@@ -1,0 +1,25 @@
+# Core Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# LLM Integration (Ollama for Llama 3.1 70B)
+ollama>=0.1.6
+
+# RAG System - using FAISS instead of ChromaDB
+faiss-cpu>=1.7.4
+sentence-transformers>=2.2.2
+
+# Database & API Client
+httpx>=0.25.0
+sqlalchemy[asyncio]>=2.0.23
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Utilities
+python-dotenv>=1.0.0
+loguru>=0.7.0
+tenacity>=8.2.0

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(done)",
+      "Bash(python -m venv:*)",
+      "Bash(e:/KITradingModel/venv/Scripts/pip install:*)",
+      "Bash(cat:*)",
+      "Bash(e:/KITradingModel/venv/Scripts/python.exe -m pip install:*)",
+      "Bash(=0.5.0)",
+      "Bash(nul)",
+      "Bash(ollama list:*)",
+      "Bash(/e/KITradingModel/venv/Scripts/python.exe:*)",
+      "Bash(curl:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
