@@ -12,13 +12,10 @@ Lokaler KI-Service für die Generierung von Handelsempfehlungen basierend auf Ze
 ## Voraussetzungen
 
 - Python 3.11+
-- Docker & Docker Compose (optional)
 - Ollama mit Llama 3.1 70B
 - EasyInsight TimescaleDB API
 
 ## Installation
-
-### 1. Lokale Installation
 
 ```bash
 # Repository klonen
@@ -35,16 +32,6 @@ pip install -r requirements.txt
 # Konfiguration anpassen
 copy .env.example .env
 # .env Datei bearbeiten
-```
-
-### 2. Docker Installation
-
-```bash
-# Services starten
-docker-compose up -d
-
-# Llama 3.1 70B Modell laden
-docker exec -it ollama ollama pull llama3.1:70b
 ```
 
 ## Konfiguration
@@ -137,8 +124,6 @@ KITradingModel/
 ├── data/
 │   └── chromadb/         # RAG Datenbank
 ├── logs/                 # Log-Dateien
-├── docker-compose.yml
-├── Dockerfile
 └── requirements.txt
 ```
 

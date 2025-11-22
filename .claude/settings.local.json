@@ -12,7 +12,12 @@
       "Bash(/e/KITradingModel/venv/Scripts/python.exe:*)",
       "Bash(curl:*)",
       "Bash(python -m json.tool:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git remote remove:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []
