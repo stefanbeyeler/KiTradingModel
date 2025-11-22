@@ -3,11 +3,20 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from loguru import logger
 import sys
+import os
 
 from .config import settings
 from .api import router
+from .services.rag_service import RAGService
+from .services.timescaledb_sync_service import TimescaleDBSyncService
+
+# Global service instances
+rag_service = RAGService()
+sync_service = TimescaleDBSyncService(rag_service)
 
 
 # Configure logging
@@ -48,6 +57,20 @@ app.add_middleware(
 # Include API routes
 app.include_router(router, prefix="/api/v1", tags=["Trading Analysis"])
 
+# Mount static files for dashboard
+static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.get("/dashboard")
+async def dashboard():
+    """Serve the monitoring dashboard."""
+    dashboard_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(dashboard_path):
+        return FileResponse(dashboard_path)
+    return {"error": "Dashboard not found"}
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -58,11 +81,30 @@ async def startup_event():
     logger.info(f"EasyInsight API: {settings.easyinsight_api_url}")
     logger.info(f"ChromaDB Directory: {settings.chroma_persist_directory}")
 
+    # Start TimescaleDB sync service if enabled
+    if settings.rag_sync_enabled:
+        try:
+            await sync_service.start()
+            logger.info(
+                f"TimescaleDB sync started - "
+                f"Host: {settings.timescaledb_host}:{settings.timescaledb_port}, "
+                f"Interval: {settings.rag_sync_interval_seconds}s"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to start TimescaleDB sync: {e}")
+            logger.info("Service will continue without automatic RAG sync")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down KI Trading Model Service...")
+
+    # Stop sync service
+    if sync_service._running:
+        await sync_service.stop()
+        await sync_service.disconnect()
+        logger.info("TimescaleDB sync service stopped")
 
 
 @app.get("/")

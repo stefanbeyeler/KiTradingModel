@@ -10,15 +10,20 @@ from ..models.trading_data import (
     AnalysisResponse,
     TradingRecommendation,
 )
-from ..services import AnalysisService, RAGService, LLMService, EasyInsightClient
+from ..services import AnalysisService, LLMService, EasyInsightClient
 
 
 router = APIRouter()
 
 # Service instances
 analysis_service = AnalysisService()
-rag_service = RAGService()
 llm_service = LLMService()
+
+
+def get_rag_service():
+    """Get the global RAG service instance from main."""
+    from ..main import rag_service
+    return rag_service
 
 
 @router.get("/health")
@@ -104,6 +109,7 @@ async def add_rag_document(
 ):
     """Add a custom document to the RAG system."""
     try:
+        rag_service = get_rag_service()
         doc_id = await rag_service.add_custom_document(
             content=content,
             document_type=document_type,
@@ -124,6 +130,7 @@ async def query_rag(
 ):
     """Query the RAG system for relevant context."""
     try:
+        rag_service = get_rag_service()
         results = await rag_service.query_relevant_context(
             query=query,
             symbol=symbol,
@@ -143,6 +150,7 @@ async def query_rag(
 async def get_rag_stats():
     """Get statistics about the RAG collection."""
     try:
+        rag_service = get_rag_service()
         stats = await rag_service.get_collection_stats()
         return stats
     except Exception as e:
@@ -157,6 +165,7 @@ async def delete_rag_documents(
 ):
     """Delete documents from the RAG system."""
     try:
+        rag_service = get_rag_service()
         deleted = await rag_service.delete_documents(symbol=symbol)
         return {
             "deleted_count": deleted,
@@ -171,6 +180,7 @@ async def delete_rag_documents(
 async def persist_rag():
     """Persist RAG database to disk."""
     try:
+        rag_service = get_rag_service()
         await rag_service.persist()
         return {"status": "persisted"}
     except Exception as e:
@@ -204,4 +214,58 @@ async def pull_llm_model():
         }
     except Exception as e:
         logger.error(f"Failed to pull model: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Sync service endpoints - import from main
+@router.get("/sync/status")
+async def get_sync_status():
+    """Get the status of the TimescaleDB sync service."""
+    from ..main import sync_service
+    return sync_service.get_status()
+
+
+@router.post("/sync/start")
+async def start_sync():
+    """Start the TimescaleDB sync service."""
+    from ..main import sync_service
+    try:
+        await sync_service.start()
+        return {
+            "status": "started",
+            "message": "TimescaleDB sync service started"
+        }
+    except Exception as e:
+        logger.error(f"Failed to start sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/sync/stop")
+async def stop_sync():
+    """Stop the TimescaleDB sync service."""
+    from ..main import sync_service
+    try:
+        await sync_service.stop()
+        return {
+            "status": "stopped",
+            "message": "TimescaleDB sync service stopped"
+        }
+    except Exception as e:
+        logger.error(f"Failed to stop sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/sync/manual")
+async def manual_sync(days_back: int = 7):
+    """Manually trigger a sync for the specified number of days."""
+    from ..main import sync_service
+    try:
+        synced_count = await sync_service.manual_sync(days_back=days_back)
+        return {
+            "status": "completed",
+            "documents_synced": synced_count,
+            "days_back": days_back
+        }
+    except Exception as e:
+        logger.error(f"Manual sync failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
