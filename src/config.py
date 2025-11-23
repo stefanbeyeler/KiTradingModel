@@ -53,14 +53,14 @@ class Settings(BaseSettings):
         description="Ollama model to use for analysis"
     )
 
-    # ChromaDB Configuration
-    chroma_persist_directory: str = Field(
-        default="./data/chromadb",
-        description="Directory for ChromaDB persistence"
+    # FAISS RAG Configuration
+    faiss_persist_directory: str = Field(
+        default="data/faiss",
+        description="Directory for FAISS index persistence"
     )
-    chroma_collection_name: str = Field(
+    rag_collection_name: str = Field(
         default="trading_history",
-        description="ChromaDB collection name for trading data"
+        description="Collection name for trading data"
     )
 
     # Embedding Model

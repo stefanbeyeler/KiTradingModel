@@ -79,7 +79,7 @@ async def startup_event():
     logger.info(f"Ollama Host: {settings.ollama_host}")
     logger.info(f"Ollama Model: {settings.ollama_model}")
     logger.info(f"TimescaleDB: {settings.timescaledb_host}:{settings.timescaledb_port}/{settings.timescaledb_database}")
-    logger.info(f"ChromaDB Directory: {settings.chroma_persist_directory}")
+    logger.info(f"FAISS Directory: {settings.faiss_persist_directory}")
 
     # Start TimescaleDB sync service if enabled
     if settings.rag_sync_enabled:

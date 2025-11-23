@@ -20,7 +20,12 @@
       "Bash(rm:*)",
       "Bash(e:KITradingModelvenvScriptspython.exe e:KITradingModelrun.py)",
       "Bash(/e/KITradingModel/venv/Scripts/pip.exe install:*)",
-      "Bash(=0.29.0)"
+      "Bash(=0.29.0)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill //F //PID 27352)",
+      "Bash(taskkill //F //PID 37700)",
+      "Bash(taskkill //F //PID 30636)"
     ],
     "deny": [],
     "ask": []

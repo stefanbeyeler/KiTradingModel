@@ -23,7 +23,7 @@ class RAGService:
     """RAG service for storing and retrieving historical trading context using FAISS."""
 
     def __init__(self):
-        self.persist_directory = settings.chroma_persist_directory
+        self.persist_directory = settings.faiss_persist_directory
         self._embedding_model = None
         self._index = None
         self._documents = []
