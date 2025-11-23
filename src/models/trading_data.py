@@ -24,7 +24,7 @@ class ConfidenceLevel(str, Enum):
 
 
 class TimeSeriesData(BaseModel):
-    """Time series data point from EasyInsight."""
+    """Time series data point from TimescaleDB."""
     timestamp: datetime
     symbol: str
     open: float

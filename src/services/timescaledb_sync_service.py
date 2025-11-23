@@ -99,9 +99,9 @@ class TimescaleDBSyncService:
                 start_time = self._last_sync_time
             else:
                 # On first run, sync last 7 days
-                start_time = datetime.utcnow() - timedelta(days=7)
+                start_time = datetime.now() - timedelta(days=7)
 
-            end_time = datetime.utcnow()
+            end_time = datetime.now()
 
             # Get available symbols
             symbols = await self._get_symbols()
@@ -334,8 +334,8 @@ Signale:
         if not self._pool:
             await self.connect()
 
-        start_time = datetime.utcnow() - timedelta(days=days_back)
-        end_time = datetime.utcnow()
+        start_time = datetime.now() - timedelta(days=days_back)
+        end_time = datetime.now()
 
         symbols = await self._get_symbols()
         total_synced = 0

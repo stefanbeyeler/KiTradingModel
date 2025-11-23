@@ -7,16 +7,6 @@ from pydantic import Field
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    # EasyInsight TimescaleDB API
-    easyinsight_api_url: str = Field(
-        default="http://localhost:3000",
-        description="Base URL for EasyInsight TimescaleDB API"
-    )
-    easyinsight_api_key: str = Field(
-        default="",
-        description="API key for EasyInsight authentication"
-    )
-
     # TimescaleDB Direct Connection
     timescaledb_host: str = Field(
         default="localhost",
@@ -97,6 +87,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()

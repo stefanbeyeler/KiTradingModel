@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import pandas as pd
 import numpy as np
+import asyncpg
 from loguru import logger
 
 from ..config import settings
@@ -19,7 +20,6 @@ from ..models.trading_data import (
     AnalysisResponse,
     SignalType,
 )
-from .easyinsight_client import EasyInsightClient
 from .llm_service import LLMService
 from .rag_service import RAGService
 
@@ -28,9 +28,94 @@ class AnalysisService:
     """Main service for generating trading recommendations."""
 
     def __init__(self):
-        self.easyinsight_client = EasyInsightClient()
         self.llm_service = LLMService()
         self.rag_service = RAGService()
+        self._pool: Optional[asyncpg.Pool] = None
+
+    async def _get_pool(self) -> asyncpg.Pool:
+        """Get or create database connection pool."""
+        if self._pool is None:
+            self._pool = await asyncpg.create_pool(
+                host=settings.timescaledb_host,
+                port=settings.timescaledb_port,
+                database=settings.timescaledb_database,
+                user=settings.timescaledb_user,
+                password=settings.timescaledb_password,
+                min_size=2,
+                max_size=10
+            )
+            logger.info(f"Connected to TimescaleDB at {settings.timescaledb_host}:{settings.timescaledb_port}")
+        return self._pool
+
+    async def _fetch_time_series(
+        self,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime
+    ) -> list[TimeSeriesData]:
+        """Fetch time series data directly from TimescaleDB."""
+        pool = await self._get_pool()
+
+        async with pool.acquire() as conn:
+            query = """
+                SELECT
+                    data_timestamp,
+                    symbol,
+                    d1_open,
+                    d1_high,
+                    d1_low,
+                    d1_close,
+                    bid,
+                    ask
+                FROM symbol
+                WHERE symbol = $1
+                AND data_timestamp >= $2
+                AND data_timestamp <= $3
+                ORDER BY data_timestamp ASC
+            """
+
+            rows = await conn.fetch(query, symbol, start_date, end_date)
+
+            time_series = []
+            for row in rows:
+                ts = TimeSeriesData(
+                    timestamp=row["data_timestamp"],
+                    symbol=symbol,
+                    open=float(row["d1_open"]) if row["d1_open"] else 0,
+                    high=float(row["d1_high"]) if row["d1_high"] else 0,
+                    low=float(row["d1_low"]) if row["d1_low"] else 0,
+                    close=float(row["d1_close"]) if row["d1_close"] else 0,
+                    volume=0,  # Volume not available in this schema
+                    additional_data={
+                        "bid": float(row["bid"]) if row["bid"] else None,
+                        "ask": float(row["ask"]) if row["ask"] else None
+                    }
+                )
+                time_series.append(ts)
+
+            logger.info(f"Fetched {len(time_series)} data points for {symbol} from TimescaleDB")
+            return time_series
+
+    async def get_available_symbols(self) -> list[str]:
+        """Get list of available trading symbols from TimescaleDB."""
+        pool = await self._get_pool()
+
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT DISTINCT symbol FROM symbol WHERE symbol IS NOT NULL ORDER BY symbol LIMIT 100"
+            )
+            return [row["symbol"] for row in rows if row["symbol"]]
+
+    async def check_timescaledb_connection(self) -> bool:
+        """Check if TimescaleDB is accessible."""
+        try:
+            pool = await self._get_pool()
+            async with pool.acquire() as conn:
+                await conn.fetchval("SELECT 1")
+            return True
+        except Exception as e:
+            logger.warning(f"TimescaleDB connection check failed: {e}")
+            return False
 
     async def analyze(self, request: AnalysisRequest) -> AnalysisResponse:
         """
@@ -48,13 +133,12 @@ class AnalysisService:
         logger.info(f"Starting analysis for {request.symbol} (request_id: {request_id})")
 
         try:
-            # 1. Fetch time series data from EasyInsight
-            async with self.easyinsight_client as client:
-                time_series = await client.get_time_series(
-                    symbol=request.symbol,
-                    start_date=datetime.utcnow() - timedelta(days=request.lookback_days),
-                    end_date=datetime.utcnow()
-                )
+            # 1. Fetch time series data from TimescaleDB
+            time_series = await self._fetch_time_series(
+                symbol=request.symbol,
+                start_date=datetime.now() - timedelta(days=request.lookback_days),
+                end_date=datetime.now()
+            )
 
             if not time_series:
                 raise ValueError(f"No data available for symbol {request.symbol}")
@@ -463,10 +547,6 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
         """Check health of all services."""
         results = {}
 
-        # Check EasyInsight API
-        async with self.easyinsight_client as client:
-            results["easyinsight_api"] = await client.health_check()
-
         # Check LLM service
         results["llm_service"] = await self.llm_service.check_model_available()
 
@@ -479,7 +559,6 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
             results["rag_service"] = False
 
         results["all_healthy"] = all([
-            results.get("easyinsight_api", False),
             results.get("llm_service", False),
             results.get("rag_service", False)
         ])

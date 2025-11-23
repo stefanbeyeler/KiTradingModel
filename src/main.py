@@ -78,7 +78,7 @@ async def startup_event():
     logger.info("Starting KI Trading Model Service...")
     logger.info(f"Ollama Host: {settings.ollama_host}")
     logger.info(f"Ollama Model: {settings.ollama_model}")
-    logger.info(f"EasyInsight API: {settings.easyinsight_api_url}")
+    logger.info(f"TimescaleDB: {settings.timescaledb_host}:{settings.timescaledb_port}/{settings.timescaledb_database}")
     logger.info(f"ChromaDB Directory: {settings.chroma_persist_directory}")
 
     # Start TimescaleDB sync service if enabled

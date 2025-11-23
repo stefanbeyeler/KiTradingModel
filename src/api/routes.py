@@ -10,7 +10,7 @@ from ..models.trading_data import (
     AnalysisResponse,
     TradingRecommendation,
 )
-from ..services import AnalysisService, LLMService, EasyInsightClient
+from ..services import AnalysisService, LLMService
 
 
 router = APIRouter()
@@ -30,11 +30,29 @@ def get_rag_service():
 async def health_check():
     """Check health of all services."""
     try:
-        health_status = await analysis_service.health_check()
+        # Check LLM service directly
+        llm_healthy = await llm_service.check_model_available()
+
+        # Check RAG service
+        rag_healthy = False
+        try:
+            rag_svc = get_rag_service()
+            stats = await rag_svc.get_collection_stats()
+            rag_healthy = True
+        except Exception:
+            pass
+
+        services = {
+            "llm_service": llm_healthy,
+            "rag_service": rag_healthy
+        }
+
+        all_healthy = llm_healthy and rag_healthy
+
         return {
-            "status": "healthy" if health_status["all_healthy"] else "degraded",
+            "status": "healthy" if all_healthy else "degraded",
             "timestamp": datetime.utcnow().isoformat(),
-            "services": health_status
+            "services": services
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -90,11 +108,10 @@ async def get_quick_recommendation(
 
 @router.get("/symbols")
 async def get_available_symbols():
-    """Get list of available trading symbols from EasyInsight."""
+    """Get list of available trading symbols from TimescaleDB."""
     try:
-        async with EasyInsightClient() as client:
-            symbols = await client.get_available_symbols()
-            return {"symbols": symbols}
+        symbols = await analysis_service.get_available_symbols()
+        return {"symbols": symbols}
     except Exception as e:
         logger.error(f"Failed to fetch symbols: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -5,15 +5,16 @@ Lokaler KI-Service für die Generierung von Handelsempfehlungen basierend auf Ze
 ## Features
 
 - **Llama 3.1 70B Integration**: Komplexe Marktanalysen und Reasoning über Ollama
-- **RAG System**: Historische Trading-Daten mit ChromaDB für kontextbezogene Empfehlungen
+- **RAG System**: Historische Trading-Daten mit FAISS für kontextbezogene Empfehlungen
 - **Technische Analyse**: Automatische Berechnung von Indikatoren (RSI, MACD, Bollinger Bands, etc.)
-- **EasyInsight Integration**: Zeitreihendaten via TimescaleDB API
+- **TimescaleDB Integration**: Direkte Verbindung zur TimescaleDB für Zeitreihendaten
+- **Automatischer RAG-Sync**: Kontinuierliche Synchronisation von Marktdaten in das RAG-System
 
 ## Voraussetzungen
 
 - Python 3.11+
 - Ollama mit Llama 3.1 70B
-- EasyInsight TimescaleDB API
+- TimescaleDB Datenbank
 
 ## Installation
 
@@ -39,16 +40,23 @@ copy .env.example .env
 Erstelle eine `.env` Datei basierend auf `.env.example`:
 
 ```env
-# EasyInsight API
-EASYINSIGHT_API_URL=http://localhost:3000
-EASYINSIGHT_API_KEY=your_api_key
+# TimescaleDB
+TIMESCALEDB_HOST=localhost
+TIMESCALEDB_PORT=5432
+TIMESCALEDB_DATABASE=easyinsight
+TIMESCALEDB_USER=postgres
+TIMESCALEDB_PASSWORD=your_password
+
+# RAG Sync
+RAG_SYNC_ENABLED=true
+RAG_SYNC_INTERVAL_SECONDS=300
 
 # Ollama
 OLLAMA_HOST=http://localhost:11434
 OLLAMA_MODEL=llama3.1:70b
 
-# ChromaDB
-CHROMA_PERSIST_DIRECTORY=./data/chromadb
+# FAISS
+FAISS_PERSIST_DIRECTORY=./data/faiss
 ```
 
 ## Verwendung
@@ -115,14 +123,15 @@ KITradingModel/
 │   ├── api/              # FastAPI Routes
 │   ├── models/           # Pydantic Datenmodelle
 │   ├── services/
-│   │   ├── easyinsight_client.py  # EasyInsight API Client
-│   │   ├── llm_service.py         # Llama 3.1 Integration
-│   │   ├── rag_service.py         # ChromaDB RAG System
-│   │   └── analysis_service.py    # Hauptanalyse-Pipeline
+│   │   ├── llm_service.py              # Llama 3.1 Integration
+│   │   ├── rag_service.py              # FAISS RAG System
+│   │   ├── analysis_service.py         # Hauptanalyse-Pipeline
+│   │   └── timescaledb_sync_service.py # TimescaleDB Sync Service
 │   ├── config.py         # Konfiguration
 │   └── main.py           # FastAPI App
+├── static/               # Dashboard UI
 ├── data/
-│   └── chromadb/         # RAG Datenbank
+│   └── faiss/            # RAG Datenbank
 ├── logs/                 # Log-Dateien
 └── requirements.txt
 ```
