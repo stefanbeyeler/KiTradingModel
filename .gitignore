@@ -26,5 +26,5 @@ nul
 # OS
 .DS_Store
 Thumbs.db
-# RAG/ChromaDB Data
+# RAG/FAISS Data
 data/

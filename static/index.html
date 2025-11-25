@@ -320,6 +320,235 @@
                 opacity: 1;
             }
         }
+
+        /* KI Query Section */
+        .ai-query-card {
+            grid-column: span 2;
+        }
+
+        .query-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 0.875rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .query-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-success {
+            background: #22c55e;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #16a34a;
+        }
+
+        .response-container {
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        .response-container.visible {
+            display: block;
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .response-box {
+            background: #0f172a;
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            border: 1px solid #334155;
+        }
+
+        .recommendation-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .recommendation-badge.buy {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid #22c55e;
+        }
+
+        .recommendation-badge.sell {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+
+        .recommendation-badge.hold {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid #f59e0b;
+        }
+
+        .confidence-bar {
+            height: 8px;
+            background: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .confidence-fill.high {
+            background: #22c55e;
+        }
+
+        .confidence-fill.medium {
+            background: #f59e0b;
+        }
+
+        .confidence-fill.low {
+            background: #ef4444;
+        }
+
+        .analysis-text {
+            color: #cbd5e1;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            font-size: 0.9rem;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #334155;
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .rag-results {
+            margin-top: 1rem;
+        }
+
+        .rag-result-item {
+            background: #1e293b;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .rag-result-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .rag-result-meta {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+
+        .rag-result-content {
+            font-size: 0.875rem;
+            color: #e2e8f0;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 0.875rem;
+            border-radius: 0.5rem 0.5rem 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: #e2e8f0;
+        }
+
+        .tab-btn.active {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -408,6 +637,110 @@
                 <div class="service-item">
                     <div class="service-status" id="syncHealth"></div>
                     <span class="service-name">TimescaleDB Sync</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- KI Query Section -->
+        <div class="card ai-query-card">
+            <div class="card-header">
+                <span class="card-title">KI Trading Analyse</span>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('analysis')">Vollanalyse</button>
+                <button class="tab-btn" onclick="switchTab('quick')">Schnellempfehlung</button>
+                <button class="tab-btn" onclick="switchTab('rag')">RAG Abfrage</button>
+            </div>
+
+            <!-- Vollanalyse Tab -->
+            <div id="tab-analysis" class="tab-content active">
+                <div class="query-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="analysisSymbol">Symbol</label>
+                            <input type="text" id="analysisSymbol" list="symbolList" placeholder="z.B. BTC/USD, EUR/USD">
+                        </div>
+                        <div class="form-group">
+                            <label for="analysisLookback">Zeitraum (Tage)</label>
+                            <input type="number" id="analysisLookback" value="30" min="1" max="365">
+                        </div>
+                        <div class="form-group">
+                            <label for="analysisTechnical">Technische Analyse</label>
+                            <select id="analysisTechnical">
+                                <option value="true">Aktiviert</option>
+                                <option value="false">Deaktiviert</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="query-buttons">
+                        <button class="btn btn-primary" id="btnAnalyze" onclick="runAnalysis()">
+                            Analyse starten
+                        </button>
+                        <button class="btn btn-secondary" onclick="loadSymbols()">
+                            Symbole laden
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schnellempfehlung Tab -->
+            <div id="tab-quick" class="tab-content">
+                <div class="query-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="quickSymbol">Symbol</label>
+                            <input type="text" id="quickSymbol" list="symbolList" placeholder="z.B. BTC/USD, EUR/USD">
+                        </div>
+                        <div class="form-group">
+                            <label for="quickLookback">Zeitraum (Tage)</label>
+                            <input type="number" id="quickLookback" value="30" min="1" max="365">
+                        </div>
+                    </div>
+                    <div class="query-buttons">
+                        <button class="btn btn-success" id="btnQuick" onclick="runQuickRecommendation()">
+                            Schnellempfehlung abrufen
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RAG Abfrage Tab -->
+            <div id="tab-rag" class="tab-content">
+                <div class="query-form">
+                    <div class="form-group">
+                        <label for="ragQuery">Abfrage</label>
+                        <textarea id="ragQuery" placeholder="z.B. RSI oversold patterns, Double Bottom bei BTC..."></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ragSymbol">Symbol (optional)</label>
+                            <input type="text" id="ragSymbol" list="symbolList" placeholder="Alle Symbole">
+                        </div>
+                        <div class="form-group">
+                            <label for="ragResults">Max. Ergebnisse</label>
+                            <input type="number" id="ragResults" value="5" min="1" max="20">
+                        </div>
+                    </div>
+                    <div class="query-buttons">
+                        <button class="btn btn-secondary" id="btnRagQuery" onclick="runRagQuery()">
+                            RAG durchsuchen
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datalist for symbols -->
+            <datalist id="symbolList"></datalist>
+
+            <!-- Response Container -->
+            <div id="responseContainer" class="response-container">
+                <div class="response-header">
+                    <span class="card-title" id="responseTitle">Ergebnis</span>
+                    <button class="action-btn" onclick="clearResponse()">Schliessen</button>
+                </div>
+                <div class="response-box" id="responseBox">
+                    <!-- Response content will be inserted here -->
                 </div>
             </div>
         </div>
@@ -589,15 +922,324 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // Hide response when switching tabs
+            clearResponse();
+        }
+
+        // Load available symbols
+        async function loadSymbols() {
+            try {
+                const data = await apiFetch('/symbols');
+                const symbols = data.symbols || [];
+
+                const datalist = document.getElementById('symbolList');
+                datalist.innerHTML = '';
+
+                if (symbols.length === 0) {
+                    showToast('Keine Symbole gefunden - Backend nicht verbunden?', 'error');
+                    return;
+                }
+
+                symbols.forEach(symbol => {
+                    const option = document.createElement('option');
+                    option.value = symbol;
+                    datalist.appendChild(option);
+                });
+
+                showToast(`${symbols.length} Symbole geladen`, 'success');
+            } catch (error) {
+                console.error('Failed to load symbols:', error);
+                showToast('Symbole konnten nicht geladen werden - Backend pruefen', 'error');
+            }
+        }
+
+        // Run full analysis
+        async function runAnalysis() {
+            const symbol = document.getElementById('analysisSymbol').value.trim();
+            const lookback = parseInt(document.getElementById('analysisLookback').value);
+            const technical = document.getElementById('analysisTechnical').value === 'true';
+
+            if (!symbol) {
+                showToast('Bitte Symbol eingeben (z.B. BTC/USD)', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnAnalyze');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span>Analysiere...';
+
+            showResponse('Analyse läuft...', `<div style="text-align: center; padding: 2rem;">
+                <span class="loading-spinner"></span>
+                <p style="margin-top: 1rem; color: #94a3b8;">KI analysiert ${symbol}...</p>
+                <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">Dies kann einige Sekunden dauern</p>
+            </div>`);
+
+            try {
+                const response = await apiFetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbol: symbol,
+                        lookback_days: lookback,
+                        include_technical: technical
+                    })
+                });
+
+                displayAnalysisResult(response);
+                showToast('Analyse abgeschlossen', 'success');
+            } catch (error) {
+                showResponse('Fehler', `<p style="color: #ef4444;">Analyse fehlgeschlagen: ${error.message}</p>`);
+                showToast('Analyse fehlgeschlagen', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Analyse starten';
+            }
+        }
+
+        // Run quick recommendation
+        async function runQuickRecommendation() {
+            const symbol = document.getElementById('quickSymbol').value.trim();
+            const lookback = parseInt(document.getElementById('quickLookback').value);
+
+            if (!symbol) {
+                showToast('Bitte Symbol eingeben (z.B. BTC/USD)', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnQuick');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span>Lädt...';
+
+            showResponse('Empfehlung wird geladen...', `<div style="text-align: center; padding: 2rem;">
+                <span class="loading-spinner"></span>
+                <p style="margin-top: 1rem; color: #94a3b8;">Schnellempfehlung für ${symbol}...</p>
+            </div>`);
+
+            try {
+                const response = await apiFetch(`/recommendation/${encodeURIComponent(symbol)}?lookback_days=${lookback}`);
+                displayRecommendation(response, symbol);
+                showToast('Empfehlung erhalten', 'success');
+            } catch (error) {
+                showResponse('Fehler', `<p style="color: #ef4444;">Empfehlung fehlgeschlagen: ${error.message}</p>`);
+                showToast('Empfehlung fehlgeschlagen', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Schnellempfehlung abrufen';
+            }
+        }
+
+        // Run RAG query
+        async function runRagQuery() {
+            const query = document.getElementById('ragQuery').value.trim();
+            const symbol = document.getElementById('ragSymbol').value.trim();
+            const nResults = parseInt(document.getElementById('ragResults').value);
+
+            if (!query) {
+                showToast('Bitte Abfrage eingeben', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnRagQuery');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span>Suche...';
+
+            showResponse('Suche läuft...', `<div style="text-align: center; padding: 2rem;">
+                <span class="loading-spinner"></span>
+                <p style="margin-top: 1rem; color: #94a3b8;">Durchsuche RAG-Datenbank...</p>
+            </div>`);
+
+            try {
+                let url = `/rag/query?query=${encodeURIComponent(query)}&n_results=${nResults}`;
+                if (symbol) {
+                    url += `&symbol=${encodeURIComponent(symbol)}`;
+                }
+
+                const response = await apiFetch(url);
+                displayRagResults(response);
+                showToast(`${response.count} Ergebnisse gefunden`, 'success');
+            } catch (error) {
+                showResponse('Fehler', `<p style="color: #ef4444;">RAG-Abfrage fehlgeschlagen: ${error.message}</p>`);
+                showToast('RAG-Abfrage fehlgeschlagen', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'RAG durchsuchen';
+            }
+        }
+
+        // Display full analysis result
+        function displayAnalysisResult(data) {
+            const rec = data.recommendation || {};
+            // Handle both 'action' and 'signal' field names
+            const action = (rec.action || rec.signal || 'hold').toLowerCase();
+            // Handle confidence as string or number
+            let confidence = rec.confidence;
+            let confidenceClass = 'low';
+            let confidencePercent = 0;
+            if (typeof confidence === 'string') {
+                if (confidence === 'high') { confidenceClass = 'high'; confidencePercent = 85; }
+                else if (confidence === 'medium') { confidenceClass = 'medium'; confidencePercent = 55; }
+                else { confidenceClass = 'low'; confidencePercent = 25; }
+            } else {
+                confidence = confidence || 0;
+                confidencePercent = confidence * 100;
+                confidenceClass = confidence >= 0.7 ? 'high' : confidence >= 0.4 ? 'medium' : 'low';
+            }
+
+            let html = `
+                <div style="margin-bottom: 1.5rem;">
+                    <span class="recommendation-badge ${action}">${action.toUpperCase()}</span>
+                    <div style="margin-top: 0.5rem;">
+                        <span style="color: #94a3b8; font-size: 0.875rem;">Konfidenz: ${confidencePercent.toFixed(0)}%</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill ${confidenceClass}" style="width: ${confidencePercent}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (rec.reasoning) {
+                html += `
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Begründung</h4>
+                        <p class="analysis-text">${rec.reasoning}</p>
+                    </div>
+                `;
+            }
+
+            if (rec.entry_price || rec.stop_loss || rec.take_profit) {
+                html += `
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Trading Levels</h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
+                                <div style="color: #64748b; font-size: 0.75rem;">Entry</div>
+                                <div style="color: #3b82f6; font-weight: 600;">${rec.entry_price ? rec.entry_price.toFixed(2) : '-'}</div>
+                            </div>
+                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
+                                <div style="color: #64748b; font-size: 0.75rem;">Stop Loss</div>
+                                <div style="color: #ef4444; font-weight: 600;">${rec.stop_loss ? rec.stop_loss.toFixed(2) : '-'}</div>
+                            </div>
+                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
+                                <div style="color: #64748b; font-size: 0.75rem;">Take Profit</div>
+                                <div style="color: #22c55e; font-weight: 600;">${rec.take_profit ? rec.take_profit.toFixed(2) : '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (rec.risk_factors && rec.risk_factors.length > 0) {
+                html += `
+                    <div>
+                        <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Risikofaktoren</h4>
+                        <ul style="color: #f59e0b; font-size: 0.875rem; padding-left: 1.25rem;">
+                            ${rec.risk_factors.map(r => `<li>${r}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            showResponse(`Analyse: ${data.symbol || 'Ergebnis'}`, html);
+        }
+
+        // Display quick recommendation
+        function displayRecommendation(rec, symbol) {
+            // Handle both 'action' and 'signal' field names
+            const action = (rec.action || rec.signal || 'hold').toLowerCase();
+            // Handle confidence as string or number
+            let confidence = rec.confidence;
+            let confidenceClass = 'low';
+            let confidencePercent = 0;
+            if (typeof confidence === 'string') {
+                if (confidence === 'high') { confidenceClass = 'high'; confidencePercent = 85; }
+                else if (confidence === 'medium') { confidenceClass = 'medium'; confidencePercent = 55; }
+                else { confidenceClass = 'low'; confidencePercent = 25; }
+            } else {
+                confidence = confidence || 0;
+                confidencePercent = confidence * 100;
+                confidenceClass = confidence >= 0.7 ? 'high' : confidence >= 0.4 ? 'medium' : 'low';
+            }
+
+            let html = `
+                <div style="text-align: center; margin-bottom: 1.5rem;">
+                    <span class="recommendation-badge ${action}" style="font-size: 1.25rem; padding: 0.75rem 1.5rem;">
+                        ${action.toUpperCase()}
+                    </span>
+                    <div style="margin-top: 1rem;">
+                        <span style="color: #94a3b8;">Konfidenz: ${confidencePercent.toFixed(0)}%</span>
+                        <div class="confidence-bar" style="max-width: 200px; margin: 0.5rem auto;">
+                            <div class="confidence-fill ${confidenceClass}" style="width: ${confidencePercent}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (rec.reasoning) {
+                html += `<p class="analysis-text" style="text-align: center;">${rec.reasoning}</p>`;
+            }
+
+            showResponse(`Empfehlung: ${symbol}`, html);
+        }
+
+        // Display RAG results
+        function displayRagResults(data) {
+            if (!data.results || data.results.length === 0) {
+                showResponse('RAG Ergebnisse', '<p style="color: #64748b; text-align: center;">Keine Ergebnisse gefunden</p>');
+                return;
+            }
+
+            let html = `<p style="color: #94a3b8; margin-bottom: 1rem;">${data.count} Dokumente gefunden für: "${data.query}"</p>`;
+            html += '<div class="rag-results">';
+
+            data.results.forEach((result, index) => {
+                const meta = result.metadata || {};
+                html += `
+                    <div class="rag-result-item">
+                        <div class="rag-result-meta">
+                            ${meta.symbol ? `<span>Symbol: ${meta.symbol}</span> | ` : ''}
+                            ${meta.document_type ? `<span>Typ: ${meta.document_type}</span> | ` : ''}
+                            ${meta.timestamp ? `<span>${new Date(meta.timestamp).toLocaleString('de-DE')}</span>` : ''}
+                        </div>
+                        <div class="rag-result-content">${result.content || result.page_content || 'Kein Inhalt'}</div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            showResponse('RAG Ergebnisse', html);
+        }
+
+        // Show/hide response container
+        function showResponse(title, content) {
+            document.getElementById('responseTitle').textContent = title;
+            document.getElementById('responseBox').innerHTML = content;
+            document.getElementById('responseContainer').classList.add('visible');
+        }
+
+        function clearResponse() {
+            document.getElementById('responseContainer').classList.remove('visible');
+        }
+
         // Initialize
         updateDashboard();
+        loadSymbols();
         setInterval(updateDashboard, 10000);
 
         // Fetch config info
         fetch('/').then(r => r.json()).then(data => {
             document.getElementById('dbHost').textContent = 'localhost:5432';
             document.getElementById('dbName').textContent = 'easyinsight';
-        });
+        }).catch(() => {});
     </script>
 </body>
 </html>

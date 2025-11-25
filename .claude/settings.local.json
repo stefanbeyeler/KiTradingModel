@@ -31,7 +31,14 @@
       "Bash(docker build:*)",
       "Bash(docker run:*)",
       "Bash(docker rm:*)",
-      "Bash(docker logs:*)"
+      "Bash(docker logs:*)",
+      "Bash(docker ps:*)",
+      "Bash(taskkill //F //PID 33140)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)",
+      "Bash(taskkill //F //PID 25424)",
+      "Bash(taskkill //F //PID 9612)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

@@ -7,7 +7,7 @@ pydantic-settings>=2.1.0
 # LLM Integration (Ollama for Llama 3.1 70B)
 ollama>=0.1.6
 
-# RAG System - using FAISS instead of ChromaDB
+# RAG System (FAISS)
 faiss-cpu>=1.7.4
 sentence-transformers>=2.2.2
 
