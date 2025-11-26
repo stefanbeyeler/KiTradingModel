@@ -340,3 +340,236 @@ class StrategyService:
                 prompt_parts.append(f"Besonders wichtige Indikatoren: {', '.join(important_indicators)}")
 
         return " ".join(filter(None, prompt_parts))
+
+    def export_strategy_to_markdown(self, strategy: TradingStrategy) -> str:
+        """Export a strategy to Markdown format."""
+        lines = []
+
+        # Header
+        lines.append(f"# Trading Strategie: {strategy.name}")
+        lines.append("")
+        lines.append(f"**ID:** `{strategy.id}`  ")
+        lines.append(f"**Typ:** {strategy.strategy_type.value}  ")
+        lines.append(f"**Risikolevel:** {strategy.risk_level.value}  ")
+        lines.append(f"**Standard:** {'Ja' if strategy.is_default else 'Nein'}  ")
+        lines.append(f"**Aktiv:** {'Ja' if strategy.is_active else 'Nein'}  ")
+        lines.append("")
+
+        # Description
+        lines.append("## Beschreibung")
+        lines.append("")
+        lines.append(strategy.description if strategy.description else "*Keine Beschreibung*")
+        lines.append("")
+
+        # Indicators
+        lines.append("## Indikatoren")
+        lines.append("")
+        if strategy.indicators:
+            lines.append("| Indikator | Aktiv | Gewichtung | Kauf-Schwelle | Verkauf-Schwelle |")
+            lines.append("|-----------|-------|------------|---------------|------------------|")
+            for ind in strategy.indicators:
+                buy_th = str(ind.buy_threshold) if ind.buy_threshold is not None else "-"
+                sell_th = str(ind.sell_threshold) if ind.sell_threshold is not None else "-"
+                lines.append(f"| {ind.name} | {'✓' if ind.enabled else '✗'} | {ind.weight} | {buy_th} | {sell_th} |")
+        else:
+            lines.append("*Keine Indikatoren konfiguriert*")
+        lines.append("")
+
+        # Signal Settings
+        lines.append("## Signal-Einstellungen")
+        lines.append("")
+        lines.append(f"- **Min. Kaufsignale:** {strategy.min_buy_signals}")
+        lines.append(f"- **Min. Verkaufssignale:** {strategy.min_sell_signals}")
+        lines.append("")
+
+        # Risk Management
+        lines.append("## Risikomanagement")
+        lines.append("")
+        lines.append(f"- **Stop-Loss ATR-Multiplikator:** {strategy.stop_loss_atr_multiplier}")
+        lines.append(f"- **Take-Profit ATR-Multiplikator:** {strategy.take_profit_atr_multiplier}")
+        lines.append(f"- **Max. Positionsgröße:** {strategy.max_position_size_percent}%")
+        lines.append("")
+
+        # Timeframe
+        lines.append("## Zeitrahmen")
+        lines.append("")
+        lines.append(f"- **Bevorzugter Zeitrahmen:** {strategy.preferred_timeframe}")
+        lines.append(f"- **Lookback-Tage:** {strategy.lookback_days}")
+        lines.append("")
+
+        # RAG Settings
+        lines.append("## RAG-Einstellungen")
+        lines.append("")
+        lines.append(f"- **RAG-Kontext verwenden:** {'Ja' if strategy.use_rag_context else 'Nein'}")
+        lines.append(f"- **Max. RAG-Dokumente:** {strategy.max_rag_documents}")
+        lines.append("")
+
+        # Custom Prompt
+        lines.append("## Benutzerdefinierter Prompt")
+        lines.append("")
+        if strategy.custom_prompt:
+            lines.append("```")
+            lines.append(strategy.custom_prompt)
+            lines.append("```")
+        else:
+            lines.append("*Kein benutzerdefinierter Prompt*")
+        lines.append("")
+
+        # Metadata
+        lines.append("---")
+        lines.append("")
+        lines.append(f"*Erstellt:* {strategy.created_at.isoformat()}  ")
+        lines.append(f"*Aktualisiert:* {strategy.updated_at.isoformat()}")
+
+        return "\n".join(lines)
+
+    def import_strategy_from_markdown(self, markdown_content: str) -> Optional[TradingStrategy]:
+        """Import a strategy from Markdown format."""
+        import re
+
+        try:
+            # Extract name from header
+            name_match = re.search(r'^# Trading Strategie: (.+)$', markdown_content, re.MULTILINE)
+            if not name_match:
+                logger.error("Could not find strategy name in markdown")
+                return None
+            name = name_match.group(1).strip()
+
+            # Extract ID (optional for import)
+            id_match = re.search(r'\*\*ID:\*\* `([^`]+)`', markdown_content)
+            original_id = id_match.group(1) if id_match else None
+
+            # Extract strategy type
+            type_match = re.search(r'\*\*Typ:\*\* (\w+)', markdown_content)
+            strategy_type = StrategyType.CUSTOM
+            if type_match:
+                try:
+                    strategy_type = StrategyType(type_match.group(1))
+                except ValueError:
+                    pass
+
+            # Extract risk level
+            risk_match = re.search(r'\*\*Risikolevel:\*\* (\w+)', markdown_content)
+            risk_level = RiskLevel.MODERATE
+            if risk_match:
+                try:
+                    risk_level = RiskLevel(risk_match.group(1))
+                except ValueError:
+                    pass
+
+            # Extract is_default
+            default_match = re.search(r'\*\*Standard:\*\* (Ja|Nein)', markdown_content)
+            is_default = default_match and default_match.group(1) == "Ja"
+
+            # Extract is_active
+            active_match = re.search(r'\*\*Aktiv:\*\* (Ja|Nein)', markdown_content)
+            is_active = not active_match or active_match.group(1) == "Ja"
+
+            # Extract description
+            desc_match = re.search(r'## Beschreibung\s*\n\s*\n(.+?)(?=\n\n## |\Z)', markdown_content, re.DOTALL)
+            description = ""
+            if desc_match:
+                desc_text = desc_match.group(1).strip()
+                if desc_text != "*Keine Beschreibung*":
+                    description = desc_text
+
+            # Extract indicators from table
+            indicators = []
+            indicator_table = re.search(r'\| Indikator \|.*?\n\|[-|]+\n(.*?)(?=\n\n|\n\*|\Z)', markdown_content, re.DOTALL)
+            if indicator_table:
+                rows = indicator_table.group(1).strip().split('\n')
+                for row in rows:
+                    cols = [c.strip() for c in row.split('|')[1:-1]]
+                    if len(cols) >= 5:
+                        ind_name = cols[0]
+                        enabled = '✓' in cols[1]
+                        weight = float(cols[2]) if cols[2] else 1.0
+                        buy_th = float(cols[3]) if cols[3] != '-' else None
+                        sell_th = float(cols[4]) if cols[4] != '-' else None
+                        indicators.append(IndicatorConfig(
+                            name=ind_name,
+                            enabled=enabled,
+                            weight=weight,
+                            buy_threshold=buy_th,
+                            sell_threshold=sell_th
+                        ))
+
+            # Extract signal settings
+            min_buy = 3
+            min_sell = 3
+            buy_match = re.search(r'\*\*Min\. Kaufsignale:\*\* (\d+)', markdown_content)
+            if buy_match:
+                min_buy = int(buy_match.group(1))
+            sell_match = re.search(r'\*\*Min\. Verkaufssignale:\*\* (\d+)', markdown_content)
+            if sell_match:
+                min_sell = int(sell_match.group(1))
+
+            # Extract risk management
+            sl_match = re.search(r'\*\*Stop-Loss ATR-Multiplikator:\*\* ([\d.]+)', markdown_content)
+            stop_loss = float(sl_match.group(1)) if sl_match else 2.0
+
+            tp_match = re.search(r'\*\*Take-Profit ATR-Multiplikator:\*\* ([\d.]+)', markdown_content)
+            take_profit = float(tp_match.group(1)) if tp_match else 3.0
+
+            pos_match = re.search(r'\*\*Max\. Positionsgröße:\*\* ([\d.]+)%', markdown_content)
+            max_position = float(pos_match.group(1)) if pos_match else 5.0
+
+            # Extract timeframe settings
+            tf_match = re.search(r'\*\*Bevorzugter Zeitrahmen:\*\* (\w+)', markdown_content)
+            timeframe = tf_match.group(1) if tf_match else "short_term"
+
+            lb_match = re.search(r'\*\*Lookback-Tage:\*\* (\d+)', markdown_content)
+            lookback = int(lb_match.group(1)) if lb_match else 30
+
+            # Extract RAG settings
+            rag_match = re.search(r'\*\*RAG-Kontext verwenden:\*\* (Ja|Nein)', markdown_content)
+            use_rag = not rag_match or rag_match.group(1) == "Ja"
+
+            rag_docs_match = re.search(r'\*\*Max\. RAG-Dokumente:\*\* (\d+)', markdown_content)
+            max_rag_docs = int(rag_docs_match.group(1)) if rag_docs_match else 5
+
+            # Extract custom prompt
+            custom_prompt = None
+            prompt_match = re.search(r'## Benutzerdefinierter Prompt\s*\n\s*\n```\n(.+?)\n```', markdown_content, re.DOTALL)
+            if prompt_match:
+                custom_prompt = prompt_match.group(1).strip()
+
+            # Generate new ID for imported strategy
+            new_id = f"imported_{uuid.uuid4().hex[:8]}"
+
+            strategy = TradingStrategy(
+                id=new_id,
+                name=name,
+                description=description,
+                strategy_type=strategy_type,
+                risk_level=risk_level,
+                indicators=indicators,
+                min_buy_signals=min_buy,
+                min_sell_signals=min_sell,
+                stop_loss_atr_multiplier=stop_loss,
+                take_profit_atr_multiplier=take_profit,
+                max_position_size_percent=max_position,
+                preferred_timeframe=timeframe,
+                lookback_days=lookback,
+                custom_prompt=custom_prompt,
+                use_rag_context=use_rag,
+                max_rag_documents=max_rag_docs,
+                is_active=is_active,
+                is_default=False,  # Never import as default
+            )
+
+            logger.info(f"Imported strategy from markdown: {strategy.name}")
+            return strategy
+
+        except Exception as e:
+            logger.error(f"Failed to import strategy from markdown: {e}")
+            return None
+
+    async def import_and_save_strategy(self, markdown_content: str) -> Optional[TradingStrategy]:
+        """Import a strategy from Markdown and save it."""
+        strategy = self.import_strategy_from_markdown(markdown_content)
+        if strategy:
+            self._strategies[strategy.id] = strategy
+            self._save_strategies()
+            return strategy
+        return None

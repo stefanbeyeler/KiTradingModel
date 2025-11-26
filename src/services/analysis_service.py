@@ -139,10 +139,10 @@ class AnalysisService:
         if request.strategy_id:
             from .strategy_service import StrategyService
             strategy_service = StrategyService()
-            strategy = strategy_service.get_strategy(request.strategy_id)
+            strategy = await strategy_service.get_strategy(request.strategy_id)
             if not strategy:
                 # Try to get default strategy
-                strategy = strategy_service.get_default_strategy()
+                strategy = await strategy_service.get_default_strategy()
 
         strategy_name = strategy.name if strategy else "default"
         logger.info(f"Starting analysis for {request.symbol} (request_id: {request_id}, strategy: {strategy_name})")

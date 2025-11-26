@@ -930,13 +930,19 @@
             <!-- Strategien Tab -->
             <div id="tab-strategies" class="tab-content">
                 <div class="query-form">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
                         <p style="color: #94a3b8; font-size: 0.875rem;">
                             Wähle eine Strategie für die Analyse aus oder erstelle eine neue.
                         </p>
-                        <button class="btn btn-primary" onclick="showCreateStrategyModal()">
-                            + Neue Strategie
-                        </button>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn btn-secondary" onclick="document.getElementById('importFileInput').click()">
+                                Import
+                            </button>
+                            <input type="file" id="importFileInput" accept=".md" style="display: none;" onchange="importStrategy(this)">
+                            <button class="btn btn-primary" onclick="showCreateStrategyModal()">
+                                + Neue Strategie
+                            </button>
+                        </div>
                     </div>
                     <div id="strategiesGrid" class="strategies-grid">
                         <div style="text-align: center; padding: 2rem; color: #64748b;">
@@ -1588,6 +1594,7 @@
                     <div class="strategy-actions">
                         ${!s.is_default ? `<button class="btn btn-small btn-secondary" onclick="setDefaultStrategy('${s.id}')">Als Standard</button>` : ''}
                         <button class="btn btn-small btn-secondary" onclick="editStrategy('${s.id}')">Bearbeiten</button>
+                        <button class="btn btn-small btn-secondary" onclick="exportStrategy('${s.id}')" title="Als Markdown exportieren">Export</button>
                         ${!s.id.startsWith('default_') ? `
                             <button class="btn btn-small btn-danger" onclick="deleteStrategy('${s.id}')">Löschen</button>
                         ` : ''}
@@ -1760,6 +1767,72 @@
                 loadStrategies();
             } catch (error) {
                 showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // Export strategy as Markdown file
+        async function exportStrategy(id) {
+            try {
+                const response = await fetch(`${API_BASE}/strategies/${id}/export`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const blob = await response.blob();
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `strategy_${id}.md`;
+
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename="(.+)"/);
+                    if (match) filename = match[1];
+                }
+
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                showToast('Strategie exportiert', 'success');
+            } catch (error) {
+                showToast('Export fehlgeschlagen: ' + error.message, 'error');
+            }
+        }
+
+        // Import strategy from Markdown file
+        async function importStrategy(input) {
+            if (!input.files || input.files.length === 0) return;
+
+            const file = input.files[0];
+            if (!file.name.endsWith('.md')) {
+                showToast('Nur Markdown-Dateien (.md) werden akzeptiert', 'error');
+                input.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_BASE}/strategies/import`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || `HTTP ${response.status}`);
+                }
+
+                const strategy = await response.json();
+                showToast(`Strategie "${strategy.name}" importiert`, 'success');
+                loadStrategies();
+            } catch (error) {
+                showToast('Import fehlgeschlagen: ' + error.message, 'error');
+            } finally {
+                input.value = ''; // Reset file input
             }
         }
 

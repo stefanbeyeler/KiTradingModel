@@ -50,7 +50,7 @@ class Settings(BaseSettings):
         description="Ollama server host URL"
     )
     ollama_model: str = Field(
-        default="llama3.1:70b-instruct-q4_K_M",
+        default="llama3.1:8b",
         description="Ollama model to use for analysis"
     )
     ollama_num_ctx: int = Field(

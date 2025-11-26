@@ -3,7 +3,8 @@
 from datetime import datetime
 from typing import Optional
 import torch
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi.responses import PlainTextResponse
 from loguru import logger
 
 from ..config import settings
@@ -393,6 +394,32 @@ async def get_default_strategy():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/strategies/{strategy_id}/export", response_class=PlainTextResponse)
+async def export_strategy(strategy_id: str):
+    """Export a strategy as Markdown file."""
+    try:
+        strategy = await strategy_service.get_strategy(strategy_id)
+        if not strategy:
+            raise HTTPException(status_code=404, detail=f"Strategy '{strategy_id}' not found")
+
+        markdown = strategy_service.export_strategy_to_markdown(strategy)
+
+        # Set filename header for download
+        filename = f"strategy_{strategy.name.replace(' ', '_').lower()}.md"
+        return PlainTextResponse(
+            content=markdown,
+            media_type="text/markdown",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to export strategy: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/strategies/{strategy_id}", response_model=TradingStrategy)
 async def get_strategy(strategy_id: str):
     """Get a specific trading strategy by ID."""
@@ -464,4 +491,31 @@ async def set_default_strategy(strategy_id: str):
         raise
     except Exception as e:
         logger.error(f"Failed to set default strategy: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/strategies/import", response_model=TradingStrategy)
+async def import_strategy(file: UploadFile = File(...)):
+    """Import a strategy from a Markdown file."""
+    try:
+        # Validate file type
+        if not file.filename.endswith('.md'):
+            raise HTTPException(status_code=400, detail="Only Markdown (.md) files are accepted")
+
+        # Read file content
+        content = await file.read()
+        markdown_content = content.decode('utf-8')
+
+        # Import strategy
+        strategy = await strategy_service.import_and_save_strategy(markdown_content)
+        if not strategy:
+            raise HTTPException(status_code=400, detail="Failed to parse strategy from Markdown. Check file format.")
+
+        return strategy
+    except HTTPException:
+        raise
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="File must be UTF-8 encoded")
+    except Exception as e:
+        logger.error(f"Failed to import strategy: {e}")
         raise HTTPException(status_code=500, detail=str(e))
