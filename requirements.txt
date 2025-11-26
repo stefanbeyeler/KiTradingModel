@@ -7,7 +7,13 @@ pydantic-settings>=2.1.0
 # LLM Integration (Ollama for Llama 3.1 70B)
 ollama>=0.1.6
 
-# RAG System (FAISS)
+# PyTorch with CUDA support (for RTX 3070)
+# Install manually: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+torch>=2.0.0
+
+# RAG System (FAISS with GPU support)
+# For GPU: pip install faiss-gpu (requires CUDA)
+# For CPU fallback: pip install faiss-cpu
 faiss-cpu>=1.7.4
 sentence-transformers>=2.2.2
 

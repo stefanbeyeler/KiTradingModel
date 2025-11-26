@@ -2,9 +2,11 @@
 
 from datetime import datetime
 from typing import Optional
+import torch
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from loguru import logger
 
+from ..config import settings
 from ..models.trading_data import (
     AnalysisRequest,
     AnalysisResponse,
@@ -210,10 +212,13 @@ async def get_llm_status():
     """Check LLM model status."""
     try:
         is_available = await llm_service.check_model_available()
+        model_info = await llm_service.get_model_info()
         return {
             "model": llm_service.model,
             "host": llm_service.host,
-            "available": is_available
+            "available": is_available,
+            "options": model_info.get("options", {}),
+            "details": model_info.get("details", {})
         }
     except Exception as e:
         logger.error(f"LLM status check failed: {e}")
@@ -285,4 +290,51 @@ async def manual_sync(days_back: int = 7):
         }
     except Exception as e:
         logger.error(f"Manual sync failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/system/info")
+async def get_system_info():
+    """Get system and GPU information."""
+    try:
+        gpu_info = {}
+        if torch.cuda.is_available():
+            gpu_info = {
+                "available": True,
+                "name": torch.cuda.get_device_name(0),
+                "memory_total_gb": round(torch.cuda.get_device_properties(0).total_memory / (1024**3), 2),
+                "memory_allocated_gb": round(torch.cuda.memory_allocated(0) / (1024**3), 2),
+                "memory_reserved_gb": round(torch.cuda.memory_reserved(0) / (1024**3), 2),
+                "cuda_version": torch.version.cuda,
+            }
+        else:
+            gpu_info = {"available": False}
+
+        rag_service = get_rag_service()
+        rag_stats = await rag_service.get_collection_stats()
+
+        return {
+            "system": {
+                "device": settings.device,
+                "gpu_available": settings.gpu_available,
+                "gpu_name": settings.gpu_name,
+                "gpu_memory_gb": round(settings.gpu_memory_gb, 2),
+                "pytorch_version": torch.__version__,
+            },
+            "gpu_runtime": gpu_info,
+            "configuration": {
+                "ollama_model": settings.ollama_model,
+                "ollama_num_ctx": settings.ollama_num_ctx,
+                "ollama_num_gpu": settings.ollama_num_gpu,
+                "ollama_num_thread": settings.ollama_num_thread,
+                "embedding_model": settings.embedding_model,
+                "embedding_device": settings.device,
+                "embedding_batch_size": settings.embedding_batch_size,
+                "use_half_precision": settings.use_half_precision,
+                "faiss_use_gpu": settings.faiss_use_gpu,
+            },
+            "rag": rag_stats
+        }
+    except Exception as e:
+        logger.error(f"System info failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

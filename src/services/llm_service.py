@@ -1,4 +1,4 @@
-"""LLM Service for Llama 3.1 70B via Ollama."""
+"""LLM Service for Llama 3.1 70B via Ollama with GPU optimization."""
 
 import json
 from datetime import datetime
@@ -16,12 +16,24 @@ from ..models.trading_data import (
 
 
 class LLMService:
-    """Service for interacting with Llama 3.1 70B via Ollama."""
+    """Service for interacting with Llama 3.1 70B via Ollama with optimized settings."""
 
     def __init__(self):
         self.model = settings.ollama_model
         self.host = settings.ollama_host
         self._client = None
+
+        # Performance options optimized for i9-13900K + RTX 3070
+        self._options = {
+            "temperature": 0.3,
+            "num_ctx": settings.ollama_num_ctx,        # Context window
+            "num_gpu": settings.ollama_num_gpu,        # GPU layers (-1 = auto)
+            "num_thread": settings.ollama_num_thread,  # CPU threads (16 for i9-13900K)
+            "num_batch": 512,                          # Batch size for prompt processing
+            "num_keep": 24,                            # Tokens to keep from initial prompt
+        }
+
+        logger.info(f"LLM Service initialized - Model: {self.model}, Options: {self._options}")
 
     def _get_client(self):
         if self._client is None:
@@ -48,6 +60,22 @@ class LLMService:
             logger.error(f"Error checking model availability: {e}")
             return False
 
+    async def get_model_info(self) -> dict:
+        """Get information about the currently configured model."""
+        try:
+            client = self._get_client()
+            info = client.show(self.model)
+            return {
+                "model": self.model,
+                "parameters": info.get("parameters", {}),
+                "template": info.get("template", ""),
+                "details": info.get("details", {}),
+                "options": self._options
+            }
+        except Exception as e:
+            logger.error(f"Error getting model info: {e}")
+            return {"model": self.model, "error": str(e)}
+
     async def pull_model(self) -> bool:
         try:
             client = self._get_client()
@@ -61,13 +89,38 @@ class LLMService:
     async def generate_analysis(self, market_data: MarketAnalysis, rag_context: list[str], custom_prompt: Optional[str] = None) -> TradingRecommendation:
         try:
             client = self._get_client()
+
+            # Build context from RAG
+            context_str = ""
+            if rag_context:
+                context_str = "\n\nHistorischer Kontext:\n" + "\n---\n".join(rag_context[:5])
+
+            # Build the prompt
+            system_prompt = """Du bist ein erfahrener Trading-Analyst. Analysiere die Marktdaten und gib eine strukturierte Empfehlung.
+Antworte IMMER im folgenden JSON-Format:
+{
+    "signal": "buy" | "sell" | "hold",
+    "confidence": "high" | "medium" | "low",
+    "entry_price": <number or null>,
+    "stop_loss": <number or null>,
+    "take_profit": <number or null>,
+    "reasoning": "<kurze Begründung>",
+    "key_factors": ["<factor1>", "<factor2>"],
+    "risks": ["<risk1>", "<risk2>"],
+    "timeframe": "short_term" | "medium_term" | "long_term"
+}"""
+
+            user_prompt = f"{str(market_data)}{context_str}"
+            if custom_prompt:
+                user_prompt += f"\n\nZusätzliche Anweisungen: {custom_prompt}"
+
             response = client.chat(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "Du bist ein Trading-Experte. Antworte im JSON-Format."},
-                    {"role": "user", "content": str(market_data)}
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
                 ],
-                options={"temperature": 0.3}
+                options=self._options
             )
             return self._parse_recommendation(response["message"]["content"], market_data.symbol, market_data.current_price)
         except Exception as e:

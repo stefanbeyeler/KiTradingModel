@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Optional
 import numpy as np
 import faiss
+import torch
 from sentence_transformers import SentenceTransformer
 from loguru import logger
 
@@ -26,20 +27,42 @@ class RAGService:
         self.persist_directory = settings.faiss_persist_directory
         self._embedding_model = None
         self._index = None
+        self._gpu_index = None
+        self._gpu_resources = None
         self._documents = []
         self._metadatas = []
         self._ids = []
         self._dimension = 384  # Default for all-MiniLM-L6-v2
+        self._device = settings.device
+        self._use_gpu_faiss = settings.faiss_use_gpu and self._check_faiss_gpu()
+
+        logger.info(f"RAG Service initialized - Device: {self._device}, FAISS GPU: {self._use_gpu_faiss}")
+
+    def _check_faiss_gpu(self) -> bool:
+        """Check if FAISS GPU is available."""
+        try:
+            return hasattr(faiss, 'StandardGpuResources') and torch.cuda.is_available()
+        except Exception:
+            return False
 
     def _get_embedding_model(self):
-        """Get or create the embedding model."""
+        """Get or create the embedding model with GPU support."""
         if self._embedding_model is None:
-            self._embedding_model = SentenceTransformer(settings.embedding_model)
-            logger.info(f"Loaded embedding model: {settings.embedding_model}")
+            self._embedding_model = SentenceTransformer(
+                settings.embedding_model,
+                device=self._device
+            )
+
+            # Use half precision on GPU to save VRAM
+            if self._device == "cuda" and settings.use_half_precision:
+                self._embedding_model = self._embedding_model.half()
+                logger.info("Using FP16 precision for embeddings")
+
+            logger.info(f"Loaded embedding model: {settings.embedding_model} on {self._device}")
         return self._embedding_model
 
     def _get_index(self):
-        """Get or create the FAISS index."""
+        """Get or create the FAISS index with optional GPU support."""
         if self._index is None:
             index_path = os.path.join(self.persist_directory, "faiss.index")
             data_path = os.path.join(self.persist_directory, "data.pkl")
@@ -61,13 +84,49 @@ class RAGService:
                 self._ids = []
                 logger.info("Created new FAISS index")
 
+            # Move index to GPU if available and enabled
+            if self._use_gpu_faiss:
+                self._index = self._move_index_to_gpu(self._index)
+
         return self._index
 
+    def _move_index_to_gpu(self, index):
+        """Move FAISS index to GPU for faster search."""
+        try:
+            if self._gpu_resources is None:
+                self._gpu_resources = faiss.StandardGpuResources()
+                # Limit GPU memory usage for FAISS (reserve memory for embeddings)
+                self._gpu_resources.setTempMemory(256 * 1024 * 1024)  # 256MB
+
+            gpu_index = faiss.index_cpu_to_gpu(self._gpu_resources, 0, index)
+            logger.info("FAISS index moved to GPU")
+            return gpu_index
+        except Exception as e:
+            logger.warning(f"Failed to move FAISS index to GPU: {e}. Using CPU.")
+            self._use_gpu_faiss = False
+            return index
+
     def _generate_embedding(self, text: str) -> np.ndarray:
-        """Generate embedding for text."""
+        """Generate embedding for text using GPU if available."""
         model = self._get_embedding_model()
-        embedding = model.encode(text)
+        embedding = model.encode(
+            text,
+            convert_to_numpy=True,
+            normalize_embeddings=True
+        )
         return embedding.astype('float32')
+
+    def _generate_embeddings_batch(self, texts: list[str]) -> np.ndarray:
+        """Generate embeddings for multiple texts in batch (more efficient on GPU)."""
+        model = self._get_embedding_model()
+        embeddings = model.encode(
+            texts,
+            batch_size=settings.embedding_batch_size,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=len(texts) > 100
+        )
+        return embeddings.astype('float32')
 
     async def add_analysis(
         self,
@@ -290,7 +349,12 @@ Risiken: {', '.join(recommendation.risks)}
         index_path = os.path.join(self.persist_directory, "faiss.index")
         data_path = os.path.join(self.persist_directory, "data.pkl")
 
-        faiss.write_index(index, index_path)
+        # Convert GPU index back to CPU for saving
+        if self._use_gpu_faiss:
+            cpu_index = faiss.index_gpu_to_cpu(index)
+            faiss.write_index(cpu_index, index_path)
+        else:
+            faiss.write_index(index, index_path)
 
         with open(data_path, "wb") as f:
             pickle.dump({
@@ -308,6 +372,8 @@ Risiken: {', '.join(recommendation.risks)}
         return {
             "collection_name": "trading_history",
             "document_count": len(self._documents),
+            "device": self._device,
+            "faiss_gpu": self._use_gpu_faiss,
             "persist_directory": self.persist_directory
         }
 

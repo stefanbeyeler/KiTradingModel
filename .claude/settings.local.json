@@ -40,7 +40,16 @@
       "Bash(taskkill //F //PID 9612)",
       "Bash(timeout:*)",
       "Bash(docker exec:*)",
-      "Bash(docker stop:*)"
+      "Bash(docker stop:*)",
+      "Bash(nvidia-smi:*)",
+      "Bash(wmic cpu get name,numberofcores,numberoflogicalprocessors /format:list)",
+      "Bash(wmic:*)",
+      "Bash(cmd //c setup_gpu.bat)",
+      "Bash(venv/Scripts/activate)",
+      "Bash(pip install:*)",
+      "Bash(e:/KITradingModel/venv/Scripts/pip.exe uninstall:*)",
+      "Bash(e:/KITradingModel/venv/Scripts/pip.exe install:*)",
+      "Bash(e:/KITradingModel/venv/Scripts/python.exe:*)"
     ],
     "deny": [],
     "ask": []
