@@ -1,5 +1,6 @@
 """Analysis Service - Main pipeline for generating trading recommendations."""
 
+import asyncio
 import time
 import uuid
 from datetime import datetime, timedelta
@@ -19,6 +20,7 @@ from ..models.trading_data import (
     AnalysisRequest,
     AnalysisResponse,
     SignalType,
+    ConfidenceLevel,
 )
 from .llm_service import LLMService
 from .rag_service import RAGService
@@ -521,27 +523,225 @@ class AnalysisService:
         return support_levels, resistance_levels
 
     async def _get_rag_context(self, analysis: MarketAnalysis) -> list[str]:
-        """Get relevant context from RAG system."""
+        """Get relevant context from RAG system (parallelized)."""
 
-        # Get similar historical market conditions
-        similar_conditions = await self.rag_service.get_similar_market_conditions(
-            analysis=analysis,
-            n_results=settings.max_context_documents // 2
-        )
-
-        # Query for patterns related to current indicators
+        # Build query for patterns
         query = f"""
 {analysis.symbol} mit RSI {analysis.technical_indicators.rsi}
 und {analysis.trend} Trend bei {analysis.volatility} Volatilität
 """
-        patterns = await self.rag_service.query_relevant_context(
+
+        # Run both RAG queries in parallel for better performance
+        similar_task = self.rag_service.get_similar_market_conditions(
+            analysis=analysis,
+            n_results=settings.max_context_documents // 2
+        )
+
+        patterns_task = self.rag_service.query_relevant_context(
             query=query,
             symbol=analysis.symbol,
             n_results=settings.max_context_documents // 2,
             document_types=["pattern", "analysis"]
         )
 
+        similar_conditions, patterns = await asyncio.gather(similar_task, patterns_task)
+
         return similar_conditions + patterns
+
+    async def quick_recommendation(
+        self,
+        symbol: str,
+        lookback_days: int = 30,
+        use_llm: bool = False
+    ) -> TradingRecommendation:
+        """
+        Generate a fast trading recommendation based on technical indicators only.
+
+        This is much faster than full analysis as it skips LLM inference by default.
+
+        Args:
+            symbol: Trading symbol
+            lookback_days: Days of historical data
+            use_llm: If True, use LLM for analysis (slower but more detailed)
+
+        Returns:
+            TradingRecommendation
+        """
+        start_time = time.time()
+        logger.info(f"Quick recommendation for {symbol} (use_llm={use_llm})")
+
+        # Fetch time series data
+        time_series = await self._fetch_time_series(
+            symbol=symbol,
+            start_date=datetime.now() - timedelta(days=lookback_days),
+            end_date=datetime.now()
+        )
+
+        if not time_series:
+            raise ValueError(f"No data available for symbol {symbol}")
+
+        # Calculate technical indicators
+        market_analysis = await self._create_market_analysis(
+            symbol=symbol,
+            time_series=time_series
+        )
+
+        if use_llm:
+            # Use LLM for detailed analysis (slower)
+            rag_context = await self._get_rag_context(market_analysis)
+            recommendation = await self.llm_service.generate_analysis(
+                market_data=market_analysis,
+                rag_context=rag_context
+            )
+        else:
+            # Fast rule-based recommendation (no LLM)
+            recommendation = self._generate_rule_based_recommendation(market_analysis)
+
+        processing_time = (time.time() - start_time) * 1000
+        logger.info(f"Quick recommendation for {symbol}: {recommendation.signal} ({processing_time:.0f}ms)")
+
+        return recommendation
+
+    def _generate_rule_based_recommendation(
+        self,
+        analysis: MarketAnalysis
+    ) -> TradingRecommendation:
+        """Generate a recommendation based on technical indicators without LLM."""
+
+        buy_signals = 0
+        sell_signals = 0
+        key_factors = []
+        risks = []
+
+        indicators = analysis.technical_indicators
+        current_price = analysis.current_price
+
+        # RSI Analysis
+        if indicators.rsi:
+            if indicators.rsi < 30:
+                buy_signals += 2
+                key_factors.append(f"RSI überverkauft ({indicators.rsi:.1f})")
+            elif indicators.rsi < 40:
+                buy_signals += 1
+                key_factors.append(f"RSI niedrig ({indicators.rsi:.1f})")
+            elif indicators.rsi > 70:
+                sell_signals += 2
+                key_factors.append(f"RSI überkauft ({indicators.rsi:.1f})")
+            elif indicators.rsi > 60:
+                sell_signals += 1
+                key_factors.append(f"RSI hoch ({indicators.rsi:.1f})")
+
+        # MACD Analysis
+        if indicators.macd and indicators.macd_signal:
+            if indicators.macd > indicators.macd_signal:
+                buy_signals += 1
+                if indicators.macd_histogram and indicators.macd_histogram > 0:
+                    buy_signals += 1
+                    key_factors.append("MACD bullish mit positivem Histogram")
+            else:
+                sell_signals += 1
+                if indicators.macd_histogram and indicators.macd_histogram < 0:
+                    sell_signals += 1
+                    key_factors.append("MACD bearish mit negativem Histogram")
+
+        # Moving Average Analysis
+        if indicators.sma_20 and indicators.sma_50:
+            if indicators.sma_20 > indicators.sma_50:
+                buy_signals += 1
+                key_factors.append("Golden Cross (SMA20 > SMA50)")
+            else:
+                sell_signals += 1
+                key_factors.append("Death Cross (SMA20 < SMA50)")
+
+        if indicators.sma_200:
+            if current_price > indicators.sma_200:
+                buy_signals += 1
+                key_factors.append("Preis über SMA200 (Aufwärtstrend)")
+            else:
+                sell_signals += 1
+                risks.append("Preis unter SMA200 (Abwärtstrend)")
+
+        # Bollinger Band Analysis
+        if indicators.bollinger_lower and indicators.bollinger_upper:
+            bb_position = (current_price - indicators.bollinger_lower) / (indicators.bollinger_upper - indicators.bollinger_lower)
+            if bb_position < 0.2:
+                buy_signals += 1
+                key_factors.append("Preis nahe unterem Bollinger Band")
+            elif bb_position > 0.8:
+                sell_signals += 1
+                key_factors.append("Preis nahe oberem Bollinger Band")
+
+        # Trend Analysis
+        if analysis.trend in ["strong_uptrend", "uptrend"]:
+            buy_signals += 1
+        elif analysis.trend in ["strong_downtrend", "downtrend"]:
+            sell_signals += 1
+
+        # Volatility Risk
+        if analysis.volatility in ["high", "very_high"]:
+            risks.append(f"Hohe Volatilität ({analysis.volatility})")
+
+        # Determine signal and confidence
+        signal_diff = buy_signals - sell_signals
+
+        if signal_diff >= 4:
+            signal = SignalType.BUY
+            confidence = ConfidenceLevel.HIGH
+        elif signal_diff >= 2:
+            signal = SignalType.BUY
+            confidence = ConfidenceLevel.MEDIUM
+        elif signal_diff >= 1:
+            signal = SignalType.BUY
+            confidence = ConfidenceLevel.LOW
+        elif signal_diff <= -4:
+            signal = SignalType.SELL
+            confidence = ConfidenceLevel.HIGH
+        elif signal_diff <= -2:
+            signal = SignalType.SELL
+            confidence = ConfidenceLevel.MEDIUM
+        elif signal_diff <= -1:
+            signal = SignalType.SELL
+            confidence = ConfidenceLevel.LOW
+        else:
+            signal = SignalType.HOLD
+            confidence = ConfidenceLevel.MEDIUM
+
+        # Calculate entry, stop-loss, take-profit
+        entry_price = current_price
+        atr = indicators.atr if indicators.atr else current_price * 0.02
+
+        if signal == SignalType.BUY:
+            stop_loss = current_price - (2 * atr)
+            take_profit = current_price + (3 * atr)
+            reasoning = f"Technische Indikatoren zeigen {buy_signals} Kaufsignale vs {sell_signals} Verkaufssignale"
+        elif signal == SignalType.SELL:
+            stop_loss = current_price + (2 * atr)
+            take_profit = current_price - (3 * atr)
+            reasoning = f"Technische Indikatoren zeigen {sell_signals} Verkaufssignale vs {buy_signals} Kaufsignale"
+        else:
+            stop_loss = None
+            take_profit = None
+            reasoning = "Keine klare Richtung - abwarten empfohlen"
+
+        # Add default factors if none found
+        if not key_factors:
+            key_factors = ["Keine starken Signale identifiziert"]
+        if not risks:
+            risks = ["Marktrisiko beachten"]
+
+        return TradingRecommendation(
+            symbol=analysis.symbol,
+            timestamp=datetime.utcnow(),
+            signal=signal,
+            confidence=confidence,
+            entry_price=round(entry_price, 4) if entry_price else None,
+            stop_loss=round(stop_loss, 4) if stop_loss else None,
+            take_profit=round(take_profit, 4) if take_profit else None,
+            reasoning=reasoning,
+            key_factors=key_factors[:5],
+            risks=risks[:3],
+            timeframe="short_term"
+        )
 
     async def health_check(self) -> dict:
         """Check health of all services."""

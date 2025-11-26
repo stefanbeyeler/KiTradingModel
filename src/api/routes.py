@@ -90,17 +90,22 @@ async def analyze_symbol(request: AnalysisRequest):
 @router.get("/recommendation/{symbol}", response_model=TradingRecommendation)
 async def get_quick_recommendation(
     symbol: str,
-    lookback_days: int = 30
+    lookback_days: int = 30,
+    use_llm: bool = False
 ):
-    """Get a quick trading recommendation for a symbol."""
+    """
+    Get a quick trading recommendation for a symbol.
+
+    By default uses fast rule-based analysis (~100ms).
+    Set use_llm=true for detailed LLM analysis (~30-60s).
+    """
     try:
-        request = AnalysisRequest(
+        recommendation = await analysis_service.quick_recommendation(
             symbol=symbol,
             lookback_days=lookback_days,
-            include_technical=True
+            use_llm=use_llm
         )
-        response = await analysis_service.analyze(request)
-        return response.recommendation
+        return recommendation
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
