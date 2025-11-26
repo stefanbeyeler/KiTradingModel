@@ -38,7 +38,9 @@
       "Bash(taskkill:*)",
       "Bash(taskkill //F //PID 25424)",
       "Bash(taskkill //F //PID 9612)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker stop:*)"
     ],
     "deny": [],
     "ask": []
