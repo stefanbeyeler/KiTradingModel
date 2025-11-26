@@ -4,6 +4,7 @@ import json
 import os
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 from loguru import logger
 
@@ -17,6 +18,18 @@ from ..models.trading_data import (
     StrategyUpdateRequest,
 )
 
+# Mapping from strategy type to markdown file name
+# Available files: momentum.md, trend_following.md, day_trading.md, mean_reversion.md, scalping.md
+STRATEGY_PROMPT_FILES = {
+    StrategyType.TREND_FOLLOWING: "trend_following.md",
+    StrategyType.MEAN_REVERSION: "mean_reversion.md",
+    StrategyType.MOMENTUM: "momentum.md",
+    StrategyType.SCALPING: "scalping.md",
+    StrategyType.SWING: "day_trading.md",  # Use day_trading for swing (similar approach)
+    StrategyType.BREAKOUT: "momentum.md",  # Use momentum for breakout (similar momentum-based approach)
+    StrategyType.CUSTOM: "day_trading.md",  # Default for custom strategies
+}
+
 
 class StrategyService:
     """Service for managing trading strategies."""
@@ -24,8 +37,11 @@ class StrategyService:
     def __init__(self):
         self._strategies: dict[str, TradingStrategy] = {}
         self._storage_path = os.path.join(settings.faiss_persist_directory, "strategies.json")
+        self._strategy_prompts_dir = Path(__file__).parent.parent.parent / "trading_strategies"
+        self._prompt_cache: dict[str, str] = {}
         self._load_strategies()
         self._ensure_default_strategies()
+        self._load_strategy_prompts()
 
     def _load_strategies(self):
         """Load strategies from disk."""
@@ -57,6 +73,30 @@ class StrategyService:
         if not self._strategies:
             self._create_default_strategies()
             self._save_strategies()
+
+    def _load_strategy_prompts(self):
+        """Load strategy prompts from markdown files."""
+        if not self._strategy_prompts_dir.exists():
+            logger.warning(f"Strategy prompts directory not found: {self._strategy_prompts_dir}")
+            return
+
+        for strategy_type, filename in STRATEGY_PROMPT_FILES.items():
+            prompt_path = self._strategy_prompts_dir / filename
+            if prompt_path.exists():
+                try:
+                    with open(prompt_path, "r", encoding="utf-8") as f:
+                        self._prompt_cache[strategy_type.value] = f.read()
+                    logger.debug(f"Loaded prompt for {strategy_type.value} from {filename}")
+                except Exception as e:
+                    logger.error(f"Failed to load prompt from {filename}: {e}")
+            else:
+                logger.warning(f"Prompt file not found: {prompt_path}")
+
+        logger.info(f"Loaded {len(self._prompt_cache)} strategy prompts")
+
+    def get_strategy_prompt_template(self, strategy_type: StrategyType) -> Optional[str]:
+        """Get the prompt template for a strategy type from the cache."""
+        return self._prompt_cache.get(strategy_type.value)
 
     def _create_default_strategies(self):
         """Create built-in default strategies."""
@@ -304,7 +344,11 @@ class StrategyService:
             ]
 
     def get_strategy_prompt(self, strategy: TradingStrategy) -> str:
-        """Generate a custom prompt based on the strategy configuration."""
+        """Generate a custom prompt based on the strategy configuration.
+
+        This returns a short strategy-specific prompt for quick context.
+        For full analysis prompts, use get_full_analysis_prompt().
+        """
         prompt_parts = []
 
         # Strategy type description
@@ -340,6 +384,59 @@ class StrategyService:
                 prompt_parts.append(f"Besonders wichtige Indikatoren: {', '.join(important_indicators)}")
 
         return " ".join(filter(None, prompt_parts))
+
+    def get_full_analysis_prompt(self, strategy: TradingStrategy) -> str:
+        """Get the full analysis prompt template for a strategy.
+
+        This combines the markdown template from trading_strategies folder
+        with strategy-specific customizations.
+        """
+        # Get the base template from cache
+        base_template = self._prompt_cache.get(strategy.strategy_type.value)
+
+        if not base_template:
+            # Fallback to day_trading template if specific template not found
+            base_template = self._prompt_cache.get(StrategyType.CUSTOM.value, "")
+            if not base_template:
+                logger.warning(f"No prompt template found for {strategy.strategy_type.value}")
+                return self.get_strategy_prompt(strategy)
+
+        # Build strategy-specific additions
+        additions = []
+
+        # Add risk level context
+        risk_context = {
+            RiskLevel.CONSERVATIVE: "\n## Risk Profile: Conservative\n- Only recommend trades with high confidence (>70)\n- Prefer wider stop losses and smaller position sizes\n- Focus on capital preservation",
+            RiskLevel.MODERATE: "\n## Risk Profile: Moderate\n- Balance between opportunity and risk\n- Standard position sizing and stop losses\n- Accept medium confidence setups (>50)",
+            RiskLevel.AGGRESSIVE: "\n## Risk Profile: Aggressive\n- Accept higher risk for higher potential returns\n- Can use tighter stops and larger positions\n- Consider lower confidence setups (>40)",
+        }
+        if strategy.risk_level in risk_context:
+            additions.append(risk_context[strategy.risk_level])
+
+        # Add indicator focus
+        if strategy.indicators:
+            enabled_indicators = [i.name for i in strategy.indicators if i.enabled]
+            high_weight_indicators = [i.name for i in strategy.indicators if i.weight >= 1.5 and i.enabled]
+
+            if enabled_indicators:
+                additions.append(f"\n## Enabled Indicators\n{', '.join(enabled_indicators)}")
+            if high_weight_indicators:
+                additions.append(f"\n## Primary Indicators (High Weight)\n{', '.join(high_weight_indicators)}")
+
+        # Add custom prompt if defined
+        if strategy.custom_prompt:
+            additions.append(f"\n## Custom Instructions\n{strategy.custom_prompt}")
+
+        # Add signal thresholds
+        additions.append(f"\n## Signal Thresholds\n- Minimum buy signals required: {strategy.min_buy_signals}\n- Minimum sell signals required: {strategy.min_sell_signals}")
+
+        # Add risk management parameters
+        additions.append(f"\n## Risk Management Parameters\n- Stop Loss ATR Multiplier: {strategy.stop_loss_atr_multiplier}\n- Take Profit ATR Multiplier: {strategy.take_profit_atr_multiplier}\n- Max Position Size: {strategy.max_position_size_percent}%")
+
+        # Combine base template with additions
+        full_prompt = base_template + "\n" + "\n".join(additions)
+
+        return full_prompt
 
     def export_strategy_to_markdown(self, strategy: TradingStrategy) -> str:
         """Export a strategy to Markdown format."""
