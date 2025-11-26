@@ -11,8 +11,11 @@ from ..models.trading_data import (
     AnalysisRequest,
     AnalysisResponse,
     TradingRecommendation,
+    TradingStrategy,
+    StrategyCreateRequest,
+    StrategyUpdateRequest,
 )
-from ..services import AnalysisService, LLMService
+from ..services import AnalysisService, LLMService, StrategyService
 
 
 router = APIRouter()
@@ -20,6 +23,7 @@ router = APIRouter()
 # Service instances
 analysis_service = AnalysisService()
 llm_service = LLMService()
+strategy_service = StrategyService()
 
 
 def get_rag_service():
@@ -91,21 +95,35 @@ async def analyze_symbol(request: AnalysisRequest):
 async def get_quick_recommendation(
     symbol: str,
     lookback_days: int = 30,
-    use_llm: bool = False
+    use_llm: bool = False,
+    strategy_id: Optional[str] = None
 ):
     """
     Get a quick trading recommendation for a symbol.
 
     By default uses fast rule-based analysis (~100ms).
     Set use_llm=true for detailed LLM analysis (~30-60s).
+    Optionally specify a strategy_id to use a specific trading strategy.
     """
     try:
+        # Get strategy if specified, otherwise use default
+        strategy = None
+        if strategy_id:
+            strategy = await strategy_service.get_strategy(strategy_id)
+            if not strategy:
+                raise HTTPException(status_code=404, detail=f"Strategy '{strategy_id}' not found")
+        else:
+            strategy = await strategy_service.get_default_strategy()
+
         recommendation = await analysis_service.quick_recommendation(
             symbol=symbol,
             lookback_days=lookback_days,
-            use_llm=use_llm
+            use_llm=use_llm,
+            strategy=strategy
         )
         return recommendation
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -342,4 +360,108 @@ async def get_system_info():
         }
     except Exception as e:
         logger.error(f"System info failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# Trading Strategy Endpoints
+# ============================================
+
+@router.get("/strategies", response_model=list[TradingStrategy])
+async def get_strategies(include_inactive: bool = False):
+    """Get all trading strategies."""
+    try:
+        strategies = await strategy_service.get_all_strategies(include_inactive=include_inactive)
+        return strategies
+    except Exception as e:
+        logger.error(f"Failed to get strategies: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/strategies/default", response_model=TradingStrategy)
+async def get_default_strategy():
+    """Get the default trading strategy."""
+    try:
+        strategy = await strategy_service.get_default_strategy()
+        if not strategy:
+            raise HTTPException(status_code=404, detail="No default strategy found")
+        return strategy
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get default strategy: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/strategies/{strategy_id}", response_model=TradingStrategy)
+async def get_strategy(strategy_id: str):
+    """Get a specific trading strategy by ID."""
+    try:
+        strategy = await strategy_service.get_strategy(strategy_id)
+        if not strategy:
+            raise HTTPException(status_code=404, detail=f"Strategy '{strategy_id}' not found")
+        return strategy
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get strategy: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/strategies", response_model=TradingStrategy)
+async def create_strategy(request: StrategyCreateRequest):
+    """Create a new trading strategy."""
+    try:
+        strategy = await strategy_service.create_strategy(request)
+        return strategy
+    except Exception as e:
+        logger.error(f"Failed to create strategy: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/strategies/{strategy_id}", response_model=TradingStrategy)
+async def update_strategy(strategy_id: str, request: StrategyUpdateRequest):
+    """Update an existing trading strategy."""
+    try:
+        strategy = await strategy_service.update_strategy(strategy_id, request)
+        if not strategy:
+            raise HTTPException(status_code=404, detail=f"Strategy '{strategy_id}' not found")
+        return strategy
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update strategy: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/strategies/{strategy_id}")
+async def delete_strategy(strategy_id: str):
+    """Delete a trading strategy (only custom strategies can be deleted)."""
+    try:
+        deleted = await strategy_service.delete_strategy(strategy_id)
+        if not deleted:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete strategy '{strategy_id}'. Either it doesn't exist or it's a default strategy."
+            )
+        return {"status": "deleted", "strategy_id": strategy_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete strategy: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/strategies/{strategy_id}/set-default", response_model=TradingStrategy)
+async def set_default_strategy(strategy_id: str):
+    """Set a strategy as the default."""
+    try:
+        strategy = await strategy_service.set_default_strategy(strategy_id)
+        if not strategy:
+            raise HTTPException(status_code=404, detail=f"Strategy '{strategy_id}' not found")
+        return strategy
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to set default strategy: {e}")
         raise HTTPException(status_code=500, detail=str(e))

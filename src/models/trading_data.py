@@ -99,6 +99,7 @@ class AnalysisRequest(BaseModel):
     include_technical: bool = True
     include_sentiment: bool = False
     custom_prompt: Optional[str] = None
+    strategy_id: Optional[str] = None
 
 
 class AnalysisResponse(BaseModel):
@@ -121,3 +122,107 @@ class RAGDocument(BaseModel):
     timestamp: datetime
     symbol: Optional[str] = None
     document_type: str  # e.g., "analysis", "news", "pattern", "indicator"
+
+
+# ============================================
+# Trading Strategy Models
+# ============================================
+
+class StrategyType(str, Enum):
+    """Types of trading strategies."""
+    TREND_FOLLOWING = "trend_following"
+    MEAN_REVERSION = "mean_reversion"
+    MOMENTUM = "momentum"
+    BREAKOUT = "breakout"
+    SCALPING = "scalping"
+    SWING = "swing"
+    CUSTOM = "custom"
+
+
+class RiskLevel(str, Enum):
+    """Risk tolerance levels."""
+    CONSERVATIVE = "conservative"
+    MODERATE = "moderate"
+    AGGRESSIVE = "aggressive"
+
+
+class IndicatorConfig(BaseModel):
+    """Configuration for a technical indicator."""
+    name: str
+    enabled: bool = True
+    weight: float = Field(default=1.0, ge=0.0, le=5.0)
+    parameters: dict = Field(default_factory=dict)
+    buy_threshold: Optional[float] = None
+    sell_threshold: Optional[float] = None
+
+
+class TradingStrategy(BaseModel):
+    """Trading strategy configuration."""
+    id: str
+    name: str
+    description: str = ""
+    strategy_type: StrategyType = StrategyType.CUSTOM
+    risk_level: RiskLevel = RiskLevel.MODERATE
+
+    # Indicator configurations
+    indicators: list[IndicatorConfig] = Field(default_factory=list)
+
+    # Signal thresholds
+    min_buy_signals: int = Field(default=3, ge=1, le=10)
+    min_sell_signals: int = Field(default=3, ge=1, le=10)
+
+    # Risk management
+    stop_loss_atr_multiplier: float = Field(default=2.0, ge=0.5, le=5.0)
+    take_profit_atr_multiplier: float = Field(default=3.0, ge=1.0, le=10.0)
+    max_position_size_percent: float = Field(default=5.0, ge=1.0, le=100.0)
+
+    # Timeframe preferences
+    preferred_timeframe: str = "short_term"
+    lookback_days: int = Field(default=30, ge=7, le=365)
+
+    # LLM prompt customization
+    custom_prompt: Optional[str] = None
+    use_rag_context: bool = True
+    max_rag_documents: int = Field(default=5, ge=0, le=20)
+
+    # Metadata
+    is_active: bool = True
+    is_default: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class StrategyCreateRequest(BaseModel):
+    """Request to create a new trading strategy."""
+    name: str
+    description: str = ""
+    strategy_type: StrategyType = StrategyType.CUSTOM
+    risk_level: RiskLevel = RiskLevel.MODERATE
+    indicators: list[IndicatorConfig] = Field(default_factory=list)
+    min_buy_signals: int = Field(default=3, ge=1, le=10)
+    min_sell_signals: int = Field(default=3, ge=1, le=10)
+    stop_loss_atr_multiplier: float = Field(default=2.0, ge=0.5, le=5.0)
+    take_profit_atr_multiplier: float = Field(default=3.0, ge=1.0, le=10.0)
+    preferred_timeframe: str = "short_term"
+    lookback_days: int = Field(default=30, ge=7, le=365)
+    custom_prompt: Optional[str] = None
+    use_rag_context: bool = True
+
+
+class StrategyUpdateRequest(BaseModel):
+    """Request to update an existing trading strategy."""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    strategy_type: Optional[StrategyType] = None
+    risk_level: Optional[RiskLevel] = None
+    indicators: Optional[list[IndicatorConfig]] = None
+    min_buy_signals: Optional[int] = None
+    min_sell_signals: Optional[int] = None
+    stop_loss_atr_multiplier: Optional[float] = None
+    take_profit_atr_multiplier: Optional[float] = None
+    preferred_timeframe: Optional[str] = None
+    lookback_days: Optional[int] = None
+    custom_prompt: Optional[str] = None
+    use_rag_context: Optional[bool] = None
+    is_active: Optional[bool] = None
+    is_default: Optional[bool] = None

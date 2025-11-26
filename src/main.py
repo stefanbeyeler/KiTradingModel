@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from loguru import logger
 import sys
 import os
@@ -68,7 +68,17 @@ async def dashboard():
     """Serve the monitoring dashboard."""
     dashboard_path = os.path.join(static_dir, "index.html")
     if os.path.exists(dashboard_path):
-        return FileResponse(dashboard_path)
+        # Read the file content directly to bypass any caching
+        with open(dashboard_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return HTMLResponse(
+            content=content,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
     return {"error": "Dashboard not found"}
 
 

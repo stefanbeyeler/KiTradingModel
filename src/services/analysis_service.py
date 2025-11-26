@@ -21,6 +21,8 @@ from ..models.trading_data import (
     AnalysisResponse,
     SignalType,
     ConfidenceLevel,
+    TradingStrategy,
+    RiskLevel,
 )
 from .llm_service import LLMService
 from .rag_service import RAGService
@@ -132,13 +134,27 @@ class AnalysisService:
         start_time = time.time()
         request_id = str(uuid.uuid4())
 
-        logger.info(f"Starting analysis for {request.symbol} (request_id: {request_id})")
+        # Load strategy if specified
+        strategy = None
+        if request.strategy_id:
+            from .strategy_service import StrategyService
+            strategy_service = StrategyService()
+            strategy = strategy_service.get_strategy(request.strategy_id)
+            if not strategy:
+                # Try to get default strategy
+                strategy = strategy_service.get_default_strategy()
+
+        strategy_name = strategy.name if strategy else "default"
+        logger.info(f"Starting analysis for {request.symbol} (request_id: {request_id}, strategy: {strategy_name})")
 
         try:
+            # Use strategy's lookback_days if available
+            effective_lookback = strategy.lookback_days if strategy else request.lookback_days
+
             # 1. Fetch time series data from TimescaleDB
             time_series = await self._fetch_time_series(
                 symbol=request.symbol,
-                start_date=datetime.now() - timedelta(days=request.lookback_days),
+                start_date=datetime.now() - timedelta(days=effective_lookback),
                 end_date=datetime.now()
             )
 
@@ -151,17 +167,30 @@ class AnalysisService:
                 time_series=time_series
             )
 
-            # 3. Query relevant historical context from RAG
-            rag_context = await self._get_rag_context(market_analysis)
+            # 3. Query relevant historical context from RAG (if strategy allows)
+            rag_context = []
+            if strategy is None or strategy.use_rag_context:
+                rag_context = await self._get_rag_context(market_analysis)
 
-            # 4. Generate recommendation using LLM
+            # 4. Build custom prompt from strategy
+            custom_prompt = request.custom_prompt
+            if strategy and not custom_prompt:
+                from .strategy_service import StrategyService
+                strategy_service = StrategyService()
+                custom_prompt = strategy_service.get_strategy_prompt(strategy)
+
+            # 5. Generate recommendation using LLM
             recommendation = await self.llm_service.generate_analysis(
                 market_data=market_analysis,
                 rag_context=rag_context,
-                custom_prompt=request.custom_prompt
+                custom_prompt=custom_prompt
             )
 
-            # 5. Store analysis in RAG for future reference
+            # Add strategy name to reasoning if used
+            if strategy and recommendation.reasoning:
+                recommendation.reasoning = f"[{strategy.name}] {recommendation.reasoning}"
+
+            # 6. Store analysis in RAG for future reference
             await self.rag_service.add_analysis(market_analysis, recommendation)
 
             # Calculate processing time
@@ -180,7 +209,7 @@ class AnalysisService:
 
             logger.info(
                 f"Analysis complete for {request.symbol}: {recommendation.signal} "
-                f"({processing_time:.2f}ms)"
+                f"({processing_time:.2f}ms, strategy: {strategy_name})"
             )
 
             return response
@@ -552,7 +581,8 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
         self,
         symbol: str,
         lookback_days: int = 30,
-        use_llm: bool = False
+        use_llm: bool = False,
+        strategy: Optional[TradingStrategy] = None
     ) -> TradingRecommendation:
         """
         Generate a fast trading recommendation based on technical indicators only.
@@ -563,17 +593,22 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
             symbol: Trading symbol
             lookback_days: Days of historical data
             use_llm: If True, use LLM for analysis (slower but more detailed)
+            strategy: Optional trading strategy to use
 
         Returns:
             TradingRecommendation
         """
         start_time = time.time()
-        logger.info(f"Quick recommendation for {symbol} (use_llm={use_llm})")
+        strategy_name = strategy.name if strategy else "default"
+        logger.info(f"Quick recommendation for {symbol} (use_llm={use_llm}, strategy={strategy_name})")
+
+        # Use strategy's lookback_days if available
+        effective_lookback = strategy.lookback_days if strategy else lookback_days
 
         # Fetch time series data
         time_series = await self._fetch_time_series(
             symbol=symbol,
-            start_date=datetime.now() - timedelta(days=lookback_days),
+            start_date=datetime.now() - timedelta(days=effective_lookback),
             end_date=datetime.now()
         )
 
@@ -588,14 +623,25 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
 
         if use_llm:
             # Use LLM for detailed analysis (slower)
-            rag_context = await self._get_rag_context(market_analysis)
+            rag_context = []
+            if strategy is None or strategy.use_rag_context:
+                rag_context = await self._get_rag_context(market_analysis)
+
+            # Build custom prompt from strategy
+            custom_prompt = None
+            if strategy:
+                from .strategy_service import StrategyService
+                temp_service = StrategyService()
+                custom_prompt = temp_service.get_strategy_prompt(strategy)
+
             recommendation = await self.llm_service.generate_analysis(
                 market_data=market_analysis,
-                rag_context=rag_context
+                rag_context=rag_context,
+                custom_prompt=custom_prompt
             )
         else:
             # Fast rule-based recommendation (no LLM)
-            recommendation = self._generate_rule_based_recommendation(market_analysis)
+            recommendation = self._generate_rule_based_recommendation(market_analysis, strategy)
 
         processing_time = (time.time() - start_time) * 1000
         logger.info(f"Quick recommendation for {symbol}: {recommendation.signal} ({processing_time:.0f}ms)")
@@ -604,7 +650,8 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
 
     def _generate_rule_based_recommendation(
         self,
-        analysis: MarketAnalysis
+        analysis: MarketAnalysis,
+        strategy: Optional[TradingStrategy] = None
     ) -> TradingRecommendation:
         """Generate a recommendation based on technical indicators without LLM."""
 
@@ -616,18 +663,43 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
         indicators = analysis.technical_indicators
         current_price = analysis.current_price
 
+        # Get strategy-specific thresholds
+        rsi_buy_threshold = 30
+        rsi_sell_threshold = 70
+        min_buy_signals = 3
+        min_sell_signals = 3
+        stop_loss_multiplier = 2.0
+        take_profit_multiplier = 3.0
+        timeframe = "short_term"
+
+        # Extract strategy-specific settings
+        if strategy:
+            min_buy_signals = strategy.min_buy_signals
+            min_sell_signals = strategy.min_sell_signals
+            stop_loss_multiplier = strategy.stop_loss_atr_multiplier
+            take_profit_multiplier = strategy.take_profit_atr_multiplier
+            timeframe = strategy.preferred_timeframe
+
+            # Get RSI thresholds from strategy indicators
+            for ind in strategy.indicators:
+                if ind.name == "RSI" and ind.enabled:
+                    if ind.buy_threshold:
+                        rsi_buy_threshold = ind.buy_threshold
+                    if ind.sell_threshold:
+                        rsi_sell_threshold = ind.sell_threshold
+
         # RSI Analysis
         if indicators.rsi:
-            if indicators.rsi < 30:
+            if indicators.rsi < rsi_buy_threshold:
                 buy_signals += 2
                 key_factors.append(f"RSI überverkauft ({indicators.rsi:.1f})")
-            elif indicators.rsi < 40:
+            elif indicators.rsi < rsi_buy_threshold + 10:
                 buy_signals += 1
                 key_factors.append(f"RSI niedrig ({indicators.rsi:.1f})")
-            elif indicators.rsi > 70:
+            elif indicators.rsi > rsi_sell_threshold:
                 sell_signals += 2
                 key_factors.append(f"RSI überkauft ({indicators.rsi:.1f})")
-            elif indicators.rsi > 60:
+            elif indicators.rsi > rsi_sell_threshold - 10:
                 sell_signals += 1
                 key_factors.append(f"RSI hoch ({indicators.rsi:.1f})")
 
@@ -681,22 +753,33 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
         if analysis.volatility in ["high", "very_high"]:
             risks.append(f"Hohe Volatilität ({analysis.volatility})")
 
-        # Determine signal and confidence
+        # Determine signal and confidence based on strategy thresholds
         signal_diff = buy_signals - sell_signals
 
-        if signal_diff >= 4:
+        # Adjust thresholds based on risk level
+        high_threshold = min_buy_signals + 1
+        medium_threshold = min_buy_signals - 1
+
+        if strategy and strategy.risk_level == RiskLevel.CONSERVATIVE:
+            high_threshold += 1
+            medium_threshold += 1
+        elif strategy and strategy.risk_level == RiskLevel.AGGRESSIVE:
+            high_threshold -= 1
+            medium_threshold = max(1, medium_threshold - 1)
+
+        if signal_diff >= high_threshold:
             signal = SignalType.BUY
             confidence = ConfidenceLevel.HIGH
-        elif signal_diff >= 2:
+        elif signal_diff >= medium_threshold:
             signal = SignalType.BUY
             confidence = ConfidenceLevel.MEDIUM
         elif signal_diff >= 1:
             signal = SignalType.BUY
             confidence = ConfidenceLevel.LOW
-        elif signal_diff <= -4:
+        elif signal_diff <= -high_threshold:
             signal = SignalType.SELL
             confidence = ConfidenceLevel.HIGH
-        elif signal_diff <= -2:
+        elif signal_diff <= -medium_threshold:
             signal = SignalType.SELL
             confidence = ConfidenceLevel.MEDIUM
         elif signal_diff <= -1:
@@ -706,28 +789,36 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
             signal = SignalType.HOLD
             confidence = ConfidenceLevel.MEDIUM
 
-        # Calculate entry, stop-loss, take-profit
+        # Calculate entry, stop-loss, take-profit using strategy multipliers
         entry_price = current_price
         atr = indicators.atr if indicators.atr else current_price * 0.02
 
         if signal == SignalType.BUY:
-            stop_loss = current_price - (2 * atr)
-            take_profit = current_price + (3 * atr)
+            stop_loss = current_price - (stop_loss_multiplier * atr)
+            take_profit = current_price + (take_profit_multiplier * atr)
             reasoning = f"Technische Indikatoren zeigen {buy_signals} Kaufsignale vs {sell_signals} Verkaufssignale"
         elif signal == SignalType.SELL:
-            stop_loss = current_price + (2 * atr)
-            take_profit = current_price - (3 * atr)
+            stop_loss = current_price + (stop_loss_multiplier * atr)
+            take_profit = current_price - (take_profit_multiplier * atr)
             reasoning = f"Technische Indikatoren zeigen {sell_signals} Verkaufssignale vs {buy_signals} Kaufsignale"
         else:
             stop_loss = None
             take_profit = None
             reasoning = "Keine klare Richtung - abwarten empfohlen"
 
+        # Add strategy name to reasoning if used
+        if strategy:
+            reasoning = f"[{strategy.name}] {reasoning}"
+
         # Add default factors if none found
         if not key_factors:
             key_factors = ["Keine starken Signale identifiziert"]
         if not risks:
             risks = ["Marktrisiko beachten"]
+
+        # Add risk level warning if aggressive
+        if strategy and strategy.risk_level == RiskLevel.AGGRESSIVE:
+            risks.insert(0, "Aggressive Strategie - erhöhtes Risiko")
 
         return TradingRecommendation(
             symbol=analysis.symbol,
@@ -740,7 +831,7 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
             reasoning=reasoning,
             key_factors=key_factors[:5],
             risks=risks[:3],
-            timeframe="short_term"
+            timeframe=timeframe
         )
 
     async def health_check(self) -> dict:

@@ -49,7 +49,11 @@
       "Bash(pip install:*)",
       "Bash(e:/KITradingModel/venv/Scripts/pip.exe uninstall:*)",
       "Bash(e:/KITradingModel/venv/Scripts/pip.exe install:*)",
-      "Bash(e:/KITradingModel/venv/Scripts/python.exe:*)"
+      "Bash(e:/KITradingModel/venv/Scripts/python.exe:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(exit 0)",
+      "Bash(docker-compose build:*)",
+      "Bash(docker-compose up:*)"
     ],
     "deny": [],
     "ask": []

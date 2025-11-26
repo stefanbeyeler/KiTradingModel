@@ -516,10 +516,12 @@
 
         .tabs {
             display: flex;
+            flex-wrap: wrap;
             gap: 0.5rem;
             margin-bottom: 1rem;
             border-bottom: 1px solid #334155;
             padding-bottom: 0.5rem;
+            overflow: visible;
         }
 
         .tab-btn {
@@ -548,6 +550,201 @@
 
         .tab-content.active {
             display: block;
+        }
+
+        /* Strategies Section */
+        .strategies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .strategy-card {
+            background: #0f172a;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            border: 1px solid #334155;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .strategy-card:hover {
+            border-color: #3b82f6;
+        }
+
+        .strategy-card.active {
+            border-color: #22c55e;
+            box-shadow: 0 0 0 1px #22c55e;
+        }
+
+        .strategy-card.default {
+            border-color: #f59e0b;
+        }
+
+        .strategy-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .strategy-name {
+            font-weight: 600;
+            color: #f8fafc;
+            font-size: 1rem;
+        }
+
+        .strategy-badges {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .strategy-badge {
+            font-size: 0.625rem;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .strategy-badge.default {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .strategy-badge.conservative {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        .strategy-badge.moderate {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .strategy-badge.aggressive {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .strategy-description {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+        }
+
+        .strategy-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .strategy-info-item {
+            background: #1e293b;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .strategy-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #334155;
+        }
+
+        .btn-small {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.visible {
+            display: flex;
+        }
+
+        .modal {
+            background: #1e293b;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid #334155;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #f8fafc;
+        }
+
+        .indicator-list {
+            margin-top: 0.5rem;
+        }
+
+        .indicator-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: #0f172a;
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .indicator-item input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        .indicator-item input[type="number"] {
+            width: 60px;
+            padding: 0.25rem;
+        }
+
+        .indicator-name {
+            flex: 1;
+            font-size: 0.875rem;
+            color: #e2e8f0;
         }
     </style>
 </head>
@@ -596,30 +793,6 @@
             </div>
         </div>
 
-        <!-- Sync Control Card -->
-        <div class="card sync-card">
-            <div class="card-header">
-                <span class="card-title">TimescaleDB Sync Steuerung</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Host</span>
-                <span class="metric-value" id="dbHost">localhost:5432</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Datenbank</span>
-                <span class="metric-value" id="dbName">easyinsight</span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Verbunden</span>
-                <span class="metric-value" id="dbConnected">Ja</span>
-            </div>
-            <div class="sync-controls">
-                <button class="btn btn-primary" id="btnStartSync" onclick="startSync()">Start Sync</button>
-                <button class="btn btn-danger" id="btnStopSync" onclick="stopSync()">Stop Sync</button>
-                <button class="btn btn-secondary" onclick="manualSync()">Manueller Sync (7 Tage)</button>
-            </div>
-        </div>
-
         <!-- Services Health -->
         <div class="card">
             <div class="card-header">
@@ -651,6 +824,7 @@
                 <button class="tab-btn active" onclick="switchTab('analysis')">Vollanalyse</button>
                 <button class="tab-btn" onclick="switchTab('quick')">Schnellempfehlung</button>
                 <button class="tab-btn" onclick="switchTab('rag')">RAG Abfrage</button>
+                <button class="tab-btn" onclick="switchTab('strategies')">Strategien</button>
             </div>
 
             <!-- Vollanalyse Tab -->
@@ -665,6 +839,14 @@
                             <label for="analysisLookback">Zeitraum (Tage)</label>
                             <input type="number" id="analysisLookback" value="30" min="1" max="365">
                         </div>
+                        <div class="form-group">
+                            <label for="analysisStrategy">Strategie</label>
+                            <select id="analysisStrategy">
+                                <option value="">Standard (Default-Strategie)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
                         <div class="form-group">
                             <label for="analysisTechnical">Technische Analyse</label>
                             <select id="analysisTechnical">
@@ -696,10 +878,25 @@
                             <label for="quickLookback">Zeitraum (Tage)</label>
                             <input type="number" id="quickLookback" value="30" min="1" max="365">
                         </div>
+                        <div class="form-group">
+                            <label for="quickStrategy">Strategie</label>
+                            <select id="quickStrategy">
+                                <option value="">Standard</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="quickUseLLM">Analysemethode</label>
+                            <select id="quickUseLLM">
+                                <option value="false">Schnell (regelbasiert)</option>
+                                <option value="true">LLM-Analyse (detaillierter, langsamer)</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="query-buttons">
                         <button class="btn btn-success" id="btnQuick" onclick="runQuickRecommendation()">
-                            Schnellempfehlung abrufen
+                            Empfehlung abrufen
                         </button>
                     </div>
                 </div>
@@ -730,6 +927,26 @@
                 </div>
             </div>
 
+            <!-- Strategien Tab -->
+            <div id="tab-strategies" class="tab-content">
+                <div class="query-form">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <p style="color: #94a3b8; font-size: 0.875rem;">
+                            Wähle eine Strategie für die Analyse aus oder erstelle eine neue.
+                        </p>
+                        <button class="btn btn-primary" onclick="showCreateStrategyModal()">
+                            + Neue Strategie
+                        </button>
+                    </div>
+                    <div id="strategiesGrid" class="strategies-grid">
+                        <div style="text-align: center; padding: 2rem; color: #64748b;">
+                            <span class="loading-spinner"></span>
+                            <p style="margin-top: 0.5rem;">Lade Strategien...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Datalist for symbols -->
             <datalist id="symbolList"></datalist>
 
@@ -742,6 +959,30 @@
                 <div class="response-box" id="responseBox">
                     <!-- Response content will be inserted here -->
                 </div>
+            </div>
+        </div>
+
+        <!-- Sync Control Card -->
+        <div class="card sync-card">
+            <div class="card-header">
+                <span class="card-title">TimescaleDB Sync Steuerung</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Host</span>
+                <span class="metric-value" id="dbHost">localhost:5432</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Datenbank</span>
+                <span class="metric-value" id="dbName">easyinsight</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Verbunden</span>
+                <span class="metric-value" id="dbConnected">Ja</span>
+            </div>
+            <div class="sync-controls">
+                <button class="btn btn-primary" id="btnStartSync" onclick="startSync()">Start Sync</button>
+                <button class="btn btn-danger" id="btnStopSync" onclick="stopSync()">Stop Sync</button>
+                <button class="btn btn-secondary" onclick="manualSync()">Manueller Sync (7 Tage)</button>
             </div>
         </div>
 
@@ -760,6 +1001,97 @@
 
         <div class="refresh-info">
             Auto-Refresh alle 10 Sekunden | Letzte Aktualisierung: <span id="lastRefresh">-</span>
+        </div>
+    </div>
+
+    <!-- Strategy Create/Edit Modal -->
+    <div id="strategyModal" class="modal-overlay" onclick="if(event.target === this) closeStrategyModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="strategyModalTitle">Neue Strategie erstellen</h3>
+                <button class="modal-close" onclick="closeStrategyModal()">&times;</button>
+            </div>
+            <form id="strategyForm" onsubmit="saveStrategy(event)">
+                <input type="hidden" id="strategyEditId" value="">
+                <div class="form-group">
+                    <label for="strategyName">Name *</label>
+                    <input type="text" id="strategyName" required placeholder="z.B. Meine Trend-Strategie">
+                </div>
+                <div class="form-group">
+                    <label for="strategyDescription">Beschreibung</label>
+                    <textarea id="strategyDescription" placeholder="Beschreibung der Strategie..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="strategyType">Strategie-Typ</label>
+                        <select id="strategyType">
+                            <option value="custom">Custom</option>
+                            <option value="trend_following">Trend Following</option>
+                            <option value="mean_reversion">Mean Reversion</option>
+                            <option value="momentum">Momentum</option>
+                            <option value="breakout">Breakout</option>
+                            <option value="scalping">Scalping</option>
+                            <option value="swing">Swing Trading</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="strategyRisk">Risikolevel</label>
+                        <select id="strategyRisk">
+                            <option value="conservative">Konservativ</option>
+                            <option value="moderate" selected>Moderat</option>
+                            <option value="aggressive">Aggressiv</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="strategyMinBuy">Min. Kaufsignale</label>
+                        <input type="number" id="strategyMinBuy" value="3" min="1" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="strategyMinSell">Min. Verkaufssignale</label>
+                        <input type="number" id="strategyMinSell" value="3" min="1" max="10">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="strategyStopLoss">Stop-Loss ATR Multiplikator</label>
+                        <input type="number" id="strategyStopLoss" value="2.0" min="0.5" max="5" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="strategyTakeProfit">Take-Profit ATR Multiplikator</label>
+                        <input type="number" id="strategyTakeProfit" value="3.0" min="1" max="10" step="0.1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="strategyTimeframe">Bevorzugter Zeitrahmen</label>
+                        <select id="strategyTimeframe">
+                            <option value="short_term">Kurzfristig</option>
+                            <option value="medium_term">Mittelfristig</option>
+                            <option value="long_term">Langfristig</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="strategyLookback">Lookback Tage</label>
+                        <input type="number" id="strategyLookback" value="30" min="7" max="365">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="strategyPrompt">Custom Prompt (optional)</label>
+                    <textarea id="strategyPrompt" placeholder="Zusätzliche Anweisungen für die KI..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="strategyUseRag" checked>
+                        RAG-Kontext verwenden
+                    </label>
+                </div>
+                <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeStrategyModal()">Abbrechen</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -968,6 +1300,7 @@
             const symbol = document.getElementById('analysisSymbol').value.trim();
             const lookback = parseInt(document.getElementById('analysisLookback').value);
             const technical = document.getElementById('analysisTechnical').value === 'true';
+            const strategyId = document.getElementById('analysisStrategy').value;
 
             if (!symbol) {
                 showToast('Bitte Symbol eingeben (z.B. BTC/USD)', 'error');
@@ -978,21 +1311,33 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="loading-spinner"></span>Analysiere...';
 
+            // Get strategy name for display
+            const strategySelect = document.getElementById('analysisStrategy');
+            const strategyName = strategyId ? strategySelect.options[strategySelect.selectedIndex].text : 'Standard';
+
             showResponse('Analyse läuft...', `<div style="text-align: center; padding: 2rem;">
                 <span class="loading-spinner"></span>
                 <p style="margin-top: 1rem; color: #94a3b8;">KI analysiert ${symbol}...</p>
-                <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">Dies kann einige Sekunden dauern</p>
+                <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">Strategie: ${strategyName}</p>
+                <p style="font-size: 0.75rem; color: #64748b;">Dies kann einige Sekunden dauern</p>
             </div>`);
 
             try {
+                const requestBody = {
+                    symbol: symbol,
+                    lookback_days: lookback,
+                    include_technical: technical
+                };
+
+                // Add strategy_id if selected
+                if (strategyId) {
+                    requestBody.strategy_id = strategyId;
+                }
+
                 const response = await apiFetch('/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        symbol: symbol,
-                        lookback_days: lookback,
-                        include_technical: technical
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 displayAnalysisResult(response);
@@ -1003,38 +1348,6 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = 'Analyse starten';
-            }
-        }
-
-        // Run quick recommendation
-        async function runQuickRecommendation() {
-            const symbol = document.getElementById('quickSymbol').value.trim();
-            const lookback = parseInt(document.getElementById('quickLookback').value);
-
-            if (!symbol) {
-                showToast('Bitte Symbol eingeben (z.B. BTC/USD)', 'error');
-                return;
-            }
-
-            const btn = document.getElementById('btnQuick');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="loading-spinner"></span>Lädt...';
-
-            showResponse('Empfehlung wird geladen...', `<div style="text-align: center; padding: 2rem;">
-                <span class="loading-spinner"></span>
-                <p style="margin-top: 1rem; color: #94a3b8;">Schnellempfehlung für ${symbol}...</p>
-            </div>`);
-
-            try {
-                const response = await apiFetch(`/recommendation/${encodeURIComponent(symbol)}?lookback_days=${lookback}`);
-                displayRecommendation(response, symbol);
-                showToast('Empfehlung erhalten', 'success');
-            } catch (error) {
-                showResponse('Fehler', `<p style="color: #ef4444;">Empfehlung fehlgeschlagen: ${error.message}</p>`);
-                showToast('Empfehlung fehlgeschlagen', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = 'Schnellempfehlung abrufen';
             }
         }
 
@@ -1230,9 +1543,271 @@
             document.getElementById('responseContainer').classList.remove('visible');
         }
 
+        // ============================================
+        // Strategy Management Functions
+        // ============================================
+
+        let strategiesCache = [];
+
+        async function loadStrategies() {
+            try {
+                const strategies = await apiFetch('/strategies');
+                strategiesCache = strategies;
+                renderStrategies(strategies);
+                updateStrategyDropdowns(strategies);
+            } catch (error) {
+                console.error('Failed to load strategies:', error);
+                document.getElementById('strategiesGrid').innerHTML =
+                    '<p style="color: #ef4444; text-align: center;">Fehler beim Laden der Strategien</p>';
+            }
+        }
+
+        function renderStrategies(strategies) {
+            const grid = document.getElementById('strategiesGrid');
+
+            if (!strategies || strategies.length === 0) {
+                grid.innerHTML = '<p style="color: #64748b; text-align: center;">Keine Strategien vorhanden</p>';
+                return;
+            }
+
+            grid.innerHTML = strategies.map(s => `
+                <div class="strategy-card ${s.is_default ? 'default' : ''}" data-id="${s.id}">
+                    <div class="strategy-header">
+                        <span class="strategy-name">${escapeHtml(s.name)}</span>
+                        <div class="strategy-badges">
+                            ${s.is_default ? '<span class="strategy-badge default">Default</span>' : ''}
+                            <span class="strategy-badge ${s.risk_level}">${getRiskLabel(s.risk_level)}</span>
+                        </div>
+                    </div>
+                    <p class="strategy-description">${escapeHtml(s.description || 'Keine Beschreibung')}</p>
+                    <div class="strategy-info">
+                        <span class="strategy-info-item">${getTypeLabel(s.strategy_type)}</span>
+                        <span class="strategy-info-item">${s.lookback_days} Tage</span>
+                        <span class="strategy-info-item">Min. ${s.min_buy_signals} Signale</span>
+                    </div>
+                    <div class="strategy-actions">
+                        ${!s.is_default ? `<button class="btn btn-small btn-secondary" onclick="setDefaultStrategy('${s.id}')">Als Standard</button>` : ''}
+                        ${!s.id.startsWith('default_') ? `
+                            <button class="btn btn-small btn-secondary" onclick="editStrategy('${s.id}')">Bearbeiten</button>
+                            <button class="btn btn-small btn-danger" onclick="deleteStrategy('${s.id}')">Löschen</button>
+                        ` : '<span style="font-size: 0.75rem; color: #64748b;">System-Strategie</span>'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStrategyDropdowns(strategies) {
+            const quickSelect = document.getElementById('quickStrategy');
+            const analysisSelect = document.getElementById('analysisStrategy');
+            const quickCurrentValue = quickSelect.value;
+            const analysisCurrentValue = analysisSelect ? analysisSelect.value : '';
+
+            // Update quick recommendation dropdown
+            quickSelect.innerHTML = '<option value="">Standard (Default-Strategie)</option>';
+            strategies.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.id;
+                option.textContent = `${s.name} (${getRiskLabel(s.risk_level)})`;
+                if (s.is_default) option.textContent += ' ★';
+                quickSelect.appendChild(option);
+            });
+
+            // Update full analysis dropdown
+            if (analysisSelect) {
+                analysisSelect.innerHTML = '<option value="">Standard (Default-Strategie)</option>';
+                strategies.forEach(s => {
+                    const option = document.createElement('option');
+                    option.value = s.id;
+                    option.textContent = `${s.name} (${getRiskLabel(s.risk_level)})`;
+                    if (s.is_default) option.textContent += ' ★';
+                    analysisSelect.appendChild(option);
+                });
+
+                // Restore analysis selection if still valid
+                if (analysisCurrentValue && strategies.some(s => s.id === analysisCurrentValue)) {
+                    analysisSelect.value = analysisCurrentValue;
+                }
+            }
+
+            // Restore quick selection if still valid
+            if (quickCurrentValue && strategies.some(s => s.id === quickCurrentValue)) {
+                quickSelect.value = quickCurrentValue;
+            }
+        }
+
+        function getRiskLabel(risk) {
+            const labels = {
+                'conservative': 'Konservativ',
+                'moderate': 'Moderat',
+                'aggressive': 'Aggressiv'
+            };
+            return labels[risk] || risk;
+        }
+
+        function getTypeLabel(type) {
+            const labels = {
+                'trend_following': 'Trend Following',
+                'mean_reversion': 'Mean Reversion',
+                'momentum': 'Momentum',
+                'breakout': 'Breakout',
+                'scalping': 'Scalping',
+                'swing': 'Swing',
+                'custom': 'Custom'
+            };
+            return labels[type] || type;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showCreateStrategyModal() {
+            document.getElementById('strategyModalTitle').textContent = 'Neue Strategie erstellen';
+            document.getElementById('strategyEditId').value = '';
+            document.getElementById('strategyForm').reset();
+            document.getElementById('strategyUseRag').checked = true;
+            document.getElementById('strategyModal').classList.add('visible');
+        }
+
+        function closeStrategyModal() {
+            document.getElementById('strategyModal').classList.remove('visible');
+        }
+
+        function editStrategy(id) {
+            const strategy = strategiesCache.find(s => s.id === id);
+            if (!strategy) return;
+
+            document.getElementById('strategyModalTitle').textContent = 'Strategie bearbeiten';
+            document.getElementById('strategyEditId').value = id;
+            document.getElementById('strategyName').value = strategy.name;
+            document.getElementById('strategyDescription').value = strategy.description || '';
+            document.getElementById('strategyType').value = strategy.strategy_type;
+            document.getElementById('strategyRisk').value = strategy.risk_level;
+            document.getElementById('strategyMinBuy').value = strategy.min_buy_signals;
+            document.getElementById('strategyMinSell').value = strategy.min_sell_signals;
+            document.getElementById('strategyStopLoss').value = strategy.stop_loss_atr_multiplier;
+            document.getElementById('strategyTakeProfit').value = strategy.take_profit_atr_multiplier;
+            document.getElementById('strategyTimeframe').value = strategy.preferred_timeframe;
+            document.getElementById('strategyLookback').value = strategy.lookback_days;
+            document.getElementById('strategyPrompt').value = strategy.custom_prompt || '';
+            document.getElementById('strategyUseRag').checked = strategy.use_rag_context;
+
+            document.getElementById('strategyModal').classList.add('visible');
+        }
+
+        async function saveStrategy(event) {
+            event.preventDefault();
+
+            const editId = document.getElementById('strategyEditId').value;
+            const isEdit = !!editId;
+
+            const data = {
+                name: document.getElementById('strategyName').value,
+                description: document.getElementById('strategyDescription').value,
+                strategy_type: document.getElementById('strategyType').value,
+                risk_level: document.getElementById('strategyRisk').value,
+                min_buy_signals: parseInt(document.getElementById('strategyMinBuy').value),
+                min_sell_signals: parseInt(document.getElementById('strategyMinSell').value),
+                stop_loss_atr_multiplier: parseFloat(document.getElementById('strategyStopLoss').value),
+                take_profit_atr_multiplier: parseFloat(document.getElementById('strategyTakeProfit').value),
+                preferred_timeframe: document.getElementById('strategyTimeframe').value,
+                lookback_days: parseInt(document.getElementById('strategyLookback').value),
+                custom_prompt: document.getElementById('strategyPrompt').value || null,
+                use_rag_context: document.getElementById('strategyUseRag').checked
+            };
+
+            try {
+                if (isEdit) {
+                    await apiFetch(`/strategies/${editId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    showToast('Strategie aktualisiert', 'success');
+                } else {
+                    await apiFetch('/strategies', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    showToast('Strategie erstellt', 'success');
+                }
+                closeStrategyModal();
+                loadStrategies();
+            } catch (error) {
+                showToast('Fehler beim Speichern: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteStrategy(id) {
+            if (!confirm('Strategie wirklich löschen?')) return;
+
+            try {
+                await apiFetch(`/strategies/${id}`, { method: 'DELETE' });
+                showToast('Strategie gelöscht', 'success');
+                loadStrategies();
+            } catch (error) {
+                showToast('Fehler beim Löschen: ' + error.message, 'error');
+            }
+        }
+
+        async function setDefaultStrategy(id) {
+            try {
+                await apiFetch(`/strategies/${id}/set-default`, { method: 'POST' });
+                showToast('Standard-Strategie gesetzt', 'success');
+                loadStrategies();
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // Update quick recommendation to use strategy
+        async function runQuickRecommendation() {
+            const symbol = document.getElementById('quickSymbol').value.trim();
+            const lookback = parseInt(document.getElementById('quickLookback').value);
+            const strategyId = document.getElementById('quickStrategy').value;
+            const useLLM = document.getElementById('quickUseLLM').value === 'true';
+
+            if (!symbol) {
+                showToast('Bitte Symbol eingeben (z.B. BTC/USD)', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnQuick');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span>Lädt...';
+
+            const methodText = useLLM ? 'LLM-Analyse' : 'Schnellempfehlung';
+            showResponse('Empfehlung wird geladen...', `<div style="text-align: center; padding: 2rem;">
+                <span class="loading-spinner"></span>
+                <p style="margin-top: 1rem; color: #94a3b8;">${methodText} für ${symbol}...</p>
+                ${useLLM ? '<p style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">Dies kann 30-60 Sekunden dauern</p>' : ''}
+            </div>`);
+
+            try {
+                let url = `/recommendation/${encodeURIComponent(symbol)}?lookback_days=${lookback}&use_llm=${useLLM}`;
+                if (strategyId) {
+                    url += `&strategy_id=${encodeURIComponent(strategyId)}`;
+                }
+
+                const response = await apiFetch(url);
+                displayRecommendation(response, symbol);
+                showToast('Empfehlung erhalten', 'success');
+            } catch (error) {
+                showResponse('Fehler', `<p style="color: #ef4444;">Empfehlung fehlgeschlagen: ${error.message}</p>`);
+                showToast('Empfehlung fehlgeschlagen', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Empfehlung abrufen';
+            }
+        }
+
         // Initialize
         updateDashboard();
         loadSymbols();
+        loadStrategies();
         setInterval(updateDashboard, 10000);
 
         // Fetch config info
