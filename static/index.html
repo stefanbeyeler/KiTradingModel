@@ -1587,10 +1587,10 @@
                     </div>
                     <div class="strategy-actions">
                         ${!s.is_default ? `<button class="btn btn-small btn-secondary" onclick="setDefaultStrategy('${s.id}')">Als Standard</button>` : ''}
+                        <button class="btn btn-small btn-secondary" onclick="editStrategy('${s.id}')">Bearbeiten</button>
                         ${!s.id.startsWith('default_') ? `
-                            <button class="btn btn-small btn-secondary" onclick="editStrategy('${s.id}')">Bearbeiten</button>
                             <button class="btn btn-small btn-danger" onclick="deleteStrategy('${s.id}')">Löschen</button>
-                        ` : '<span style="font-size: 0.75rem; color: #64748b;">System-Strategie</span>'}
+                        ` : ''}
                     </div>
                 </div>
             `).join('');
