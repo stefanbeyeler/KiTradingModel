@@ -1,18 +1,133 @@
-"""Version configuration for KI Trading Model."""
+"""Version configuration for KI Trading Model - derived from Git."""
 
+import subprocess
 from datetime import datetime
+from pathlib import Path
 
-# Release version - update this for each release
-VERSION = "1.0.0"
+# Base version
+BASE_VERSION = "1.0.0"
 
-# Release date/time - update this for each release
-RELEASE_DATE = "2025-11-29T12:00:00"
+# Cache for git info
+_git_info_cache = None
+
+
+def _get_git_info() -> dict:
+    """Get version info from git repository."""
+    global _git_info_cache
+
+    if _git_info_cache is not None:
+        return _git_info_cache
+
+    try:
+        # Get the repository root (where .git is located)
+        repo_root = Path(__file__).parent.parent
+
+        # Get short commit hash
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        commit_hash = result.stdout.strip() if result.returncode == 0 else None
+
+        # Get commit date/time (ISO format)
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%ci"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        commit_date_str = result.stdout.strip() if result.returncode == 0 else None
+
+        # Parse commit date
+        commit_date = None
+        if commit_date_str:
+            # Format: "2025-11-29 08:08:23 +0100"
+            try:
+                commit_date = datetime.strptime(commit_date_str[:19], "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                pass
+
+        # Try to get tag if exists
+        result = subprocess.run(
+            ["git", "describe", "--tags", "--exact-match", "HEAD"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        tag = result.stdout.strip() if result.returncode == 0 else None
+
+        # Get commit count for build number
+        result = subprocess.run(
+            ["git", "rev-list", "--count", "HEAD"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        commit_count = result.stdout.strip() if result.returncode == 0 else "0"
+
+        _git_info_cache = {
+            "commit_hash": commit_hash,
+            "commit_date": commit_date,
+            "tag": tag,
+            "commit_count": commit_count
+        }
+
+    except Exception:
+        _git_info_cache = {
+            "commit_hash": None,
+            "commit_date": None,
+            "tag": None,
+            "commit_count": "0"
+        }
+
+    return _git_info_cache
+
+
+def _build_version() -> str:
+    """Build version string from git info."""
+    git_info = _get_git_info()
+
+    # If there's a tag, use it
+    if git_info["tag"]:
+        return git_info["tag"].lstrip("v")
+
+    # Otherwise use BASE_VERSION + build number + commit hash
+    commit_hash = git_info["commit_hash"] or "unknown"
+    commit_count = git_info["commit_count"] or "0"
+
+    return f"{BASE_VERSION}.{commit_count}+{commit_hash}"
+
+
+def _get_release_date() -> str:
+    """Get release date from git commit."""
+    git_info = _get_git_info()
+
+    if git_info["commit_date"]:
+        return git_info["commit_date"].isoformat()
+
+    return datetime.now().isoformat()
+
+
+# Export version and release date
+VERSION = _build_version()
+RELEASE_DATE = _get_release_date()
 
 
 def get_version_info() -> dict:
     """Get version information as dictionary."""
+    git_info = _get_git_info()
+    commit_date = git_info["commit_date"] or datetime.now()
+
     return {
         "version": f"v{VERSION}",
         "release_date": RELEASE_DATE,
-        "release_date_formatted": datetime.fromisoformat(RELEASE_DATE).strftime("%d.%m.%Y %H:%M")
+        "release_date_formatted": commit_date.strftime("%d.%m.%Y %H:%M"),
+        "commit_hash": git_info["commit_hash"],
+        "build_number": git_info["commit_count"]
     }

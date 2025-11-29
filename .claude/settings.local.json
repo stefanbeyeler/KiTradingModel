@@ -57,7 +57,9 @@
       "Bash(OLLAMA_MODEL=llama3.1:8b /e/KITradingModel/venv/Scripts/python.exe:*)",
       "Bash(python:*)",
       "Bash(dir:*)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "Bash(git describe:*)",
+      "Bash(git rev-parse:*)"
     ],
     "deny": [],
     "ask": []
