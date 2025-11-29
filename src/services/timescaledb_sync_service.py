@@ -172,6 +172,10 @@ class TimescaleDBSyncService:
                     h1_high,
                     h1_low,
                     h1_close,
+                    m15_open,
+                    m15_high,
+                    m15_low,
+                    m15_close,
                     rsi14price_close,
                     macd12269price_close_main_line,
                     macd12269price_close_signal_line,
@@ -182,11 +186,18 @@ class TimescaleDBSyncService:
                     bb200200price_close_upper_band,
                     bb200200price_close_lower_band,
                     atr_d1,
+                    range_d1,
                     cci14price_typical,
                     sto533mode_smasto_lowhigh_main_line,
                     sto533mode_smasto_lowhigh_signal_line,
                     ichimoku92652_tenkansen_line,
                     ichimoku92652_kijunsen_line,
+                    ichimoku92652_senkouspana_line,
+                    ichimoku92652_senkouspanb_line,
+                    ichimoku92652_chikouspan_line,
+                    ma100mode_smaprice_close,
+                    r1_level_m5,
+                    s1_level_m5,
                     strength_4h,
                     strength_1d,
                     strength_1w
@@ -207,7 +218,7 @@ class TimescaleDBSyncService:
                     return 0
 
                 for row in rows:
-                    # Extract values with null handling
+                    # Extract values with null handling - Daily data
                     d1_open = float(row["d1_open"]) if row["d1_open"] else 0
                     d1_high = float(row["d1_high"]) if row["d1_high"] else 0
                     d1_low = float(row["d1_low"]) if row["d1_low"] else 0
@@ -216,7 +227,19 @@ class TimescaleDBSyncService:
                     ask = float(row["ask"]) if row["ask"] else 0
                     spread = float(row["spread"]) if row["spread"] else 0
 
-                    # Calculate metrics
+                    # Extract H1 (hourly) data
+                    h1_open = float(row["h1_open"]) if row["h1_open"] else 0
+                    h1_high = float(row["h1_high"]) if row["h1_high"] else 0
+                    h1_low = float(row["h1_low"]) if row["h1_low"] else 0
+                    h1_close = float(row["h1_close"]) if row["h1_close"] else 0
+
+                    # Extract M15 (15-minute) data
+                    m15_open = float(row["m15_open"]) if row["m15_open"] else 0
+                    m15_high = float(row["m15_high"]) if row["m15_high"] else 0
+                    m15_low = float(row["m15_low"]) if row["m15_low"] else 0
+                    m15_close = float(row["m15_close"]) if row["m15_close"] else 0
+
+                    # Calculate metrics - Daily
                     price_change = (
                         (d1_close - d1_open) / d1_open * 100
                     ) if d1_open > 0 else 0
@@ -225,13 +248,35 @@ class TimescaleDBSyncService:
                         (d1_high - d1_low) / d1_low * 100
                     ) if d1_low > 0 else 0
 
+                    # Calculate metrics - Hourly
+                    h1_price_change = (
+                        (h1_close - h1_open) / h1_open * 100
+                    ) if h1_open > 0 else 0
+
+                    h1_volatility = (
+                        (h1_high - h1_low) / h1_low * 100
+                    ) if h1_low > 0 else 0
+
+                    # Calculate metrics - M15
+                    m15_price_change = (
+                        (m15_close - m15_open) / m15_open * 100
+                    ) if m15_open > 0 else 0
+
+                    m15_volatility = (
+                        (m15_high - m15_low) / m15_low * 100
+                    ) if m15_low > 0 else 0
+
                     # Technical indicators
                     rsi = float(row["rsi14price_close"]) if row["rsi14price_close"] else None
                     macd_main = float(row["macd12269price_close_main_line"]) if row["macd12269price_close_main_line"] else None
                     macd_signal = float(row["macd12269price_close_signal_line"]) if row["macd12269price_close_signal_line"] else None
                     adx = float(row["adx14_main_line"]) if row["adx14_main_line"] else None
+                    adx_plus_di = float(row["adx14_plusdi_line"]) if row["adx14_plusdi_line"] else None
+                    adx_minus_di = float(row["adx14_minusdi_line"]) if row["adx14_minusdi_line"] else None
                     atr = float(row["atr_d1"]) if row["atr_d1"] else None
+                    range_d1 = float(row["range_d1"]) if row["range_d1"] else None
                     cci = float(row["cci14price_typical"]) if row["cci14price_typical"] else None
+                    ma100 = float(row["ma100mode_smaprice_close"]) if row["ma100mode_smaprice_close"] else None
                     stoch_k = float(row["sto533mode_smasto_lowhigh_main_line"]) if row["sto533mode_smasto_lowhigh_main_line"] else None
                     stoch_d = float(row["sto533mode_smasto_lowhigh_signal_line"]) if row["sto533mode_smasto_lowhigh_signal_line"] else None
 
@@ -239,6 +284,22 @@ class TimescaleDBSyncService:
                     bb_middle = float(row["bb200200price_close_base_line"]) if row["bb200200price_close_base_line"] else None
                     bb_upper = float(row["bb200200price_close_upper_band"]) if row["bb200200price_close_upper_band"] else None
                     bb_lower = float(row["bb200200price_close_lower_band"]) if row["bb200200price_close_lower_band"] else None
+
+                    # Ichimoku indicators
+                    ichimoku_tenkan = float(row["ichimoku92652_tenkansen_line"]) if row["ichimoku92652_tenkansen_line"] else None
+                    ichimoku_kijun = float(row["ichimoku92652_kijunsen_line"]) if row["ichimoku92652_kijunsen_line"] else None
+                    ichimoku_senkou_a = float(row["ichimoku92652_senkouspana_line"]) if row["ichimoku92652_senkouspana_line"] else None
+                    ichimoku_senkou_b = float(row["ichimoku92652_senkouspanb_line"]) if row["ichimoku92652_senkouspanb_line"] else None
+                    ichimoku_chikou = float(row["ichimoku92652_chikouspan_line"]) if row["ichimoku92652_chikouspan_line"] else None
+
+                    # Pivot Points
+                    pivot_r1 = float(row["r1_level_m5"]) if row["r1_level_m5"] else None
+                    pivot_s1 = float(row["s1_level_m5"]) if row["s1_level_m5"] else None
+
+                    # Strength indicators
+                    strength_4h = float(row["strength_4h"]) if row["strength_4h"] else None
+                    strength_1d = float(row["strength_1d"]) if row["strength_1d"] else None
+                    strength_1w = float(row["strength_1w"]) if row["strength_1w"] else None
 
                     # Determine trend based on indicators
                     trend = "neutral"
@@ -252,39 +313,113 @@ class TimescaleDBSyncService:
                         elif price_change < 0:
                             trend = "bearish"
 
+                    # Determine ADX direction signal
+                    adx_direction = "N/A"
+                    if adx_plus_di and adx_minus_di:
+                        if adx_plus_di > adx_minus_di:
+                            adx_direction = "Bullish (+DI > -DI)"
+                        else:
+                            adx_direction = "Bearish (-DI > +DI)"
+
+                    # Determine Ichimoku signal
+                    ichimoku_signal = "N/A"
+                    if ichimoku_tenkan and ichimoku_kijun:
+                        if ichimoku_tenkan > ichimoku_kijun:
+                            ichimoku_signal = "Bullish (Tenkan > Kijun)"
+                        else:
+                            ichimoku_signal = "Bearish (Tenkan < Kijun)"
+
+                    # Determine Ichimoku Cloud signal (Kumo)
+                    ichimoku_cloud = "N/A"
+                    if ichimoku_senkou_a and ichimoku_senkou_b:
+                        if ichimoku_senkou_a > ichimoku_senkou_b:
+                            ichimoku_cloud = "Bullish Cloud (Senkou A > B)"
+                        else:
+                            ichimoku_cloud = "Bearish Cloud (Senkou A < B)"
+
+                    # Determine MA100 position signal
+                    ma100_signal = "N/A"
+                    if ma100 and d1_close:
+                        if d1_close > ma100:
+                            ma100_signal = "Bullish (Preis über MA100)"
+                        else:
+                            ma100_signal = "Bearish (Preis unter MA100)"
+
                     # Create comprehensive document content
                     content = f"""
 Marktdaten - {symbol}
 Zeitstempel: {row['data_timestamp'].isoformat()}
 Kategorie: {row['category'] or 'N/A'}
 
-Preisdaten:
+Preisdaten (Aktuell):
 - Bid: {bid:.5f}
 - Ask: {ask:.5f}
 - Spread: {spread:.5f}
-- D1 Open: {d1_open:.5f}
-- D1 High: {d1_high:.5f}
-- D1 Low: {d1_low:.5f}
-- D1 Close: {d1_close:.5f}
 
-Performance:
-- Tagesänderung: {price_change:.2f}%
+Tages-Daten (D1):
+- Open: {d1_open:.5f}
+- High: {d1_high:.5f}
+- Low: {d1_low:.5f}
+- Close: {d1_close:.5f}
+- Änderung: {price_change:.2f}%
 - Volatilität: {volatility:.2f}%
+- Range: {f'{range_d1:.5f}' if range_d1 else 'N/A'}
+
+Stunden-Daten (H1):
+- Open: {h1_open:.5f}
+- High: {h1_high:.5f}
+- Low: {h1_low:.5f}
+- Close: {h1_close:.5f}
+- Änderung: {h1_price_change:.2f}%
+- Volatilität: {h1_volatility:.2f}%
+
+15-Minuten-Daten (M15):
+- Open: {m15_open:.5f}
+- High: {m15_high:.5f}
+- Low: {m15_low:.5f}
+- Close: {m15_close:.5f}
+- Änderung: {m15_price_change:.2f}%
+- Volatilität: {m15_volatility:.2f}%
+
+Trend-Analyse:
 - Trend: {trend}
 
 Technische Indikatoren:
 - RSI (14): {f'{rsi:.2f}' if rsi else 'N/A'}
 - MACD: {f'{macd_main:.5f}' if macd_main else 'N/A'} / Signal: {f'{macd_signal:.5f}' if macd_signal else 'N/A'}
-- ADX (14): {f'{adx:.2f}' if adx else 'N/A'}
+- ADX (14): {f'{adx:.2f}' if adx else 'N/A'} | +DI: {f'{adx_plus_di:.2f}' if adx_plus_di else 'N/A'} | -DI: {f'{adx_minus_di:.2f}' if adx_minus_di else 'N/A'}
 - ATR (D1): {f'{atr:.5f}' if atr else 'N/A'}
 - CCI (14): {f'{cci:.2f}' if cci else 'N/A'}
 - Stochastik: %K={f'{stoch_k:.2f}' if stoch_k else 'N/A'}, %D={f'{stoch_d:.2f}' if stoch_d else 'N/A'}
 - Bollinger Bands: Upper={f'{bb_upper:.5f}' if bb_upper else 'N/A'}, Middle={f'{bb_middle:.5f}' if bb_middle else 'N/A'}, Lower={f'{bb_lower:.5f}' if bb_lower else 'N/A'}
+- SMA (100): {f'{ma100:.5f}' if ma100 else 'N/A'}
+
+Ichimoku Cloud:
+- Tenkan-sen: {f'{ichimoku_tenkan:.5f}' if ichimoku_tenkan else 'N/A'}
+- Kijun-sen: {f'{ichimoku_kijun:.5f}' if ichimoku_kijun else 'N/A'}
+- Senkou Span A: {f'{ichimoku_senkou_a:.5f}' if ichimoku_senkou_a else 'N/A'}
+- Senkou Span B: {f'{ichimoku_senkou_b:.5f}' if ichimoku_senkou_b else 'N/A'}
+- Chikou Span: {f'{ichimoku_chikou:.5f}' if ichimoku_chikou else 'N/A'}
+- TK Signal: {ichimoku_signal}
+- Cloud Signal: {ichimoku_cloud}
+
+Pivot Points (M5):
+- R1 (Widerstand): {f'{pivot_r1:.5f}' if pivot_r1 else 'N/A'}
+- S1 (Unterstützung): {f'{pivot_s1:.5f}' if pivot_s1 else 'N/A'}
+
+Stärke-Indikatoren:
+- Stärke 4H: {f'{strength_4h:.2f}' if strength_4h else 'N/A'}
+- Stärke 1D: {f'{strength_1d:.2f}' if strength_1d else 'N/A'}
+- Stärke 1W: {f'{strength_1w:.2f}' if strength_1w else 'N/A'}
 
 Signale:
 - RSI Signal: {'Überkauft' if rsi and rsi > 70 else 'Überverkauft' if rsi and rsi < 30 else 'Neutral' if rsi else 'N/A'}
 - MACD Signal: {'Bullish' if macd_main and macd_signal and macd_main > macd_signal else 'Bearish' if macd_main and macd_signal else 'N/A'}
 - Trend-Stärke (ADX): {'Stark' if adx and adx > 25 else 'Schwach' if adx else 'N/A'}
+- MA100 Signal: {ma100_signal}
+- ADX Richtung: {adx_direction}
+- Ichimoku Signal: {ichimoku_signal}
+- Stochastik Signal: {'Überkauft' if stoch_k and stoch_k > 80 else 'Überverkauft' if stoch_k and stoch_k < 20 else 'Neutral' if stoch_k else 'N/A'}
 """
 
                     # Build metadata
@@ -294,12 +429,27 @@ Signale:
                         "bid": bid,
                         "ask": ask,
                         "spread": spread,
+                        # Daily data
                         "d1_open": d1_open,
                         "d1_high": d1_high,
                         "d1_low": d1_low,
                         "d1_close": d1_close,
                         "price_change": price_change,
                         "volatility": volatility,
+                        # Hourly data
+                        "h1_open": h1_open,
+                        "h1_high": h1_high,
+                        "h1_low": h1_low,
+                        "h1_close": h1_close,
+                        "h1_price_change": h1_price_change,
+                        "h1_volatility": h1_volatility,
+                        # M15 data
+                        "m15_open": m15_open,
+                        "m15_high": m15_high,
+                        "m15_low": m15_low,
+                        "m15_close": m15_close,
+                        "m15_price_change": m15_price_change,
+                        "m15_volatility": m15_volatility,
                         "trend": trend
                     }
 
@@ -312,8 +462,48 @@ Signale:
                         metadata["macd_signal"] = macd_signal
                     if adx:
                         metadata["adx"] = adx
+                    if adx_plus_di:
+                        metadata["adx_plus_di"] = adx_plus_di
+                    if adx_minus_di:
+                        metadata["adx_minus_di"] = adx_minus_di
                     if atr:
                         metadata["atr"] = atr
+                    if range_d1:
+                        metadata["range_d1"] = range_d1
+                    if cci:
+                        metadata["cci"] = cci
+                    if ma100:
+                        metadata["ma100"] = ma100
+                    if stoch_k:
+                        metadata["stoch_k"] = stoch_k
+                    if stoch_d:
+                        metadata["stoch_d"] = stoch_d
+                    if bb_upper:
+                        metadata["bb_upper"] = bb_upper
+                    if bb_middle:
+                        metadata["bb_middle"] = bb_middle
+                    if bb_lower:
+                        metadata["bb_lower"] = bb_lower
+                    if ichimoku_tenkan:
+                        metadata["ichimoku_tenkan"] = ichimoku_tenkan
+                    if ichimoku_kijun:
+                        metadata["ichimoku_kijun"] = ichimoku_kijun
+                    if ichimoku_senkou_a:
+                        metadata["ichimoku_senkou_a"] = ichimoku_senkou_a
+                    if ichimoku_senkou_b:
+                        metadata["ichimoku_senkou_b"] = ichimoku_senkou_b
+                    if ichimoku_chikou:
+                        metadata["ichimoku_chikou"] = ichimoku_chikou
+                    if pivot_r1:
+                        metadata["pivot_r1"] = pivot_r1
+                    if pivot_s1:
+                        metadata["pivot_s1"] = pivot_s1
+                    if strength_4h:
+                        metadata["strength_4h"] = strength_4h
+                    if strength_1d:
+                        metadata["strength_1d"] = strength_1d
+                    if strength_1w:
+                        metadata["strength_1w"] = strength_1w
 
                     # Add to RAG
                     await self.rag_service.add_custom_document(
