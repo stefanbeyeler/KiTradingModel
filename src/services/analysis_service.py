@@ -19,6 +19,7 @@ from ..models.trading_data import (
     TradingRecommendation,
     AnalysisRequest,
     AnalysisResponse,
+    TradeDirection,
     SignalType,
     ConfidenceLevel,
     TradingStrategy,
@@ -767,48 +768,78 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
             high_threshold -= 1
             medium_threshold = max(1, medium_threshold - 1)
 
+        # Determine direction, signal and confidence
         if signal_diff >= high_threshold:
+            direction = TradeDirection.LONG
             signal = SignalType.BUY
             confidence = ConfidenceLevel.HIGH
+            confidence_score = 85
         elif signal_diff >= medium_threshold:
+            direction = TradeDirection.LONG
             signal = SignalType.BUY
             confidence = ConfidenceLevel.MEDIUM
+            confidence_score = 65
         elif signal_diff >= 1:
+            direction = TradeDirection.LONG
             signal = SignalType.BUY
             confidence = ConfidenceLevel.LOW
+            confidence_score = 45
         elif signal_diff <= -high_threshold:
+            direction = TradeDirection.SHORT
             signal = SignalType.SELL
             confidence = ConfidenceLevel.HIGH
+            confidence_score = 85
         elif signal_diff <= -medium_threshold:
+            direction = TradeDirection.SHORT
             signal = SignalType.SELL
             confidence = ConfidenceLevel.MEDIUM
+            confidence_score = 65
         elif signal_diff <= -1:
+            direction = TradeDirection.SHORT
             signal = SignalType.SELL
             confidence = ConfidenceLevel.LOW
+            confidence_score = 45
         else:
+            direction = TradeDirection.NEUTRAL
             signal = SignalType.HOLD
             confidence = ConfidenceLevel.MEDIUM
+            confidence_score = 50
 
         # Calculate entry, stop-loss, take-profit using strategy multipliers
         entry_price = current_price
         atr = indicators.atr if indicators.atr else current_price * 0.02
 
-        if signal == SignalType.BUY:
+        # Calculate price levels based on direction
+        if direction == TradeDirection.LONG:
             stop_loss = current_price - (stop_loss_multiplier * atr)
-            take_profit = current_price + (take_profit_multiplier * atr)
-            reasoning = f"Technische Indikatoren zeigen {buy_signals} Kaufsignale vs {sell_signals} Verkaufssignale"
-        elif signal == SignalType.SELL:
+            take_profit_1 = current_price + (take_profit_multiplier * atr * 0.5)
+            take_profit_2 = current_price + (take_profit_multiplier * atr)
+            take_profit_3 = current_price + (take_profit_multiplier * atr * 1.5)
+            setup_recommendation = f"Bullisches Setup: {buy_signals} Kaufsignale vs {sell_signals} Verkaufssignale identifiziert"
+        elif direction == TradeDirection.SHORT:
             stop_loss = current_price + (stop_loss_multiplier * atr)
-            take_profit = current_price - (take_profit_multiplier * atr)
-            reasoning = f"Technische Indikatoren zeigen {sell_signals} Verkaufssignale vs {buy_signals} Kaufsignale"
+            take_profit_1 = current_price - (take_profit_multiplier * atr * 0.5)
+            take_profit_2 = current_price - (take_profit_multiplier * atr)
+            take_profit_3 = current_price - (take_profit_multiplier * atr * 1.5)
+            setup_recommendation = f"Bärisches Setup: {sell_signals} Verkaufssignale vs {buy_signals} Kaufsignale identifiziert"
         else:
             stop_loss = None
-            take_profit = None
-            reasoning = "Keine klare Richtung - abwarten empfohlen"
+            take_profit_1 = None
+            take_profit_2 = None
+            take_profit_3 = None
+            setup_recommendation = "Keine klare Richtung - abwarten empfohlen"
 
-        # Add strategy name to reasoning if used
+        # Calculate risk-reward ratio
+        risk_reward_ratio = None
+        if stop_loss and take_profit_2:
+            risk = abs(current_price - stop_loss)
+            reward = abs(take_profit_2 - current_price)
+            if risk > 0:
+                risk_reward_ratio = round(reward / risk, 2)
+
+        # Add strategy name to setup recommendation if used
         if strategy:
-            reasoning = f"[{strategy.name}] {reasoning}"
+            setup_recommendation = f"[{strategy.name}] {setup_recommendation}"
 
         # Add default factors if none found
         if not key_factors:
@@ -820,15 +851,61 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
         if strategy and strategy.risk_level == RiskLevel.AGGRESSIVE:
             risks.insert(0, "Aggressive Strategie - erhöhtes Risiko")
 
+        # Build trend analysis
+        trend_analysis = f"Trend: {analysis.trend}. "
+        if indicators.sma_20 and indicators.sma_50:
+            if indicators.sma_20 > indicators.sma_50:
+                trend_analysis += "SMA20 über SMA50 (bullish). "
+            else:
+                trend_analysis += "SMA20 unter SMA50 (bearish). "
+        if indicators.rsi:
+            trend_analysis += f"RSI bei {indicators.rsi:.1f}."
+
+        # Build support/resistance string
+        support_resistance = ""
+        if analysis.support_levels:
+            support_resistance += f"Support: {', '.join([str(round(s, 5)) for s in analysis.support_levels[:3]])}. "
+        if analysis.resistance_levels:
+            support_resistance += f"Resistance: {', '.join([str(round(r, 5)) for r in analysis.resistance_levels[:3]])}."
+
+        # Build key levels string
+        key_levels_str = ""
+        if indicators.bollinger_upper and indicators.bollinger_lower:
+            key_levels_str = f"BB Upper: {indicators.bollinger_upper:.5f}, BB Lower: {indicators.bollinger_lower:.5f}"
+        if indicators.sma_200:
+            key_levels_str += f", SMA200: {indicators.sma_200:.5f}"
+
+        # Build risk factors string
+        risk_factors_str = "; ".join(risks[:3]) if risks else "Standardmäßiges Marktrisiko"
+
+        # Build trade rationale
+        trade_rationale = f"Basierend auf {len(key_factors)} identifizierten Faktoren: " + "; ".join(key_factors[:3])
+
         return TradingRecommendation(
             symbol=analysis.symbol,
             timestamp=datetime.utcnow(),
+            # New schema fields
+            direction=direction,
+            confidence_score=confidence_score,
+            setup_recommendation=setup_recommendation,
+            entry_price=round(entry_price, 5) if entry_price else None,
+            stop_loss=round(stop_loss, 5) if stop_loss else None,
+            take_profit_1=round(take_profit_1, 5) if take_profit_1 else None,
+            take_profit_2=round(take_profit_2, 5) if take_profit_2 else None,
+            take_profit_3=round(take_profit_3, 5) if take_profit_3 else None,
+            risk_reward_ratio=risk_reward_ratio,
+            recommended_position_size=0.01,  # Default micro lot
+            max_risk_percent=1.0,  # Default 1% risk
+            trend_analysis=trend_analysis.strip(),
+            support_resistance=support_resistance.strip(),
+            key_levels=key_levels_str.strip(", "),
+            risk_factors=risk_factors_str,
+            trade_rationale=trade_rationale,
+            # Legacy fields for backward compatibility
             signal=signal,
             confidence=confidence,
-            entry_price=round(entry_price, 4) if entry_price else None,
-            stop_loss=round(stop_loss, 4) if stop_loss else None,
-            take_profit=round(take_profit, 4) if take_profit else None,
-            reasoning=reasoning,
+            take_profit=round(take_profit_1, 5) if take_profit_1 else None,
+            reasoning=setup_recommendation,
             key_factors=key_factors[:5],
             risks=risks[:3],
             timeframe=timeframe

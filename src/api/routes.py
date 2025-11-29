@@ -8,6 +8,7 @@ from fastapi.responses import PlainTextResponse
 from loguru import logger
 
 from ..config import settings
+from ..version import get_version_info, VERSION, RELEASE_DATE
 from ..models.trading_data import (
     AnalysisRequest,
     AnalysisResponse,
@@ -31,6 +32,12 @@ def get_rag_service():
     """Get the global RAG service instance from main."""
     from ..main import rag_service
     return rag_service
+
+
+@router.get("/version")
+async def get_version():
+    """Get application version and release information."""
+    return get_version_info()
 
 
 @router.get("/health")

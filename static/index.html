@@ -32,6 +32,29 @@
             color: #f8fafc;
         }
 
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .release-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .release-version {
+            font-weight: 600;
+            color: #3b82f6;
+        }
+
+        .release-date {
+            color: #64748b;
+        }
+
         .header-status {
             display: flex;
             align-items: center;
@@ -751,9 +774,15 @@
 <body>
     <header class="header">
         <h1>KI Trading Model Dashboard</h1>
-        <div class="header-status">
-            <div class="status-indicator" id="globalStatus"></div>
-            <span id="statusText">Verbinde...</span>
+        <div class="header-info">
+            <div class="release-info">
+                <span class="release-version" id="releaseVersion">v1.0.0</span>
+                <span class="release-date" id="releaseDate">-</span>
+            </div>
+            <div class="header-status">
+                <div class="status-indicator" id="globalStatus"></div>
+                <span id="statusText">Verbinde...</span>
+            </div>
         </div>
     </header>
 
@@ -1395,28 +1424,42 @@
             }
         }
 
-        // Display full analysis result
+        // Display full analysis result with complete output schema
         function displayAnalysisResult(data) {
             const rec = data.recommendation || {};
-            // Handle both 'action' and 'signal' field names
-            const action = (rec.action || rec.signal || 'hold').toLowerCase();
-            // Handle confidence as string or number
-            let confidence = rec.confidence;
-            let confidenceClass = 'low';
+
+            // Map direction values (handle both old and new format)
+            let direction = (rec.direction || rec.action || rec.signal || 'NEUTRAL').toUpperCase();
+            if (direction === 'BUY') direction = 'LONG';
+            if (direction === 'SELL') direction = 'SHORT';
+            if (direction === 'HOLD') direction = 'NEUTRAL';
+
+            // Map direction to CSS class
+            const directionClass = direction === 'LONG' ? 'buy' : direction === 'SHORT' ? 'sell' : 'hold';
+
+            // Handle confidence_score (0-100) or confidence (0-1 or string)
             let confidencePercent = 0;
-            if (typeof confidence === 'string') {
-                if (confidence === 'high') { confidenceClass = 'high'; confidencePercent = 85; }
-                else if (confidence === 'medium') { confidenceClass = 'medium'; confidencePercent = 55; }
-                else { confidenceClass = 'low'; confidencePercent = 25; }
-            } else {
-                confidence = confidence || 0;
-                confidencePercent = confidence * 100;
-                confidenceClass = confidence >= 0.7 ? 'high' : confidence >= 0.4 ? 'medium' : 'low';
+            if (rec.confidence_score !== undefined) {
+                confidencePercent = rec.confidence_score;
+            } else if (typeof rec.confidence === 'string') {
+                if (rec.confidence === 'high') confidencePercent = 85;
+                else if (rec.confidence === 'medium') confidencePercent = 55;
+                else confidencePercent = 25;
+            } else if (rec.confidence !== undefined) {
+                confidencePercent = rec.confidence * 100;
             }
+
+            const confidenceClass = confidencePercent >= 70 ? 'high' : confidencePercent >= 40 ? 'medium' : 'low';
+
+            // Format price with appropriate decimals
+            const formatPrice = (price) => {
+                if (!price && price !== 0) return '-';
+                return price < 10 ? price.toFixed(5) : price.toFixed(2);
+            };
 
             let html = `
                 <div style="margin-bottom: 1.5rem;">
-                    <span class="recommendation-badge ${action}">${action.toUpperCase()}</span>
+                    <span class="recommendation-badge ${directionClass}">${direction}</span>
                     <div style="margin-top: 0.5rem;">
                         <span style="color: #94a3b8; font-size: 0.875rem;">Konfidenz: ${confidencePercent.toFixed(0)}%</span>
                         <div class="confidence-bar">
@@ -1426,44 +1469,121 @@
                 </div>
             `;
 
-            if (rec.reasoning) {
+            // Setup Recommendation
+            if (rec.setup_recommendation || rec.reasoning) {
                 html += `
                     <div style="margin-bottom: 1rem;">
-                        <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Begründung</h4>
-                        <p class="analysis-text">${rec.reasoning}</p>
+                        <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Setup Empfehlung</h4>
+                        <p class="analysis-text">${rec.setup_recommendation || rec.reasoning}</p>
                     </div>
                 `;
             }
 
-            if (rec.entry_price || rec.stop_loss || rec.take_profit) {
+            // Trading Levels - Entry, Stop Loss, Take Profits
+            if (rec.entry_price || rec.stop_loss || rec.take_profit_1 || rec.take_profit) {
                 html += `
                     <div style="margin-bottom: 1rem;">
                         <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Trading Levels</h4>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
-                                <div style="color: #64748b; font-size: 0.75rem;">Entry</div>
-                                <div style="color: #3b82f6; font-weight: 600;">${rec.entry_price ? rec.entry_price.toFixed(2) : '-'}</div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
+                                <div style="color: #64748b; font-size: 0.75rem;">Entry Price</div>
+                                <div style="color: #3b82f6; font-weight: 600; font-size: 1.1rem;">${formatPrice(rec.entry_price)}</div>
                             </div>
-                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
+                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
                                 <div style="color: #64748b; font-size: 0.75rem;">Stop Loss</div>
-                                <div style="color: #ef4444; font-weight: 600;">${rec.stop_loss ? rec.stop_loss.toFixed(2) : '-'}</div>
+                                <div style="color: #ef4444; font-weight: 600; font-size: 1.1rem;">${formatPrice(rec.stop_loss)}</div>
                             </div>
-                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
-                                <div style="color: #64748b; font-size: 0.75rem;">Take Profit</div>
-                                <div style="color: #22c55e; font-weight: 600;">${rec.take_profit ? rec.take_profit.toFixed(2) : '-'}</div>
+                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
+                                <div style="color: #64748b; font-size: 0.75rem;">Take Profit 1</div>
+                                <div style="color: #22c55e; font-weight: 600;">${formatPrice(rec.take_profit_1 || rec.take_profit)}</div>
+                            </div>
+                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
+                                <div style="color: #64748b; font-size: 0.75rem;">Take Profit 2</div>
+                                <div style="color: #22c55e; font-weight: 600;">${formatPrice(rec.take_profit_2)}</div>
+                            </div>
+                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
+                                <div style="color: #64748b; font-size: 0.75rem;">Take Profit 3</div>
+                                <div style="color: #22c55e; font-weight: 600;">${formatPrice(rec.take_profit_3)}</div>
+                            </div>
+                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
+                                <div style="color: #64748b; font-size: 0.75rem;">Risk/Reward</div>
+                                <div style="color: #f59e0b; font-weight: 600;">${rec.risk_reward_ratio ? rec.risk_reward_ratio.toFixed(2) + ':1' : '-'}</div>
                             </div>
                         </div>
                     </div>
                 `;
             }
 
-            if (rec.risk_factors && rec.risk_factors.length > 0) {
+            // Risk Management
+            if (rec.recommended_position_size || rec.max_risk_percent) {
                 html += `
-                    <div>
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Risikomanagement</h4>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
+                                <div style="color: #64748b; font-size: 0.75rem;">Position Size</div>
+                                <div style="color: #e2e8f0; font-weight: 600;">${rec.recommended_position_size ? rec.recommended_position_size.toFixed(2) + ' Lots' : '-'}</div>
+                            </div>
+                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
+                                <div style="color: #64748b; font-size: 0.75rem;">Max. Risiko</div>
+                                <div style="color: #f59e0b; font-weight: 600;">${rec.max_risk_percent ? rec.max_risk_percent.toFixed(1) + '%' : '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Trend Analysis
+            if (rec.trend_analysis) {
+                html += `
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Trend-Analyse</h4>
+                        <p class="analysis-text">${rec.trend_analysis}</p>
+                    </div>
+                `;
+            }
+
+            // Support & Resistance
+            if (rec.support_resistance) {
+                html += `
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Unterstützung & Widerstand</h4>
+                        <p class="analysis-text">${rec.support_resistance}</p>
+                    </div>
+                `;
+            }
+
+            // Key Levels
+            if (rec.key_levels) {
+                html += `
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Wichtige Preisniveaus</h4>
+                        <p class="analysis-text">${rec.key_levels}</p>
+                    </div>
+                `;
+            }
+
+            // Risk Factors
+            if (rec.risk_factors) {
+                const riskContent = Array.isArray(rec.risk_factors)
+                    ? rec.risk_factors.map(r => `<li>${r}</li>`).join('')
+                    : `<li>${rec.risk_factors}</li>`;
+                html += `
+                    <div style="margin-bottom: 1rem;">
                         <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Risikofaktoren</h4>
-                        <ul style="color: #f59e0b; font-size: 0.875rem; padding-left: 1.25rem;">
-                            ${rec.risk_factors.map(r => `<li>${r}</li>`).join('')}
+                        <ul style="color: #f59e0b; font-size: 0.875rem; padding-left: 1.25rem; line-height: 1.6;">
+                            ${riskContent}
                         </ul>
+                    </div>
+                `;
+            }
+
+            // Trade Rationale
+            if (rec.trade_rationale) {
+                html += `
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Handelsbegründung</h4>
+                        <p class="analysis-text">${rec.trade_rationale}</p>
                     </div>
                 `;
             }
@@ -1877,10 +1997,41 @@
             }
         }
 
+        // Load release/version info
+        async function loadVersionInfo() {
+            try {
+                const data = await apiFetch('/version');
+                if (data.version) {
+                    document.getElementById('releaseVersion').textContent = data.version;
+                }
+                if (data.release_date) {
+                    const releaseDate = new Date(data.release_date);
+                    document.getElementById('releaseDate').textContent =
+                        `Release: ${releaseDate.toLocaleDateString('de-DE')} ${releaseDate.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})}`;
+                }
+            } catch (error) {
+                // Fallback: Try to get from root endpoint or keep defaults
+                try {
+                    const rootData = await fetch('/').then(r => r.json());
+                    if (rootData.version) {
+                        document.getElementById('releaseVersion').textContent = rootData.version;
+                    }
+                    if (rootData.release_date) {
+                        const releaseDate = new Date(rootData.release_date);
+                        document.getElementById('releaseDate').textContent =
+                            `Release: ${releaseDate.toLocaleDateString('de-DE')} ${releaseDate.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})}`;
+                    }
+                } catch (e) {
+                    console.log('Version info not available from API');
+                }
+            }
+        }
+
         // Initialize
         updateDashboard();
         loadSymbols();
         loadStrategies();
+        loadVersionInfo();
         setInterval(updateDashboard, 10000);
 
         // Fetch config info

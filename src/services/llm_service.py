@@ -10,9 +10,11 @@ from ..config import settings
 from ..models.trading_data import (
     MarketAnalysis,
     TradingRecommendation,
+    TradeDirection,
     SignalType,
     ConfidenceLevel,
 )
+from ..config import get_output_schema_prompt
 
 
 class LLMService:
@@ -95,20 +97,14 @@ class LLMService:
             if rag_context:
                 context_str = "\n\nHistorischer Kontext:\n" + "\n---\n".join(rag_context[:5])
 
-            # Build the prompt
-            system_prompt = """Du bist ein erfahrener Trading-Analyst. Analysiere die Marktdaten und gib eine strukturierte Empfehlung.
-Antworte IMMER im folgenden JSON-Format:
-{
-    "signal": "buy" | "sell" | "hold",
-    "confidence": "high" | "medium" | "low",
-    "entry_price": <number or null>,
-    "stop_loss": <number or null>,
-    "take_profit": <number or null>,
-    "reasoning": "<kurze Begründung>",
-    "key_factors": ["<factor1>", "<factor2>"],
-    "risks": ["<risk1>", "<risk2>"],
-    "timeframe": "short_term" | "medium_term" | "long_term"
-}"""
+            # Build the system prompt with output schema
+            output_schema_prompt = get_output_schema_prompt()
+
+            system_prompt = f"""Du bist ein erfahrener Trading-Analyst. Analysiere die Marktdaten und gib eine strukturierte Empfehlung.
+
+{output_schema_prompt}
+
+Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danach."""
 
             user_prompt = f"{str(market_data)}{context_str}"
             if custom_prompt:
@@ -132,24 +128,81 @@ Antworte IMMER im folgenden JSON-Format:
             json_start = llm_response.find("{")
             json_end = llm_response.rfind("}") + 1
             if json_start == -1:
-                raise ValueError("No JSON")
+                raise ValueError("No JSON found in LLM response")
             data = json.loads(llm_response[json_start:json_end])
+
+            # Parse direction (new schema)
+            direction_str = data.get("direction", "NEUTRAL").upper()
+            try:
+                direction = TradeDirection(direction_str)
+            except ValueError:
+                direction = TradeDirection.NEUTRAL
+
+            # Map direction to legacy signal
+            signal_map = {
+                TradeDirection.LONG: SignalType.BUY,
+                TradeDirection.SHORT: SignalType.SELL,
+                TradeDirection.NEUTRAL: SignalType.HOLD
+            }
+            signal = signal_map.get(direction, SignalType.HOLD)
+
+            # Parse confidence_score (0-100) to confidence level
+            confidence_score = int(data.get("confidence_score", 50))
+            if confidence_score >= 80:
+                confidence = ConfidenceLevel.VERY_HIGH
+            elif confidence_score >= 60:
+                confidence = ConfidenceLevel.HIGH
+            elif confidence_score >= 40:
+                confidence = ConfidenceLevel.MEDIUM
+            else:
+                confidence = ConfidenceLevel.LOW
+
+            # Get take profit values
+            take_profit_1 = data.get("take_profit_1")
+            take_profit_2 = data.get("take_profit_2")
+            take_profit_3 = data.get("take_profit_3")
+
+            # Build risk factors string from list if needed
+            risk_factors = data.get("risk_factors", "")
+            if isinstance(risk_factors, list):
+                risk_factors = "; ".join(risk_factors)
+
             return TradingRecommendation(
                 symbol=symbol,
                 timestamp=datetime.utcnow(),
-                signal=SignalType(data.get("signal", "hold")),
-                confidence=ConfidenceLevel(data.get("confidence", "low")),
+                # New schema fields
+                direction=direction,
+                confidence_score=confidence_score,
+                setup_recommendation=data.get("setup_recommendation", ""),
                 entry_price=data.get("entry_price"),
                 stop_loss=data.get("stop_loss"),
-                take_profit=data.get("take_profit"),
-                reasoning=data.get("reasoning", ""),
-                key_factors=data.get("key_factors", []),
-                risks=data.get("risks", []),
-                timeframe=data.get("timeframe", "short_term")
+                take_profit_1=take_profit_1,
+                take_profit_2=take_profit_2,
+                take_profit_3=take_profit_3,
+                risk_reward_ratio=data.get("risk_reward_ratio"),
+                recommended_position_size=data.get("recommended_position_size"),
+                max_risk_percent=data.get("max_risk_percent"),
+                trend_analysis=data.get("trend_analysis", ""),
+                support_resistance=data.get("support_resistance", ""),
+                key_levels=data.get("key_levels", ""),
+                risk_factors=risk_factors,
+                trade_rationale=data.get("trade_rationale", ""),
+                # Legacy fields for backward compatibility
+                signal=signal,
+                confidence=confidence,
+                take_profit=take_profit_1,  # Use first TP as legacy take_profit
+                reasoning=data.get("setup_recommendation", ""),
+                key_factors=[],
+                risks=[risk_factors] if risk_factors else [],
+                timeframe="short_term"
             )
         except Exception as e:
+            logger.error(f"Error parsing LLM recommendation: {e}")
             return TradingRecommendation(
                 symbol=symbol,
+                direction=TradeDirection.NEUTRAL,
+                confidence_score=25,
+                setup_recommendation=f"Parsing error: {str(e)}",
                 signal=SignalType.HOLD,
                 confidence=ConfidenceLevel.LOW,
                 reasoning=str(e),

@@ -10,6 +10,7 @@ import sys
 import os
 
 from .config import settings
+from .version import VERSION, RELEASE_DATE
 from .api import router
 from .services.rag_service import RAGService
 from .services.timescaledb_sync_service import TimescaleDBSyncService
@@ -38,7 +39,7 @@ logger.add(
 app = FastAPI(
     title="KI Trading Model",
     description="Lokaler KI-Service für Handelsempfehlungen basierend auf Llama 3.1 70B und RAG",
-    version="1.0.0",
+    version=VERSION,
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -122,7 +123,8 @@ async def root():
     """Root endpoint with service information."""
     return {
         "service": "KI Trading Model",
-        "version": "1.0.0",
+        "version": f"v{VERSION}",
+        "release_date": RELEASE_DATE,
         "description": "Lokaler KI-Service für Handelsempfehlungen",
         "docs": "/docs",
         "health": "/api/v1/health"
