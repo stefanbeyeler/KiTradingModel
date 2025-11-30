@@ -1709,8 +1709,13 @@
                 </div>`
                 : '';
 
-            // Always show strategy - use "Standard (Default)" if not specified
-            const strategyDisplay = log.strategy_name || 'Standard (Default)';
+            // Always show strategy - resolve default strategy name if not specified
+            let strategyDisplay = log.strategy_name;
+            if (!strategyDisplay) {
+                // Try to find default strategy from cache
+                const defaultStrategy = strategiesCache.find(s => s.is_default);
+                strategyDisplay = defaultStrategy ? defaultStrategy.name : 'Standard';
+            }
 
             return `
                 <div class="log-entry" onclick="toggleLogEntry(this)">
