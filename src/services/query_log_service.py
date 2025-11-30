@@ -122,8 +122,8 @@ class QueryLogService:
         """Add a new query log entry."""
 
         entry = QueryLogEntry(
-            id=f"log_{datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')}",
-            timestamp=datetime.utcnow(),
+            id=f"log_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
+            timestamp=datetime.now(),
             query_type=query_type,
             symbol=symbol,
             system_prompt=system_prompt,

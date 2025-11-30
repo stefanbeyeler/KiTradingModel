@@ -638,6 +638,41 @@
             height: 14px;
         }
 
+        /* Symbol Input with Reset Button */
+        .symbol-input-wrapper {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .symbol-input-wrapper input {
+            flex: 1;
+        }
+
+        .btn-reset-symbol {
+            background: #475569;
+            border: 1px solid #64748b;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            cursor: pointer;
+            color: #e2e8f0;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-reset-symbol:hover {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: white;
+        }
+
+        .btn-reset-symbol svg {
+            width: 16px;
+            height: 16px;
+        }
+
         .tabs {
             display: flex;
             flex-wrap: wrap;
@@ -882,6 +917,15 @@
         .log-timestamp {
             font-size: 0.75rem;
             color: #64748b;
+        }
+
+        .log-strategy-badge {
+            font-size: 0.75rem;
+            color: #a78bfa;
+            background: rgba(167, 139, 250, 0.15);
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
         }
 
         .log-meta {
@@ -1158,7 +1202,14 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="analysisSymbol">Symbol</label>
-                            <input type="text" id="analysisSymbol" list="symbolList" placeholder="z.B. BTC/USD, EUR/USD">
+                            <div class="symbol-input-wrapper">
+                                <input type="text" id="analysisSymbol" list="symbolList" placeholder="z.B. BTC/USD, EUR/USD">
+                                <button type="button" class="btn-reset-symbol" onclick="clearLastSymbol()" title="Symbol zurücksetzen">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="analysisLookback">Zeitraum (Tage)</label>
@@ -1197,7 +1248,14 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="quickSymbol">Symbol</label>
-                            <input type="text" id="quickSymbol" list="symbolList" placeholder="z.B. BTC/USD, EUR/USD">
+                            <div class="symbol-input-wrapper">
+                                <input type="text" id="quickSymbol" list="symbolList" placeholder="z.B. BTC/USD, EUR/USD">
+                                <button type="button" class="btn-reset-symbol" onclick="clearLastSymbol()" title="Symbol zurücksetzen">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="quickLookback">Zeitraum (Tage)</label>
@@ -1651,6 +1709,9 @@
                 </div>`
                 : '';
 
+            // Always show strategy - use "Standard (Default)" if not specified
+            const strategyDisplay = log.strategy_name || 'Standard (Default)';
+
             return `
                 <div class="log-entry" onclick="toggleLogEntry(this)">
                     <div class="log-entry-header">
@@ -1658,7 +1719,7 @@
                             <span class="log-type-badge log-type-${log.query_type}">${typeLabel}</span>
                             ${log.symbol ? `<span class="log-symbol">${log.symbol}</span>` : ''}
                             <span class="log-timestamp">${timestamp}</span>
-                            ${log.strategy_name ? `<span style="color: #94a3b8; font-size: 0.75rem;">Strategie: ${log.strategy_name}</span>` : ''}
+                            <span class="log-strategy-badge">📊 ${strategyDisplay}</span>
                         </div>
                         <div class="log-meta">
                             <span class="${log.success ? 'log-success' : 'log-error'}">${log.success ? 'Erfolgreich' : 'Fehler'}</span>
@@ -1727,6 +1788,36 @@
             toast.textContent = message;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
+        }
+
+        // localStorage key for last used symbol
+        const LAST_SYMBOL_KEY = 'ki_trading_last_symbol';
+
+        // Load last used symbol from localStorage
+        function loadLastSymbol() {
+            const lastSymbol = localStorage.getItem(LAST_SYMBOL_KEY);
+            if (lastSymbol) {
+                document.getElementById('analysisSymbol').value = lastSymbol;
+                document.getElementById('quickSymbol').value = lastSymbol;
+            }
+        }
+
+        // Save symbol to localStorage
+        function saveLastSymbol(symbol) {
+            if (symbol && symbol.trim()) {
+                localStorage.setItem(LAST_SYMBOL_KEY, symbol.trim());
+                // Sync both input fields
+                document.getElementById('analysisSymbol').value = symbol.trim();
+                document.getElementById('quickSymbol').value = symbol.trim();
+            }
+        }
+
+        // Clear saved symbol
+        function clearLastSymbol() {
+            localStorage.removeItem(LAST_SYMBOL_KEY);
+            document.getElementById('analysisSymbol').value = '';
+            document.getElementById('quickSymbol').value = '';
+            showToast('Symbol zurückgesetzt', 'success');
         }
 
         // Copy to clipboard with visual feedback
@@ -1806,6 +1897,9 @@
                 showToast('Bitte Symbol eingeben (z.B. BTC/USD)', 'error');
                 return;
             }
+
+            // Save symbol to localStorage
+            saveLastSymbol(symbol);
 
             const btn = document.getElementById('btnAnalyze');
             btn.disabled = true;
@@ -2431,6 +2525,9 @@
                 return;
             }
 
+            // Save symbol to localStorage
+            saveLastSymbol(symbol);
+
             const btn = document.getElementById('btnQuick');
             btn.disabled = true;
             btn.innerHTML = '<span class="loading-spinner"></span>Lädt...';
@@ -2493,6 +2590,7 @@
         loadSymbols();
         loadStrategies();
         loadVersionInfo();
+        loadLastSymbol();  // Load saved symbol from localStorage
         setInterval(updateDashboard, 10000);
 
         // Fetch config info

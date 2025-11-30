@@ -135,17 +135,21 @@ class AnalysisService:
         start_time = time.time()
         request_id = str(uuid.uuid4())
 
-        # Load strategy if specified
+        # Load strategy - either specified or default
         strategy = None
+        from .strategy_service import StrategyService
+        strategy_service = StrategyService()
+
         if request.strategy_id:
-            from .strategy_service import StrategyService
-            strategy_service = StrategyService()
             strategy = await strategy_service.get_strategy(request.strategy_id)
             if not strategy:
-                # Try to get default strategy
+                # Fallback to default strategy if specified strategy not found
                 strategy = await strategy_service.get_default_strategy()
+        else:
+            # No strategy specified - use default strategy
+            strategy = await strategy_service.get_default_strategy()
 
-        strategy_name = strategy.name if strategy else "default"
+        strategy_name = strategy.name if strategy else "Standard (Default)"
         logger.info(f"Starting analysis for {request.symbol} (request_id: {request_id}, strategy: {strategy_name})")
 
         try:
@@ -186,7 +190,7 @@ class AnalysisService:
                 rag_context=rag_context,
                 custom_prompt=custom_prompt,
                 strategy_id=strategy.id if strategy else None,
-                strategy_name=strategy.name if strategy else None,
+                strategy_name=strategy.name if strategy else "Standard (Default)",
             )
 
             # Add strategy name to reasoning if used
@@ -602,7 +606,7 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
             TradingRecommendation
         """
         start_time = time.time()
-        strategy_name = strategy.name if strategy else "default"
+        strategy_name = strategy.name if strategy else "Standard (Default)"
         logger.info(f"Quick recommendation for {symbol} (use_llm={use_llm}, strategy={strategy_name})")
 
         # Use strategy's lookback_days if available
@@ -642,7 +646,7 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
                 rag_context=rag_context,
                 custom_prompt=custom_prompt,
                 strategy_id=strategy.id if strategy else None,
-                strategy_name=strategy.name if strategy else None,
+                strategy_name=strategy.name if strategy else "Standard (Default)",
             )
         else:
             # Fast rule-based recommendation (no LLM)
