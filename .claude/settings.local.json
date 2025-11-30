@@ -59,7 +59,9 @@
       "Bash(dir:*)",
       "Bash(ping:*)",
       "Bash(git describe:*)",
-      "Bash(git rev-parse:*)"
+      "Bash(git rev-parse:*)",
+      "Bash(echo:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
