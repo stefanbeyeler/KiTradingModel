@@ -26,5 +26,7 @@ nul
 # OS
 .DS_Store
 Thumbs.db
+
 # RAG/FAISS Data
-data/
+data/data.pkl
+data/faiss_index
