@@ -1,8 +1,9 @@
 """LLM Service for Llama 3.1 70B via Ollama with GPU optimization."""
 
 import json
+import time
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Tuple
 import ollama
 from loguru import logger
 
@@ -15,6 +16,7 @@ from ..models.trading_data import (
     ConfidenceLevel,
 )
 from ..config import get_output_schema_prompt
+from .query_log_service import query_log_service
 
 
 class LLMService:
@@ -88,7 +90,19 @@ class LLMService:
             logger.error(f"Error pulling model: {e}")
             return False
 
-    async def generate_analysis(self, market_data: MarketAnalysis, rag_context: list[str], custom_prompt: Optional[str] = None) -> TradingRecommendation:
+    async def generate_analysis(
+        self,
+        market_data: MarketAnalysis,
+        rag_context: list[str],
+        custom_prompt: Optional[str] = None,
+        strategy_id: Optional[str] = None,
+        strategy_name: Optional[str] = None,
+    ) -> TradingRecommendation:
+        start_time = time.time()
+        system_prompt = ""
+        user_prompt = ""
+        llm_response = ""
+
         try:
             client = self._get_client()
 
@@ -118,9 +132,50 @@ Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danac
                 ],
                 options=self._options
             )
-            return self._parse_recommendation(response["message"]["content"], market_data.symbol, market_data.current_price)
+
+            llm_response = response["message"]["content"]
+            processing_time = (time.time() - start_time) * 1000
+
+            recommendation = self._parse_recommendation(llm_response, market_data.symbol, market_data.current_price)
+
+            # Log the query
+            query_log_service.add_log(
+                query_type="analysis",
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                llm_response=llm_response,
+                model_used=self.model,
+                processing_time_ms=processing_time,
+                symbol=market_data.symbol,
+                rag_context=rag_context[:5] if rag_context else [],
+                parsed_response=recommendation.model_dump() if recommendation else None,
+                success=True,
+                strategy_id=strategy_id,
+                strategy_name=strategy_name,
+            )
+
+            return recommendation
+
         except Exception as e:
+            processing_time = (time.time() - start_time) * 1000
             logger.error(f"Error: {e}")
+
+            # Log the failed query
+            query_log_service.add_log(
+                query_type="analysis",
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                llm_response=llm_response,
+                model_used=self.model,
+                processing_time_ms=processing_time,
+                symbol=market_data.symbol if market_data else None,
+                rag_context=rag_context[:5] if rag_context else [],
+                success=False,
+                error_message=str(e),
+                strategy_id=strategy_id,
+                strategy_name=strategy_name,
+            )
+
             raise
 
     def _parse_recommendation(self, llm_response: str, symbol: str, current_price: float) -> TradingRecommendation:

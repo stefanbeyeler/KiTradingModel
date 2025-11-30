@@ -18,6 +18,7 @@ from ..models.trading_data import (
     StrategyUpdateRequest,
 )
 from ..services import AnalysisService, LLMService, StrategyService
+from ..services.query_log_service import query_log_service, QueryLogEntry
 
 
 router = APIRouter()
@@ -525,4 +526,79 @@ async def import_strategy(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File must be UTF-8 encoded")
     except Exception as e:
         logger.error(f"Failed to import strategy: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Query Logs ====================
+
+@router.get("/query-logs")
+async def get_query_logs(
+    limit: int = 50,
+    offset: int = 0,
+    query_type: Optional[str] = None,
+    symbol: Optional[str] = None,
+    success_only: bool = False,
+):
+    """
+    Get query log history with optional filtering.
+
+    Parameters:
+    - limit: Maximum number of logs to return (default: 50)
+    - offset: Number of logs to skip (default: 0)
+    - query_type: Filter by type (analysis, quick_recommendation, rag_query)
+    - symbol: Filter by symbol (partial match)
+    - success_only: Only return successful queries
+    """
+    try:
+        logs = query_log_service.get_logs(
+            limit=limit,
+            offset=offset,
+            query_type=query_type,
+            symbol=symbol,
+            success_only=success_only,
+        )
+        return {
+            "logs": [log.model_dump() for log in logs],
+            "count": len(logs),
+            "offset": offset,
+            "limit": limit,
+        }
+    except Exception as e:
+        logger.error(f"Failed to get query logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/query-logs/stats")
+async def get_query_log_stats():
+    """Get statistics about query logs."""
+    try:
+        return query_log_service.get_stats()
+    except Exception as e:
+        logger.error(f"Failed to get query log stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/query-logs/{log_id}")
+async def get_query_log_by_id(log_id: str):
+    """Get a specific query log entry by ID."""
+    try:
+        log = query_log_service.get_log_by_id(log_id)
+        if not log:
+            raise HTTPException(status_code=404, detail=f"Log '{log_id}' not found")
+        return log.model_dump()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get query log: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/query-logs")
+async def clear_query_logs():
+    """Clear all query logs."""
+    try:
+        count = query_log_service.clear_logs()
+        return {"status": "cleared", "deleted_count": count}
+    except Exception as e:
+        logger.error(f"Failed to clear query logs: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -184,7 +184,9 @@ class AnalysisService:
             recommendation = await self.llm_service.generate_analysis(
                 market_data=market_analysis,
                 rag_context=rag_context,
-                custom_prompt=custom_prompt
+                custom_prompt=custom_prompt,
+                strategy_id=strategy.id if strategy else None,
+                strategy_name=strategy.name if strategy else None,
             )
 
             # Add strategy name to reasoning if used
@@ -638,7 +640,9 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
             recommendation = await self.llm_service.generate_analysis(
                 market_data=market_analysis,
                 rag_context=rag_context,
-                custom_prompt=custom_prompt
+                custom_prompt=custom_prompt,
+                strategy_id=strategy.id if strategy else None,
+                strategy_name=strategy.name if strategy else None,
             )
         else:
             # Fast rule-based recommendation (no LLM)

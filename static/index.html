@@ -712,6 +712,190 @@
             font-size: 0.75rem;
         }
 
+        /* Query Logs styles */
+        .query-logs-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .log-stats {
+            display: flex;
+            gap: 1.5rem;
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        .log-stat-item strong {
+            color: #e2e8f0;
+        }
+
+        .log-filter-select {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .log-filter-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .log-entry {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .log-entry:hover {
+            border-color: #3b82f6;
+            background: #253449;
+        }
+
+        .log-entry.expanded {
+            border-color: #3b82f6;
+        }
+
+        .log-entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .log-entry-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .log-type-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .log-type-analysis {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .log-type-quick_recommendation {
+            background: #22c55e;
+            color: white;
+        }
+
+        .log-type-rag_query {
+            background: #f59e0b;
+            color: black;
+        }
+
+        .log-symbol {
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .log-timestamp {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .log-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .log-success {
+            color: #22c55e;
+        }
+
+        .log-error {
+            color: #ef4444;
+        }
+
+        .log-details {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #334155;
+        }
+
+        .log-entry.expanded .log-details {
+            display: block;
+        }
+
+        .log-section {
+            margin-bottom: 1rem;
+        }
+
+        .log-section-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .log-section-content {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.375rem;
+            padding: 0.75rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.8rem;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-rag-context {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .log-rag-item {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .log-rag-count {
+            background: #334155;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.7rem;
+        }
+
+        .expand-icon {
+            transition: transform 0.2s;
+            color: #64748b;
+        }
+
+        .log-entry.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
         /* Modal styles */
         .modal-overlay {
             display: none;
@@ -891,6 +1075,7 @@
                 <button class="tab-btn" onclick="switchTab('quick')">Schnellempfehlung</button>
                 <button class="tab-btn" onclick="switchTab('rag')">RAG Abfrage</button>
                 <button class="tab-btn" onclick="switchTab('strategies')">Strategien</button>
+                <button class="tab-btn" onclick="switchTab('logs')">Query Logs</button>
             </div>
 
             <!-- Vollanalyse Tab -->
@@ -1014,6 +1199,36 @@
                         <div style="text-align: center; padding: 2rem; color: #64748b;">
                             <span class="loading-spinner"></span>
                             <p style="margin-top: 0.5rem;">Lade Strategien...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Query Logs Tab -->
+            <div id="tab-logs" class="tab-content">
+                <div class="query-form">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                            <div class="log-stats" id="logStats">
+                                <span class="log-stat-item">Gesamt: <strong id="logTotalCount">0</strong></span>
+                                <span class="log-stat-item">Erfolgsrate: <strong id="logSuccessRate">0%</strong></span>
+                                <span class="log-stat-item">Avg. Zeit: <strong id="logAvgTime">0ms</strong></span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <select id="logTypeFilter" class="log-filter-select" onchange="loadQueryLogs()">
+                                <option value="">Alle Typen</option>
+                                <option value="analysis">Vollanalyse</option>
+                                <option value="quick_recommendation">Schnellempfehlung</option>
+                                <option value="rag_query">RAG Abfrage</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="loadQueryLogs()">Aktualisieren</button>
+                            <button class="btn btn-danger" onclick="clearQueryLogs()">Logs löschen</button>
+                        </div>
+                    </div>
+                    <div id="queryLogsContainer" class="query-logs-container">
+                        <div style="text-align: center; padding: 2rem; color: #64748b;">
+                            <p>Klicken Sie auf "Aktualisieren" um Logs zu laden.</p>
                         </div>
                     </div>
                 </div>
@@ -1310,6 +1525,126 @@
 
         function openDocs() {
             window.open('/docs', '_blank');
+        }
+
+        // ==================== Query Logs Functions ====================
+
+        async function loadQueryLogs() {
+            const container = document.getElementById('queryLogsContainer');
+            const typeFilter = document.getElementById('logTypeFilter').value;
+
+            container.innerHTML = '<div style="text-align: center; padding: 2rem;"><span class="loading-spinner"></span><p style="margin-top: 0.5rem; color: #64748b;">Lade Logs...</p></div>';
+
+            try {
+                // Load logs and stats in parallel
+                const [logsResponse, statsResponse] = await Promise.all([
+                    apiFetch(`/query-logs?limit=100${typeFilter ? '&query_type=' + typeFilter : ''}`),
+                    apiFetch('/query-logs/stats')
+                ]);
+
+                // Update stats
+                document.getElementById('logTotalCount').textContent = statsResponse.total_queries || 0;
+                document.getElementById('logSuccessRate').textContent = (statsResponse.success_rate || 0) + '%';
+                document.getElementById('logAvgTime').textContent = Math.round(statsResponse.avg_processing_time_ms || 0) + 'ms';
+
+                const logs = logsResponse.logs || [];
+
+                if (logs.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;"><p>Keine Logs vorhanden.</p></div>';
+                    return;
+                }
+
+                container.innerHTML = logs.map(log => renderLogEntry(log)).join('');
+
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #ef4444;"><p>Fehler beim Laden: ${error.message}</p></div>`;
+            }
+        }
+
+        function renderLogEntry(log) {
+            const timestamp = new Date(log.timestamp).toLocaleString('de-DE');
+            const typeLabel = {
+                'analysis': 'Vollanalyse',
+                'quick_recommendation': 'Schnellempfehlung',
+                'rag_query': 'RAG Abfrage'
+            }[log.query_type] || log.query_type;
+
+            const ragContextHtml = log.rag_context && log.rag_context.length > 0
+                ? `<div class="log-section">
+                    <div class="log-section-title">
+                        RAG Kontext <span class="log-rag-count">${log.rag_document_count} Dokumente</span>
+                    </div>
+                    <ul class="log-rag-context">
+                        ${log.rag_context.slice(0, 3).map((ctx, i) => `
+                            <li class="log-rag-item">${escapeHtml(ctx.substring(0, 200))}${ctx.length > 200 ? '...' : ''}</li>
+                        `).join('')}
+                    </ul>
+                </div>`
+                : '';
+
+            return `
+                <div class="log-entry" onclick="toggleLogEntry(this)">
+                    <div class="log-entry-header">
+                        <div class="log-entry-info">
+                            <span class="log-type-badge log-type-${log.query_type}">${typeLabel}</span>
+                            ${log.symbol ? `<span class="log-symbol">${log.symbol}</span>` : ''}
+                            <span class="log-timestamp">${timestamp}</span>
+                            ${log.strategy_name ? `<span style="color: #94a3b8; font-size: 0.75rem;">Strategie: ${log.strategy_name}</span>` : ''}
+                        </div>
+                        <div class="log-meta">
+                            <span class="${log.success ? 'log-success' : 'log-error'}">${log.success ? 'Erfolgreich' : 'Fehler'}</span>
+                            <span>${Math.round(log.processing_time_ms)}ms</span>
+                            <span>${log.model_used}</span>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                    </div>
+                    <div class="log-details">
+                        <div class="log-section">
+                            <div class="log-section-title">System Prompt</div>
+                            <div class="log-section-content">${escapeHtml(log.system_prompt || '-')}</div>
+                        </div>
+                        <div class="log-section">
+                            <div class="log-section-title">User Prompt</div>
+                            <div class="log-section-content">${escapeHtml(log.user_prompt || '-')}</div>
+                        </div>
+                        ${ragContextHtml}
+                        <div class="log-section">
+                            <div class="log-section-title">LLM Antwort</div>
+                            <div class="log-section-content">${escapeHtml(log.llm_response || '-')}</div>
+                        </div>
+                        ${log.error_message ? `
+                            <div class="log-section">
+                                <div class="log-section-title" style="color: #ef4444;">Fehlermeldung</div>
+                                <div class="log-section-content" style="border-color: #ef4444;">${escapeHtml(log.error_message)}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleLogEntry(element) {
+            element.classList.toggle('expanded');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function clearQueryLogs() {
+            if (!confirm('Alle Query-Logs wirklich löschen?')) return;
+
+            try {
+                const response = await apiFetch('/query-logs', { method: 'DELETE' });
+                showToast(`${response.deleted_count} Logs gelöscht`, 'success');
+                await loadQueryLogs();
+            } catch (error) {
+                showToast('Fehler beim Löschen', 'error');
+            }
         }
 
         async function refreshAll() {
