@@ -1137,15 +1137,9 @@
                             </select>
                         </div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="quickUseLLM">Analysemethode</label>
-                            <select id="quickUseLLM">
-                                <option value="false">Schnell (regelbasiert)</option>
-                                <option value="true">LLM-Analyse (detaillierter, langsamer)</option>
-                            </select>
-                        </div>
-                    </div>
+                    <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 1rem;">
+                        Schnelle regelbasierte Analyse ohne LLM. Für detaillierte KI-Analyse nutze "Vollanalyse".
+                    </p>
                     <div class="query-buttons">
                         <button class="btn btn-success" id="btnQuick" onclick="runQuickRecommendation()">
                             Empfehlung abrufen
@@ -2329,12 +2323,11 @@
             }
         }
 
-        // Update quick recommendation to use strategy
+        // Quick recommendation (rule-based only, no LLM)
         async function runQuickRecommendation() {
             const symbol = document.getElementById('quickSymbol').value.trim();
             const lookback = parseInt(document.getElementById('quickLookback').value);
             const strategyId = document.getElementById('quickStrategy').value;
-            const useLLM = document.getElementById('quickUseLLM').value === 'true';
 
             if (!symbol) {
                 showToast('Bitte Symbol eingeben (z.B. BTC/USD)', 'error');
@@ -2345,15 +2338,13 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="loading-spinner"></span>Lädt...';
 
-            const methodText = useLLM ? 'LLM-Analyse' : 'Schnellempfehlung';
             showResponse('Empfehlung wird geladen...', `<div style="text-align: center; padding: 2rem;">
                 <span class="loading-spinner"></span>
-                <p style="margin-top: 1rem; color: #94a3b8;">${methodText} für ${symbol}...</p>
-                ${useLLM ? '<p style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">Dies kann 30-60 Sekunden dauern</p>' : ''}
+                <p style="margin-top: 1rem; color: #94a3b8;">Schnellempfehlung für ${symbol}...</p>
             </div>`);
 
             try {
-                let url = `/recommendation/${encodeURIComponent(symbol)}?lookback_days=${lookback}&use_llm=${useLLM}`;
+                let url = `/recommendation/${encodeURIComponent(symbol)}?lookback_days=${lookback}&use_llm=false`;
                 if (strategyId) {
                     url += `&strategy_id=${encodeURIComponent(strategyId)}`;
                 }
