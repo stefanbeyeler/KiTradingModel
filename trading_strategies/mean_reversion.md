@@ -36,11 +36,13 @@ You MUST respond with a JSON object following this EXACT schema:
   "direction": "LONG" | "SHORT" | "NEUTRAL",
   "confidence_score": 0-100,
   "setup_recommendation": "Detailed description of the trading setup and why it's valid or not",
-  "entry_price": 0.00000,
-  "stop_loss": 0.00000,
-  "take_profit_1": 0.00000,
-  "take_profit_2": 0.00000,
-  "take_profit_3": 0.00000,
+  "price_levels": {
+    "entry":        0.00000,
+    "stop_loss":    0.00000,
+    "take_profit_1": 0.00000,
+    "take_profit_2": 0.00000,
+    "take_profit_3": 0.00000
+  },
   "risk_reward_ratio": 0.0,
   "recommended_position_size": 0.00,
   "max_risk_percent": 0.0,
