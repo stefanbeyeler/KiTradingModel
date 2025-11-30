@@ -31,3 +31,4 @@ Thumbs.db
 data/data.pkl
 data/faiss_index
 data/query_logs.json
+data/faiss/
