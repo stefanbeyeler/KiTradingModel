@@ -565,6 +565,79 @@
             color: #e2e8f0;
         }
 
+        /* Trading Levels Compact Style */
+        .trading-levels-container {
+            background: #1e293b;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .trading-level-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #334155;
+        }
+
+        .trading-level-row:last-child {
+            border-bottom: none;
+        }
+
+        .trading-level-label {
+            color: #94a3b8;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .trading-level-value-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .trading-level-value {
+            font-weight: 600;
+            font-size: 1rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .trading-level-value.entry { color: #3b82f6; }
+        .trading-level-value.stop-loss { color: #ef4444; }
+        .trading-level-value.take-profit { color: #22c55e; }
+        .trading-level-value.risk-reward { color: #f59e0b; }
+        .trading-level-value.neutral { color: #e2e8f0; }
+
+        .copy-btn {
+            background: #334155;
+            border: none;
+            border-radius: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .copy-btn:hover {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .copy-btn.copied {
+            background: #22c55e;
+            color: white;
+        }
+
+        .copy-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
         .tabs {
             display: flex;
             flex-wrap: wrap;
@@ -1656,6 +1729,31 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
+        // Copy to clipboard with visual feedback
+        async function copyToClipboard(value, button) {
+            try {
+                await navigator.clipboard.writeText(value);
+
+                // Visual feedback
+                button.classList.add('copied');
+                const originalHTML = button.innerHTML;
+                button.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                `;
+
+                setTimeout(() => {
+                    button.classList.remove('copied');
+                    button.innerHTML = originalHTML;
+                }, 1500);
+
+                showToast(`${value} kopiert`, 'success');
+            } catch (err) {
+                showToast('Kopieren fehlgeschlagen', 'error');
+            }
+        }
+
         // Tab switching
         function switchTab(tabName) {
             // Update tab buttons
@@ -1846,55 +1944,54 @@
                 `;
             }
 
-            // Trading Levels - Entry, Stop Loss, Take Profits
+            // Trading Levels - Compact with Copy Buttons
             if (rec.entry_price || rec.stop_loss || rec.take_profit_1 || rec.take_profit) {
+                const levels = [
+                    { label: 'Entry Price', value: rec.entry_price, class: 'entry' },
+                    { label: 'Stop Loss', value: rec.stop_loss, class: 'stop-loss' },
+                    { label: 'Take Profit 1', value: rec.take_profit_1 || rec.take_profit, class: 'take-profit' },
+                    { label: 'Take Profit 2', value: rec.take_profit_2, class: 'take-profit' },
+                    { label: 'Take Profit 3', value: rec.take_profit_3, class: 'take-profit' },
+                    { label: 'Risk/Reward', value: rec.risk_reward_ratio, class: 'risk-reward', suffix: ':1', isRatio: true },
+                    { label: 'Position Size', value: rec.recommended_position_size, class: 'neutral', suffix: ' Lots' },
+                    { label: 'Max. Risiko', value: rec.max_risk_percent, class: 'risk-reward', suffix: '%' }
+                ];
+
                 html += `
                     <div style="margin-bottom: 1rem;">
                         <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Trading Levels</h4>
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
-                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
-                                <div style="color: #64748b; font-size: 0.75rem;">Entry Price</div>
-                                <div style="color: #3b82f6; font-weight: 600; font-size: 1.1rem;">${formatPrice(rec.entry_price)}</div>
-                            </div>
-                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
-                                <div style="color: #64748b; font-size: 0.75rem;">Stop Loss</div>
-                                <div style="color: #ef4444; font-weight: 600; font-size: 1.1rem;">${formatPrice(rec.stop_loss)}</div>
-                            </div>
-                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
-                                <div style="color: #64748b; font-size: 0.75rem;">Take Profit 1</div>
-                                <div style="color: #22c55e; font-weight: 600;">${formatPrice(rec.take_profit_1 || rec.take_profit)}</div>
-                            </div>
-                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
-                                <div style="color: #64748b; font-size: 0.75rem;">Take Profit 2</div>
-                                <div style="color: #22c55e; font-weight: 600;">${formatPrice(rec.take_profit_2)}</div>
-                            </div>
-                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
-                                <div style="color: #64748b; font-size: 0.75rem;">Take Profit 3</div>
-                                <div style="color: #22c55e; font-weight: 600;">${formatPrice(rec.take_profit_3)}</div>
-                            </div>
-                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
-                                <div style="color: #64748b; font-size: 0.75rem;">Risk/Reward</div>
-                                <div style="color: #f59e0b; font-weight: 600;">${rec.risk_reward_ratio ? rec.risk_reward_ratio.toFixed(2) + ':1' : '-'}</div>
-                            </div>
-                        </div>
-                    </div>
+                        <div class="trading-levels-container">
                 `;
-            }
 
-            // Risk Management
-            if (rec.recommended_position_size || rec.max_risk_percent) {
+                levels.forEach(level => {
+                    if (level.value !== null && level.value !== undefined) {
+                        const displayValue = level.isRatio
+                            ? level.value.toFixed(2) + (level.suffix || '')
+                            : (level.suffix
+                                ? (typeof level.value === 'number' ? level.value.toFixed(level.suffix === '%' ? 1 : 2) : level.value) + level.suffix
+                                : formatPrice(level.value));
+                        const copyValue = level.isRatio
+                            ? level.value.toFixed(2)
+                            : (typeof level.value === 'number' ? formatPrice(level.value) : level.value);
+
+                        html += `
+                            <div class="trading-level-row">
+                                <span class="trading-level-label">${level.label}</span>
+                                <div class="trading-level-value-wrap">
+                                    <span class="trading-level-value ${level.class}">${displayValue}</span>
+                                    <button class="copy-btn" onclick="copyToClipboard('${copyValue}', this)" title="Kopieren">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
                 html += `
-                    <div style="margin-bottom: 1rem;">
-                        <h4 style="color: #f8fafc; margin-bottom: 0.5rem; font-size: 0.875rem;">Risikomanagement</h4>
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
-                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
-                                <div style="color: #64748b; font-size: 0.75rem;">Position Size</div>
-                                <div style="color: #e2e8f0; font-weight: 600;">${rec.recommended_position_size ? rec.recommended_position_size.toFixed(2) + ' Lots' : '-'}</div>
-                            </div>
-                            <div style="background: #1e293b; padding: 0.75rem; border-radius: 0.5rem;">
-                                <div style="color: #64748b; font-size: 0.75rem;">Max. Risiko</div>
-                                <div style="color: #f59e0b; font-weight: 600;">${rec.max_risk_percent ? rec.max_risk_percent.toFixed(1) + '%' : '-'}</div>
-                            </div>
                         </div>
                     </div>
                 `;
