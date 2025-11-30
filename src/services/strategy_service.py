@@ -19,13 +19,13 @@ from ..models.trading_data import (
 )
 
 # Mapping from strategy type to markdown file name
-# Available files: momentum.md, trend_following.md, day_trading.md, mean_reversion.md, scalping.md
+# Available files: momentum.md, trend_following.md, day_trading.md, mean_reversion.md, scalping.md, swing_trading.md
 STRATEGY_PROMPT_FILES = {
     StrategyType.TREND_FOLLOWING: "trend_following.md",
     StrategyType.MEAN_REVERSION: "mean_reversion.md",
     StrategyType.MOMENTUM: "momentum.md",
     StrategyType.SCALPING: "scalping.md",
-    StrategyType.SWING: "day_trading.md",  # Use day_trading for swing (similar approach)
+    StrategyType.SWING: "swing_trading.md",
     StrategyType.BREAKOUT: "momentum.md",  # Use momentum for breakout (similar momentum-based approach)
     StrategyType.CUSTOM: "day_trading.md",  # Default for custom strategies
 }
