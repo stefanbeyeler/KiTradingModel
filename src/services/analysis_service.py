@@ -731,11 +731,12 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
 """
 
         # Run both RAG queries in parallel for better performance
+        # Note: document_types filter includes "market_data" which is the primary type in the database
         similar_task = self.rag_service.query_relevant_context_with_details(
             query=f"Symbol: {analysis.symbol} Preis: {analysis.current_price} Trend: {analysis.trend}",
             symbol=analysis.symbol,
             n_results=settings.max_context_documents // 2,
-            document_types=["analysis"]
+            document_types=["analysis", "market_data"]  # Include market_data for historical context
         )
 
         patterns_task = self.rag_service.query_relevant_context_with_details(

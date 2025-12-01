@@ -249,8 +249,12 @@ Ergebnis: {outcome}
 
         query_embedding = self._generate_embedding(query)
 
-        # Search more results to filter
-        search_k = min(n_results * 3, index.ntotal)
+        # Search more results when filtering by symbol (semantic search may return other symbols first)
+        # XAUUSD can appear at position 500+ in semantic search, so we need large search_k
+        if symbol:
+            search_k = min(max(n_results * 500, 2500), index.ntotal)
+        else:
+            search_k = min(n_results * 10, index.ntotal)
         distances, indices = index.search(np.array([query_embedding]), search_k)
 
         documents = []
@@ -314,8 +318,12 @@ Ergebnis: {outcome}
         query_embedding = self._generate_embedding(query)
         context_details["embedding_time_ms"] = (time.time() - embed_start) * 1000
 
-        # Search more results to filter
-        search_k = min(n_results * 3, index.ntotal)
+        # Search more results when filtering by symbol (semantic search may return other symbols first)
+        # XAUUSD can appear at position 500+ in semantic search, so we need large search_k
+        if symbol:
+            search_k = min(max(n_results * 500, 2500), index.ntotal)
+        else:
+            search_k = min(n_results * 10, index.ntotal)
         context_details["search_k"] = search_k
 
         # Measure search time
