@@ -1827,9 +1827,37 @@
 
         // Copy to clipboard with visual feedback
         async function copyToClipboard(value, button) {
-            try {
-                await navigator.clipboard.writeText(value);
+            let success = false;
 
+            // Try modern Clipboard API first (works on HTTPS/localhost)
+            if (navigator.clipboard && window.isSecureContext) {
+                try {
+                    await navigator.clipboard.writeText(value);
+                    success = true;
+                } catch (err) {
+                    console.warn('Clipboard API failed, trying fallback');
+                }
+            }
+
+            // Fallback for HTTP connections using execCommand
+            if (!success) {
+                try {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = value;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-9999px';
+                    textArea.style.top = '-9999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    success = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                } catch (err) {
+                    console.error('Fallback copy failed:', err);
+                }
+            }
+
+            if (success) {
                 // Visual feedback
                 button.classList.add('copied');
                 const originalHTML = button.innerHTML;
@@ -1845,7 +1873,7 @@
                 }, 1500);
 
                 showToast(`${value} kopiert`, 'success');
-            } catch (err) {
+            } else {
                 showToast('Kopieren fehlgeschlagen', 'error');
             }
         }
