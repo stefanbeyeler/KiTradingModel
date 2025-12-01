@@ -1405,14 +1405,14 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="analysisLookback">Zeitraum (Tage)</label>
-                            <input type="number" id="analysisLookback" value="30" min="1" max="365">
-                        </div>
-                        <div class="form-group">
                             <label for="analysisStrategy">Strategie</label>
-                            <select id="analysisStrategy">
+                            <select id="analysisStrategy" onchange="onStrategyChange('analysis')">
                                 <option value="">Standard (Default-Strategie)</option>
                             </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="analysisLookback">Zeitraum (Tage)</label>
+                            <input type="number" id="analysisLookback" value="30" min="1" max="365">
                         </div>
                     </div>
                     <div class="form-row">
@@ -1451,14 +1451,14 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="quickLookback">Zeitraum (Tage)</label>
-                            <input type="number" id="quickLookback" value="30" min="1" max="365">
-                        </div>
-                        <div class="form-group">
                             <label for="quickStrategy">Strategie</label>
-                            <select id="quickStrategy">
+                            <select id="quickStrategy" onchange="onStrategyChange('quick')">
                                 <option value="">Standard</option>
                             </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="quickLookback">Zeitraum (Tage)</label>
+                            <input type="number" id="quickLookback" value="30" min="1" max="365">
                         </div>
                     </div>
                     <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 1rem;">
@@ -2758,6 +2758,24 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Handle strategy selection change - auto-set lookback days
+        function onStrategyChange(formType) {
+            const strategySelect = document.getElementById(formType === 'analysis' ? 'analysisStrategy' : 'quickStrategy');
+            const lookbackInput = document.getElementById(formType === 'analysis' ? 'analysisLookback' : 'quickLookback');
+            const strategyId = strategySelect.value;
+
+            if (strategyId && strategiesCache) {
+                const strategy = strategiesCache.find(s => s.id === strategyId);
+                if (strategy && strategy.lookback_days) {
+                    lookbackInput.value = strategy.lookback_days;
+                }
+            } else {
+                // Default to 30 days when "Standard" is selected
+                const defaultStrategy = strategiesCache ? strategiesCache.find(s => s.is_default) : null;
+                lookbackInput.value = defaultStrategy ? defaultStrategy.lookback_days : 30;
+            }
         }
 
         function showCreateStrategyModal() {
