@@ -274,6 +274,106 @@ Ergebnis: {outcome}
         logger.info(f"Retrieved {len(documents)} relevant documents for query")
         return documents
 
+    async def query_relevant_context_with_details(
+        self,
+        query: str,
+        symbol: Optional[str] = None,
+        n_results: int = None,
+        document_types: Optional[list[str]] = None
+    ) -> tuple[list[str], dict]:
+        """
+        Query relevant historical context with detailed logging information.
+        Returns: (documents, context_details_dict)
+        """
+        import time
+
+        if n_results is None:
+            n_results = settings.max_context_documents
+
+        index = self._get_index()
+
+        context_details = {
+            "query_text": query,
+            "documents_retrieved": 0,
+            "documents_used": 0,
+            "document_details": [],
+            "filter_symbol": symbol,
+            "filter_document_types": document_types or [],
+            "embedding_model": settings.embedding_model,
+            "embedding_dimension": self._dimension,
+            "search_k": 0,
+            "embedding_time_ms": 0,
+            "search_time_ms": 0,
+        }
+
+        if index.ntotal == 0:
+            return [], context_details
+
+        # Measure embedding time
+        embed_start = time.time()
+        query_embedding = self._generate_embedding(query)
+        context_details["embedding_time_ms"] = (time.time() - embed_start) * 1000
+
+        # Search more results to filter
+        search_k = min(n_results * 3, index.ntotal)
+        context_details["search_k"] = search_k
+
+        # Measure search time
+        search_start = time.time()
+        distances, indices = index.search(np.array([query_embedding]), search_k)
+        context_details["search_time_ms"] = (time.time() - search_start) * 1000
+
+        context_details["documents_retrieved"] = len([i for i in indices[0] if i >= 0])
+
+        documents = []
+        for i, idx in enumerate(indices[0]):
+            if idx < 0 or idx >= len(self._documents):
+                continue
+
+            meta = self._metadatas[idx]
+            doc_id = self._ids[idx] if idx < len(self._ids) else f"doc_{idx}"
+            content = self._documents[idx]
+
+            # Calculate similarity score (convert L2 distance to similarity)
+            distance = float(distances[0][i]) if i < len(distances[0]) else 0
+            similarity_score = 1 / (1 + distance)  # Convert distance to similarity
+
+            # Apply filters
+            if symbol and meta.get("symbol") != symbol:
+                continue
+            if document_types and meta.get("document_type") not in document_types:
+                continue
+
+            # Create document detail entry
+            doc_detail = {
+                "id": doc_id,
+                "type": meta.get("document_type", "unknown"),
+                "symbol": meta.get("symbol"),
+                "timestamp": meta.get("timestamp"),
+                "similarity_score": round(similarity_score, 4),
+                "l2_distance": round(distance, 4),
+                "content_preview": content[:500] + "..." if len(content) > 500 else content,
+                "content_length": len(content),
+                "metadata": {k: v for k, v in meta.items() if k not in ["symbol", "timestamp", "document_type"]},
+            }
+            context_details["document_details"].append(doc_detail)
+
+            documents.append(content)
+
+            if len(documents) >= n_results:
+                break
+
+        context_details["documents_used"] = len(documents)
+
+        logger.info(
+            f"RAG Query: Retrieved {context_details['documents_retrieved']} docs, "
+            f"used {context_details['documents_used']} after filtering "
+            f"(embed: {context_details['embedding_time_ms']:.1f}ms, "
+            f"search: {context_details['search_time_ms']:.1f}ms)"
+        )
+
+        return documents, context_details
+
     async def get_similar_market_conditions(
         self,
         analysis: MarketAnalysis,

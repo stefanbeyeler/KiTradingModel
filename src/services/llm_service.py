@@ -16,7 +16,7 @@ from ..models.trading_data import (
     ConfidenceLevel,
 )
 from ..config import get_output_schema_prompt
-from .query_log_service import query_log_service
+from .query_log_service import query_log_service, TimescaleDBDataLog, RAGContextLog
 
 
 class LLMService:
@@ -97,6 +97,9 @@ class LLMService:
         custom_prompt: Optional[str] = None,
         strategy_id: Optional[str] = None,
         strategy_name: Optional[str] = None,
+        # Neue Parameter für detaillierte Protokollierung
+        timescaledb_data: Optional[TimescaleDBDataLog] = None,
+        rag_context_details: Optional[RAGContextLog] = None,
     ) -> TradingRecommendation:
         start_time = time.time()
         system_prompt = ""
@@ -138,7 +141,7 @@ Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danac
 
             recommendation = self._parse_recommendation(llm_response, market_data.symbol, market_data.current_price)
 
-            # Log the query
+            # Log the query with detailed data source information
             query_log_service.add_log(
                 query_type="analysis",
                 system_prompt=system_prompt,
@@ -152,6 +155,9 @@ Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danac
                 success=True,
                 strategy_id=strategy_id,
                 strategy_name=strategy_name,
+                # Detaillierte Datenquellenprotokollierung
+                timescaledb_data=timescaledb_data,
+                rag_context_details=rag_context_details,
             )
 
             return recommendation
@@ -160,7 +166,7 @@ Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danac
             processing_time = (time.time() - start_time) * 1000
             logger.error(f"Error: {e}")
 
-            # Log the failed query
+            # Log the failed query with detailed data source information
             query_log_service.add_log(
                 query_type="analysis",
                 system_prompt=system_prompt,
@@ -174,6 +180,9 @@ Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danac
                 error_message=str(e),
                 strategy_id=strategy_id,
                 strategy_name=strategy_name,
+                # Detaillierte Datenquellenprotokollierung auch bei Fehlern
+                timescaledb_data=timescaledb_data,
+                rag_context_details=rag_context_details,
             )
 
             raise

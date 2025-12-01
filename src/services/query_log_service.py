@@ -3,13 +3,59 @@
 import json
 import os
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 from pydantic import BaseModel, Field
 from collections import deque
 import threading
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class TimescaleDBDataLog(BaseModel):
+    """Detaillierte Protokollierung der TimescaleDB-Daten."""
+    query_timestamp: datetime = Field(default_factory=datetime.now)
+    tables_queried: list[str] = Field(default_factory=list)
+    symbols_queried: list[str] = Field(default_factory=list)
+    time_range_start: Optional[datetime] = None
+    time_range_end: Optional[datetime] = None
+    rows_fetched: int = 0
+
+    # OHLC-Daten
+    ohlc_data: Optional[dict] = None  # {d1: {open, high, low, close}, h1: {...}, m15: {...}}
+
+    # Technische Indikatoren
+    indicators_fetched: dict = Field(default_factory=dict)  # {rsi: 65.2, macd: 0.0012, ...}
+
+    # Rohdaten-Sample (erste 3 Zeilen für Debugging)
+    raw_data_sample: list[dict] = Field(default_factory=list)
+
+    # SQL-Queries (für Debugging)
+    sql_queries: list[str] = Field(default_factory=list)
+
+
+class RAGContextLog(BaseModel):
+    """Detaillierte Protokollierung der RAG-Kontextdaten."""
+    query_text: str = ""
+    documents_retrieved: int = 0
+    documents_used: int = 0
+
+    # Details zu jedem Dokument
+    document_details: list[dict] = Field(default_factory=list)
+    # Struktur: [{id, type, symbol, timestamp, similarity_score, content_preview, metadata}]
+
+    # Filterkriterien
+    filter_symbol: Optional[str] = None
+    filter_document_types: list[str] = Field(default_factory=list)
+
+    # Embedding-Informationen
+    embedding_model: str = ""
+    embedding_dimension: int = 0
+    search_k: int = 0
+
+    # Performance
+    embedding_time_ms: float = 0
+    search_time_ms: float = 0
 
 
 class QueryLogEntry(BaseModel):
@@ -23,9 +69,13 @@ class QueryLogEntry(BaseModel):
     system_prompt: str
     user_prompt: str
 
-    # RAG context used
+    # RAG context used (Legacy - für Rückwärtskompatibilität)
     rag_context: list[str] = Field(default_factory=list)
     rag_document_count: int = 0
+
+    # NEUE FELDER: Detaillierte Datenprotokollierung
+    timescaledb_data: Optional[TimescaleDBDataLog] = None
+    rag_context_details: Optional[RAGContextLog] = None
 
     # LLM response
     llm_response: str
@@ -118,8 +168,11 @@ class QueryLogService:
         error_message: Optional[str] = None,
         strategy_id: Optional[str] = None,
         strategy_name: Optional[str] = None,
+        # Neue Parameter für detaillierte Protokollierung
+        timescaledb_data: Optional[TimescaleDBDataLog] = None,
+        rag_context_details: Optional[RAGContextLog] = None,
     ) -> QueryLogEntry:
-        """Add a new query log entry."""
+        """Add a new query log entry with detailed data source information."""
 
         entry = QueryLogEntry(
             id=f"log_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
@@ -130,6 +183,9 @@ class QueryLogService:
             user_prompt=user_prompt,
             rag_context=rag_context or [],
             rag_document_count=len(rag_context) if rag_context else 0,
+            # Neue detaillierte Protokollierung
+            timescaledb_data=timescaledb_data,
+            rag_context_details=rag_context_details,
             llm_response=llm_response,
             parsed_response=parsed_response,
             model_used=model_used,
@@ -143,7 +199,15 @@ class QueryLogService:
         self._logs.append(entry)
         self._save_logs()
 
-        logger.info(f"Added query log: {entry.id} ({query_type}, {symbol})")
+        # Erweiterte Logging-Information
+        tsdb_info = ""
+        if timescaledb_data:
+            tsdb_info = f", TSDB rows: {timescaledb_data.rows_fetched}"
+        rag_info = ""
+        if rag_context_details:
+            rag_info = f", RAG docs: {rag_context_details.documents_used}"
+
+        logger.info(f"Added query log: {entry.id} ({query_type}, {symbol}{tsdb_info}{rag_info})")
         return entry
 
     def get_logs(

@@ -27,6 +27,7 @@ from ..models.trading_data import (
 )
 from .llm_service import LLMService
 from .rag_service import RAGService
+from .query_log_service import TimescaleDBDataLog, RAGContextLog
 
 
 class AnalysisService:
@@ -59,30 +60,80 @@ class AnalysisService:
         end_date: datetime
     ) -> list[TimeSeriesData]:
         """Fetch time series data directly from TimescaleDB."""
+        result = await self._fetch_time_series_with_details(symbol, start_date, end_date)
+        return result[0]
+
+    async def _fetch_time_series_with_details(
+        self,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime
+    ) -> tuple[list[TimeSeriesData], TimescaleDBDataLog]:
+        """
+        Fetch time series data with detailed logging information.
+        Returns: (time_series, timescaledb_data_log)
+        """
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn:
-            query = """
-                SELECT
-                    data_timestamp,
-                    symbol,
-                    d1_open,
-                    d1_high,
-                    d1_low,
-                    d1_close,
-                    bid,
-                    ask
-                FROM symbol
-                WHERE symbol = $1
-                AND data_timestamp >= $2
-                AND data_timestamp <= $3
-                ORDER BY data_timestamp ASC
-            """
+        # SQL Query für Logging
+        query = """
+            SELECT
+                data_timestamp,
+                symbol,
+                d1_open,
+                d1_high,
+                d1_low,
+                d1_close,
+                h1_open,
+                h1_high,
+                h1_low,
+                h1_close,
+                m15_open,
+                m15_high,
+                m15_low,
+                m15_close,
+                bid,
+                ask,
+                spread,
+                rsi14price_close,
+                macd12269price_close_main_line,
+                macd12269price_close_signal_line,
+                adx14_main_line,
+                adx14_plusdi_line,
+                adx14_minusdi_line,
+                bb200200price_close_base_line,
+                bb200200price_close_upper_band,
+                bb200200price_close_lower_band,
+                atr_d1,
+                cci14price_typical,
+                sto533mode_smasto_lowhigh_main_line,
+                sto533mode_smasto_lowhigh_signal_line,
+                ichimoku92652_tenkansen_line,
+                ichimoku92652_kijunsen_line,
+                ma100mode_smaprice_close,
+                strength_4h,
+                strength_1d,
+                strength_1w
+            FROM symbol
+            WHERE symbol = $1
+            AND data_timestamp >= $2
+            AND data_timestamp <= $3
+            ORDER BY data_timestamp ASC
+        """
 
+        async with pool.acquire() as conn:
             rows = await conn.fetch(query, symbol, start_date, end_date)
 
             time_series = []
-            for row in rows:
+            raw_data_sample = []
+            indicators_fetched = {}
+            ohlc_data = {
+                "d1": {"open": None, "high": None, "low": None, "close": None},
+                "h1": {"open": None, "high": None, "low": None, "close": None},
+                "m15": {"open": None, "high": None, "low": None, "close": None},
+            }
+
+            for i, row in enumerate(rows):
                 ts = TimeSeriesData(
                     timestamp=row["data_timestamp"],
                     symbol=symbol,
@@ -98,8 +149,106 @@ class AnalysisService:
                 )
                 time_series.append(ts)
 
-            logger.info(f"Fetched {len(time_series)} data points for {symbol} from TimescaleDB")
-            return time_series
+                # Sammle Rohdaten-Sample (erste 3 Zeilen)
+                if i < 3:
+                    sample = {
+                        "timestamp": row["data_timestamp"].isoformat() if row["data_timestamp"] else None,
+                        "symbol": row["symbol"],
+                        "d1_ohlc": {
+                            "open": float(row["d1_open"]) if row["d1_open"] else None,
+                            "high": float(row["d1_high"]) if row["d1_high"] else None,
+                            "low": float(row["d1_low"]) if row["d1_low"] else None,
+                            "close": float(row["d1_close"]) if row["d1_close"] else None,
+                        },
+                        "bid": float(row["bid"]) if row["bid"] else None,
+                        "ask": float(row["ask"]) if row["ask"] else None,
+                        "spread": float(row["spread"]) if row["spread"] else None,
+                    }
+                    raw_data_sample.append(sample)
+
+            # Letzte Zeile für aktuelle Indikatoren verwenden
+            if rows:
+                last_row = rows[-1]
+
+                # OHLC-Daten
+                ohlc_data["d1"] = {
+                    "open": float(last_row["d1_open"]) if last_row["d1_open"] else None,
+                    "high": float(last_row["d1_high"]) if last_row["d1_high"] else None,
+                    "low": float(last_row["d1_low"]) if last_row["d1_low"] else None,
+                    "close": float(last_row["d1_close"]) if last_row["d1_close"] else None,
+                }
+                ohlc_data["h1"] = {
+                    "open": float(last_row["h1_open"]) if last_row["h1_open"] else None,
+                    "high": float(last_row["h1_high"]) if last_row["h1_high"] else None,
+                    "low": float(last_row["h1_low"]) if last_row["h1_low"] else None,
+                    "close": float(last_row["h1_close"]) if last_row["h1_close"] else None,
+                }
+                ohlc_data["m15"] = {
+                    "open": float(last_row["m15_open"]) if last_row["m15_open"] else None,
+                    "high": float(last_row["m15_high"]) if last_row["m15_high"] else None,
+                    "low": float(last_row["m15_low"]) if last_row["m15_low"] else None,
+                    "close": float(last_row["m15_close"]) if last_row["m15_close"] else None,
+                }
+
+                # Technische Indikatoren
+                if last_row["rsi14price_close"]:
+                    indicators_fetched["rsi14"] = float(last_row["rsi14price_close"])
+                if last_row["macd12269price_close_main_line"]:
+                    indicators_fetched["macd_main"] = float(last_row["macd12269price_close_main_line"])
+                if last_row["macd12269price_close_signal_line"]:
+                    indicators_fetched["macd_signal"] = float(last_row["macd12269price_close_signal_line"])
+                if last_row["adx14_main_line"]:
+                    indicators_fetched["adx"] = float(last_row["adx14_main_line"])
+                if last_row["adx14_plusdi_line"]:
+                    indicators_fetched["adx_plus_di"] = float(last_row["adx14_plusdi_line"])
+                if last_row["adx14_minusdi_line"]:
+                    indicators_fetched["adx_minus_di"] = float(last_row["adx14_minusdi_line"])
+                if last_row["bb200200price_close_base_line"]:
+                    indicators_fetched["bb_middle"] = float(last_row["bb200200price_close_base_line"])
+                if last_row["bb200200price_close_upper_band"]:
+                    indicators_fetched["bb_upper"] = float(last_row["bb200200price_close_upper_band"])
+                if last_row["bb200200price_close_lower_band"]:
+                    indicators_fetched["bb_lower"] = float(last_row["bb200200price_close_lower_band"])
+                if last_row["atr_d1"]:
+                    indicators_fetched["atr_d1"] = float(last_row["atr_d1"])
+                if last_row["cci14price_typical"]:
+                    indicators_fetched["cci14"] = float(last_row["cci14price_typical"])
+                if last_row["sto533mode_smasto_lowhigh_main_line"]:
+                    indicators_fetched["stoch_k"] = float(last_row["sto533mode_smasto_lowhigh_main_line"])
+                if last_row["sto533mode_smasto_lowhigh_signal_line"]:
+                    indicators_fetched["stoch_d"] = float(last_row["sto533mode_smasto_lowhigh_signal_line"])
+                if last_row["ichimoku92652_tenkansen_line"]:
+                    indicators_fetched["ichimoku_tenkan"] = float(last_row["ichimoku92652_tenkansen_line"])
+                if last_row["ichimoku92652_kijunsen_line"]:
+                    indicators_fetched["ichimoku_kijun"] = float(last_row["ichimoku92652_kijunsen_line"])
+                if last_row["ma100mode_smaprice_close"]:
+                    indicators_fetched["ma100"] = float(last_row["ma100mode_smaprice_close"])
+                if last_row["strength_4h"]:
+                    indicators_fetched["strength_4h"] = float(last_row["strength_4h"])
+                if last_row["strength_1d"]:
+                    indicators_fetched["strength_1d"] = float(last_row["strength_1d"])
+                if last_row["strength_1w"]:
+                    indicators_fetched["strength_1w"] = float(last_row["strength_1w"])
+
+            # Erstelle TimescaleDB Log
+            tsdb_log = TimescaleDBDataLog(
+                query_timestamp=datetime.now(),
+                tables_queried=["symbol"],
+                symbols_queried=[symbol],
+                time_range_start=start_date,
+                time_range_end=end_date,
+                rows_fetched=len(rows),
+                ohlc_data=ohlc_data,
+                indicators_fetched=indicators_fetched,
+                raw_data_sample=raw_data_sample,
+                sql_queries=[query.strip()],
+            )
+
+            logger.info(
+                f"TimescaleDB: Fetched {len(time_series)} rows for {symbol}, "
+                f"{len(indicators_fetched)} indicators available"
+            )
+            return time_series, tsdb_log
 
     async def get_available_symbols(self) -> list[str]:
         """Get list of available trading symbols from TimescaleDB."""
@@ -156,8 +305,8 @@ class AnalysisService:
             # Use strategy's lookback_days if available
             effective_lookback = strategy.lookback_days if strategy else request.lookback_days
 
-            # 1. Fetch time series data from TimescaleDB
-            time_series = await self._fetch_time_series(
+            # 1. Fetch time series data from TimescaleDB MIT DETAILLIERTER PROTOKOLLIERUNG
+            time_series, tsdb_log = await self._fetch_time_series_with_details(
                 symbol=request.symbol,
                 start_date=datetime.now() - timedelta(days=effective_lookback),
                 end_date=datetime.now()
@@ -172,10 +321,11 @@ class AnalysisService:
                 time_series=time_series
             )
 
-            # 3. Query relevant historical context from RAG (if strategy allows)
+            # 3. Query relevant historical context from RAG MIT DETAILLIERTER PROTOKOLLIERUNG
             rag_context = []
+            rag_log = None
             if strategy is None or strategy.use_rag_context:
-                rag_context = await self._get_rag_context(market_analysis)
+                rag_context, rag_log = await self._get_rag_context_with_details(market_analysis)
 
             # 4. Build custom prompt from strategy
             custom_prompt = request.custom_prompt
@@ -184,13 +334,16 @@ class AnalysisService:
                 strategy_service = StrategyService()
                 custom_prompt = strategy_service.get_strategy_prompt(strategy)
 
-            # 5. Generate recommendation using LLM
+            # 5. Generate recommendation using LLM MIT DETAILLIERTER PROTOKOLLIERUNG
             recommendation = await self.llm_service.generate_analysis(
                 market_data=market_analysis,
                 rag_context=rag_context,
                 custom_prompt=custom_prompt,
                 strategy_id=strategy.id if strategy else None,
                 strategy_name=strategy.name if strategy else "Standard",
+                # Übergebe detaillierte Protokollierungsdaten
+                timescaledb_data=tsdb_log,
+                rag_context_details=rag_log,
             )
 
             # Add strategy name to reasoning if used
@@ -560,6 +713,16 @@ class AnalysisService:
 
     async def _get_rag_context(self, analysis: MarketAnalysis) -> list[str]:
         """Get relevant context from RAG system (parallelized)."""
+        result = await self._get_rag_context_with_details(analysis)
+        return result[0]
+
+    async def _get_rag_context_with_details(
+        self, analysis: MarketAnalysis
+    ) -> tuple[list[str], RAGContextLog]:
+        """
+        Get relevant context from RAG system with detailed logging.
+        Returns: (documents, rag_context_log)
+        """
 
         # Build query for patterns
         query = f"""
@@ -568,21 +731,45 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
 """
 
         # Run both RAG queries in parallel for better performance
-        similar_task = self.rag_service.get_similar_market_conditions(
-            analysis=analysis,
-            n_results=settings.max_context_documents // 2
+        similar_task = self.rag_service.query_relevant_context_with_details(
+            query=f"Symbol: {analysis.symbol} Preis: {analysis.current_price} Trend: {analysis.trend}",
+            symbol=analysis.symbol,
+            n_results=settings.max_context_documents // 2,
+            document_types=["analysis"]
         )
 
-        patterns_task = self.rag_service.query_relevant_context(
+        patterns_task = self.rag_service.query_relevant_context_with_details(
             query=query,
             symbol=analysis.symbol,
             n_results=settings.max_context_documents // 2,
-            document_types=["pattern", "analysis"]
+            document_types=["pattern", "market_data"]
         )
 
-        similar_conditions, patterns = await asyncio.gather(similar_task, patterns_task)
+        (similar_docs, similar_details), (pattern_docs, pattern_details) = await asyncio.gather(
+            similar_task, patterns_task
+        )
 
-        return similar_conditions + patterns
+        # Kombiniere Dokumente
+        all_docs = similar_docs + pattern_docs
+
+        # Kombiniere Details für Logging
+        all_document_details = similar_details.get("document_details", []) + pattern_details.get("document_details", [])
+
+        rag_log = RAGContextLog(
+            query_text=query.strip(),
+            documents_retrieved=similar_details.get("documents_retrieved", 0) + pattern_details.get("documents_retrieved", 0),
+            documents_used=len(all_docs),
+            document_details=all_document_details,
+            filter_symbol=analysis.symbol,
+            filter_document_types=["analysis", "pattern", "market_data"],
+            embedding_model=similar_details.get("embedding_model", ""),
+            embedding_dimension=similar_details.get("embedding_dimension", 0),
+            search_k=similar_details.get("search_k", 0) + pattern_details.get("search_k", 0),
+            embedding_time_ms=similar_details.get("embedding_time_ms", 0) + pattern_details.get("embedding_time_ms", 0),
+            search_time_ms=similar_details.get("search_time_ms", 0) + pattern_details.get("search_time_ms", 0),
+        )
+
+        return all_docs, rag_log
 
     async def quick_recommendation(
         self,
@@ -612,8 +799,8 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
         # Use strategy's lookback_days if available
         effective_lookback = strategy.lookback_days if strategy else lookback_days
 
-        # Fetch time series data
-        time_series = await self._fetch_time_series(
+        # Fetch time series data MIT DETAILLIERTER PROTOKOLLIERUNG
+        time_series, tsdb_log = await self._fetch_time_series_with_details(
             symbol=symbol,
             start_date=datetime.now() - timedelta(days=effective_lookback),
             end_date=datetime.now()
@@ -629,10 +816,11 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
         )
 
         if use_llm:
-            # Use LLM for detailed analysis (slower)
+            # Use LLM for detailed analysis (slower) MIT DETAILLIERTER PROTOKOLLIERUNG
             rag_context = []
+            rag_log = None
             if strategy is None or strategy.use_rag_context:
-                rag_context = await self._get_rag_context(market_analysis)
+                rag_context, rag_log = await self._get_rag_context_with_details(market_analysis)
 
             # Build custom prompt from strategy
             custom_prompt = None
@@ -647,6 +835,9 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
                 custom_prompt=custom_prompt,
                 strategy_id=strategy.id if strategy else None,
                 strategy_name=strategy.name if strategy else "Standard",
+                # Detaillierte Protokollierungsdaten
+                timescaledb_data=tsdb_log,
+                rag_context_details=rag_log,
             )
         else:
             # Fast rule-based recommendation (no LLM)
