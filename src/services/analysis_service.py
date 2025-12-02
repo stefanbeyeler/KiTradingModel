@@ -68,10 +68,10 @@ class AnalysisService:
         symbol: str,
         start_date: datetime,
         end_date: datetime
-    ) -> tuple[list[TimeSeriesData], TimescaleDBDataLog]:
+    ) -> tuple[list[TimeSeriesData], TimescaleDBDataLog, dict]:
         """
         Fetch time series data with detailed logging information.
-        Returns: (time_series, timescaledb_data_log)
+        Returns: (time_series, timescaledb_data_log, indicators_fetched)
         """
         pool = await self._get_pool()
 
@@ -248,7 +248,7 @@ class AnalysisService:
                 f"TimescaleDB: Fetched {len(time_series)} rows for {symbol}, "
                 f"{len(indicators_fetched)} indicators available"
             )
-            return time_series, tsdb_log
+            return time_series, tsdb_log, indicators_fetched
 
     async def get_available_symbols(self) -> list[str]:
         """Get list of available trading symbols from TimescaleDB."""
@@ -351,7 +351,7 @@ class AnalysisService:
             effective_lookback = strategy.lookback_days if strategy else request.lookback_days
 
             # 1. Fetch time series data from TimescaleDB MIT DETAILLIERTER PROTOKOLLIERUNG
-            time_series, tsdb_log = await self._fetch_time_series_with_details(
+            time_series, tsdb_log, db_indicators = await self._fetch_time_series_with_details(
                 symbol=request.symbol,
                 start_date=datetime.now() - timedelta(days=effective_lookback),
                 end_date=datetime.now()
@@ -360,10 +360,11 @@ class AnalysisService:
             if not time_series:
                 raise ValueError(f"No data available for symbol {request.symbol}")
 
-            # 2. Calculate technical indicators
+            # 2. Calculate technical indicators (use DB indicators where available)
             market_analysis = await self._create_market_analysis(
                 symbol=request.symbol,
-                time_series=time_series
+                time_series=time_series,
+                db_indicators=db_indicators
             )
 
             # 3. Query relevant historical context from RAG MIT DETAILLIERTER PROTOKOLLIERUNG
@@ -426,7 +427,8 @@ class AnalysisService:
     async def _create_market_analysis(
         self,
         symbol: str,
-        time_series: list[TimeSeriesData]
+        time_series: list[TimeSeriesData],
+        db_indicators: dict = None
     ) -> MarketAnalysis:
         """Create market analysis from time series data."""
 
@@ -445,8 +447,8 @@ class AnalysisService:
 
         df = df.sort_values("timestamp").reset_index(drop=True)
 
-        # Calculate technical indicators
-        indicators = self._calculate_indicators(df)
+        # Calculate technical indicators (use DB values where available)
+        indicators = self._calculate_indicators(df, db_indicators)
 
         # Generate trading signals
         signals = self._generate_signals(df, indicators)
@@ -482,52 +484,75 @@ class AnalysisService:
             resistance_levels=resistance_levels
         )
 
-    def _calculate_indicators(self, df: pd.DataFrame) -> TechnicalIndicators:
-        """Calculate all technical indicators."""
+    def _calculate_indicators(self, df: pd.DataFrame, db_indicators: dict = None) -> TechnicalIndicators:
+        """Calculate all technical indicators. Use DB values where available."""
 
         close = df["close"]
         high = df["high"]
         low = df["low"]
         volume_data = df["volume"]
 
+        # Use DB indicators if available, otherwise calculate
+        db = db_indicators or {}
+
         # Moving Averages (SMA)
         sma_20 = close.rolling(window=20).mean().iloc[-1] if len(df) >= 20 else None
         sma_50 = close.rolling(window=50).mean().iloc[-1] if len(df) >= 50 else None
         sma_200 = close.rolling(window=200).mean().iloc[-1] if len(df) >= 200 else None
 
+        # Use MA100 from DB if available
+        if db.get("ma100"):
+            sma_200 = db["ma100"]  # Use MA100 as approximation for SMA200
+
         # Exponential Moving Averages (EMA)
         ema_12 = close.ewm(span=12, adjust=False).mean().iloc[-1]
         ema_26 = close.ewm(span=26, adjust=False).mean().iloc[-1]
 
-        # RSI
-        delta = close.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        rsi = (100 - (100 / (1 + rs))).iloc[-1]
+        # RSI - prefer DB value (from MT5)
+        if db.get("rsi14") is not None:
+            rsi = db["rsi14"]
+        else:
+            delta = close.diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            rsi = (100 - (100 / (1 + rs))).iloc[-1]
 
-        # MACD
-        ema_12_series = close.ewm(span=12, adjust=False).mean()
-        ema_26_series = close.ewm(span=26, adjust=False).mean()
-        macd_line = ema_12_series - ema_26_series
-        macd_signal_line = macd_line.ewm(span=9, adjust=False).mean()
-        macd_value = macd_line.iloc[-1]
-        macd_signal = macd_signal_line.iloc[-1]
-        macd_histogram = (macd_line - macd_signal_line).iloc[-1]
+        # MACD - prefer DB values
+        if db.get("macd_main") is not None and db.get("macd_signal") is not None:
+            macd_value = db["macd_main"]
+            macd_signal = db["macd_signal"]
+            macd_histogram = macd_value - macd_signal
+        else:
+            ema_12_series = close.ewm(span=12, adjust=False).mean()
+            ema_26_series = close.ewm(span=26, adjust=False).mean()
+            macd_line = ema_12_series - ema_26_series
+            macd_signal_line = macd_line.ewm(span=9, adjust=False).mean()
+            macd_value = macd_line.iloc[-1]
+            macd_signal = macd_signal_line.iloc[-1]
+            macd_histogram = (macd_line - macd_signal_line).iloc[-1]
 
-        # Bollinger Bands
-        sma_20_series = close.rolling(window=20).mean()
-        std_20 = close.rolling(window=20).std()
-        bollinger_upper = (sma_20_series + (std_20 * 2)).iloc[-1]
-        bollinger_middle = sma_20_series.iloc[-1]
-        bollinger_lower = (sma_20_series - (std_20 * 2)).iloc[-1]
+        # Bollinger Bands - prefer DB values
+        if db.get("bb_upper") is not None and db.get("bb_middle") is not None and db.get("bb_lower") is not None:
+            bollinger_upper = db["bb_upper"]
+            bollinger_middle = db["bb_middle"]
+            bollinger_lower = db["bb_lower"]
+        else:
+            sma_20_series = close.rolling(window=20).mean()
+            std_20 = close.rolling(window=20).std()
+            bollinger_upper = (sma_20_series + (std_20 * 2)).iloc[-1]
+            bollinger_middle = sma_20_series.iloc[-1]
+            bollinger_lower = (sma_20_series - (std_20 * 2)).iloc[-1]
 
-        # ATR (Average True Range)
-        tr1 = high - low
-        tr2 = abs(high - close.shift())
-        tr3 = abs(low - close.shift())
-        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-        atr = tr.rolling(window=14).mean().iloc[-1]
+        # ATR - prefer DB value
+        if db.get("atr_d1") is not None:
+            atr = db["atr_d1"]
+        else:
+            tr1 = high - low
+            tr2 = abs(high - close.shift())
+            tr3 = abs(low - close.shift())
+            tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+            atr = tr.rolling(window=14).mean().iloc[-1]
 
         # OBV (On-Balance Volume)
         obv_values = [0]
@@ -846,7 +871,7 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
         effective_lookback = strategy.lookback_days if strategy else lookback_days
 
         # Fetch time series data MIT DETAILLIERTER PROTOKOLLIERUNG
-        time_series, tsdb_log = await self._fetch_time_series_with_details(
+        time_series, tsdb_log, db_indicators = await self._fetch_time_series_with_details(
             symbol=symbol,
             start_date=datetime.now() - timedelta(days=effective_lookback),
             end_date=datetime.now()
@@ -855,10 +880,11 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
         if not time_series:
             raise ValueError(f"No data available for symbol {symbol}")
 
-        # Calculate technical indicators
+        # Calculate technical indicators (use DB indicators where available)
         market_analysis = await self._create_market_analysis(
             symbol=symbol,
-            time_series=time_series
+            time_series=time_series,
+            db_indicators=db_indicators
         )
 
         if use_llm:

@@ -1484,21 +1484,10 @@
                     <!-- Symbol Info Display -->
                     <div id="symbolInfoContainer" class="symbol-info-container" style="display: none;">
                         <div class="symbol-info-grid">
+                            <!-- Zeile 1: Letzter Datensatz, High/Low, RSI, Spread -->
                             <div class="symbol-info-item">
                                 <span class="info-label">Letzter Datensatz:</span>
                                 <span id="infoLastTimestamp" class="info-value">-</span>
-                            </div>
-                            <div class="symbol-info-item">
-                                <span class="info-label">Close:</span>
-                                <span id="infoLatestClose" class="info-value">-</span>
-                            </div>
-                            <div class="symbol-info-item">
-                                <span class="info-label">Bid/Ask:</span>
-                                <span id="infoBidAsk" class="info-value">-</span>
-                            </div>
-                            <div class="symbol-info-item">
-                                <span class="info-label">Spread:</span>
-                                <span id="infoSpread" class="info-value">-</span>
                             </div>
                             <div class="symbol-info-item">
                                 <span class="info-label">High/Low:</span>
@@ -1509,12 +1498,21 @@
                                 <span id="infoRSI" class="info-value">-</span>
                             </div>
                             <div class="symbol-info-item">
-                                <span class="info-label">ATR:</span>
-                                <span id="infoATR" class="info-value">-</span>
+                                <span class="info-label">Spread:</span>
+                                <span id="infoSpread" class="info-value">-</span>
+                            </div>
+                            <!-- Zeile 2: Bid/Ask, Close, ATR -->
+                            <div class="symbol-info-item">
+                                <span class="info-label">Bid/Ask:</span>
+                                <span id="infoBidAsk" class="info-value">-</span>
                             </div>
                             <div class="symbol-info-item">
-                                <span class="info-label">Datensätze:</span>
-                                <span id="infoTotalRecords" class="info-value">-</span>
+                                <span class="info-label">Close:</span>
+                                <span id="infoLatestClose" class="info-value">-</span>
+                            </div>
+                            <div class="symbol-info-item">
+                                <span class="info-label">ATR:</span>
+                                <span id="infoATR" class="info-value">-</span>
                             </div>
                         </div>
                     </div>
@@ -2408,8 +2406,8 @@
                     return;
                 }
 
-                // Format timestamp
-                const lastTs = data.last_timestamp ? new Date(data.last_timestamp).toLocaleString('de-DE') : '-';
+                // Format timestamp (in UTC)
+                const lastTs = data.last_timestamp ? new Date(data.last_timestamp).toLocaleString('de-DE', { timeZone: 'UTC' }) + ' UTC' : '-';
 
                 // Format price values
                 const formatPrice = (val) => val !== null ? val.toFixed(val >= 100 ? 2 : 5) : '-';
@@ -2442,7 +2440,11 @@
                 }
 
                 document.getElementById('infoATR').textContent = data.latest_atr !== null ? data.latest_atr.toFixed(5) : '-';
-                document.getElementById('infoTotalRecords').textContent = data.total_records ? data.total_records.toLocaleString('de-DE') : '-';
+
+                const totalRecordsEl = document.getElementById('infoTotalRecords');
+                if (totalRecordsEl) {
+                    totalRecordsEl.textContent = data.total_records ? data.total_records.toLocaleString('de-DE') : '-';
+                }
 
                 document.getElementById('symbolInfoContainer').style.display = 'block';
             } catch (error) {
@@ -2624,9 +2626,9 @@
                     { label: 'Take Profit 1', value: rec.take_profit_1 || rec.take_profit, class: 'take-profit' },
                     { label: 'Take Profit 2', value: rec.take_profit_2, class: 'take-profit' },
                     { label: 'Take Profit 3', value: rec.take_profit_3, class: 'take-profit' },
-                    { label: 'Risk/Reward', value: rec.risk_reward_ratio, class: 'risk-reward', suffix: ':1', isRatio: true },
                     { label: 'Position Size', value: rec.recommended_position_size, class: 'neutral', suffix: ' Lots' },
-                    { label: 'Max. Risiko', value: rec.max_risk_percent, class: 'risk-reward', suffix: '%' }
+                    { label: 'Risk/Reward', value: rec.risk_reward_ratio, class: 'risk-reward', suffix: ':1', isRatio: true, noCopy: true, spaceBefore: true },
+                    { label: 'Max. Risiko', value: rec.max_risk_percent, class: 'risk-reward', suffix: '%', noCopy: true }
                 ];
 
                 html += `
@@ -2646,17 +2648,24 @@
                             ? level.value.toFixed(2)
                             : (typeof level.value === 'number' ? formatPrice(level.value) : level.value);
 
-                        html += `
-                            <div class="trading-level-row">
-                                <span class="trading-level-label">${level.label}</span>
-                                <div class="trading-level-value-wrap">
-                                    <span class="trading-level-value ${level.class}">${displayValue}</span>
+                        // Add spacing before if specified
+                        if (level.spaceBefore) {
+                            html += `<div style="height: 0.5rem;"></div>`;
+                        }
+
+                        const copyButton = level.noCopy ? '' : `
                                     <button class="copy-btn" onclick="copyToClipboard('${copyValue}', this)" title="Kopieren">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                                         </svg>
-                                    </button>
+                                    </button>`;
+
+                        html += `
+                            <div class="trading-level-row">
+                                <span class="trading-level-label">${level.label}</span>
+                                <div class="trading-level-value-wrap">
+                                    <span class="trading-level-value ${level.class}">${displayValue}</span>${copyButton}
                                 </div>
                             </div>
                         `;
