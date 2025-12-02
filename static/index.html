@@ -425,6 +425,65 @@
             resize: vertical;
         }
 
+        /* Symbol Info Container */
+        .symbol-info-container {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .symbol-info-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem 1.5rem;
+        }
+
+        .symbol-info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.25rem 0;
+        }
+
+        .symbol-info-item .info-label {
+            color: #94a3b8;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .symbol-info-item .info-value {
+            color: #f1f5f9;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        }
+
+        .symbol-info-item .info-value.positive {
+            color: #22c55e;
+        }
+
+        .symbol-info-item .info-value.negative {
+            color: #ef4444;
+        }
+
+        .symbol-info-item .info-value.neutral {
+            color: #f59e0b;
+        }
+
+        @media (max-width: 1200px) {
+            .symbol-info-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .symbol-info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .query-buttons {
             display: flex;
             gap: 0.75rem;
@@ -1422,6 +1481,43 @@
                             </select>
                         </div>
                     </div>
+                    <!-- Symbol Info Display -->
+                    <div id="symbolInfoContainer" class="symbol-info-container" style="display: none;">
+                        <div class="symbol-info-grid">
+                            <div class="symbol-info-item">
+                                <span class="info-label">Letzter Datensatz:</span>
+                                <span id="infoLastTimestamp" class="info-value">-</span>
+                            </div>
+                            <div class="symbol-info-item">
+                                <span class="info-label">Close:</span>
+                                <span id="infoLatestClose" class="info-value">-</span>
+                            </div>
+                            <div class="symbol-info-item">
+                                <span class="info-label">Bid/Ask:</span>
+                                <span id="infoBidAsk" class="info-value">-</span>
+                            </div>
+                            <div class="symbol-info-item">
+                                <span class="info-label">Spread:</span>
+                                <span id="infoSpread" class="info-value">-</span>
+                            </div>
+                            <div class="symbol-info-item">
+                                <span class="info-label">High/Low:</span>
+                                <span id="infoHighLow" class="info-value">-</span>
+                            </div>
+                            <div class="symbol-info-item">
+                                <span class="info-label">RSI(14):</span>
+                                <span id="infoRSI" class="info-value">-</span>
+                            </div>
+                            <div class="symbol-info-item">
+                                <span class="info-label">ATR:</span>
+                                <span id="infoATR" class="info-value">-</span>
+                            </div>
+                            <div class="symbol-info-item">
+                                <span class="info-label">Datensätze:</span>
+                                <span id="infoTotalRecords" class="info-value">-</span>
+                            </div>
+                        </div>
+                    </div>
                     <div class="query-buttons">
                         <button class="btn btn-primary" id="btnAnalyze" onclick="runAnalysis()">
                             Analyse starten
@@ -2296,6 +2392,78 @@
             }
         }
 
+        // Fetch and display symbol info from TimescaleDB
+        let symbolInfoTimeout = null;
+        async function fetchSymbolInfo(symbol) {
+            if (!symbol || symbol.trim() === '') {
+                document.getElementById('symbolInfoContainer').style.display = 'none';
+                return;
+            }
+
+            try {
+                const data = await apiFetch(`/symbol-info/${encodeURIComponent(symbol)}`);
+
+                if (data.error) {
+                    document.getElementById('symbolInfoContainer').style.display = 'none';
+                    return;
+                }
+
+                // Format timestamp
+                const lastTs = data.last_timestamp ? new Date(data.last_timestamp).toLocaleString('de-DE') : '-';
+
+                // Format price values
+                const formatPrice = (val) => val !== null ? val.toFixed(val >= 100 ? 2 : 5) : '-';
+                const formatSpread = (val) => val !== null ? val.toFixed(1) : '-';
+
+                // Update UI elements
+                document.getElementById('infoLastTimestamp').textContent = lastTs;
+                document.getElementById('infoLatestClose').textContent = formatPrice(data.latest_close);
+                document.getElementById('infoBidAsk').textContent =
+                    data.latest_bid !== null && data.latest_ask !== null
+                        ? `${formatPrice(data.latest_bid)} / ${formatPrice(data.latest_ask)}`
+                        : '-';
+                document.getElementById('infoSpread').textContent = formatSpread(data.latest_spread);
+                document.getElementById('infoHighLow').textContent =
+                    data.latest_high !== null && data.latest_low !== null
+                        ? `${formatPrice(data.latest_high)} / ${formatPrice(data.latest_low)}`
+                        : '-';
+
+                // RSI with color coding
+                const rsiEl = document.getElementById('infoRSI');
+                if (data.latest_rsi !== null) {
+                    rsiEl.textContent = data.latest_rsi.toFixed(2);
+                    rsiEl.className = 'info-value';
+                    if (data.latest_rsi >= 70) rsiEl.classList.add('negative');
+                    else if (data.latest_rsi <= 30) rsiEl.classList.add('positive');
+                    else rsiEl.classList.add('neutral');
+                } else {
+                    rsiEl.textContent = '-';
+                    rsiEl.className = 'info-value';
+                }
+
+                document.getElementById('infoATR').textContent = data.latest_atr !== null ? data.latest_atr.toFixed(5) : '-';
+                document.getElementById('infoTotalRecords').textContent = data.total_records ? data.total_records.toLocaleString('de-DE') : '-';
+
+                document.getElementById('symbolInfoContainer').style.display = 'block';
+            } catch (error) {
+                console.error('Failed to fetch symbol info:', error);
+                document.getElementById('symbolInfoContainer').style.display = 'none';
+            }
+        }
+
+        // Debounced symbol info fetch
+        function onSymbolInput(event) {
+            const symbol = event.target.value.trim();
+
+            if (symbolInfoTimeout) {
+                clearTimeout(symbolInfoTimeout);
+            }
+
+            symbolInfoTimeout = setTimeout(() => {
+                fetchSymbolInfo(symbol);
+            }, 500);
+        }
+
         // Run full analysis
         async function runAnalysis() {
             const symbol = document.getElementById('analysisSymbol').value.trim();
@@ -3020,6 +3188,16 @@
         loadVersionInfo();
         loadLastSymbol();  // Load saved symbol from localStorage
         setInterval(updateDashboard, 10000);
+
+        // Add event listener for symbol input to fetch symbol info
+        const analysisSymbolInput = document.getElementById('analysisSymbol');
+        analysisSymbolInput.addEventListener('input', onSymbolInput);
+        analysisSymbolInput.addEventListener('change', (e) => fetchSymbolInfo(e.target.value.trim()));
+
+        // Fetch symbol info if a symbol is already loaded
+        if (analysisSymbolInput.value.trim()) {
+            fetchSymbolInfo(analysisSymbolInput.value.trim());
+        }
 
         // Fetch config info
         fetch('/').then(r => r.json()).then(data => {

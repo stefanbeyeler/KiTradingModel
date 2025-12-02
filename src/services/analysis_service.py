@@ -260,6 +260,51 @@ class AnalysisService:
             )
             return [row["symbol"] for row in rows if row["symbol"]]
 
+    async def get_symbol_info(self, symbol: str) -> dict:
+        """Get detailed information about a symbol from TimescaleDB."""
+        pool = await self._get_pool()
+
+        async with pool.acquire() as conn:
+            # Get latest data point and statistics
+            query = """
+                SELECT
+                    symbol,
+                    MAX(data_timestamp) as last_timestamp,
+                    MIN(data_timestamp) as first_timestamp,
+                    COUNT(*) as total_records,
+                    -- Latest values (from most recent record)
+                    (SELECT d1_close FROM symbol s2 WHERE s2.symbol = $1 ORDER BY data_timestamp DESC LIMIT 1) as latest_close,
+                    (SELECT bid FROM symbol s2 WHERE s2.symbol = $1 ORDER BY data_timestamp DESC LIMIT 1) as latest_bid,
+                    (SELECT ask FROM symbol s2 WHERE s2.symbol = $1 ORDER BY data_timestamp DESC LIMIT 1) as latest_ask,
+                    (SELECT spread FROM symbol s2 WHERE s2.symbol = $1 ORDER BY data_timestamp DESC LIMIT 1) as latest_spread,
+                    (SELECT d1_high FROM symbol s2 WHERE s2.symbol = $1 ORDER BY data_timestamp DESC LIMIT 1) as latest_high,
+                    (SELECT d1_low FROM symbol s2 WHERE s2.symbol = $1 ORDER BY data_timestamp DESC LIMIT 1) as latest_low,
+                    (SELECT rsi14price_close FROM symbol s2 WHERE s2.symbol = $1 ORDER BY data_timestamp DESC LIMIT 1) as latest_rsi,
+                    (SELECT atr_d1 FROM symbol s2 WHERE s2.symbol = $1 ORDER BY data_timestamp DESC LIMIT 1) as latest_atr
+                FROM symbol
+                WHERE symbol = $1
+                GROUP BY symbol
+            """
+            row = await conn.fetchrow(query, symbol)
+
+            if not row:
+                return {"error": f"Symbol {symbol} not found in database"}
+
+            return {
+                "symbol": row["symbol"],
+                "last_timestamp": row["last_timestamp"].isoformat() if row["last_timestamp"] else None,
+                "first_timestamp": row["first_timestamp"].isoformat() if row["first_timestamp"] else None,
+                "total_records": row["total_records"],
+                "latest_close": float(row["latest_close"]) if row["latest_close"] else None,
+                "latest_bid": float(row["latest_bid"]) if row["latest_bid"] else None,
+                "latest_ask": float(row["latest_ask"]) if row["latest_ask"] else None,
+                "latest_spread": float(row["latest_spread"]) if row["latest_spread"] else None,
+                "latest_high": float(row["latest_high"]) if row["latest_high"] else None,
+                "latest_low": float(row["latest_low"]) if row["latest_low"] else None,
+                "latest_rsi": float(row["latest_rsi"]) if row["latest_rsi"] else None,
+                "latest_atr": float(row["latest_atr"]) if row["latest_atr"] else None
+            }
+
     async def check_timescaledb_connection(self) -> bool:
         """Check if TimescaleDB is accessible."""
         try:

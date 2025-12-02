@@ -151,6 +151,17 @@ async def get_available_symbols():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/symbol-info/{symbol:path}")
+async def get_symbol_info(symbol: str):
+    """Get detailed information about a symbol from TimescaleDB."""
+    try:
+        info = await analysis_service.get_symbol_info(symbol)
+        return info
+    except Exception as e:
+        logger.error(f"Failed to fetch symbol info for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/rag/document")
 async def add_rag_document(
     content: str,
