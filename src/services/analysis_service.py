@@ -166,69 +166,101 @@ class AnalysisService:
                     }
                     raw_data_sample.append(sample)
 
-            # Letzte Zeile für aktuelle Indikatoren verwenden
-            if rows:
-                last_row = rows[-1]
+            # Hole die AKTUELLSTEN Daten (unabhängig vom Lookback-Zeitraum)
+            latest_data_query = """
+                SELECT
+                    data_timestamp,
+                    d1_open, d1_high, d1_low, d1_close,
+                    h1_open, h1_high, h1_low, h1_close,
+                    m15_open, m15_high, m15_low, m15_close,
+                    bid, ask, spread,
+                    rsi14price_close,
+                    macd12269price_close_main_line,
+                    macd12269price_close_signal_line,
+                    adx14_main_line,
+                    adx14_plusdi_line,
+                    adx14_minusdi_line,
+                    bb200200price_close_base_line,
+                    bb200200price_close_upper_band,
+                    bb200200price_close_lower_band,
+                    atr_d1,
+                    cci14price_typical,
+                    sto533mode_smasto_lowhigh_main_line,
+                    sto533mode_smasto_lowhigh_signal_line,
+                    ichimoku92652_tenkansen_line,
+                    ichimoku92652_kijunsen_line,
+                    ma100mode_smaprice_close,
+                    strength_4h,
+                    strength_1d,
+                    strength_1w
+                FROM symbol
+                WHERE symbol = $1
+                ORDER BY data_timestamp DESC
+                LIMIT 1
+            """
+            latest_row = await conn.fetchrow(latest_data_query, symbol)
 
-                # OHLC-Daten
+            # OHLC-Daten aus dem AKTUELLSTEN Datensatz
+            if latest_row:
                 ohlc_data["d1"] = {
-                    "open": float(last_row["d1_open"]) if last_row["d1_open"] else None,
-                    "high": float(last_row["d1_high"]) if last_row["d1_high"] else None,
-                    "low": float(last_row["d1_low"]) if last_row["d1_low"] else None,
-                    "close": float(last_row["d1_close"]) if last_row["d1_close"] else None,
+                    "open": float(latest_row["d1_open"]) if latest_row["d1_open"] else None,
+                    "high": float(latest_row["d1_high"]) if latest_row["d1_high"] else None,
+                    "low": float(latest_row["d1_low"]) if latest_row["d1_low"] else None,
+                    "close": float(latest_row["d1_close"]) if latest_row["d1_close"] else None,
                 }
                 ohlc_data["h1"] = {
-                    "open": float(last_row["h1_open"]) if last_row["h1_open"] else None,
-                    "high": float(last_row["h1_high"]) if last_row["h1_high"] else None,
-                    "low": float(last_row["h1_low"]) if last_row["h1_low"] else None,
-                    "close": float(last_row["h1_close"]) if last_row["h1_close"] else None,
+                    "open": float(latest_row["h1_open"]) if latest_row["h1_open"] else None,
+                    "high": float(latest_row["h1_high"]) if latest_row["h1_high"] else None,
+                    "low": float(latest_row["h1_low"]) if latest_row["h1_low"] else None,
+                    "close": float(latest_row["h1_close"]) if latest_row["h1_close"] else None,
                 }
                 ohlc_data["m15"] = {
-                    "open": float(last_row["m15_open"]) if last_row["m15_open"] else None,
-                    "high": float(last_row["m15_high"]) if last_row["m15_high"] else None,
-                    "low": float(last_row["m15_low"]) if last_row["m15_low"] else None,
-                    "close": float(last_row["m15_close"]) if last_row["m15_close"] else None,
+                    "open": float(latest_row["m15_open"]) if latest_row["m15_open"] else None,
+                    "high": float(latest_row["m15_high"]) if latest_row["m15_high"] else None,
+                    "low": float(latest_row["m15_low"]) if latest_row["m15_low"] else None,
+                    "close": float(latest_row["m15_close"]) if latest_row["m15_close"] else None,
                 }
 
-                # Technische Indikatoren
-                if last_row["rsi14price_close"]:
-                    indicators_fetched["rsi14"] = float(last_row["rsi14price_close"])
-                if last_row["macd12269price_close_main_line"]:
-                    indicators_fetched["macd_main"] = float(last_row["macd12269price_close_main_line"])
-                if last_row["macd12269price_close_signal_line"]:
-                    indicators_fetched["macd_signal"] = float(last_row["macd12269price_close_signal_line"])
-                if last_row["adx14_main_line"]:
-                    indicators_fetched["adx"] = float(last_row["adx14_main_line"])
-                if last_row["adx14_plusdi_line"]:
-                    indicators_fetched["adx_plus_di"] = float(last_row["adx14_plusdi_line"])
-                if last_row["adx14_minusdi_line"]:
-                    indicators_fetched["adx_minus_di"] = float(last_row["adx14_minusdi_line"])
-                if last_row["bb200200price_close_base_line"]:
-                    indicators_fetched["bb_middle"] = float(last_row["bb200200price_close_base_line"])
-                if last_row["bb200200price_close_upper_band"]:
-                    indicators_fetched["bb_upper"] = float(last_row["bb200200price_close_upper_band"])
-                if last_row["bb200200price_close_lower_band"]:
-                    indicators_fetched["bb_lower"] = float(last_row["bb200200price_close_lower_band"])
-                if last_row["atr_d1"]:
-                    indicators_fetched["atr_d1"] = float(last_row["atr_d1"])
-                if last_row["cci14price_typical"]:
-                    indicators_fetched["cci14"] = float(last_row["cci14price_typical"])
-                if last_row["sto533mode_smasto_lowhigh_main_line"]:
-                    indicators_fetched["stoch_k"] = float(last_row["sto533mode_smasto_lowhigh_main_line"])
-                if last_row["sto533mode_smasto_lowhigh_signal_line"]:
-                    indicators_fetched["stoch_d"] = float(last_row["sto533mode_smasto_lowhigh_signal_line"])
-                if last_row["ichimoku92652_tenkansen_line"]:
-                    indicators_fetched["ichimoku_tenkan"] = float(last_row["ichimoku92652_tenkansen_line"])
-                if last_row["ichimoku92652_kijunsen_line"]:
-                    indicators_fetched["ichimoku_kijun"] = float(last_row["ichimoku92652_kijunsen_line"])
-                if last_row["ma100mode_smaprice_close"]:
-                    indicators_fetched["ma100"] = float(last_row["ma100mode_smaprice_close"])
-                if last_row["strength_4h"]:
-                    indicators_fetched["strength_4h"] = float(last_row["strength_4h"])
-                if last_row["strength_1d"]:
-                    indicators_fetched["strength_1d"] = float(last_row["strength_1d"])
-                if last_row["strength_1w"]:
-                    indicators_fetched["strength_1w"] = float(last_row["strength_1w"])
+            # Technische Indikatoren aus dem AKTUELLSTEN Datensatz (nicht Lookback)
+            if latest_row:
+                if latest_row["rsi14price_close"]:
+                    indicators_fetched["rsi14"] = float(latest_row["rsi14price_close"])
+                if latest_row["macd12269price_close_main_line"]:
+                    indicators_fetched["macd_main"] = float(latest_row["macd12269price_close_main_line"])
+                if latest_row["macd12269price_close_signal_line"]:
+                    indicators_fetched["macd_signal"] = float(latest_row["macd12269price_close_signal_line"])
+                if latest_row["adx14_main_line"]:
+                    indicators_fetched["adx"] = float(latest_row["adx14_main_line"])
+                if latest_row["adx14_plusdi_line"]:
+                    indicators_fetched["adx_plus_di"] = float(latest_row["adx14_plusdi_line"])
+                if latest_row["adx14_minusdi_line"]:
+                    indicators_fetched["adx_minus_di"] = float(latest_row["adx14_minusdi_line"])
+                if latest_row["bb200200price_close_base_line"]:
+                    indicators_fetched["bb_middle"] = float(latest_row["bb200200price_close_base_line"])
+                if latest_row["bb200200price_close_upper_band"]:
+                    indicators_fetched["bb_upper"] = float(latest_row["bb200200price_close_upper_band"])
+                if latest_row["bb200200price_close_lower_band"]:
+                    indicators_fetched["bb_lower"] = float(latest_row["bb200200price_close_lower_band"])
+                if latest_row["atr_d1"]:
+                    indicators_fetched["atr_d1"] = float(latest_row["atr_d1"])
+                if latest_row["cci14price_typical"]:
+                    indicators_fetched["cci14"] = float(latest_row["cci14price_typical"])
+                if latest_row["sto533mode_smasto_lowhigh_main_line"]:
+                    indicators_fetched["stoch_k"] = float(latest_row["sto533mode_smasto_lowhigh_main_line"])
+                if latest_row["sto533mode_smasto_lowhigh_signal_line"]:
+                    indicators_fetched["stoch_d"] = float(latest_row["sto533mode_smasto_lowhigh_signal_line"])
+                if latest_row["ichimoku92652_tenkansen_line"]:
+                    indicators_fetched["ichimoku_tenkan"] = float(latest_row["ichimoku92652_tenkansen_line"])
+                if latest_row["ichimoku92652_kijunsen_line"]:
+                    indicators_fetched["ichimoku_kijun"] = float(latest_row["ichimoku92652_kijunsen_line"])
+                if latest_row["ma100mode_smaprice_close"]:
+                    indicators_fetched["ma100"] = float(latest_row["ma100mode_smaprice_close"])
+                if latest_row["strength_4h"]:
+                    indicators_fetched["strength_4h"] = float(latest_row["strength_4h"])
+                if latest_row["strength_1d"]:
+                    indicators_fetched["strength_1d"] = float(latest_row["strength_1d"])
+                if latest_row["strength_1w"]:
+                    indicators_fetched["strength_1w"] = float(latest_row["strength_1w"])
 
             # Erstelle TimescaleDB Log
             tsdb_log = TimescaleDBDataLog(
@@ -511,12 +543,14 @@ class AnalysisService:
         # RSI - prefer DB value (from MT5)
         if db.get("rsi14") is not None:
             rsi = db["rsi14"]
+            logger.info(f"Using DB RSI value: {rsi}")
         else:
             delta = close.diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
             rs = gain / loss
             rsi = (100 - (100 / (1 + rs))).iloc[-1]
+            logger.info(f"Calculated RSI value: {rsi} (no DB value available)")
 
         # MACD - prefer DB values
         if db.get("macd_main") is not None and db.get("macd_signal") is not None:
