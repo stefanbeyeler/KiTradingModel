@@ -6,7 +6,7 @@ LABEL description="Web Dashboard for KI Trading Model"
 # Remove default nginx config
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy dashboard files
+# Copy dashboard files (build from project root with -f dashboard/Dockerfile)
 COPY static/index.html /usr/share/nginx/html/index.html
 
 # Copy nginx configuration

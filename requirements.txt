@@ -30,3 +30,7 @@ numpy>=1.24.0
 python-dotenv>=1.0.0
 loguru>=0.7.0
 tenacity>=8.2.0
+
+# NHITS Neural Forecasting (Custom PyTorch implementation)
+# Note: Uses PyTorch directly instead of NeuralForecast due to Ray dependency issues on Windows
+# torch is already installed above

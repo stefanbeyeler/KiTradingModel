@@ -68,6 +68,22 @@ class TradingSignal(BaseModel):
     description: str
 
 
+class NHITSForecast(BaseModel):
+    """NHITS forecast data embedded in MarketAnalysis."""
+    predicted_price_1h: Optional[float] = None
+    predicted_price_4h: Optional[float] = None
+    predicted_price_24h: Optional[float] = None
+    predicted_change_percent_1h: Optional[float] = None
+    predicted_change_percent_4h: Optional[float] = None
+    predicted_change_percent_24h: Optional[float] = None
+    confidence_low_24h: Optional[float] = None
+    confidence_high_24h: Optional[float] = None
+    trend_up_probability: Optional[float] = None
+    trend_down_probability: Optional[float] = None
+    model_confidence: Optional[float] = None
+    predicted_volatility: Optional[float] = None
+
+
 class MarketAnalysis(BaseModel):
     """Comprehensive market analysis result."""
     symbol: str
@@ -81,6 +97,12 @@ class MarketAnalysis(BaseModel):
     volatility: str
     support_levels: list[float] = []
     resistance_levels: list[float] = []
+
+    # NHITS Neural Forecast Data
+    nhits_forecast: Optional[NHITSForecast] = Field(
+        default=None,
+        description="NHITS neural network price forecast"
+    )
 
 
 class TradingRecommendation(BaseModel):

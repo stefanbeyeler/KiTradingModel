@@ -24,10 +24,12 @@ from ..models.trading_data import (
     ConfidenceLevel,
     TradingStrategy,
     RiskLevel,
+    NHITSForecast,
 )
 from .llm_service import LLMService
 from .rag_service import RAGService
 from .query_log_service import TimescaleDBDataLog, RAGContextLog
+from ..config.settings import settings as app_settings
 
 
 class AnalysisService:
@@ -502,6 +504,11 @@ class AnalysisService:
         # Find support and resistance levels
         support_levels, resistance_levels = self._find_support_resistance(df)
 
+        # Generate NHITS forecast if enabled
+        nhits_forecast = None
+        if app_settings.nhits_enabled:
+            nhits_forecast = await self._get_nhits_forecast(symbol, time_series)
+
         return MarketAnalysis(
             symbol=symbol,
             timestamp=datetime.utcnow(),
@@ -513,8 +520,78 @@ class AnalysisService:
             trend=trend_direction,
             volatility=volatility_level,
             support_levels=support_levels,
-            resistance_levels=resistance_levels
+            resistance_levels=resistance_levels,
+            nhits_forecast=nhits_forecast
         )
+
+    async def _get_nhits_forecast(
+        self,
+        symbol: str,
+        time_series: list[TimeSeriesData]
+    ) -> NHITSForecast | None:
+        """
+        Generate NHITS neural network forecast for the symbol.
+
+        Args:
+            symbol: Trading symbol
+            time_series: Historical time series data
+
+        Returns:
+            NHITSForecast or None if forecast fails
+        """
+        try:
+            from .forecast_service import forecast_service
+
+            # Check if we have enough data for NHITS
+            min_required = app_settings.nhits_input_size + app_settings.nhits_horizon
+            if len(time_series) < min_required:
+                logger.warning(
+                    f"NHITS: Insufficient data for {symbol}: "
+                    f"{len(time_series)} < {min_required} required"
+                )
+                return None
+
+            # Generate forecast
+            forecast_result = await forecast_service.forecast(
+                time_series=time_series,
+                symbol=symbol
+            )
+
+            # Check if forecast was successful
+            if not forecast_result.predicted_prices:
+                logger.warning(f"NHITS: Empty forecast for {symbol}")
+                return None
+
+            # Convert to NHITSForecast model
+            nhits_forecast = NHITSForecast(
+                predicted_price_1h=forecast_result.predicted_price_1h,
+                predicted_price_4h=forecast_result.predicted_price_4h,
+                predicted_price_24h=forecast_result.predicted_price_24h,
+                predicted_change_percent_1h=forecast_result.predicted_change_percent_1h,
+                predicted_change_percent_4h=forecast_result.predicted_change_percent_4h,
+                predicted_change_percent_24h=forecast_result.predicted_change_percent_24h,
+                confidence_low_24h=forecast_result.confidence_low[-1] if forecast_result.confidence_low else None,
+                confidence_high_24h=forecast_result.confidence_high[-1] if forecast_result.confidence_high else None,
+                trend_up_probability=forecast_result.trend_up_probability,
+                trend_down_probability=forecast_result.trend_down_probability,
+                model_confidence=forecast_result.model_confidence,
+                predicted_volatility=forecast_result.predicted_volatility,
+            )
+
+            logger.info(
+                f"NHITS forecast for {symbol}: "
+                f"24h change {forecast_result.predicted_change_percent_24h:+.2f}%, "
+                f"confidence {forecast_result.model_confidence:.1%}"
+            )
+
+            return nhits_forecast
+
+        except ImportError as e:
+            logger.warning(f"NHITS: NeuralForecast not installed: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"NHITS forecast failed for {symbol}: {e}")
+            return None
 
     def _calculate_indicators(self, df: pd.DataFrame, db_indicators: dict = None) -> TechnicalIndicators:
         """Calculate all technical indicators. Use DB values where available."""

@@ -115,6 +115,52 @@ class Settings(BaseSettings):
         description="Use FP16 for embeddings on GPU (saves VRAM)"
     )
 
+    # NHITS Neural Forecasting Configuration
+    nhits_enabled: bool = Field(
+        default=True,
+        description="Enable NHITS neural forecasting"
+    )
+    nhits_horizon: int = Field(
+        default=24,
+        description="Forecast horizon in hours"
+    )
+    nhits_input_size: int = Field(
+        default=168,
+        description="Input window size (168 = 7 days of hourly data)"
+    )
+    nhits_hidden_size: int = Field(
+        default=256,
+        description="Hidden layer size for NHITS network"
+    )
+    nhits_n_pool_kernel_size: list = Field(
+        default=[2, 2, 1],
+        description="Hierarchical pooling kernel sizes"
+    )
+    nhits_batch_size: int = Field(
+        default=32,
+        description="Training batch size"
+    )
+    nhits_max_steps: int = Field(
+        default=500,
+        description="Maximum training steps"
+    )
+    nhits_learning_rate: float = Field(
+        default=1e-3,
+        description="Learning rate for training"
+    )
+    nhits_use_gpu: bool = Field(
+        default=True,
+        description="Use GPU for NHITS if available"
+    )
+    nhits_model_path: str = Field(
+        default="models/nhits",
+        description="Directory for NHITS model persistence"
+    )
+    nhits_auto_retrain_days: int = Field(
+        default=7,
+        description="Retrain model if older than this many days"
+    )
+
     @computed_field
     @property
     def device(self) -> str:

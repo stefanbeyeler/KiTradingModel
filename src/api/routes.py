@@ -17,6 +17,12 @@ from ..models.trading_data import (
     StrategyCreateRequest,
     StrategyUpdateRequest,
 )
+from ..models.forecast_data import (
+    ForecastResult,
+    ForecastConfig,
+    ForecastTrainingResult,
+    ForecastModelInfo,
+)
 from ..services import AnalysisService, LLMService, StrategyService
 from ..services.query_log_service import query_log_service, QueryLogEntry
 
@@ -612,4 +618,188 @@ async def clear_query_logs():
         return {"status": "cleared", "deleted_count": count}
     except Exception as e:
         logger.error(f"Failed to clear query logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== NHITS Forecast Endpoints ====================
+
+def get_forecast_service():
+    """Get the forecast service instance."""
+    from ..services.forecast_service import forecast_service
+    return forecast_service
+
+
+# IMPORTANT: Static routes MUST come before parameterized routes
+# to avoid FastAPI interpreting "status" or "models" as {symbol}
+
+@router.get("/forecast/status")
+async def get_forecast_status():
+    """
+    Get the status of the NHITS forecasting service.
+
+    Returns whether NHITS is enabled and configuration details.
+    """
+    try:
+        forecast_service = get_forecast_service()
+        models = forecast_service.list_models()
+
+        return {
+            "enabled": settings.nhits_enabled,
+            "configuration": {
+                "horizon": settings.nhits_horizon,
+                "input_size": settings.nhits_input_size,
+                "hidden_size": settings.nhits_hidden_size,
+                "batch_size": settings.nhits_batch_size,
+                "max_steps": settings.nhits_max_steps,
+                "use_gpu": settings.nhits_use_gpu,
+                "auto_retrain_days": settings.nhits_auto_retrain_days,
+                "model_path": settings.nhits_model_path,
+            },
+            "trained_models": len(models),
+            "models": [m.symbol for m in models if m.model_exists],
+        }
+    except Exception as e:
+        logger.error(f"Failed to get forecast status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/forecast/models", response_model=list[ForecastModelInfo])
+async def list_forecast_models():
+    """
+    List all trained NHITS models.
+
+    Returns information about all models that have been trained.
+    """
+    try:
+        forecast_service = get_forecast_service()
+        models = forecast_service.list_models()
+        return models
+    except Exception as e:
+        logger.error(f"Failed to list models: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/forecast/{symbol}", response_model=ForecastResult)
+async def get_forecast(
+    symbol: str,
+    horizon: int = 24,
+    retrain: bool = False
+):
+    """
+    Generate NHITS price forecast for a symbol.
+
+    Parameters:
+    - symbol: Trading symbol (e.g., EURUSD)
+    - horizon: Forecast horizon in hours (default: 24, max: 168)
+    - retrain: Force model retraining before forecast (default: false)
+
+    Returns predicted prices with confidence intervals for the specified horizon.
+    """
+    try:
+        # Check if NHITS is enabled
+        if not settings.nhits_enabled:
+            raise HTTPException(
+                status_code=503,
+                detail="NHITS forecasting is disabled. Enable it in settings."
+            )
+
+        # Fetch time series data
+        from datetime import timedelta
+        time_series = await analysis_service._fetch_time_series(
+            symbol=symbol,
+            start_date=datetime.now() - timedelta(days=30),
+            end_date=datetime.now()
+        )
+
+        if not time_series:
+            raise HTTPException(status_code=404, detail=f"No data found for symbol {symbol}")
+
+        # Create config
+        config = ForecastConfig(
+            symbol=symbol,
+            horizon=min(horizon, 168),  # Max 7 days
+            retrain=retrain
+        )
+
+        # Generate forecast
+        forecast_service = get_forecast_service()
+        result = await forecast_service.forecast(
+            time_series=time_series,
+            symbol=symbol,
+            config=config
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Forecast failed for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/forecast/{symbol}/train", response_model=ForecastTrainingResult)
+async def train_forecast_model(
+    symbol: str,
+    days: int = 90
+):
+    """
+    Train or retrain the NHITS model for a symbol.
+
+    Parameters:
+    - symbol: Trading symbol
+    - days: Number of days of historical data to use (default: 90)
+
+    This will train a new model or replace the existing one.
+    """
+    try:
+        if not settings.nhits_enabled:
+            raise HTTPException(
+                status_code=503,
+                detail="NHITS forecasting is disabled. Enable it in settings."
+            )
+
+        # Fetch extended historical data
+        from datetime import timedelta
+        time_series = await analysis_service._fetch_time_series(
+            symbol=symbol,
+            start_date=datetime.now() - timedelta(days=days),
+            end_date=datetime.now()
+        )
+
+        if not time_series:
+            raise HTTPException(status_code=404, detail=f"No data found for symbol {symbol}")
+
+        # Train model
+        forecast_service = get_forecast_service()
+        result = await forecast_service.train(
+            time_series=time_series,
+            symbol=symbol
+        )
+
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.error_message)
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Training failed for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/forecast/{symbol}/model", response_model=ForecastModelInfo)
+async def get_forecast_model_info(symbol: str):
+    """
+    Get information about the trained NHITS model for a symbol.
+
+    Returns model metadata including last training date, samples used, and metrics.
+    """
+    try:
+        forecast_service = get_forecast_service()
+        info = forecast_service.get_model_info(symbol)
+        return info
+    except Exception as e:
+        logger.error(f"Failed to get model info for {symbol}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

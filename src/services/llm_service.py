@@ -114,16 +114,34 @@ class LLMService:
             if rag_context:
                 context_str = "\n\nHistorischer Kontext:\n" + "\n---\n".join(rag_context[:5])
 
+            # Build NHITS forecast section if available
+            nhits_section = self._build_nhits_prompt_section(market_data)
+
             # Build the system prompt with output schema
             output_schema_prompt = get_output_schema_prompt()
 
+            # Enhanced system prompt with NHITS instructions
+            nhits_instructions = ""
+            if market_data.nhits_forecast:
+                nhits_instructions = """
+
+## NHITS AI FORECAST INTEGRATION
+Du erhältst zusätzlich eine KI-basierte Preisvorhersage (NHITS Neural Network).
+Verwende diese Daten zur Verbesserung deiner Analyse:
+
+- Wenn NHITS eine signifikante Bewegung (>1%) mit hoher Konfidenz (>0.7) vorhersagt, gewichte dies stark
+- Verwende die Konfidenzintervalle für Stop-Loss und Take-Profit Levels
+- Wenn NHITS und technische Indikatoren übereinstimmen, erhöhe den confidence_score
+- Wenn NHITS und technische Indikatoren widersprechen, erwähne diese Diskrepanz im trade_rationale
+- Die trend_up_probability kann für die Richtungsentscheidung verwendet werden"""
+
             system_prompt = f"""Du bist ein erfahrener Trading-Analyst. Analysiere die Marktdaten und gib eine strukturierte Empfehlung.
 
-{output_schema_prompt}
+{output_schema_prompt}{nhits_instructions}
 
 Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danach."""
 
-            user_prompt = f"{str(market_data)}{context_str}"
+            user_prompt = f"{str(market_data)}{nhits_section}{context_str}"
             if custom_prompt:
                 user_prompt += f"\n\nZusätzliche Anweisungen: {custom_prompt}"
 
@@ -186,6 +204,41 @@ Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danac
             )
 
             raise
+
+    def _build_nhits_prompt_section(self, market_data: MarketAnalysis) -> str:
+        """Build the NHITS forecast section for the LLM prompt."""
+        if not market_data.nhits_forecast:
+            return "\n\n## NHITS AI FORECAST\nKeine NHITS-Vorhersage verfügbar."
+
+        forecast = market_data.nhits_forecast
+
+        section = "\n\n## NHITS AI FORECAST (Neural Network Prediction)"
+        section += f"\n- Vorhergesagter Preis (1h): {forecast.predicted_price_1h:.5f}" if forecast.predicted_price_1h else ""
+        section += f"\n- Vorhergesagter Preis (4h): {forecast.predicted_price_4h:.5f}" if forecast.predicted_price_4h else ""
+        section += f"\n- Vorhergesagter Preis (24h): {forecast.predicted_price_24h:.5f}" if forecast.predicted_price_24h else ""
+
+        if forecast.predicted_change_percent_1h is not None:
+            section += f"\n- Erwartete Änderung (1h): {forecast.predicted_change_percent_1h:+.2f}%"
+        if forecast.predicted_change_percent_4h is not None:
+            section += f"\n- Erwartete Änderung (4h): {forecast.predicted_change_percent_4h:+.2f}%"
+        if forecast.predicted_change_percent_24h is not None:
+            section += f"\n- Erwartete Änderung (24h): {forecast.predicted_change_percent_24h:+.2f}%"
+
+        if forecast.confidence_low_24h and forecast.confidence_high_24h:
+            section += f"\n- 90% Konfidenzintervall (24h): [{forecast.confidence_low_24h:.5f} - {forecast.confidence_high_24h:.5f}]"
+
+        if forecast.trend_up_probability is not None:
+            section += f"\n- Trend Up Wahrscheinlichkeit: {forecast.trend_up_probability:.1%}"
+        if forecast.trend_down_probability is not None:
+            section += f"\n- Trend Down Wahrscheinlichkeit: {forecast.trend_down_probability:.1%}"
+
+        if forecast.model_confidence is not None:
+            section += f"\n- Modell-Konfidenz: {forecast.model_confidence:.1%}"
+
+        if forecast.predicted_volatility is not None:
+            section += f"\n- Erwartete Volatilität: {forecast.predicted_volatility:.2%}"
+
+        return section
 
     def _parse_recommendation(self, llm_response: str, symbol: str, current_price: float) -> TradingRecommendation:
         try:
