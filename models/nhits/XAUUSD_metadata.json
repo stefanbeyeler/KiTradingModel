@@ -1,0 +1,11 @@
+{
+  "symbol": "XAUUSD",
+  "trained_at": "2025-12-03T17:44:47.992113",
+  "training_samples": 8615,
+  "horizon": 24,
+  "input_size": 168,
+  "duration_seconds": 348.407248,
+  "final_loss": 0.015235979503227606,
+  "mean": 4147.983236429707,
+  "std": 62.60871865682681
+}

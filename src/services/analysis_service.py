@@ -539,6 +539,9 @@ class AnalysisService:
         Returns:
             NHITSForecast or None if forecast fails
         """
+        # Timeout for NHITS forecast (30 seconds max to prevent blocking)
+        NHITS_TIMEOUT_SECONDS = 30
+
         try:
             from .forecast_service import forecast_service
 
@@ -551,11 +554,21 @@ class AnalysisService:
                 )
                 return None
 
-            # Generate forecast
-            forecast_result = await forecast_service.forecast(
-                time_series=time_series,
-                symbol=symbol
-            )
+            # Generate forecast with timeout to prevent blocking
+            try:
+                forecast_result = await asyncio.wait_for(
+                    forecast_service.forecast(
+                        time_series=time_series,
+                        symbol=symbol
+                    ),
+                    timeout=NHITS_TIMEOUT_SECONDS
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"NHITS: Forecast timed out for {symbol} "
+                    f"after {NHITS_TIMEOUT_SECONDS}s"
+                )
+                return None
 
             # Check if forecast was successful
             if not forecast_result.predicted_prices:

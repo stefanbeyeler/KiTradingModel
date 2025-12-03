@@ -160,6 +160,22 @@ class Settings(BaseSettings):
         default=7,
         description="Retrain model if older than this many days"
     )
+    nhits_train_on_startup: bool = Field(
+        default=False,
+        description="Train models for all symbols on startup"
+    )
+    nhits_scheduled_training_enabled: bool = Field(
+        default=True,
+        description="Enable scheduled periodic training"
+    )
+    nhits_scheduled_training_interval_hours: int = Field(
+        default=24,
+        description="Interval for scheduled training in hours"
+    )
+    nhits_training_symbols: list = Field(
+        default=[],
+        description="Specific symbols to train (empty = all available)"
+    )
 
     @computed_field
     @property

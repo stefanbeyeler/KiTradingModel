@@ -14,6 +14,7 @@ from .version import VERSION, RELEASE_DATE
 from .api import router
 from .services.rag_service import RAGService
 from .services.timescaledb_sync_service import TimescaleDBSyncService
+from .services.nhits_training_service import nhits_training_service
 
 # Global service instances
 rag_service = RAGService()
@@ -105,11 +106,44 @@ async def startup_event():
             logger.warning(f"Failed to start TimescaleDB sync: {e}")
             logger.info("Service will continue without automatic RAG sync")
 
+    # Initialize NHITS training service
+    if settings.nhits_enabled:
+        try:
+            # Connect training service to database
+            if sync_service._pool:
+                await nhits_training_service.connect(sync_service._pool)
+                logger.info("NHITS training service connected to database")
+
+            # Start scheduled training if enabled
+            if settings.nhits_scheduled_training_enabled:
+                await nhits_training_service.start()
+                logger.info(
+                    f"NHITS scheduled training started - "
+                    f"Interval: {settings.nhits_scheduled_training_interval_hours}h"
+                )
+
+            # Run startup training if enabled
+            if settings.nhits_train_on_startup:
+                logger.info("Starting NHITS startup training...")
+                import asyncio
+                asyncio.create_task(
+                    nhits_training_service.train_all_symbols(force=False)
+                )
+
+        except Exception as e:
+            logger.warning(f"Failed to initialize NHITS training service: {e}")
+            logger.info("Service will continue without automatic NHITS training")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down KI Trading Model Service...")
+
+    # Stop NHITS training service
+    if nhits_training_service._running:
+        await nhits_training_service.stop()
+        logger.info("NHITS training service stopped")
 
     # Stop sync service
     if sync_service._running:

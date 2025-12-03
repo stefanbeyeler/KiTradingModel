@@ -8,6 +8,8 @@ avoiding the Ray dependency issues with NeuralForecast on Windows.
 import logging
 import os
 import json
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from pathlib import Path
@@ -154,6 +156,10 @@ class ForecastService:
             "cuda" if settings.nhits_use_gpu and torch.cuda.is_available() else "cpu"
         )
 
+        # ThreadPoolExecutor for running blocking PyTorch operations
+        # without blocking the async event loop
+        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="nhits")
+
         # Ensure model directory exists
         self.model_path.mkdir(parents=True, exist_ok=True)
 
@@ -266,13 +272,16 @@ class ForecastService:
         age_days = (datetime.utcnow() - trained_at).days
         return age_days >= settings.nhits_auto_retrain_days
 
-    async def train(
+    def _train_sync(
         self,
         time_series: List[TimeSeriesData],
         symbol: str,
     ) -> ForecastTrainingResult:
-        """Train NHITS model on historical data."""
-        logger.info(f"Training NHITS model for {symbol}")
+        """
+        Synchronous training function to run in ThreadPoolExecutor.
+        This prevents blocking the async event loop.
+        """
+        logger.info(f"Training NHITS model for {symbol} (sync)")
         start_time = datetime.utcnow()
 
         try:
@@ -418,6 +427,24 @@ class ForecastService:
                 error_message=str(e),
             )
 
+    async def train(
+        self,
+        time_series: List[TimeSeriesData],
+        symbol: str,
+    ) -> ForecastTrainingResult:
+        """
+        Train NHITS model on historical data.
+        Runs the blocking PyTorch operations in a ThreadPoolExecutor.
+        """
+        logger.info(f"Training NHITS model for {symbol}")
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            self._executor,
+            self._train_sync,
+            time_series,
+            symbol,
+        )
+
     def _load_model(self, symbol: str) -> Optional[SimpleNHITS]:
         """Load a saved model from disk."""
         if symbol in self.models:
@@ -445,25 +472,16 @@ class ForecastService:
             logger.warning(f"Failed to load model for {symbol}: {e}")
             return None
 
-    async def forecast(
+    def _forecast_sync(
         self,
         time_series: List[TimeSeriesData],
         symbol: str,
-        config: Optional[ForecastConfig] = None,
+        model: SimpleNHITS,
     ) -> ForecastResult:
-        """Generate price forecast using NHITS."""
-        config = config or ForecastConfig(symbol=symbol)
-
-        # Check if we need to train or retrain
-        model = self._load_model(symbol)
-
-        if model is None or config.retrain or self._should_retrain(symbol):
-            logger.info(f"Training/retraining NHITS model for {symbol}")
-            result = await self.train(time_series, symbol)
-            if not result.success:
-                return self._create_empty_forecast(symbol, time_series)
-            model = self.models[symbol]
-
+        """
+        Synchronous forecast function to run in ThreadPoolExecutor.
+        This prevents blocking the async event loop.
+        """
         try:
             df = self._prepare_data(time_series, symbol)
             prices = df['close'].values
@@ -553,6 +571,38 @@ class ForecastService:
         except Exception as e:
             logger.error(f"Forecast failed for {symbol}: {e}")
             return self._create_empty_forecast(symbol, time_series)
+
+    async def forecast(
+        self,
+        time_series: List[TimeSeriesData],
+        symbol: str,
+        config: Optional[ForecastConfig] = None,
+    ) -> ForecastResult:
+        """
+        Generate price forecast using NHITS.
+        Runs the blocking PyTorch operations in a ThreadPoolExecutor.
+        """
+        config = config or ForecastConfig(symbol=symbol)
+
+        # Check if we need to train or retrain
+        model = self._load_model(symbol)
+
+        if model is None or config.retrain or self._should_retrain(symbol):
+            logger.info(f"Training/retraining NHITS model for {symbol}")
+            result = await self.train(time_series, symbol)
+            if not result.success:
+                return self._create_empty_forecast(symbol, time_series)
+            model = self.models[symbol]
+
+        # Run inference in thread pool to not block the event loop
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            self._executor,
+            self._forecast_sync,
+            time_series,
+            symbol,
+            model,
+        )
 
     def _calc_change_pct(self, current: float, predicted: float) -> float:
         """Calculate percentage change."""

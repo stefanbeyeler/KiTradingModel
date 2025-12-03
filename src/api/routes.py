@@ -629,6 +629,12 @@ def get_forecast_service():
     return forecast_service
 
 
+def get_training_service():
+    """Get the NHITS training service instance."""
+    from ..services.nhits_training_service import nhits_training_service
+    return nhits_training_service
+
+
 # IMPORTANT: Static routes MUST come before parameterized routes
 # to avoid FastAPI interpreting "status" or "models" as {symbol}
 
@@ -678,6 +684,130 @@ async def list_forecast_models():
         logger.error(f"Failed to list models: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ==================== NHITS Batch Training Endpoints ====================
+# NOTE: These must be defined BEFORE parameterized routes like /forecast/{symbol}
+
+@router.get("/forecast/training/status")
+async def get_training_status():
+    """
+    Get the status of the NHITS training service.
+
+    Returns information about scheduled training and recent training runs.
+    """
+    try:
+        training_service = get_training_service()
+        return training_service.get_status()
+    except Exception as e:
+        logger.error(f"Failed to get training status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/forecast/training/symbols")
+async def get_trainable_symbols():
+    """
+    Get list of symbols available for NHITS training.
+
+    Returns all symbols that have sufficient data in TimescaleDB.
+    """
+    try:
+        training_service = get_training_service()
+
+        # Ensure training service has database connection
+        if not training_service._db_pool:
+            import asyncpg
+            pool = await asyncpg.create_pool(
+                host=settings.timescaledb_host,
+                port=settings.timescaledb_port,
+                database=settings.timescaledb_database,
+                user=settings.timescaledb_user,
+                password=settings.timescaledb_password,
+                min_size=1,
+                max_size=5
+            )
+            await training_service.connect(pool)
+
+        symbols = await training_service.get_available_symbols()
+
+        return {
+            "count": len(symbols),
+            "symbols": symbols
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get trainable symbols: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/forecast/train-all")
+async def train_all_models(
+    symbols: list[str] | None = None,
+    force: bool = False,
+    background: bool = True
+):
+    """
+    Train NHITS models for all (or specified) symbols.
+
+    Parameters:
+    - symbols: Optional list of specific symbols to train (default: all available)
+    - force: Force retraining even if models are up to date
+    - background: Run training in background (default: True)
+
+    Returns training summary or task status if running in background.
+    """
+    import asyncio
+    try:
+        if not settings.nhits_enabled:
+            raise HTTPException(
+                status_code=503,
+                detail="NHITS forecasting is disabled. Enable it in settings."
+            )
+
+        training_service = get_training_service()
+
+        # Ensure training service has database connection
+        if not training_service._db_pool:
+            import asyncpg
+            pool = await asyncpg.create_pool(
+                host=settings.timescaledb_host,
+                port=settings.timescaledb_port,
+                database=settings.timescaledb_database,
+                user=settings.timescaledb_user,
+                password=settings.timescaledb_password,
+                min_size=1,
+                max_size=5
+            )
+            await training_service.connect(pool)
+
+        if background:
+            # Start training in background
+            asyncio.create_task(
+                training_service.train_all_symbols(
+                    symbols=symbols,
+                    force=force
+                )
+            )
+            return {
+                "status": "started",
+                "message": "Training started in background",
+                "symbols": symbols or "all available"
+            }
+        else:
+            # Run training synchronously
+            result = await training_service.train_all_symbols(
+                symbols=symbols,
+                force=force
+            )
+            return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to start batch training: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== NHITS Symbol-specific Endpoints ====================
 
 @router.get("/forecast/{symbol}", response_model=ForecastResult)
 async def get_forecast(
