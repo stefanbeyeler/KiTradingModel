@@ -33,3 +33,6 @@ data/faiss_index
 data/query_logs.json
 data/faiss/
 data/query_logs.json
+
+# NHITS Models
+models/nhits/
