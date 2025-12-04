@@ -147,7 +147,27 @@ class AnalysisService:
                     additional_data={
                         "bid": float(row["bid"]) if row["bid"] else None,
                         "ask": float(row["ask"]) if row["ask"] else None
-                    }
+                    },
+                    # Include technical indicators for NHITS multi-variate forecasting
+                    rsi=float(row["rsi14price_close"]) if row["rsi14price_close"] else None,
+                    macd_main=float(row["macd12269price_close_main_line"]) if row["macd12269price_close_main_line"] else None,
+                    macd_signal=float(row["macd12269price_close_signal_line"]) if row["macd12269price_close_signal_line"] else None,
+                    adx=float(row["adx14_main_line"]) if row["adx14_main_line"] else None,
+                    adx_plus_di=float(row["adx14_plusdi_line"]) if row["adx14_plusdi_line"] else None,
+                    adx_minus_di=float(row["adx14_minusdi_line"]) if row["adx14_minusdi_line"] else None,
+                    atr=float(row["atr_d1"]) if row["atr_d1"] else None,
+                    cci=float(row["cci14price_typical"]) if row["cci14price_typical"] else None,
+                    stoch_k=float(row["sto533mode_smasto_lowhigh_main_line"]) if row["sto533mode_smasto_lowhigh_main_line"] else None,
+                    stoch_d=float(row["sto533mode_smasto_lowhigh_signal_line"]) if row["sto533mode_smasto_lowhigh_signal_line"] else None,
+                    bb_upper=float(row["bb200200price_close_upper_band"]) if row["bb200200price_close_upper_band"] else None,
+                    bb_middle=float(row["bb200200price_close_base_line"]) if row["bb200200price_close_base_line"] else None,
+                    bb_lower=float(row["bb200200price_close_lower_band"]) if row["bb200200price_close_lower_band"] else None,
+                    ma100=float(row["ma100mode_smaprice_close"]) if row["ma100mode_smaprice_close"] else None,
+                    ichimoku_tenkan=float(row["ichimoku92652_tenkansen_line"]) if row["ichimoku92652_tenkansen_line"] else None,
+                    ichimoku_kijun=float(row["ichimoku92652_kijunsen_line"]) if row["ichimoku92652_kijunsen_line"] else None,
+                    strength_4h=float(row["strength_4h"]) if row["strength_4h"] else None,
+                    strength_1d=float(row["strength_1d"]) if row["strength_1d"] else None,
+                    strength_1w=float(row["strength_1w"]) if row["strength_1w"] else None,
                 )
                 time_series.append(ts)
 

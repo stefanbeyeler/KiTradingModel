@@ -41,6 +41,27 @@ class TimeSeriesData(BaseModel):
     volume: float
     additional_data: Optional[dict] = None
 
+    # Technical Indicators from TimescaleDB (optional, for NHITS multi-variate forecasting)
+    rsi: Optional[float] = None
+    macd_main: Optional[float] = None
+    macd_signal: Optional[float] = None
+    adx: Optional[float] = None
+    adx_plus_di: Optional[float] = None
+    adx_minus_di: Optional[float] = None
+    atr: Optional[float] = None
+    cci: Optional[float] = None
+    stoch_k: Optional[float] = None
+    stoch_d: Optional[float] = None
+    bb_upper: Optional[float] = None
+    bb_middle: Optional[float] = None
+    bb_lower: Optional[float] = None
+    ma100: Optional[float] = None
+    ichimoku_tenkan: Optional[float] = None
+    ichimoku_kijun: Optional[float] = None
+    strength_4h: Optional[float] = None
+    strength_1d: Optional[float] = None
+    strength_1w: Optional[float] = None
+
 
 class TechnicalIndicators(BaseModel):
     """Technical analysis indicators."""

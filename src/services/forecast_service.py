@@ -41,10 +41,12 @@ class NHITSBlock(nn.Module):
         output_size: int,
         hidden_size: int,
         pool_kernel_size: int = 2,
+        n_features: int = 1,  # Number of input features (multi-variate support)
     ):
         super().__init__()
         self.pool_kernel_size = pool_kernel_size
         self.output_size = output_size
+        self.n_features = n_features
 
         # Pooling layer
         self.pooling = nn.AvgPool1d(
@@ -53,11 +55,12 @@ class NHITSBlock(nn.Module):
             ceil_mode=True
         )
 
-        # Calculate pooled input size
+        # Calculate pooled input size (now includes features)
         pooled_size = (input_size + pool_kernel_size - 1) // pool_kernel_size
+        total_input_size = pooled_size * n_features
 
         # MLP layers
-        self.fc1 = nn.Linear(pooled_size, hidden_size)
+        self.fc1 = nn.Linear(total_input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, output_size)
 
@@ -65,11 +68,23 @@ class NHITSBlock(nn.Module):
         self.dropout = nn.Dropout(0.1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x shape: (batch, input_size)
-        # Add channel dim for pooling: (batch, 1, input_size)
-        x = x.unsqueeze(1)
-        x = self.pooling(x)
-        x = x.squeeze(1)
+        # x shape: (batch, n_features, input_size) for multi-variate
+        # or (batch, input_size) for univariate
+        if x.dim() == 2:
+            # Univariate: add feature dimension
+            x = x.unsqueeze(1)
+
+        batch_size = x.shape[0]
+
+        # Apply pooling to each feature
+        pooled_features = []
+        for i in range(x.shape[1]):
+            feat = x[:, i:i+1, :]  # (batch, 1, input_size)
+            pooled = self.pooling(feat)  # (batch, 1, pooled_size)
+            pooled_features.append(pooled.squeeze(1))
+
+        # Concatenate all pooled features
+        x = torch.cat(pooled_features, dim=1)  # (batch, n_features * pooled_size)
 
         # MLP
         x = self.relu(self.fc1(x))
@@ -89,6 +104,7 @@ class SimpleNHITS(nn.Module):
     - Multiple stacked blocks with different pooling sizes
     - Each block captures patterns at different scales
     - Outputs are summed for final prediction
+    - Supports multi-variate input (price + technical indicators)
     """
 
     def __init__(
@@ -98,11 +114,13 @@ class SimpleNHITS(nn.Module):
         hidden_size: int = 256,
         n_pool_kernel_sizes: List[int] = [2, 2, 1],
         n_quantiles: int = 3,  # For probabilistic forecasts
+        n_features: int = 1,  # Number of input features (1 = univariate, >1 = multi-variate)
     ):
         super().__init__()
         self.input_size = input_size
         self.output_size = output_size
         self.n_quantiles = n_quantiles
+        self.n_features = n_features
 
         # Create blocks with different pooling sizes
         self.blocks = nn.ModuleList([
@@ -110,7 +128,8 @@ class SimpleNHITS(nn.Module):
                 input_size=input_size,
                 output_size=output_size * n_quantiles,
                 hidden_size=hidden_size,
-                pool_kernel_size=kernel_size
+                pool_kernel_size=kernel_size,
+                n_features=n_features,
             )
             for kernel_size in n_pool_kernel_sizes
         ])
@@ -122,7 +141,8 @@ class SimpleNHITS(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x shape: (batch, input_size)
+        # x shape: (batch, n_features, input_size) for multi-variate
+        # or (batch, input_size) for univariate
         block_outputs = []
 
         for block in self.blocks:
@@ -169,12 +189,19 @@ class ForecastService:
             f"device={self.device}, model_path={self.model_path}"
         )
 
+    # Feature names for multi-variate forecasting
+    INDICATOR_FEATURES = [
+        'rsi', 'macd_main', 'macd_signal', 'adx', 'adx_plus_di', 'adx_minus_di',
+        'atr', 'cci', 'stoch_k', 'stoch_d', 'bb_upper', 'bb_middle', 'bb_lower',
+        'ma100', 'ichimoku_tenkan', 'ichimoku_kijun', 'strength_4h', 'strength_1d', 'strength_1w'
+    ]
+
     def _prepare_data(
         self,
         time_series: List[TimeSeriesData],
         symbol: str,
     ) -> pd.DataFrame:
-        """Convert TimeSeriesData to DataFrame."""
+        """Convert TimeSeriesData to DataFrame with all features."""
         if not time_series:
             raise ValueError("Empty time series data")
 
@@ -182,6 +209,29 @@ class ForecastService:
             {
                 'timestamp': pd.to_datetime(ts.timestamp),
                 'close': float(ts.close),
+                'open': float(ts.open),
+                'high': float(ts.high),
+                'low': float(ts.low),
+                # Technical Indicators
+                'rsi': ts.rsi,
+                'macd_main': ts.macd_main,
+                'macd_signal': ts.macd_signal,
+                'adx': ts.adx,
+                'adx_plus_di': ts.adx_plus_di,
+                'adx_minus_di': ts.adx_minus_di,
+                'atr': ts.atr,
+                'cci': ts.cci,
+                'stoch_k': ts.stoch_k,
+                'stoch_d': ts.stoch_d,
+                'bb_upper': ts.bb_upper,
+                'bb_middle': ts.bb_middle,
+                'bb_lower': ts.bb_lower,
+                'ma100': ts.ma100,
+                'ichimoku_tenkan': ts.ichimoku_tenkan,
+                'ichimoku_kijun': ts.ichimoku_kijun,
+                'strength_4h': ts.strength_4h,
+                'strength_1d': ts.strength_1d,
+                'strength_1w': ts.strength_1w,
             }
             for ts in time_series
         ])
@@ -189,18 +239,87 @@ class ForecastService:
         df = df.sort_values('timestamp').drop_duplicates(subset=['timestamp']).reset_index(drop=True)
         return df
 
+    def _get_available_features(self, df: pd.DataFrame) -> List[str]:
+        """Determine which indicator features have sufficient non-null data."""
+        available = []
+        min_coverage = 0.5  # At least 50% non-null values required
+
+        for feature in self.INDICATOR_FEATURES:
+            if feature in df.columns:
+                coverage = df[feature].notna().mean()
+                if coverage >= min_coverage:
+                    available.append(feature)
+
+        return available
+
+    def _prepare_multivariate_data(
+        self,
+        df: pd.DataFrame,
+        feature_names: List[str],
+    ) -> tuple:
+        """
+        Prepare multi-variate data for training/inference.
+
+        Returns:
+            Tuple of (features_array, feature_means, feature_stds, n_features)
+            features_array shape: (n_samples, n_features) where features are in order:
+            [close, indicator1, indicator2, ...]
+        """
+        # Always include close price as first feature
+        all_features = ['close'] + feature_names
+
+        # Fill missing values with forward fill, then backward fill
+        for col in all_features:
+            if col in df.columns:
+                df[col] = df[col].fillna(method='ffill').fillna(method='bfill')
+
+        # Extract feature values
+        feature_arrays = []
+        feature_means = {}
+        feature_stds = {}
+
+        for feat in all_features:
+            if feat in df.columns:
+                values = df[feat].values.astype(np.float32)
+                mean = np.mean(values)
+                std = np.std(values) + 1e-8
+                normalized = (values - mean) / std
+                feature_arrays.append(normalized)
+                feature_means[feat] = mean
+                feature_stds[feat] = std
+
+        # Stack features: shape (n_features, n_samples)
+        features = np.stack(feature_arrays, axis=0)
+
+        return features, feature_means, feature_stds, len(all_features)
+
     def _create_sequences(
         self,
         data: np.ndarray,
         input_size: int,
         output_size: int
     ) -> tuple:
-        """Create input/output sequences for training."""
+        """
+        Create input/output sequences for training.
+
+        For univariate data: data shape (n_samples,)
+        For multivariate data: data shape (n_features, n_samples)
+        """
         X, y = [], []
 
-        for i in range(len(data) - input_size - output_size + 1):
-            X.append(data[i:i + input_size])
-            y.append(data[i + input_size:i + input_size + output_size])
+        if data.ndim == 1:
+            # Univariate case
+            for i in range(len(data) - input_size - output_size + 1):
+                X.append(data[i:i + input_size])
+                y.append(data[i + input_size:i + input_size + output_size])
+        else:
+            # Multivariate case: data shape (n_features, n_samples)
+            n_features, n_samples = data.shape
+            for i in range(n_samples - input_size - output_size + 1):
+                # X: (n_features, input_size)
+                X.append(data[:, i:i + input_size])
+                # y: only predict close price (first feature)
+                y.append(data[0, i + input_size:i + input_size + output_size])
 
         return np.array(X), np.array(y)
 
@@ -215,14 +334,15 @@ class ForecastService:
         """Denormalize data."""
         return data * std + mean
 
-    def _create_model(self) -> SimpleNHITS:
-        """Create a new NHITS model."""
+    def _create_model(self, n_features: int = 1) -> SimpleNHITS:
+        """Create a new NHITS model with specified number of features."""
         model = SimpleNHITS(
             input_size=self.input_size,
             output_size=self.horizon,
             hidden_size=settings.nhits_hidden_size,
             n_pool_kernel_sizes=settings.nhits_n_pool_kernel_size,
             n_quantiles=3,  # 10%, 50%, 90%
+            n_features=n_features,  # Multi-variate support
         )
         return model.to(self.device)
 
@@ -280,25 +400,44 @@ class ForecastService:
         """
         Synchronous training function to run in ThreadPoolExecutor.
         This prevents blocking the async event loop.
+        Supports multi-variate training with technical indicators.
         """
         logger.info(f"Training NHITS model for {symbol} (sync)")
         start_time = datetime.utcnow()
 
         try:
             df = self._prepare_data(time_series, symbol)
-            prices = df['close'].values
 
             min_required = self.input_size + self.horizon
-            if len(prices) < min_required:
+            if len(df) < min_required:
                 raise ValueError(
-                    f"Insufficient data: {len(prices)} rows, need {min_required}"
+                    f"Insufficient data: {len(df)} rows, need {min_required}"
                 )
 
-            # Normalize data
-            normalized, mean, std = self._normalize(prices)
+            # Check which indicator features are available
+            available_features = self._get_available_features(df)
+            n_features = 1 + len(available_features)  # close + indicators
 
-            # Create sequences
-            X, y = self._create_sequences(normalized, self.input_size, self.horizon)
+            logger.info(
+                f"NHITS training for {symbol}: Using {n_features} features "
+                f"(close + {len(available_features)} indicators: {available_features[:5]}...)"
+            )
+
+            # Prepare multi-variate data
+            if available_features:
+                features, feature_means, feature_stds, n_features = self._prepare_multivariate_data(
+                    df, available_features
+                )
+                # Create sequences for multi-variate data
+                X, y = self._create_sequences(features, self.input_size, self.horizon)
+            else:
+                # Fallback to univariate (close only)
+                prices = df['close'].values
+                normalized, mean, std = self._normalize(prices)
+                X, y = self._create_sequences(normalized, self.input_size, self.horizon)
+                feature_means = {'close': mean}
+                feature_stds = {'close': std}
+                n_features = 1
 
             if len(X) < 10:
                 raise ValueError(f"Not enough sequences for training: {len(X)}")
@@ -315,8 +454,8 @@ class ForecastService:
                 shuffle=True
             )
 
-            # Create model
-            model = self._create_model()
+            # Create model with correct number of features
+            model = self._create_model(n_features=n_features)
 
             # Training setup
             optimizer = torch.optim.Adam(model.parameters(), lr=settings.nhits_learning_rate)
@@ -371,12 +510,17 @@ class ForecastService:
                 if epoch % 100 == 0:
                     logger.debug(f"Epoch {epoch}, Loss: {epoch_loss:.6f}")
 
-            # Save model
+            # Save model with feature information
             model_path = self._get_model_path(symbol)
             torch.save({
                 'model_state_dict': model.state_dict(),
-                'mean': mean,
-                'std': std,
+                'n_features': n_features,
+                'feature_names': ['close'] + available_features,
+                'feature_means': {k: float(v) for k, v in feature_means.items()},
+                'feature_stds': {k: float(v) for k, v in feature_stds.items()},
+                # Legacy support
+                'mean': float(feature_means.get('close', 0)),
+                'std': float(feature_stds.get('close', 1)),
             }, model_path)
 
             self.models[symbol] = model
@@ -393,15 +537,19 @@ class ForecastService:
                 'input_size': self.input_size,
                 'duration_seconds': duration,
                 'final_loss': best_loss,
-                'mean': float(mean),
-                'std': float(std),
+                'n_features': n_features,
+                'feature_names': ['close'] + available_features,
+                'mean': float(feature_means.get('close', 0)),
+                'std': float(feature_stds.get('close', 1)),
+                'feature_means': {k: float(v) for k, v in feature_means.items()},
+                'feature_stds': {k: float(v) for k, v in feature_stds.items()},
             }
             self._save_metadata(symbol, metadata)
             self.model_metadata[symbol] = metadata
 
             logger.info(
                 f"NHITS model trained for {symbol}: "
-                f"{len(X)} samples, {duration:.1f}s, loss={best_loss:.6f}"
+                f"{len(X)} samples, {n_features} features, {duration:.1f}s, loss={best_loss:.6f}"
             )
 
             return ForecastTrainingResult(
@@ -410,12 +558,18 @@ class ForecastService:
                 training_samples=len(X),
                 training_duration_seconds=duration,
                 model_path=str(model_path),
-                metrics={'final_loss': best_loss},
+                metrics={
+                    'final_loss': best_loss,
+                    'n_features': n_features,
+                    'features_used': ['close'] + available_features,
+                },
                 success=True,
             )
 
         except Exception as e:
             logger.error(f"Failed to train NHITS model for {symbol}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return ForecastTrainingResult(
                 symbol=symbol,
                 trained_at=datetime.utcnow(),
@@ -446,7 +600,7 @@ class ForecastService:
         )
 
     def _load_model(self, symbol: str) -> Optional[SimpleNHITS]:
-        """Load a saved model from disk."""
+        """Load a saved model from disk with multi-variate support."""
         if symbol in self.models:
             return self.models[symbol]
 
@@ -456,20 +610,36 @@ class ForecastService:
 
         try:
             checkpoint = torch.load(model_path, map_location=self.device)
-            model = self._create_model()
+
+            # Get number of features (default to 1 for legacy models)
+            n_features = checkpoint.get('n_features', 1)
+
+            model = self._create_model(n_features=n_features)
             model.load_state_dict(checkpoint['model_state_dict'])
             model.eval()
 
             self.models[symbol] = model
             metadata = self._load_metadata(symbol) or {}
+
+            # Load multi-variate metadata
             metadata['mean'] = checkpoint.get('mean', 0)
             metadata['std'] = checkpoint.get('std', 1)
+            metadata['n_features'] = n_features
+            metadata['feature_names'] = checkpoint.get('feature_names', ['close'])
+            metadata['feature_means'] = checkpoint.get('feature_means', {'close': metadata['mean']})
+            metadata['feature_stds'] = checkpoint.get('feature_stds', {'close': metadata['std']})
+
             self.model_metadata[symbol] = metadata
 
-            logger.info(f"Loaded NHITS model for {symbol}")
+            logger.info(
+                f"Loaded NHITS model for {symbol} "
+                f"({n_features} features: {metadata['feature_names'][:3]}...)"
+            )
             return model
         except Exception as e:
             logger.warning(f"Failed to load model for {symbol}: {e}")
+            import traceback
+            logger.warning(traceback.format_exc())
             return None
 
     def _forecast_sync(
@@ -480,26 +650,58 @@ class ForecastService:
     ) -> ForecastResult:
         """
         Synchronous forecast function to run in ThreadPoolExecutor.
-        This prevents blocking the async event loop.
+        Supports multi-variate forecasting with technical indicators.
         """
         try:
             df = self._prepare_data(time_series, symbol)
-            prices = df['close'].values
 
-            if len(prices) < self.input_size:
+            if len(df) < self.input_size:
                 logger.warning(
-                    f"Insufficient data for prediction: {len(prices)} < {self.input_size}"
+                    f"Insufficient data for prediction: {len(df)} < {self.input_size}"
                 )
                 return self._create_empty_forecast(symbol, time_series)
 
-            # Get normalization parameters
+            # Get metadata including feature information
             metadata = self.model_metadata.get(symbol, {})
-            mean = metadata.get('mean', np.mean(prices))
-            std = metadata.get('std', np.std(prices) + 1e-8)
+            n_features = metadata.get('n_features', 1)
+            feature_names = metadata.get('feature_names', ['close'])
+            feature_means = metadata.get('feature_means', {'close': metadata.get('mean', 0)})
+            feature_stds = metadata.get('feature_stds', {'close': metadata.get('std', 1)})
 
-            # Prepare input
-            input_data = (prices[-self.input_size:] - mean) / std
-            input_tensor = torch.FloatTensor(input_data).unsqueeze(0).to(self.device)
+            # Get close price normalization params
+            close_mean = feature_means.get('close', metadata.get('mean', np.mean(df['close'].values)))
+            close_std = feature_stds.get('close', metadata.get('std', np.std(df['close'].values) + 1e-8))
+
+            # Prepare input based on model type
+            if n_features > 1 and len(feature_names) > 1:
+                # Multi-variate: prepare all features
+                indicator_features = [f for f in feature_names if f != 'close']
+
+                # Fill missing values
+                for col in feature_names:
+                    if col in df.columns:
+                        df[col] = df[col].fillna(method='ffill').fillna(method='bfill')
+
+                # Build feature tensor
+                feature_arrays = []
+                for feat in feature_names:
+                    if feat in df.columns:
+                        values = df[feat].values[-self.input_size:].astype(np.float32)
+                        mean = feature_means.get(feat, np.mean(values))
+                        std = feature_stds.get(feat, np.std(values) + 1e-8)
+                        normalized = (values - mean) / std
+                        feature_arrays.append(normalized)
+
+                # Stack features: (n_features, input_size)
+                input_data = np.stack(feature_arrays, axis=0)
+                input_tensor = torch.FloatTensor(input_data).unsqueeze(0).to(self.device)
+
+                logger.debug(f"Multi-variate forecast for {symbol} with {n_features} features")
+            else:
+                # Univariate: close price only
+                prices = df['close'].values
+                input_data = (prices[-self.input_size:] - close_mean) / close_std
+                input_tensor = torch.FloatTensor(input_data).unsqueeze(0).to(self.device)
 
             # Generate forecast
             model.eval()
@@ -509,16 +711,16 @@ class ForecastService:
             # output shape: (1, horizon, 3) for 3 quantiles
             output = output.cpu().numpy()[0]
 
-            # Denormalize
-            predicted_low = output[:, 0] * std + mean  # 10th percentile
-            predicted_median = output[:, 1] * std + mean  # 50th percentile (main prediction)
-            predicted_high = output[:, 2] * std + mean  # 90th percentile
+            # Denormalize using close price parameters
+            predicted_low = output[:, 0] * close_std + close_mean  # 10th percentile
+            predicted_median = output[:, 1] * close_std + close_mean  # 50th percentile (main prediction)
+            predicted_high = output[:, 2] * close_std + close_mean  # 90th percentile
 
             predicted_prices = predicted_median.tolist()
             confidence_low = predicted_low.tolist()
             confidence_high = predicted_high.tolist()
 
-            current_price = prices[-1]
+            current_price = df['close'].values[-1]
 
             # Calculate trend probabilities
             price_changes = np.diff([current_price] + predicted_prices)
@@ -632,9 +834,17 @@ class ForecastService:
         )
 
     def get_model_info(self, symbol: str) -> ForecastModelInfo:
-        """Get information about a trained model."""
+        """Get information about a trained model including multi-variate features."""
         model_path = self._get_model_path(symbol)
         metadata = self._load_metadata(symbol)
+
+        # Build metrics including feature information
+        metrics = {}
+        if metadata:
+            metrics = metadata.get('metrics', {})
+            metrics['n_features'] = metadata.get('n_features', 1)
+            metrics['feature_names'] = metadata.get('feature_names', ['close'])
+            metrics['final_loss'] = metadata.get('final_loss')
 
         return ForecastModelInfo(
             symbol=symbol,
@@ -644,7 +854,7 @@ class ForecastService:
             training_samples=metadata.get('training_samples') if metadata else None,
             horizon=self.horizon,
             input_size=self.input_size,
-            metrics=metadata.get('metrics', {}) if metadata else {},
+            metrics=metrics,
         )
 
     def list_models(self) -> List[ForecastModelInfo]:
