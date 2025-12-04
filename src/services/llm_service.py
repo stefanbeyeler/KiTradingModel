@@ -16,7 +16,7 @@ from ..models.trading_data import (
     ConfidenceLevel,
 )
 from ..config import get_output_schema_prompt
-from .query_log_service import query_log_service, TimescaleDBDataLog, RAGContextLog
+from .query_log_service import query_log_service, TimescaleDBDataLog, RAGContextLog, NHITSForecastLog
 
 
 class LLMService:
@@ -159,6 +159,9 @@ Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danac
 
             recommendation = self._parse_recommendation(llm_response, market_data.symbol, market_data.current_price)
 
+            # Create NHITS forecast log if available
+            nhits_forecast_log = self._create_nhits_forecast_log(market_data)
+
             # Log the query with detailed data source information
             query_log_service.add_log(
                 query_type="analysis",
@@ -176,6 +179,7 @@ Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danac
                 # Detaillierte Datenquellenprotokollierung
                 timescaledb_data=timescaledb_data,
                 rag_context_details=rag_context_details,
+                nhits_forecast=nhits_forecast_log,
             )
 
             return recommendation
@@ -183,6 +187,9 @@ Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danac
         except Exception as e:
             processing_time = (time.time() - start_time) * 1000
             logger.error(f"Error: {e}")
+
+            # Create NHITS forecast log if available (for error logging too)
+            nhits_forecast_log = self._create_nhits_forecast_log(market_data) if market_data else None
 
             # Log the failed query with detailed data source information
             query_log_service.add_log(
@@ -201,9 +208,41 @@ Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danac
                 # Detaillierte Datenquellenprotokollierung auch bei Fehlern
                 timescaledb_data=timescaledb_data,
                 rag_context_details=rag_context_details,
+                nhits_forecast=nhits_forecast_log,
             )
 
             raise
+
+    def _create_nhits_forecast_log(self, market_data: MarketAnalysis) -> Optional[NHITSForecastLog]:
+        """Create NHITSForecastLog from MarketAnalysis NHITS forecast data."""
+        if not market_data.nhits_forecast:
+            return None
+
+        forecast = market_data.nhits_forecast
+        return NHITSForecastLog(
+            forecast_timestamp=datetime.utcnow(),
+            symbol=market_data.symbol,
+            horizon_hours=24,  # Default horizon
+            current_price=market_data.current_price,  # Get from market_data, not forecast
+            predicted_price_1h=forecast.predicted_price_1h,
+            predicted_price_4h=forecast.predicted_price_4h,
+            predicted_price_24h=forecast.predicted_price_24h,
+            predicted_change_percent_1h=forecast.predicted_change_percent_1h,
+            predicted_change_percent_4h=forecast.predicted_change_percent_4h,
+            predicted_change_percent_24h=forecast.predicted_change_percent_24h,
+            confidence_low_24h=forecast.confidence_low_24h,
+            confidence_high_24h=forecast.confidence_high_24h,
+            trend_up_probability=forecast.trend_up_probability,
+            trend_down_probability=forecast.trend_down_probability,
+            model_confidence=forecast.model_confidence,
+            predicted_volatility=forecast.predicted_volatility,
+            # These fields are not in NHITSForecast model, leave as defaults
+            last_training_date=None,
+            training_samples=None,
+            predicted_prices=[],
+            confidence_low=[],
+            confidence_high=[],
+        )
 
     def _build_nhits_prompt_section(self, market_data: MarketAnalysis) -> str:
         """Build the NHITS forecast section for the LLM prompt."""

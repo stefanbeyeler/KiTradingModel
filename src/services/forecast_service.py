@@ -21,6 +21,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from src.models.forecast_data import (
+    TrainingMetrics,
     ForecastResult,
     ForecastConfig,
     ForecastTrainingResult,
@@ -558,11 +559,11 @@ class ForecastService:
                 training_samples=len(X),
                 training_duration_seconds=duration,
                 model_path=str(model_path),
-                metrics={
-                    'final_loss': best_loss,
-                    'n_features': n_features,
-                    'features_used': ['close'] + available_features,
-                },
+                metrics=TrainingMetrics(
+                    final_loss=best_loss,
+                    n_features=n_features,
+                    features_used=['close'] + available_features,
+                ),
                 success=True,
             )
 
@@ -576,7 +577,7 @@ class ForecastService:
                 training_samples=0,
                 training_duration_seconds=0,
                 model_path="",
-                metrics={},
+                metrics=TrainingMetrics(),
                 success=False,
                 error_message=str(e),
             )

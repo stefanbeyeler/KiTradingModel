@@ -34,6 +34,45 @@ class TimescaleDBDataLog(BaseModel):
     sql_queries: list[str] = Field(default_factory=list)
 
 
+class NHITSForecastLog(BaseModel):
+    """Detaillierte Protokollierung der NHITS-Server-Antworten."""
+    forecast_timestamp: Optional[datetime] = None
+    symbol: Optional[str] = None
+    horizon_hours: int = 24
+
+    # Preisvorhersagen
+    current_price: Optional[float] = None
+    predicted_price_1h: Optional[float] = None
+    predicted_price_4h: Optional[float] = None
+    predicted_price_24h: Optional[float] = None
+
+    # Prozentuale Änderungen
+    predicted_change_percent_1h: Optional[float] = None
+    predicted_change_percent_4h: Optional[float] = None
+    predicted_change_percent_24h: Optional[float] = None
+
+    # Konfidenzintervalle (24h)
+    confidence_low_24h: Optional[float] = None
+    confidence_high_24h: Optional[float] = None
+
+    # Trend-Wahrscheinlichkeiten
+    trend_up_probability: Optional[float] = None
+    trend_down_probability: Optional[float] = None
+
+    # Modell-Metriken
+    model_confidence: Optional[float] = None
+    predicted_volatility: Optional[float] = None
+
+    # Modell-Metadaten
+    last_training_date: Optional[datetime] = None
+    training_samples: Optional[int] = None
+
+    # Vollständige Preisliste für detaillierte Analyse
+    predicted_prices: list[float] = Field(default_factory=list)
+    confidence_low: list[float] = Field(default_factory=list)
+    confidence_high: list[float] = Field(default_factory=list)
+
+
 class RAGContextLog(BaseModel):
     """Detaillierte Protokollierung der RAG-Kontextdaten."""
     query_text: str = ""
@@ -76,6 +115,7 @@ class QueryLogEntry(BaseModel):
     # NEUE FELDER: Detaillierte Datenprotokollierung
     timescaledb_data: Optional[TimescaleDBDataLog] = None
     rag_context_details: Optional[RAGContextLog] = None
+    nhits_forecast: Optional[NHITSForecastLog] = None
 
     # LLM response
     llm_response: str
@@ -137,6 +177,16 @@ class QueryLogService:
         except Exception as e:
             logger.warning(f"Failed to load query logs: {e}")
 
+    def _serialize_datetime(self, obj: Any) -> Any:
+        """Recursively convert datetime objects to ISO strings in a dict/list structure."""
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            return {k: self._serialize_datetime(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._serialize_datetime(item) for item in obj]
+        return obj
+
     def _save_logs(self) -> None:
         """Persist logs to disk."""
         try:
@@ -147,7 +197,8 @@ class QueryLogService:
                     logs_data = []
                     for log in self._logs:
                         log_dict = log.model_dump()
-                        log_dict["timestamp"] = log.timestamp.isoformat()
+                        # Serialize all datetime fields recursively
+                        log_dict = self._serialize_datetime(log_dict)
                         logs_data.append(log_dict)
                     json.dump(logs_data, f, ensure_ascii=False, indent=2)
         except Exception as e:
@@ -171,6 +222,7 @@ class QueryLogService:
         # Neue Parameter für detaillierte Protokollierung
         timescaledb_data: Optional[TimescaleDBDataLog] = None,
         rag_context_details: Optional[RAGContextLog] = None,
+        nhits_forecast: Optional[NHITSForecastLog] = None,
     ) -> QueryLogEntry:
         """Add a new query log entry with detailed data source information."""
 
@@ -186,6 +238,7 @@ class QueryLogService:
             # Neue detaillierte Protokollierung
             timescaledb_data=timescaledb_data,
             rag_context_details=rag_context_details,
+            nhits_forecast=nhits_forecast,
             llm_response=llm_response,
             parsed_response=parsed_response,
             model_used=model_used,
@@ -206,8 +259,11 @@ class QueryLogService:
         rag_info = ""
         if rag_context_details:
             rag_info = f", RAG docs: {rag_context_details.documents_used}"
+        nhits_info = ""
+        if nhits_forecast:
+            nhits_info = f", NHITS: {nhits_forecast.predicted_change_percent_24h:+.2f}%" if nhits_forecast.predicted_change_percent_24h else ", NHITS: available"
 
-        logger.info(f"Added query log: {entry.id} ({query_type}, {symbol}{tsdb_info}{rag_info})")
+        logger.info(f"Added query log: {entry.id} ({query_type}, {symbol}{tsdb_info}{rag_info}{nhits_info})")
         return entry
 
     def get_logs(

@@ -140,6 +140,16 @@ class ForecastConfig(BaseModel):
     )
 
 
+class TrainingMetrics(BaseModel):
+    """Training metrics for NHITS model."""
+    final_loss: Optional[float] = None
+    n_features: Optional[int] = None
+    features_used: Optional[List[str]] = None
+    mae: Optional[float] = None
+    mape: Optional[float] = None
+    rmse: Optional[float] = None
+
+
 class ForecastTrainingResult(BaseModel):
     """Result of model training."""
 
@@ -148,9 +158,9 @@ class ForecastTrainingResult(BaseModel):
     training_samples: int
     training_duration_seconds: float
     model_path: str
-    metrics: Dict[str, float] = Field(
-        default_factory=dict,
-        description="Training metrics (MAE, MAPE, RMSE, etc.)"
+    metrics: TrainingMetrics = Field(
+        default_factory=TrainingMetrics,
+        description="Training metrics including features used"
     )
     success: bool = True
     error_message: Optional[str] = None
