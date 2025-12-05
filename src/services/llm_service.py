@@ -28,8 +28,9 @@ class LLMService:
         self._client = None
 
         # Performance options optimized for i9-13900K + RTX 3070
+        # Temperature 0.1 to reduce hallucinations and ensure factual accuracy
         self._options = {
-            "temperature": 0.3,
+            "temperature": 0.1,
             "num_ctx": settings.ollama_num_ctx,        # Context window
             "num_gpu": settings.ollama_num_gpu,        # GPU layers (-1 = auto)
             "num_thread": settings.ollama_num_thread,  # CPU threads (16 for i9-13900K)
@@ -136,6 +137,12 @@ Verwende diese Daten zur Verbesserung deiner Analyse:
 - Die trend_up_probability kann für die Richtungsentscheidung verwendet werden"""
 
             system_prompt = f"""Du bist ein erfahrener Trading-Analyst. Analysiere die Marktdaten und gib eine strukturierte Empfehlung.
+
+WICHTIG - STRIKTE REGELN:
+1. Verwende AUSSCHLIESSLICH die Indikatorwerte aus den bereitgestellten Marktdaten
+2. ERFINDE NIEMALS Indikatorwerte - nutze nur die exakten Zahlen aus dem Input
+3. Wenn der RSI=46.04 ist, dann schreibe RSI 46.04, NICHT einen anderen Wert
+4. Überprüfe deine Analyse: Stimmen die genannten Werte mit dem Input überein?
 
 {output_schema_prompt}{nhits_instructions}
 
