@@ -15,6 +15,7 @@ from .api import router
 from .services.rag_service import RAGService
 from .services.timescaledb_sync_service import TimescaleDBSyncService
 from .services.nhits_training_service import nhits_training_service
+from .services.model_improvement_service import model_improvement_service
 
 # Global service instances
 rag_service = RAGService()
@@ -130,6 +131,14 @@ async def startup_event():
                     nhits_training_service.train_all_symbols(force=False)
                 )
 
+            # Start model improvement service for automatic feedback learning
+            if sync_service._pool:
+                await model_improvement_service.start_evaluation_loop(
+                    sync_service._pool,
+                    interval_seconds=300  # Evaluate every 5 minutes
+                )
+                logger.info("Model improvement service started (feedback learning enabled)")
+
         except Exception as e:
             logger.warning(f"Failed to initialize NHITS training service: {e}")
             logger.info("Service will continue without automatic NHITS training")
@@ -139,6 +148,11 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down KI Trading Model Service...")
+
+    # Stop model improvement service
+    if model_improvement_service._running:
+        await model_improvement_service.stop()
+        logger.info("Model improvement service stopped")
 
     # Stop NHITS training service
     if nhits_training_service._running:

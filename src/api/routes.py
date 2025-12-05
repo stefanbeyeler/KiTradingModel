@@ -807,6 +807,139 @@ async def train_all_models(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =============================================================================
+# Model Improvement & Performance Endpoints (MUST be before {symbol} routes!)
+# =============================================================================
+
+@router.get("/forecast/performance")
+async def get_model_performance():
+    """
+    Get performance metrics for all NHITS models.
+
+    Returns prediction accuracy, direction accuracy, and identifies
+    models that need retraining based on performance degradation.
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+        return model_improvement_service.get_performance_summary()
+    except Exception as e:
+        logger.error(f"Failed to get model performance: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/forecast/retraining-needed")
+async def get_symbols_needing_retraining():
+    """
+    Get list of symbols whose models need retraining due to poor performance.
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+
+        symbols = model_improvement_service.get_symbols_needing_retraining()
+        details = {}
+
+        for symbol in symbols:
+            metrics = model_improvement_service.performance_metrics.get(symbol)
+            if metrics:
+                details[symbol] = {
+                    "reason": metrics.retraining_reason,
+                    "avg_error_pct": round(metrics.avg_error_pct, 4),
+                    "direction_accuracy": round(metrics.direction_accuracy, 4),
+                    "evaluated_predictions": metrics.evaluated_predictions,
+                }
+
+        return {
+            "symbols": symbols,
+            "count": len(symbols),
+            "details": details
+        }
+    except Exception as e:
+        logger.error(f"Failed to get retraining list: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/forecast/evaluate")
+async def evaluate_predictions():
+    """
+    Manually trigger evaluation of pending predictions.
+
+    This compares past predictions with actual prices and updates
+    model performance metrics.
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+        from ..services.timescaledb_sync_service import TimescaleDBSyncService
+
+        # Get database pool from sync service
+        sync_service = TimescaleDBSyncService.__new__(TimescaleDBSyncService)
+        if not hasattr(sync_service, '_pool') or not sync_service._pool:
+            raise HTTPException(
+                status_code=503,
+                detail="Database connection not available"
+            )
+
+        evaluated = await model_improvement_service.evaluate_pending_predictions(
+            sync_service._pool
+        )
+
+        return {
+            "success": True,
+            "evaluated": evaluated,
+            "total_evaluated": sum(evaluated.values()),
+            "message": f"Evaluated {sum(evaluated.values())} predictions"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to evaluate predictions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/forecast/retrain-poor-performers")
+async def retrain_poor_performers(background_tasks: BackgroundTasks):
+    """
+    Trigger retraining for all models that are performing poorly.
+
+    Uses the automatic improvement system to identify and retrain
+    models with low direction accuracy or high prediction error.
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+        from ..services.nhits_training_service import nhits_training_service
+
+        symbols = model_improvement_service.get_symbols_needing_retraining()
+
+        if not symbols:
+            return {
+                "success": True,
+                "message": "No models need retraining",
+                "symbols": []
+            }
+
+        # Queue retraining in background
+        async def retrain_symbols():
+            for symbol in symbols:
+                try:
+                    await nhits_training_service.train_symbol(symbol, force=True)
+                    # Reset metrics after retraining
+                    if symbol in model_improvement_service.performance_metrics:
+                        model_improvement_service.performance_metrics[symbol].needs_retraining = False
+                        model_improvement_service.performance_metrics[symbol].retraining_reason = None
+                except Exception as e:
+                    logger.error(f"Failed to retrain {symbol}: {e}")
+
+        background_tasks.add_task(retrain_symbols)
+
+        return {
+            "success": True,
+            "message": f"Queued retraining for {len(symbols)} models",
+            "symbols": symbols
+        }
+    except Exception as e:
+        logger.error(f"Failed to retrain poor performers: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== NHITS Symbol-specific Endpoints ====================
 
 @router.get("/forecast/{symbol}", response_model=ForecastResult)

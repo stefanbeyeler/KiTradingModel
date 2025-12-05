@@ -461,22 +461,42 @@ class ForecastService:
             # Training setup
             optimizer = torch.optim.Adam(model.parameters(), lr=settings.nhits_learning_rate)
 
-            # Quantile loss for probabilistic forecasting
+            # Quantile loss for probabilistic forecasting with direction awareness
             quantiles = torch.tensor([0.1, 0.5, 0.9], device=self.device)
+            direction_weight = 0.3  # Weight for direction loss component
 
-            def quantile_loss(pred, target):
-                # pred shape: (batch, horizon, n_quantiles)
-                # target shape: (batch, horizon)
-                # Expand target to match pred shape
-                target_expanded = target.unsqueeze(-1)  # (batch, horizon, 1)
-                errors = target_expanded - pred  # (batch, horizon, n_quantiles)
+            def quantile_loss_with_direction(pred, target, input_last):
+                """
+                Combined loss function:
+                1. Quantile loss for price prediction accuracy
+                2. Direction classification loss for trend prediction
 
-                # Calculate quantile loss for each quantile
-                losses = torch.max(
+                This helps the model learn both accurate price levels AND correct direction.
+                """
+                # 1. Standard quantile loss
+                target_expanded = target.unsqueeze(-1)
+                errors = target_expanded - pred
+
+                q_loss = torch.max(
                     (quantiles - 1) * errors,
                     quantiles * errors
-                )
-                return losses.mean()
+                ).mean()
+
+                # 2. Direction loss - penalize wrong direction predictions
+                pred_median = pred[:, :, 1]  # Get median prediction (50th percentile)
+                input_last_expanded = input_last.unsqueeze(1)
+
+                # Calculate direction differences
+                pred_direction = pred_median - input_last_expanded
+                actual_direction = target - input_last_expanded
+
+                # Soft sign for gradient flow
+                pred_sign = torch.tanh(pred_direction * 100)
+                actual_sign = torch.tanh(actual_direction * 100)
+
+                dir_loss = torch.nn.functional.mse_loss(pred_sign, actual_sign)
+
+                return (1 - direction_weight) * q_loss + direction_weight * dir_loss
 
             # Training loop
             model.train()
@@ -489,8 +509,15 @@ class ForecastService:
                     optimizer.zero_grad()
                     output = model(batch_X)
 
-                    # Calculate quantile loss
-                    loss = quantile_loss(output, batch_y)
+                    # Get last input price for direction calculation
+                    # For multivariate: first feature (close) at last timestep
+                    if batch_X.dim() == 3:
+                        input_last = batch_X[:, 0, -1]  # (batch, n_features, input_size) -> last close
+                    else:
+                        input_last = batch_X[:, -1]  # (batch, input_size) -> last value
+
+                    # Calculate combined loss with direction awareness
+                    loss = quantile_loss_with_direction(output, batch_y, input_last)
 
                     loss.backward()
                     optimizer.step()
@@ -768,6 +795,19 @@ class ForecastService:
                 f"({result.predicted_change_percent_24h:+.2f}%) "
                 f"[confidence: {result.model_confidence:.1%}]"
             )
+
+            # Record prediction for feedback learning
+            try:
+                from .model_improvement_service import model_improvement_service
+                model_improvement_service.record_prediction(
+                    symbol=symbol,
+                    current_price=current_price,
+                    predicted_price_1h=result.predicted_price_1h,
+                    predicted_price_4h=result.predicted_price_4h,
+                    predicted_price_24h=result.predicted_price_24h,
+                )
+            except Exception as e:
+                logger.debug(f"Failed to record prediction for feedback: {e}")
 
             return result
 
