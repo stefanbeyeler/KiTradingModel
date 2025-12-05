@@ -26,6 +26,56 @@
   },
   "XAUUSD": {
     "symbol": "XAUUSD",
+    "total_predictions": 12,
+    "evaluated_predictions": 0,
+    "avg_error_pct": 0.0,
+    "direction_accuracy": 0.0,
+    "last_updated": null,
+    "metrics_1h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "BTCUSD": {
+    "symbol": "BTCUSD",
+    "total_predictions": 2,
+    "evaluated_predictions": 0,
+    "avg_error_pct": 0.0,
+    "direction_accuracy": 0.0,
+    "last_updated": null,
+    "metrics_1h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "XTIUSD": {
+    "symbol": "XTIUSD",
     "total_predictions": 5,
     "evaluated_predictions": 0,
     "avg_error_pct": 0.0,
