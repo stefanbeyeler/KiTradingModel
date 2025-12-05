@@ -160,10 +160,10 @@ uvicorn src.main:app --host 0.0.0.0 --port 8000 --workers 4
 
 | URL | Beschreibung |
 |-----|--------------|
-| http://localhost:8000 | API Root |
-| http://localhost:8000/dashboard | Web-Dashboard |
-| http://localhost:8000/docs | Swagger API-Dokumentation |
-| http://localhost:8000/redoc | ReDoc API-Dokumentation |
+| http://localhost:3011 | API Root |
+| http://localhost:3011/dashboard | Web-Dashboard |
+| http://localhost:3011/docs | Swagger API-Dokumentation |
+| http://localhost:3011/redoc | ReDoc API-Dokumentation |
 
 ---
 

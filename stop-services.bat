@@ -4,7 +4,7 @@ REM KITradingModel - Stop All Services
 REM ============================================================
 REM Dienste:
 REM   1. Dashboard Container (Port 3001)
-REM   2. FastAPI Backend (Port 8000)
+REM   2. FastAPI Backend (Port 3011)
 REM   3. Ollama LLM Service (Port 11434) - optional
 REM   4. TimescaleDB (Port 5432) - wird nicht gestoppt
 REM ============================================================
@@ -45,8 +45,8 @@ echo [2/3] Stoppe FastAPI Backend...
 REM Finde Python-Prozesse die run.py ausführen
 set "found=0"
 
-REM Methode 1: Suche nach Prozessen auf Port 8000
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8000" ^| findstr "LISTENING"') do (
+REM Methode 1: Suche nach Prozessen auf Port 3011
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3011" ^| findstr "LISTENING"') do (
     set "pid=%%a"
     if not "!pid!"=="" (
         echo       [INFO] Beende Prozess mit PID: !pid!

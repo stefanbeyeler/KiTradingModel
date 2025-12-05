@@ -5,7 +5,7 @@ REM ============================================================
 REM Dienste:
 REM   1. Ollama LLM Service (Port 11434)
 REM   2. TimescaleDB (Port 5432) - muss extern laufen
-REM   3. FastAPI Backend (Port 8000)
+REM   3. FastAPI Backend (Port 3011)
 REM   4. Dashboard Container (Port 3001)
 REM ============================================================
 
@@ -63,9 +63,9 @@ REM ============================================================
 echo [3/4] Starte FastAPI Backend...
 
 REM Prüfe ob bereits läuft
-curl -s http://localhost:8000/health >nul 2>&1
+curl -s http://localhost:3011/health >nul 2>&1
 if %errorlevel% equ 0 (
-    echo       [OK] FastAPI Backend laeuft bereits auf Port 8000
+    echo       [OK] FastAPI Backend laeuft bereits auf Port 3011
 ) else (
     echo       [INFO] Starte FastAPI Backend...
 
@@ -79,7 +79,7 @@ if %errorlevel% equ 0 (
     echo       [INFO] Warte auf Backend-Start...
     timeout /t 10 /nobreak >nul
 
-    curl -s http://localhost:8000/health >nul 2>&1
+    curl -s http://localhost:3011/health >nul 2>&1
     if %errorlevel% equ 0 (
         echo       [OK] FastAPI Backend erfolgreich gestartet
     ) else (
@@ -140,12 +140,12 @@ echo   Service              Port      URL
 echo   --------------------------------------------------
 echo   Ollama LLM           11434     http://localhost:11434
 echo   TimescaleDB          5432      localhost:5432
-echo   FastAPI Backend      8000      http://localhost:8000
+echo   FastAPI Backend      3011      http://localhost:3011
 echo   Dashboard            3001      http://localhost:3001
 echo.
 echo   API Dokumentation:
-echo   - Swagger UI:  http://localhost:8000/docs
-echo   - ReDoc:       http://localhost:8000/redoc
+echo   - Swagger UI:  http://localhost:3011/docs
+echo   - ReDoc:       http://localhost:3011/redoc
 echo.
 echo ============================================================
 echo.

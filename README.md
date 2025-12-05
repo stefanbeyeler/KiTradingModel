@@ -114,7 +114,7 @@ Alle Endpoints sind unter `/api/v1/` verfügbar.
 
 ```bash
 # Vollständige Analyse (langsam, ~30-60s, mit LLM)
-curl -X POST "http://localhost:8000/api/v1/analyze" \
+curl -X POST "http://localhost:3011/api/v1/analyze" \
   -H "Content-Type: application/json" \
   -d '{
     "symbol": "BTC/USD",
@@ -123,10 +123,10 @@ curl -X POST "http://localhost:8000/api/v1/analyze" \
   }'
 
 # Schnelle Empfehlung (regelbasiert, ~100ms, ohne LLM)
-curl "http://localhost:8000/api/v1/recommendation/BTC-USD"
+curl "http://localhost:3011/api/v1/recommendation/BTC-USD"
 
 # Empfehlung mit LLM (langsamer, ~30-60s, detaillierter)
-curl "http://localhost:8000/api/v1/recommendation/BTC-USD?use_llm=true"
+curl "http://localhost:3011/api/v1/recommendation/BTC-USD?use_llm=true"
 ```
 
 #### System & Health
@@ -138,10 +138,10 @@ curl "http://localhost:8000/api/v1/recommendation/BTC-USD?use_llm=true"
 
 ```bash
 # Health Check
-curl "http://localhost:8000/api/v1/health"
+curl "http://localhost:3011/api/v1/health"
 
 # System Info (GPU-Status, Konfiguration)
-curl "http://localhost:8000/api/v1/system/info"
+curl "http://localhost:3011/api/v1/system/info"
 ```
 
 Beispiel-Antwort `/system/info`:
@@ -171,7 +171,7 @@ Beispiel-Antwort `/system/info`:
 
 ```bash
 # LLM Status
-curl "http://localhost:8000/api/v1/llm/status"
+curl "http://localhost:3011/api/v1/llm/status"
 ```
 
 #### RAG System
@@ -186,13 +186,13 @@ curl "http://localhost:8000/api/v1/llm/status"
 
 ```bash
 # RAG Statistiken
-curl "http://localhost:8000/api/v1/rag/stats"
+curl "http://localhost:3011/api/v1/rag/stats"
 
 # RAG abfragen
-curl "http://localhost:8000/api/v1/rag/query?query=RSI%20oversold&symbol=BTC/USD"
+curl "http://localhost:3011/api/v1/rag/query?query=RSI%20oversold&symbol=BTC/USD"
 
 # Dokument hinzufügen
-curl -X POST "http://localhost:8000/api/v1/rag/document" \
+curl -X POST "http://localhost:3011/api/v1/rag/document" \
   -H "Content-Type: application/json" \
   -d '{
     "content": "BTC hat ein Double Bottom Pattern gebildet...",
@@ -212,10 +212,10 @@ curl -X POST "http://localhost:8000/api/v1/rag/document" \
 
 ```bash
 # Sync Status
-curl "http://localhost:8000/api/v1/sync/status"
+curl "http://localhost:3011/api/v1/sync/status"
 
 # Manueller Sync (letzte 7 Tage)
-curl -X POST "http://localhost:8000/api/v1/sync/manual?days_back=7"
+curl -X POST "http://localhost:3011/api/v1/sync/manual?days_back=7"
 ```
 
 ## Architektur
@@ -242,8 +242,8 @@ KITradingModel/
 ## API Dokumentation
 
 Nach dem Start verfügbar unter:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- Swagger UI: http://localhost:3011/docs
+- ReDoc: http://localhost:3011/redoc
 
 ## Llama 3.1 70B Setup
 

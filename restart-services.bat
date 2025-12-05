@@ -4,7 +4,7 @@ REM KITradingModel - Restart All Services
 REM ============================================================
 REM Startet alle Dienste neu:
 REM   1. Dashboard Container (Port 3001)
-REM   2. FastAPI Backend (Port 8000)
+REM   2. FastAPI Backend (Port 3011)
 REM   3. Ollama LLM Service (Port 11434)
 REM ============================================================
 
@@ -44,7 +44,7 @@ echo.
 REM --- FastAPI Backend ---
 echo [2/3] Stoppe FastAPI Backend...
 set "found=0"
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8000" ^| findstr "LISTENING"') do (
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3011" ^| findstr "LISTENING"') do (
     set "pid=%%a"
     if not "!pid!"=="" (
         taskkill /F /PID !pid! >nul 2>&1
@@ -124,9 +124,9 @@ if exist "venv\Scripts\python.exe" (
 echo       [INFO] Warte auf Backend-Start...
 timeout /t 10 /nobreak >nul
 
-curl -s http://localhost:8000/health >nul 2>&1
+curl -s http://localhost:3011/health >nul 2>&1
 if %errorlevel% equ 0 (
-    echo       [OK] FastAPI Backend gestartet auf Port 8000
+    echo       [OK] FastAPI Backend gestartet auf Port 3011
 ) else (
     echo       [INFO] Backend startet noch...
 )
@@ -178,11 +178,11 @@ if %errorlevel% equ 0 (
     echo   TimescaleDB          5432      [--] Nicht erreichbar
 )
 
-curl -s http://localhost:8000/health >nul 2>&1
+curl -s http://localhost:3011/health >nul 2>&1
 if %errorlevel% equ 0 (
-    echo   FastAPI Backend      8000      [OK] Aktiv
+    echo   FastAPI Backend      3011      [OK] Aktiv
 ) else (
-    echo   FastAPI Backend      8000      [..] Startet noch
+    echo   FastAPI Backend      3011      [..] Startet noch
 )
 
 docker ps --filter "name=ki-trading-dashboard" --format "{{.Names}}" 2>nul | findstr "ki-trading-dashboard" >nul 2>&1
@@ -195,8 +195,8 @@ if %errorlevel% equ 0 (
 echo.
 echo   URLs:
 echo   - Dashboard:   http://localhost:3001
-echo   - API:         http://localhost:8000
-echo   - Swagger:     http://localhost:8000/docs
+echo   - API:         http://localhost:3011
+echo   - Swagger:     http://localhost:3011/docs
 echo.
 echo ============================================================
 echo.

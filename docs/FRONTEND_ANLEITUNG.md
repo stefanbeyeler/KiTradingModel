@@ -29,7 +29,7 @@ Diese Anleitung beschreibt die Nutzung des Web-Dashboards für das KI Trading Mo
 
 | Deployment | URL |
 |------------|-----|
-| Lokal (direkt) | http://localhost:8000/dashboard |
+| Lokal (direkt) | http://localhost:3011/dashboard |
 | Docker | http://localhost:3001 |
 
 ### 1.3 Erster Start
@@ -386,7 +386,7 @@ docker-compose down
 ### 7.3 Fehlerbehebung
 
 #### Dashboard lädt nicht
-1. Backend-Status prüfen: http://localhost:8000/api/v1/health
+1. Backend-Status prüfen: http://localhost:3011/api/v1/health
 2. Browser-Konsole auf Fehler prüfen (F12)
 3. Cache leeren und neu laden (Strg+F5)
 

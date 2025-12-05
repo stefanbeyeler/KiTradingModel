@@ -69,7 +69,10 @@
       "Bash(e:\\KITradingModel\\venv\\Scripts\\python.exe:*)",
       "Bash(e:/KITradingModel/venv/Scripts/pip.exe show:*)",
       "Bash(docker port:*)",
-      "Bash(docker-compose:*)"
+      "Bash(docker-compose:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

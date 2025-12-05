@@ -29,6 +29,6 @@ echo Hinweis: FAISS-GPU ist fuer Python 3.13 nicht verfuegbar.
 echo          FAISS laeuft auf CPU, Embeddings auf GPU (RTX 3070).
 echo.
 echo Starte den Service mit: python run.py
-echo Pruefe GPU-Status unter: http://localhost:8000/api/system/info
+echo Pruefe GPU-Status unter: http://localhost:3011/api/system/info
 echo ============================================
 pause
