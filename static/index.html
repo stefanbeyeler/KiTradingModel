@@ -2001,6 +2001,9 @@
             // NEUE RAG Context Details Anzeige
             const ragDetailsHtml = renderRAGContextDetails(log.rag_context_details);
 
+            // NEUE NHITS Forecast Details Anzeige
+            const nhitsDetailsHtml = renderNHITSForecastDetails(log.nhits_forecast);
+
             // Always show strategy - resolve default strategy name if not specified
             let strategyDisplay = log.strategy_name;
             if (!strategyDisplay) {
@@ -2016,6 +2019,9 @@
             const ragBadge = log.rag_context_details
                 ? `<span class="log-strategy-badge" style="background: rgba(249, 115, 22, 0.15); color: #f97316;">📚 ${log.rag_context_details.documents_used} Docs</span>`
                 : '';
+            const nhitsBadge = log.nhits_forecast
+                ? `<span class="log-strategy-badge" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa;">🤖 ${log.nhits_forecast.predicted_change_percent_24h !== null ? (log.nhits_forecast.predicted_change_percent_24h >= 0 ? '+' : '') + log.nhits_forecast.predicted_change_percent_24h.toFixed(2) + '%' : 'NHITS'}</span>`
+                : '';
 
             return `
                 <div class="log-entry" onclick="toggleLogEntry(this)">
@@ -2027,6 +2033,7 @@
                             <span class="log-strategy-badge">📊 ${strategyDisplay}</span>
                             ${tsdbBadge}
                             ${ragBadge}
+                            ${nhitsBadge}
                         </div>
                         <div class="log-meta">
                             <span class="${log.success ? 'log-success' : 'log-error'}">${log.success ? 'Erfolgreich' : 'Fehler'}</span>
@@ -2037,6 +2044,7 @@
                     </div>
                     <div class="log-details">
                         ${tsdbHtml}
+                        ${nhitsDetailsHtml}
                         ${ragDetailsHtml}
                         ${ragContextHtml}
                         <div class="log-section">
@@ -2158,6 +2166,143 @@
                     ${ohlcHtml ? `<div style="margin-top: 0.75rem;"><strong style="color: #94a3b8; font-size: 0.8rem;">OHLC Preisdaten:</strong>${ohlcHtml}</div>` : ''}
                     ${indicatorChips ? `<div style="margin-top: 0.75rem;"><strong style="color: #94a3b8; font-size: 0.8rem;">Technische Indikatoren:</strong><div class="indicators-grid">${indicatorChips}</div></div>` : ''}
                     ${sqlHtml}
+                </div>
+            `;
+        }
+
+        function renderNHITSForecastDetails(nhits) {
+            if (!nhits) return '';
+
+            // Formatiere Preisänderungen mit Farbe
+            const formatChange = (change) => {
+                if (change === null || change === undefined) return '-';
+                const color = change >= 0 ? '#22c55e' : '#ef4444';
+                const sign = change >= 0 ? '+' : '';
+                return `<span style="color: ${color}; font-weight: 600;">${sign}${change.toFixed(2)}%</span>`;
+            };
+
+            // Formatiere Wahrscheinlichkeit mit Farbe
+            const formatProb = (prob, isUp) => {
+                if (prob === null || prob === undefined) return '-';
+                const color = isUp ? '#22c55e' : '#ef4444';
+                return `<span style="color: ${color}; font-weight: 600;">${(prob * 100).toFixed(1)}%</span>`;
+            };
+
+            // Formatiere Konfidenz
+            const formatConfidence = (conf) => {
+                if (conf === null || conf === undefined) return '-';
+                const pct = conf * 100;
+                const color = pct >= 90 ? '#22c55e' : pct >= 70 ? '#f97316' : '#ef4444';
+                return `<span style="color: ${color}; font-weight: 600;">${pct.toFixed(1)}%</span>`;
+            };
+
+            // Preis-Trend Icon
+            const trendIcon = (nhits.trend_up_probability || 0) >= 0.5 ? '📈' : '📉';
+            const trendColor = (nhits.trend_up_probability || 0) >= 0.5 ? '#22c55e' : '#ef4444';
+
+            return `
+                <div class="data-source-section" style="border-color: #8b5cf6; background: linear-gradient(135deg, #2d1e3d 0%, #1e293b 100%);">
+                    <div class="data-source-header" style="color: #a78bfa;">
+                        <span class="icon">🤖</span>
+                        NHITS Forecast Details
+                    </div>
+                    <div class="data-grid">
+                        <div class="data-item">
+                            <div class="data-item-label">Symbol</div>
+                            <div class="data-item-value">${nhits.symbol || '-'}</div>
+                        </div>
+                        <div class="data-item">
+                            <div class="data-item-label">Aktueller Preis</div>
+                            <div class="data-item-value highlight">${nhits.current_price ? nhits.current_price.toFixed(5) : '-'}</div>
+                        </div>
+                        <div class="data-item">
+                            <div class="data-item-label">Modell-Konfidenz</div>
+                            <div class="data-item-value">${formatConfidence(nhits.model_confidence)}</div>
+                        </div>
+                        <div class="data-item">
+                            <div class="data-item-label">Horizont</div>
+                            <div class="data-item-value">${nhits.horizon_hours || 24}h</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 0.75rem;">
+                        <strong style="color: #94a3b8; font-size: 0.8rem;">Preisvorhersagen:</strong>
+                        <div class="ohlc-grid" style="margin-top: 0.5rem;">
+                            <div class="ohlc-item">
+                                <div class="ohlc-label">1h Preis</div>
+                                <div class="ohlc-value">${nhits.predicted_price_1h ? nhits.predicted_price_1h.toFixed(5) : '-'}</div>
+                                <div style="font-size: 0.7rem;">${formatChange(nhits.predicted_change_percent_1h)}</div>
+                            </div>
+                            <div class="ohlc-item">
+                                <div class="ohlc-label">4h Preis</div>
+                                <div class="ohlc-value">${nhits.predicted_price_4h ? nhits.predicted_price_4h.toFixed(5) : '-'}</div>
+                                <div style="font-size: 0.7rem;">${formatChange(nhits.predicted_change_percent_4h)}</div>
+                            </div>
+                            <div class="ohlc-item">
+                                <div class="ohlc-label">24h Preis</div>
+                                <div class="ohlc-value" style="color: ${trendColor};">${nhits.predicted_price_24h ? nhits.predicted_price_24h.toFixed(5) : '-'}</div>
+                                <div style="font-size: 0.7rem;">${formatChange(nhits.predicted_change_percent_24h)}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 0.75rem;">
+                        <strong style="color: #94a3b8; font-size: 0.8rem;">Trend-Analyse:</strong>
+                        <div class="data-grid" style="margin-top: 0.5rem;">
+                            <div class="data-item">
+                                <div class="data-item-label">📈 Trend Up</div>
+                                <div class="data-item-value">${formatProb(nhits.trend_up_probability, true)}</div>
+                            </div>
+                            <div class="data-item">
+                                <div class="data-item-label">📉 Trend Down</div>
+                                <div class="data-item-value">${formatProb(nhits.trend_down_probability, false)}</div>
+                            </div>
+                            <div class="data-item">
+                                <div class="data-item-label">Volatilität</div>
+                                <div class="data-item-value">${nhits.predicted_volatility ? (nhits.predicted_volatility * 100).toFixed(2) + '%' : '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${nhits.confidence_low_24h && nhits.confidence_high_24h ? `
+                    <div style="margin-top: 0.75rem;">
+                        <strong style="color: #94a3b8; font-size: 0.8rem;">90% Konfidenzintervall (24h):</strong>
+                        <div class="sql-query-box" style="color: #a78bfa; margin-top: 0.5rem;">
+                            ${nhits.confidence_low_24h.toFixed(5)} — ${nhits.confidence_high_24h.toFixed(5)}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${nhits.last_training_date ? `
+                    <div style="margin-top: 0.75rem;">
+                        <strong style="color: #94a3b8; font-size: 0.8rem;">Modell-Info:</strong>
+                        <div class="data-grid" style="margin-top: 0.5rem;">
+                            <div class="data-item">
+                                <div class="data-item-label">Letztes Training</div>
+                                <div class="data-item-value">${new Date(nhits.last_training_date).toLocaleString('de-DE')}</div>
+                            </div>
+                            ${nhits.training_samples ? `
+                            <div class="data-item">
+                                <div class="data-item-label">Training Samples</div>
+                                <div class="data-item-value">${nhits.training_samples.toLocaleString('de-DE')}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${nhits.predicted_prices && nhits.predicted_prices.length > 0 ? `
+                    <div class="collapsible-section" onclick="event.stopPropagation(); this.classList.toggle('open')" style="margin-top: 0.75rem;">
+                        <div class="collapsible-header">
+                            <span class="collapsible-arrow">▶</span> Vollständige Preisprognose anzeigen (${nhits.predicted_prices.length} Datenpunkte)
+                        </div>
+                        <div class="collapsible-content">
+                            <div class="sql-query-box" style="color: #a78bfa; max-height: 150px; overflow-y: auto;">
+                                ${nhits.predicted_prices.map((p, i) => `${i+1}h: ${p.toFixed(5)}`).join(' | ')}
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
             `;
         }
