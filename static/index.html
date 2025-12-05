@@ -209,6 +209,105 @@
             cursor: not-allowed;
         }
 
+        /* Kompakter Status-Header */
+        .status-bar {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .status-bar-section {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-bar-divider {
+            width: 1px;
+            height: 24px;
+            background: #334155;
+        }
+
+        .status-bar-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-bar-value {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .status-bar-value.highlight {
+            color: #3b82f6;
+        }
+
+        .status-bar-value.success {
+            color: #22c55e;
+        }
+
+        .status-bar-value.warning {
+            color: #f59e0b;
+        }
+
+        .status-bar-services {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-left: auto;
+        }
+
+        .status-bar-service {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .status-bar-service-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-bar-service-dot.healthy {
+            background: #22c55e;
+        }
+
+        .status-bar-service-dot.unhealthy {
+            background: #ef4444;
+        }
+
+        .status-bar-service-name {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        @media (max-width: 900px) {
+            .status-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+            .status-bar-divider {
+                display: none;
+            }
+            .status-bar-services {
+                margin-left: 0;
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+        }
+
         .services-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1378,58 +1477,53 @@
     </header>
 
     <div class="container">
-        <!-- Overview Cards -->
-        <div class="grid">
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">RAG Dokumente</span>
-                </div>
-                <div class="card-value" id="ragDocCount">-</div>
-                <div class="card-subtitle" id="ragCollection">Lade...</div>
+        <!-- Kompakter Status-Bar -->
+        <div class="status-bar">
+            <div class="status-bar-section">
+                <span class="status-bar-label">RAG Docs</span>
+                <span class="status-bar-value highlight" id="ragDocCount">-</span>
             </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Sync Status</span>
-                </div>
-                <div class="card-value" id="syncStatus">-</div>
-                <div class="card-subtitle" id="lastSync">Letzte Sync: -</div>
+            <div class="status-bar-divider"></div>
+            <div class="status-bar-section">
+                <span class="status-bar-label">Sync</span>
+                <span class="status-bar-value" id="syncStatus">-</span>
+                <span class="status-bar-value" style="color: #64748b; font-weight: 400; font-size: 0.75rem;" id="lastSync">-</span>
             </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Sync Intervall</span>
-                </div>
-                <div class="card-value" id="syncInterval">-</div>
-                <div class="card-subtitle" id="syncCount">Syncs: 0</div>
+            <div class="status-bar-divider"></div>
+            <div class="status-bar-section">
+                <span class="status-bar-label">Intervall</span>
+                <span class="status-bar-value" id="syncInterval">-</span>
+                <span class="status-bar-value" style="color: #64748b; font-weight: 400; font-size: 0.75rem;" id="syncCount">(0)</span>
             </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">LLM Model</span>
-                </div>
-                <div class="card-value" id="llmStatus">-</div>
-                <div class="card-subtitle" id="llmModel">Lade...</div>
+            <div class="status-bar-divider"></div>
+            <div class="status-bar-section">
+                <span class="status-bar-label">LLM</span>
+                <span class="status-bar-value success" id="llmStatus">-</span>
+                <span class="status-bar-value" style="color: #64748b; font-weight: 400; font-size: 0.75rem;" id="llmModel">-</span>
             </div>
-        </div>
-
-        <!-- Services Health -->
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Service Health</span>
+            <div class="status-bar-divider"></div>
+            <div class="status-bar-section">
+                <span class="status-bar-label">NHITS</span>
+                <span class="status-bar-value" id="nhitsStatus">-</span>
+                <span class="status-bar-value" style="color: #64748b; font-weight: 400; font-size: 0.75rem;" id="nhitsModels">-</span>
             </div>
-            <div class="services-grid" id="servicesHealth">
-                <div class="service-item">
-                    <div class="service-status" id="ollamaHealth"></div>
-                    <span class="service-name">Ollama LLM</span>
+            <div class="status-bar-divider"></div>
+            <div class="status-bar-services">
+                <div class="status-bar-service">
+                    <div class="status-bar-service-dot" id="syncHealth"></div>
+                    <span class="status-bar-service-name">TimescaleDB</span>
                 </div>
-                <div class="service-item">
-                    <div class="service-status" id="ragHealth"></div>
-                    <span class="service-name">RAG System</span>
+                <div class="status-bar-service">
+                    <div class="status-bar-service-dot" id="nhitsHealth"></div>
+                    <span class="status-bar-service-name">NHITS</span>
                 </div>
-                <div class="service-item">
-                    <div class="service-status" id="syncHealth"></div>
-                    <span class="service-name">TimescaleDB Sync</span>
+                <div class="status-bar-service">
+                    <div class="status-bar-service-dot" id="ragHealth"></div>
+                    <span class="status-bar-service-name">RAG</span>
+                </div>
+                <div class="status-bar-service">
+                    <div class="status-bar-service-dot" id="ollamaHealth"></div>
+                    <span class="status-bar-service-name">Ollama</span>
                 </div>
             </div>
         </div>
@@ -1812,11 +1906,12 @@
         async function updateDashboard() {
             try {
                 // Fetch all data in parallel
-                const [health, syncStatus, ragStats, llmStatus] = await Promise.all([
+                const [health, syncStatus, ragStats, llmStatus, nhitsStatus] = await Promise.all([
                     apiFetch('/health').catch(() => null),
                     apiFetch('/sync/status').catch(() => null),
                     apiFetch('/rag/stats').catch(() => null),
-                    apiFetch('/llm/status').catch(() => null)
+                    apiFetch('/llm/status').catch(() => null),
+                    apiFetch('/forecast/status').catch(() => null)
                 ]);
 
                 // Update global status
@@ -1836,20 +1931,28 @@
                 // Update RAG stats
                 if (ragStats) {
                     document.getElementById('ragDocCount').textContent = ragStats.document_count || 0;
-                    document.getElementById('ragCollection').textContent = `Collection: ${ragStats.collection_name || '-'}`;
                 }
 
                 // Update sync status
                 if (syncStatus) {
                     const isRunning = syncStatus.running;
-                    document.getElementById('syncStatus').textContent = isRunning ? 'Aktiv' : 'Gestoppt';
-                    document.getElementById('syncStatus').style.color = isRunning ? '#22c55e' : '#ef4444';
+                    const syncStatusEl = document.getElementById('syncStatus');
+                    syncStatusEl.textContent = isRunning ? 'Aktiv' : 'Gestoppt';
+                    syncStatusEl.className = `status-bar-value ${isRunning ? 'success' : ''}`;
+                    syncStatusEl.style.color = isRunning ? '#22c55e' : '#ef4444';
+
+                    // Kompakte Anzeige für lastSync
                     document.getElementById('lastSync').textContent = syncStatus.last_sync_time
-                        ? `Letzte Sync: ${new Date(syncStatus.last_sync_time).toLocaleString('de-DE')}`
-                        : 'Noch keine Sync';
+                        ? new Date(syncStatus.last_sync_time).toLocaleTimeString('de-DE')
+                        : '-';
                     document.getElementById('syncInterval').textContent = `${syncStatus.sync_interval_seconds}s`;
-                    document.getElementById('syncCount').textContent = `Syncs: ${syncStatus.sync_count || 0}`;
-                    document.getElementById('dbConnected').textContent = syncStatus.connected ? 'Ja' : 'Nein';
+                    document.getElementById('syncCount').textContent = `(${syncStatus.sync_count || 0})`;
+
+                    // dbConnected Element existiert möglicherweise nicht mehr
+                    const dbConnectedEl = document.getElementById('dbConnected');
+                    if (dbConnectedEl) {
+                        dbConnectedEl.textContent = syncStatus.connected ? 'Ja' : 'Nein';
+                    }
 
                     // Update buttons
                     document.getElementById('btnStartSync').disabled = isRunning;
@@ -1857,22 +1960,44 @@
 
                     // Update sync health indicator
                     document.getElementById('syncHealth').className =
-                        `service-status ${syncStatus.connected ? 'healthy' : 'unhealthy'}`;
+                        `status-bar-service-dot ${syncStatus.connected ? 'healthy' : 'unhealthy'}`;
                 }
 
                 // Update LLM status
                 if (llmStatus) {
-                    document.getElementById('llmStatus').textContent = llmStatus.available ? 'Verfügbar' : 'Nicht verfügbar';
-                    document.getElementById('llmStatus').style.color = llmStatus.available ? '#22c55e' : '#ef4444';
+                    const llmStatusEl = document.getElementById('llmStatus');
+                    llmStatusEl.textContent = llmStatus.available ? 'OK' : 'Offline';
+                    llmStatusEl.className = `status-bar-value ${llmStatus.available ? 'success' : ''}`;
+                    llmStatusEl.style.color = llmStatus.available ? '#22c55e' : '#ef4444';
                     document.getElementById('llmModel').textContent = llmStatus.model || '-';
                     document.getElementById('ollamaHealth').className =
-                        `service-status ${llmStatus.available ? 'healthy' : 'unhealthy'}`;
+                        `status-bar-service-dot ${llmStatus.available ? 'healthy' : 'unhealthy'}`;
                 }
 
                 // Update health indicators
                 if (health && health.services) {
                     document.getElementById('ragHealth').className =
-                        `service-status ${health.services.rag_service ? 'healthy' : 'unhealthy'}`;
+                        `status-bar-service-dot ${health.services.rag_service ? 'healthy' : 'unhealthy'}`;
+                }
+
+                // Update NHITS status
+                if (nhitsStatus) {
+                    const nhitsStatusEl = document.getElementById('nhitsStatus');
+                    const isEnabled = nhitsStatus.enabled;
+                    const modelCount = nhitsStatus.trained_models || 0;
+
+                    nhitsStatusEl.textContent = isEnabled ? 'Aktiv' : 'Aus';
+                    nhitsStatusEl.className = `status-bar-value ${isEnabled ? 'success' : ''}`;
+                    nhitsStatusEl.style.color = isEnabled ? '#22c55e' : '#64748b';
+
+                    document.getElementById('nhitsModels').textContent = `(${modelCount} Modelle)`;
+                    document.getElementById('nhitsHealth').className =
+                        `status-bar-service-dot ${isEnabled && modelCount > 0 ? 'healthy' : 'unhealthy'}`;
+                } else {
+                    document.getElementById('nhitsStatus').textContent = 'Offline';
+                    document.getElementById('nhitsStatus').style.color = '#ef4444';
+                    document.getElementById('nhitsModels').textContent = '';
+                    document.getElementById('nhitsHealth').className = 'status-bar-service-dot unhealthy';
                 }
 
                 // Update last refresh time

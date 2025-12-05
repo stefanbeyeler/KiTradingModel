@@ -176,4 +176,4 @@ class ForecastModelInfo(BaseModel):
     training_samples: Optional[int] = None
     horizon: int = 24
     input_size: int = 168
-    metrics: Dict[str, float] = Field(default_factory=dict)
+    metrics: Dict[str, Any] = Field(default_factory=dict)
