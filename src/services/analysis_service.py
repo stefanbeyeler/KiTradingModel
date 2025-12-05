@@ -559,8 +559,9 @@ class AnalysisService:
         Returns:
             NHITSForecast or None if forecast fails
         """
-        # Timeout for NHITS forecast (30 seconds max to prevent blocking)
-        NHITS_TIMEOUT_SECONDS = 30
+        # Timeout for NHITS forecast (120 seconds to allow for initial training)
+        # First-time training for a new symbol can take 60-90 seconds
+        NHITS_TIMEOUT_SECONDS = 120
 
         try:
             from .forecast_service import forecast_service
