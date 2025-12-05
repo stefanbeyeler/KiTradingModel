@@ -445,8 +445,29 @@
 
         .quick-actions {
             display: flex;
-            gap: 0.5rem;
+            gap: 1rem;
             flex-wrap: wrap;
+        }
+
+        .action-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            padding: 0.5rem;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+
+        .action-group-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding-right: 0.5rem;
+            border-right: 1px solid #475569;
+            margin-right: 0.25rem;
+            white-space: nowrap;
         }
 
         .action-btn {
@@ -2048,13 +2069,21 @@
                 <span class="card-title">Schnellaktionen</span>
             </div>
             <div class="quick-actions">
-                <button class="action-btn" onclick="persistRAG()">RAG Speichern</button>
-                <button class="action-btn" onclick="checkLLM()">LLM Status</button>
-                <button class="action-btn" onclick="openDocs()">API Docs</button>
-                <button class="action-btn" onclick="refreshAll()">Alles Aktualisieren</button>
-                <button class="action-btn" onclick="trainAllModels(false)" title="Alle Modelle trainieren (nur fehlende)">Alle Trainieren</button>
-                <button class="action-btn" onclick="trainAllModels(true)" title="Alle Modelle neu trainieren (erzwungen)">Force Train All</button>
-                <button class="action-btn" onclick="retrainPoorPerformers()" title="Nur schlecht performende Modelle neu trainieren">Schwache Retrainieren</button>
+                <div class="action-group">
+                    <span class="action-group-label">System</span>
+                    <button class="action-btn" onclick="refreshAll()">Aktualisieren</button>
+                </div>
+                <div class="action-group">
+                    <span class="action-group-label">Services</span>
+                    <button class="action-btn" onclick="checkLLM()">LLM Status</button>
+                    <button class="action-btn" onclick="persistRAG()">RAG Speichern</button>
+                </div>
+                <div class="action-group">
+                    <span class="action-group-label">Training</span>
+                    <button class="action-btn" onclick="trainAllModels(false)" title="Alle Modelle trainieren (nur fehlende)">Alle Trainieren</button>
+                    <button class="action-btn" onclick="trainAllModels(true)" title="Alle Modelle neu trainieren (erzwungen)">Force Train</button>
+                    <button class="action-btn" onclick="retrainPoorPerformers()" title="Nur schlecht performende Modelle neu trainieren">Schwache Retrainieren</button>
+                </div>
             </div>
         </div>
 
