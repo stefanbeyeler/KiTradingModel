@@ -36,3 +36,6 @@ data/query_logs.json
 
 # NHITS Models
 models/nhits/
+data/query_logs.json
+data/model_metrics/performance_metrics.json
+data/model_feedback/pending_feedback.json

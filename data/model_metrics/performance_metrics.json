@@ -26,7 +26,7 @@
   },
   "XAUUSD": {
     "symbol": "XAUUSD",
-    "total_predictions": 12,
+    "total_predictions": 15,
     "evaluated_predictions": 0,
     "avg_error_pct": 0.0,
     "direction_accuracy": 0.0,
@@ -76,7 +76,7 @@
   },
   "XTIUSD": {
     "symbol": "XTIUSD",
-    "total_predictions": 5,
+    "total_predictions": 6,
     "evaluated_predictions": 0,
     "avg_error_pct": 0.0,
     "direction_accuracy": 0.0,

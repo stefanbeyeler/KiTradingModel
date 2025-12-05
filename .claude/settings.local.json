@@ -68,7 +68,8 @@
       "Bash(docker-compose config:*)",
       "Bash(e:\\KITradingModel\\venv\\Scripts\\python.exe:*)",
       "Bash(e:/KITradingModel/venv/Scripts/pip.exe show:*)",
-      "Bash(docker port:*)"
+      "Bash(docker port:*)",
+      "Bash(docker-compose:*)"
     ],
     "deny": [],
     "ask": []

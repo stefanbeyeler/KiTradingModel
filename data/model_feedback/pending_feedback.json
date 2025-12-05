@@ -463,6 +463,105 @@
       "prediction_error_pct": null,
       "direction_correct": null,
       "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T17:12:41.448074",
+      "horizon": "1h",
+      "current_price": 4213.86,
+      "predicted_price": 4234.19580078125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T17:12:41.448074",
+      "horizon": "4h",
+      "current_price": 4213.86,
+      "predicted_price": 4233.04296875,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T17:12:41.448074",
+      "horizon": "24h",
+      "current_price": 4213.86,
+      "predicted_price": 4236.4462890625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T17:25:55.528365",
+      "horizon": "1h",
+      "current_price": 4209.45,
+      "predicted_price": 4224.65966796875,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T17:25:55.528365",
+      "horizon": "4h",
+      "current_price": 4209.45,
+      "predicted_price": 4225.2294921875,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T17:25:55.528365",
+      "horizon": "24h",
+      "current_price": 4209.45,
+      "predicted_price": 4226.67041015625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T17:26:03.853158",
+      "horizon": "1h",
+      "current_price": 4214.54,
+      "predicted_price": 4224.52587890625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T17:26:03.853158",
+      "horizon": "4h",
+      "current_price": 4214.54,
+      "predicted_price": 4225.07861328125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T17:26:03.853158",
+      "horizon": "24h",
+      "current_price": 4214.54,
+      "predicted_price": 4226.26806640625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
     }
   ],
   "BTCUSD": [
@@ -694,6 +793,39 @@
       "horizon": "24h",
       "current_price": 60.34,
       "predicted_price": 59.47930908203125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XTIUSD",
+      "timestamp": "2025-12-05T17:20:49.099362",
+      "horizon": "1h",
+      "current_price": 60.18,
+      "predicted_price": 59.86528396606445,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XTIUSD",
+      "timestamp": "2025-12-05T17:20:49.099362",
+      "horizon": "4h",
+      "current_price": 60.18,
+      "predicted_price": 59.81210708618164,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XTIUSD",
+      "timestamp": "2025-12-05T17:20:49.099362",
+      "horizon": "24h",
+      "current_price": 60.18,
+      "predicted_price": 59.364501953125,
       "actual_price": null,
       "prediction_error_pct": null,
       "direction_correct": null,

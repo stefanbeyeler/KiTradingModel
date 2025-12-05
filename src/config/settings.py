@@ -96,7 +96,7 @@ class Settings(BaseSettings):
 
     # Service Configuration
     service_host: str = Field(default="0.0.0.0")
-    service_port: int = Field(default=8000)
+    service_port: int = Field(default=3011)
     log_level: str = Field(default="INFO")
 
     # Trading Analysis Configuration
