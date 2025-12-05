@@ -1,0 +1,237 @@
+{
+  "USDCHF": [
+    {
+      "symbol": "USDCHF",
+      "timestamp": "2025-12-05T09:38:16.562703",
+      "horizon": "1h",
+      "current_price": 0.80304,
+      "predicted_price": 0.802914559841156,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "USDCHF",
+      "timestamp": "2025-12-05T09:38:16.562703",
+      "horizon": "4h",
+      "current_price": 0.80304,
+      "predicted_price": 0.802918016910553,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "USDCHF",
+      "timestamp": "2025-12-05T09:38:16.562703",
+      "horizon": "24h",
+      "current_price": 0.80304,
+      "predicted_price": 0.8031374216079712,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "USDCHF",
+      "timestamp": "2025-12-05T09:50:22.644652",
+      "horizon": "1h",
+      "current_price": 0.80313,
+      "predicted_price": 0.8031270503997803,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "USDCHF",
+      "timestamp": "2025-12-05T09:50:22.644652",
+      "horizon": "4h",
+      "current_price": 0.80313,
+      "predicted_price": 0.8031303286552429,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "USDCHF",
+      "timestamp": "2025-12-05T09:50:22.644652",
+      "horizon": "24h",
+      "current_price": 0.80313,
+      "predicted_price": 0.8032177090644836,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ],
+  "XAUUSD": [
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T09:49:06.625649",
+      "horizon": "1h",
+      "current_price": 4223.47,
+      "predicted_price": 4225.0322265625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T09:49:06.625649",
+      "horizon": "4h",
+      "current_price": 4223.47,
+      "predicted_price": 4225.49755859375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T09:49:06.625649",
+      "horizon": "24h",
+      "current_price": 4223.47,
+      "predicted_price": 4228.75927734375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T09:51:01.104386",
+      "horizon": "1h",
+      "current_price": 4223.47,
+      "predicted_price": 4225.0322265625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T09:51:01.104386",
+      "horizon": "4h",
+      "current_price": 4223.47,
+      "predicted_price": 4225.49755859375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T09:51:01.104386",
+      "horizon": "24h",
+      "current_price": 4223.47,
+      "predicted_price": 4228.75927734375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T09:57:45.270184",
+      "horizon": "1h",
+      "current_price": 4221.38,
+      "predicted_price": 4224.70947265625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T09:57:45.270184",
+      "horizon": "4h",
+      "current_price": 4221.38,
+      "predicted_price": 4224.6298828125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T09:57:45.270184",
+      "horizon": "24h",
+      "current_price": 4221.38,
+      "predicted_price": 4227.220703125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T10:27:08.655533",
+      "horizon": "1h",
+      "current_price": 4219.44,
+      "predicted_price": 4212.87744140625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T10:27:08.655533",
+      "horizon": "4h",
+      "current_price": 4219.44,
+      "predicted_price": 4213.3896484375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T10:27:08.655533",
+      "horizon": "24h",
+      "current_price": 4219.44,
+      "predicted_price": 4209.19482421875,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T11:53:16.848681",
+      "horizon": "1h",
+      "current_price": 4223.73,
+      "predicted_price": 4217.771484375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T11:53:16.848681",
+      "horizon": "4h",
+      "current_price": 4223.73,
+      "predicted_price": 4217.4375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-05T11:53:16.848681",
+      "horizon": "24h",
+      "current_price": 4223.73,
+      "predicted_price": 4218.7255859375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ]
+}

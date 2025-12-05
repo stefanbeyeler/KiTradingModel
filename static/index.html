@@ -89,6 +89,31 @@
             height: 16px;
         }
 
+        .api-docs-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-backend {
+            background: #1e3a5f;
+            border-color: #2563eb;
+        }
+
+        .btn-backend:hover {
+            background: #2563eb;
+            border-color: #3b82f6;
+        }
+
+        .btn-frontend {
+            background: #1e4d40;
+            border-color: #10b981;
+        }
+
+        .btn-frontend:hover {
+            background: #10b981;
+            border-color: #34d399;
+        }
+
         .status-indicator {
             width: 10px;
             height: 10px;
@@ -458,6 +483,10 @@
 
         .toast.error {
             background: #ef4444;
+        }
+
+        .toast.info {
+            background: #3b82f6;
         }
 
         @keyframes slideIn {
@@ -1011,6 +1040,146 @@
             border-color: #3b82f6;
         }
 
+        /* Performance Tab Styles */
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #000;
+        }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        }
+
+        .retraining-alert {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .retraining-alert .alert-icon {
+            font-size: 1.5rem;
+        }
+
+        .retraining-alert .alert-content {
+            color: #fbbf24;
+        }
+
+        .perf-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .perf-card-title {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .perf-card-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .perf-card-value.good {
+            color: #22c55e;
+        }
+
+        .perf-card-value.warning {
+            color: #f59e0b;
+        }
+
+        .perf-card-value.bad {
+            color: #ef4444;
+        }
+
+        .perf-card-subtitle {
+            font-size: 0.7rem;
+            color: #475569;
+            margin-top: 0.25rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .performance-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .performance-table th,
+        .performance-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+
+        .performance-table th {
+            background: #1e293b;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.5px;
+        }
+
+        .performance-table tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .performance-table .status-ok {
+            color: #22c55e;
+        }
+
+        .performance-table .status-warning {
+            color: #f59e0b;
+        }
+
+        .performance-table .status-bad {
+            color: #ef4444;
+        }
+
+        .accuracy-bar {
+            width: 60px;
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 0.5rem;
+        }
+
+        .accuracy-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .accuracy-bar-fill.good {
+            background: #22c55e;
+        }
+
+        .accuracy-bar-fill.warning {
+            background: #f59e0b;
+        }
+
+        .accuracy-bar-fill.bad {
+            background: #ef4444;
+        }
+
         .log-entry {
             background: #1e293b;
             border: 1px solid #334155;
@@ -1455,16 +1624,25 @@
     <header class="header">
         <h1>KI Trading Model Dashboard</h1>
         <div class="header-info">
-            <a href="/docs" target="_blank" class="btn-api-docs" title="API Dokumentation in neuem Tab öffnen">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-                API Docs
-            </a>
+            <div class="api-docs-buttons">
+                <a href="/docs" target="_blank" class="btn-api-docs btn-backend" title="Backend API (Swagger UI)">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                    Backend
+                </a>
+                <a href="/redoc" target="_blank" class="btn-api-docs btn-frontend" title="Frontend API (ReDoc)">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    Frontend
+                </a>
+            </div>
             <div class="release-info">
                 <span class="release-version" id="releaseVersion">v1.0.0</span>
                 <span class="release-date" id="releaseDate">-</span>
@@ -1540,6 +1718,7 @@
                 <button class="tab-btn" onclick="switchTab('rag')">RAG Abfrage</button>
                 <button class="tab-btn" onclick="switchTab('strategies')">Strategien</button>
                 <button class="tab-btn" onclick="switchTab('logs')">Query Logs</button>
+                <button class="tab-btn" onclick="switchTab('performance')">Model Performance</button>
             </div>
 
             <!-- Vollanalyse Tab -->
@@ -1739,6 +1918,91 @@
                 </div>
             </div>
 
+            <!-- Model Performance Tab -->
+            <div id="tab-performance" class="tab-content">
+                <div class="query-form">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                            <div class="log-stats" id="performanceStats">
+                                <span class="log-stat-item">Vorhersagen: <strong id="perfTotalPredictions">0</strong></span>
+                                <span class="log-stat-item">Evaluiert: <strong id="perfTotalEvaluated">0</strong></span>
+                                <span class="log-stat-item">Ausstehend: <strong id="perfPendingEvaluations">0</strong></span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn btn-secondary" onclick="loadModelPerformance()">Aktualisieren</button>
+                            <button class="btn btn-primary" onclick="evaluatePredictions()">Evaluation starten</button>
+                            <button class="btn btn-warning" onclick="retrainPoorPerformers()">Schlechte Modelle neu trainieren</button>
+                        </div>
+                    </div>
+
+                    <!-- Retraining Needed Alert -->
+                    <div id="retrainingAlert" class="retraining-alert" style="display: none;">
+                        <div class="alert-icon">⚠️</div>
+                        <div class="alert-content">
+                            <strong>Modelle mit schlechter Performance gefunden:</strong>
+                            <span id="retrainingSymbols">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Performance Summary Cards -->
+                    <div class="performance-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div class="perf-card">
+                            <div class="perf-card-title">Gesamt-Richtungsgenauigkeit</div>
+                            <div class="perf-card-value" id="perfOverallDirectionAcc">-</div>
+                            <div class="perf-card-subtitle">Ziel: > 50%</div>
+                        </div>
+                        <div class="perf-card">
+                            <div class="perf-card-title">Durchschn. Fehler</div>
+                            <div class="perf-card-value" id="perfOverallError">-</div>
+                            <div class="perf-card-subtitle">Ziel: < 0.5%</div>
+                        </div>
+                        <div class="perf-card">
+                            <div class="perf-card-title">Modelle</div>
+                            <div class="perf-card-value" id="perfTotalSymbols">0</div>
+                            <div class="perf-card-subtitle">Mit Feedback-Daten</div>
+                        </div>
+                        <div class="perf-card">
+                            <div class="perf-card-title">Retraining nötig</div>
+                            <div class="perf-card-value" id="perfRetrainingCount">0</div>
+                            <div class="perf-card-subtitle">Modelle unter Schwellenwert</div>
+                        </div>
+                    </div>
+
+                    <!-- Symbol Performance Table -->
+                    <div class="table-container">
+                        <table class="performance-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Vorhersagen</th>
+                                    <th>Evaluiert</th>
+                                    <th>Fehler %</th>
+                                    <th>Richtung</th>
+                                    <th>1h Acc.</th>
+                                    <th>4h Acc.</th>
+                                    <th>24h Acc.</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="performanceTableBody">
+                                <tr>
+                                    <td colspan="9" style="text-align: center; padding: 2rem; color: #64748b;">
+                                        Klicken Sie auf "Aktualisieren" um Performance-Daten zu laden.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="performance-info" style="margin-top: 1rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; font-size: 0.85rem; color: #94a3b8;">
+                        <strong>Automatisches Feedback-Learning:</strong>
+                        Vorhersagen werden automatisch aufgezeichnet und nach 1h, 4h und 24h mit den tatsächlichen Preisen verglichen.
+                        Bei schlechter Performance (Richtungsgenauigkeit &lt; 45% oder Fehler &gt; 0.5%) wird automatisches Retraining empfohlen.
+                    </div>
+                </div>
+            </div>
+
             <!-- Datalist for symbols -->
             <datalist id="symbolList"></datalist>
 
@@ -1788,6 +2052,9 @@
                 <button class="action-btn" onclick="checkLLM()">LLM Status</button>
                 <button class="action-btn" onclick="openDocs()">API Docs</button>
                 <button class="action-btn" onclick="refreshAll()">Alles Aktualisieren</button>
+                <button class="action-btn" onclick="trainAllModels(false)" title="Alle Modelle trainieren (nur fehlende)">Alle Trainieren</button>
+                <button class="action-btn" onclick="trainAllModels(true)" title="Alle Modelle neu trainieren (erzwungen)">Force Train All</button>
+                <button class="action-btn" onclick="retrainPoorPerformers()" title="Nur schlecht performende Modelle neu trainieren">Schwache Retrainieren</button>
             </div>
         </div>
 
@@ -2519,6 +2786,189 @@
                 await loadQueryLogs();
             } catch (error) {
                 showToast('Fehler beim Löschen', 'error');
+            }
+        }
+
+        // ==================== Model Performance Functions ====================
+
+        async function loadModelPerformance() {
+            const tableBody = document.getElementById('performanceTableBody');
+            tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem;"><span class="loading-spinner"></span> Lade Performance-Daten...</td></tr>';
+
+            try {
+                const data = await apiFetch('/forecast/performance');
+
+                // Update summary stats
+                document.getElementById('perfTotalPredictions').textContent = data.total_predictions || 0;
+                document.getElementById('perfTotalEvaluated').textContent = data.total_evaluated || 0;
+                document.getElementById('perfPendingEvaluations').textContent = data.pending_evaluations || 0;
+                document.getElementById('perfTotalSymbols').textContent = data.total_symbols || 0;
+
+                const retrainingCount = (data.symbols_needing_retraining || []).length;
+                document.getElementById('perfRetrainingCount').textContent = retrainingCount;
+
+                // Calculate overall metrics
+                let totalDirectionAcc = 0;
+                let totalError = 0;
+                let symbolCount = 0;
+
+                const symbols = Object.entries(data.by_symbol || {});
+                symbols.forEach(([symbol, metrics]) => {
+                    if (metrics.evaluated > 0) {
+                        totalDirectionAcc += metrics.direction_accuracy;
+                        totalError += metrics.avg_error_pct;
+                        symbolCount++;
+                    }
+                });
+
+                // Update overall direction accuracy card
+                const avgDirectionAcc = symbolCount > 0 ? (totalDirectionAcc / symbolCount * 100) : 0;
+                const dirAccElement = document.getElementById('perfOverallDirectionAcc');
+                dirAccElement.textContent = symbolCount > 0 ? avgDirectionAcc.toFixed(1) + '%' : '-';
+                dirAccElement.className = 'perf-card-value ' + getAccuracyClass(avgDirectionAcc);
+
+                // Update overall error card
+                const avgError = symbolCount > 0 ? (totalError / symbolCount) : 0;
+                const errorElement = document.getElementById('perfOverallError');
+                errorElement.textContent = symbolCount > 0 ? avgError.toFixed(3) + '%' : '-';
+                errorElement.className = 'perf-card-value ' + (avgError < 0.5 ? 'good' : avgError < 1 ? 'warning' : 'bad');
+
+                // Show retraining alert if needed
+                const retrainingAlert = document.getElementById('retrainingAlert');
+                if (retrainingCount > 0) {
+                    retrainingAlert.style.display = 'flex';
+                    document.getElementById('retrainingSymbols').textContent = data.symbols_needing_retraining.join(', ');
+                } else {
+                    retrainingAlert.style.display = 'none';
+                }
+
+                // Render table
+                if (symbols.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem; color: #64748b;">Noch keine Performance-Daten vorhanden. Forecasts werden automatisch aufgezeichnet.</td></tr>';
+                    return;
+                }
+
+                tableBody.innerHTML = symbols.map(([symbol, metrics]) => renderPerformanceRow(symbol, metrics, data.symbols_needing_retraining || [])).join('');
+
+            } catch (error) {
+                console.error('Error loading performance:', error);
+                tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2rem; color: #ef4444;">Fehler beim Laden: ${error.message}</td></tr>`;
+            }
+        }
+
+        function renderPerformanceRow(symbol, metrics, retrainingNeeded) {
+            const needsRetraining = retrainingNeeded.includes(symbol);
+            const directionAcc = metrics.direction_accuracy * 100;
+            const acc1h = metrics['1h']?.direction_acc * 100 || 0;
+            const acc4h = metrics['4h']?.direction_acc * 100 || 0;
+            const acc24h = metrics['24h']?.direction_acc * 100 || 0;
+
+            return `
+                <tr>
+                    <td><strong>${symbol}</strong></td>
+                    <td>${metrics.total}</td>
+                    <td>${metrics.evaluated}</td>
+                    <td>${metrics.avg_error_pct.toFixed(3)}%</td>
+                    <td>
+                        <span class="accuracy-bar">
+                            <span class="accuracy-bar-fill ${getAccuracyClass(directionAcc)}" style="width: ${directionAcc}%"></span>
+                        </span>
+                        ${directionAcc.toFixed(1)}%
+                    </td>
+                    <td class="${getAccuracyClass(acc1h)}">${metrics['1h']?.count > 0 ? acc1h.toFixed(0) + '%' : '-'}</td>
+                    <td class="${getAccuracyClass(acc4h)}">${metrics['4h']?.count > 0 ? acc4h.toFixed(0) + '%' : '-'}</td>
+                    <td class="${getAccuracyClass(acc24h)}">${metrics['24h']?.count > 0 ? acc24h.toFixed(0) + '%' : '-'}</td>
+                    <td class="${needsRetraining ? 'status-bad' : 'status-ok'}">
+                        ${needsRetraining ? '⚠️ Retraining' : '✓ OK'}
+                        ${metrics.reason ? `<br><small style="color: #94a3b8;">${metrics.reason}</small>` : ''}
+                    </td>
+                </tr>
+            `;
+        }
+
+        function getAccuracyClass(accuracy) {
+            if (accuracy >= 50) return 'good';
+            if (accuracy >= 40) return 'warning';
+            return 'bad';
+        }
+
+        async function evaluatePredictions() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Evaluiere...';
+            btn.disabled = true;
+
+            try {
+                const result = await apiFetch('/forecast/evaluate', { method: 'POST' });
+
+                if (result.total_evaluated > 0) {
+                    showToast(`${result.total_evaluated} Vorhersagen evaluiert`, 'success');
+                } else {
+                    showToast('Keine Vorhersagen zum Evaluieren bereit', 'info');
+                }
+
+                await loadModelPerformance();
+
+            } catch (error) {
+                console.error('Evaluation error:', error);
+                showToast('Evaluation fehlgeschlagen: ' + error.message, 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function retrainPoorPerformers() {
+            if (!confirm('Sollen alle Modelle mit schlechter Performance neu trainiert werden? Dies kann mehrere Minuten dauern.')) {
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Training läuft...';
+            btn.disabled = true;
+
+            try {
+                const result = await apiFetch('/forecast/retrain-poor-performers', { method: 'POST' });
+
+                if (result.symbols_queued && result.symbols_queued.length > 0) {
+                    showToast(`Retraining gestartet für: ${result.symbols_queued.join(', ')}`, 'success');
+                } else {
+                    showToast('Keine Modelle benötigen Retraining', 'info');
+                }
+
+                // Reload performance data after a short delay
+                setTimeout(() => loadModelPerformance(), 2000);
+
+            } catch (error) {
+                console.error('Retraining error:', error);
+                showToast('Retraining fehlgeschlagen: ' + error.message, 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function trainAllModels(force = false) {
+            const action = force ? 'neu trainieren (erzwungen)' : 'trainieren';
+            if (!confirm('Sollen alle Modelle ' + action + ' werden? Dies kann mehrere Minuten dauern.')) {
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Training läuft...';
+            btn.disabled = true;
+
+            try {
+                const result = await apiFetch('/forecast/train-all?force=' + force + '&background=true', { method: 'POST' });
+                showToast(result.message || 'Training gestartet', 'success');
+            } catch (error) {
+                console.error('Training error:', error);
+                showToast('Training fehlgeschlagen: ' + error.message, 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
             }
         }
 
@@ -3466,7 +3916,7 @@
         loadStrategies();
         loadVersionInfo();
         loadLastSymbol();  // Load saved symbol from localStorage
-        setInterval(updateDashboard, 10000);
+        setInterval(updateDashboard, 60000); // Auto-refresh every 1 minute
 
         // Add event listener for symbol input to fetch symbol info
         const analysisSymbolInput = document.getElementById('analysisSymbol');

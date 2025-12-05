@@ -91,8 +91,8 @@ class NHITSTrainingService:
             async with self._db_pool.acquire() as conn:
                 rows = await conn.fetch("""
                     SELECT DISTINCT symbol
-                    FROM market_data
-                    WHERE timestamp > NOW() - INTERVAL '30 days'
+                    FROM symbol
+                    WHERE data_timestamp > NOW() - INTERVAL '30 days'
                     ORDER BY symbol
                 """)
                 symbols = [row['symbol'] for row in rows]
@@ -116,26 +116,26 @@ class NHITSTrainingService:
             async with self._db_pool.acquire() as conn:
                 rows = await conn.fetch("""
                     SELECT
-                        timestamp,
-                        open,
-                        high,
-                        low,
-                        close,
-                        COALESCE(volume, 0) as volume
-                    FROM market_data
+                        data_timestamp as timestamp,
+                        d1_open as open,
+                        d1_high as high,
+                        d1_low as low,
+                        d1_close as close
+                    FROM symbol
                     WHERE symbol = $1
-                      AND timestamp > NOW() - INTERVAL '%s days'
-                    ORDER BY timestamp ASC
+                      AND data_timestamp > NOW() - INTERVAL '%s days'
+                    ORDER BY data_timestamp ASC
                 """ % days, symbol)
 
                 time_series = [
                     TimeSeriesData(
                         timestamp=row['timestamp'],
+                        symbol=symbol,
                         open=float(row['open']),
                         high=float(row['high']),
                         low=float(row['low']),
                         close=float(row['close']),
-                        volume=float(row['volume'])
+                        volume=0.0  # Volume not available in symbol table
                     )
                     for row in rows
                 ]

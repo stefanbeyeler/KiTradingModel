@@ -1,4 +1,5 @@
 """API routes for the KI Trading Model service."""
+# Health check now includes NHITS status
 
 from datetime import datetime
 from typing import Optional
@@ -63,17 +64,41 @@ async def health_check():
         except Exception:
             pass
 
+        # Check NHITS forecast service
+        nhits_healthy = False
+        nhits_status = {}
+        try:
+            from ..services.forecast_service import forecast_service
+            nhits_healthy = forecast_service.device is not None
+
+            # Get model count and device info
+            models = list(forecast_service.model_path.glob("*_model.pt"))
+            nhits_status = {
+                "enabled": settings.nhits_enabled,
+                "device": str(forecast_service.device) if forecast_service.device else "none",
+                "models_loaded": len(models),
+                "model_symbols": [p.stem.replace("_model", "") for p in models],
+                "cuda_available": torch.cuda.is_available(),
+            }
+            if torch.cuda.is_available():
+                nhits_status["gpu_name"] = torch.cuda.get_device_name(0)
+                nhits_status["gpu_memory_total"] = f"{torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB"
+        except Exception as e:
+            nhits_status = {"error": str(e)}
+
         services = {
             "llm_service": llm_healthy,
-            "rag_service": rag_healthy
+            "rag_service": rag_healthy,
+            "nhits_service": nhits_healthy
         }
 
-        all_healthy = llm_healthy and rag_healthy
+        all_healthy = llm_healthy and rag_healthy and nhits_healthy
 
         return {
             "status": "healthy" if all_healthy else "degraded",
             "timestamp": datetime.utcnow().isoformat(),
-            "services": services
+            "services": services,
+            "nhits": nhits_status
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")
