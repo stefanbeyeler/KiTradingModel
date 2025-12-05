@@ -832,6 +832,32 @@ async def train_all_models(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/forecast/training/cancel")
+async def cancel_training():
+    """
+    Cancel the current training run.
+
+    Stops the batch training process after the current symbol completes.
+    """
+    try:
+        training_service = get_training_service()
+        cancelled = training_service.cancel_training()
+
+        if cancelled:
+            return {
+                "success": True,
+                "message": "Training cancellation requested. Training will stop after current symbol."
+            }
+        else:
+            return {
+                "success": False,
+                "message": "No training is currently in progress."
+            }
+    except Exception as e:
+        logger.error(f"Failed to cancel training: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # =============================================================================
 # Model Improvement & Performance Endpoints (MUST be before {symbol} routes!)
 # =============================================================================

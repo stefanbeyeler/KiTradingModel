@@ -24,8 +24,17 @@ class NHITSTrainingService:
         self._task: Optional[asyncio.Task] = None
         self._db_pool = None
         self._training_in_progress = False
+        self._training_cancelled = False
         self._last_training_run: Optional[datetime] = None
         self._training_results: Dict[str, ForecastTrainingResult] = {}
+        # Progress tracking
+        self._current_training_start: Optional[datetime] = None
+        self._training_total_symbols: int = 0
+        self._training_completed_symbols: int = 0
+        self._training_current_symbol: Optional[str] = None
+        self._training_successful: int = 0
+        self._training_failed: int = 0
+        self._training_skipped: int = 0
 
     async def connect(self, db_pool):
         """Set the database connection pool."""
@@ -245,7 +254,16 @@ class NHITSTrainingService:
             }
 
         self._training_in_progress = True
+        self._training_cancelled = False
         start_time = datetime.utcnow()
+        self._current_training_start = start_time
+
+        # Reset progress counters
+        self._training_completed_symbols = 0
+        self._training_successful = 0
+        self._training_failed = 0
+        self._training_skipped = 0
+        self._training_current_symbol = None
 
         try:
             # Get symbols to train
@@ -263,79 +281,83 @@ class NHITSTrainingService:
                     "results": {}
                 }
 
+            self._training_total_symbols = len(symbols_to_train)
+
             logger.info(
                 f"Starting batch training for {len(symbols_to_train)} symbols"
             )
 
             results = {}
-            successful = 0
-            failed = 0
-            skipped = 0
 
-            # Train in batches to limit concurrency
-            semaphore = asyncio.Semaphore(max_concurrent)
+            # Train sequentially to track progress properly
+            for symbol in symbols_to_train:
+                # Check if cancelled
+                if self._training_cancelled:
+                    logger.info("Training cancelled by user")
+                    break
 
-            async def train_with_semaphore(sym: str):
-                async with semaphore:
-                    return await self.train_symbol(sym, force=force)
+                self._training_current_symbol = symbol
 
-            # Create tasks
-            tasks = [
-                train_with_semaphore(symbol)
-                for symbol in symbols_to_train
-            ]
+                try:
+                    result = await self.train_symbol(symbol, force=force)
 
-            # Execute all tasks
-            training_results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            # Process results
-            for symbol, result in zip(symbols_to_train, training_results):
-                if isinstance(result, Exception):
-                    results[symbol] = {
-                        "success": False,
-                        "error": str(result)
-                    }
-                    failed += 1
-                elif result.success:
-                    if "skipped" in (result.error_message or "").lower():
+                    if isinstance(result, Exception):
                         results[symbol] = {
-                            "success": True,
-                            "skipped": True,
-                            "samples": result.training_samples
+                            "success": False,
+                            "error": str(result)
                         }
-                        skipped += 1
+                        self._training_failed += 1
+                    elif result.success:
+                        if "skipped" in (result.error_message or "").lower():
+                            results[symbol] = {
+                                "success": True,
+                                "skipped": True,
+                                "samples": result.training_samples
+                            }
+                            self._training_skipped += 1
+                        else:
+                            results[symbol] = {
+                                "success": True,
+                                "samples": result.training_samples,
+                                "duration": result.training_duration_seconds,
+                                "loss": result.metrics.get("final_loss")
+                            }
+                            self._training_successful += 1
                     else:
                         results[symbol] = {
-                            "success": True,
-                            "samples": result.training_samples,
-                            "duration": result.training_duration_seconds,
-                            "loss": result.metrics.get("final_loss")
+                            "success": False,
+                            "error": result.error_message
                         }
-                        successful += 1
-                else:
+                        self._training_failed += 1
+
+                except Exception as e:
                     results[symbol] = {
                         "success": False,
-                        "error": result.error_message
+                        "error": str(e)
                     }
-                    failed += 1
+                    self._training_failed += 1
+
+                self._training_completed_symbols += 1
 
             duration = (datetime.utcnow() - start_time).total_seconds()
             self._last_training_run = datetime.utcnow()
 
+            status = "cancelled" if self._training_cancelled else "completed"
+
             summary = {
-                "status": "completed",
+                "status": status,
                 "started_at": start_time.isoformat(),
                 "duration_seconds": duration,
                 "total_symbols": len(symbols_to_train),
-                "successful": successful,
-                "failed": failed,
-                "skipped": skipped,
+                "successful": self._training_successful,
+                "failed": self._training_failed,
+                "skipped": self._training_skipped,
                 "results": results
             }
 
             logger.info(
-                f"Batch training completed: "
-                f"{successful} successful, {failed} failed, {skipped} skipped "
+                f"Batch training {status}: "
+                f"{self._training_successful} successful, {self._training_failed} failed, {self._training_skipped} skipped "
                 f"in {duration:.1f}s"
             )
 
@@ -351,6 +373,17 @@ class NHITSTrainingService:
 
         finally:
             self._training_in_progress = False
+            self._training_cancelled = False
+            self._training_current_symbol = None
+            self._current_training_start = None
+
+    def cancel_training(self) -> bool:
+        """Cancel the current training run."""
+        if not self._training_in_progress:
+            return False
+        self._training_cancelled = True
+        logger.info("Training cancellation requested")
+        return True
 
     def get_status(self) -> Dict[str, Any]:
         """Get the current status of the training service."""
@@ -358,7 +391,7 @@ class NHITSTrainingService:
 
         models = forecast_service.list_models()
 
-        return {
+        status = {
             "enabled": settings.nhits_scheduled_training_enabled,
             "running": self._running,
             "training_in_progress": self._training_in_progress,
@@ -367,6 +400,30 @@ class NHITSTrainingService:
             "trained_models": len([m for m in models if m.model_exists]),
             "configured_symbols": settings.nhits_training_symbols or "all",
         }
+
+        # Add detailed progress if training is in progress
+        if self._training_in_progress:
+            elapsed = 0
+            if self._current_training_start:
+                elapsed = (datetime.utcnow() - self._current_training_start).total_seconds()
+
+            progress_pct = 0
+            if self._training_total_symbols > 0:
+                progress_pct = int((self._training_completed_symbols / self._training_total_symbols) * 100)
+
+            status["progress"] = {
+                "total_symbols": self._training_total_symbols,
+                "completed_symbols": self._training_completed_symbols,
+                "current_symbol": self._training_current_symbol,
+                "successful": self._training_successful,
+                "failed": self._training_failed,
+                "skipped": self._training_skipped,
+                "progress_percent": progress_pct,
+                "elapsed_seconds": int(elapsed),
+                "cancelling": self._training_cancelled,
+            }
+
+        return status
 
 
 # Singleton instance

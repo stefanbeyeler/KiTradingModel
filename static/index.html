@@ -1639,9 +1639,173 @@
             font-size: 0.875rem;
             color: #e2e8f0;
         }
+
+        /* Training Status Banner */
+        .training-status-banner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            border-bottom: 2px solid #6366f1;
+            padding: 0.75rem 2rem;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .training-status-banner.visible {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .training-banner-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 1rem;
+        }
+
+        .training-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .training-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            border-top-color: #a5b4fc;
+            animation: spin 1s linear infinite;
+        }
+
+        .training-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .training-title {
+            font-weight: 600;
+            color: #e0e7ff;
+            font-size: 0.9rem;
+        }
+
+        .training-details {
+            font-size: 0.75rem;
+            color: #a5b4fc;
+        }
+
+        .training-progress-container {
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .training-progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .training-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #a5b4fc);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            animation: progressPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes progressPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .training-progress-text {
+            font-size: 0.7rem;
+            color: #a5b4fc;
+            margin-top: 0.25rem;
+            text-align: center;
+        }
+
+        .btn-cancel-training {
+            padding: 0.5rem 1rem;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            border-radius: 0.5rem;
+            color: #fca5a5;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-cancel-training:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-cancel-training svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Adjust body padding when banner is visible */
+        body.training-active {
+            padding-top: 60px;
+        }
+
+        body.training-active .header {
+            margin-top: 0;
+        }
     </style>
 </head>
 <body>
+    <!-- Training Status Banner -->
+    <div id="trainingStatusBanner" class="training-status-banner">
+        <div class="training-banner-content">
+            <div class="training-info">
+                <div class="training-spinner"></div>
+                <div class="training-text">
+                    <span class="training-title">NHITS Training läuft...</span>
+                    <span class="training-details" id="trainingDetails">Initialisiere...</span>
+                </div>
+            </div>
+            <div class="training-progress-container">
+                <div class="training-progress-bar">
+                    <div class="training-progress-fill" id="trainingProgressFill" style="width: 0%"></div>
+                </div>
+                <div class="training-progress-text" id="trainingProgressText">0%</div>
+            </div>
+            <button class="btn-cancel-training" onclick="cancelTraining()" title="Training abbrechen">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                Abbrechen
+            </button>
+        </div>
+    </div>
+
     <header class="header">
         <h1>KI Trading Model Dashboard</h1>
         <div class="header-info">
@@ -2970,6 +3134,9 @@
             }
         }
 
+        // Training status polling
+        let trainingStatusInterval = null;
+
         async function trainAllModels(force = false) {
             const action = force ? 'neu trainieren (erzwungen)' : 'trainieren';
             if (!confirm('Sollen alle Modelle ' + action + ' werden? Dies kann mehrere Minuten dauern.')) {
@@ -2984,12 +3151,136 @@
             try {
                 const result = await apiFetch('/forecast/train-all?force=' + force + '&background=true', { method: 'POST' });
                 showToast(result.message || 'Training gestartet', 'success');
+
+                // Start polling for training status
+                startTrainingStatusPolling();
             } catch (error) {
                 console.error('Training error:', error);
                 showToast('Training fehlgeschlagen: ' + error.message, 'error');
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
+            }
+        }
+
+        function startTrainingStatusPolling() {
+            // Clear any existing interval
+            if (trainingStatusInterval) {
+                clearInterval(trainingStatusInterval);
+            }
+
+            // Poll immediately
+            checkTrainingStatus();
+
+            // Then poll every 2 seconds
+            trainingStatusInterval = setInterval(checkTrainingStatus, 2000);
+        }
+
+        function stopTrainingStatusPolling() {
+            if (trainingStatusInterval) {
+                clearInterval(trainingStatusInterval);
+                trainingStatusInterval = null;
+            }
+        }
+
+        // Track if we were showing the banner to show completion toast
+        let wasTrainingActive = false;
+
+        async function checkTrainingStatus() {
+            try {
+                const status = await apiFetch('/forecast/training/status');
+
+                if (status.training_in_progress) {
+                    wasTrainingActive = true;
+                    showTrainingBanner(status);
+
+                    // Ensure polling is running
+                    if (!trainingStatusInterval) {
+                        trainingStatusInterval = setInterval(checkTrainingStatus, 2000);
+                    }
+                } else {
+                    hideTrainingBanner();
+                    stopTrainingStatusPolling();
+
+                    // Show completion toast if we were previously training
+                    if (wasTrainingActive) {
+                        wasTrainingActive = false;
+                        showToast('Training abgeschlossen!', 'success');
+
+                        // Reload performance data
+                        loadModelPerformance();
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking training status:', error);
+            }
+        }
+
+        function showTrainingBanner(status) {
+            const banner = document.getElementById('trainingStatusBanner');
+            const details = document.getElementById('trainingDetails');
+            const progressFill = document.getElementById('trainingProgressFill');
+            const progressText = document.getElementById('trainingProgressText');
+
+            if (!banner) return;
+
+            banner.classList.add('visible');
+            document.body.classList.add('training-active');
+
+            if (status.progress) {
+                const p = status.progress;
+                const current = p.current_symbol || 'Initialisiere...';
+                const elapsed = formatDuration(p.elapsed_seconds);
+
+                let statusText = `Training: ${current}`;
+                if (p.cancelling) {
+                    statusText = `Abbruch wird ausgeführt nach: ${current}`;
+                }
+
+                details.textContent = `${statusText} | ${p.completed_symbols}/${p.total_symbols} Symbole | ${elapsed}`;
+                progressFill.style.width = `${p.progress_percent}%`;
+                progressText.textContent = `${p.progress_percent}% (${p.successful} OK, ${p.failed} Fehler, ${p.skipped} übersprungen)`;
+            } else {
+                details.textContent = 'Initialisiere Training...';
+                progressFill.style.width = '0%';
+                progressText.textContent = '0%';
+            }
+        }
+
+        function hideTrainingBanner() {
+            const banner = document.getElementById('trainingStatusBanner');
+            if (banner) {
+                banner.classList.remove('visible');
+                document.body.classList.remove('training-active');
+            }
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds || seconds < 0) return '0s';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            if (mins > 0) {
+                return `${mins}m ${secs}s`;
+            }
+            return `${secs}s`;
+        }
+
+        async function cancelTraining() {
+            if (!confirm('Training wirklich abbrechen? Das aktuelle Symbol wird noch fertig trainiert.')) {
+                return;
+            }
+
+            try {
+                const result = await apiFetch('/forecast/training/cancel', { method: 'POST' });
+
+                if (result.success) {
+                    showToast('Training wird abgebrochen...', 'info');
+                } else {
+                    showToast(result.message || 'Kein Training aktiv', 'warning');
+                }
+            } catch (error) {
+                console.error('Error cancelling training:', error);
+                showToast('Fehler beim Abbrechen: ' + error.message, 'error');
             }
         }
 
@@ -3646,6 +3937,21 @@
             if (quickCurrentValue && strategies.some(s => s.id === quickCurrentValue)) {
                 quickSelect.value = quickCurrentValue;
             }
+
+            // Auto-set lookback days based on default strategy on page load
+            const defaultStrategy = strategies.find(s => s.is_default);
+            if (defaultStrategy) {
+                const quickLookback = document.getElementById('quickLookback');
+                const analysisLookback = document.getElementById('analysisLookback');
+                
+                // Only set if current value is the default (30) - don't override user changes
+                if (quickLookback && quickLookback.value === '30') {
+                    quickLookback.value = defaultStrategy.lookback_days;
+                }
+                if (analysisLookback && analysisLookback.value === '30') {
+                    analysisLookback.value = defaultStrategy.lookback_days;
+                }
+            }
         }
 
         function getRiskLabel(risk) {
@@ -3937,6 +4243,7 @@
         loadStrategies();
         loadVersionInfo();
         loadLastSymbol();  // Load saved symbol from localStorage
+        checkTrainingStatus();  // Check if training is in progress on page load
         setInterval(updateDashboard, 60000); // Auto-refresh every 1 minute
 
         // Add event listener for symbol input to fetch symbol info
