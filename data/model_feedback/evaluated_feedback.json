@@ -421,6 +421,17 @@
       "prediction_error_pct": 2.0081002623362503,
       "direction_correct": true,
       "evaluated_at": "2025-12-06T07:24:06.891689"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp": "2025-12-06T09:09:50.824198",
+      "horizon": "1h",
+      "current_price": 89626.0,
+      "predicted_price": 88975.0078125,
+      "actual_price": 89626.0,
+      "prediction_error_pct": 0.7263430115145159,
+      "direction_correct": true,
+      "evaluated_at": "2025-12-06T11:06:49.428269"
     }
   ],
   "XTIUSD": [
@@ -687,6 +698,117 @@
       "prediction_error_pct": 0.44589366481084836,
       "direction_correct": true,
       "evaluated_at": "2025-12-06T07:24:16.820511"
+    }
+  ],
+  "ETHUSD": [
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T07:39:35.295666",
+      "horizon": "1h",
+      "current_price": 3040.15,
+      "predicted_price": 3031.87109375,
+      "actual_price": 3040.15,
+      "prediction_error_pct": 0.272319005641172,
+      "direction_correct": "True",
+      "evaluated_at": "2025-12-06T09:10:10.489474"
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T07:40:35.984459",
+      "horizon": "1h",
+      "current_price": 3040.15,
+      "predicted_price": 3031.87109375,
+      "actual_price": 3040.15,
+      "prediction_error_pct": 0.272319005641172,
+      "direction_correct": "True",
+      "evaluated_at": "2025-12-06T09:15:24.816837"
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T09:13:10.726760",
+      "horizon": "1h",
+      "current_price": 3029.63,
+      "predicted_price": 3022.823486328125,
+      "actual_price": 3028.85,
+      "prediction_error_pct": 0.19897035745827324,
+      "direction_correct": true,
+      "evaluated_at": "2025-12-06T11:06:49.428269"
+    }
+  ],
+  "AVXUSD": [
+    {
+      "symbol": "AVXUSD",
+      "timestamp": "2025-12-06T09:00:24.512347",
+      "horizon": "1h",
+      "current_price": 13.2275,
+      "predicted_price": 13.285112380981445,
+      "actual_price": 13.2075,
+      "prediction_error_pct": 0.587638697569152,
+      "direction_correct": false,
+      "evaluated_at": "2025-12-06T11:06:49.428269"
+    }
+  ],
+  "BCHUSD": [
+    {
+      "symbol": "BCHUSD",
+      "timestamp": "2025-12-06T09:03:21.845927",
+      "horizon": "1h",
+      "current_price": 575.8,
+      "predicted_price": 564.4561767578125,
+      "actual_price": 574.7,
+      "prediction_error_pct": 1.7824644583587166,
+      "direction_correct": true,
+      "evaluated_at": "2025-12-06T11:06:49.428269"
+    }
+  ],
+  "BNBUSD": [
+    {
+      "symbol": "BNBUSD",
+      "timestamp": "2025-12-06T09:04:42.550647",
+      "horizon": "1h",
+      "current_price": 882.6,
+      "predicted_price": 880.9866943359375,
+      "actual_price": 882.2,
+      "prediction_error_pct": 0.13753181410820056,
+      "direction_correct": true,
+      "evaluated_at": "2025-12-06T11:06:49.428269"
+    },
+    {
+      "symbol": "BNBUSD",
+      "timestamp": "2025-12-06T09:06:33.552270",
+      "horizon": "1h",
+      "current_price": 882.2,
+      "predicted_price": 880.9628295898438,
+      "actual_price": 882.2,
+      "prediction_error_pct": 0.14023695422311214,
+      "direction_correct": true,
+      "evaluated_at": "2025-12-06T11:06:49.428269"
+    }
+  ],
+  "DOGUSD": [
+    {
+      "symbol": "DOGUSD",
+      "timestamp": "2025-12-06T09:05:36.728399",
+      "horizon": "1h",
+      "current_price": 0.13834,
+      "predicted_price": 0.13728880882263184,
+      "actual_price": 0.13834,
+      "prediction_error_pct": 0.7598606168629137,
+      "direction_correct": true,
+      "evaluated_at": "2025-12-06T11:06:49.428269"
+    }
+  ],
+  "DOTUSD": [
+    {
+      "symbol": "DOTUSD",
+      "timestamp": "2025-12-06T09:15:07.873901",
+      "horizon": "1h",
+      "current_price": 2.078,
+      "predicted_price": 2.0906271934509277,
+      "actual_price": 2.078,
+      "prediction_error_pct": 0.6076608975422467,
+      "direction_correct": false,
+      "evaluated_at": "2025-12-06T11:06:49.428269"
     }
   ]
 }

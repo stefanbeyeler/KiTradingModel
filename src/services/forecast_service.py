@@ -761,6 +761,9 @@ class ForecastService:
             ]
             avg_volatility = float(np.mean(volatilities)) if volatilities else 0.0
 
+            # Calculate realistic model confidence using historical performance
+            model_confidence = self._calculate_model_confidence(symbol, avg_volatility)
+
             result = ForecastResult(
                 symbol=symbol,
                 forecast_timestamp=datetime.utcnow(),
@@ -783,7 +786,7 @@ class ForecastService:
                 trend_down_probability=1 - trend_up_prob,
 
                 predicted_volatility=avg_volatility,
-                model_confidence=max(0.0, min(1.0, 1 - avg_volatility)),
+                model_confidence=model_confidence,
 
                 last_training_date=metadata.get('trained_at'),
                 training_samples=metadata.get('training_samples'),
@@ -846,6 +849,72 @@ class ForecastService:
             symbol,
             model,
         )
+
+    def _calculate_model_confidence(self, symbol: str, avg_volatility: float) -> float:
+        """
+        Calculate realistic model confidence based on multiple factors.
+
+        Factors:
+        1. Historical direction accuracy (most important - 40% weight)
+        2. Historical average error percentage (30% weight)
+        3. Number of evaluated predictions - more data = more reliable estimate (20% weight)
+        4. Prediction interval width/volatility (10% weight)
+
+        Returns confidence between 0.0 and 1.0
+        """
+        try:
+            from .model_improvement_service import model_improvement_service
+
+            metrics = model_improvement_service.performance_metrics.get(symbol)
+
+            if not metrics or metrics.evaluated_predictions < 2:
+                # Not enough historical data - return conservative default
+                # New models get low confidence (uncertainty is high)
+                return 0.45
+
+            # Factor 1: Direction accuracy (40% weight)
+            # 50% accuracy (random) = 0 contribution, 100% accuracy = 0.4 contribution
+            direction_acc = metrics.direction_accuracy
+            direction_score = (direction_acc - 0.5) * 0.8  # Scale: 0.5->0, 1.0->0.4
+            direction_score = max(0.0, direction_score)
+
+            # Factor 2: Average error percentage (30% weight)
+            # Financial predictions: even 1% error is significant
+            # 0% error = 0.3 contribution, 2% error = 0 contribution
+            avg_error = metrics.avg_error_pct
+            error_score = max(0.0, 0.3 - (avg_error / 2.0) * 0.3)
+
+            # Factor 3: Sample size - how reliable is our estimate? (20% weight)
+            # Need many evaluations to be confident in our confidence
+            # 5 evaluations = 5% contribution, 50+ evaluations = 20% contribution
+            eval_count = metrics.evaluated_predictions
+            sample_score = min(0.20, eval_count / 250.0)  # Max at 50 evaluations
+
+            # Factor 4: Prediction interval width (10% weight)
+            # Narrow intervals = model is more certain
+            volatility_score = max(0.0, min(0.1, 0.1 - avg_volatility * 5))
+
+            # Combine all factors
+            # Base confidence is low - financial markets are inherently unpredictable
+            base_confidence = 0.25
+            total_confidence = base_confidence + direction_score + error_score + sample_score + volatility_score
+
+            # Clamp to reasonable range (25% - 75%)
+            # Even the best models shouldn't claim >75% confidence in financial predictions
+            final_confidence = max(0.25, min(0.75, total_confidence))
+
+            logger.debug(
+                f"Confidence for {symbol}: direction={direction_score:.2f}, "
+                f"error={error_score:.2f}, sample={sample_score:.2f}, "
+                f"volatility={volatility_score:.2f} => {final_confidence:.1%}"
+            )
+
+            return final_confidence
+
+        except Exception as e:
+            logger.debug(f"Failed to calculate model confidence for {symbol}: {e}")
+            # Fallback to conservative estimate
+            return 0.45
 
     def _calc_change_pct(self, current: float, predicted: float) -> float:
         """Calculate percentage change."""

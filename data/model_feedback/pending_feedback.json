@@ -188,6 +188,39 @@
       "prediction_error_pct": null,
       "direction_correct": null,
       "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-06T11:09:11.224565",
+      "horizon": "1h",
+      "current_price": 4198.54,
+      "predicted_price": 4195.0283203125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-06T11:09:11.224565",
+      "horizon": "4h",
+      "current_price": 4198.54,
+      "predicted_price": 4195.31201171875,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp": "2025-12-06T11:09:11.224565",
+      "horizon": "24h",
+      "current_price": 4198.54,
+      "predicted_price": 4197.142578125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
     }
   ],
   "BTCUSD": [
@@ -208,6 +241,28 @@
       "horizon": "24h",
       "current_price": 91146.0,
       "predicted_price": 91417.8359375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp": "2025-12-06T09:09:50.824198",
+      "horizon": "4h",
+      "current_price": 89626.0,
+      "predicted_price": 88450.765625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp": "2025-12-06T09:09:50.824198",
+      "horizon": "24h",
+      "current_price": 89626.0,
+      "predicted_price": 88677.859375,
       "actual_price": null,
       "prediction_error_pct": null,
       "direction_correct": null,
@@ -276,6 +331,455 @@
       "horizon": "24h",
       "current_price": 60.18,
       "predicted_price": 59.364501953125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ],
+  "ETHUSD": [
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T07:39:35.295666",
+      "horizon": "4h",
+      "current_price": 3040.15,
+      "predicted_price": 3030.1396484375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T07:39:35.295666",
+      "horizon": "24h",
+      "current_price": 3040.15,
+      "predicted_price": 3022.184326171875,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T07:40:35.984459",
+      "horizon": "4h",
+      "current_price": 3040.15,
+      "predicted_price": 3030.1396484375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T07:40:35.984459",
+      "horizon": "24h",
+      "current_price": 3040.15,
+      "predicted_price": 3022.184326171875,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T09:13:10.726760",
+      "horizon": "4h",
+      "current_price": 3029.63,
+      "predicted_price": 3022.86669921875,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T09:13:10.726760",
+      "horizon": "24h",
+      "current_price": 3029.63,
+      "predicted_price": 3015.19775390625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T11:09:22.616879",
+      "horizon": "1h",
+      "current_price": 3026.68,
+      "predicted_price": 3033.387939453125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T11:09:22.616879",
+      "horizon": "4h",
+      "current_price": 3026.68,
+      "predicted_price": 3031.176025390625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T11:09:22.616879",
+      "horizon": "24h",
+      "current_price": 3026.68,
+      "predicted_price": 3019.456787109375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T11:09:46.866171",
+      "horizon": "1h",
+      "current_price": 3026.68,
+      "predicted_price": 3033.387939453125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T11:09:46.866171",
+      "horizon": "4h",
+      "current_price": 3026.68,
+      "predicted_price": 3031.176025390625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "ETHUSD",
+      "timestamp": "2025-12-06T11:09:46.866171",
+      "horizon": "24h",
+      "current_price": 3026.68,
+      "predicted_price": 3019.456787109375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ],
+  "XTZUSD": [
+    {
+      "symbol": "XTZUSD",
+      "timestamp": "2025-12-06T07:41:07.014303",
+      "horizon": "1h",
+      "current_price": 0.4734,
+      "predicted_price": 0.4706376791000366,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XTZUSD",
+      "timestamp": "2025-12-06T07:41:07.014303",
+      "horizon": "4h",
+      "current_price": 0.4734,
+      "predicted_price": 0.47642579674720764,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XTZUSD",
+      "timestamp": "2025-12-06T07:41:07.014303",
+      "horizon": "24h",
+      "current_price": 0.4734,
+      "predicted_price": 0.4799317419528961,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XTZUSD",
+      "timestamp": "2025-12-06T07:41:16.445427",
+      "horizon": "1h",
+      "current_price": 0.4734,
+      "predicted_price": 0.4706376791000366,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XTZUSD",
+      "timestamp": "2025-12-06T07:41:16.445427",
+      "horizon": "4h",
+      "current_price": 0.4734,
+      "predicted_price": 0.47642579674720764,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "XTZUSD",
+      "timestamp": "2025-12-06T07:41:16.445427",
+      "horizon": "24h",
+      "current_price": 0.4734,
+      "predicted_price": 0.4799317419528961,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ],
+  "AUDJPY": [
+    {
+      "symbol": "AUDJPY",
+      "timestamp": "2025-12-06T08:57:00.616441",
+      "horizon": "1h",
+      "current_price": 103.163,
+      "predicted_price": 103.17816925048828,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "AUDJPY",
+      "timestamp": "2025-12-06T08:57:00.616441",
+      "horizon": "4h",
+      "current_price": 103.163,
+      "predicted_price": 103.24604797363281,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "AUDJPY",
+      "timestamp": "2025-12-06T08:57:00.616441",
+      "horizon": "24h",
+      "current_price": 103.163,
+      "predicted_price": 103.23332977294922,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ],
+  "AUDNZD": [
+    {
+      "symbol": "AUDNZD",
+      "timestamp": "2025-12-06T08:57:31.992149",
+      "horizon": "1h",
+      "current_price": 1.1491,
+      "predicted_price": 1.1507147550582886,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "AUDNZD",
+      "timestamp": "2025-12-06T08:57:31.992149",
+      "horizon": "4h",
+      "current_price": 1.1491,
+      "predicted_price": 1.1499898433685303,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "AUDNZD",
+      "timestamp": "2025-12-06T08:57:31.992149",
+      "horizon": "24h",
+      "current_price": 1.1491,
+      "predicted_price": 1.1501179933547974,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ],
+  "AUS200": [
+    {
+      "symbol": "AUS200",
+      "timestamp": "2025-12-06T08:59:53.816066",
+      "horizon": "1h",
+      "current_price": 8601.2,
+      "predicted_price": 8591.8505859375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "AUS200",
+      "timestamp": "2025-12-06T08:59:53.816066",
+      "horizon": "4h",
+      "current_price": 8601.2,
+      "predicted_price": 8591.1083984375,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "AUS200",
+      "timestamp": "2025-12-06T08:59:53.816066",
+      "horizon": "24h",
+      "current_price": 8601.2,
+      "predicted_price": 8597.73046875,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ],
+  "AVXUSD": [
+    {
+      "symbol": "AVXUSD",
+      "timestamp": "2025-12-06T09:00:24.512347",
+      "horizon": "4h",
+      "current_price": 13.2275,
+      "predicted_price": 13.159062385559082,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "AVXUSD",
+      "timestamp": "2025-12-06T09:00:24.512347",
+      "horizon": "24h",
+      "current_price": 13.2275,
+      "predicted_price": 13.067464828491211,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ],
+  "BCHUSD": [
+    {
+      "symbol": "BCHUSD",
+      "timestamp": "2025-12-06T09:03:21.845927",
+      "horizon": "4h",
+      "current_price": 575.8,
+      "predicted_price": 562.7661743164062,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "BCHUSD",
+      "timestamp": "2025-12-06T09:03:21.845927",
+      "horizon": "24h",
+      "current_price": 575.8,
+      "predicted_price": 554.1932373046875,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ],
+  "BNBUSD": [
+    {
+      "symbol": "BNBUSD",
+      "timestamp": "2025-12-06T09:04:42.550647",
+      "horizon": "4h",
+      "current_price": 882.6,
+      "predicted_price": 881.9345703125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "BNBUSD",
+      "timestamp": "2025-12-06T09:04:42.550647",
+      "horizon": "24h",
+      "current_price": 882.6,
+      "predicted_price": 880.6055908203125,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "BNBUSD",
+      "timestamp": "2025-12-06T09:06:33.552270",
+      "horizon": "4h",
+      "current_price": 882.2,
+      "predicted_price": 881.9110717773438,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "BNBUSD",
+      "timestamp": "2025-12-06T09:06:33.552270",
+      "horizon": "24h",
+      "current_price": 882.2,
+      "predicted_price": 881.138916015625,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ],
+  "DOGUSD": [
+    {
+      "symbol": "DOGUSD",
+      "timestamp": "2025-12-06T09:05:36.728399",
+      "horizon": "4h",
+      "current_price": 0.13834,
+      "predicted_price": 0.13746599853038788,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "DOGUSD",
+      "timestamp": "2025-12-06T09:05:36.728399",
+      "horizon": "24h",
+      "current_price": 0.13834,
+      "predicted_price": 0.13721129298210144,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    }
+  ],
+  "DOTUSD": [
+    {
+      "symbol": "DOTUSD",
+      "timestamp": "2025-12-06T09:15:07.873901",
+      "horizon": "4h",
+      "current_price": 2.078,
+      "predicted_price": 2.0924365520477295,
+      "actual_price": null,
+      "prediction_error_pct": null,
+      "direction_correct": null,
+      "evaluated_at": null
+    },
+    {
+      "symbol": "DOTUSD",
+      "timestamp": "2025-12-06T09:15:07.873901",
+      "horizon": "24h",
+      "current_price": 2.078,
+      "predicted_price": 2.1226859092712402,
       "actual_price": null,
       "prediction_error_pct": null,
       "direction_correct": null,

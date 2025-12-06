@@ -26,7 +26,7 @@
   },
   "XAUUSD": {
     "symbol": "XAUUSD",
-    "total_predictions": 15,
+    "total_predictions": 16,
     "evaluated_predictions": 30,
     "avg_error_pct": 0.32406243169638554,
     "direction_accuracy": 0.5333333333333333,
@@ -51,14 +51,14 @@
   },
   "BTCUSD": {
     "symbol": "BTCUSD",
-    "total_predictions": 2,
-    "evaluated_predictions": 4,
-    "avg_error_pct": 1.0804333094161358,
+    "total_predictions": 3,
+    "evaluated_predictions": 5,
+    "avg_error_pct": 1.009615249835812,
     "direction_accuracy": 1.0,
-    "last_updated": "2025-12-06T07:24:16.338642",
+    "last_updated": "2025-12-06T11:06:49.451701",
     "metrics_1h": {
-      "count": 2,
-      "avg_error": 0.2987834837492108,
+      "count": 3,
+      "avg_error": 0.4413033263376458,
       "direction_acc": 1.0
     },
     "metrics_4h": {
@@ -90,6 +90,256 @@
       "count": 12,
       "avg_error": 0.6122177630646006,
       "direction_acc": 1.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "ETHUSD": {
+    "symbol": "ETHUSD",
+    "total_predictions": 5,
+    "evaluated_predictions": 3,
+    "avg_error_pct": 0.2478694562468724,
+    "direction_accuracy": 1.0,
+    "last_updated": "2025-12-06T11:06:53.232356",
+    "metrics_1h": {
+      "count": 3,
+      "avg_error": 0.2478694562468724,
+      "direction_acc": 1.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "XTZUSD": {
+    "symbol": "XTZUSD",
+    "total_predictions": 2,
+    "evaluated_predictions": 0,
+    "avg_error_pct": 0.0,
+    "direction_accuracy": 0.0,
+    "last_updated": null,
+    "metrics_1h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "AUDJPY": {
+    "symbol": "AUDJPY",
+    "total_predictions": 1,
+    "evaluated_predictions": 0,
+    "avg_error_pct": 0.0,
+    "direction_accuracy": 0.0,
+    "last_updated": null,
+    "metrics_1h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "AUDNZD": {
+    "symbol": "AUDNZD",
+    "total_predictions": 1,
+    "evaluated_predictions": 0,
+    "avg_error_pct": 0.0,
+    "direction_accuracy": 0.0,
+    "last_updated": null,
+    "metrics_1h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "AUS200": {
+    "symbol": "AUS200",
+    "total_predictions": 1,
+    "evaluated_predictions": 0,
+    "avg_error_pct": 0.0,
+    "direction_accuracy": 0.0,
+    "last_updated": null,
+    "metrics_1h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "AVXUSD": {
+    "symbol": "AVXUSD",
+    "total_predictions": 1,
+    "evaluated_predictions": 1,
+    "avg_error_pct": 0.587638697569152,
+    "direction_accuracy": 0.0,
+    "last_updated": "2025-12-06T11:06:53.691232",
+    "metrics_1h": {
+      "count": 1,
+      "avg_error": 0.587638697569152,
+      "direction_acc": 0.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "BCHUSD": {
+    "symbol": "BCHUSD",
+    "total_predictions": 1,
+    "evaluated_predictions": 1,
+    "avg_error_pct": 1.7824644583587166,
+    "direction_accuracy": 1.0,
+    "last_updated": "2025-12-06T11:06:54.147820",
+    "metrics_1h": {
+      "count": 1,
+      "avg_error": 1.7824644583587166,
+      "direction_acc": 1.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "BNBUSD": {
+    "symbol": "BNBUSD",
+    "total_predictions": 2,
+    "evaluated_predictions": 2,
+    "avg_error_pct": 0.13888438416565635,
+    "direction_accuracy": 1.0,
+    "last_updated": "2025-12-06T11:06:54.620271",
+    "metrics_1h": {
+      "count": 2,
+      "avg_error": 0.13888438416565635,
+      "direction_acc": 1.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "DOGUSD": {
+    "symbol": "DOGUSD",
+    "total_predictions": 1,
+    "evaluated_predictions": 1,
+    "avg_error_pct": 0.7598606168629137,
+    "direction_accuracy": 1.0,
+    "last_updated": "2025-12-06T11:06:54.621577",
+    "metrics_1h": {
+      "count": 1,
+      "avg_error": 0.7598606168629137,
+      "direction_acc": 1.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "DOTUSD": {
+    "symbol": "DOTUSD",
+    "total_predictions": 1,
+    "evaluated_predictions": 1,
+    "avg_error_pct": 0.6076608975422467,
+    "direction_accuracy": 0.0,
+    "last_updated": "2025-12-06T11:06:54.622658",
+    "metrics_1h": {
+      "count": 1,
+      "avg_error": 0.6076608975422467,
+      "direction_acc": 0.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
     },
     "metrics_24h": {
       "count": 0,
