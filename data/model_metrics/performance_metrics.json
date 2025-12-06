@@ -52,18 +52,18 @@
   "BTCUSD": {
     "symbol": "BTCUSD",
     "total_predictions": 5,
-    "evaluated_predictions": 5,
-    "avg_error_pct": 1.009615249835812,
-    "direction_accuracy": 1.0,
-    "last_updated": "2025-12-06T11:06:49.451701",
+    "evaluated_predictions": 8,
+    "avg_error_pct": 0.9474695577272967,
+    "direction_accuracy": 0.75,
+    "last_updated": "2025-12-06T13:43:46.786892",
     "metrics_1h": {
-      "count": 3,
-      "avg_error": 0.4413033263376458,
-      "direction_acc": 1.0
+      "count": 5,
+      "avg_error": 0.520874517790993,
+      "direction_acc": 0.6
     },
     "metrics_4h": {
-      "count": 2,
-      "avg_error": 1.862083135083061,
+      "count": 3,
+      "avg_error": 1.6584612909544694,
       "direction_acc": 1.0
     },
     "metrics_24h": {
@@ -101,20 +101,20 @@
   },
   "ETHUSD": {
     "symbol": "ETHUSD",
-    "total_predictions": 10,
-    "evaluated_predictions": 3,
-    "avg_error_pct": 0.2478694562468724,
-    "direction_accuracy": 1.0,
-    "last_updated": "2025-12-06T11:06:53.232356",
+    "total_predictions": 15,
+    "evaluated_predictions": 16,
+    "avg_error_pct": 0.1687310576053917,
+    "direction_accuracy": 0.5,
+    "last_updated": "2025-12-06T13:43:46.788985",
     "metrics_1h": {
-      "count": 3,
-      "avg_error": 0.2478694562468724,
-      "direction_acc": 1.0
+      "count": 13,
+      "avg_error": 0.17455062016109713,
+      "direction_acc": 0.46153846153846156
     },
     "metrics_4h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 3,
+      "avg_error": 0.1435129531973349,
+      "direction_acc": 0.6666666666666666
     },
     "metrics_24h": {
       "count": 0,
@@ -227,19 +227,19 @@
   "AVXUSD": {
     "symbol": "AVXUSD",
     "total_predictions": 1,
-    "evaluated_predictions": 1,
-    "avg_error_pct": 0.587638697569152,
-    "direction_accuracy": 0.0,
-    "last_updated": "2025-12-06T11:06:53.691232",
+    "evaluated_predictions": 2,
+    "avg_error_pct": 0.32585889479148084,
+    "direction_accuracy": 0.5,
+    "last_updated": "2025-12-06T13:33:46.724350",
     "metrics_1h": {
       "count": 1,
       "avg_error": 0.587638697569152,
       "direction_acc": 0.0
     },
     "metrics_4h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 1,
+      "avg_error": 0.06407909201380971,
+      "direction_acc": 1.0
     },
     "metrics_24h": {
       "count": 0,
@@ -252,18 +252,18 @@
   "BCHUSD": {
     "symbol": "BCHUSD",
     "total_predictions": 1,
-    "evaluated_predictions": 1,
-    "avg_error_pct": 1.7824644583587166,
-    "direction_accuracy": 1.0,
-    "last_updated": "2025-12-06T11:06:54.147820",
+    "evaluated_predictions": 2,
+    "avg_error_pct": 2.881014146938899,
+    "direction_accuracy": 0.5,
+    "last_updated": "2025-12-06T13:33:46.725378",
     "metrics_1h": {
       "count": 1,
       "avg_error": 1.7824644583587166,
       "direction_acc": 1.0
     },
     "metrics_4h": {
-      "count": 0,
-      "avg_error": 0.0,
+      "count": 1,
+      "avg_error": 3.9795638355190808,
       "direction_acc": 0.0
     },
     "metrics_24h": {
@@ -277,19 +277,19 @@
   "BNBUSD": {
     "symbol": "BNBUSD",
     "total_predictions": 3,
-    "evaluated_predictions": 2,
-    "avg_error_pct": 0.13888438416565635,
-    "direction_accuracy": 1.0,
-    "last_updated": "2025-12-06T11:06:54.620271",
+    "evaluated_predictions": 5,
+    "avg_error_pct": 0.10244580494216667,
+    "direction_accuracy": 0.8,
+    "last_updated": "2025-12-06T13:38:46.764046",
     "metrics_1h": {
-      "count": 2,
-      "avg_error": 0.13888438416565635,
+      "count": 3,
+      "avg_error": 0.13469140993850817,
       "direction_acc": 1.0
     },
     "metrics_4h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 2,
+      "avg_error": 0.054077397447654385,
+      "direction_acc": 0.5
     },
     "metrics_24h": {
       "count": 0,
@@ -302,19 +302,19 @@
   "DOGUSD": {
     "symbol": "DOGUSD",
     "total_predictions": 1,
-    "evaluated_predictions": 1,
-    "avg_error_pct": 0.7598606168629137,
+    "evaluated_predictions": 2,
+    "avg_error_pct": 0.6166814920442987,
     "direction_accuracy": 1.0,
-    "last_updated": "2025-12-06T11:06:54.621577",
+    "last_updated": "2025-12-06T13:38:46.765041",
     "metrics_1h": {
       "count": 1,
       "avg_error": 0.7598606168629137,
       "direction_acc": 1.0
     },
     "metrics_4h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 1,
+      "avg_error": 0.47350236722568373,
+      "direction_acc": 1.0
     },
     "metrics_24h": {
       "count": 0,
@@ -327,18 +327,18 @@
   "DOTUSD": {
     "symbol": "DOTUSD",
     "total_predictions": 1,
-    "evaluated_predictions": 1,
-    "avg_error_pct": 0.6076608975422467,
+    "evaluated_predictions": 2,
+    "avg_error_pct": 0.6754373829966779,
     "direction_accuracy": 0.0,
-    "last_updated": "2025-12-06T11:06:54.622658",
+    "last_updated": "2025-12-06T13:48:46.847715",
     "metrics_1h": {
       "count": 1,
       "avg_error": 0.6076608975422467,
       "direction_acc": 0.0
     },
     "metrics_4h": {
-      "count": 0,
-      "avg_error": 0.0,
+      "count": 1,
+      "avg_error": 0.743213868451109,
       "direction_acc": 0.0
     },
     "metrics_24h": {
@@ -351,15 +351,15 @@
   },
   "ADAUSD": {
     "symbol": "ADAUSD",
-    "total_predictions": 1,
-    "evaluated_predictions": 0,
-    "avg_error_pct": 0.0,
-    "direction_accuracy": 0.0,
-    "last_updated": null,
+    "total_predictions": 3,
+    "evaluated_predictions": 3,
+    "avg_error_pct": 0.7649820475955028,
+    "direction_accuracy": 0.3333333333333333,
+    "last_updated": "2025-12-06T13:18:46.618195",
     "metrics_1h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 3,
+      "avg_error": 0.7649820475955028,
+      "direction_acc": 0.3333333333333333
     },
     "metrics_4h": {
       "count": 0,
