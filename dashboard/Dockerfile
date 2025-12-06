@@ -8,6 +8,7 @@ RUN rm -rf /usr/share/nginx/html/*
 
 # Copy dashboard files (build from project root with -f dashboard/Dockerfile)
 COPY static/index.html /usr/share/nginx/html/index.html
+COPY static/favicon.svg /usr/share/nginx/html/favicon.svg
 
 # Copy nginx configuration
 COPY dashboard/nginx.conf /etc/nginx/conf.d/default.conf
