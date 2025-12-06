@@ -169,9 +169,15 @@ class ModelImprovementService:
                 with open(feedback_file, "r") as f:
                     data = json.load(f)
                     for symbol, feedbacks in data.items():
-                        self.pending_feedback[symbol] = [
-                            PredictionFeedback(**fb) for fb in feedbacks
-                        ]
+                        parsed_feedbacks = []
+                        for fb in feedbacks:
+                            # Convert timestamp strings back to datetime objects
+                            if isinstance(fb.get("timestamp"), str):
+                                fb["timestamp"] = datetime.fromisoformat(fb["timestamp"])
+                            if isinstance(fb.get("evaluated_at"), str):
+                                fb["evaluated_at"] = datetime.fromisoformat(fb["evaluated_at"])
+                            parsed_feedbacks.append(PredictionFeedback(**fb))
+                        self.pending_feedback[symbol] = parsed_feedbacks
                 logger.info(f"Loaded {sum(len(v) for v in self.pending_feedback.values())} pending feedbacks")
             except Exception as e:
                 logger.warning(f"Failed to load pending feedback: {e}")

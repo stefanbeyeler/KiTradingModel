@@ -919,14 +919,13 @@ async def evaluate_predictions():
     """
     try:
         from ..services.model_improvement_service import model_improvement_service
-        from ..services.timescaledb_sync_service import TimescaleDBSyncService
+        from ..main import sync_service
 
-        # Get database pool from sync service
-        sync_service = TimescaleDBSyncService.__new__(TimescaleDBSyncService)
-        if not hasattr(sync_service, '_pool') or not sync_service._pool:
+        # Check if sync_service has an active database pool
+        if not sync_service._pool:
             raise HTTPException(
                 status_code=503,
-                detail="Database connection not available"
+                detail="Database connection not available. Please ensure RAG sync is enabled."
             )
 
         evaluated = await model_improvement_service.evaluate_pending_predictions(
