@@ -145,6 +145,7 @@ class ModelImprovementService:
         self.metrics_path.mkdir(parents=True, exist_ok=True)
 
         self.pending_feedback: Dict[str, List[PredictionFeedback]] = {}
+        self.evaluated_feedback: Dict[str, List[PredictionFeedback]] = {}  # Store evaluated predictions
         self.performance_metrics: Dict[str, ModelPerformanceMetrics] = {}
 
         # Thresholds for retraining
@@ -182,6 +183,25 @@ class ModelImprovementService:
             except Exception as e:
                 logger.warning(f"Failed to load pending feedback: {e}")
 
+        # Load evaluated feedback
+        evaluated_file = self.feedback_path / "evaluated_feedback.json"
+        if evaluated_file.exists():
+            try:
+                with open(evaluated_file, "r") as f:
+                    data = json.load(f)
+                    for symbol, feedbacks in data.items():
+                        parsed_feedbacks = []
+                        for fb in feedbacks:
+                            if isinstance(fb.get("timestamp"), str):
+                                fb["timestamp"] = datetime.fromisoformat(fb["timestamp"])
+                            if isinstance(fb.get("evaluated_at"), str):
+                                fb["evaluated_at"] = datetime.fromisoformat(fb["evaluated_at"])
+                            parsed_feedbacks.append(PredictionFeedback(**fb))
+                        self.evaluated_feedback[symbol] = parsed_feedbacks
+                logger.info(f"Loaded {sum(len(v) for v in self.evaluated_feedback.values())} evaluated feedbacks")
+            except Exception as e:
+                logger.warning(f"Failed to load evaluated feedback: {e}")
+
         # Load metrics
         metrics_file = self.metrics_path / "performance_metrics.json"
         if metrics_file.exists():
@@ -210,6 +230,21 @@ class ModelImprovementService:
                 json.dump(data, f, indent=2, default=str)
         except Exception as e:
             logger.warning(f"Failed to save pending feedback: {e}")
+
+        # Save evaluated feedback
+        evaluated_file = self.feedback_path / "evaluated_feedback.json"
+        try:
+            data = {}
+            for symbol, feedbacks in self.evaluated_feedback.items():
+                data[symbol] = [
+                    {k: v.isoformat() if isinstance(v, datetime) else v
+                     for k, v in asdict(fb).items()}
+                    for fb in feedbacks
+                ]
+            with open(evaluated_file, "w") as f:
+                json.dump(data, f, indent=2, default=str)
+        except Exception as e:
+            logger.warning(f"Failed to save evaluated feedback: {e}")
 
         # Save metrics
         metrics_file = self.metrics_path / "performance_metrics.json"
@@ -309,11 +344,20 @@ class ModelImprovementService:
                         )
                         fb.evaluated_at = now
 
+                        # Store evaluated feedback for display
+                        if symbol not in self.evaluated_feedback:
+                            self.evaluated_feedback[symbol] = []
+                        self.evaluated_feedback[symbol].append(fb)
+
+                        # Keep only last 100 evaluated feedbacks per symbol
+                        if len(self.evaluated_feedback[symbol]) > 100:
+                            self.evaluated_feedback[symbol] = self.evaluated_feedback[symbol][-100:]
+
                         # Update metrics
                         self._update_metrics(symbol, fb)
                         symbol_evaluated += 1
 
-                        logger.debug(
+                        logger.info(
                             f"Evaluated {symbol} {fb.horizon}: "
                             f"error={fb.prediction_error_pct:.3f}%, "
                             f"direction={'correct' if fb.direction_correct else 'wrong'}"
@@ -343,18 +387,22 @@ class ModelImprovementService:
         target_time: datetime
     ) -> Optional[float]:
         """Get actual price from database at target time."""
+        # Calculate time window in Python to avoid PostgreSQL type issues
+        time_start = target_time - timedelta(minutes=30)
+        time_end = target_time + timedelta(minutes=30)
+
         query = """
             SELECT d1_close as close
             FROM symbol
             WHERE symbol = $1
-              AND data_timestamp >= $2 - interval '30 minutes'
-              AND data_timestamp <= $2 + interval '30 minutes'
-            ORDER BY ABS(EXTRACT(EPOCH FROM (data_timestamp - $2)))
+              AND data_timestamp >= $2
+              AND data_timestamp <= $3
+            ORDER BY ABS(EXTRACT(EPOCH FROM (data_timestamp - $4)))
             LIMIT 1
         """
 
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow(query, symbol, target_time)
+            row = await conn.fetchrow(query, symbol, time_start, time_end, target_time)
             if row:
                 return float(row["close"])
         return None
@@ -456,6 +504,52 @@ class ModelImprovementService:
             }
 
         return summary
+
+    def get_evaluated_predictions(self, symbol: Optional[str] = None, limit: int = 50) -> List[Dict]:
+        """
+        Get list of evaluated predictions for display.
+
+        Args:
+            symbol: Optional symbol to filter by. If None, returns all.
+            limit: Maximum number of predictions to return per symbol.
+
+        Returns:
+            List of evaluated prediction dictionaries.
+        """
+        result = []
+
+        if symbol:
+            feedbacks = self.evaluated_feedback.get(symbol, [])
+            for fb in feedbacks[-limit:]:
+                result.append({
+                    "symbol": fb.symbol,
+                    "timestamp": fb.timestamp.isoformat() if fb.timestamp else None,
+                    "horizon": fb.horizon,
+                    "current_price": fb.current_price,
+                    "predicted_price": fb.predicted_price,
+                    "actual_price": fb.actual_price,
+                    "prediction_error_pct": round(fb.prediction_error_pct, 4) if fb.prediction_error_pct else None,
+                    "direction_correct": fb.direction_correct,
+                    "evaluated_at": fb.evaluated_at.isoformat() if fb.evaluated_at else None,
+                })
+        else:
+            for sym, feedbacks in self.evaluated_feedback.items():
+                for fb in feedbacks[-limit:]:
+                    result.append({
+                        "symbol": fb.symbol,
+                        "timestamp": fb.timestamp.isoformat() if fb.timestamp else None,
+                        "horizon": fb.horizon,
+                        "current_price": fb.current_price,
+                        "predicted_price": fb.predicted_price,
+                        "actual_price": fb.actual_price,
+                        "prediction_error_pct": round(fb.prediction_error_pct, 4) if fb.prediction_error_pct else None,
+                        "direction_correct": fb.direction_correct,
+                        "evaluated_at": fb.evaluated_at.isoformat() if fb.evaluated_at else None,
+                    })
+
+        # Sort by evaluated_at descending
+        result.sort(key=lambda x: x.get("evaluated_at") or "", reverse=True)
+        return result[:limit]
 
     async def start_evaluation_loop(self, db_pool, interval_seconds: int = 300):
         """Start background evaluation loop."""

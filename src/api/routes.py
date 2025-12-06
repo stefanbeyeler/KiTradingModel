@@ -878,6 +878,30 @@ async def get_model_performance():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/forecast/evaluated")
+async def get_evaluated_predictions(symbol: Optional[str] = None, limit: int = 50):
+    """
+    Get list of evaluated predictions with their results.
+
+    Shows past predictions compared to actual prices, including
+    error percentages and direction accuracy.
+
+    Args:
+        symbol: Optional symbol to filter by
+        limit: Maximum number of predictions to return (default 50)
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+        predictions = model_improvement_service.get_evaluated_predictions(symbol=symbol, limit=limit)
+        return {
+            "count": len(predictions),
+            "predictions": predictions
+        }
+    except Exception as e:
+        logger.error(f"Failed to get evaluated predictions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/forecast/retraining-needed")
 async def get_symbols_needing_retraining():
     """
@@ -946,7 +970,7 @@ async def evaluate_predictions():
 
 
 @router.post("/forecast/retrain-poor-performers")
-async def retrain_poor_performers(background_tasks: BackgroundTasks):
+async def retrain_poor_performers():
     """
     Trigger retraining for all models that are performing poorly.
 
@@ -966,19 +990,29 @@ async def retrain_poor_performers(background_tasks: BackgroundTasks):
                 "symbols": []
             }
 
-        # Queue retraining in background
+        # Retraining function to run in background
         async def retrain_symbols():
+            logger.info(f"Starting retraining for poor performers: {symbols}")
             for symbol in symbols:
                 try:
-                    await nhits_training_service.train_symbol(symbol, force=True)
-                    # Reset metrics after retraining
-                    if symbol in model_improvement_service.performance_metrics:
-                        model_improvement_service.performance_metrics[symbol].needs_retraining = False
-                        model_improvement_service.performance_metrics[symbol].retraining_reason = None
+                    logger.info(f"Retraining model for {symbol}...")
+                    result = await nhits_training_service.train_symbol(symbol, force=True)
+                    if result.success:
+                        logger.info(f"Successfully retrained {symbol}")
+                        # Reset metrics after successful retraining
+                        if symbol in model_improvement_service.performance_metrics:
+                            model_improvement_service.performance_metrics[symbol].needs_retraining = False
+                            model_improvement_service.performance_metrics[symbol].retraining_reason = None
+                            model_improvement_service._save_data()
+                    else:
+                        logger.error(f"Retraining failed for {symbol}: {result.error_message}")
                 except Exception as e:
-                    logger.error(f"Failed to retrain {symbol}: {e}")
+                    logger.error(f"Failed to retrain {symbol}: {e}", exc_info=True)
+            logger.info("Retraining for poor performers completed")
 
-        background_tasks.add_task(retrain_symbols)
+        # Use asyncio.create_task to properly run async function in background
+        import asyncio
+        asyncio.create_task(retrain_symbols())
 
         return {
             "success": True,

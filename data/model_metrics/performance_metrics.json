@@ -2,19 +2,19 @@
   "USDCHF": {
     "symbol": "USDCHF",
     "total_predictions": 2,
-    "evaluated_predictions": 0,
-    "avg_error_pct": 0.0,
-    "direction_accuracy": 0.0,
-    "last_updated": null,
+    "evaluated_predictions": 4,
+    "avg_error_pct": 0.024866781865898982,
+    "direction_accuracy": 0.75,
+    "last_updated": "2025-12-06T07:24:06.904209",
     "metrics_1h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 2,
+      "avg_error": 0.0010903348281630122,
+      "direction_acc": 1.0
     },
     "metrics_4h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 2,
+      "avg_error": 0.04864322890363495,
+      "direction_acc": 0.5
     },
     "metrics_24h": {
       "count": 0,
@@ -27,19 +27,19 @@
   "XAUUSD": {
     "symbol": "XAUUSD",
     "total_predictions": 15,
-    "evaluated_predictions": 0,
-    "avg_error_pct": 0.0,
-    "direction_accuracy": 0.0,
-    "last_updated": null,
+    "evaluated_predictions": 30,
+    "avg_error_pct": 0.32406243169638554,
+    "direction_accuracy": 0.5333333333333333,
+    "last_updated": "2025-12-06T07:24:15.882050",
     "metrics_1h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 15,
+      "avg_error": 0.1465402641247265,
+      "direction_acc": 0.5333333333333333
     },
     "metrics_4h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 15,
+      "avg_error": 0.5015845992680446,
+      "direction_acc": 0.5333333333333333
     },
     "metrics_24h": {
       "count": 0,
@@ -52,19 +52,19 @@
   "BTCUSD": {
     "symbol": "BTCUSD",
     "total_predictions": 2,
-    "evaluated_predictions": 0,
-    "avg_error_pct": 0.0,
-    "direction_accuracy": 0.0,
-    "last_updated": null,
+    "evaluated_predictions": 4,
+    "avg_error_pct": 1.0804333094161358,
+    "direction_accuracy": 1.0,
+    "last_updated": "2025-12-06T07:24:16.338642",
     "metrics_1h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 2,
+      "avg_error": 0.2987834837492108,
+      "direction_acc": 1.0
     },
     "metrics_4h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 2,
+      "avg_error": 1.862083135083061,
+      "direction_acc": 1.0
     },
     "metrics_24h": {
       "count": 0,
@@ -77,19 +77,19 @@
   "XTIUSD": {
     "symbol": "XTIUSD",
     "total_predictions": 6,
-    "evaluated_predictions": 0,
-    "avg_error_pct": 0.0,
-    "direction_accuracy": 0.0,
-    "last_updated": null,
+    "evaluated_predictions": 24,
+    "avg_error_pct": 0.7031712165578593,
+    "direction_accuracy": 1.0,
+    "last_updated": "2025-12-06T07:24:20.592692",
     "metrics_1h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 12,
+      "avg_error": 0.7941246700511181,
+      "direction_acc": 1.0
     },
     "metrics_4h": {
-      "count": 0,
-      "avg_error": 0.0,
-      "direction_acc": 0.0
+      "count": 12,
+      "avg_error": 0.6122177630646006,
+      "direction_acc": 1.0
     },
     "metrics_24h": {
       "count": 0,
