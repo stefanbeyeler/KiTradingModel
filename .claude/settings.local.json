@@ -75,7 +75,8 @@
       "Bash(grep:*)",
       "Bash(npm run build:*)",
       "Bash(npm install:*)",
-      "Bash(docker inspect:*)"
+      "Bash(docker inspect:*)",
+      "Bash(netsh interface ipv4 show excludedportrange:*)"
     ],
     "deny": [],
     "ask": []

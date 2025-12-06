@@ -51,7 +51,7 @@
   },
   "BTCUSD": {
     "symbol": "BTCUSD",
-    "total_predictions": 5,
+    "total_predictions": 10,
     "evaluated_predictions": 8,
     "avg_error_pct": 0.9474695577272967,
     "direction_accuracy": 0.75,
@@ -101,7 +101,7 @@
   },
   "ETHUSD": {
     "symbol": "ETHUSD",
-    "total_predictions": 15,
+    "total_predictions": 16,
     "evaluated_predictions": 16,
     "avg_error_pct": 0.1687310576053917,
     "direction_accuracy": 0.5,
