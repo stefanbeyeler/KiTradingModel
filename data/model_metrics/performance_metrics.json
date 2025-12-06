@@ -51,7 +51,7 @@
   },
   "BTCUSD": {
     "symbol": "BTCUSD",
-    "total_predictions": 3,
+    "total_predictions": 5,
     "evaluated_predictions": 5,
     "avg_error_pct": 1.009615249835812,
     "direction_accuracy": 1.0,
@@ -76,7 +76,7 @@
   },
   "XTIUSD": {
     "symbol": "XTIUSD",
-    "total_predictions": 6,
+    "total_predictions": 7,
     "evaluated_predictions": 24,
     "avg_error_pct": 0.7031712165578593,
     "direction_accuracy": 1.0,
@@ -101,7 +101,7 @@
   },
   "ETHUSD": {
     "symbol": "ETHUSD",
-    "total_predictions": 5,
+    "total_predictions": 10,
     "evaluated_predictions": 3,
     "avg_error_pct": 0.2478694562468724,
     "direction_accuracy": 1.0,
@@ -126,7 +126,7 @@
   },
   "XTZUSD": {
     "symbol": "XTZUSD",
-    "total_predictions": 2,
+    "total_predictions": 3,
     "evaluated_predictions": 0,
     "avg_error_pct": 0.0,
     "direction_accuracy": 0.0,
@@ -276,7 +276,7 @@
   },
   "BNBUSD": {
     "symbol": "BNBUSD",
-    "total_predictions": 2,
+    "total_predictions": 3,
     "evaluated_predictions": 2,
     "avg_error_pct": 0.13888438416565635,
     "direction_accuracy": 1.0,
@@ -334,6 +334,31 @@
     "metrics_1h": {
       "count": 1,
       "avg_error": 0.6076608975422467,
+      "direction_acc": 0.0
+    },
+    "metrics_4h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "metrics_24h": {
+      "count": 0,
+      "avg_error": 0.0,
+      "direction_acc": 0.0
+    },
+    "needs_retraining": false,
+    "retraining_reason": null
+  },
+  "ADAUSD": {
+    "symbol": "ADAUSD",
+    "total_predictions": 1,
+    "evaluated_predictions": 0,
+    "avg_error_pct": 0.0,
+    "direction_accuracy": 0.0,
+    "last_updated": null,
+    "metrics_1h": {
+      "count": 0,
+      "avg_error": 0.0,
       "direction_acc": 0.0
     },
     "metrics_4h": {
