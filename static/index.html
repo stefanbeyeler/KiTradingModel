@@ -1901,6 +1901,7 @@
                 <button class="tab-btn" onclick="switchTab('quick')">Schnellempfehlung</button>
                 <button class="tab-btn" onclick="switchTab('rag')">RAG Abfrage</button>
                 <button class="tab-btn" onclick="switchTab('strategies')">Strategien</button>
+                <button class="tab-btn" onclick="switchTab('symbols')">Symbole</button>
                 <button class="tab-btn" onclick="switchTab('logs')">Query Logs</button>
                 <button class="tab-btn" onclick="switchTab('performance')">Model Performance</button>
             </div>
@@ -2068,6 +2069,99 @@
                             <span class="loading-spinner"></span>
                             <p style="margin-top: 0.5rem;">Lade Strategien...</p>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Symbole Tab -->
+            <div id="tab-symbols" class="tab-content">
+                <div class="query-form">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                            <div class="log-stats" id="symbolStats">
+                                <span class="log-stat-item">Gesamt: <strong id="symbolTotalCount">0</strong></span>
+                                <span class="log-stat-item">Aktiv: <strong id="symbolActiveCount">0</strong></span>
+                                <span class="log-stat-item">Mit Daten: <strong id="symbolWithDataCount">0</strong></span>
+                                <span class="log-stat-item">Mit Modell: <strong id="symbolWithModelCount">0</strong></span>
+                                <span class="log-stat-item">Favoriten: <strong id="symbolFavoritesCount">0</strong></span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn btn-secondary" onclick="loadManagedSymbols()">Aktualisieren</button>
+                            <button class="btn btn-primary" onclick="importSymbolsFromTimescaleDB()">
+                                Import aus TimescaleDB
+                            </button>
+                            <button class="btn btn-secondary" onclick="showCreateSymbolModal()">
+                                + Neues Symbol
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter -->
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="symbolSearchInput" placeholder="Symbol suchen..."
+                                   style="width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #334155; background: #0f172a; color: #e2e8f0;"
+                                   oninput="filterSymbols()">
+                        </div>
+                        <select id="symbolCategoryFilter" onchange="filterSymbols()"
+                                style="padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #334155; background: #0f172a; color: #e2e8f0;">
+                            <option value="">Alle Kategorien</option>
+                            <option value="forex">Forex</option>
+                            <option value="crypto">Crypto</option>
+                            <option value="stock">Aktien</option>
+                            <option value="index">Indizes</option>
+                            <option value="commodity">Rohstoffe</option>
+                            <option value="other">Andere</option>
+                        </select>
+                        <select id="symbolStatusFilter" onchange="filterSymbols()"
+                                style="padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #334155; background: #0f172a; color: #e2e8f0;">
+                            <option value="">Alle Status</option>
+                            <option value="active">Aktiv</option>
+                            <option value="inactive">Inaktiv</option>
+                            <option value="suspended">Suspendiert</option>
+                        </select>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; color: #94a3b8; font-size: 0.875rem;">
+                            <input type="checkbox" id="symbolFavoritesOnly" onchange="filterSymbols()">
+                            Nur Favoriten
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; color: #94a3b8; font-size: 0.875rem;">
+                            <input type="checkbox" id="symbolWithDataOnly" onchange="filterSymbols()">
+                            Nur mit Daten
+                        </label>
+                    </div>
+
+                    <!-- Symbole Tabelle -->
+                    <div class="table-container">
+                        <table class="performance-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th>Symbol</th>
+                                    <th>Kategorie</th>
+                                    <th>Status</th>
+                                    <th>Daten</th>
+                                    <th>Letzter Datenpunkt</th>
+                                    <th>Records</th>
+                                    <th>NHITS</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="symbolsTableBody">
+                                <tr>
+                                    <td colspan="9" style="text-align: center; padding: 2rem; color: #64748b;">
+                                        Klicken Sie auf "Import aus TimescaleDB" um Symbole zu importieren.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="performance-info" style="margin-top: 1rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; font-size: 0.85rem; color: #94a3b8;">
+                        <strong>Symbolverwaltung:</strong>
+                        Importieren Sie alle verfügbaren Symbole aus TimescaleDB. Symbole können als Favoriten markiert,
+                        kategorisiert und mit Tags versehen werden. Der Import erkennt automatisch die Kategorie (Forex, Crypto, etc.)
+                        und aktualisiert Daten-Verfügbarkeits-Informationen.
                     </div>
                 </div>
             </div>
@@ -2341,6 +2435,93 @@
                 <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
                     <button type="submit" class="btn btn-primary">Speichern</button>
                     <button type="button" class="btn btn-secondary" onclick="closeStrategyModal()">Abbrechen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Symbol Create/Edit Modal -->
+    <div id="symbolModal" class="modal-overlay" onclick="if(event.target === this) closeSymbolModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="symbolModalTitle">Neues Symbol erstellen</h3>
+                <button class="modal-close" onclick="closeSymbolModal()">&times;</button>
+            </div>
+            <form id="symbolForm" onsubmit="saveSymbol(event)">
+                <input type="hidden" id="symbolEditId" value="">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="symbolInput">Symbol *</label>
+                        <input type="text" id="symbolInput" required placeholder="z.B. EURUSD, BTCUSD">
+                    </div>
+                    <div class="form-group">
+                        <label for="symbolDisplayName">Anzeigename</label>
+                        <input type="text" id="symbolDisplayName" placeholder="z.B. Euro/US-Dollar">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="symbolCategory">Kategorie</label>
+                        <select id="symbolCategory">
+                            <option value="forex">Forex</option>
+                            <option value="crypto">Crypto</option>
+                            <option value="stock">Aktien</option>
+                            <option value="index">Indizes</option>
+                            <option value="commodity">Rohstoffe</option>
+                            <option value="etf">ETF</option>
+                            <option value="other">Andere</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="symbolStatus">Status</label>
+                        <select id="symbolStatus">
+                            <option value="active">Aktiv</option>
+                            <option value="inactive">Inaktiv</option>
+                            <option value="suspended">Suspendiert</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="symbolBaseCurrency">Basiswährung</label>
+                        <input type="text" id="symbolBaseCurrency" placeholder="z.B. EUR">
+                    </div>
+                    <div class="form-group">
+                        <label for="symbolQuoteCurrency">Quotierungswährung</label>
+                        <input type="text" id="symbolQuoteCurrency" placeholder="z.B. USD">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="symbolPipValue">Pip-Wert</label>
+                        <input type="number" id="symbolPipValue" step="0.00001" placeholder="z.B. 0.0001">
+                    </div>
+                    <div class="form-group">
+                        <label for="symbolMinLot">Min. Lotgröße</label>
+                        <input type="number" id="symbolMinLot" value="0.01" step="0.01" min="0.01">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="symbolDescription">Beschreibung</label>
+                    <textarea id="symbolDescription" placeholder="Beschreibung des Symbols..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="symbolNotes">Notizen</label>
+                    <textarea id="symbolNotes" placeholder="Persönliche Notizen..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="symbolTags">Tags (kommagetrennt)</label>
+                    <input type="text" id="symbolTags" placeholder="z.B. major, trending, volatile">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="symbolIsFavorite">
+                        Als Favorit markieren
+                    </label>
+                </div>
+                <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeSymbolModal()">Abbrechen</button>
                 </div>
             </form>
         </div>
@@ -4244,10 +4425,311 @@
             }
         }
 
+        // ==================== Symbol Management Functions ====================
+
+        let allManagedSymbols = [];
+
+        async function loadManagedSymbols() {
+            try {
+                const [symbols, stats] = await Promise.all([
+                    apiFetch('/managed-symbols'),
+                    apiFetch('/managed-symbols/stats')
+                ]);
+
+                allManagedSymbols = symbols;
+
+                // Update stats
+                document.getElementById('symbolTotalCount').textContent = stats.total_symbols || 0;
+                document.getElementById('symbolActiveCount').textContent = stats.active_symbols || 0;
+                document.getElementById('symbolWithDataCount').textContent = stats.with_timescaledb_data || 0;
+                document.getElementById('symbolWithModelCount').textContent = stats.with_nhits_model || 0;
+                document.getElementById('symbolFavoritesCount').textContent = stats.favorites_count || 0;
+
+                renderSymbolsTable(symbols);
+            } catch (error) {
+                console.error('Failed to load managed symbols:', error);
+                showToast('Symbole konnten nicht geladen werden', 'error');
+            }
+        }
+
+        function filterSymbols() {
+            const search = document.getElementById('symbolSearchInput').value.toLowerCase();
+            const category = document.getElementById('symbolCategoryFilter').value;
+            const status = document.getElementById('symbolStatusFilter').value;
+            const favoritesOnly = document.getElementById('symbolFavoritesOnly').checked;
+            const withDataOnly = document.getElementById('symbolWithDataOnly').checked;
+
+            let filtered = allManagedSymbols.filter(s => {
+                if (search && !s.symbol.toLowerCase().includes(search) &&
+                    !(s.display_name && s.display_name.toLowerCase().includes(search))) {
+                    return false;
+                }
+                if (category && s.category !== category) return false;
+                if (status && s.status !== status) return false;
+                if (favoritesOnly && !s.is_favorite) return false;
+                if (withDataOnly && !s.has_timescaledb_data) return false;
+                return true;
+            });
+
+            renderSymbolsTable(filtered);
+        }
+
+        function renderSymbolsTable(symbols) {
+            const tbody = document.getElementById('symbolsTableBody');
+
+            if (!symbols || symbols.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 2rem; color: #64748b;">
+                            Keine Symbole gefunden. Klicken Sie auf "Import aus TimescaleDB" um Symbole zu importieren.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const categoryLabels = {
+                forex: 'Forex',
+                crypto: 'Crypto',
+                stock: 'Aktien',
+                index: 'Indizes',
+                commodity: 'Rohstoffe',
+                etf: 'ETF',
+                other: 'Andere'
+            };
+
+            const statusColors = {
+                active: '#22c55e',
+                inactive: '#f59e0b',
+                suspended: '#ef4444'
+            };
+
+            tbody.innerHTML = symbols.map(s => {
+                const lastData = s.last_data_timestamp
+                    ? new Date(s.last_data_timestamp).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
+                    : '-';
+                const records = s.total_records ? s.total_records.toLocaleString('de-DE') : '-';
+
+                return `
+                    <tr>
+                        <td style="text-align: center;">
+                            <button onclick="toggleSymbolFavorite('${s.symbol}')" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;">
+                                ${s.is_favorite ? '⭐' : '☆'}
+                            </button>
+                        </td>
+                        <td>
+                            <strong>${s.symbol}</strong>
+                            ${s.display_name && s.display_name !== s.symbol ? `<br><span style="color: #64748b; font-size: 0.75rem;">${s.display_name}</span>` : ''}
+                        </td>
+                        <td>
+                            <span style="background: #334155; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">
+                                ${categoryLabels[s.category] || s.category}
+                            </span>
+                        </td>
+                        <td>
+                            <span style="color: ${statusColors[s.status] || '#94a3b8'};">●</span>
+                            ${s.status === 'active' ? 'Aktiv' : s.status === 'inactive' ? 'Inaktiv' : 'Suspendiert'}
+                        </td>
+                        <td style="text-align: center;">
+                            ${s.has_timescaledb_data ? '✅' : '❌'}
+                        </td>
+                        <td style="font-size: 0.8rem; color: #94a3b8;">
+                            ${lastData}
+                        </td>
+                        <td style="text-align: right;">
+                            ${records}
+                        </td>
+                        <td style="text-align: center;">
+                            ${s.has_nhits_model ? '✅' : '❌'}
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 0.25rem;">
+                                <button onclick="editSymbol('${s.symbol}')" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                    Bearbeiten
+                                </button>
+                                <button onclick="refreshSymbol('${s.symbol}')" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                    ↻
+                                </button>
+                                <button onclick="deleteSymbol('${s.symbol}')" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                    ✕
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function importSymbolsFromTimescaleDB() {
+            if (!confirm('Alle Symbole aus TimescaleDB importieren? Bestehende Symbole werden aktualisiert.')) {
+                return;
+            }
+
+            showToast('Importiere Symbole aus TimescaleDB...', 'info');
+
+            try {
+                const result = await apiFetch('/managed-symbols/import', { method: 'POST' });
+
+                showToast(
+                    `Import abgeschlossen: ${result.imported} neu, ${result.updated} aktualisiert`,
+                    'success'
+                );
+
+                await loadManagedSymbols();
+            } catch (error) {
+                console.error('Failed to import symbols:', error);
+                showToast('Import fehlgeschlagen: ' + error.message, 'error');
+            }
+        }
+
+        async function toggleSymbolFavorite(symbolId) {
+            try {
+                const result = await apiFetch(`/managed-symbols/${symbolId}/favorite`, { method: 'POST' });
+
+                // Update local data
+                const idx = allManagedSymbols.findIndex(s => s.symbol === symbolId);
+                if (idx >= 0) {
+                    allManagedSymbols[idx] = result;
+                }
+
+                filterSymbols();
+
+                // Update stats
+                const stats = await apiFetch('/managed-symbols/stats');
+                document.getElementById('symbolFavoritesCount').textContent = stats.favorites_count || 0;
+            } catch (error) {
+                console.error('Failed to toggle favorite:', error);
+                showToast('Favorit konnte nicht geändert werden', 'error');
+            }
+        }
+
+        async function refreshSymbol(symbolId) {
+            try {
+                showToast(`Aktualisiere ${symbolId}...`, 'info');
+                const result = await apiFetch(`/managed-symbols/${symbolId}/refresh`, { method: 'POST' });
+
+                const idx = allManagedSymbols.findIndex(s => s.symbol === symbolId);
+                if (idx >= 0) {
+                    allManagedSymbols[idx] = result;
+                }
+
+                filterSymbols();
+                showToast(`${symbolId} aktualisiert`, 'success');
+            } catch (error) {
+                console.error('Failed to refresh symbol:', error);
+                showToast('Aktualisierung fehlgeschlagen', 'error');
+            }
+        }
+
+        async function deleteSymbol(symbolId) {
+            if (!confirm(`Symbol ${symbolId} wirklich löschen?`)) {
+                return;
+            }
+
+            try {
+                await apiFetch(`/managed-symbols/${symbolId}`, { method: 'DELETE' });
+
+                allManagedSymbols = allManagedSymbols.filter(s => s.symbol !== symbolId);
+                filterSymbols();
+
+                showToast(`${symbolId} gelöscht`, 'success');
+                await loadManagedSymbols();
+            } catch (error) {
+                console.error('Failed to delete symbol:', error);
+                showToast('Löschen fehlgeschlagen', 'error');
+            }
+        }
+
+        function showCreateSymbolModal() {
+            document.getElementById('symbolModalTitle').textContent = 'Neues Symbol erstellen';
+            document.getElementById('symbolEditId').value = '';
+            document.getElementById('symbolForm').reset();
+            document.getElementById('symbolInput').disabled = false;
+            document.getElementById('symbolModal').style.display = 'flex';
+        }
+
+        async function editSymbol(symbolId) {
+            try {
+                const symbol = await apiFetch(`/managed-symbols/${symbolId}`);
+
+                document.getElementById('symbolModalTitle').textContent = `Symbol bearbeiten: ${symbolId}`;
+                document.getElementById('symbolEditId').value = symbolId;
+                document.getElementById('symbolInput').value = symbol.symbol;
+                document.getElementById('symbolInput').disabled = true;
+                document.getElementById('symbolDisplayName').value = symbol.display_name || '';
+                document.getElementById('symbolCategory').value = symbol.category || 'forex';
+                document.getElementById('symbolStatus').value = symbol.status || 'active';
+                document.getElementById('symbolBaseCurrency').value = symbol.base_currency || '';
+                document.getElementById('symbolQuoteCurrency').value = symbol.quote_currency || '';
+                document.getElementById('symbolPipValue').value = symbol.pip_value || '';
+                document.getElementById('symbolMinLot').value = symbol.min_lot_size || 0.01;
+                document.getElementById('symbolDescription').value = symbol.description || '';
+                document.getElementById('symbolNotes').value = symbol.notes || '';
+                document.getElementById('symbolTags').value = (symbol.tags || []).join(', ');
+                document.getElementById('symbolIsFavorite').checked = symbol.is_favorite || false;
+
+                document.getElementById('symbolModal').style.display = 'flex';
+            } catch (error) {
+                console.error('Failed to load symbol:', error);
+                showToast('Symbol konnte nicht geladen werden', 'error');
+            }
+        }
+
+        function closeSymbolModal() {
+            document.getElementById('symbolModal').style.display = 'none';
+        }
+
+        async function saveSymbol(event) {
+            event.preventDefault();
+
+            const editId = document.getElementById('symbolEditId').value;
+            const isEdit = !!editId;
+
+            const data = {
+                symbol: document.getElementById('symbolInput').value.trim().toUpperCase(),
+                display_name: document.getElementById('symbolDisplayName').value.trim() || null,
+                category: document.getElementById('symbolCategory').value,
+                status: document.getElementById('symbolStatus').value,
+                base_currency: document.getElementById('symbolBaseCurrency').value.trim() || null,
+                quote_currency: document.getElementById('symbolQuoteCurrency').value.trim() || null,
+                pip_value: parseFloat(document.getElementById('symbolPipValue').value) || null,
+                min_lot_size: parseFloat(document.getElementById('symbolMinLot').value) || 0.01,
+                description: document.getElementById('symbolDescription').value.trim() || null,
+                notes: document.getElementById('symbolNotes').value.trim() || null,
+                tags: document.getElementById('symbolTags').value.split(',').map(t => t.trim()).filter(t => t),
+                is_favorite: document.getElementById('symbolIsFavorite').checked
+            };
+
+            try {
+                if (isEdit) {
+                    await apiFetch(`/managed-symbols/${editId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    showToast(`${editId} aktualisiert`, 'success');
+                } else {
+                    await apiFetch('/managed-symbols', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    showToast(`${data.symbol} erstellt`, 'success');
+                }
+
+                closeSymbolModal();
+                await loadManagedSymbols();
+            } catch (error) {
+                console.error('Failed to save symbol:', error);
+                showToast('Speichern fehlgeschlagen: ' + error.message, 'error');
+            }
+        }
+
         // Initialize
         updateDashboard();
         loadSymbols();
         loadStrategies();
+        loadManagedSymbols();
         loadVersionInfo();
         loadLastSymbol();  // Load saved symbol from localStorage
         checkTrainingStatus();  // Check if training is in progress on page load

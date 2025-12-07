@@ -18,6 +18,15 @@ from ..models.trading_data import (
     StrategyCreateRequest,
     StrategyUpdateRequest,
 )
+from ..models.symbol_data import (
+    ManagedSymbol,
+    SymbolCategory,
+    SymbolStatus,
+    SymbolCreateRequest,
+    SymbolUpdateRequest,
+    SymbolImportResult,
+    SymbolStats,
+)
 from ..models.forecast_data import (
     ForecastResult,
     ForecastConfig,
@@ -26,6 +35,7 @@ from ..models.forecast_data import (
 )
 from ..services import AnalysisService, LLMService, StrategyService
 from ..services.query_log_service import query_log_service, QueryLogEntry
+from ..services.symbol_service import symbol_service
 
 
 router = APIRouter()
@@ -1149,4 +1159,182 @@ async def get_forecast_model_info(symbol: str):
         return info
     except Exception as e:
         logger.error(f"Failed to get model info for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Symbol Management Endpoints ====================
+
+@router.get("/managed-symbols", response_model=list[ManagedSymbol])
+async def get_managed_symbols(
+    category: Optional[SymbolCategory] = None,
+    status: Optional[SymbolStatus] = None,
+    favorites_only: bool = False,
+    with_data_only: bool = False,
+):
+    """
+    Get all managed symbols with optional filtering.
+
+    Parameters:
+    - category: Filter by category (forex, crypto, stock, etc.)
+    - status: Filter by status (active, inactive, suspended)
+    - favorites_only: Only return favorites
+    - with_data_only: Only return symbols with TimescaleDB data
+    """
+    try:
+        symbols = await symbol_service.get_all_symbols(
+            category=category,
+            status=status,
+            favorites_only=favorites_only,
+            with_data_only=with_data_only,
+        )
+        return symbols
+    except Exception as e:
+        logger.error(f"Failed to get managed symbols: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/managed-symbols/stats", response_model=SymbolStats)
+async def get_symbol_stats():
+    """Get statistics about managed symbols."""
+    try:
+        stats = await symbol_service.get_stats()
+        return stats
+    except Exception as e:
+        logger.error(f"Failed to get symbol stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/managed-symbols/search")
+async def search_managed_symbols(query: str, limit: int = 20):
+    """
+    Search managed symbols by name, description, or tags.
+
+    Parameters:
+    - query: Search query string
+    - limit: Maximum number of results (default: 20)
+    """
+    try:
+        symbols = await symbol_service.search_symbols(query=query, limit=limit)
+        return {
+            "query": query,
+            "count": len(symbols),
+            "symbols": symbols,
+        }
+    except Exception as e:
+        logger.error(f"Failed to search symbols: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/managed-symbols/import", response_model=SymbolImportResult)
+async def import_symbols_from_timescaledb():
+    """
+    Import all symbols from TimescaleDB.
+
+    This will:
+    1. Query all distinct symbols from TimescaleDB
+    2. Create new managed symbols for those not yet tracked
+    3. Update existing symbols with latest data availability info
+    4. Check NHITS model availability for each symbol
+    """
+    try:
+        result = await symbol_service.import_from_timescaledb()
+        return result
+    except Exception as e:
+        logger.error(f"Failed to import symbols: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/managed-symbols", response_model=ManagedSymbol)
+async def create_managed_symbol(request: SymbolCreateRequest):
+    """
+    Create a new managed symbol.
+
+    The category will be auto-detected based on the symbol name if not specified.
+    """
+    try:
+        symbol = await symbol_service.create_symbol(request)
+        return symbol
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to create symbol: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/managed-symbols/{symbol_id}", response_model=ManagedSymbol)
+async def get_managed_symbol(symbol_id: str):
+    """Get a specific managed symbol by ID."""
+    try:
+        symbol = await symbol_service.get_symbol(symbol_id)
+        if not symbol:
+            raise HTTPException(status_code=404, detail=f"Symbol '{symbol_id}' not found")
+        return symbol
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get symbol: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/managed-symbols/{symbol_id}", response_model=ManagedSymbol)
+async def update_managed_symbol(symbol_id: str, request: SymbolUpdateRequest):
+    """Update an existing managed symbol."""
+    try:
+        symbol = await symbol_service.update_symbol(symbol_id, request)
+        if not symbol:
+            raise HTTPException(status_code=404, detail=f"Symbol '{symbol_id}' not found")
+        return symbol
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update symbol: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/managed-symbols/{symbol_id}")
+async def delete_managed_symbol(symbol_id: str):
+    """Delete a managed symbol."""
+    try:
+        deleted = await symbol_service.delete_symbol(symbol_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail=f"Symbol '{symbol_id}' not found")
+        return {"status": "deleted", "symbol": symbol_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete symbol: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/managed-symbols/{symbol_id}/favorite", response_model=ManagedSymbol)
+async def toggle_symbol_favorite(symbol_id: str):
+    """Toggle favorite status for a symbol."""
+    try:
+        symbol = await symbol_service.toggle_favorite(symbol_id)
+        if not symbol:
+            raise HTTPException(status_code=404, detail=f"Symbol '{symbol_id}' not found")
+        return symbol
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to toggle favorite: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/managed-symbols/{symbol_id}/refresh", response_model=ManagedSymbol)
+async def refresh_symbol_data(symbol_id: str):
+    """
+    Refresh TimescaleDB data information for a symbol.
+
+    Updates data availability, timestamps, and NHITS model status.
+    """
+    try:
+        symbol = await symbol_service.refresh_symbol_data(symbol_id)
+        if not symbol:
+            raise HTTPException(status_code=404, detail=f"Symbol '{symbol_id}' not found")
+        return symbol
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to refresh symbol: {e}")
         raise HTTPException(status_code=500, detail=str(e))
