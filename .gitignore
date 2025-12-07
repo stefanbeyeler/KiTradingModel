@@ -27,15 +27,8 @@ nul
 .DS_Store
 Thumbs.db
 
-# RAG/FAISS Data
-data/data.pkl
-data/faiss_index
-data/query_logs.json
-data/faiss/
-data/query_logs.json
+# RAG/FAISS Data - gesamter data Ordner
+data/
 
 # NHITS Models
 models/nhits/
-data/query_logs.json
-data/model_metrics/performance_metrics.json
-data/model_feedback/pending_feedback.json
