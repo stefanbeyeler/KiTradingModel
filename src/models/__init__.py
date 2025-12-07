@@ -9,6 +9,17 @@ from .trading_data import (
     AnalysisResponse,
 )
 
+from .symbol_data import (
+    SymbolCategory,
+    SymbolStatus,
+    SymbolSubcategory,
+    ManagedSymbol,
+    SymbolCreateRequest,
+    SymbolUpdateRequest,
+    SymbolImportResult,
+    SymbolStats,
+)
+
 __all__ = [
     "TimeSeriesData",
     "TradingSignal",
@@ -16,4 +27,12 @@ __all__ = [
     "TradingRecommendation",
     "AnalysisRequest",
     "AnalysisResponse",
+    "SymbolCategory",
+    "SymbolStatus",
+    "SymbolSubcategory",
+    "ManagedSymbol",
+    "SymbolCreateRequest",
+    "SymbolUpdateRequest",
+    "SymbolImportResult",
+    "SymbolStats",
 ]

@@ -24,11 +24,50 @@ class SymbolStatus(str, Enum):
     SUSPENDED = "suspended"
 
 
+class SymbolSubcategory(str, Enum):
+    """Sub-categories for more granular symbol classification."""
+    # Forex subcategories
+    MAJOR = "major"           # Major currency pairs (EUR/USD, GBP/USD, etc.)
+    MINOR = "minor"           # Minor currency pairs (EUR/GBP, etc.)
+    EXOTIC = "exotic"         # Exotic currency pairs
+
+    # Crypto subcategories
+    LARGE_CAP = "large_cap"   # Top cryptocurrencies by market cap
+    MID_CAP = "mid_cap"       # Mid-sized cryptocurrencies
+    SMALL_CAP = "small_cap"   # Smaller cryptocurrencies
+    DEFI = "defi"             # DeFi tokens
+    MEME = "meme"             # Meme coins
+    STABLECOIN = "stablecoin" # Stablecoins
+
+    # Stock subcategories
+    TECH = "tech"             # Technology stocks
+    FINANCE = "finance"       # Financial sector
+    HEALTHCARE = "healthcare" # Healthcare sector
+    ENERGY = "energy"         # Energy sector
+    CONSUMER = "consumer"     # Consumer goods/services
+    INDUSTRIAL = "industrial" # Industrial sector
+
+    # Index subcategories
+    GLOBAL = "global"         # Global indices
+    REGIONAL = "regional"     # Regional indices
+    SECTOR = "sector"         # Sector-specific indices
+
+    # Commodity subcategories
+    PRECIOUS_METAL = "precious_metal"  # Gold, Silver, Platinum
+    BASE_METAL = "base_metal"          # Copper, Aluminum, etc.
+    AGRICULTURE = "agriculture"        # Wheat, Corn, Coffee, etc.
+    ENERGY_COMMODITY = "energy_commodity"  # Oil, Natural Gas
+
+    # General
+    OTHER = "other"           # Uncategorized
+
+
 class ManagedSymbol(BaseModel):
     """A managed trading symbol with metadata."""
     symbol: str = Field(..., description="Trading symbol identifier (e.g., EURUSD)")
     display_name: Optional[str] = Field(None, description="Human-readable name")
     category: SymbolCategory = Field(default=SymbolCategory.FOREX, description="Symbol category")
+    subcategory: Optional[SymbolSubcategory] = Field(None, description="Symbol subcategory for finer classification")
     status: SymbolStatus = Field(default=SymbolStatus.ACTIVE, description="Symbol status")
     description: Optional[str] = Field(None, description="Symbol description")
 
@@ -64,6 +103,7 @@ class SymbolCreateRequest(BaseModel):
     symbol: str
     display_name: Optional[str] = None
     category: SymbolCategory = SymbolCategory.FOREX
+    subcategory: Optional[SymbolSubcategory] = None
     description: Optional[str] = None
     base_currency: Optional[str] = None
     quote_currency: Optional[str] = None
@@ -78,6 +118,7 @@ class SymbolUpdateRequest(BaseModel):
     """Request to update an existing managed symbol."""
     display_name: Optional[str] = None
     category: Optional[SymbolCategory] = None
+    subcategory: Optional[SymbolSubcategory] = None
     status: Optional[SymbolStatus] = None
     description: Optional[str] = None
     base_currency: Optional[str] = None
@@ -109,4 +150,5 @@ class SymbolStats(BaseModel):
     with_timescaledb_data: int
     with_nhits_model: int
     by_category: dict[str, int]
+    by_subcategory: dict[str, int] = Field(default_factory=dict)
     favorites_count: int
