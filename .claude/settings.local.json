@@ -77,7 +77,9 @@
       "Bash(npm install:*)",
       "Bash(docker inspect:*)",
       "Bash(netsh interface ipv4 show excludedportrange:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(npm run dev:*)",
+      "Bash(E:/TradingDashboard/backend/venv/Scripts/python.exe:*)"
     ],
     "deny": [],
     "ask": []

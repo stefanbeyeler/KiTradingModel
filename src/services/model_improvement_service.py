@@ -386,25 +386,50 @@ class ModelImprovementService:
         symbol: str,
         target_time: datetime
     ) -> Optional[float]:
-        """Get actual price from database at target time."""
-        # Calculate time window in Python to avoid PostgreSQL type issues
-        time_start = target_time - timedelta(minutes=30)
-        time_end = target_time + timedelta(minutes=30)
+        """Get actual price from database at target time.
 
-        query = """
-            SELECT d1_close as close
-            FROM symbol
-            WHERE symbol = $1
-              AND data_timestamp >= $2
-              AND data_timestamp <= $3
-            ORDER BY ABS(EXTRACT(EPOCH FROM (data_timestamp - $4)))
-            LIMIT 1
+        Uses a tiered approach to find the closest price:
+        1. First try ±30 minutes window (ideal for regular trading hours)
+        2. If not found, extend to ±48 hours (handles weekends/holidays)
         """
-
         async with db_pool.acquire() as conn:
+            # First try narrow window (±30 minutes)
+            time_start = target_time - timedelta(minutes=30)
+            time_end = target_time + timedelta(minutes=30)
+
+            query = """
+                SELECT d1_close as close
+                FROM symbol
+                WHERE symbol = $1
+                  AND data_timestamp >= $2
+                  AND data_timestamp <= $3
+                ORDER BY ABS(EXTRACT(EPOCH FROM (data_timestamp - $4)))
+                LIMIT 1
+            """
+
             row = await conn.fetchrow(query, symbol, time_start, time_end, target_time)
             if row:
                 return float(row["close"])
+
+            # If not found, try extended window for weekends/holidays (±48 hours)
+            # But only look AFTER the target time (we want the next available price)
+            time_end_extended = target_time + timedelta(hours=48)
+
+            query_extended = """
+                SELECT d1_close as close
+                FROM symbol
+                WHERE symbol = $1
+                  AND data_timestamp >= $2
+                  AND data_timestamp <= $3
+                ORDER BY data_timestamp ASC
+                LIMIT 1
+            """
+
+            row = await conn.fetchrow(query_extended, symbol, target_time, time_end_extended)
+            if row:
+                logger.debug(f"Used extended window to find price for {symbol} at {target_time}")
+                return float(row["close"])
+
         return None
 
     def _update_metrics(self, symbol: str, feedback: PredictionFeedback):

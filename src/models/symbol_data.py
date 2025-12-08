@@ -152,3 +152,4 @@ class SymbolStats(BaseModel):
     by_category: dict[str, int]
     by_subcategory: dict[str, int] = Field(default_factory=dict)
     favorites_count: int
+# Force reload

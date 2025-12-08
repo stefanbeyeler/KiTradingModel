@@ -1027,7 +1027,8 @@ async def retrain_poor_performers():
         return {
             "success": True,
             "message": f"Queued retraining for {len(symbols)} models",
-            "symbols": symbols
+            "symbols": symbols,
+            "symbols_queued": symbols  # For frontend compatibility
         }
     except Exception as e:
         logger.error(f"Failed to retrain poor performers: {e}")
