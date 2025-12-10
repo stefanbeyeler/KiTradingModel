@@ -3626,40 +3626,49 @@
                     return;
                 }
 
+                // Extract values from nested structure (new API format)
+                const ohlc = data.ohlc_d1 || {};
+                const price = data.price || {};
+                const indicators = data.indicators || {};
+                const rsi = indicators.rsi || {};
+                const atr = indicators.atr || {};
+
                 // Format timestamp (in UTC)
                 const lastTs = data.last_timestamp ? new Date(data.last_timestamp).toLocaleString('de-DE', { timeZone: 'UTC' }) + ' UTC' : '-';
 
                 // Format price values
-                const formatPrice = (val) => val !== null ? val.toFixed(val >= 100 ? 2 : 5) : '-';
-                const formatSpread = (val) => val !== null ? val.toFixed(1) : '-';
+                const formatPrice = (val) => val !== null && val !== undefined ? val.toFixed(val >= 100 ? 2 : 5) : '-';
+                const formatSpread = (val) => val !== null && val !== undefined ? (val * 100000).toFixed(1) : '-';
 
                 // Update UI elements
                 document.getElementById('infoLastTimestamp').textContent = lastTs;
-                document.getElementById('infoLatestClose').textContent = formatPrice(data.latest_close);
+                document.getElementById('infoLatestClose').textContent = formatPrice(ohlc.close);
                 document.getElementById('infoBidAsk').textContent =
-                    data.latest_bid !== null && data.latest_ask !== null
-                        ? `${formatPrice(data.latest_bid)} / ${formatPrice(data.latest_ask)}`
+                    price.bid !== null && price.ask !== null
+                        ? `${formatPrice(price.bid)} / ${formatPrice(price.ask)}`
                         : '-';
-                document.getElementById('infoSpread').textContent = formatSpread(data.latest_spread);
+                document.getElementById('infoSpread').textContent = formatSpread(price.spread);
                 document.getElementById('infoHighLow').textContent =
-                    data.latest_high !== null && data.latest_low !== null
-                        ? `${formatPrice(data.latest_high)} / ${formatPrice(data.latest_low)}`
+                    ohlc.high !== null && ohlc.low !== null
+                        ? `${formatPrice(ohlc.high)} / ${formatPrice(ohlc.low)}`
                         : '-';
 
                 // RSI with color coding
                 const rsiEl = document.getElementById('infoRSI');
-                if (data.latest_rsi !== null) {
-                    rsiEl.textContent = data.latest_rsi.toFixed(2);
+                const rsiValue = rsi.value;
+                if (rsiValue !== null && rsiValue !== undefined) {
+                    rsiEl.textContent = rsiValue.toFixed(2);
                     rsiEl.className = 'info-value';
-                    if (data.latest_rsi >= 70) rsiEl.classList.add('negative');
-                    else if (data.latest_rsi <= 30) rsiEl.classList.add('positive');
+                    if (rsiValue >= 70) rsiEl.classList.add('negative');
+                    else if (rsiValue <= 30) rsiEl.classList.add('positive');
                     else rsiEl.classList.add('neutral');
                 } else {
                     rsiEl.textContent = '-';
                     rsiEl.className = 'info-value';
                 }
 
-                document.getElementById('infoATR').textContent = data.latest_atr !== null ? data.latest_atr.toFixed(5) : '-';
+                const atrValue = atr.value;
+                document.getElementById('infoATR').textContent = atrValue !== null && atrValue !== undefined ? atrValue.toFixed(5) : '-';
 
                 const totalRecordsEl = document.getElementById('infoTotalRecords');
                 if (totalRecordsEl) {
