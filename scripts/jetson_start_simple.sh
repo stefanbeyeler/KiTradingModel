@@ -24,7 +24,7 @@ docker run -d \
   --name ki-trading \
   --runtime=nvidia \
   --restart unless-stopped \
-  -p 3011:3011 \
+  --network=host \
   -v "$(pwd)":/app:rw \
   --env-file .env \
   ki-trading-jetson:latest

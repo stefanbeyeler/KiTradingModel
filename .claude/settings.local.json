@@ -86,7 +86,14 @@
       "Bash(python3:*)",
       "Bash(sudo apt-get update:*)",
       "Bash(sudo apt-get install:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(git config:*)",
+      "Bash(ssh-keygen:*)",
+      "Bash(systemctl is-active:*)",
+      "Bash(sudo docker ps:*)",
+      "Bash(sudo docker logs:*)",
+      "Bash(ip route:*)",
+      "Bash(sudo docker exec:*)"
     ],
     "deny": [],
     "ask": []
