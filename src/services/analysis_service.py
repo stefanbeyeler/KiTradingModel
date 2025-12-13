@@ -72,6 +72,110 @@ class AnalysisService:
             logger.info(f"Connected to TimescaleDB at {settings.timescaledb_host}:{settings.timescaledb_port}")
         return self._pool
 
+    async def fetch_latest_market_data(self, symbol: str) -> Optional[MarketDataSnapshot]:
+        """
+        Fetch the latest market data snapshot from EasyInsight API.
+
+        This includes all OHLC data, technical indicators, and market conditions
+        for comprehensive LLM analysis.
+        """
+        try:
+            import httpx
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(
+                    f"{settings.easyinsight_api_url}/symbol-latest-full/{symbol}"
+                )
+                response.raise_for_status()
+
+                data = response.json()
+                if not data:
+                    logger.warning(f"No data returned from EasyInsight API for {symbol}")
+                    return None
+
+                # Parse snapshot_time
+                snapshot_time = datetime.fromisoformat(
+                    data['snapshot_time'].replace('Z', '+00:00')
+                )
+
+                # Create comprehensive market data snapshot
+                snapshot = MarketDataSnapshot(
+                    symbol=symbol,
+                    snapshot_time=snapshot_time,
+                    category=data.get('category', 'Unknown'),
+                    price=PriceData(
+                        bid=data.get('bid'),
+                        ask=data.get('ask'),
+                        spread=data.get('spread'),
+                        spread_pct=data.get('spread_pct')
+                    ),
+                    ohlc=OHLCData(
+                        m15_open=data.get('m15_open'),
+                        m15_high=data.get('m15_high'),
+                        m15_low=data.get('m15_low'),
+                        m15_close=data.get('m15_close'),
+                        h1_open=data.get('h1_open'),
+                        h1_high=data.get('h1_high'),
+                        h1_low=data.get('h1_low'),
+                        h1_close=data.get('h1_close'),
+                        d1_open=data.get('d1_open'),
+                        d1_high=data.get('d1_high'),
+                        d1_low=data.get('d1_low'),
+                        d1_close=data.get('d1_close')
+                    ),
+                    indicators=AllIndicators(
+                        rsi=RSIIndicator(value=data.get('rsi')),
+                        macd=MACDIndicator(
+                            main=data.get('macd_main'),
+                            signal=data.get('macd_signal')
+                        ),
+                        stochastic=StochasticIndicator(
+                            main=data.get('sto_main'),
+                            signal=data.get('sto_signal')
+                        ),
+                        cci=CCIIndicator(value=data.get('cci')),
+                        adx=ADXIndicator(
+                            main=data.get('adx_main'),
+                            plus_di=data.get('adx_plusdi'),
+                            minus_di=data.get('adx_minusdi')
+                        ),
+                        ma=MAIndicator(ma_10=data.get('ma_10')),
+                        ichimoku=IchimokuIndicator(
+                            tenkan=data.get('ichimoku_tenkan'),
+                            kijun=data.get('ichimoku_kijun'),
+                            senkou_a=data.get('ichimoku_senkoua'),
+                            senkou_b=data.get('ichimoku_senkoub'),
+                            chikou=data.get('ichimoku_chikou')
+                        ),
+                        bollinger=BollingerBandsIndicator(
+                            upper=data.get('bb_upper'),
+                            base=data.get('bb_base'),
+                            lower=data.get('bb_lower')
+                        ),
+                        atr=ATRIndicator(
+                            d1=data.get('atr_d1'),
+                            d1_pct=data.get('atr_pct_d1')
+                        ),
+                        range=RangeIndicator(d1=data.get('range_d1')),
+                        pivot_points=PivotPoints(
+                            s1_m5=data.get('s1_level_m5'),
+                            r1_m5=data.get('r1_level_m5')
+                        ),
+                        strength=StrengthIndicators(
+                            h4=data.get('strength_4h'),
+                            d1=data.get('strength_1d'),
+                            w1=data.get('strength_1w')
+                        )
+                    )
+                )
+
+                logger.info(f"Fetched latest market data for {symbol} from EasyInsight API")
+                return snapshot
+
+        except Exception as e:
+            logger.error(f"Failed to fetch latest market data from EasyInsight API for {symbol}: {e}")
+            return None
+
     async def _fetch_time_series(
         self,
         symbol: str,
@@ -347,6 +451,113 @@ class AnalysisService:
                     "SELECT DISTINCT symbol FROM symbol WHERE symbol IS NOT NULL ORDER BY symbol LIMIT 100"
                 )
                 return [row["symbol"] for row in rows if row["symbol"]]
+
+    async def fetch_all_latest_market_data(self) -> list[MarketDataSnapshot]:
+        """
+        Fetch latest market data for all available symbols from EasyInsight API.
+
+        Returns a list of MarketDataSnapshot objects with complete indicator data.
+        """
+        try:
+            import httpx
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{settings.easyinsight_api_url}/symbol-data-full",
+                    params={"limit": 1}  # Get only latest snapshot for each symbol
+                )
+                response.raise_for_status()
+
+                data = response.json()
+                snapshots = []
+
+                for row in data.get('data', []):
+                    try:
+                        snapshot_time = datetime.fromisoformat(
+                            row['snapshot_time'].replace('Z', '+00:00')
+                        )
+
+                        snapshot = MarketDataSnapshot(
+                            symbol=row['symbol'],
+                            snapshot_time=snapshot_time,
+                            category=row.get('category', 'Unknown'),
+                            price=PriceData(
+                                bid=row.get('bid'),
+                                ask=row.get('ask'),
+                                spread=row.get('spread'),
+                                spread_pct=row.get('spread_pct')
+                            ),
+                            ohlc=OHLCData(
+                                m15_open=row.get('m15_open'),
+                                m15_high=row.get('m15_high'),
+                                m15_low=row.get('m15_low'),
+                                m15_close=row.get('m15_close'),
+                                h1_open=row.get('h1_open'),
+                                h1_high=row.get('h1_high'),
+                                h1_low=row.get('h1_low'),
+                                h1_close=row.get('h1_close'),
+                                d1_open=row.get('d1_open'),
+                                d1_high=row.get('d1_high'),
+                                d1_low=row.get('d1_low'),
+                                d1_close=row.get('d1_close')
+                            ),
+                            indicators=AllIndicators(
+                                rsi=RSIIndicator(value=row.get('rsi')),
+                                macd=MACDIndicator(
+                                    main=row.get('macd_main'),
+                                    signal=row.get('macd_signal')
+                                ),
+                                stochastic=StochasticIndicator(
+                                    main=row.get('sto_main'),
+                                    signal=row.get('sto_signal')
+                                ),
+                                cci=CCIIndicator(value=row.get('cci')),
+                                adx=ADXIndicator(
+                                    main=row.get('adx_main'),
+                                    plus_di=row.get('adx_plusdi'),
+                                    minus_di=row.get('adx_minusdi')
+                                ),
+                                ma=MAIndicator(ma_10=row.get('ma_10')),
+                                ichimoku=IchimokuIndicator(
+                                    tenkan=row.get('ichimoku_tenkan'),
+                                    kijun=row.get('ichimoku_kijun'),
+                                    senkou_a=row.get('ichimoku_senkoua'),
+                                    senkou_b=row.get('ichimoku_senkoub'),
+                                    chikou=row.get('ichimoku_chikou')
+                                ),
+                                bollinger=BollingerBandsIndicator(
+                                    upper=row.get('bb_upper'),
+                                    base=row.get('bb_base'),
+                                    lower=row.get('bb_lower')
+                                ),
+                                atr=ATRIndicator(
+                                    d1=row.get('atr_d1'),
+                                    d1_pct=row.get('atr_pct_d1')
+                                ),
+                                range=RangeIndicator(d1=row.get('range_d1')),
+                                pivot_points=PivotPoints(
+                                    s1_m5=row.get('s1_level_m5'),
+                                    r1_m5=row.get('r1_level_m5')
+                                ),
+                                strength=StrengthIndicators(
+                                    h4=row.get('strength_4h'),
+                                    d1=row.get('strength_1d'),
+                                    w1=row.get('strength_1w')
+                                )
+                            )
+                        )
+                        snapshots.append(snapshot)
+
+                    except Exception as row_error:
+                        logger.warning(f"Failed to parse market data for {row.get('symbol')}: {row_error}")
+                        continue
+
+                logger.info(f"Fetched latest market data for {len(snapshots)} symbols from EasyInsight API")
+                return snapshots
+
+        except Exception as e:
+            logger.error(f"Failed to fetch all latest market data from EasyInsight API: {e}")
+            return []
 
     async def get_symbol_info(self, symbol: str) -> dict:
         """Get detailed information about a symbol from TimescaleDB including all available indicators."""

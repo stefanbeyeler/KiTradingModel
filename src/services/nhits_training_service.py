@@ -159,7 +159,7 @@ class NHITSTrainingService:
                         # Parse ISO format timestamp
                         timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
 
-                        # Use h1_ (hourly) data for training (NHITS is configured for hourly forecasting)
+                        # Use h1_ (hourly) data for training with all available indicators
                         time_series.append(TimeSeriesData(
                             timestamp=timestamp,
                             symbol=symbol,
@@ -167,7 +167,50 @@ class NHITSTrainingService:
                             high=float(row.get('h1_high', 0)),
                             low=float(row.get('h1_low', 0)),
                             close=float(row.get('h1_close', 0)),
-                            volume=0.0  # Volume not available in API response
+                            volume=0.0,  # Volume not available in API response
+                            # Technical Indicators for multi-variate NHITS forecasting
+                            rsi=row.get('rsi'),
+                            macd_main=row.get('macd_main'),
+                            macd_signal=row.get('macd_signal'),
+                            adx=row.get('adx_main'),
+                            adx_plus_di=row.get('adx_plusdi'),
+                            adx_minus_di=row.get('adx_minusdi'),
+                            atr=row.get('atr_d1'),
+                            cci=row.get('cci'),
+                            stoch_k=row.get('sto_main'),
+                            stoch_d=row.get('sto_signal'),
+                            bb_upper=row.get('bb_upper'),
+                            bb_middle=row.get('bb_base'),
+                            bb_lower=row.get('bb_lower'),
+                            ma100=row.get('ma_10'),
+                            ichimoku_tenkan=row.get('ichimoku_tenkan'),
+                            ichimoku_kijun=row.get('ichimoku_kijun'),
+                            strength_4h=row.get('strength_4h'),
+                            strength_1d=row.get('strength_1d'),
+                            strength_1w=row.get('strength_1w'),
+                            # Store all additional data for LLM context
+                            additional_data={
+                                'bid': row.get('bid'),
+                                'ask': row.get('ask'),
+                                'spread': row.get('spread'),
+                                'spread_pct': row.get('spread_pct'),
+                                'category': row.get('category'),
+                                'ichimoku_chikou': row.get('ichimoku_chikou'),
+                                'ichimoku_senkoua': row.get('ichimoku_senkoua'),
+                                'ichimoku_senkoub': row.get('ichimoku_senkoub'),
+                                's1_level_m5': row.get('s1_level_m5'),
+                                'r1_level_m5': row.get('r1_level_m5'),
+                                'range_d1': row.get('range_d1'),
+                                'atr_pct_d1': row.get('atr_pct_d1'),
+                                'd1_open': row.get('d1_open'),
+                                'd1_high': row.get('d1_high'),
+                                'd1_low': row.get('d1_low'),
+                                'd1_close': row.get('d1_close'),
+                                'm15_open': row.get('m15_open'),
+                                'm15_high': row.get('m15_high'),
+                                'm15_low': row.get('m15_low'),
+                                'm15_close': row.get('m15_close')
+                            }
                         ))
                     except Exception as row_error:
                         logger.warning(f"Failed to parse row for {symbol}: {row_error}")
