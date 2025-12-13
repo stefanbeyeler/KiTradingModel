@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  ki-trading:
+    build:
+      context: ../../
+      dockerfile: docker/jetson/Dockerfile
+      args:
+        - BASE_IMAGE
+    image: ki-trading-jetson:latest
+    restart: unless-stopped
+    runtime: nvidia
+    environment:
+      - FAISS_USE_GPU=1
+      - EMBEDDING_DEVICE=cuda
+      - NHITS_USE_GPU=1
+    ports:
+      - "3011:3011"
+    volumes:
+      - ../../:/app:rw
+    deploy:
+      resources: {}

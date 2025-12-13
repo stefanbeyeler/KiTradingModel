@@ -79,7 +79,14 @@
       "Bash(netsh interface ipv4 show excludedportrange:*)",
       "Bash(tree:*)",
       "Bash(npm run dev:*)",
-      "Bash(E:/TradingDashboard/backend/venv/Scripts/python.exe:*)"
+      "Bash(E:/TradingDashboard/backend/venv/Scripts/python.exe:*)",
+      "Bash(lscpu:*)",
+      "Bash(docker compose:*)",
+      "Bash(test:*)",
+      "Bash(python3:*)",
+      "Bash(sudo apt-get update:*)",
+      "Bash(sudo apt-get install:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
