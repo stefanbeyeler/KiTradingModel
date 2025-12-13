@@ -93,7 +93,11 @@
       "Bash(sudo docker ps:*)",
       "Bash(sudo docker logs:*)",
       "Bash(ip route:*)",
-      "Bash(sudo docker exec:*)"
+      "Bash(sudo docker exec:*)",
+      "Bash(sudo docker stop:*)",
+      "Bash(sudo docker rm:*)",
+      "Bash(bash:*)",
+      "Bash(sg docker:*)"
     ],
     "deny": [],
     "ask": []

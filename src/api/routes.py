@@ -1099,7 +1099,8 @@ async def get_forecast(
 @router.post("/forecast/{symbol}/train", response_model=ForecastTrainingResult)
 async def train_forecast_model(
     symbol: str,
-    days: int = 90
+    days: int = 90,
+    force: bool = False
 ):
     """
     Train or retrain the NHITS model for a symbol.
@@ -1107,6 +1108,7 @@ async def train_forecast_model(
     Parameters:
     - symbol: Trading symbol
     - days: Number of days of historical data to use (default: 90)
+    - force: Force retraining even if model is up to date
 
     This will train a new model or replace the existing one.
     """
@@ -1117,23 +1119,9 @@ async def train_forecast_model(
                 detail="NHITS forecasting is disabled. Enable it in settings."
             )
 
-        # Fetch extended historical data
-        from datetime import timedelta
-        time_series = await analysis_service._fetch_time_series(
-            symbol=symbol,
-            start_date=datetime.now() - timedelta(days=days),
-            end_date=datetime.now()
-        )
-
-        if not time_series:
-            raise HTTPException(status_code=404, detail=f"No data found for symbol {symbol}")
-
-        # Train model
-        forecast_service = get_forecast_service()
-        result = await forecast_service.train(
-            time_series=time_series,
-            symbol=symbol
-        )
+        # Use nhits_training_service which supports EasyInsight API
+        from ..services.nhits_training_service import nhits_training_service
+        result = await nhits_training_service.train_symbol(symbol=symbol, force=force)
 
         if not result.success:
             raise HTTPException(status_code=500, detail=result.error_message)

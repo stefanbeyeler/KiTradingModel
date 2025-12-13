@@ -91,24 +91,36 @@ class NHITSTrainingService:
                 await asyncio.sleep(60)  # Wait before retrying
 
     async def get_available_symbols(self) -> List[str]:
-        """Get list of symbols available for training from TimescaleDB."""
-        if not self._db_pool:
-            logger.warning("No database connection available")
-            return []
-
+        """Get list of symbols available for training from EasyInsight API."""
         try:
-            async with self._db_pool.acquire() as conn:
-                rows = await conn.fetch("""
-                    SELECT DISTINCT symbol
-                    FROM symbol
-                    WHERE data_timestamp > NOW() - INTERVAL '30 days'
-                    ORDER BY symbol
-                """)
-                symbols = [row['symbol'] for row in rows]
-                logger.info(f"Found {len(symbols)} symbols for NHITS training")
+            import httpx
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(f"{settings.easyinsight_api_url}/symbols")
+                response.raise_for_status()
+
+                data = response.json()
+                # API returns list of dicts with 'symbol', 'category', etc.
+                symbols = [item.get('symbol') for item in data if item.get('symbol')]
+
+                logger.info(f"Found {len(symbols)} symbols for NHITS training from EasyInsight API")
                 return symbols
+
         except Exception as e:
-            logger.error(f"Failed to get symbols: {e}")
+            logger.error(f"Failed to get symbols from EasyInsight API: {e}")
+            # Fallback to database if available
+            if self._db_pool:
+                try:
+                    async with self._db_pool.acquire() as conn:
+                        rows = await conn.fetch("""
+                            SELECT DISTINCT symbol
+                            FROM symbol
+                            WHERE data_timestamp > NOW() - INTERVAL '30 days'
+                            ORDER BY symbol
+                        """)
+                        return [row['symbol'] for row in rows]
+                except Exception as db_error:
+                    logger.error(f"Fallback DB query failed: {db_error}")
             return []
 
     async def get_training_data(
@@ -116,47 +128,101 @@ class NHITSTrainingService:
         symbol: str,
         days: int = 30
     ) -> List[TimeSeriesData]:
-        """Fetch training data for a symbol from TimescaleDB."""
-        if not self._db_pool:
-            logger.warning("No database connection available")
-            return []
-
+        """Fetch training data for a symbol from EasyInsight API."""
         try:
-            async with self._db_pool.acquire() as conn:
-                rows = await conn.fetch("""
-                    SELECT
-                        data_timestamp as timestamp,
-                        d1_open as open,
-                        d1_high as high,
-                        d1_low as low,
-                        d1_close as close
-                    FROM symbol
-                    WHERE symbol = $1
-                      AND data_timestamp > NOW() - INTERVAL '%s days'
-                    ORDER BY data_timestamp ASC
-                """ % days, symbol)
+            import httpx
+            from datetime import datetime
 
-                time_series = [
-                    TimeSeriesData(
-                        timestamp=row['timestamp'],
-                        symbol=symbol,
-                        open=float(row['open']),
-                        high=float(row['high']),
-                        low=float(row['low']),
-                        close=float(row['close']),
-                        volume=0.0  # Volume not available in symbol table
-                    )
-                    for row in rows
-                ]
+            # Request enough data points. The API returns snapshots which may be
+            # more frequent than daily. Request days * 24 to ensure we get enough hourly data.
+            # For daily training we'll filter to unique days later.
+            limit = days * 24
 
-                logger.debug(
-                    f"Fetched {len(time_series)} data points for {symbol}"
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
+                    params={"limit": limit}
+                )
+                response.raise_for_status()
+
+                data = response.json()
+                rows = data.get('data', [])
+
+                time_series = []
+                for row in rows:
+                    try:
+                        # Parse timestamp
+                        timestamp_str = row.get('snapshot_time')
+                        if not timestamp_str:
+                            continue
+
+                        # Parse ISO format timestamp
+                        timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+
+                        # Use h1_ (hourly) data for training (NHITS is configured for hourly forecasting)
+                        time_series.append(TimeSeriesData(
+                            timestamp=timestamp,
+                            symbol=symbol,
+                            open=float(row.get('h1_open', 0)),
+                            high=float(row.get('h1_high', 0)),
+                            low=float(row.get('h1_low', 0)),
+                            close=float(row.get('h1_close', 0)),
+                            volume=0.0  # Volume not available in API response
+                        ))
+                    except Exception as row_error:
+                        logger.warning(f"Failed to parse row for {symbol}: {row_error}")
+                        continue
+
+                logger.info(
+                    f"Fetched {len(time_series)} data points for {symbol} from EasyInsight API"
                 )
                 return time_series
 
         except Exception as e:
-            logger.error(f"Failed to get training data for {symbol}: {e}")
-            return []
+            logger.warning(f"Failed to get training data from EasyInsight API for {symbol}: {e}")
+
+            # Fallback to direct TimescaleDB access
+            if not self._db_pool:
+                logger.error("No database connection available for fallback")
+                return []
+
+            try:
+                logger.info(f"Attempting fallback to TimescaleDB for {symbol}")
+                async with self._db_pool.acquire() as conn:
+                    rows = await conn.fetch("""
+                        SELECT
+                            data_timestamp as timestamp,
+                            d1_open as open,
+                            d1_high as high,
+                            d1_low as low,
+                            d1_close as close
+                        FROM symbol
+                        WHERE symbol = $1
+                          AND data_timestamp > NOW() - INTERVAL '%s days'
+                        ORDER BY data_timestamp ASC
+                    """ % days, symbol)
+
+                    time_series = [
+                        TimeSeriesData(
+                            timestamp=row['timestamp'],
+                            symbol=symbol,
+                            open=float(row['open']),
+                            high=float(row['high']),
+                            low=float(row['low']),
+                            close=float(row['close']),
+                            volume=0.0  # Volume not available in symbol table
+                        )
+                        for row in rows
+                    ]
+
+                    logger.debug(
+                        f"Fetched {len(time_series)} data points for {symbol} from TimescaleDB (fallback)"
+                    )
+                    return time_series
+
+            except Exception as db_error:
+                logger.error(f"Fallback DB query also failed for {symbol}: {db_error}")
+                return []
 
     async def train_symbol(
         self,
