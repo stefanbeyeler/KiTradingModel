@@ -322,14 +322,31 @@ class AnalysisService:
             return time_series, tsdb_log, indicators_fetched
 
     async def get_available_symbols(self) -> list[str]:
-        """Get list of available trading symbols from TimescaleDB."""
-        pool = await self._get_pool()
+        """Get list of available trading symbols from EasyInsight API."""
+        try:
+            import httpx
 
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                "SELECT DISTINCT symbol FROM symbol WHERE symbol IS NOT NULL ORDER BY symbol LIMIT 100"
-            )
-            return [row["symbol"] for row in rows if row["symbol"]]
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(f"{settings.easyinsight_api_url}/symbols")
+                response.raise_for_status()
+
+                data = response.json()
+                # API returns list of dicts with 'symbol', 'category', etc.
+                symbols = [item.get('symbol') for item in data if item.get('symbol')]
+
+                logger.info(f"Fetched {len(symbols)} symbols from EasyInsight API")
+                return sorted(symbols)
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch symbols from EasyInsight API: {e}, falling back to direct DB access")
+
+            # Fallback to direct TimescaleDB access
+            pool = await self._get_pool()
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(
+                    "SELECT DISTINCT symbol FROM symbol WHERE symbol IS NOT NULL ORDER BY symbol LIMIT 100"
+                )
+                return [row["symbol"] for row in rows if row["symbol"]]
 
     async def get_symbol_info(self, symbol: str) -> dict:
         """Get detailed information about a symbol from TimescaleDB including all available indicators."""

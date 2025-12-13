@@ -30,6 +30,12 @@ class Settings(BaseSettings):
         description="TimescaleDB password"
     )
 
+    # EasyInsight API Configuration
+    easyinsight_api_url: str = Field(
+        default="http://localhost:3000/api",
+        description="EasyInsight API base URL"
+    )
+
     # RAG Sync Configuration
     rag_sync_enabled: bool = Field(
         default=True,
