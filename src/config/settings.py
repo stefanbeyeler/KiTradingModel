@@ -8,16 +8,26 @@ from pydantic import Field, computed_field
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    # TimescaleDB Direct Connection REMOVED - Using EasyInsight API only
-    # All data access now goes through http://10.1.19.102:3000/api endpoints
-
     # EasyInsight API Configuration
+    # All data access goes through this REST API - no direct database connections
     easyinsight_api_url: str = Field(
         default="http://10.1.19.102:3000/api",
         description="EasyInsight API base URL"
     )
 
-    # RAG Sync Configuration REMOVED - TimescaleDB sync disabled
+    # RAG Sync Configuration
+    rag_sync_enabled: bool = Field(
+        default=False,
+        description="Enable automatic RAG sync with EasyInsight API"
+    )
+    rag_sync_interval_seconds: int = Field(
+        default=3600,
+        description="Interval between RAG syncs in seconds"
+    )
+    rag_sync_batch_size: int = Field(
+        default=100,
+        description="Number of records to sync per symbol per batch"
+    )
 
     # Ollama Configuration
     ollama_host: str = Field(

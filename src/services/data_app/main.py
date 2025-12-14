@@ -31,6 +31,7 @@ from src.api.routes import (
 )
 from src.services.timescaledb_sync_service import TimescaleDBSyncService
 from src.services.rag_service import RAGService
+from src.service_registry import register_service
 
 # Global service instances
 sync_service = None
@@ -90,6 +91,7 @@ async def startup_event():
     # Initialize RAG Service (for sync service)
     try:
         rag_service = RAGService()
+        register_service('rag_service', rag_service)
         logger.info("RAG Service initialized")
     except Exception as e:
         logger.error(f"Failed to initialize RAG Service: {e}")
@@ -98,6 +100,7 @@ async def startup_event():
     # Initialize TimescaleDB Sync Service
     try:
         sync_service = TimescaleDBSyncService(rag_service)
+        register_service('sync_service', sync_service)
         logger.info("TimescaleDB Sync Service initialized")
 
         # Auto-start sync if configured
@@ -129,7 +132,7 @@ async def health_check():
     """Health check endpoint."""
     sync_status = "unknown"
     if sync_service:
-        sync_status = "running" if getattr(sync_service, 'is_running', False) else "stopped"
+        sync_status = "running" if getattr(sync_service, '_running', False) else "stopped"
 
     return {
         "service": "data",

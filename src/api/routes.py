@@ -62,9 +62,21 @@ strategy_service = StrategyService()
 
 
 def get_rag_service():
-    """Get the global RAG service instance from main."""
-    from ..main import rag_service
-    return rag_service
+    """Get the global RAG service instance from service registry."""
+    from ..service_registry import get_rag_service as _get_rag
+    service = _get_rag()
+    if service is None:
+        raise HTTPException(status_code=503, detail="RAG service not initialized")
+    return service
+
+
+def get_sync_service():
+    """Get the global sync service instance from service registry."""
+    from ..service_registry import get_sync_service as _get_sync
+    service = _get_sync()
+    if service is None:
+        raise HTTPException(status_code=503, detail="Sync service not initialized")
+    return service
 
 
 # ==================== System & Health ====================
@@ -355,7 +367,7 @@ async def get_sync_status():
     - Last sync time and sync count
     - Configured sync interval
     """
-    from ..main import sync_service
+    sync_service = get_sync_service()
     return sync_service.get_status()
 
 
@@ -367,7 +379,7 @@ async def start_sync():
     Begins automatic synchronization of market data from EasyInsight API
     to the RAG knowledge base. Sync runs at configured intervals.
     """
-    from ..main import sync_service
+    sync_service = get_sync_service()
     try:
         await sync_service.start()
         return {
@@ -387,7 +399,7 @@ async def stop_sync():
 
     Stops automatic synchronization. Can be restarted later with /sync/start.
     """
-    from ..main import sync_service
+    sync_service = get_sync_service()
     try:
         await sync_service.stop()
         return {
@@ -411,7 +423,7 @@ async def manual_sync(days_back: int = 7):
     RAG knowledge base for LLM analysis. Useful for backfilling data
     or syncing after adding new symbols.
     """
-    from ..main import sync_service
+    sync_service = get_sync_service()
     try:
         synced_count = await sync_service.manual_sync(days_back=days_back)
         return {
@@ -1128,33 +1140,18 @@ async def evaluate_predictions():
 
     This compares past predictions with actual prices and updates
     model performance metrics.
+
+    NOTE: This endpoint requires direct database access which is currently
+    disabled. Evaluation is done via the EasyInsight API instead.
     """
-    try:
-        from ..services.model_improvement_service import model_improvement_service
-        from ..main import sync_service
-
-        # Check if sync_service has an active database pool
-        if not sync_service._pool:
-            raise HTTPException(
-                status_code=503,
-                detail="Database connection not available. Please ensure RAG sync is enabled."
-            )
-
-        evaluated = await model_improvement_service.evaluate_pending_predictions(
-            sync_service._pool
-        )
-
-        return {
-            "success": True,
-            "evaluated": evaluated,
-            "total_evaluated": sum(evaluated.values()),
-            "message": f"Evaluated {sum(evaluated.values())} predictions"
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to evaluate predictions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    # This endpoint requires direct database access for historical price lookups
+    # Since we're using API-only mode, this functionality is not available
+    raise HTTPException(
+        status_code=501,
+        detail="Prediction evaluation requires direct database access. "
+               "This feature is not available in API-only mode. "
+               "Use the EasyInsight API for historical data queries."
+    )
 
 
 @training_router.post("/forecast/retrain-poor-performers")

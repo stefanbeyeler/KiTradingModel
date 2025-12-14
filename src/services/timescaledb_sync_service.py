@@ -1,52 +1,33 @@
-"""Service for continuous synchronization of TimescaleDB data to RAG."""
+"""Service for continuous synchronization of EasyInsight API data to RAG.
+
+This service fetches market data from the EasyInsight API (not direct database)
+and stores it in the RAG knowledge base for LLM analysis.
+"""
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
-import asyncpg
+import httpx
 from loguru import logger
 
 from ..config import settings
-from ..models.trading_data import TimeSeriesData
 from .rag_service import RAGService
 
 
 class TimescaleDBSyncService:
-    """Service for continuously syncing TimescaleDB data to the RAG system."""
+    """Service for syncing EasyInsight API data to the RAG system.
+
+    Note: Despite the name, this service uses the EasyInsight REST API
+    exclusively and does not connect directly to any database.
+    """
 
     def __init__(self, rag_service: RAGService):
         self.rag_service = rag_service
-        self._pool: Optional[asyncpg.Pool] = None
         self._running = False
         self._task: Optional[asyncio.Task] = None
         self._last_sync_time: Optional[datetime] = None
         self._sync_count = 0
-
-    async def connect(self):
-        """Connect to TimescaleDB."""
-        try:
-            self._pool = await asyncpg.create_pool(
-                host=settings.timescaledb_host,
-                port=settings.timescaledb_port,
-                database=settings.timescaledb_database,
-                user=settings.timescaledb_user,
-                password=settings.timescaledb_password,
-                min_size=2,
-                max_size=10
-            )
-            logger.info(
-                f"Connected to TimescaleDB at {settings.timescaledb_host}:{settings.timescaledb_port}"
-            )
-        except Exception as e:
-            logger.error(f"Failed to connect to TimescaleDB: {e}")
-            raise
-
-    async def disconnect(self):
-        """Disconnect from TimescaleDB."""
-        if self._pool:
-            await self._pool.close()
-            self._pool = None
-            logger.info("Disconnected from TimescaleDB")
+        self._api_url = settings.easyinsight_api_url
 
     async def start(self):
         """Start the continuous sync process."""
@@ -54,13 +35,14 @@ class TimescaleDBSyncService:
             logger.warning("Sync service is already running")
             return
 
-        if not self._pool:
-            await self.connect()
+        # Verify API connectivity
+        if not await self._check_api_connectivity():
+            raise Exception(f"Cannot connect to EasyInsight API at {self._api_url}")
 
         self._running = True
         self._task = asyncio.create_task(self._sync_loop())
         logger.info(
-            f"Started RAG sync service (interval: {settings.rag_sync_interval_seconds}s)"
+            f"Started RAG sync service (API: {self._api_url}, interval: {settings.rag_sync_interval_seconds}s)"
         )
 
     async def stop(self):
@@ -74,6 +56,16 @@ class TimescaleDBSyncService:
                 pass
             self._task = None
         logger.info("Stopped RAG sync service")
+
+    async def _check_api_connectivity(self) -> bool:
+        """Check if the EasyInsight API is reachable."""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(f"{self._api_url}/symbols")
+                return response.status_code == 200
+        except Exception as e:
+            logger.error(f"API connectivity check failed: {e}")
+            return False
 
     async def _sync_loop(self):
         """Main sync loop that runs continuously."""
@@ -89,14 +81,8 @@ class TimescaleDBSyncService:
 
     async def _perform_sync(self):
         """Perform a single sync operation."""
-        if not self._pool:
-            logger.warning("No database connection for sync")
-            return
-
         try:
-            from datetime import timezone
-
-            # Determine time range for sync (using UTC timezone)
+            # Determine time range for sync
             if self._last_sync_time:
                 start_time = self._last_sync_time
             else:
@@ -105,11 +91,11 @@ class TimescaleDBSyncService:
 
             end_time = datetime.now(timezone.utc)
 
-            # Get available symbols
+            # Get available symbols from API
             symbols = await self._get_symbols()
 
             if not symbols:
-                logger.warning("No symbols found in TimescaleDB")
+                logger.warning("No symbols found from EasyInsight API")
                 return
 
             total_synced = 0
@@ -136,10 +122,8 @@ class TimescaleDBSyncService:
     async def _get_symbols(self) -> list[str]:
         """Get list of available symbols from EasyInsight API."""
         try:
-            import httpx
-
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(f"{settings.easyinsight_api_url}/symbols")
+                response = await client.get(f"{self._api_url}/symbols")
                 response.raise_for_status()
 
                 data = response.json()
@@ -151,21 +135,6 @@ class TimescaleDBSyncService:
 
         except Exception as e:
             logger.error(f"Error fetching symbols from EasyInsight API: {e}")
-
-            # Fallback to direct database query if API fails
-            if self._pool:
-                try:
-                    async with self._pool.acquire() as conn:
-                        rows = await conn.fetch(
-                            "SELECT DISTINCT symbol FROM symbol WHERE symbol IS NOT NULL LIMIT 100"
-                        )
-                        if rows:
-                            symbols = [row["symbol"] for row in rows if row["symbol"]]
-                            logger.info(f"Found {len(symbols)} symbols from database (fallback)")
-                            return symbols
-                except Exception as db_error:
-                    logger.error(f"Fallback database query failed: {db_error}")
-
             return []
 
     async def _sync_symbol_data(
@@ -173,17 +142,15 @@ class TimescaleDBSyncService:
     ) -> int:
         """Sync data for a specific symbol from EasyInsight API."""
         synced_count = 0
+        batch_size = getattr(settings, 'rag_sync_batch_size', 100)
 
         try:
-            import httpx
-
-            # Calculate how many data points to fetch
-            # Request batch size * 2 to ensure we get enough data
-            limit = settings.rag_sync_batch_size * 2
+            # Request data from API
+            limit = batch_size * 2
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
-                    f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
+                    f"{self._api_url}/symbol-data-full/{symbol}",
                     params={"limit": limit}
                 )
                 response.raise_for_status()
@@ -210,93 +177,70 @@ class TimescaleDBSyncService:
                             continue
 
                         # Limit processing to batch size
-                        if synced_count >= settings.rag_sync_batch_size:
+                        if synced_count >= batch_size:
                             break
 
-                        # Extract values with null handling - Daily data
-                        d1_open = float(row.get("d1_open", 0)) if row.get("d1_open") else 0
-                        d1_high = float(row.get("d1_high", 0)) if row.get("d1_high") else 0
-                        d1_low = float(row.get("d1_low", 0)) if row.get("d1_low") else 0
-                        d1_close = float(row.get("d1_close", 0)) if row.get("d1_close") else 0
-                        bid = float(row.get("bid", 0)) if row.get("bid") else 0
-                        ask = float(row.get("ask", 0)) if row.get("ask") else 0
-                        spread = float(row.get("spread", 0)) if row.get("spread") else 0
+                        # Extract values with null handling
+                        d1_open = float(row.get("d1_open") or 0)
+                        d1_high = float(row.get("d1_high") or 0)
+                        d1_low = float(row.get("d1_low") or 0)
+                        d1_close = float(row.get("d1_close") or 0)
+                        bid = float(row.get("bid") or 0)
+                        ask = float(row.get("ask") or 0)
+                        spread = float(row.get("spread") or 0)
 
-                        # Extract H1 (hourly) data
-                        h1_open = float(row.get("h1_open", 0)) if row.get("h1_open") else 0
-                        h1_high = float(row.get("h1_high", 0)) if row.get("h1_high") else 0
-                        h1_low = float(row.get("h1_low", 0)) if row.get("h1_low") else 0
-                        h1_close = float(row.get("h1_close", 0)) if row.get("h1_close") else 0
+                        # H1 (hourly) data
+                        h1_open = float(row.get("h1_open") or 0)
+                        h1_high = float(row.get("h1_high") or 0)
+                        h1_low = float(row.get("h1_low") or 0)
+                        h1_close = float(row.get("h1_close") or 0)
 
-                        # Extract M15 (15-minute) data
-                        m15_open = float(row.get("m15_open", 0)) if row.get("m15_open") else 0
-                        m15_high = float(row.get("m15_high", 0)) if row.get("m15_high") else 0
-                        m15_low = float(row.get("m15_low", 0)) if row.get("m15_low") else 0
-                        m15_close = float(row.get("m15_close", 0)) if row.get("m15_close") else 0
+                        # M15 (15-minute) data
+                        m15_open = float(row.get("m15_open") or 0)
+                        m15_high = float(row.get("m15_high") or 0)
+                        m15_low = float(row.get("m15_low") or 0)
+                        m15_close = float(row.get("m15_close") or 0)
 
-                        # Calculate metrics - Daily
-                        price_change = (
-                            (d1_close - d1_open) / d1_open * 100
-                        ) if d1_open > 0 else 0
+                        # Calculate metrics
+                        price_change = ((d1_close - d1_open) / d1_open * 100) if d1_open > 0 else 0
+                        volatility = ((d1_high - d1_low) / d1_low * 100) if d1_low > 0 else 0
+                        h1_price_change = ((h1_close - h1_open) / h1_open * 100) if h1_open > 0 else 0
+                        h1_volatility = ((h1_high - h1_low) / h1_low * 100) if h1_low > 0 else 0
+                        m15_price_change = ((m15_close - m15_open) / m15_open * 100) if m15_open > 0 else 0
+                        m15_volatility = ((m15_high - m15_low) / m15_low * 100) if m15_low > 0 else 0
 
-                        volatility = (
-                            (d1_high - d1_low) / d1_low * 100
-                        ) if d1_low > 0 else 0
-
-                        # Calculate metrics - Hourly
-                        h1_price_change = (
-                            (h1_close - h1_open) / h1_open * 100
-                        ) if h1_open > 0 else 0
-
-                        h1_volatility = (
-                            (h1_high - h1_low) / h1_low * 100
-                        ) if h1_low > 0 else 0
-
-                        # Calculate metrics - M15
-                        m15_price_change = (
-                            (m15_close - m15_open) / m15_open * 100
-                        ) if m15_open > 0 else 0
-
-                        m15_volatility = (
-                            (m15_high - m15_low) / m15_low * 100
-                        ) if m15_low > 0 else 0
-
-                        # Technical indicators (using API response format)
-                        rsi = float(row.get("rsi", 0)) if row.get("rsi") else None
-                        macd_main = float(row.get("macd_main", 0)) if row.get("macd_main") else None
-                        macd_signal = float(row.get("macd_signal", 0)) if row.get("macd_signal") else None
-                        adx = float(row.get("adx_main", 0)) if row.get("adx_main") else None
-                        adx_plus_di = float(row.get("adx_plusdi", 0)) if row.get("adx_plusdi") else None
-                        adx_minus_di = float(row.get("adx_minusdi", 0)) if row.get("adx_minusdi") else None
-                        atr = float(row.get("atr_d1", 0)) if row.get("atr_d1") else None
-                        range_d1 = float(row.get("range_d1", 0)) if row.get("range_d1") else None
-                        cci = float(row.get("cci", 0)) if row.get("cci") else None
-                        ma100 = float(row.get("ma_100", 0)) if row.get("ma_100") else None
-                        stoch_k = float(row.get("sto_main", 0)) if row.get("sto_main") else None
-                        stoch_d = float(row.get("sto_signal", 0)) if row.get("sto_signal") else None
+                        # Technical indicators
+                        rsi = float(row.get("rsi") or 0) if row.get("rsi") else None
+                        macd_main = float(row.get("macd_main") or 0) if row.get("macd_main") else None
+                        macd_signal = float(row.get("macd_signal") or 0) if row.get("macd_signal") else None
+                        adx = float(row.get("adx_main") or 0) if row.get("adx_main") else None
+                        adx_plus_di = float(row.get("adx_plusdi") or 0) if row.get("adx_plusdi") else None
+                        adx_minus_di = float(row.get("adx_minusdi") or 0) if row.get("adx_minusdi") else None
+                        atr = float(row.get("atr_d1") or 0) if row.get("atr_d1") else None
+                        range_d1 = float(row.get("range_d1") or 0) if row.get("range_d1") else None
+                        cci = float(row.get("cci") or 0) if row.get("cci") else None
+                        ma100 = float(row.get("ma_100") or 0) if row.get("ma_100") else None
+                        stoch_k = float(row.get("sto_main") or 0) if row.get("sto_main") else None
+                        stoch_d = float(row.get("sto_signal") or 0) if row.get("sto_signal") else None
 
                         # Bollinger Bands
-                        bb_middle = float(row.get("bb_base", 0)) if row.get("bb_base") else None
-                        bb_upper = float(row.get("bb_upper", 0)) if row.get("bb_upper") else None
-                        bb_lower = float(row.get("bb_lower", 0)) if row.get("bb_lower") else None
+                        bb_middle = float(row.get("bb_base") or 0) if row.get("bb_base") else None
+                        bb_upper = float(row.get("bb_upper") or 0) if row.get("bb_upper") else None
+                        bb_lower = float(row.get("bb_lower") or 0) if row.get("bb_lower") else None
 
                         # Ichimoku indicators
-                        ichimoku_tenkan = float(row.get("ichimoku_tenkan", 0)) if row.get("ichimoku_tenkan") else None
-                        ichimoku_kijun = float(row.get("ichimoku_kijun", 0)) if row.get("ichimoku_kijun") else None
-                        ichimoku_senkou_a = float(row.get("ichimoku_senkoua", 0)) if row.get("ichimoku_senkoua") else None
-                        ichimoku_senkou_b = float(row.get("ichimoku_senkoub", 0)) if row.get("ichimoku_senkoub") else None
-                        ichimoku_chikou = float(row.get("ichimoku_chikou", 0)) if row.get("ichimoku_chikou") else None
-
-                        # Pivot Points (API doesn't have these, set to None)
-                        pivot_r1 = None
-                        pivot_s1 = None
+                        ichimoku_tenkan = float(row.get("ichimoku_tenkan") or 0) if row.get("ichimoku_tenkan") else None
+                        ichimoku_kijun = float(row.get("ichimoku_kijun") or 0) if row.get("ichimoku_kijun") else None
+                        ichimoku_senkou_a = float(row.get("ichimoku_senkoua") or 0) if row.get("ichimoku_senkoua") else None
+                        ichimoku_senkou_b = float(row.get("ichimoku_senkoub") or 0) if row.get("ichimoku_senkoub") else None
+                        ichimoku_chikou = float(row.get("ichimoku_chikou") or 0) if row.get("ichimoku_chikou") else None
 
                         # Strength indicators
-                        strength_4h = float(row.get("strength_4h", 0)) if row.get("strength_4h") else None
-                        strength_1d = float(row.get("strength_1d", 0)) if row.get("strength_1d") else None
-                        strength_1w = float(row.get("strength_1w", 0)) if row.get("strength_1w") else None
+                        strength_4h = float(row.get("strength_4h") or 0) if row.get("strength_4h") else None
+                        strength_1d = float(row.get("strength_1d") or 0) if row.get("strength_1d") else None
+                        strength_1w = float(row.get("strength_1w") or 0) if row.get("strength_1w") else None
 
-                        # Determine trend based on indicators
+                        # Determine trend
                         trend = "neutral"
                         if rsi:
                             if rsi > 70:
@@ -308,39 +252,24 @@ class TimescaleDBSyncService:
                             elif price_change < 0:
                                 trend = "bearish"
 
-                        # Determine ADX direction signal
+                        # Signal interpretations
                         adx_direction = "N/A"
                         if adx_plus_di and adx_minus_di:
-                            if adx_plus_di > adx_minus_di:
-                                adx_direction = "Bullish (+DI > -DI)"
-                            else:
-                                adx_direction = "Bearish (-DI > +DI)"
+                            adx_direction = "Bullish (+DI > -DI)" if adx_plus_di > adx_minus_di else "Bearish (-DI > +DI)"
 
-                        # Determine Ichimoku signal
                         ichimoku_signal = "N/A"
                         if ichimoku_tenkan and ichimoku_kijun:
-                            if ichimoku_tenkan > ichimoku_kijun:
-                                ichimoku_signal = "Bullish (Tenkan > Kijun)"
-                            else:
-                                ichimoku_signal = "Bearish (Tenkan < Kijun)"
+                            ichimoku_signal = "Bullish (Tenkan > Kijun)" if ichimoku_tenkan > ichimoku_kijun else "Bearish (Tenkan < Kijun)"
 
-                        # Determine Ichimoku Cloud signal (Kumo)
                         ichimoku_cloud = "N/A"
                         if ichimoku_senkou_a and ichimoku_senkou_b:
-                            if ichimoku_senkou_a > ichimoku_senkou_b:
-                                ichimoku_cloud = "Bullish Cloud (Senkou A > B)"
-                            else:
-                                ichimoku_cloud = "Bearish Cloud (Senkou A < B)"
+                            ichimoku_cloud = "Bullish Cloud (Senkou A > B)" if ichimoku_senkou_a > ichimoku_senkou_b else "Bearish Cloud (Senkou A < B)"
 
-                        # Determine MA100 position signal
                         ma100_signal = "N/A"
                         if ma100 and d1_close:
-                            if d1_close > ma100:
-                                ma100_signal = "Bullish (Preis über MA100)"
-                            else:
-                                ma100_signal = "Bearish (Preis unter MA100)"
+                            ma100_signal = "Bullish (Preis über MA100)" if d1_close > ma100 else "Bearish (Preis unter MA100)"
 
-                        # Create comprehensive document content
+                        # Create document content
                         content = f"""
 Marktdaten - {symbol}
 Zeitstempel: {data_timestamp.isoformat()}
@@ -398,10 +327,6 @@ Ichimoku Cloud:
 - TK Signal: {ichimoku_signal}
 - Cloud Signal: {ichimoku_cloud}
 
-Pivot Points (M5):
-- R1 (Widerstand): {f'{pivot_r1:.5f}' if pivot_r1 else 'N/A'}
-- S1 (Unterstützung): {f'{pivot_s1:.5f}' if pivot_s1 else 'N/A'}
-
 Stärke-Indikatoren:
 - Stärke 4H: {f'{strength_4h:.2f}' if strength_4h else 'N/A'}
 - Stärke 1D: {f'{strength_1d:.2f}' if strength_1d else 'N/A'}
@@ -424,21 +349,18 @@ Signale:
                             "bid": bid,
                             "ask": ask,
                             "spread": spread,
-                            # Daily data
                             "d1_open": d1_open,
                             "d1_high": d1_high,
                             "d1_low": d1_low,
                             "d1_close": d1_close,
                             "price_change": price_change,
                             "volatility": volatility,
-                            # Hourly data
                             "h1_open": h1_open,
                             "h1_high": h1_high,
                             "h1_low": h1_low,
                             "h1_close": h1_close,
                             "h1_price_change": h1_price_change,
                             "h1_volatility": h1_volatility,
-                            # M15 data
                             "m15_open": m15_open,
                             "m15_high": m15_high,
                             "m15_low": m15_low,
@@ -448,57 +370,20 @@ Signale:
                             "trend": trend
                         }
 
-                        # Add indicators to metadata if available
-                        if rsi:
-                            metadata["rsi"] = rsi
-                        if macd_main:
-                            metadata["macd_main"] = macd_main
-                        if macd_signal:
-                            metadata["macd_signal"] = macd_signal
-                        if adx:
-                            metadata["adx"] = adx
-                        if adx_plus_di:
-                            metadata["adx_plus_di"] = adx_plus_di
-                        if adx_minus_di:
-                            metadata["adx_minus_di"] = adx_minus_di
-                        if atr:
-                            metadata["atr"] = atr
-                        if range_d1:
-                            metadata["range_d1"] = range_d1
-                        if cci:
-                            metadata["cci"] = cci
-                        if ma100:
-                            metadata["ma100"] = ma100
-                        if stoch_k:
-                            metadata["stoch_k"] = stoch_k
-                        if stoch_d:
-                            metadata["stoch_d"] = stoch_d
-                        if bb_upper:
-                            metadata["bb_upper"] = bb_upper
-                        if bb_middle:
-                            metadata["bb_middle"] = bb_middle
-                        if bb_lower:
-                            metadata["bb_lower"] = bb_lower
-                        if ichimoku_tenkan:
-                            metadata["ichimoku_tenkan"] = ichimoku_tenkan
-                        if ichimoku_kijun:
-                            metadata["ichimoku_kijun"] = ichimoku_kijun
-                        if ichimoku_senkou_a:
-                            metadata["ichimoku_senkou_a"] = ichimoku_senkou_a
-                        if ichimoku_senkou_b:
-                            metadata["ichimoku_senkou_b"] = ichimoku_senkou_b
-                        if ichimoku_chikou:
-                            metadata["ichimoku_chikou"] = ichimoku_chikou
-                        if pivot_r1:
-                            metadata["pivot_r1"] = pivot_r1
-                        if pivot_s1:
-                            metadata["pivot_s1"] = pivot_s1
-                        if strength_4h:
-                            metadata["strength_4h"] = strength_4h
-                        if strength_1d:
-                            metadata["strength_1d"] = strength_1d
-                        if strength_1w:
-                            metadata["strength_1w"] = strength_1w
+                        # Add optional indicators
+                        for key, val in [
+                            ("rsi", rsi), ("macd_main", macd_main), ("macd_signal", macd_signal),
+                            ("adx", adx), ("adx_plus_di", adx_plus_di), ("adx_minus_di", adx_minus_di),
+                            ("atr", atr), ("range_d1", range_d1), ("cci", cci), ("ma100", ma100),
+                            ("stoch_k", stoch_k), ("stoch_d", stoch_d),
+                            ("bb_upper", bb_upper), ("bb_middle", bb_middle), ("bb_lower", bb_lower),
+                            ("ichimoku_tenkan", ichimoku_tenkan), ("ichimoku_kijun", ichimoku_kijun),
+                            ("ichimoku_senkou_a", ichimoku_senkou_a), ("ichimoku_senkou_b", ichimoku_senkou_b),
+                            ("ichimoku_chikou", ichimoku_chikou),
+                            ("strength_4h", strength_4h), ("strength_1d", strength_1d), ("strength_1w", strength_1w)
+                        ]:
+                            if val is not None:
+                                metadata[key] = val
 
                         # Add to RAG
                         await self.rag_service.add_custom_document(
@@ -520,10 +405,9 @@ Signale:
 
     async def manual_sync(self, days_back: int = 7) -> int:
         """Manually trigger a sync for the specified number of days."""
-        from datetime import timezone
-
-        if not self._pool:
-            await self.connect()
+        # Verify API connectivity
+        if not await self._check_api_connectivity():
+            raise Exception(f"Cannot connect to EasyInsight API at {self._api_url}")
 
         start_time = datetime.now(timezone.utc) - timedelta(days=days_back)
         end_time = datetime.now(timezone.utc)
@@ -545,7 +429,7 @@ Signale:
         """Get the current status of the sync service."""
         return {
             "running": self._running,
-            "connected": self._pool is not None,
+            "api_url": self._api_url,
             "last_sync_time": (
                 self._last_sync_time.isoformat() if self._last_sync_time else None
             ),
