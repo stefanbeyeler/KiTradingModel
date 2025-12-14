@@ -230,6 +230,32 @@
             margin-top: 1rem;
         }
 
+        .training-timing {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .timing-stat {
+            text-align: center;
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .timing-stat .value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #a78bfa;
+        }
+
+        .timing-stat .label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-top: 0.3rem;
+        }
+
         .training-stat {
             text-align: center;
             padding: 0.8rem;
@@ -393,6 +419,16 @@
                             <div class="label">Fehlgeschlagen</div>
                         </div>
                     </div>
+                    <div class="training-timing" id="training-timing" style="display: none;">
+                        <div class="timing-stat">
+                            <div class="value" id="stat-elapsed">-</div>
+                            <div class="label">Vergangen</div>
+                        </div>
+                        <div class="timing-stat">
+                            <div class="value" id="stat-eta">-</div>
+                            <div class="label">Verbleibend (ETA)</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -480,6 +516,7 @@
                 const progressEl = document.getElementById('training-progress');
                 const btnTrain = document.getElementById('btn-train');
                 const btnCancel = document.getElementById('btn-cancel');
+                const timingEl = document.getElementById('training-timing');
 
                 if (data.training_in_progress) {
                     msgEl.textContent = `Training: ${data.current_symbol || '-'} (${data.completed_symbols}/${data.total_symbols})`;
@@ -489,11 +526,21 @@
 
                     document.getElementById('stat-successful').textContent = data.results?.successful || 0;
                     document.getElementById('stat-failed').textContent = data.results?.failed || 0;
+
+                    // Show timing information
+                    if (data.timing) {
+                        timingEl.style.display = 'grid';
+                        document.getElementById('stat-elapsed').textContent = data.timing.elapsed_formatted || '-';
+                        document.getElementById('stat-eta').textContent = data.timing.eta_formatted || '-';
+                    } else {
+                        timingEl.style.display = 'none';
+                    }
                 } else {
                     msgEl.textContent = data.message || 'Kein Training aktiv';
                     progressEl.style.width = '0%';
                     btnTrain.disabled = false;
                     btnCancel.disabled = true;
+                    timingEl.style.display = 'none';
                 }
             } catch (err) {
                 console.error('Training status error:', err);

@@ -108,7 +108,8 @@
       "Bash(for port in 3001 3002 3003 3011)",
       "Bash(do echo \"=== Port $port ===\")",
       "Bash(systemctl list-units:*)",
-      "Bash(readlink:*)"
+      "Bash(readlink:*)",
+      "Bash(sudo docker compose:*)"
     ],
     "deny": [],
     "ask": []
