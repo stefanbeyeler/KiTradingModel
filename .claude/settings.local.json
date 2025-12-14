@@ -97,7 +97,9 @@
       "Bash(sudo docker stop:*)",
       "Bash(sudo docker rm:*)",
       "Bash(bash:*)",
-      "Bash(sg docker:*)"
+      "Bash(sg docker:*)",
+      "Bash(ls:*)",
+      "Bash(sudo usermod:*)"
     ],
     "deny": [],
     "ask": []
