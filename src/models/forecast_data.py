@@ -177,3 +177,69 @@ class ForecastModelInfo(BaseModel):
     horizon: int = 24
     input_size: int = 168
     metrics: Dict[str, Any] = Field(default_factory=dict)
+
+
+class TrainingProgressTiming(BaseModel):
+    """Timing information for training progress."""
+
+    elapsed_seconds: int = Field(description="Time elapsed since training started (seconds)")
+    eta_seconds: Optional[int] = Field(
+        default=None,
+        description="Estimated time remaining (seconds)"
+    )
+    elapsed_formatted: str = Field(description="Elapsed time in human-readable format (e.g., '4m 30s')")
+    eta_formatted: Optional[str] = Field(
+        default=None,
+        description="ETA in human-readable format (e.g., '6m 15s')"
+    )
+
+
+class TrainingProgressResults(BaseModel):
+    """Training results breakdown."""
+
+    successful: int = Field(default=0, description="Number of successfully trained models")
+    failed: int = Field(default=0, description="Number of failed training attempts")
+    skipped: int = Field(default=0, description="Number of skipped models (already up-to-date)")
+
+
+class TrainingProgressResponse(BaseModel):
+    """Real-time training progress information."""
+
+    training_in_progress: bool = Field(description="Whether training is currently running")
+    current_symbol: Optional[str] = Field(
+        default=None,
+        description="Symbol currently being trained"
+    )
+    total_symbols: int = Field(default=0, description="Total number of symbols to train")
+    completed_symbols: int = Field(default=0, description="Number of symbols completed")
+    remaining_symbols: int = Field(default=0, description="Number of symbols remaining")
+    progress_percent: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="Progress percentage (0-100)"
+    )
+    results: TrainingProgressResults = Field(
+        default_factory=TrainingProgressResults,
+        description="Breakdown of training results"
+    )
+    timing: Optional[TrainingProgressTiming] = Field(
+        default=None,
+        description="Timing information (only when training is active)"
+    )
+    cancelling: bool = Field(
+        default=False,
+        description="Whether training cancellation has been requested"
+    )
+    started_at: Optional[str] = Field(
+        default=None,
+        description="ISO timestamp when training started"
+    )
+    message: Optional[str] = Field(
+        default=None,
+        description="Status message (when training is not active)"
+    )
+    last_training_run: Optional[str] = Field(
+        default=None,
+        description="ISO timestamp of last completed training run"
+    )

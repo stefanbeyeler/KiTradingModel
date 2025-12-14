@@ -32,6 +32,9 @@ from ..models.forecast_data import (
     ForecastConfig,
     ForecastTrainingResult,
     ForecastModelInfo,
+    TrainingProgressResponse,
+    TrainingProgressResults,
+    TrainingProgressTiming,
 )
 from ..services import AnalysisService, LLMService, StrategyService
 from ..services.query_log_service import query_log_service, QueryLogEntry
@@ -41,7 +44,8 @@ from ..services.symbol_service import symbol_service
 # Thematisch gruppierte Router für bessere API-Organisation
 router = APIRouter()  # Hauptrouter für allgemeine Endpoints
 trading_router = APIRouter()  # Trading-Analyse und Empfehlungen
-forecast_router = APIRouter()  # NHITS Forecasting
+forecast_router = APIRouter()  # NHITS Forecasting (Predictions)
+training_router = APIRouter()  # NHITS Training
 symbol_router = APIRouter()  # Symbol-Management
 strategy_router = APIRouter()  # Trading-Strategien
 rag_router = APIRouter()  # RAG & Wissensbasis
@@ -736,7 +740,7 @@ async def list_forecast_models():
 # ==================== NHITS Batch Training Endpoints ====================
 # NOTE: These must be defined BEFORE parameterized routes like /forecast/{symbol}
 
-@forecast_router.get("/forecast/training/status")
+@training_router.get("/forecast/training/status")
 async def get_training_status():
     """
     Get the status of the NHITS training service.
@@ -751,7 +755,7 @@ async def get_training_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@forecast_router.get("/forecast/training/progress")
+@training_router.get("/forecast/training/progress", response_model=TrainingProgressResponse)
 async def get_training_progress():
     """
     Get real-time progress of the current NHITS training session.
@@ -772,11 +776,11 @@ async def get_training_progress():
 
         # If no training in progress, return minimal info
         if not status.get("training_in_progress", False):
-            return {
-                "training_in_progress": False,
-                "message": "No training currently running",
-                "last_training_run": status.get("last_training_run")
-            }
+            return TrainingProgressResponse(
+                training_in_progress=False,
+                message="No training currently running",
+                last_training_run=status.get("last_training_run")
+            )
 
         # Extract detailed progress information
         progress = status.get("progress", {})
@@ -798,34 +802,34 @@ async def get_training_progress():
             remaining_symbols = total - completed
             eta_seconds = int(avg_time_per_symbol * remaining_symbols)
 
-        return {
-            "training_in_progress": True,
-            "current_symbol": current_symbol,
-            "total_symbols": total,
-            "completed_symbols": completed,
-            "remaining_symbols": total - completed,
-            "progress_percent": progress_pct,
-            "results": {
-                "successful": successful,
-                "failed": failed,
-                "skipped": skipped
-            },
-            "timing": {
-                "elapsed_seconds": elapsed,
-                "eta_seconds": eta_seconds,
-                "elapsed_formatted": f"{elapsed // 60}m {elapsed % 60}s" if elapsed else "0s",
-                "eta_formatted": f"{eta_seconds // 60}m {eta_seconds % 60}s" if eta_seconds else None
-            },
-            "cancelling": cancelling,
-            "started_at": status.get("started_at")
-        }
+        return TrainingProgressResponse(
+            training_in_progress=True,
+            current_symbol=current_symbol,
+            total_symbols=total,
+            completed_symbols=completed,
+            remaining_symbols=total - completed,
+            progress_percent=progress_pct,
+            results=TrainingProgressResults(
+                successful=successful,
+                failed=failed,
+                skipped=skipped
+            ),
+            timing=TrainingProgressTiming(
+                elapsed_seconds=elapsed,
+                eta_seconds=eta_seconds,
+                elapsed_formatted=f"{elapsed // 60}m {elapsed % 60}s" if elapsed else "0s",
+                eta_formatted=f"{eta_seconds // 60}m {eta_seconds % 60}s" if eta_seconds else None
+            ),
+            cancelling=cancelling,
+            started_at=status.get("started_at")
+        )
 
     except Exception as e:
         logger.error(f"Failed to get training progress: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@forecast_router.get("/forecast/training/symbols")
+@training_router.get("/forecast/training/symbols")
 async def get_trainable_symbols():
     """
     Get list of symbols available for NHITS training.
@@ -861,7 +865,7 @@ async def get_trainable_symbols():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@forecast_router.post("/forecast/train-all")
+@training_router.post("/forecast/train-all")
 async def train_all_models(
     symbols: list[str] | None = None,
     force: bool = False,
@@ -929,7 +933,7 @@ async def train_all_models(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@forecast_router.post("/forecast/training/cancel")
+@training_router.post("/forecast/training/cancel")
 async def cancel_training():
     """
     Cancel the current training run.
@@ -959,7 +963,7 @@ async def cancel_training():
 # Model Improvement & Performance Endpoints (MUST be before {symbol} routes!)
 # =============================================================================
 
-@forecast_router.get("/forecast/performance")
+@training_router.get("/forecast/performance")
 async def get_model_performance():
     """
     Get performance metrics for all NHITS models.
@@ -975,7 +979,7 @@ async def get_model_performance():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@forecast_router.get("/forecast/evaluated")
+@training_router.get("/forecast/evaluated")
 async def get_evaluated_predictions(symbol: Optional[str] = None, limit: int = 50):
     """
     Get list of evaluated predictions with their results.
@@ -999,7 +1003,7 @@ async def get_evaluated_predictions(symbol: Optional[str] = None, limit: int = 5
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@forecast_router.get("/forecast/retraining-needed")
+@training_router.get("/forecast/retraining-needed")
 async def get_symbols_needing_retraining():
     """
     Get list of symbols whose models need retraining due to poor performance.
@@ -1030,7 +1034,7 @@ async def get_symbols_needing_retraining():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@forecast_router.post("/forecast/evaluate")
+@training_router.post("/forecast/evaluate")
 async def evaluate_predictions():
     """
     Manually trigger evaluation of pending predictions.
@@ -1066,7 +1070,7 @@ async def evaluate_predictions():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@forecast_router.post("/forecast/retrain-poor-performers")
+@training_router.post("/forecast/retrain-poor-performers")
 async def retrain_poor_performers():
     """
     Trigger retraining for all models that are performing poorly.
@@ -1183,7 +1187,7 @@ async def get_forecast(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@forecast_router.post("/forecast/{symbol}/train", response_model=ForecastTrainingResult)
+@training_router.post("/forecast/{symbol}/train", response_model=ForecastTrainingResult)
 async def train_forecast_model(
     symbol: str,
     days: int = 90,
@@ -1434,9 +1438,13 @@ def get_all_routers():
             "name": "Trading",
             "description": "Trading recommendations, symbol analysis, and market insights"
         }),
-        (forecast_router, "/api/v1", ["🔮 NHITS Forecasting"], {
-            "name": "Forecasting",
-            "description": "Neural forecasting with NHITS models - training, predictions, and evaluation"
+        (forecast_router, "/api/v1", ["🔮 NHITS Forecast"], {
+            "name": "Forecast",
+            "description": "Neural price forecasting with NHITS models - generate predictions and view model info"
+        }),
+        (training_router, "/api/v1", ["🎓 NHITS Training"], {
+            "name": "Training",
+            "description": "NHITS model training - batch training, progress monitoring, and performance evaluation"
         }),
         (symbol_router, "/api/v1", ["📈 Symbol Management"], {
             "name": "Symbols",
