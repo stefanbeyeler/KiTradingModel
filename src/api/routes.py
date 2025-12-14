@@ -38,7 +38,16 @@ from ..services.query_log_service import query_log_service, QueryLogEntry
 from ..services.symbol_service import symbol_service
 
 
-router = APIRouter()
+# Thematisch gruppierte Router für bessere API-Organisation
+router = APIRouter()  # Hauptrouter für allgemeine Endpoints
+trading_router = APIRouter()  # Trading-Analyse und Empfehlungen
+forecast_router = APIRouter()  # NHITS Forecasting
+symbol_router = APIRouter()  # Symbol-Management
+strategy_router = APIRouter()  # Trading-Strategien
+rag_router = APIRouter()  # RAG & Wissensbasis
+llm_router = APIRouter()  # LLM Service
+system_router = APIRouter()  # System & Monitoring
+query_log_router = APIRouter()  # Query Logs & Analytics
 
 # Service instances
 analysis_service = AnalysisService()
@@ -52,13 +61,15 @@ def get_rag_service():
     return rag_service
 
 
-@router.get("/version")
+# ==================== System & Health ====================
+
+@system_router.get("/version")
 async def get_version():
     """Get application version and release information."""
     return get_version_info()
 
 
-@router.get("/health")
+@system_router.get("/health")
 async def health_check():
     """Check health of all services."""
     try:
@@ -119,7 +130,9 @@ async def health_check():
         }
 
 
-@router.post("/analyze", response_model=AnalysisResponse)
+# ==================== Trading Analysis ====================
+
+@trading_router.post("/analyze", response_model=AnalysisResponse)
 async def analyze_symbol(request: AnalysisRequest):
     """
     Generate a trading analysis and recommendation for a symbol.
@@ -141,7 +154,7 @@ async def analyze_symbol(request: AnalysisRequest):
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
-@router.get("/recommendation/{symbol}", response_model=TradingRecommendation)
+@trading_router.get("/recommendation/{symbol}", response_model=TradingRecommendation)
 async def get_quick_recommendation(
     symbol: str,
     lookback_days: int = 30,
@@ -181,7 +194,7 @@ async def get_quick_recommendation(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/symbols")
+@trading_router.get("/symbols")
 async def get_available_symbols():
     """Get list of available trading symbols from TimescaleDB."""
     try:
@@ -192,7 +205,7 @@ async def get_available_symbols():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/symbol-info/{symbol:path}")
+@trading_router.get("/symbol-info/{symbol:path}")
 async def get_symbol_info(symbol: str):
     """Get detailed information about a symbol from TimescaleDB."""
     try:
@@ -203,7 +216,7 @@ async def get_symbol_info(symbol: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/rag/document")
+@rag_router.post("/rag/document")
 async def add_rag_document(
     content: str,
     document_type: str,
@@ -225,7 +238,7 @@ async def add_rag_document(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/rag/query")
+@rag_router.get("/rag/query")
 async def query_rag(
     query: str,
     symbol: Optional[str] = None,
@@ -249,7 +262,7 @@ async def query_rag(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/rag/stats")
+@rag_router.get("/rag/stats")
 async def get_rag_stats():
     """Get statistics about the RAG collection."""
     try:
@@ -261,7 +274,7 @@ async def get_rag_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/rag/documents")
+@rag_router.delete("/rag/documents")
 async def delete_rag_documents(
     symbol: Optional[str] = None,
     background_tasks: BackgroundTasks = None
@@ -279,7 +292,7 @@ async def delete_rag_documents(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/rag/persist")
+@rag_router.post("/rag/persist")
 async def persist_rag():
     """Persist RAG database to disk."""
     try:
@@ -291,7 +304,7 @@ async def persist_rag():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/llm/status")
+@llm_router.get("/llm/status")
 async def get_llm_status():
     """Check LLM model status."""
     try:
@@ -309,7 +322,7 @@ async def get_llm_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/llm/pull")
+@llm_router.post("/llm/pull")
 async def pull_llm_model():
     """Pull the configured LLM model."""
     try:
@@ -324,14 +337,14 @@ async def pull_llm_model():
 
 
 # Sync service endpoints - import from main
-@router.get("/sync/status")
+@system_router.get("/sync/status")
 async def get_sync_status():
     """Get the status of the TimescaleDB sync service."""
     from ..main import sync_service
     return sync_service.get_status()
 
 
-@router.post("/sync/start")
+@system_router.post("/sync/start")
 async def start_sync():
     """Start the TimescaleDB sync service."""
     from ..main import sync_service
@@ -346,7 +359,7 @@ async def start_sync():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/sync/stop")
+@system_router.post("/sync/stop")
 async def stop_sync():
     """Stop the TimescaleDB sync service."""
     from ..main import sync_service
@@ -361,7 +374,7 @@ async def stop_sync():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/sync/manual")
+@system_router.post("/sync/manual")
 async def manual_sync(days_back: int = 7):
     """Manually trigger a sync for the specified number of days."""
     from ..main import sync_service
@@ -377,7 +390,7 @@ async def manual_sync(days_back: int = 7):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/system/info")
+@system_router.get("/system/info")
 async def get_system_info():
     """Get system and GPU information."""
     try:
@@ -428,7 +441,7 @@ async def get_system_info():
 # Trading Strategy Endpoints
 # ============================================
 
-@router.get("/strategies", response_model=list[TradingStrategy])
+@strategy_router.get("/strategies", response_model=list[TradingStrategy])
 async def get_strategies(include_inactive: bool = False):
     """Get all trading strategies."""
     try:
@@ -439,7 +452,7 @@ async def get_strategies(include_inactive: bool = False):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/strategies/default", response_model=TradingStrategy)
+@strategy_router.get("/strategies/default", response_model=TradingStrategy)
 async def get_default_strategy():
     """Get the default trading strategy."""
     try:
@@ -454,7 +467,7 @@ async def get_default_strategy():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/strategies/{strategy_id}/export", response_class=PlainTextResponse)
+@strategy_router.get("/strategies/{strategy_id}/export", response_class=PlainTextResponse)
 async def export_strategy(strategy_id: str):
     """Export a strategy as Markdown file."""
     try:
@@ -480,7 +493,7 @@ async def export_strategy(strategy_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/strategies/{strategy_id}", response_model=TradingStrategy)
+@strategy_router.get("/strategies/{strategy_id}", response_model=TradingStrategy)
 async def get_strategy(strategy_id: str):
     """Get a specific trading strategy by ID."""
     try:
@@ -495,7 +508,7 @@ async def get_strategy(strategy_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/strategies", response_model=TradingStrategy)
+@strategy_router.post("/strategies", response_model=TradingStrategy)
 async def create_strategy(request: StrategyCreateRequest):
     """Create a new trading strategy."""
     try:
@@ -506,7 +519,7 @@ async def create_strategy(request: StrategyCreateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/strategies/{strategy_id}", response_model=TradingStrategy)
+@strategy_router.put("/strategies/{strategy_id}", response_model=TradingStrategy)
 async def update_strategy(strategy_id: str, request: StrategyUpdateRequest):
     """Update an existing trading strategy."""
     try:
@@ -521,7 +534,7 @@ async def update_strategy(strategy_id: str, request: StrategyUpdateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/strategies/{strategy_id}")
+@strategy_router.delete("/strategies/{strategy_id}")
 async def delete_strategy(strategy_id: str):
     """Delete a trading strategy (only custom strategies can be deleted)."""
     try:
@@ -539,7 +552,7 @@ async def delete_strategy(strategy_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/strategies/{strategy_id}/set-default", response_model=TradingStrategy)
+@strategy_router.post("/strategies/{strategy_id}/set-default", response_model=TradingStrategy)
 async def set_default_strategy(strategy_id: str):
     """Set a strategy as the default."""
     try:
@@ -554,7 +567,7 @@ async def set_default_strategy(strategy_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/strategies/import", response_model=TradingStrategy)
+@strategy_router.post("/strategies/import", response_model=TradingStrategy)
 async def import_strategy(file: UploadFile = File(...)):
     """Import a strategy from a Markdown file."""
     try:
@@ -583,7 +596,7 @@ async def import_strategy(file: UploadFile = File(...)):
 
 # ==================== Query Logs ====================
 
-@router.get("/query-logs")
+@query_log_router.get("/query-logs")
 async def get_query_logs(
     limit: int = 50,
     offset: int = 0,
@@ -620,7 +633,7 @@ async def get_query_logs(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/query-logs/stats")
+@query_log_router.get("/query-logs/stats")
 async def get_query_log_stats():
     """Get statistics about query logs."""
     try:
@@ -630,7 +643,7 @@ async def get_query_log_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/query-logs/{log_id}")
+@query_log_router.get("/query-logs/{log_id}")
 async def get_query_log_by_id(log_id: str):
     """Get a specific query log entry by ID."""
     try:
@@ -645,7 +658,7 @@ async def get_query_log_by_id(log_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/query-logs")
+@query_log_router.delete("/query-logs")
 async def clear_query_logs():
     """Clear all query logs."""
     try:
@@ -673,7 +686,7 @@ def get_training_service():
 # IMPORTANT: Static routes MUST come before parameterized routes
 # to avoid FastAPI interpreting "status" or "models" as {symbol}
 
-@router.get("/forecast/status")
+@forecast_router.get("/forecast/status")
 async def get_forecast_status():
     """
     Get the status of the NHITS forecasting service.
@@ -704,7 +717,7 @@ async def get_forecast_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/forecast/models", response_model=list[ForecastModelInfo])
+@forecast_router.get("/forecast/models", response_model=list[ForecastModelInfo])
 async def list_forecast_models():
     """
     List all trained NHITS models.
@@ -723,7 +736,7 @@ async def list_forecast_models():
 # ==================== NHITS Batch Training Endpoints ====================
 # NOTE: These must be defined BEFORE parameterized routes like /forecast/{symbol}
 
-@router.get("/forecast/training/status")
+@forecast_router.get("/forecast/training/status")
 async def get_training_status():
     """
     Get the status of the NHITS training service.
@@ -738,7 +751,7 @@ async def get_training_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/forecast/training/symbols")
+@forecast_router.get("/forecast/training/symbols")
 async def get_trainable_symbols():
     """
     Get list of symbols available for NHITS training.
@@ -774,7 +787,7 @@ async def get_trainable_symbols():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/forecast/train-all")
+@forecast_router.post("/forecast/train-all")
 async def train_all_models(
     symbols: list[str] | None = None,
     force: bool = False,
@@ -842,7 +855,7 @@ async def train_all_models(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/forecast/training/cancel")
+@forecast_router.post("/forecast/training/cancel")
 async def cancel_training():
     """
     Cancel the current training run.
@@ -872,7 +885,7 @@ async def cancel_training():
 # Model Improvement & Performance Endpoints (MUST be before {symbol} routes!)
 # =============================================================================
 
-@router.get("/forecast/performance")
+@forecast_router.get("/forecast/performance")
 async def get_model_performance():
     """
     Get performance metrics for all NHITS models.
@@ -888,7 +901,7 @@ async def get_model_performance():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/forecast/evaluated")
+@forecast_router.get("/forecast/evaluated")
 async def get_evaluated_predictions(symbol: Optional[str] = None, limit: int = 50):
     """
     Get list of evaluated predictions with their results.
@@ -912,7 +925,7 @@ async def get_evaluated_predictions(symbol: Optional[str] = None, limit: int = 5
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/forecast/retraining-needed")
+@forecast_router.get("/forecast/retraining-needed")
 async def get_symbols_needing_retraining():
     """
     Get list of symbols whose models need retraining due to poor performance.
@@ -943,7 +956,7 @@ async def get_symbols_needing_retraining():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/forecast/evaluate")
+@forecast_router.post("/forecast/evaluate")
 async def evaluate_predictions():
     """
     Manually trigger evaluation of pending predictions.
@@ -979,7 +992,7 @@ async def evaluate_predictions():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/forecast/retrain-poor-performers")
+@forecast_router.post("/forecast/retrain-poor-performers")
 async def retrain_poor_performers():
     """
     Trigger retraining for all models that are performing poorly.
@@ -1037,7 +1050,7 @@ async def retrain_poor_performers():
 
 # ==================== NHITS Symbol-specific Endpoints ====================
 
-@router.get("/forecast/{symbol}", response_model=ForecastResult)
+@forecast_router.get("/forecast/{symbol}", response_model=ForecastResult)
 async def get_forecast(
     symbol: str,
     horizon: int = 24,
@@ -1096,7 +1109,7 @@ async def get_forecast(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/forecast/{symbol}/train", response_model=ForecastTrainingResult)
+@forecast_router.post("/forecast/{symbol}/train", response_model=ForecastTrainingResult)
 async def train_forecast_model(
     symbol: str,
     days: int = 90,
@@ -1135,7 +1148,7 @@ async def train_forecast_model(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/forecast/{symbol}/model", response_model=ForecastModelInfo)
+@forecast_router.get("/forecast/{symbol}/model", response_model=ForecastModelInfo)
 async def get_forecast_model_info(symbol: str):
     """
     Get information about the trained NHITS model for a symbol.
@@ -1153,7 +1166,7 @@ async def get_forecast_model_info(symbol: str):
 
 # ==================== Symbol Management Endpoints ====================
 
-@router.get("/managed-symbols", response_model=list[ManagedSymbol])
+@symbol_router.get("/managed-symbols", response_model=list[ManagedSymbol])
 async def get_managed_symbols(
     category: Optional[SymbolCategory] = None,
     status: Optional[SymbolStatus] = None,
@@ -1182,7 +1195,7 @@ async def get_managed_symbols(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/managed-symbols/stats", response_model=SymbolStats)
+@symbol_router.get("/managed-symbols/stats", response_model=SymbolStats)
 async def get_symbol_stats():
     """Get statistics about managed symbols."""
     try:
@@ -1193,7 +1206,7 @@ async def get_symbol_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/managed-symbols/search")
+@symbol_router.get("/managed-symbols/search")
 async def search_managed_symbols(query: str, limit: int = 20):
     """
     Search managed symbols by name, description, or tags.
@@ -1214,7 +1227,7 @@ async def search_managed_symbols(query: str, limit: int = 20):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/managed-symbols/import", response_model=SymbolImportResult)
+@symbol_router.post("/managed-symbols/import", response_model=SymbolImportResult)
 async def import_symbols_from_timescaledb():
     """
     Import all symbols from TimescaleDB.
@@ -1233,7 +1246,7 @@ async def import_symbols_from_timescaledb():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/managed-symbols", response_model=ManagedSymbol)
+@symbol_router.post("/managed-symbols", response_model=ManagedSymbol)
 async def create_managed_symbol(request: SymbolCreateRequest):
     """
     Create a new managed symbol.
@@ -1250,7 +1263,7 @@ async def create_managed_symbol(request: SymbolCreateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/managed-symbols/{symbol_id}", response_model=ManagedSymbol)
+@symbol_router.get("/managed-symbols/{symbol_id}", response_model=ManagedSymbol)
 async def get_managed_symbol(symbol_id: str):
     """Get a specific managed symbol by ID."""
     try:
@@ -1265,7 +1278,7 @@ async def get_managed_symbol(symbol_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/managed-symbols/{symbol_id}", response_model=ManagedSymbol)
+@symbol_router.put("/managed-symbols/{symbol_id}", response_model=ManagedSymbol)
 async def update_managed_symbol(symbol_id: str, request: SymbolUpdateRequest):
     """Update an existing managed symbol."""
     try:
@@ -1280,7 +1293,7 @@ async def update_managed_symbol(symbol_id: str, request: SymbolUpdateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/managed-symbols/{symbol_id}")
+@symbol_router.delete("/managed-symbols/{symbol_id}")
 async def delete_managed_symbol(symbol_id: str):
     """Delete a managed symbol."""
     try:
@@ -1295,7 +1308,7 @@ async def delete_managed_symbol(symbol_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/managed-symbols/{symbol_id}/favorite", response_model=ManagedSymbol)
+@symbol_router.post("/managed-symbols/{symbol_id}/favorite", response_model=ManagedSymbol)
 async def toggle_symbol_favorite(symbol_id: str):
     """Toggle favorite status for a symbol."""
     try:
@@ -1310,7 +1323,7 @@ async def toggle_symbol_favorite(symbol_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/managed-symbols/{symbol_id}/refresh", response_model=ManagedSymbol)
+@symbol_router.post("/managed-symbols/{symbol_id}/refresh", response_model=ManagedSymbol)
 async def refresh_symbol_data(symbol_id: str):
     """
     Refresh TimescaleDB data information for a symbol.
@@ -1327,3 +1340,48 @@ async def refresh_symbol_data(symbol_id: str):
     except Exception as e:
         logger.error(f"Failed to refresh symbol: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Router Export ====================
+
+def get_all_routers():
+    """
+    Return all thematic routers with their tags for inclusion in main app.
+
+    Returns:
+        list: List of tuples (router, prefix, tags, description)
+    """
+    return [
+        (system_router, "/api/v1", ["🖥️ System & Monitoring"], {
+            "name": "System",
+            "description": "Health checks, version info, sync status, and system information"
+        }),
+        (trading_router, "/api/v1", ["📊 Trading Analysis"], {
+            "name": "Trading",
+            "description": "Trading recommendations, symbol analysis, and market insights"
+        }),
+        (forecast_router, "/api/v1", ["🔮 NHITS Forecasting"], {
+            "name": "Forecasting",
+            "description": "Neural forecasting with NHITS models - training, predictions, and evaluation"
+        }),
+        (symbol_router, "/api/v1", ["📈 Symbol Management"], {
+            "name": "Symbols",
+            "description": "Manage trading symbols, categories, and data availability"
+        }),
+        (strategy_router, "/api/v1", ["🎯 Trading Strategies"], {
+            "name": "Strategies",
+            "description": "Trading strategy management, import/export, and defaults"
+        }),
+        (rag_router, "/api/v1", ["🧠 RAG & Knowledge Base"], {
+            "name": "RAG",
+            "description": "Retrieval-Augmented Generation - document management and semantic search"
+        }),
+        (llm_router, "/api/v1", ["🤖 LLM Service"], {
+            "name": "LLM",
+            "description": "Large Language Model management and status"
+        }),
+        (query_log_router, "/api/v1", ["📝 Query Logs & Analytics"], {
+            "name": "Analytics",
+            "description": "Query logging, statistics, and audit trails"
+        }),
+    ]

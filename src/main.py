@@ -57,8 +57,12 @@ app.add_middleware(
 )
 
 
-# Include API routes
-app.include_router(router, prefix="/api/v1", tags=["Trading Analysis"])
+# Include API routes - thematically grouped
+from .api.routes import get_all_routers
+
+for router_tuple in get_all_routers():
+    router_obj, prefix, tags, metadata = router_tuple
+    app.include_router(router_obj, prefix=prefix, tags=tags)
 
 # Mount static files for dashboard
 static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
