@@ -57,12 +57,18 @@
 
         .services-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 1.5rem;
             margin-bottom: 1.5rem;
         }
 
-        @media (max-width: 1200px) {
+        @media (max-width: 1400px) {
+            .services-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 1000px) {
             .services-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -338,7 +344,7 @@
         <div class="container">
             <h1>KI Trading Model</h1>
             <div class="header-status">
-                <span id="services-count">Services: -/4</span>
+                <span id="services-count">Services: -/5</span>
                 <span id="models-count">Modelle: -</span>
                 <span id="last-update">Update: -</span>
             </div>
@@ -347,39 +353,21 @@
 
     <div class="container">
         <div class="services-grid">
-            <!-- NHITS Service -->
-            <div class="service-card" id="nhits-card">
+            <!-- EasyInsight API -->
+            <div class="service-card" id="easyinsight-card">
                 <div class="service-header">
-                    <h2>NHITS Service</h2>
-                    <span class="status-badge status-loading" id="nhits-status">Laden...</span>
+                    <h2>EasyInsight API</h2>
+                    <span class="status-badge status-loading" id="easyinsight-status">Laden...</span>
                 </div>
-                <p>Neural Hierarchical Interpolation for Time Series - Preisprognosen und Modell-Training.</p>
-                <div class="service-info" id="nhits-info">
-                    <div><span class="label">Port</span><span>3001</span></div>
-                    <div><span class="label">GPU</span><span id="nhits-gpu">-</span></div>
-                    <div><span class="label">Training</span><span id="nhits-training">-</span></div>
+                <p>Externe Datenquelle - OHLCV-Marktdaten und Symbol-Informationen via TimescaleDB.</p>
+                <div class="service-info" id="easyinsight-info">
+                    <div><span class="label">Host</span><span>10.1.19.102:3000</span></div>
+                    <div><span class="label">Symbole</span><span id="easyinsight-symbols">-</span></div>
+                    <div><span class="label">Latenz</span><span id="easyinsight-latency">-</span></div>
                 </div>
                 <div class="service-links">
-                    <a href="/nhits/docs" target="_blank">API Docs</a>
-                    <a href="/nhits/health" target="_blank">Health</a>
-                </div>
-            </div>
-
-            <!-- LLM Service -->
-            <div class="service-card" id="llm-card">
-                <div class="service-header">
-                    <h2>LLM Service</h2>
-                    <span class="status-badge status-loading" id="llm-status">Laden...</span>
-                </div>
-                <p>Large Language Model Analyse mit RAG - Trading-Insights powered by Llama 3.1 70B.</p>
-                <div class="service-info" id="llm-info">
-                    <div><span class="label">Port</span><span>3002</span></div>
-                    <div><span class="label">Modell</span><span id="llm-model">-</span></div>
-                    <div><span class="label">RAG</span><span id="llm-rag">-</span></div>
-                </div>
-                <div class="service-links">
-                    <a href="/llm/docs" target="_blank">API Docs</a>
-                    <a href="/llm/health" target="_blank">Health</a>
+                    <a href="http://10.1.19.102:3000/swagger/" target="_blank">API Docs</a>
+                    <a href="http://10.1.19.102:3000/api/symbols" target="_blank">Symbols</a>
                 </div>
             </div>
 
@@ -401,21 +389,57 @@
                 </div>
             </div>
 
-            <!-- EasyInsight API -->
-            <div class="service-card" id="easyinsight-card">
+            <!-- NHITS Service -->
+            <div class="service-card" id="nhits-card">
                 <div class="service-header">
-                    <h2>EasyInsight API</h2>
-                    <span class="status-badge status-loading" id="easyinsight-status">Laden...</span>
+                    <h2>NHITS Service</h2>
+                    <span class="status-badge status-loading" id="nhits-status">Laden...</span>
                 </div>
-                <p>Externe Datenquelle - OHLCV-Marktdaten und Symbol-Informationen via TimescaleDB.</p>
-                <div class="service-info" id="easyinsight-info">
-                    <div><span class="label">Host</span><span>10.1.19.102:3000</span></div>
-                    <div><span class="label">Symbole</span><span id="easyinsight-symbols">-</span></div>
-                    <div><span class="label">Latenz</span><span id="easyinsight-latency">-</span></div>
+                <p>Neural Hierarchical Interpolation for Time Series - Preisprognosen und Modell-Training.</p>
+                <div class="service-info" id="nhits-info">
+                    <div><span class="label">Port</span><span>3001</span></div>
+                    <div><span class="label">GPU</span><span id="nhits-gpu">-</span></div>
+                    <div><span class="label">Training</span><span id="nhits-training">-</span></div>
                 </div>
                 <div class="service-links">
-                    <a href="http://10.1.19.102:3000/swagger/" target="_blank">API Docs</a>
-                    <a href="http://10.1.19.102:3000/api/symbols" target="_blank">Symbols</a>
+                    <a href="/nhits/docs" target="_blank">API Docs</a>
+                    <a href="/nhits/health" target="_blank">Health</a>
+                </div>
+            </div>
+
+            <!-- RAG Service -->
+            <div class="service-card" id="rag-card">
+                <div class="service-header">
+                    <h2>RAG Service</h2>
+                    <span class="status-badge status-loading" id="rag-status">Laden...</span>
+                </div>
+                <p>Vector Search & Knowledge Base - FAISS-basierte Dokumentensuche und Retrieval.</p>
+                <div class="service-info" id="rag-info">
+                    <div><span class="label">Port</span><span>3004</span></div>
+                    <div><span class="label">Dokumente</span><span id="rag-docs">-</span></div>
+                    <div><span class="label">GPU</span><span id="rag-gpu">-</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/rag/docs" target="_blank">API Docs</a>
+                    <a href="/rag/health" target="_blank">Health</a>
+                </div>
+            </div>
+
+            <!-- LLM Service -->
+            <div class="service-card" id="llm-card">
+                <div class="service-header">
+                    <h2>LLM Service</h2>
+                    <span class="status-badge status-loading" id="llm-status">Laden...</span>
+                </div>
+                <p>Large Language Model Analyse mit RAG - Trading-Insights powered by Llama 3.1 70B.</p>
+                <div class="service-info" id="llm-info">
+                    <div><span class="label">Port</span><span>3002</span></div>
+                    <div><span class="label">Modell</span><span id="llm-model">-</span></div>
+                    <div><span class="label">RAG</span><span id="llm-rag">-</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/llm/docs" target="_blank">API Docs</a>
+                    <a href="/llm/health" target="_blank">Health</a>
                 </div>
             </div>
         </div>
@@ -469,7 +493,7 @@
     </div>
 
     <footer>
-        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + Llama 3.1 70B
+        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + Llama 3.1 70B + RAG
     </footer>
 
     <div class="toast" id="toast"></div>
@@ -528,6 +552,14 @@
             if (data) {
                 document.getElementById('data-easyinsight').textContent = data.easyinsight_api ? 'Verbunden' : '-';
                 document.getElementById('data-sync').textContent = data.sync_service_status || '-';
+            }
+        }
+
+        async function updateRagInfo() {
+            const data = await checkHealth('rag', 3004, 'rag-status');
+            if (data) {
+                document.getElementById('rag-docs').textContent = data.document_count || 0;
+                document.getElementById('rag-gpu').textContent = data.faiss_gpu ? 'Aktiviert' : 'CPU';
             }
         }
 
@@ -605,11 +637,12 @@
                 updateNhitsInfo(),
                 updateLlmInfo(),
                 updateDataInfo(),
+                updateRagInfo(),
                 updateEasyInsightInfo(),
                 updateTrainingStatus()
             ]);
 
-            document.getElementById('services-count').textContent = `Services: ${healthyServices}/4`;
+            document.getElementById('services-count').textContent = `Services: ${healthyServices}/5`;
             document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
         }
 

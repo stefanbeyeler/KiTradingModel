@@ -109,7 +109,9 @@
       "Bash(do echo \"=== Port $port ===\")",
       "Bash(systemctl list-units:*)",
       "Bash(readlink:*)",
-      "Bash(sudo docker compose:*)"
+      "Bash(sudo docker compose:*)",
+      "Bash(wc:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

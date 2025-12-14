@@ -11,6 +11,7 @@ services:
       - nhits-service
       - llm-service
       - data-service
+      - rag-service
     networks:
       - trading-net
     extra_hosts:
@@ -38,6 +39,7 @@ services:
     environment:
       - SERVICE_NAME=nhits
       - PORT=3001
+      - ROOT_PATH=/nhits
       - NHITS_USE_GPU=1
       - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
       - NHITS_AUTO_RETRAIN_DAYS=${NHITS_AUTO_RETRAIN_DAYS:-7}
@@ -79,6 +81,7 @@ services:
     environment:
       - SERVICE_NAME=llm
       - PORT=3002
+      - ROOT_PATH=/llm
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1:70b}
       - OLLAMA_HOST=http://host.docker.internal:11434
       - FAISS_USE_GPU=1
@@ -105,6 +108,47 @@ services:
       retries: 3
       start_period: 60s
 
+  # RAG Service - Vector Search & Knowledge Base (Port 3004)
+  rag-service:
+    build:
+      context: .
+      dockerfile: docker/services/rag/Dockerfile
+    container_name: trading-rag
+    runtime: nvidia
+    ports:
+      - "3004:3004"
+    volumes:
+      - rag-data:/app/data/faiss
+      - ./src:/app/src:ro
+      - ./logs:/app/logs
+    environment:
+      - SERVICE_NAME=rag
+      - PORT=3004
+      - ROOT_PATH=/rag
+      - FAISS_USE_GPU=1
+      - EMBEDDING_DEVICE=cuda
+      - FAISS_PERSIST_DIRECTORY=/app/data/faiss
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # Data Service - Symbols, Strategies, Sync (Port 3003)
   data-service:
     build:
@@ -120,6 +164,7 @@ services:
     environment:
       - SERVICE_NAME=data
       - PORT=3003
+      - ROOT_PATH=/data
       - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
       - OLLAMA_HOST=http://host.docker.internal:11434
     networks:

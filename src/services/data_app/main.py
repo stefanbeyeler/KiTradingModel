@@ -56,7 +56,8 @@ app = FastAPI(
     description="Data Management Service - Symbols, Strategies, Sync & Monitoring",
     version=VERSION,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    root_path=os.getenv("ROOT_PATH", "")
 )
 
 # Configure CORS

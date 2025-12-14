@@ -45,7 +45,8 @@ app = FastAPI(
     description="Neural Hierarchical Interpolation for Time Series - Training & Forecasting",
     version=VERSION,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    root_path=os.getenv("ROOT_PATH", "")
 )
 
 # Configure CORS
