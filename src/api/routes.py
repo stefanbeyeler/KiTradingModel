@@ -751,6 +751,80 @@ async def get_training_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@forecast_router.get("/forecast/training/progress")
+async def get_training_progress():
+    """
+    Get real-time progress of the current NHITS training session.
+
+    Returns detailed progress information including:
+    - Current symbol being trained
+    - Number of symbols completed vs total
+    - Success/failure/skipped counts
+    - Progress percentage
+    - Elapsed time
+    - Estimated time remaining (if available)
+
+    Useful for monitoring long-running batch training jobs.
+    """
+    try:
+        training_service = get_training_service()
+        status = training_service.get_status()
+
+        # If no training in progress, return minimal info
+        if not status.get("training_in_progress", False):
+            return {
+                "training_in_progress": False,
+                "message": "No training currently running",
+                "last_training_run": status.get("last_training_run")
+            }
+
+        # Extract detailed progress information
+        progress = status.get("progress", {})
+
+        total = progress.get("total_symbols", 0)
+        completed = progress.get("completed_symbols", 0)
+        successful = progress.get("successful", 0)
+        failed = progress.get("failed", 0)
+        skipped = progress.get("skipped", 0)
+        current_symbol = progress.get("current_symbol")
+        progress_pct = progress.get("progress_percent", 0)
+        elapsed = progress.get("elapsed_seconds", 0)
+        cancelling = progress.get("cancelling", False)
+
+        # Calculate estimated time remaining
+        eta_seconds = None
+        if completed > 0 and total > 0 and not cancelling:
+            avg_time_per_symbol = elapsed / completed
+            remaining_symbols = total - completed
+            eta_seconds = int(avg_time_per_symbol * remaining_symbols)
+
+        return {
+            "training_in_progress": True,
+            "current_symbol": current_symbol,
+            "total_symbols": total,
+            "completed_symbols": completed,
+            "remaining_symbols": total - completed,
+            "progress_percent": progress_pct,
+            "results": {
+                "successful": successful,
+                "failed": failed,
+                "skipped": skipped
+            },
+            "timing": {
+                "elapsed_seconds": elapsed,
+                "eta_seconds": eta_seconds,
+                "elapsed_formatted": f"{elapsed // 60}m {elapsed % 60}s" if elapsed else "0s",
+                "eta_formatted": f"{eta_seconds // 60}m {eta_seconds % 60}s" if eta_seconds else None
+            },
+            "cancelling": cancelling,
+            "started_at": status.get("started_at")
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get training progress: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @forecast_router.get("/forecast/training/symbols")
 async def get_trainable_symbols():
     """
