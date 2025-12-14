@@ -114,7 +114,7 @@ async def shutdown_event():
     logger.info("Shutting down Data Service...")
 
     # Stop sync service if running
-    if sync_service and sync_service.is_running:
+    if sync_service and getattr(sync_service, '_running', False):
         await sync_service.stop()
         logger.info("TimescaleDB Sync Service stopped")
 

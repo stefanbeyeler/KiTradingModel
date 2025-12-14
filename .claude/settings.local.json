@@ -100,7 +100,11 @@
       "Bash(sg docker:*)",
       "Bash(ls:*)",
       "Bash(sudo usermod:*)",
-      "Bash(ss -tlnp:*)"
+      "Bash(ss -tlnp:*)",
+      "Bash(for symbol in BTCUSD ETHUSD SOLUSD ADAUSD BNBUSD LTCUSD)",
+      "Bash(do curl -s -X POST http://10.1.19.101:3003/api/v1/managed-symbols -H \"Content-Type: application/json\" -d \"{\n      \"\"symbol\"\": \"\"$symbol\"\",\n      \"\"exchange\"\": \"\"kraken\"\",\n      \"\"interval\"\": \"\"1h\"\",\n      \"\"enabled\"\": true\n    }\")",
+      "Bash(source:*)",
+      "Bash(for symbol in BTCUSD ETHUSD SOLUSD)"
     ],
     "deny": [],
     "ask": []

@@ -94,14 +94,16 @@ class TimescaleDBSyncService:
             return
 
         try:
-            # Determine time range for sync
+            from datetime import timezone
+
+            # Determine time range for sync (using UTC timezone)
             if self._last_sync_time:
                 start_time = self._last_sync_time
             else:
                 # On first run, sync last 7 days
-                start_time = datetime.now() - timedelta(days=7)
+                start_time = datetime.now(timezone.utc) - timedelta(days=7)
 
-            end_time = datetime.now()
+            end_time = datetime.now(timezone.utc)
 
             # Get available symbols
             symbols = await self._get_symbols()
@@ -132,224 +134,217 @@ class TimescaleDBSyncService:
             raise
 
     async def _get_symbols(self) -> list[str]:
-        """Get list of available symbols from TimescaleDB."""
-        async with self._pool.acquire() as conn:
-            # Query the EasyInsight symbol table directly
-            try:
-                rows = await conn.fetch(
-                    "SELECT DISTINCT symbol FROM symbol WHERE symbol IS NOT NULL LIMIT 100"
-                )
-                if rows:
-                    symbols = [row["symbol"] for row in rows if row["symbol"]]
-                    logger.info(f"Found {len(symbols)} symbols in database")
-                    return symbols
-            except Exception as e:
-                logger.error(f"Error querying symbols: {e}")
+        """Get list of available symbols from EasyInsight API."""
+        try:
+            import httpx
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(f"{settings.easyinsight_api_url}/symbols")
+                response.raise_for_status()
+
+                data = response.json()
+                # API returns list of dicts with 'symbol', 'category', 'count', etc.
+                symbols = [item.get('symbol') for item in data if item.get('symbol')]
+
+                logger.info(f"Found {len(symbols)} symbols from EasyInsight API")
+                return symbols
+
+        except Exception as e:
+            logger.error(f"Error fetching symbols from EasyInsight API: {e}")
+
+            # Fallback to direct database query if API fails
+            if self._pool:
+                try:
+                    async with self._pool.acquire() as conn:
+                        rows = await conn.fetch(
+                            "SELECT DISTINCT symbol FROM symbol WHERE symbol IS NOT NULL LIMIT 100"
+                        )
+                        if rows:
+                            symbols = [row["symbol"] for row in rows if row["symbol"]]
+                            logger.info(f"Found {len(symbols)} symbols from database (fallback)")
+                            return symbols
+                except Exception as db_error:
+                    logger.error(f"Fallback database query failed: {db_error}")
 
             return []
 
     async def _sync_symbol_data(
         self, symbol: str, start_time: datetime, end_time: datetime
     ) -> int:
-        """Sync data for a specific symbol from EasyInsight symbol table."""
+        """Sync data for a specific symbol from EasyInsight API."""
         synced_count = 0
 
-        async with self._pool.acquire() as conn:
-            # Query EasyInsight symbol table with all relevant data
-            query = """
-                SELECT
-                    data_timestamp,
-                    symbol,
-                    category,
-                    bid,
-                    ask,
-                    spread,
-                    d1_open,
-                    d1_high,
-                    d1_low,
-                    d1_close,
-                    h1_open,
-                    h1_high,
-                    h1_low,
-                    h1_close,
-                    m15_open,
-                    m15_high,
-                    m15_low,
-                    m15_close,
-                    rsi14price_close,
-                    macd12269price_close_main_line,
-                    macd12269price_close_signal_line,
-                    adx14_main_line,
-                    adx14_plusdi_line,
-                    adx14_minusdi_line,
-                    bb200200price_close_base_line,
-                    bb200200price_close_upper_band,
-                    bb200200price_close_lower_band,
-                    atr_d1,
-                    range_d1,
-                    cci14price_typical,
-                    sto533mode_smasto_lowhigh_main_line,
-                    sto533mode_smasto_lowhigh_signal_line,
-                    ichimoku92652_tenkansen_line,
-                    ichimoku92652_kijunsen_line,
-                    ichimoku92652_senkouspana_line,
-                    ichimoku92652_senkouspanb_line,
-                    ichimoku92652_chikouspan_line,
-                    ma100mode_smaprice_close,
-                    r1_level_m5,
-                    s1_level_m5,
-                    strength_4h,
-                    strength_1d,
-                    strength_1w
-                FROM symbol
-                WHERE symbol = $1
-                AND data_timestamp > $2
-                AND data_timestamp <= $3
-                ORDER BY data_timestamp DESC
-                LIMIT $4
-            """
+        try:
+            import httpx
 
-            try:
-                rows = await conn.fetch(
-                    query, symbol, start_time, end_time, settings.rag_sync_batch_size
+            # Calculate how many data points to fetch
+            # Request batch size * 2 to ensure we get enough data
+            limit = settings.rag_sync_batch_size * 2
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
+                    params={"limit": limit}
                 )
+                response.raise_for_status()
+
+                data = response.json()
+                rows = data.get('data', [])
 
                 if not rows:
                     return 0
 
+                # Process only records within the time range
                 for row in rows:
-                    # Extract values with null handling - Daily data
-                    d1_open = float(row["d1_open"]) if row["d1_open"] else 0
-                    d1_high = float(row["d1_high"]) if row["d1_high"] else 0
-                    d1_low = float(row["d1_low"]) if row["d1_low"] else 0
-                    d1_close = float(row["d1_close"]) if row["d1_close"] else 0
-                    bid = float(row["bid"]) if row["bid"] else 0
-                    ask = float(row["ask"]) if row["ask"] else 0
-                    spread = float(row["spread"]) if row["spread"] else 0
+                    try:
+                        # Parse timestamp
+                        timestamp_str = row.get('snapshot_time')
+                        if not timestamp_str:
+                            continue
 
-                    # Extract H1 (hourly) data
-                    h1_open = float(row["h1_open"]) if row["h1_open"] else 0
-                    h1_high = float(row["h1_high"]) if row["h1_high"] else 0
-                    h1_low = float(row["h1_low"]) if row["h1_low"] else 0
-                    h1_close = float(row["h1_close"]) if row["h1_close"] else 0
+                        # Parse ISO format timestamp
+                        data_timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
 
-                    # Extract M15 (15-minute) data
-                    m15_open = float(row["m15_open"]) if row["m15_open"] else 0
-                    m15_high = float(row["m15_high"]) if row["m15_high"] else 0
-                    m15_low = float(row["m15_low"]) if row["m15_low"] else 0
-                    m15_close = float(row["m15_close"]) if row["m15_close"] else 0
+                        # Skip if outside time range
+                        if data_timestamp <= start_time or data_timestamp > end_time:
+                            continue
 
-                    # Calculate metrics - Daily
-                    price_change = (
-                        (d1_close - d1_open) / d1_open * 100
-                    ) if d1_open > 0 else 0
+                        # Limit processing to batch size
+                        if synced_count >= settings.rag_sync_batch_size:
+                            break
 
-                    volatility = (
-                        (d1_high - d1_low) / d1_low * 100
-                    ) if d1_low > 0 else 0
+                        # Extract values with null handling - Daily data
+                        d1_open = float(row.get("d1_open", 0)) if row.get("d1_open") else 0
+                        d1_high = float(row.get("d1_high", 0)) if row.get("d1_high") else 0
+                        d1_low = float(row.get("d1_low", 0)) if row.get("d1_low") else 0
+                        d1_close = float(row.get("d1_close", 0)) if row.get("d1_close") else 0
+                        bid = float(row.get("bid", 0)) if row.get("bid") else 0
+                        ask = float(row.get("ask", 0)) if row.get("ask") else 0
+                        spread = float(row.get("spread", 0)) if row.get("spread") else 0
 
-                    # Calculate metrics - Hourly
-                    h1_price_change = (
-                        (h1_close - h1_open) / h1_open * 100
-                    ) if h1_open > 0 else 0
+                        # Extract H1 (hourly) data
+                        h1_open = float(row.get("h1_open", 0)) if row.get("h1_open") else 0
+                        h1_high = float(row.get("h1_high", 0)) if row.get("h1_high") else 0
+                        h1_low = float(row.get("h1_low", 0)) if row.get("h1_low") else 0
+                        h1_close = float(row.get("h1_close", 0)) if row.get("h1_close") else 0
 
-                    h1_volatility = (
-                        (h1_high - h1_low) / h1_low * 100
-                    ) if h1_low > 0 else 0
+                        # Extract M15 (15-minute) data
+                        m15_open = float(row.get("m15_open", 0)) if row.get("m15_open") else 0
+                        m15_high = float(row.get("m15_high", 0)) if row.get("m15_high") else 0
+                        m15_low = float(row.get("m15_low", 0)) if row.get("m15_low") else 0
+                        m15_close = float(row.get("m15_close", 0)) if row.get("m15_close") else 0
 
-                    # Calculate metrics - M15
-                    m15_price_change = (
-                        (m15_close - m15_open) / m15_open * 100
-                    ) if m15_open > 0 else 0
+                        # Calculate metrics - Daily
+                        price_change = (
+                            (d1_close - d1_open) / d1_open * 100
+                        ) if d1_open > 0 else 0
 
-                    m15_volatility = (
-                        (m15_high - m15_low) / m15_low * 100
-                    ) if m15_low > 0 else 0
+                        volatility = (
+                            (d1_high - d1_low) / d1_low * 100
+                        ) if d1_low > 0 else 0
 
-                    # Technical indicators
-                    rsi = float(row["rsi14price_close"]) if row["rsi14price_close"] else None
-                    macd_main = float(row["macd12269price_close_main_line"]) if row["macd12269price_close_main_line"] else None
-                    macd_signal = float(row["macd12269price_close_signal_line"]) if row["macd12269price_close_signal_line"] else None
-                    adx = float(row["adx14_main_line"]) if row["adx14_main_line"] else None
-                    adx_plus_di = float(row["adx14_plusdi_line"]) if row["adx14_plusdi_line"] else None
-                    adx_minus_di = float(row["adx14_minusdi_line"]) if row["adx14_minusdi_line"] else None
-                    atr = float(row["atr_d1"]) if row["atr_d1"] else None
-                    range_d1 = float(row["range_d1"]) if row["range_d1"] else None
-                    cci = float(row["cci14price_typical"]) if row["cci14price_typical"] else None
-                    ma100 = float(row["ma100mode_smaprice_close"]) if row["ma100mode_smaprice_close"] else None
-                    stoch_k = float(row["sto533mode_smasto_lowhigh_main_line"]) if row["sto533mode_smasto_lowhigh_main_line"] else None
-                    stoch_d = float(row["sto533mode_smasto_lowhigh_signal_line"]) if row["sto533mode_smasto_lowhigh_signal_line"] else None
+                        # Calculate metrics - Hourly
+                        h1_price_change = (
+                            (h1_close - h1_open) / h1_open * 100
+                        ) if h1_open > 0 else 0
 
-                    # Bollinger Bands
-                    bb_middle = float(row["bb200200price_close_base_line"]) if row["bb200200price_close_base_line"] else None
-                    bb_upper = float(row["bb200200price_close_upper_band"]) if row["bb200200price_close_upper_band"] else None
-                    bb_lower = float(row["bb200200price_close_lower_band"]) if row["bb200200price_close_lower_band"] else None
+                        h1_volatility = (
+                            (h1_high - h1_low) / h1_low * 100
+                        ) if h1_low > 0 else 0
 
-                    # Ichimoku indicators
-                    ichimoku_tenkan = float(row["ichimoku92652_tenkansen_line"]) if row["ichimoku92652_tenkansen_line"] else None
-                    ichimoku_kijun = float(row["ichimoku92652_kijunsen_line"]) if row["ichimoku92652_kijunsen_line"] else None
-                    ichimoku_senkou_a = float(row["ichimoku92652_senkouspana_line"]) if row["ichimoku92652_senkouspana_line"] else None
-                    ichimoku_senkou_b = float(row["ichimoku92652_senkouspanb_line"]) if row["ichimoku92652_senkouspanb_line"] else None
-                    ichimoku_chikou = float(row["ichimoku92652_chikouspan_line"]) if row["ichimoku92652_chikouspan_line"] else None
+                        # Calculate metrics - M15
+                        m15_price_change = (
+                            (m15_close - m15_open) / m15_open * 100
+                        ) if m15_open > 0 else 0
 
-                    # Pivot Points
-                    pivot_r1 = float(row["r1_level_m5"]) if row["r1_level_m5"] else None
-                    pivot_s1 = float(row["s1_level_m5"]) if row["s1_level_m5"] else None
+                        m15_volatility = (
+                            (m15_high - m15_low) / m15_low * 100
+                        ) if m15_low > 0 else 0
 
-                    # Strength indicators
-                    strength_4h = float(row["strength_4h"]) if row["strength_4h"] else None
-                    strength_1d = float(row["strength_1d"]) if row["strength_1d"] else None
-                    strength_1w = float(row["strength_1w"]) if row["strength_1w"] else None
+                        # Technical indicators (using API response format)
+                        rsi = float(row.get("rsi", 0)) if row.get("rsi") else None
+                        macd_main = float(row.get("macd_main", 0)) if row.get("macd_main") else None
+                        macd_signal = float(row.get("macd_signal", 0)) if row.get("macd_signal") else None
+                        adx = float(row.get("adx_main", 0)) if row.get("adx_main") else None
+                        adx_plus_di = float(row.get("adx_plusdi", 0)) if row.get("adx_plusdi") else None
+                        adx_minus_di = float(row.get("adx_minusdi", 0)) if row.get("adx_minusdi") else None
+                        atr = float(row.get("atr_d1", 0)) if row.get("atr_d1") else None
+                        range_d1 = float(row.get("range_d1", 0)) if row.get("range_d1") else None
+                        cci = float(row.get("cci", 0)) if row.get("cci") else None
+                        ma100 = float(row.get("ma_100", 0)) if row.get("ma_100") else None
+                        stoch_k = float(row.get("sto_main", 0)) if row.get("sto_main") else None
+                        stoch_d = float(row.get("sto_signal", 0)) if row.get("sto_signal") else None
 
-                    # Determine trend based on indicators
-                    trend = "neutral"
-                    if rsi:
-                        if rsi > 70:
-                            trend = "overbought"
-                        elif rsi < 30:
-                            trend = "oversold"
-                        elif price_change > 0:
-                            trend = "bullish"
-                        elif price_change < 0:
-                            trend = "bearish"
+                        # Bollinger Bands
+                        bb_middle = float(row.get("bb_base", 0)) if row.get("bb_base") else None
+                        bb_upper = float(row.get("bb_upper", 0)) if row.get("bb_upper") else None
+                        bb_lower = float(row.get("bb_lower", 0)) if row.get("bb_lower") else None
 
-                    # Determine ADX direction signal
-                    adx_direction = "N/A"
-                    if adx_plus_di and adx_minus_di:
-                        if adx_plus_di > adx_minus_di:
-                            adx_direction = "Bullish (+DI > -DI)"
-                        else:
-                            adx_direction = "Bearish (-DI > +DI)"
+                        # Ichimoku indicators
+                        ichimoku_tenkan = float(row.get("ichimoku_tenkan", 0)) if row.get("ichimoku_tenkan") else None
+                        ichimoku_kijun = float(row.get("ichimoku_kijun", 0)) if row.get("ichimoku_kijun") else None
+                        ichimoku_senkou_a = float(row.get("ichimoku_senkoua", 0)) if row.get("ichimoku_senkoua") else None
+                        ichimoku_senkou_b = float(row.get("ichimoku_senkoub", 0)) if row.get("ichimoku_senkoub") else None
+                        ichimoku_chikou = float(row.get("ichimoku_chikou", 0)) if row.get("ichimoku_chikou") else None
 
-                    # Determine Ichimoku signal
-                    ichimoku_signal = "N/A"
-                    if ichimoku_tenkan and ichimoku_kijun:
-                        if ichimoku_tenkan > ichimoku_kijun:
-                            ichimoku_signal = "Bullish (Tenkan > Kijun)"
-                        else:
-                            ichimoku_signal = "Bearish (Tenkan < Kijun)"
+                        # Pivot Points (API doesn't have these, set to None)
+                        pivot_r1 = None
+                        pivot_s1 = None
 
-                    # Determine Ichimoku Cloud signal (Kumo)
-                    ichimoku_cloud = "N/A"
-                    if ichimoku_senkou_a and ichimoku_senkou_b:
-                        if ichimoku_senkou_a > ichimoku_senkou_b:
-                            ichimoku_cloud = "Bullish Cloud (Senkou A > B)"
-                        else:
-                            ichimoku_cloud = "Bearish Cloud (Senkou A < B)"
+                        # Strength indicators
+                        strength_4h = float(row.get("strength_4h", 0)) if row.get("strength_4h") else None
+                        strength_1d = float(row.get("strength_1d", 0)) if row.get("strength_1d") else None
+                        strength_1w = float(row.get("strength_1w", 0)) if row.get("strength_1w") else None
 
-                    # Determine MA100 position signal
-                    ma100_signal = "N/A"
-                    if ma100 and d1_close:
-                        if d1_close > ma100:
-                            ma100_signal = "Bullish (Preis über MA100)"
-                        else:
-                            ma100_signal = "Bearish (Preis unter MA100)"
+                        # Determine trend based on indicators
+                        trend = "neutral"
+                        if rsi:
+                            if rsi > 70:
+                                trend = "overbought"
+                            elif rsi < 30:
+                                trend = "oversold"
+                            elif price_change > 0:
+                                trend = "bullish"
+                            elif price_change < 0:
+                                trend = "bearish"
 
-                    # Create comprehensive document content
-                    content = f"""
+                        # Determine ADX direction signal
+                        adx_direction = "N/A"
+                        if adx_plus_di and adx_minus_di:
+                            if adx_plus_di > adx_minus_di:
+                                adx_direction = "Bullish (+DI > -DI)"
+                            else:
+                                adx_direction = "Bearish (-DI > +DI)"
+
+                        # Determine Ichimoku signal
+                        ichimoku_signal = "N/A"
+                        if ichimoku_tenkan and ichimoku_kijun:
+                            if ichimoku_tenkan > ichimoku_kijun:
+                                ichimoku_signal = "Bullish (Tenkan > Kijun)"
+                            else:
+                                ichimoku_signal = "Bearish (Tenkan < Kijun)"
+
+                        # Determine Ichimoku Cloud signal (Kumo)
+                        ichimoku_cloud = "N/A"
+                        if ichimoku_senkou_a and ichimoku_senkou_b:
+                            if ichimoku_senkou_a > ichimoku_senkou_b:
+                                ichimoku_cloud = "Bullish Cloud (Senkou A > B)"
+                            else:
+                                ichimoku_cloud = "Bearish Cloud (Senkou A < B)"
+
+                        # Determine MA100 position signal
+                        ma100_signal = "N/A"
+                        if ma100 and d1_close:
+                            if d1_close > ma100:
+                                ma100_signal = "Bullish (Preis über MA100)"
+                            else:
+                                ma100_signal = "Bearish (Preis unter MA100)"
+
+                        # Create comprehensive document content
+                        content = f"""
 Marktdaten - {symbol}
-Zeitstempel: {row['data_timestamp'].isoformat()}
-Kategorie: {row['category'] or 'N/A'}
+Zeitstempel: {data_timestamp.isoformat()}
+Kategorie: {row.get('category', 'N/A')}
 
 Preisdaten (Aktuell):
 - Bid: {bid:.5f}
@@ -422,110 +417,116 @@ Signale:
 - Stochastik Signal: {'Überkauft' if stoch_k and stoch_k > 80 else 'Überverkauft' if stoch_k and stoch_k < 20 else 'Neutral' if stoch_k else 'N/A'}
 """
 
-                    # Build metadata
-                    metadata = {
-                        "timestamp": row["data_timestamp"].isoformat(),
-                        "category": row["category"],
-                        "bid": bid,
-                        "ask": ask,
-                        "spread": spread,
-                        # Daily data
-                        "d1_open": d1_open,
-                        "d1_high": d1_high,
-                        "d1_low": d1_low,
-                        "d1_close": d1_close,
-                        "price_change": price_change,
-                        "volatility": volatility,
-                        # Hourly data
-                        "h1_open": h1_open,
-                        "h1_high": h1_high,
-                        "h1_low": h1_low,
-                        "h1_close": h1_close,
-                        "h1_price_change": h1_price_change,
-                        "h1_volatility": h1_volatility,
-                        # M15 data
-                        "m15_open": m15_open,
-                        "m15_high": m15_high,
-                        "m15_low": m15_low,
-                        "m15_close": m15_close,
-                        "m15_price_change": m15_price_change,
-                        "m15_volatility": m15_volatility,
-                        "trend": trend
-                    }
+                        # Build metadata
+                        metadata = {
+                            "timestamp": data_timestamp.isoformat(),
+                            "category": row.get("category", "N/A"),
+                            "bid": bid,
+                            "ask": ask,
+                            "spread": spread,
+                            # Daily data
+                            "d1_open": d1_open,
+                            "d1_high": d1_high,
+                            "d1_low": d1_low,
+                            "d1_close": d1_close,
+                            "price_change": price_change,
+                            "volatility": volatility,
+                            # Hourly data
+                            "h1_open": h1_open,
+                            "h1_high": h1_high,
+                            "h1_low": h1_low,
+                            "h1_close": h1_close,
+                            "h1_price_change": h1_price_change,
+                            "h1_volatility": h1_volatility,
+                            # M15 data
+                            "m15_open": m15_open,
+                            "m15_high": m15_high,
+                            "m15_low": m15_low,
+                            "m15_close": m15_close,
+                            "m15_price_change": m15_price_change,
+                            "m15_volatility": m15_volatility,
+                            "trend": trend
+                        }
 
-                    # Add indicators to metadata if available
-                    if rsi:
-                        metadata["rsi"] = rsi
-                    if macd_main:
-                        metadata["macd_main"] = macd_main
-                    if macd_signal:
-                        metadata["macd_signal"] = macd_signal
-                    if adx:
-                        metadata["adx"] = adx
-                    if adx_plus_di:
-                        metadata["adx_plus_di"] = adx_plus_di
-                    if adx_minus_di:
-                        metadata["adx_minus_di"] = adx_minus_di
-                    if atr:
-                        metadata["atr"] = atr
-                    if range_d1:
-                        metadata["range_d1"] = range_d1
-                    if cci:
-                        metadata["cci"] = cci
-                    if ma100:
-                        metadata["ma100"] = ma100
-                    if stoch_k:
-                        metadata["stoch_k"] = stoch_k
-                    if stoch_d:
-                        metadata["stoch_d"] = stoch_d
-                    if bb_upper:
-                        metadata["bb_upper"] = bb_upper
-                    if bb_middle:
-                        metadata["bb_middle"] = bb_middle
-                    if bb_lower:
-                        metadata["bb_lower"] = bb_lower
-                    if ichimoku_tenkan:
-                        metadata["ichimoku_tenkan"] = ichimoku_tenkan
-                    if ichimoku_kijun:
-                        metadata["ichimoku_kijun"] = ichimoku_kijun
-                    if ichimoku_senkou_a:
-                        metadata["ichimoku_senkou_a"] = ichimoku_senkou_a
-                    if ichimoku_senkou_b:
-                        metadata["ichimoku_senkou_b"] = ichimoku_senkou_b
-                    if ichimoku_chikou:
-                        metadata["ichimoku_chikou"] = ichimoku_chikou
-                    if pivot_r1:
-                        metadata["pivot_r1"] = pivot_r1
-                    if pivot_s1:
-                        metadata["pivot_s1"] = pivot_s1
-                    if strength_4h:
-                        metadata["strength_4h"] = strength_4h
-                    if strength_1d:
-                        metadata["strength_1d"] = strength_1d
-                    if strength_1w:
-                        metadata["strength_1w"] = strength_1w
+                        # Add indicators to metadata if available
+                        if rsi:
+                            metadata["rsi"] = rsi
+                        if macd_main:
+                            metadata["macd_main"] = macd_main
+                        if macd_signal:
+                            metadata["macd_signal"] = macd_signal
+                        if adx:
+                            metadata["adx"] = adx
+                        if adx_plus_di:
+                            metadata["adx_plus_di"] = adx_plus_di
+                        if adx_minus_di:
+                            metadata["adx_minus_di"] = adx_minus_di
+                        if atr:
+                            metadata["atr"] = atr
+                        if range_d1:
+                            metadata["range_d1"] = range_d1
+                        if cci:
+                            metadata["cci"] = cci
+                        if ma100:
+                            metadata["ma100"] = ma100
+                        if stoch_k:
+                            metadata["stoch_k"] = stoch_k
+                        if stoch_d:
+                            metadata["stoch_d"] = stoch_d
+                        if bb_upper:
+                            metadata["bb_upper"] = bb_upper
+                        if bb_middle:
+                            metadata["bb_middle"] = bb_middle
+                        if bb_lower:
+                            metadata["bb_lower"] = bb_lower
+                        if ichimoku_tenkan:
+                            metadata["ichimoku_tenkan"] = ichimoku_tenkan
+                        if ichimoku_kijun:
+                            metadata["ichimoku_kijun"] = ichimoku_kijun
+                        if ichimoku_senkou_a:
+                            metadata["ichimoku_senkou_a"] = ichimoku_senkou_a
+                        if ichimoku_senkou_b:
+                            metadata["ichimoku_senkou_b"] = ichimoku_senkou_b
+                        if ichimoku_chikou:
+                            metadata["ichimoku_chikou"] = ichimoku_chikou
+                        if pivot_r1:
+                            metadata["pivot_r1"] = pivot_r1
+                        if pivot_s1:
+                            metadata["pivot_s1"] = pivot_s1
+                        if strength_4h:
+                            metadata["strength_4h"] = strength_4h
+                        if strength_1d:
+                            metadata["strength_1d"] = strength_1d
+                        if strength_1w:
+                            metadata["strength_1w"] = strength_1w
 
-                    # Add to RAG
-                    await self.rag_service.add_custom_document(
-                        content=content,
-                        document_type="market_data",
-                        symbol=symbol,
-                        metadata=metadata
-                    )
-                    synced_count += 1
+                        # Add to RAG
+                        await self.rag_service.add_custom_document(
+                            content=content,
+                            document_type="market_data",
+                            symbol=symbol,
+                            metadata=metadata
+                        )
+                        synced_count += 1
 
-            except Exception as e:
-                logger.error(f"Error syncing {symbol}: {e}")
+                    except Exception as row_error:
+                        logger.error(f"Error processing row for {symbol}: {row_error}")
+                        continue
+
+        except Exception as e:
+            logger.error(f"Error syncing {symbol}: {e}")
 
         return synced_count
 
     async def manual_sync(self, days_back: int = 7) -> int:
         """Manually trigger a sync for the specified number of days."""
+        from datetime import timezone
+
         if not self._pool:
             await self.connect()
 
-        start_time = datetime.now() - timedelta(days=days_back)
-        end_time = datetime.now()
+        start_time = datetime.now(timezone.utc) - timedelta(days=days_back)
+        end_time = datetime.now(timezone.utc)
 
         symbols = await self._get_symbols()
         total_synced = 0
