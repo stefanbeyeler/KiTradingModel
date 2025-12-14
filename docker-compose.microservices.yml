@@ -1,0 +1,182 @@
+version: '3.8'
+
+services:
+  # Frontend - API Gateway & Dashboard (Port 3000)
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/services/frontend/Dockerfile
+    container_name: trading-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - nhits-service
+      - llm-service
+      - data-service
+    networks:
+      - trading-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # NHITS Service - Training & Forecasting (Port 3001)
+  nhits-service:
+    build:
+      context: .
+      dockerfile: docker/services/nhits/Dockerfile
+    container_name: trading-nhits
+    runtime: nvidia
+    ports:
+      - "3001:3001"
+    volumes:
+      - models-data:/app/data/models
+      - ./src:/app/src:ro
+      - ./logs:/app/logs
+    environment:
+      - SERVICE_NAME=nhits
+      - PORT=3001
+      - NHITS_USE_GPU=1
+      - TIMESCALE_HOST=${TIMESCALE_HOST:-10.1.19.104}
+      - TIMESCALE_PORT=${TIMESCALE_PORT:-5432}
+      - TIMESCALE_DB=${TIMESCALE_DB:-trading}
+      - TIMESCALE_USER=${TIMESCALE_USER:-postgres}
+      - TIMESCALE_PASSWORD=${TIMESCALE_PASSWORD}
+      - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000}
+      - NHITS_AUTO_RETRAIN_DAYS=${NHITS_AUTO_RETRAIN_DAYS:-7}
+    networks:
+      - trading-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # LLM Service - Analysis & RAG (Port 3002)
+  llm-service:
+    build:
+      context: .
+      dockerfile: docker/services/llm/Dockerfile
+    container_name: trading-llm
+    runtime: nvidia
+    ports:
+      - "3002:3002"
+    volumes:
+      - rag-data:/app/data/rag
+      - ollama-models:/root/.ollama
+      - ./src:/app/src:ro
+      - ./logs:/app/logs
+    environment:
+      - SERVICE_NAME=llm
+      - PORT=3002
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1:70b}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
+      - FAISS_USE_GPU=1
+      - EMBEDDING_DEVICE=cuda
+    networks:
+      - trading-net
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Data Service - Symbols, Strategies, Sync (Port 3003)
+  data-service:
+    build:
+      context: .
+      dockerfile: docker/services/data/Dockerfile
+    container_name: trading-data
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./src:/app/src:ro
+      - ./logs:/app/logs
+      - ./data/symbols:/app/data/symbols
+    environment:
+      - SERVICE_NAME=data
+      - PORT=3003
+      - TIMESCALE_HOST=${TIMESCALE_HOST:-10.1.19.104}
+      - TIMESCALE_PORT=${TIMESCALE_PORT:-5432}
+      - TIMESCALE_DB=${TIMESCALE_DB:-trading}
+      - TIMESCALE_USER=${TIMESCALE_USER:-postgres}
+      - TIMESCALE_PASSWORD=${TIMESCALE_PASSWORD}
+      - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000}
+      - TIMESCALE_SYNC_ENABLED=${TIMESCALE_SYNC_ENABLED:-true}
+      - TIMESCALE_SYNC_INTERVAL_MINUTES=${TIMESCALE_SYNC_INTERVAL_MINUTES:-60}
+    networks:
+      - trading-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Ollama Service - LLM Backend
+  ollama:
+    image: ollama/ollama:latest
+    container_name: trading-ollama
+    runtime: nvidia
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    networks:
+      - trading-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  models-data:
+    driver: local
+  rag-data:
+    driver: local
+  ollama-models:
+    driver: local
+
+networks:
+  trading-net:
+    driver: bridge

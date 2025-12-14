@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KI Trading Model - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .service-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .service-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .service-card p {
+            opacity: 0.9;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .service-card a {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: background 0.3s;
+            margin-right: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .service-card a:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .emoji {
+            font-size: 2rem;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+        }
+
+        .quick-links {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .quick-links h3 {
+            margin-bottom: 1rem;
+        }
+
+        .quick-links a {
+            display: inline-block;
+            margin: 0.5rem 1rem 0.5rem 0;
+            color: #fff;
+            text-decoration: none;
+            opacity: 0.9;
+        }
+
+        .quick-links a:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        footer {
+            margin-top: auto;
+            text-align: center;
+            padding: 2rem 0;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🤖 KI Trading Model</h1>
+            <p class="subtitle">AI-Powered Trading Analysis & Forecasting Platform</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="services-grid">
+            <div class="service-card">
+                <h2><span class="emoji">🔮</span> NHITS Service</h2>
+                <span class="status">● Online</span>
+                <p>Neural Hierarchical Interpolation for Time Series - Advanced price forecasting and model training.</p>
+                <div>
+                    <a href="http://10.1.19.101:3001/docs" target="_blank">📊 API Docs</a>
+                    <a href="http://10.1.19.101:3001/health" target="_blank">🏥 Health</a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <h2><span class="emoji">🧠</span> LLM Service</h2>
+                <span class="status">● Online</span>
+                <p>Large Language Model analysis with RAG - Intelligent trading insights powered by Llama 3.1 70B.</p>
+                <div>
+                    <a href="http://10.1.19.101:3002/docs" target="_blank">📊 API Docs</a>
+                    <a href="http://10.1.19.101:3002/health" target="_blank">🏥 Health</a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <h2><span class="emoji">📊</span> Data Service</h2>
+                <span class="status">● Online</span>
+                <p>Symbol management, strategies, and TimescaleDB synchronization - Your data backbone.</p>
+                <div>
+                    <a href="http://10.1.19.101:3003/docs" target="_blank">📊 API Docs</a>
+                    <a href="http://10.1.19.101:3003/health" target="_blank">🏥 Health</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="quick-links">
+            <h3>📚 Quick Links</h3>
+            <a href="/docs/MICROSERVICES_ARCHITECTURE.md" target="_blank">→ Microservices Architecture</a>
+            <a href="/docs/EVENT_BASED_TRAINING.md" target="_blank">→ Event-Based Training</a>
+            <a href="/docs/SWAGGER_API_CATEGORIES.md" target="_blank">→ API Categories</a>
+            <a href="/docs/PORT_CONFIGURATION.md" target="_blank">→ Port Configuration</a>
+        </div>
+
+        <div class="quick-links">
+            <h3>🚀 Getting Started</h3>
+            <p style="opacity: 0.9; margin-bottom: 1rem;">
+                This dashboard provides access to all microservices. Each service has its own Swagger documentation for interactive API testing.
+            </p>
+            <p style="opacity: 0.9;">
+                <strong>Architecture:</strong> Frontend (Port 3000) → NHITS (3001) + LLM (3002) + Data (3003)
+            </p>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>KI Trading Model v2.0.0 | Microservices Architecture</p>
+            <p>Powered by FastAPI, NHITS, Llama 3.1 70B & TimescaleDB</p>
+        </div>
+    </footer>
+
+    <script>
+        // Check service health on load
+        const services = [
+            { name: 'NHITS', url: 'http://10.1.19.101:3001/health' },
+            { name: 'LLM', url: 'http://10.1.19.101:3002/health' },
+            { name: 'Data', url: 'http://10.1.19.101:3003/health' }
+        ];
+
+        services.forEach(service => {
+            fetch(service.url)
+                .then(res => res.json())
+                .then(data => {
+                    console.log(`${service.name} Service:`, data);
+                })
+                .catch(err => {
+                    console.error(`${service.name} Service offline:`, err);
+                });
+        });
+    </script>
+</body>
+</html>
