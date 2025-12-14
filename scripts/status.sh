@@ -2,107 +2,109 @@
 set -euo pipefail
 
 echo "=========================================="
-echo "KI Trading Model - System Status"
+echo "KI Trading Model - Microservices Status"
 echo "=========================================="
 echo ""
 
 # Check Docker service
-echo "🐳 Docker Service:"
+echo "Docker Service:"
 if systemctl is-active --quiet docker; then
-    echo "  ✅ Docker is running"
+    echo "  [OK] Docker is running"
 else
-    echo "  ❌ Docker is NOT running"
-    echo "  → Start with: sudo systemctl start docker"
+    echo "  [FAIL] Docker is NOT running"
+    echo "  -> Start with: sudo systemctl start docker"
 fi
 echo ""
 
 # Check Ollama service
-echo "🦙 Ollama Service:"
+echo "Ollama Service:"
 if curl -s http://localhost:11434/api/version > /dev/null 2>&1; then
     VERSION=$(curl -s http://localhost:11434/api/version | grep -o '"version":"[^"]*"' | cut -d'"' -f4)
-    echo "  ✅ Ollama is running (version: $VERSION)"
+    echo "  [OK] Ollama is running (version: $VERSION)"
 else
-    echo "  ❌ Ollama is NOT running"
-    echo "  → Check with: systemctl status ollama"
+    echo "  [FAIL] Ollama is NOT running"
+    echo "  -> Check with: systemctl status ollama"
 fi
 echo ""
 
-# Check TimescaleDB connectivity
-echo "🗄️  TimescaleDB (10.1.19.100:5432):"
-if timeout 2 bash -c 'cat < /dev/null > /dev/tcp/10.1.19.100/5432' 2>/dev/null; then
-    echo "  ✅ TimescaleDB is reachable"
+# Check EasyInsight API connectivity
+echo "EasyInsight API (10.1.19.102:3000):"
+if curl -s http://10.1.19.102:3000/api/symbols > /dev/null 2>&1; then
+    SYMBOL_COUNT=$(curl -s http://10.1.19.102:3000/api/symbols | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "?")
+    echo "  [OK] EasyInsight API is reachable ($SYMBOL_COUNT symbols)"
 else
-    echo "  ❌ TimescaleDB is NOT reachable"
-    echo "  → Check network connection and database server"
+    echo "  [FAIL] EasyInsight API is NOT reachable"
 fi
 echo ""
 
-# Check containers
-echo "📦 Docker Containers:"
-BACKEND_STATUS=$(docker inspect -f '{{.State.Status}}' ki-trading 2>/dev/null || echo "not found")
-DASHBOARD_STATUS=$(docker inspect -f '{{.State.Status}}' ki-trading-dashboard 2>/dev/null || echo "not found")
-
-echo "  Backend (ki-trading):"
-if [ "$BACKEND_STATUS" = "running" ]; then
-    UPTIME=$(docker inspect -f '{{.State.StartedAt}}' ki-trading 2>/dev/null)
-    echo "    ✅ Running (started: $UPTIME)"
-    echo "    → API: http://localhost:3011/api/v1/"
-    echo "    → Docs: http://localhost:3011/docs"
-elif [ "$BACKEND_STATUS" = "restarting" ]; then
-    echo "    ⚠️  Restarting (check logs)"
-    echo "    → Logs: docker logs ki-trading"
-elif [ "$BACKEND_STATUS" = "exited" ]; then
-    echo "    ❌ Stopped"
-    echo "    → Start: docker start ki-trading"
-else
-    echo "    ❌ Not found"
-    echo "    → Create: bash scripts/jetson_start_simple.sh"
-fi
+# Check Microservice containers
+echo "Microservice Containers:"
 echo ""
 
-echo "  Dashboard (ki-trading-dashboard):"
-if [ "$DASHBOARD_STATUS" = "running" ]; then
-    UPTIME=$(docker inspect -f '{{.State.StartedAt}}' ki-trading-dashboard 2>/dev/null)
-    echo "    ✅ Running (started: $UPTIME)"
-    echo "    → Dashboard: http://localhost:3001"
-elif [ "$DASHBOARD_STATUS" = "restarting" ]; then
-    echo "    ⚠️  Restarting (check logs)"
-    echo "    → Logs: docker logs ki-trading-dashboard"
-elif [ "$DASHBOARD_STATUS" = "exited" ]; then
-    echo "    ❌ Stopped"
-    echo "    → Start: docker start ki-trading-dashboard"
-else
-    echo "    ❌ Not found"
-    echo "    → Create: bash scripts/dashboard_start.sh"
-fi
-echo ""
+check_service() {
+    local NAME=$1
+    local PORT=$2
+    local DISPLAY_NAME=$3
 
-# Quick health check if backend is running
-if [ "$BACKEND_STATUS" = "running" ]; then
-    echo "🏥 Backend Health Check:"
-    HEALTH=$(curl -s http://localhost:3011/api/v1/health 2>/dev/null || echo "failed")
-    if [ "$HEALTH" != "failed" ]; then
-        echo "  ✅ Backend is healthy"
-        echo "  Response: $HEALTH"
+    STATUS=$(docker inspect -f '{{.State.Status}}' "$NAME" 2>/dev/null || echo "not found")
+    HEALTH=$(docker inspect -f '{{.State.Health.Status}}' "$NAME" 2>/dev/null || echo "none")
+
+    echo "  $DISPLAY_NAME ($NAME):"
+    if [ "$STATUS" = "running" ]; then
+        if [ "$HEALTH" = "healthy" ]; then
+            echo "    [OK] Running & Healthy"
+        elif [ "$HEALTH" = "unhealthy" ]; then
+            echo "    [WARN] Running but Unhealthy"
+        else
+            echo "    [OK] Running"
+        fi
+        echo "    -> http://localhost:$PORT"
+    elif [ "$STATUS" = "restarting" ]; then
+        echo "    [WARN] Restarting"
+    elif [ "$STATUS" = "exited" ]; then
+        echo "    [FAIL] Stopped"
     else
-        echo "  ❌ Backend health check failed"
-        echo "  → Check logs: docker logs ki-trading"
+        echo "    [FAIL] Not found"
     fi
     echo ""
-fi
+}
+
+check_service "trading-nhits" "3001" "NHITS Service (Training & Forecast)"
+check_service "trading-llm" "3002" "LLM Service (Analysis & RAG)"
+check_service "trading-data" "3003" "Data Service (Symbols & Sync)"
+check_service "trading-frontend" "3000" "Frontend (Dashboard)"
+
+# Health checks
+echo "=========================================="
+echo "Service Health Checks:"
+echo "=========================================="
+echo ""
+
+for PORT in 3001 3002 3003; do
+    HEALTH=$(curl -s "http://localhost:$PORT/health" 2>/dev/null || echo "")
+    if [ -n "$HEALTH" ]; then
+        SERVICE=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('service','unknown'))" 2>/dev/null || echo "port-$PORT")
+        STATUS=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))" 2>/dev/null || echo "unknown")
+        echo "  Port $PORT ($SERVICE): $STATUS"
+    else
+        echo "  Port $PORT: not responding"
+    fi
+done
+echo ""
 
 # Summary
 echo "=========================================="
 echo "Quick Commands:"
 echo "=========================================="
-echo "View logs:     docker logs -f ki-trading"
-echo "               docker logs -f ki-trading-dashboard"
+echo "Start all:     docker compose -f docker-compose.microservices.yml up -d"
+echo "Stop all:      docker compose -f docker-compose.microservices.yml down"
+echo "View logs:     docker logs -f trading-nhits"
+echo "               docker logs -f trading-llm"
+echo "               docker logs -f trading-data"
 echo ""
-echo "Restart:       docker restart ki-trading"
-echo "               docker restart ki-trading-dashboard"
-echo ""
-echo "Stop all:      docker stop ki-trading ki-trading-dashboard"
-echo "Start all:     docker start ki-trading ki-trading-dashboard"
-echo ""
-echo "Full restart:  bash scripts/start_all.sh"
+echo "API Docs:"
+echo "  NHITS:       http://localhost:3001/docs"
+echo "  LLM:         http://localhost:3002/docs"
+echo "  Data:        http://localhost:3003/docs"
+echo "  Dashboard:   http://localhost:3000"
 echo "=========================================="

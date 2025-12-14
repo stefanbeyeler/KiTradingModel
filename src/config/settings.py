@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     # EasyInsight API Configuration
     easyinsight_api_url: str = Field(
-        default="http://localhost:3000/api",
+        default="http://10.1.19.102:3000/api",
         description="EasyInsight API base URL"
     )
 

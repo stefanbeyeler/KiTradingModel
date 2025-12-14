@@ -84,7 +84,7 @@ async def startup_event():
 
     logger.info("Starting Data Service...")
     logger.info(f"Version: {VERSION}")
-    logger.info(f"TimescaleDB: {settings.timescaledb_host}:{settings.timescaledb_port}")
+    logger.info(f"EasyInsight API: {settings.easyinsight_api_url}")
 
     # Initialize RAG Service (for sync service)
     try:
@@ -134,7 +134,7 @@ async def health_check():
         "service": "data",
         "status": "healthy",
         "version": VERSION,
-        "timescaledb_host": settings.timescaledb_host,
+        "easyinsight_api": settings.easyinsight_api_url,
         "sync_service_status": sync_status
     }
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,218 +13,541 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            color: #fff;
+            color: #e8e8e8;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: 1.5rem;
         }
 
         header {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
-            padding: 1.5rem 0;
-            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+            font-weight: 600;
         }
 
-        .subtitle {
-            opacity: 0.9;
-            font-size: 1.1rem;
+        .header-status {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .header-status span {
+            padding: 0.4rem 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
         }
 
         .services-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 1.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1000px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .service-card {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border-radius: 12px;
             padding: 1.5rem;
-            transition: transform 0.3s, box-shadow 0.3s;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
         }
 
         .service-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transform: translateY(-3px);
+            border-color: rgba(100, 200, 255, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
         }
 
         .service-card h2 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
-        .service-card p {
-            opacity: 0.9;
-            margin-bottom: 1rem;
-            line-height: 1.6;
+        .status-badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
         }
 
-        .service-card a {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 0.6rem 1.2rem;
+        .status-healthy {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status-unhealthy {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .status-loading {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffd54f;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .service-card p {
+            opacity: 0.8;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .service-info {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 0.8rem;
+            margin-bottom: 1rem;
+            font-size: 0.8rem;
+        }
+
+        .service-info div {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .service-info div:last-child {
+            border-bottom: none;
+        }
+
+        .service-info .label {
+            opacity: 0.6;
+        }
+
+        .service-links {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .service-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.5rem 0.8rem;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
             border-radius: 6px;
             text-decoration: none;
-            transition: background 0.3s;
-            margin-right: 0.5rem;
-            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(100, 200, 255, 0.2);
         }
 
-        .service-card a:hover {
-            background: rgba(255, 255, 255, 0.3);
+        .service-links a:hover {
+            background: rgba(100, 200, 255, 0.2);
+            transform: translateY(-1px);
         }
 
-        .emoji {
-            font-size: 2rem;
+        .bottom-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
         }
 
-        .status {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            background: rgba(76, 175, 80, 0.3);
-            border: 1px solid rgba(76, 175, 80, 0.5);
+        @media (max-width: 800px) {
+            .bottom-section {
+                grid-template-columns: 1fr;
+            }
         }
 
-        .quick-links {
-            background: rgba(255, 255, 255, 0.1);
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border-radius: 12px;
             padding: 1.5rem;
-            margin-top: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .quick-links h3 {
+        .panel h3 {
+            font-size: 1rem;
             margin-bottom: 1rem;
-        }
-
-        .quick-links a {
-            display: inline-block;
-            margin: 0.5rem 1rem 0.5rem 0;
-            color: #fff;
-            text-decoration: none;
             opacity: 0.9;
         }
 
-        .quick-links a:hover {
-            opacity: 1;
-            text-decoration: underline;
+        .training-status {
+            font-size: 0.9rem;
+        }
+
+        .training-status .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .training-status .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #64c8ff, #a78bfa);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        .training-info {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .training-stat {
+            text-align: center;
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .training-stat .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .training-stat .label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-top: 0.3rem;
+        }
+
+        .quick-actions button {
+            width: 100%;
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .quick-actions button:hover {
+            background: rgba(100, 200, 255, 0.2);
+        }
+
+        .quick-actions button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         footer {
-            margin-top: auto;
             text-align: center;
-            padding: 2rem 0;
-            opacity: 0.7;
+            padding: 1.5rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            border-left: 4px solid #64c8ff;
+            display: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
     </style>
 </head>
 <body>
     <header>
         <div class="container">
-            <h1>🤖 KI Trading Model</h1>
-            <p class="subtitle">AI-Powered Trading Analysis & Forecasting Platform</p>
+            <h1>KI Trading Model</h1>
+            <div class="header-status">
+                <span id="services-count">Services: -/3</span>
+                <span id="models-count">Modelle: -</span>
+                <span id="last-update">Update: -</span>
+            </div>
         </div>
     </header>
 
     <div class="container">
         <div class="services-grid">
-            <div class="service-card">
-                <h2><span class="emoji">🔮</span> NHITS Service</h2>
-                <span class="status">● Online</span>
-                <p>Neural Hierarchical Interpolation for Time Series - Advanced price forecasting and model training.</p>
-                <div>
-                    <a href="http://10.1.19.101:3001/docs" target="_blank">📊 API Docs</a>
-                    <a href="http://10.1.19.101:3001/health" target="_blank">🏥 Health</a>
+            <!-- NHITS Service -->
+            <div class="service-card" id="nhits-card">
+                <div class="service-header">
+                    <h2>NHITS Service</h2>
+                    <span class="status-badge status-loading" id="nhits-status">Laden...</span>
+                </div>
+                <p>Neural Hierarchical Interpolation for Time Series - Preisprognosen und Modell-Training.</p>
+                <div class="service-info" id="nhits-info">
+                    <div><span class="label">Port</span><span>3001</span></div>
+                    <div><span class="label">GPU</span><span id="nhits-gpu">-</span></div>
+                    <div><span class="label">Training</span><span id="nhits-training">-</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/nhits/docs" target="_blank">API Docs</a>
+                    <a href="/nhits/health" target="_blank">Health</a>
                 </div>
             </div>
 
-            <div class="service-card">
-                <h2><span class="emoji">🧠</span> LLM Service</h2>
-                <span class="status">● Online</span>
-                <p>Large Language Model analysis with RAG - Intelligent trading insights powered by Llama 3.1 70B.</p>
-                <div>
-                    <a href="http://10.1.19.101:3002/docs" target="_blank">📊 API Docs</a>
-                    <a href="http://10.1.19.101:3002/health" target="_blank">🏥 Health</a>
+            <!-- LLM Service -->
+            <div class="service-card" id="llm-card">
+                <div class="service-header">
+                    <h2>LLM Service</h2>
+                    <span class="status-badge status-loading" id="llm-status">Laden...</span>
+                </div>
+                <p>Large Language Model Analyse mit RAG - Trading-Insights powered by Llama 3.1 70B.</p>
+                <div class="service-info" id="llm-info">
+                    <div><span class="label">Port</span><span>3002</span></div>
+                    <div><span class="label">Modell</span><span id="llm-model">-</span></div>
+                    <div><span class="label">RAG</span><span id="llm-rag">-</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/llm/docs" target="_blank">API Docs</a>
+                    <a href="/llm/health" target="_blank">Health</a>
                 </div>
             </div>
 
-            <div class="service-card">
-                <h2><span class="emoji">📊</span> Data Service</h2>
-                <span class="status">● Online</span>
-                <p>Symbol management, strategies, and TimescaleDB synchronization - Your data backbone.</p>
-                <div>
-                    <a href="http://10.1.19.101:3003/docs" target="_blank">📊 API Docs</a>
-                    <a href="http://10.1.19.101:3003/health" target="_blank">🏥 Health</a>
+            <!-- Data Service -->
+            <div class="service-card" id="data-card">
+                <div class="service-header">
+                    <h2>Data Service</h2>
+                    <span class="status-badge status-loading" id="data-status">Laden...</span>
+                </div>
+                <p>Symbol-Management, Trading-Strategien und Daten-Synchronisation mit EasyInsight.</p>
+                <div class="service-info" id="data-info">
+                    <div><span class="label">Port</span><span>3003</span></div>
+                    <div><span class="label">TimescaleDB</span><span id="data-tsdb">-</span></div>
+                    <div><span class="label">Sync</span><span id="data-sync">-</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/data/docs" target="_blank">API Docs</a>
+                    <a href="/data/health" target="_blank">Health</a>
                 </div>
             </div>
         </div>
 
-        <div class="quick-links">
-            <h3>📚 Quick Links</h3>
-            <a href="/docs/MICROSERVICES_ARCHITECTURE.md" target="_blank">→ Microservices Architecture</a>
-            <a href="/docs/EVENT_BASED_TRAINING.md" target="_blank">→ Event-Based Training</a>
-            <a href="/docs/SWAGGER_API_CATEGORIES.md" target="_blank">→ API Categories</a>
-            <a href="/docs/PORT_CONFIGURATION.md" target="_blank">→ Port Configuration</a>
-        </div>
+        <div class="bottom-section">
+            <!-- Training Status -->
+            <div class="panel">
+                <h3>NHITS Training Status</h3>
+                <div class="training-status">
+                    <div id="training-message">Kein Training aktiv</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="training-progress" style="width: 0%"></div>
+                    </div>
+                    <div class="training-info">
+                        <div class="training-stat">
+                            <div class="value" id="stat-models">-</div>
+                            <div class="label">Modelle</div>
+                        </div>
+                        <div class="training-stat">
+                            <div class="value" id="stat-successful">-</div>
+                            <div class="label">Erfolgreich</div>
+                        </div>
+                        <div class="training-stat">
+                            <div class="value" id="stat-failed">-</div>
+                            <div class="label">Fehlgeschlagen</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <div class="quick-links">
-            <h3>🚀 Getting Started</h3>
-            <p style="opacity: 0.9; margin-bottom: 1rem;">
-                This dashboard provides access to all microservices. Each service has its own Swagger documentation for interactive API testing.
-            </p>
-            <p style="opacity: 0.9;">
-                <strong>Architecture:</strong> Frontend (Port 3000) → NHITS (3001) + LLM (3002) + Data (3003)
-            </p>
+            <!-- Quick Actions -->
+            <div class="panel">
+                <h3>Schnellaktionen</h3>
+                <div class="quick-actions">
+                    <button onclick="startTraining()" id="btn-train">Alle Modelle trainieren</button>
+                    <button onclick="cancelTraining()" id="btn-cancel" disabled>Training abbrechen</button>
+                    <button onclick="refreshStatus()">Status aktualisieren</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <footer>
-        <div class="container">
-            <p>KI Trading Model v2.0.0 | Microservices Architecture</p>
-            <p>Powered by FastAPI, NHITS, Llama 3.1 70B & TimescaleDB</p>
-        </div>
+        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + Llama 3.1 70B
     </footer>
 
-    <script>
-        // Check service health on load
-        const services = [
-            { name: 'NHITS', url: 'http://10.1.19.101:3001/health' },
-            { name: 'LLM', url: 'http://10.1.19.101:3002/health' },
-            { name: 'Data', url: 'http://10.1.19.101:3003/health' }
-        ];
+    <div class="toast" id="toast"></div>
 
-        services.forEach(service => {
-            fetch(service.url)
-                .then(res => res.json())
-                .then(data => {
-                    console.log(`${service.name} Service:`, data);
-                })
-                .catch(err => {
-                    console.error(`${service.name} Service offline:`, err);
-                });
-        });
+    <script>
+        const API_BASE = '';  // Relative URLs via nginx proxy
+
+        let healthyServices = 0;
+
+        async function checkHealth(service, port, statusId) {
+            try {
+                const res = await fetch(`/${service}/health`);
+                const data = await res.json();
+
+                const statusEl = document.getElementById(statusId);
+                statusEl.textContent = data.status === 'healthy' ? 'Online' : 'Degraded';
+                statusEl.className = `status-badge ${data.status === 'healthy' ? 'status-healthy' : 'status-unhealthy'}`;
+
+                if (data.status === 'healthy') healthyServices++;
+
+                return data;
+            } catch (err) {
+                const statusEl = document.getElementById(statusId);
+                statusEl.textContent = 'Offline';
+                statusEl.className = 'status-badge status-unhealthy';
+                return null;
+            }
+        }
+
+        async function updateNhitsInfo() {
+            const data = await checkHealth('nhits', 3001, 'nhits-status');
+            if (data) {
+                document.getElementById('nhits-gpu').textContent = data.gpu_enabled ? 'Aktiviert' : 'CPU';
+                document.getElementById('nhits-training').textContent = data.training_in_progress ? 'Aktiv' : 'Inaktiv';
+            }
+
+            // Get models count
+            try {
+                const res = await fetch('/nhits/api/v1/forecast/models');
+                const models = await res.json();
+                document.getElementById('stat-models').textContent = models.length;
+                document.getElementById('models-count').textContent = `Modelle: ${models.length}`;
+            } catch (err) {}
+        }
+
+        async function updateLlmInfo() {
+            const data = await checkHealth('llm', 3002, 'llm-status');
+            if (data) {
+                document.getElementById('llm-model').textContent = data.llm_model || '-';
+                document.getElementById('llm-rag').textContent = data.rag_enabled ? 'Aktiviert' : 'Deaktiviert';
+            }
+        }
+
+        async function updateDataInfo() {
+            const data = await checkHealth('data', 3003, 'data-status');
+            if (data) {
+                document.getElementById('data-tsdb').textContent = data.timescaledb_host || '-';
+                document.getElementById('data-sync').textContent = data.sync_service_status || '-';
+            }
+        }
+
+        async function updateTrainingStatus() {
+            try {
+                const res = await fetch('/nhits/api/v1/forecast/training/progress');
+                const data = await res.json();
+
+                const msgEl = document.getElementById('training-message');
+                const progressEl = document.getElementById('training-progress');
+                const btnTrain = document.getElementById('btn-train');
+                const btnCancel = document.getElementById('btn-cancel');
+
+                if (data.training_in_progress) {
+                    msgEl.textContent = `Training: ${data.current_symbol || '-'} (${data.completed_symbols}/${data.total_symbols})`;
+                    progressEl.style.width = `${data.progress_percent}%`;
+                    btnTrain.disabled = true;
+                    btnCancel.disabled = false;
+
+                    document.getElementById('stat-successful').textContent = data.results?.successful || 0;
+                    document.getElementById('stat-failed').textContent = data.results?.failed || 0;
+                } else {
+                    msgEl.textContent = data.message || 'Kein Training aktiv';
+                    progressEl.style.width = '0%';
+                    btnTrain.disabled = false;
+                    btnCancel.disabled = true;
+                }
+            } catch (err) {
+                console.error('Training status error:', err);
+            }
+        }
+
+        async function refreshStatus() {
+            healthyServices = 0;
+            await Promise.all([
+                updateNhitsInfo(),
+                updateLlmInfo(),
+                updateDataInfo(),
+                updateTrainingStatus()
+            ]);
+
+            document.getElementById('services-count').textContent = `Services: ${healthyServices}/3`;
+            document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
+        }
+
+        async function startTraining() {
+            try {
+                showToast('Training wird gestartet...');
+                const res = await fetch('/nhits/api/v1/forecast/train-all?force=false&background=true', { method: 'POST' });
+                const data = await res.json();
+                showToast(`Training gestartet: ${data.message || 'OK'}`);
+                setTimeout(refreshStatus, 1000);
+            } catch (err) {
+                showToast('Fehler beim Starten des Trainings');
+            }
+        }
+
+        async function cancelTraining() {
+            try {
+                const res = await fetch('/nhits/api/v1/forecast/training/cancel', { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message || 'Training wird abgebrochen...');
+                setTimeout(refreshStatus, 1000);
+            } catch (err) {
+                showToast('Fehler beim Abbrechen');
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Initial load
+        refreshStatus();
+
+        // Auto-refresh every 10 seconds
+        setInterval(refreshStatus, 10000);
     </script>
 </body>
 </html>
