@@ -110,8 +110,9 @@ GET http://10.1.19.102:3000/api/symbol-data-full/EURUSD?limit=720
   - Support/Resistance: `s1_level_m5`, `r1_level_m5`
   - Volatilität: `range_d1`, `atr_pct_d1`
 
-**Fallback:**
-- Bei API-Fehler: Direkte TimescaleDB-Abfrage (Tabelle `symbol`)
+**Error Handling:**
+- Bei API-Fehler: Fehler wird zurückgegeben (kein Fallback mehr)
+- **Wichtig:** Direkter TimescaleDB-Zugriff wurde entfernt (API-Only seit 2025-12-14)
 
 ---
 
@@ -215,17 +216,18 @@ async with httpx.AsyncClient(timeout=30.0) as client:
     )
 ```
 
-### Fallback: TimescaleDB
+### Error Handling: API-Only (kein Fallback)
 ```python
 try:
     # EasyInsight API call
     ...
 except Exception as e:
-    logger.warning(f"API failed: {e}, falling back to TimescaleDB")
-    # Direct database query
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT ... FROM symbol ...")
+    logger.error(f"API failed: {e}")
+    return []  # Kein Fallback mehr - API-Only Architektur
 ```
+
+**Wichtig:** Seit 2025-12-14 wurde der direkte TimescaleDB-Zugriff entfernt.
+Alle Daten kommen ausschließlich von der EasyInsight API.
 
 ---
 
@@ -380,30 +382,31 @@ logger.warning(f"Failed to get data from EasyInsight API: {e}, falling back to T
 
 ---
 
-## 🔄 Alternativen
+## 🔄 Data Access Strategy
 
-### TimescaleDB (Fallback)
-- **Host:** 10.1.19.102:5432
-- **Database:** easyinsight
-- **Tabelle:** `symbol`
-- **Verwendung:** Nur bei API-Ausfall
+### ⚡ API-Only Architecture (seit 2025-12-14)
+- **Primär:** EasyInsight API (`http://10.1.19.102:3000/api`)
+- **Kein Fallback:** Direkter TimescaleDB-Zugriff wurde entfernt
+- **Begründung:** Single Source of Truth, zentrale Wartung, API-First Design
+- **Error Handling:** Bei API-Fehler werden Fehler zurückgegeben (keine automatische Wiederholung)
 
-### Lokale FAISS (RAG)
+### 📦 Lokale FAISS (RAG)
 - **Directory:** `./data/faiss`
 - **Verwendung:** Historische Kontext-Daten für LLM
-- **Sync:** 5-Minuten-Intervall
+- **Sync:** Manuell oder über API-Trigger (automatischer TimescaleDB-Sync deaktiviert)
 
 ---
 
-## ✅ Vorteile der API-Integration
+## ✅ Vorteile der API-Only Integration
 
-1. **Single Source of Truth:** Zentrale Datenquelle
+1. **Single Source of Truth:** Zentrale Datenquelle ohne Duplikation
 2. **Vollständige Indikatoren:** 40+ technische Indikatoren
 3. **Multi-Timeframe:** M15, H1, D1 OHLC-Daten
-4. **Real-time:** Aktuelle Marktdaten
+4. **Real-time:** Aktuelle Marktdaten direkt von der API
 5. **Skalierbar:** Einfache Erweiterung um neue Symbole
-6. **Wartbar:** API-Änderungen zentral gepflegt
-7. **Fallback:** Redundanz durch TimescaleDB
+6. **Wartbar:** API-Änderungen zentral gepflegt, keine DB-Schema-Migration nötig
+7. **Sicherheit:** Keine direkten Datenbankzugriffe, reduzierte Angriffsfläche
+8. **Performance:** Optimierte API-Endpoints mit Caching
 
 ---
 

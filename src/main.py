@@ -13,13 +13,14 @@ from .config import settings
 from .version import VERSION, RELEASE_DATE
 from .api import router
 from .services.rag_service import RAGService
-from .services.timescaledb_sync_service import TimescaleDBSyncService
+# TimescaleDB sync service removed - using EasyInsight API only
+# from .services.timescaledb_sync_service import TimescaleDBSyncService
 from .services.nhits_training_service import nhits_training_service
 from .services.model_improvement_service import model_improvement_service
 
 # Global service instances
 rag_service = RAGService()
-sync_service = TimescaleDBSyncService(rag_service)
+# sync_service = TimescaleDBSyncService(rag_service)  # REMOVED - API-only access
 
 
 # Configure logging
@@ -95,30 +96,15 @@ async def startup_event():
     logger.info("Starting KI Trading Model Service...")
     logger.info(f"Ollama Host: {settings.ollama_host}")
     logger.info(f"Ollama Model: {settings.ollama_model}")
-    logger.info(f"TimescaleDB: {settings.timescaledb_host}:{settings.timescaledb_port}/{settings.timescaledb_database}")
+    logger.info(f"EasyInsight API: {settings.easyinsight_api_url}")
     logger.info(f"FAISS Directory: {settings.faiss_persist_directory}")
 
-    # Start TimescaleDB sync service if enabled
-    if settings.rag_sync_enabled:
-        try:
-            await sync_service.start()
-            logger.info(
-                f"TimescaleDB sync started - "
-                f"Host: {settings.timescaledb_host}:{settings.timescaledb_port}, "
-                f"Interval: {settings.rag_sync_interval_seconds}s"
-            )
-        except Exception as e:
-            logger.warning(f"Failed to start TimescaleDB sync: {e}")
-            logger.info("Service will continue without automatic RAG sync")
+    # TimescaleDB sync service removed - using EasyInsight API only
+    logger.info("Using EasyInsight API for all data access (TimescaleDB sync disabled)")
 
     # Initialize NHITS training service
     if settings.nhits_enabled:
         try:
-            # Connect training service to database
-            if sync_service._pool:
-                await nhits_training_service.connect(sync_service._pool)
-                logger.info("NHITS training service connected to database")
-
             # Start scheduled training if enabled
             if settings.nhits_scheduled_training_enabled:
                 await nhits_training_service.start()
@@ -135,13 +121,7 @@ async def startup_event():
                     nhits_training_service.train_all_symbols(force=False)
                 )
 
-            # Start model improvement service for automatic feedback learning
-            if sync_service._pool:
-                await model_improvement_service.start_evaluation_loop(
-                    sync_service._pool,
-                    interval_seconds=300  # Evaluate every 5 minutes
-                )
-                logger.info("Model improvement service started (feedback learning enabled)")
+            logger.info("NHITS training service initialized (using EasyInsight API)")
 
         except Exception as e:
             logger.warning(f"Failed to initialize NHITS training service: {e}")
@@ -163,11 +143,8 @@ async def shutdown_event():
         await nhits_training_service.stop()
         logger.info("NHITS training service stopped")
 
-    # Stop sync service
-    if sync_service._running:
-        await sync_service.stop()
-        await sync_service.disconnect()
-        logger.info("TimescaleDB sync service stopped")
+    # TimescaleDB sync service removed - using EasyInsight API only
+    logger.info("Shutdown complete (API-only mode)")
 
 
 @app.get("/")

@@ -22,7 +22,6 @@ class NHITSTrainingService:
     def __init__(self):
         self._running = False
         self._task: Optional[asyncio.Task] = None
-        self._db_pool = None
         self._training_in_progress = False
         self._training_cancelled = False
         self._last_training_run: Optional[datetime] = None
@@ -35,10 +34,6 @@ class NHITSTrainingService:
         self._training_successful: int = 0
         self._training_failed: int = 0
         self._training_skipped: int = 0
-
-    async def connect(self, db_pool):
-        """Set the database connection pool."""
-        self._db_pool = db_pool
 
     async def start(self):
         """Start the scheduled training service."""
@@ -222,50 +217,8 @@ class NHITSTrainingService:
                 return time_series
 
         except Exception as e:
-            logger.warning(f"Failed to get training data from EasyInsight API for {symbol}: {e}")
-
-            # Fallback to direct TimescaleDB access
-            if not self._db_pool:
-                logger.error("No database connection available for fallback")
-                return []
-
-            try:
-                logger.info(f"Attempting fallback to TimescaleDB for {symbol}")
-                async with self._db_pool.acquire() as conn:
-                    rows = await conn.fetch("""
-                        SELECT
-                            data_timestamp as timestamp,
-                            d1_open as open,
-                            d1_high as high,
-                            d1_low as low,
-                            d1_close as close
-                        FROM symbol
-                        WHERE symbol = $1
-                          AND data_timestamp > NOW() - INTERVAL '%s days'
-                        ORDER BY data_timestamp ASC
-                    """ % days, symbol)
-
-                    time_series = [
-                        TimeSeriesData(
-                            timestamp=row['timestamp'],
-                            symbol=symbol,
-                            open=float(row['open']),
-                            high=float(row['high']),
-                            low=float(row['low']),
-                            close=float(row['close']),
-                            volume=0.0  # Volume not available in symbol table
-                        )
-                        for row in rows
-                    ]
-
-                    logger.debug(
-                        f"Fetched {len(time_series)} data points for {symbol} from TimescaleDB (fallback)"
-                    )
-                    return time_series
-
-            except Exception as db_error:
-                logger.error(f"Fallback DB query also failed for {symbol}: {db_error}")
-                return []
+            logger.error(f"Failed to get training data from EasyInsight API for {symbol}: {e}")
+            return []
 
     async def train_symbol(
         self,
