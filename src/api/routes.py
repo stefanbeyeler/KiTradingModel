@@ -39,6 +39,7 @@ from ..models.forecast_data import (
 from ..services import AnalysisService, LLMService, StrategyService
 from ..services.query_log_service import query_log_service, QueryLogEntry
 from ..services.symbol_service import symbol_service
+from ..services.event_based_training_service import event_based_training_service
 
 
 # Thematisch gruppierte Router für bessere API-Organisation
@@ -957,6 +958,90 @@ async def cancel_training():
             }
     except Exception as e:
         logger.error(f"Failed to cancel training: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Event-Based Training Endpoints ====================
+
+@training_router.get("/forecast/training/events/status")
+async def get_event_training_status():
+    """
+    Get status of the event-based training monitor.
+
+    Returns whether the service is running and monitoring trading events
+    to trigger automatic model retraining.
+    """
+    try:
+        return {
+            "running": event_based_training_service._running,
+            "check_interval_minutes": event_based_training_service._check_interval_minutes,
+            "event_threshold": event_based_training_service._event_threshold,
+            "monitored_indicators": event_based_training_service._monitored_indicators
+        }
+    except Exception as e:
+        logger.error(f"Failed to get event training status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@training_router.get("/forecast/training/events/summary")
+async def get_event_summary(symbol: Optional[str] = None, hours: int = 24):
+    """
+    Get summary of recent trading events.
+
+    Shows event statistics from the EasyInsight logs API to understand
+    market activity and potential retraining triggers.
+
+    Args:
+        symbol: Optional symbol to filter events
+        hours: Number of hours to look back (default: 24)
+    """
+    try:
+        summary = await event_based_training_service.get_event_summary(
+            symbol=symbol,
+            hours=hours
+        )
+        return summary
+    except Exception as e:
+        logger.error(f"Failed to get event summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@training_router.post("/forecast/training/events/start")
+async def start_event_training():
+    """
+    Start the event-based training monitor.
+
+    Begins monitoring trading events from EasyInsight and automatically
+    triggers model retraining when significant events are detected.
+    """
+    try:
+        await event_based_training_service.start()
+        return {
+            "success": True,
+            "message": "Event-based training monitor started",
+            "check_interval_minutes": event_based_training_service._check_interval_minutes
+        }
+    except Exception as e:
+        logger.error(f"Failed to start event training: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@training_router.post("/forecast/training/events/stop")
+async def stop_event_training():
+    """
+    Stop the event-based training monitor.
+
+    Stops monitoring trading events. Scheduled and manual training
+    will continue to work normally.
+    """
+    try:
+        await event_based_training_service.stop()
+        return {
+            "success": True,
+            "message": "Event-based training monitor stopped"
+        }
+    except Exception as e:
+        logger.error(f"Failed to stop event training: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
