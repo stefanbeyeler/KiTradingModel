@@ -99,7 +99,8 @@
       "Bash(bash:*)",
       "Bash(sg docker:*)",
       "Bash(ls:*)",
-      "Bash(sudo usermod:*)"
+      "Bash(sudo usermod:*)",
+      "Bash(ss -tlnp:*)"
     ],
     "deny": [],
     "ask": []

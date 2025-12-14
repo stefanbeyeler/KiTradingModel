@@ -530,6 +530,7 @@ class NHITSTrainingService:
                 "progress_percent": progress_pct,
                 "elapsed_seconds": int(elapsed),
                 "cancelling": self._training_cancelled,
+                "started_at": self._current_training_start.isoformat() if self._current_training_start else None,
             }
 
         return status

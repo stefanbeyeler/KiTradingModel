@@ -794,6 +794,7 @@ async def get_training_progress():
         progress_pct = progress.get("progress_percent", 0)
         elapsed = progress.get("elapsed_seconds", 0)
         cancelling = progress.get("cancelling", False)
+        started_at = progress.get("started_at")
 
         # Calculate estimated time remaining
         eta_seconds = None
@@ -821,7 +822,7 @@ async def get_training_progress():
                 eta_formatted=f"{eta_seconds // 60}m {eta_seconds % 60}s" if eta_seconds else None
             ),
             cancelling=cancelling,
-            started_at=status.get("started_at")
+            started_at=started_at
         )
 
     except Exception as e:
