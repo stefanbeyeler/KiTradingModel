@@ -1,5 +1,25 @@
 # Event-Based NHITS Training
 
+## Port-Konfiguration
+
+### Backend API (Port 3011)
+
+- **URL**: `http://10.1.19.101:3011`
+- **Verwendung**: Direkte API-Aufrufe (curl, Postman, Scripts)
+- **Swagger UI**: `http://10.1.19.101:3011/docs`
+- **ReDoc**: `http://10.1.19.101:3011/redoc`
+
+### Frontend Dashboard (Port 3001)
+
+- **URL**: `http://10.1.19.101:3001`
+- **Verwendung**: Web-UI mit integrierter Swagger-Dokumentation
+- **Swagger UI**: `http://10.1.19.101:3001/docs` (zeigt Backend-API)
+- **Funktionsweise**: API-Calls werden automatisch an Backend (Port 3011) weitergeleitet
+
+**Empfehlung**: Verwenden Sie **Port 3001** für interaktive Nutzung über Browser und **Port 3011** für Scripting/Automatisierung.
+
+---
+
 ## Übersicht
 
 Das Event-Based Training System überwacht Trading-Events von der EasyInsight Logs API (`http://10.1.19.102:3000/api/logs`) und triggert automatisch NHITS Model-Retraining, wenn signifikante Marktbewegungen erkannt werden.

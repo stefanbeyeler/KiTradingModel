@@ -1,5 +1,26 @@
 # Swagger API Kategorisierung
 
+## Port-Konfiguration
+
+### Backend API (Port 3011)
+
+- **URL**: `http://10.1.19.101:3011`
+- **Verwendung**: Direkte API-Aufrufe (curl, Postman, Scripts)
+- **Swagger UI**: `http://10.1.19.101:3011/docs`
+- **ReDoc**: `http://10.1.19.101:3011/redoc`
+- **OpenAPI JSON**: `http://10.1.19.101:3011/openapi.json`
+
+### Frontend Dashboard (Port 3001)
+
+- **URL**: `http://10.1.19.101:3001`
+- **Verwendung**: Web-UI mit integrierter Swagger-Dokumentation
+- **Swagger UI**: `http://10.1.19.101:3001/docs` (zeigt Backend-API)
+- **Funktionsweise**: API-Calls werden automatisch an Backend (Port 3011) weitergeleitet
+
+**Empfehlung**: Verwenden Sie **Port 3001** für interaktive Nutzung über Browser (Swagger UI) und **Port 3011** für Scripting/Automatisierung.
+
+---
+
 ## Übersicht
 
 Die API-Dokumentation ist in 9 thematische Kategorien unterteilt, um die Navigation und Nutzung zu erleichtern.
