@@ -870,21 +870,6 @@ async def get_trainable_symbols():
     """
     try:
         training_service = get_training_service()
-
-        # Ensure training service has database connection
-        if not training_service._db_pool:
-            import asyncpg
-            pool = await asyncpg.create_pool(
-                host=settings.timescaledb_host,
-                port=settings.timescaledb_port,
-                database=settings.timescaledb_database,
-                user=settings.timescaledb_user,
-                password=settings.timescaledb_password,
-                min_size=1,
-                max_size=5
-            )
-            await training_service.connect(pool)
-
         symbols = await training_service.get_available_symbols()
 
         return {
@@ -922,20 +907,6 @@ async def train_all_models(
             )
 
         training_service = get_training_service()
-
-        # Ensure training service has database connection
-        if not training_service._db_pool:
-            import asyncpg
-            pool = await asyncpg.create_pool(
-                host=settings.timescaledb_host,
-                port=settings.timescaledb_port,
-                database=settings.timescaledb_database,
-                user=settings.timescaledb_user,
-                password=settings.timescaledb_password,
-                min_size=1,
-                max_size=5
-            )
-            await training_service.connect(pool)
 
         if background:
             # Start training in background

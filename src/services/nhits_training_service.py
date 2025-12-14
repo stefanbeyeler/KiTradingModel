@@ -103,19 +103,6 @@ class NHITSTrainingService:
 
         except Exception as e:
             logger.error(f"Failed to get symbols from EasyInsight API: {e}")
-            # Fallback to database if available
-            if self._db_pool:
-                try:
-                    async with self._db_pool.acquire() as conn:
-                        rows = await conn.fetch("""
-                            SELECT DISTINCT symbol
-                            FROM symbol
-                            WHERE data_timestamp > NOW() - INTERVAL '30 days'
-                            ORDER BY symbol
-                        """)
-                        return [row['symbol'] for row in rows]
-                except Exception as db_error:
-                    logger.error(f"Fallback DB query failed: {db_error}")
             return []
 
     async def get_training_data(
