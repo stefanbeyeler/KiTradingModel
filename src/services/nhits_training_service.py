@@ -11,7 +11,7 @@ from typing import List, Optional, Dict, Any
 
 from ..config.settings import settings
 from ..models.trading_data import TimeSeriesData
-from ..models.forecast_data import ForecastTrainingResult
+from ..models.forecast_data import ForecastTrainingResult, TrainingMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -226,7 +226,7 @@ class NHITSTrainingService:
                     training_samples=0,
                     training_duration_seconds=0,
                     model_path="",
-                    metrics={},
+                    metrics=TrainingMetrics(),
                     success=False,
                     error_message="No training data available"
                 )
@@ -239,7 +239,7 @@ class NHITSTrainingService:
                     training_samples=len(time_series),
                     training_duration_seconds=0,
                     model_path="",
-                    metrics={},
+                    metrics=TrainingMetrics(),
                     success=False,
                     error_message=f"Insufficient data: {len(time_series)} < {min_required}"
                 )
@@ -254,7 +254,7 @@ class NHITSTrainingService:
                     training_samples=info.training_samples or 0,
                     training_duration_seconds=0,
                     model_path=str(forecast_service._get_model_path(symbol)),
-                    metrics={},
+                    metrics=TrainingMetrics(),
                     success=True,
                     error_message="Model up to date (skipped)"
                 )
@@ -369,7 +369,7 @@ class NHITSTrainingService:
                                 "success": True,
                                 "samples": result.training_samples,
                                 "duration": result.training_duration_seconds,
-                                "loss": result.metrics.get("final_loss")
+                                "loss": result.metrics.final_loss if result.metrics else None
                             }
                             self._training_successful += 1
                     else:

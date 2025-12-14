@@ -57,12 +57,18 @@
 
         .services-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 1.5rem;
             margin-bottom: 1.5rem;
         }
 
-        @media (max-width: 1000px) {
+        @media (max-width: 1200px) {
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 700px) {
             .services-grid {
                 grid-template-columns: 1fr;
             }
@@ -332,7 +338,7 @@
         <div class="container">
             <h1>KI Trading Model</h1>
             <div class="header-status">
-                <span id="services-count">Services: -/3</span>
+                <span id="services-count">Services: -/4</span>
                 <span id="models-count">Modelle: -</span>
                 <span id="last-update">Update: -</span>
             </div>
@@ -386,12 +392,30 @@
                 <p>Symbol-Management, Trading-Strategien und Daten-Synchronisation mit EasyInsight.</p>
                 <div class="service-info" id="data-info">
                     <div><span class="label">Port</span><span>3003</span></div>
-                    <div><span class="label">TimescaleDB</span><span id="data-tsdb">-</span></div>
+                    <div><span class="label">EasyInsight</span><span id="data-easyinsight">-</span></div>
                     <div><span class="label">Sync</span><span id="data-sync">-</span></div>
                 </div>
                 <div class="service-links">
                     <a href="/data/docs" target="_blank">API Docs</a>
                     <a href="/data/health" target="_blank">Health</a>
+                </div>
+            </div>
+
+            <!-- EasyInsight API -->
+            <div class="service-card" id="easyinsight-card">
+                <div class="service-header">
+                    <h2>EasyInsight API</h2>
+                    <span class="status-badge status-loading" id="easyinsight-status">Laden...</span>
+                </div>
+                <p>Externe Datenquelle - OHLCV-Marktdaten und Symbol-Informationen via TimescaleDB.</p>
+                <div class="service-info" id="easyinsight-info">
+                    <div><span class="label">Host</span><span>10.1.19.102:3000</span></div>
+                    <div><span class="label">Symbole</span><span id="easyinsight-symbols">-</span></div>
+                    <div><span class="label">Latenz</span><span id="easyinsight-latency">-</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="http://10.1.19.102:3000/swagger/" target="_blank">API Docs</a>
+                    <a href="http://10.1.19.102:3000/api/symbols" target="_blank">Symbols</a>
                 </div>
             </div>
         </div>
@@ -502,8 +526,36 @@
         async function updateDataInfo() {
             const data = await checkHealth('data', 3003, 'data-status');
             if (data) {
-                document.getElementById('data-tsdb').textContent = data.timescaledb_host || '-';
+                document.getElementById('data-easyinsight').textContent = data.easyinsight_api ? 'Verbunden' : '-';
                 document.getElementById('data-sync').textContent = data.sync_service_status || '-';
+            }
+        }
+
+        async function updateEasyInsightInfo() {
+            const statusEl = document.getElementById('easyinsight-status');
+            const symbolsEl = document.getElementById('easyinsight-symbols');
+            const latencyEl = document.getElementById('easyinsight-latency');
+
+            try {
+                const startTime = performance.now();
+                const res = await fetch('/easyinsight/api/symbols');
+                const latency = Math.round(performance.now() - startTime);
+
+                if (res.ok) {
+                    const symbols = await res.json();
+                    statusEl.textContent = 'Online';
+                    statusEl.className = 'status-badge status-healthy';
+                    symbolsEl.textContent = symbols.length;
+                    latencyEl.textContent = `${latency}ms`;
+                    healthyServices++;
+                } else {
+                    throw new Error('API returned error');
+                }
+            } catch (err) {
+                statusEl.textContent = 'Offline';
+                statusEl.className = 'status-badge status-unhealthy';
+                symbolsEl.textContent = '-';
+                latencyEl.textContent = '-';
             }
         }
 
@@ -553,10 +605,11 @@
                 updateNhitsInfo(),
                 updateLlmInfo(),
                 updateDataInfo(),
+                updateEasyInsightInfo(),
                 updateTrainingStatus()
             ]);
 
-            document.getElementById('services-count').textContent = `Services: ${healthyServices}/3`;
+            document.getElementById('services-count').textContent = `Services: ${healthyServices}/4`;
             document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
         }
 

@@ -128,7 +128,7 @@ class Settings(BaseSettings):
         description="Use GPU for NHITS if available"
     )
     nhits_model_path: str = Field(
-        default="models/nhits",
+        default="data/models/nhits",
         description="Directory for NHITS model persistence"
     )
     nhits_auto_retrain_days: int = Field(
