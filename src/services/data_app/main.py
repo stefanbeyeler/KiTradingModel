@@ -24,6 +24,7 @@ from src.version import VERSION
 from src.api.routes import (
     symbol_router,
     strategy_router,
+    sync_router,
     system_router,
     query_log_router,
     router as general_router
@@ -69,10 +70,11 @@ app.add_middleware(
 
 # Include routers
 app.include_router(general_router, prefix="/api/v1", tags=["General"])
-app.include_router(symbol_router, prefix="/api/v1", tags=["Symbol Management"])
-app.include_router(strategy_router, prefix="/api/v1", tags=["Trading Strategies"])
-app.include_router(system_router, prefix="/api/v1", tags=["System & Monitoring"])
-app.include_router(query_log_router, prefix="/api/v1", tags=["Query Logs & Analytics"])
+app.include_router(symbol_router, prefix="/api/v1", tags=["📈 Symbol Management"])
+app.include_router(strategy_router, prefix="/api/v1", tags=["🎯 Trading Strategies"])
+app.include_router(sync_router, prefix="/api/v1", tags=["🔄 TimescaleDB Sync"])
+app.include_router(system_router, prefix="/api/v1", tags=["🖥️ System & Monitoring"])
+app.include_router(query_log_router, prefix="/api/v1", tags=["📝 Query Logs & Analytics"])
 
 
 @app.on_event("startup")

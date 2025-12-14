@@ -51,6 +51,7 @@ symbol_router = APIRouter()  # Symbol-Management
 strategy_router = APIRouter()  # Trading-Strategien
 rag_router = APIRouter()  # RAG & Wissensbasis
 llm_router = APIRouter()  # LLM Service
+sync_router = APIRouter()  # TimescaleDB Sync
 system_router = APIRouter()  # System & Monitoring
 query_log_router = APIRouter()  # Query Logs & Analytics
 
@@ -341,32 +342,51 @@ async def pull_llm_model():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Sync service endpoints - import from main
-@system_router.get("/sync/status")
+# ==================== TimescaleDB Sync Endpoints ====================
+
+@sync_router.get("/sync/status")
 async def get_sync_status():
-    """Get the status of the TimescaleDB sync service."""
+    """
+    Get the status of the TimescaleDB sync service.
+
+    Returns information about:
+    - Whether the sync service is running
+    - Database connection status
+    - Last sync time and sync count
+    - Configured sync interval
+    """
     from ..main import sync_service
     return sync_service.get_status()
 
 
-@system_router.post("/sync/start")
+@sync_router.post("/sync/start")
 async def start_sync():
-    """Start the TimescaleDB sync service."""
+    """
+    Start the TimescaleDB sync service.
+
+    Begins automatic synchronization of market data from EasyInsight API
+    to the RAG knowledge base. Sync runs at configured intervals.
+    """
     from ..main import sync_service
     try:
         await sync_service.start()
         return {
             "status": "started",
-            "message": "TimescaleDB sync service started"
+            "message": "TimescaleDB sync service started",
+            "interval_seconds": sync_service.get_status()["sync_interval_seconds"]
         }
     except Exception as e:
         logger.error(f"Failed to start sync: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@system_router.post("/sync/stop")
+@sync_router.post("/sync/stop")
 async def stop_sync():
-    """Stop the TimescaleDB sync service."""
+    """
+    Stop the TimescaleDB sync service.
+
+    Stops automatic synchronization. Can be restarted later with /sync/start.
+    """
     from ..main import sync_service
     try:
         await sync_service.stop()
@@ -379,16 +399,26 @@ async def stop_sync():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@system_router.post("/sync/manual")
+@sync_router.post("/sync/manual")
 async def manual_sync(days_back: int = 7):
-    """Manually trigger a sync for the specified number of days."""
+    """
+    Manually trigger a one-time sync for the specified number of days.
+
+    Parameters:
+    - days_back: Number of days of historical data to sync (default: 7)
+
+    This fetches market data from EasyInsight API and stores it in the
+    RAG knowledge base for LLM analysis. Useful for backfilling data
+    or syncing after adding new symbols.
+    """
     from ..main import sync_service
     try:
         synced_count = await sync_service.manual_sync(days_back=days_back)
         return {
             "status": "completed",
             "documents_synced": synced_count,
-            "days_back": days_back
+            "days_back": days_back,
+            "message": f"Successfully synced {synced_count} documents from the last {days_back} days"
         }
     except Exception as e:
         logger.error(f"Manual sync failed: {e}")
@@ -1518,7 +1548,11 @@ def get_all_routers():
     return [
         (system_router, "/api/v1", ["🖥️ System & Monitoring"], {
             "name": "System",
-            "description": "Health checks, version info, sync status, and system information"
+            "description": "Health checks, version info, and system information"
+        }),
+        (sync_router, "/api/v1", ["🔄 TimescaleDB Sync"], {
+            "name": "Sync",
+            "description": "TimescaleDB synchronization - start/stop sync service, manual sync, and status monitoring"
         }),
         (trading_router, "/api/v1", ["📊 Trading Analysis"], {
             "name": "Trading",
