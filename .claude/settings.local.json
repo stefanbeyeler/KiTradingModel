@@ -111,7 +111,8 @@
       "Bash(readlink:*)",
       "Bash(sudo docker compose:*)",
       "Bash(wc:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(tail:*)"
     ],
     "deny": [],
     "ask": []

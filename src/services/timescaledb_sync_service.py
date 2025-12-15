@@ -99,9 +99,15 @@ class TimescaleDBSyncService:
                 return
 
             total_synced = 0
+
+            # Sync symbol market data
             for symbol in symbols:
                 synced = await self._sync_symbol_data(symbol, start_time, end_time)
                 total_synced += synced
+
+            # Sync MT5 logs (ATR, Support/Resistance, etc.)
+            mt5_synced = await self._sync_mt5_logs(start_time, end_time)
+            total_synced += mt5_synced
 
             self._last_sync_time = end_time
             self._sync_count += 1
@@ -110,7 +116,7 @@ class TimescaleDBSyncService:
                 # Persist RAG database after sync
                 await self.rag_service.persist()
                 logger.info(
-                    f"Sync #{self._sync_count} completed: {total_synced} documents added"
+                    f"Sync #{self._sync_count} completed: {total_synced} documents added (MT5: {mt5_synced})"
                 )
             else:
                 logger.debug(f"Sync #{self._sync_count} completed: no new data")
@@ -403,6 +409,178 @@ Signale:
 
         return synced_count
 
+    async def _sync_mt5_logs(self, start_time: datetime, end_time: datetime) -> int:
+        """Sync MT5 logs from EasyInsight API to RAG."""
+        synced_count = 0
+        batch_size = getattr(settings, 'rag_sync_batch_size', 100)
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # Fetch recent logs
+                response = await client.get(
+                    f"{self._api_url}/logs",
+                    params={"limit": batch_size * 2}
+                )
+                response.raise_for_status()
+
+                data = response.json()
+                logs = data.get('data', [])
+
+                logger.info(f"MT5 logs API returned {len(logs)} entries (time range: {start_time} to {end_time})")
+
+                if not logs:
+                    return 0
+
+                # Group logs by symbol for better context
+                logs_by_symbol: dict[str, list] = {}
+                for log in logs:
+                    try:
+                        # Parse timestamp
+                        timestamp_str = log.get('timestamp') or log.get('created_at')
+                        if not timestamp_str:
+                            continue
+
+                        log_timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+
+                        # Convert to UTC for comparison if it has timezone info
+                        if log_timestamp.tzinfo is not None:
+                            log_timestamp_utc = log_timestamp.astimezone(timezone.utc)
+                        else:
+                            log_timestamp_utc = log_timestamp.replace(tzinfo=timezone.utc)
+
+                        # Skip if outside time range
+                        if log_timestamp_utc <= start_time or log_timestamp_utc > end_time:
+                            continue
+
+                        symbol = log.get('symbol', 'UNKNOWN')
+                        if symbol not in logs_by_symbol:
+                            logs_by_symbol[symbol] = []
+                        logs_by_symbol[symbol].append(log)
+
+                    except Exception as e:
+                        logger.debug(f"Error parsing log entry: {e}")
+                        continue
+
+                logger.info(f"MT5 logs: {len(logs_by_symbol)} symbols matched time range")
+
+                # Process grouped logs
+                for symbol, symbol_logs in logs_by_symbol.items():
+                    if synced_count >= batch_size:
+                        break
+
+                    # Group by indicator type
+                    atr_logs = [l for l in symbol_logs if l.get('indicator') == 'ATR']
+                    fxl_logs = [l for l in symbol_logs if l.get('indicator') == 'FXL']
+                    other_logs = [l for l in symbol_logs if l.get('indicator') not in ('ATR', 'FXL')]
+
+                    # Create document for ATR signals
+                    for log in atr_logs[:5]:  # Limit per indicator
+                        content = self._format_mt5_log(log, 'ATR')
+                        if content:
+                            await self.rag_service.add_custom_document(
+                                content=content,
+                                document_type="mt5_signal",
+                                symbol=symbol,
+                                metadata={
+                                    "indicator": "ATR",
+                                    "source": log.get('source', 'MT5'),
+                                    "timestamp": log.get('timestamp'),
+                                    "log_file": log.get('log_file')
+                                }
+                            )
+                            synced_count += 1
+
+                    # Create document for FXL (Support/Resistance) signals
+                    for log in fxl_logs[:5]:
+                        content = self._format_mt5_log(log, 'FXL')
+                        if content:
+                            await self.rag_service.add_custom_document(
+                                content=content,
+                                document_type="mt5_signal",
+                                symbol=symbol,
+                                metadata={
+                                    "indicator": "FXL",
+                                    "source": log.get('source', 'MT5'),
+                                    "timestamp": log.get('timestamp'),
+                                    "log_file": log.get('log_file')
+                                }
+                            )
+                            synced_count += 1
+
+                    # Create document for other signals
+                    for log in other_logs[:3]:
+                        content = self._format_mt5_log(log, log.get('indicator', 'unknown'))
+                        if content:
+                            await self.rag_service.add_custom_document(
+                                content=content,
+                                document_type="mt5_signal",
+                                symbol=symbol,
+                                metadata={
+                                    "indicator": log.get('indicator', 'unknown'),
+                                    "source": log.get('source', 'MT5'),
+                                    "timestamp": log.get('timestamp'),
+                                    "log_file": log.get('log_file')
+                                }
+                            )
+                            synced_count += 1
+
+        except Exception as e:
+            logger.error(f"Error syncing MT5 logs: {e}")
+
+        return synced_count
+
+    def _format_mt5_log(self, log: dict, indicator: str) -> str:
+        """Format MT5 log entry for RAG storage."""
+        symbol = log.get('symbol', 'UNKNOWN')
+        content = log.get('content', '')
+        timestamp = log.get('timestamp', '')
+        source = log.get('source', 'MT5')
+
+        if indicator == 'ATR':
+            # Parse ATR value from content like "BTCUSD ATR: 54%"
+            return f"""
+MT5 Signal - ATR (Average True Range)
+Symbol: {symbol}
+Zeitstempel: {timestamp}
+Quelle: {source}
+
+Signal: {content}
+
+Interpretation:
+- ATR misst die Volatilität des Marktes
+- Hohe ATR-Werte (>70%) = Hohe Volatilität, größere Preisbewegungen erwartet
+- Niedrige ATR-Werte (<30%) = Geringe Volatilität, seitwärts gerichteter Markt
+- ATR hilft bei der Bestimmung von Stop-Loss-Levels und Positionsgrößen
+"""
+
+        elif indicator == 'FXL':
+            # Parse Support/Resistance from content like "FXL for BTCUSD Support at 87264.50 | Resistance at 90315.00|"
+            return f"""
+MT5 Signal - Support & Resistance (FXL)
+Symbol: {symbol}
+Zeitstempel: {timestamp}
+Quelle: {source}
+
+Signal: {content}
+
+Interpretation:
+- Support = Unterstützungsniveau, wo Käufer typischerweise einsteigen
+- Resistance = Widerstandsniveau, wo Verkäufer typischerweise einsteigen
+- Durchbruch über Resistance = Bullisches Signal
+- Durchbruch unter Support = Bärisches Signal
+- Diese Levels können als Entry/Exit-Punkte genutzt werden
+"""
+
+        else:
+            return f"""
+MT5 Signal - {indicator}
+Symbol: {symbol}
+Zeitstempel: {timestamp}
+Quelle: {source}
+
+Signal: {content}
+"""
+
     async def manual_sync(self, days_back: int = 7) -> int:
         """Manually trigger a sync for the specified number of days."""
         # Verify API connectivity
@@ -415,9 +593,15 @@ Signale:
         symbols = await self._get_symbols()
         total_synced = 0
 
+        # Sync symbol market data
         for symbol in symbols:
             synced = await self._sync_symbol_data(symbol, start_time, end_time)
             total_synced += synced
+
+        # Sync MT5 logs
+        mt5_synced = await self._sync_mt5_logs(start_time, end_time)
+        total_synced += mt5_synced
+        logger.info(f"MT5 logs synced: {mt5_synced} documents")
 
         if total_synced > 0:
             await self.rag_service.persist()
