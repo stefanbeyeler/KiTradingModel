@@ -117,7 +117,8 @@
       "Bash(do echo \"=== Check $i ===\")",
       "Bash(sudo docker-compose:*)",
       "Bash(git pull:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []

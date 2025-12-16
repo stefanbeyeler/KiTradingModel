@@ -114,24 +114,24 @@ class Settings(BaseSettings):
         description="Input window size (168 = 7 days of hourly data)"
     )
     nhits_hidden_size: int = Field(
-        default=256,
-        description="Hidden layer size for NHITS network"
+        default=128,
+        description="Hidden layer size for NHITS network (128 optimal for trading data)"
     )
     nhits_n_pool_kernel_size: list = Field(
-        default=[2, 2, 1],
-        description="Hierarchical pooling kernel sizes"
+        default=[4, 2, 1],
+        description="Hierarchical pooling kernel sizes (multi-scale: coarse, medium, fine)"
     )
     nhits_batch_size: int = Field(
-        default=32,
-        description="Training batch size"
+        default=64,
+        description="Training batch size (64 for better GPU utilization)"
     )
     nhits_max_steps: int = Field(
-        default=500,
-        description="Maximum training steps"
+        default=1000,
+        description="Maximum training steps (early stopping controls actual duration)"
     )
     nhits_learning_rate: float = Field(
-        default=1e-3,
-        description="Learning rate for training"
+        default=3e-3,
+        description="Learning rate for training (0.003 for faster convergence)"
     )
     nhits_use_gpu: bool = Field(
         default=True,

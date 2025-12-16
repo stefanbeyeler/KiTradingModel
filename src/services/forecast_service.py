@@ -166,10 +166,11 @@ class ForecastService:
     """Service for NHITS-based time series forecasting with multi-timeframe support."""
 
     # Timeframe configurations: (horizon_steps, input_size, step_minutes)
+    # input_size must be > horizon to create valid training sequences
     TIMEFRAME_CONFIG = {
         "M15": {"horizon": 8, "input_size": 96, "step_minutes": 15},   # 2h horizon, 24h lookback
         "H1": {"horizon": 24, "input_size": 168, "step_minutes": 60},  # 24h horizon, 7d lookback
-        "D1": {"horizon": 7, "input_size": 30, "step_minutes": 1440},  # 7d horizon, 30d lookback
+        "D1": {"horizon": 7, "input_size": 60, "step_minutes": 1440},  # 7d horizon, 60d lookback (fixed from 30)
     }
 
     def __init__(self):
