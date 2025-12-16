@@ -41,7 +41,7 @@ class TimeSeriesData(BaseModel):
     volume: float
     additional_data: Optional[dict] = None
 
-    # Technical Indicators from TimescaleDB (optional, for NHITS multi-variate forecasting)
+    # Technical Indicators from EasyInsight API (optional, for NHITS multi-variate forecasting)
     rsi: Optional[float] = None
     macd_main: Optional[float] = None
     macd_signal: Optional[float] = None
@@ -49,6 +49,7 @@ class TimeSeriesData(BaseModel):
     adx_plus_di: Optional[float] = None
     adx_minus_di: Optional[float] = None
     atr: Optional[float] = None
+    atr_pct: Optional[float] = None  # ATR as percentage
     cci: Optional[float] = None
     stoch_k: Optional[float] = None
     stoch_d: Optional[float] = None
@@ -58,9 +59,15 @@ class TimeSeriesData(BaseModel):
     ma100: Optional[float] = None
     ichimoku_tenkan: Optional[float] = None
     ichimoku_kijun: Optional[float] = None
+    ichimoku_senkou_a: Optional[float] = None  # Senkou Span A (Cloud upper/lower)
+    ichimoku_senkou_b: Optional[float] = None  # Senkou Span B (Cloud upper/lower)
+    ichimoku_chikou: Optional[float] = None    # Chikou Span (Lagging)
     strength_4h: Optional[float] = None
     strength_1d: Optional[float] = None
     strength_1w: Optional[float] = None
+    range_d1: Optional[float] = None           # Daily range
+    s1_level: Optional[float] = None           # Support 1 pivot point
+    r1_level: Optional[float] = None           # Resistance 1 pivot point
 
 
 class TechnicalIndicators(BaseModel):

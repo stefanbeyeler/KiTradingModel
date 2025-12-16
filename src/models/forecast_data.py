@@ -11,6 +11,10 @@ class ForecastResult(BaseModel):
     symbol: str
     forecast_timestamp: datetime = Field(default_factory=datetime.utcnow)
     horizon_hours: int = Field(default=24, description="Forecast horizon in hours")
+    timeframe: str = Field(
+        default="H1",
+        description="Timeframe used: M15 (15-min), H1 (hourly), D1 (daily)"
+    )
 
     # Price predictions per hour
     predicted_prices: List[float] = Field(

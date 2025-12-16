@@ -163,7 +163,14 @@ class SimpleNHITS(nn.Module):
 
 
 class ForecastService:
-    """Service for NHITS-based time series forecasting."""
+    """Service for NHITS-based time series forecasting with multi-timeframe support."""
+
+    # Timeframe configurations: (horizon_steps, input_size, step_minutes)
+    TIMEFRAME_CONFIG = {
+        "M15": {"horizon": 8, "input_size": 96, "step_minutes": 15},   # 2h horizon, 24h lookback
+        "H1": {"horizon": 24, "input_size": 168, "step_minutes": 60},  # 24h horizon, 7d lookback
+        "D1": {"horizon": 7, "input_size": 30, "step_minutes": 1440},  # 7d horizon, 30d lookback
+    }
 
     def __init__(self):
         self.models: Dict[str, SimpleNHITS] = {}
@@ -190,11 +197,32 @@ class ForecastService:
             f"device={self.device}, model_path={self.model_path}"
         )
 
-    # Feature names for multi-variate forecasting
+    def get_timeframe_config(self, timeframe: str) -> Dict[str, int]:
+        """Get configuration for a specific timeframe."""
+        tf = timeframe.upper()
+        if tf not in self.TIMEFRAME_CONFIG:
+            logger.warning(f"Unknown timeframe {tf}, defaulting to H1")
+            tf = "H1"
+        return self.TIMEFRAME_CONFIG[tf]
+
+    def _get_model_key(self, symbol: str, timeframe: str = "H1") -> str:
+        """Get unique model key for symbol+timeframe combination."""
+        return f"{symbol}_{timeframe.upper()}"
+
+    # Feature names for multi-variate forecasting (all EasyInsight indicators)
     INDICATOR_FEATURES = [
-        'rsi', 'macd_main', 'macd_signal', 'adx', 'adx_plus_di', 'adx_minus_di',
-        'atr', 'cci', 'stoch_k', 'stoch_d', 'bb_upper', 'bb_middle', 'bb_lower',
-        'ma100', 'ichimoku_tenkan', 'ichimoku_kijun', 'strength_4h', 'strength_1d', 'strength_1w'
+        # Momentum Indicators
+        'rsi', 'macd_main', 'macd_signal', 'cci', 'stoch_k', 'stoch_d',
+        # Trend Indicators
+        'adx', 'adx_plus_di', 'adx_minus_di', 'ma100',
+        # Volatility Indicators
+        'atr', 'atr_pct', 'bb_upper', 'bb_middle', 'bb_lower', 'range_d1',
+        # Ichimoku Cloud (complete)
+        'ichimoku_tenkan', 'ichimoku_kijun', 'ichimoku_senkou_a', 'ichimoku_senkou_b', 'ichimoku_chikou',
+        # Strength Indicators
+        'strength_4h', 'strength_1d', 'strength_1w',
+        # Support/Resistance Pivot Points
+        's1_level', 'r1_level'
     ]
 
     def _prepare_data(
@@ -213,26 +241,38 @@ class ForecastService:
                 'open': float(ts.open),
                 'high': float(ts.high),
                 'low': float(ts.low),
-                # Technical Indicators
+                # Momentum Indicators
                 'rsi': ts.rsi,
                 'macd_main': ts.macd_main,
                 'macd_signal': ts.macd_signal,
-                'adx': ts.adx,
-                'adx_plus_di': ts.adx_plus_di,
-                'adx_minus_di': ts.adx_minus_di,
-                'atr': ts.atr,
                 'cci': ts.cci,
                 'stoch_k': ts.stoch_k,
                 'stoch_d': ts.stoch_d,
+                # Trend Indicators
+                'adx': ts.adx,
+                'adx_plus_di': ts.adx_plus_di,
+                'adx_minus_di': ts.adx_minus_di,
+                'ma100': ts.ma100,
+                # Volatility Indicators
+                'atr': ts.atr,
+                'atr_pct': ts.atr_pct,
                 'bb_upper': ts.bb_upper,
                 'bb_middle': ts.bb_middle,
                 'bb_lower': ts.bb_lower,
-                'ma100': ts.ma100,
+                'range_d1': ts.range_d1,
+                # Ichimoku Cloud (complete)
                 'ichimoku_tenkan': ts.ichimoku_tenkan,
                 'ichimoku_kijun': ts.ichimoku_kijun,
+                'ichimoku_senkou_a': ts.ichimoku_senkou_a,
+                'ichimoku_senkou_b': ts.ichimoku_senkou_b,
+                'ichimoku_chikou': ts.ichimoku_chikou,
+                # Strength Indicators
                 'strength_4h': ts.strength_4h,
                 'strength_1d': ts.strength_1d,
                 'strength_1w': ts.strength_1w,
+                # Support/Resistance Pivot Points
+                's1_level': ts.s1_level,
+                'r1_level': ts.r1_level,
             }
             for ts in time_series
         ])
@@ -335,11 +375,16 @@ class ForecastService:
         """Denormalize data."""
         return data * std + mean
 
-    def _create_model(self, n_features: int = 1) -> SimpleNHITS:
-        """Create a new NHITS model with specified number of features."""
+    def _create_model(
+        self,
+        n_features: int = 1,
+        input_size: Optional[int] = None,
+        horizon: Optional[int] = None
+    ) -> SimpleNHITS:
+        """Create a new NHITS model with specified number of features and dimensions."""
         model = SimpleNHITS(
-            input_size=self.input_size,
-            output_size=self.horizon,
+            input_size=input_size or self.input_size,
+            output_size=horizon or self.horizon,
             hidden_size=settings.nhits_hidden_size,
             n_pool_kernel_sizes=settings.nhits_n_pool_kernel_size,
             n_quantiles=3,  # 10%, 50%, 90%
@@ -347,26 +392,29 @@ class ForecastService:
         )
         return model.to(self.device)
 
-    def _get_metadata_path(self, symbol: str) -> Path:
+    def _get_metadata_path(self, symbol: str, timeframe: str = "H1") -> Path:
         """Get path to model metadata file."""
-        return self.model_path / f"{symbol}_metadata.json"
+        model_key = self._get_model_key(symbol, timeframe)
+        return self.model_path / f"{model_key}_metadata.json"
 
-    def _get_model_path(self, symbol: str) -> Path:
+    def _get_model_path(self, symbol: str, timeframe: str = "H1") -> Path:
         """Get path to model file."""
-        return self.model_path / f"{symbol}_model.pt"
+        model_key = self._get_model_key(symbol, timeframe)
+        return self.model_path / f"{model_key}_model.pt"
 
-    def _save_metadata(self, symbol: str, metadata: Dict) -> None:
+    def _save_metadata(self, symbol: str, metadata: Dict, timeframe: str = "H1") -> None:
         """Save model metadata to disk."""
-        path = self._get_metadata_path(symbol)
+        path = self._get_metadata_path(symbol, timeframe)
         meta_copy = metadata.copy()
+        meta_copy['timeframe'] = timeframe.upper()
         if 'trained_at' in meta_copy and isinstance(meta_copy['trained_at'], datetime):
             meta_copy['trained_at'] = meta_copy['trained_at'].isoformat()
         with open(path, 'w') as f:
             json.dump(meta_copy, f, indent=2)
 
-    def _load_metadata(self, symbol: str) -> Optional[Dict]:
+    def _load_metadata(self, symbol: str, timeframe: str = "H1") -> Optional[Dict]:
         """Load model metadata from disk."""
-        path = self._get_metadata_path(symbol)
+        path = self._get_metadata_path(symbol, timeframe)
         if not path.exists():
             return None
 
@@ -377,12 +425,12 @@ class ForecastService:
                     meta['trained_at'] = datetime.fromisoformat(meta['trained_at'])
                 return meta
         except Exception as e:
-            logger.warning(f"Failed to load metadata for {symbol}: {e}")
+            logger.warning(f"Failed to load metadata for {symbol}/{timeframe}: {e}")
             return None
 
-    def _should_retrain(self, symbol: str) -> bool:
+    def _should_retrain(self, symbol: str, timeframe: str = "H1") -> bool:
         """Check if model should be retrained based on age."""
-        metadata = self._load_metadata(symbol)
+        metadata = self._load_metadata(symbol, timeframe)
         if not metadata:
             return True
 
@@ -397,19 +445,26 @@ class ForecastService:
         self,
         time_series: List[TimeSeriesData],
         symbol: str,
+        timeframe: str = "H1",
     ) -> ForecastTrainingResult:
         """
         Synchronous training function to run in ThreadPoolExecutor.
         This prevents blocking the async event loop.
         Supports multi-variate training with technical indicators.
+        Supports multiple timeframes (M15, H1, D1).
         """
-        logger.info(f"Training NHITS model for {symbol} (sync)")
+        # Get timeframe-specific configuration
+        tf_config = self.get_timeframe_config(timeframe)
+        horizon = tf_config["horizon"]
+        input_size = tf_config["input_size"]
+
+        logger.info(f"Training NHITS model for {symbol}/{timeframe} (horizon={horizon}, input={input_size})")
         start_time = datetime.utcnow()
 
         try:
             df = self._prepare_data(time_series, symbol)
 
-            min_required = self.input_size + self.horizon
+            min_required = input_size + horizon
             if len(df) < min_required:
                 raise ValueError(
                     f"Insufficient data: {len(df)} rows, need {min_required}"
@@ -430,12 +485,12 @@ class ForecastService:
                     df, available_features
                 )
                 # Create sequences for multi-variate data
-                X, y = self._create_sequences(features, self.input_size, self.horizon)
+                X, y = self._create_sequences(features, input_size, horizon)
             else:
                 # Fallback to univariate (close only)
                 prices = df['close'].values
                 normalized, mean, std = self._normalize(prices)
-                X, y = self._create_sequences(normalized, self.input_size, self.horizon)
+                X, y = self._create_sequences(normalized, input_size, horizon)
                 feature_means = {'close': mean}
                 feature_stds = {'close': std}
                 n_features = 1
@@ -455,8 +510,8 @@ class ForecastService:
                 shuffle=True
             )
 
-            # Create model with correct number of features
-            model = self._create_model(n_features=n_features)
+            # Create model with correct number of features and timeframe dimensions
+            model = self._create_model(n_features=n_features, input_size=input_size, horizon=horizon)
 
             # Training setup
             optimizer = torch.optim.Adam(model.parameters(), lr=settings.nhits_learning_rate)
@@ -539,19 +594,23 @@ class ForecastService:
                     logger.debug(f"Epoch {epoch}, Loss: {epoch_loss:.6f}")
 
             # Save model with feature information
-            model_path = self._get_model_path(symbol)
+            model_key = self._get_model_key(symbol, timeframe)
+            model_path = self._get_model_path(symbol, timeframe)
             torch.save({
                 'model_state_dict': model.state_dict(),
                 'n_features': n_features,
                 'feature_names': ['close'] + available_features,
                 'feature_means': {k: float(v) for k, v in feature_means.items()},
                 'feature_stds': {k: float(v) for k, v in feature_stds.items()},
+                'timeframe': timeframe.upper(),
+                'horizon': horizon,
+                'input_size': input_size,
                 # Legacy support
                 'mean': float(feature_means.get('close', 0)),
                 'std': float(feature_stds.get('close', 1)),
             }, model_path)
 
-            self.models[symbol] = model
+            self.models[model_key] = model
 
             # Calculate duration
             duration = (datetime.utcnow() - start_time).total_seconds()
@@ -559,10 +618,11 @@ class ForecastService:
             # Save metadata
             metadata = {
                 'symbol': symbol,
+                'timeframe': timeframe.upper(),
                 'trained_at': datetime.utcnow(),
                 'training_samples': len(X),
-                'horizon': self.horizon,
-                'input_size': self.input_size,
+                'horizon': horizon,
+                'input_size': input_size,
                 'duration_seconds': duration,
                 'final_loss': best_loss,
                 'n_features': n_features,
@@ -572,8 +632,8 @@ class ForecastService:
                 'feature_means': {k: float(v) for k, v in feature_means.items()},
                 'feature_stds': {k: float(v) for k, v in feature_stds.items()},
             }
-            self._save_metadata(symbol, metadata)
-            self.model_metadata[symbol] = metadata
+            self._save_metadata(symbol, metadata, timeframe)
+            self.model_metadata[model_key] = metadata
 
             logger.info(
                 f"NHITS model trained for {symbol}: "
@@ -613,26 +673,35 @@ class ForecastService:
         self,
         time_series: List[TimeSeriesData],
         symbol: str,
+        timeframe: str = "H1",
     ) -> ForecastTrainingResult:
         """
         Train NHITS model on historical data.
         Runs the blocking PyTorch operations in a ThreadPoolExecutor.
+
+        Args:
+            time_series: Historical price/indicator data
+            symbol: Trading symbol (e.g., "BTCUSD")
+            timeframe: M15 (15-min), H1 (hourly), or D1 (daily)
         """
-        logger.info(f"Training NHITS model for {symbol}")
+        logger.info(f"Training NHITS model for {symbol}/{timeframe}")
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
             self._executor,
             self._train_sync,
             time_series,
             symbol,
+            timeframe,
         )
 
-    def _load_model(self, symbol: str) -> Optional[SimpleNHITS]:
-        """Load a saved model from disk with multi-variate support."""
-        if symbol in self.models:
-            return self.models[symbol]
+    def _load_model(self, symbol: str, timeframe: str = "H1") -> Optional[SimpleNHITS]:
+        """Load a saved model from disk with multi-variate and multi-timeframe support."""
+        model_key = self._get_model_key(symbol, timeframe)
 
-        model_path = self._get_model_path(symbol)
+        if model_key in self.models:
+            return self.models[model_key]
+
+        model_path = self._get_model_path(symbol, timeframe)
         if not model_path.exists():
             return None
 
@@ -642,12 +711,21 @@ class ForecastService:
             # Get number of features (default to 1 for legacy models)
             n_features = checkpoint.get('n_features', 1)
 
-            model = self._create_model(n_features=n_features)
+            # Get timeframe-specific dimensions from checkpoint or config
+            tf_config = self.get_timeframe_config(timeframe)
+            input_size = checkpoint.get('input_size', tf_config['input_size'])
+            horizon = checkpoint.get('horizon', tf_config['horizon'])
+
+            model = self._create_model(
+                n_features=n_features,
+                input_size=input_size,
+                horizon=horizon
+            )
             model.load_state_dict(checkpoint['model_state_dict'])
             model.eval()
 
-            self.models[symbol] = model
-            metadata = self._load_metadata(symbol) or {}
+            self.models[model_key] = model
+            metadata = self._load_metadata(symbol, timeframe) or {}
 
             # Load multi-variate metadata
             metadata['mean'] = checkpoint.get('mean', 0)
@@ -656,16 +734,19 @@ class ForecastService:
             metadata['feature_names'] = checkpoint.get('feature_names', ['close'])
             metadata['feature_means'] = checkpoint.get('feature_means', {'close': metadata['mean']})
             metadata['feature_stds'] = checkpoint.get('feature_stds', {'close': metadata['std']})
+            metadata['timeframe'] = timeframe.upper()
+            metadata['input_size'] = input_size
+            metadata['horizon'] = horizon
 
-            self.model_metadata[symbol] = metadata
+            self.model_metadata[model_key] = metadata
 
             logger.info(
-                f"Loaded NHITS model for {symbol} "
-                f"({n_features} features: {metadata['feature_names'][:3]}...)"
+                f"Loaded NHITS model for {symbol}/{timeframe} "
+                f"({n_features} features, horizon={horizon}, input={input_size})"
             )
             return model
         except Exception as e:
-            logger.warning(f"Failed to load model for {symbol}: {e}")
+            logger.warning(f"Failed to load model for {symbol}/{timeframe}: {e}")
             import traceback
             logger.warning(traceback.format_exc())
             return None
@@ -675,22 +756,31 @@ class ForecastService:
         time_series: List[TimeSeriesData],
         symbol: str,
         model: SimpleNHITS,
+        timeframe: str = "H1",
     ) -> ForecastResult:
         """
         Synchronous forecast function to run in ThreadPoolExecutor.
         Supports multi-variate forecasting with technical indicators.
+        Supports multiple timeframes (M15, H1, D1).
         """
         try:
             df = self._prepare_data(time_series, symbol)
 
-            if len(df) < self.input_size:
+            # Get timeframe-specific configuration
+            tf_config = self.get_timeframe_config(timeframe)
+            input_size = tf_config["input_size"]
+            horizon = tf_config["horizon"]
+            step_minutes = tf_config["step_minutes"]
+            model_key = self._get_model_key(symbol, timeframe)
+
+            if len(df) < input_size:
                 logger.warning(
-                    f"Insufficient data for prediction: {len(df)} < {self.input_size}"
+                    f"Insufficient data for prediction: {len(df)} < {input_size}"
                 )
-                return self._create_empty_forecast(symbol, time_series)
+                return self._create_empty_forecast(symbol, time_series, timeframe)
 
             # Get metadata including feature information
-            metadata = self.model_metadata.get(symbol, {})
+            metadata = self.model_metadata.get(model_key, {})
             n_features = metadata.get('n_features', 1)
             feature_names = metadata.get('feature_names', ['close'])
             feature_means = metadata.get('feature_means', {'close': metadata.get('mean', 0)})
@@ -714,7 +804,7 @@ class ForecastService:
                 feature_arrays = []
                 for feat in feature_names:
                     if feat in df.columns:
-                        values = df[feat].values[-self.input_size:].astype(np.float32)
+                        values = df[feat].values[-input_size:].astype(np.float32)
                         mean = feature_means.get(feat, np.mean(values))
                         std = feature_stds.get(feat, np.std(values) + 1e-8)
                         normalized = (values - mean) / std
@@ -724,11 +814,11 @@ class ForecastService:
                 input_data = np.stack(feature_arrays, axis=0)
                 input_tensor = torch.FloatTensor(input_data).unsqueeze(0).to(self.device)
 
-                logger.debug(f"Multi-variate forecast for {symbol} with {n_features} features")
+                logger.debug(f"Multi-variate forecast for {symbol}/{timeframe} with {n_features} features")
             else:
                 # Univariate: close price only
                 prices = df['close'].values
-                input_data = (prices[-self.input_size:] - close_mean) / close_std
+                input_data = (prices[-input_size:] - close_mean) / close_std
                 input_tensor = torch.FloatTensor(input_data).unsqueeze(0).to(self.device)
 
             # Generate forecast
@@ -764,23 +854,55 @@ class ForecastService:
             # Calculate realistic model confidence using historical performance
             model_confidence = self._calculate_model_confidence(symbol, avg_volatility)
 
+            # Calculate horizon in hours based on timeframe
+            horizon_hours = (horizon * step_minutes) / 60
+
+            # Calculate price predictions at specific time intervals based on timeframe
+            # For M15: steps are 15 min apart, for H1: steps are 1h apart, for D1: steps are 24h apart
+            if timeframe.upper() == "M15":
+                # M15: 8 steps = 2 hours; step 2 = 30min, step 4 = 1h, step 8 = 2h
+                predicted_price_short = predicted_prices[1] if len(predicted_prices) > 1 else None  # 30 min
+                predicted_price_mid = predicted_prices[3] if len(predicted_prices) > 3 else predicted_prices[-1] if predicted_prices else None  # 1h
+                predicted_price_long = predicted_prices[-1] if predicted_prices else None  # 2h
+                change_short = self._calc_change_pct(current_price, predicted_price_short) if predicted_price_short else None
+                change_mid = self._calc_change_pct(current_price, predicted_price_mid) if predicted_price_mid else None
+                change_long = self._calc_change_pct(current_price, predicted_price_long) if predicted_price_long else None
+            elif timeframe.upper() == "D1":
+                # D1: 7 steps = 7 days; step 1 = 1d, step 3 = 3d, step 7 = 7d
+                predicted_price_short = predicted_prices[0] if len(predicted_prices) > 0 else None  # 1 day
+                predicted_price_mid = predicted_prices[2] if len(predicted_prices) > 2 else predicted_prices[-1] if predicted_prices else None  # 3 days
+                predicted_price_long = predicted_prices[-1] if predicted_prices else None  # 7 days
+                change_short = self._calc_change_pct(current_price, predicted_price_short) if predicted_price_short else None
+                change_mid = self._calc_change_pct(current_price, predicted_price_mid) if predicted_price_mid else None
+                change_long = self._calc_change_pct(current_price, predicted_price_long) if predicted_price_long else None
+            else:
+                # H1 (default): 24 steps = 24 hours; step 1 = 1h, step 4 = 4h, step 24 = 24h
+                predicted_price_short = predicted_prices[0] if len(predicted_prices) > 0 else None  # 1h
+                predicted_price_mid = predicted_prices[3] if len(predicted_prices) > 3 else predicted_prices[-1] if predicted_prices else None  # 4h
+                predicted_price_long = predicted_prices[-1] if predicted_prices else None  # 24h
+                change_short = self._calc_change_pct(current_price, predicted_price_short) if predicted_price_short else None
+                change_mid = self._calc_change_pct(current_price, predicted_price_mid) if predicted_price_mid else None
+                change_long = self._calc_change_pct(current_price, predicted_price_long) if predicted_price_long else None
+
             result = ForecastResult(
                 symbol=symbol,
                 forecast_timestamp=datetime.utcnow(),
-                horizon_hours=self.horizon,
+                horizon_hours=int(horizon_hours),
+                timeframe=timeframe.upper(),
 
                 predicted_prices=predicted_prices,
                 confidence_low=confidence_low,
                 confidence_high=confidence_high,
 
-                predicted_price_1h=predicted_prices[0] if len(predicted_prices) > 0 else None,
-                predicted_price_4h=predicted_prices[3] if len(predicted_prices) > 3 else predicted_prices[-1] if predicted_prices else None,
-                predicted_price_24h=predicted_prices[-1] if predicted_prices else None,
+                # Use generic naming - interpretation depends on timeframe
+                predicted_price_1h=predicted_price_short,
+                predicted_price_4h=predicted_price_mid,
+                predicted_price_24h=predicted_price_long,
 
                 current_price=current_price,
-                predicted_change_percent_1h=self._calc_change_pct(current_price, predicted_prices[0]) if predicted_prices else None,
-                predicted_change_percent_4h=self._calc_change_pct(current_price, predicted_prices[3]) if len(predicted_prices) > 3 else None,
-                predicted_change_percent_24h=self._calc_change_pct(current_price, predicted_prices[-1]) if predicted_prices else None,
+                predicted_change_percent_1h=change_short,
+                predicted_change_percent_4h=change_mid,
+                predicted_change_percent_24h=change_long,
 
                 trend_up_probability=trend_up_prob,
                 trend_down_probability=1 - trend_up_prob,
@@ -793,52 +915,63 @@ class ForecastService:
             )
 
             logger.info(
-                f"NHITS forecast for {symbol}: "
+                f"NHITS forecast for {symbol}/{timeframe}: "
                 f"{current_price:.5f} -> {predicted_prices[-1]:.5f} "
-                f"({result.predicted_change_percent_24h:+.2f}%) "
+                f"({change_long:+.2f}% over {horizon_hours:.1f}h) "
                 f"[confidence: {result.model_confidence:.1%}]"
             )
 
-            # Record prediction for feedback learning
-            try:
-                from .model_improvement_service import model_improvement_service
-                model_improvement_service.record_prediction(
-                    symbol=symbol,
-                    current_price=current_price,
-                    predicted_price_1h=result.predicted_price_1h,
-                    predicted_price_4h=result.predicted_price_4h,
-                    predicted_price_24h=result.predicted_price_24h,
-                )
-            except Exception as e:
-                logger.debug(f"Failed to record prediction for feedback: {e}")
+            # Record prediction for feedback learning (only for H1 timeframe for now)
+            if timeframe.upper() == "H1":
+                try:
+                    from .model_improvement_service import model_improvement_service
+                    model_improvement_service.record_prediction(
+                        symbol=symbol,
+                        current_price=current_price,
+                        predicted_price_1h=result.predicted_price_1h,
+                        predicted_price_4h=result.predicted_price_4h,
+                        predicted_price_24h=result.predicted_price_24h,
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to record prediction for feedback: {e}")
 
             return result
 
         except Exception as e:
-            logger.error(f"Forecast failed for {symbol}: {e}")
-            return self._create_empty_forecast(symbol, time_series)
+            logger.error(f"Forecast failed for {symbol}/{timeframe}: {e}")
+            return self._create_empty_forecast(symbol, time_series, timeframe)
 
     async def forecast(
         self,
         time_series: List[TimeSeriesData],
         symbol: str,
         config: Optional[ForecastConfig] = None,
+        timeframe: str = "H1",
     ) -> ForecastResult:
         """
         Generate price forecast using NHITS.
         Runs the blocking PyTorch operations in a ThreadPoolExecutor.
+
+        Args:
+            time_series: Historical price/indicator data
+            symbol: Trading symbol (e.g., "BTCUSD")
+            config: Optional forecast configuration
+            timeframe: M15 (15-min), H1 (hourly), or D1 (daily)
         """
-        config = config or ForecastConfig(symbol=symbol)
+        config = config or ForecastConfig(symbol=symbol, timeframe=timeframe)
+        timeframe = config.timeframe or timeframe
+
+        model_key = self._get_model_key(symbol, timeframe)
 
         # Check if we need to train or retrain
-        model = self._load_model(symbol)
+        model = self._load_model(symbol, timeframe)
 
-        if model is None or config.retrain or self._should_retrain(symbol):
-            logger.info(f"Training/retraining NHITS model for {symbol}")
-            result = await self.train(time_series, symbol)
+        if model is None or config.retrain or self._should_retrain(symbol, timeframe):
+            logger.info(f"Training/retraining NHITS model for {symbol}/{timeframe}")
+            result = await self.train(time_series, symbol, timeframe)
             if not result.success:
-                return self._create_empty_forecast(symbol, time_series)
-            model = self.models[symbol]
+                return self._create_empty_forecast(symbol, time_series, timeframe)
+            model = self.models[model_key]
 
         # Run inference in thread pool to not block the event loop
         loop = asyncio.get_event_loop()
@@ -848,6 +981,7 @@ class ForecastService:
             time_series,
             symbol,
             model,
+            timeframe,
         )
 
     def _calculate_model_confidence(self, symbol: str, avg_volatility: float) -> float:
@@ -926,14 +1060,18 @@ class ForecastService:
         self,
         symbol: str,
         time_series: List[TimeSeriesData],
+        timeframe: str = "H1",
     ) -> ForecastResult:
         """Create an empty forecast result when prediction fails."""
         current_price = time_series[-1].close if time_series else 0.0
+        tf_config = self.get_timeframe_config(timeframe)
+        horizon_hours = (tf_config["horizon"] * tf_config["step_minutes"]) / 60
 
         return ForecastResult(
             symbol=symbol,
             forecast_timestamp=datetime.utcnow(),
-            horizon_hours=self.horizon,
+            horizon_hours=int(horizon_hours),
+            timeframe=timeframe.upper(),
             predicted_prices=[],
             confidence_low=[],
             confidence_high=[],

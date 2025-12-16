@@ -112,7 +112,10 @@
       "Bash(sudo docker compose:*)",
       "Bash(wc:*)",
       "Bash(mkdir:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(for i in 1 2 3 4 5)",
+      "Bash(do echo \"=== Check $i ===\")",
+      "Bash(sudo docker-compose:*)"
     ],
     "deny": [],
     "ask": []

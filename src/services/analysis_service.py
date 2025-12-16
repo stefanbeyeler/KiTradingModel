@@ -163,14 +163,219 @@ class AnalysisService:
         self,
         symbol: str,
         start_date: datetime,
-        end_date: datetime
+        end_date: datetime,
+        interval: str = "h1"
     ) -> list[TimeSeriesData]:
-        """Fetch time series data directly from TimescaleDB."""
-        result = await self._fetch_time_series_with_details(symbol, start_date, end_date)
+        """Fetch time series data from EasyInsight API.
+
+        Args:
+            symbol: Trading symbol
+            start_date: Start date for data range
+            end_date: End date for data range
+            interval: Data interval - 'm15' (15-min), 'h1' (hourly), 'd1' (daily)
+        """
+        result = await self._fetch_time_series_with_details(symbol, start_date, end_date, interval)
         return result[0]
 
-    # _fetch_time_series_with_details removed - use EasyInsight API
-    pass
+    async def _fetch_time_series_with_details(
+        self,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime,
+        interval: str = "h1"
+    ) -> tuple[list[TimeSeriesData], TimescaleDBDataLog, dict]:
+        """
+        Fetch time series data from EasyInsight API with detailed logging.
+
+        Args:
+            symbol: Trading symbol
+            start_date: Start date for data range
+            end_date: End date for data range
+            interval: Data interval - 'm15' (15-min), 'h1' (hourly), 'd1' (daily)
+
+        Returns:
+            tuple: (time_series_data, tsdb_log, db_indicators)
+        """
+        import httpx
+
+        # Normalize interval
+        interval = interval.lower()
+        if interval not in ["m15", "h1", "d1"]:
+            interval = "h1"
+
+        # Calculate number of data points needed based on interval
+        days = (end_date - start_date).days
+        if interval == "m15":
+            # 15-minute data: 96 candles per day
+            limit = max(days * 96, 192)  # At least 2 days of M15 data
+        elif interval == "d1":
+            # Daily data: 1 candle per day
+            limit = max(days, 45)  # At least 45 days of D1 data
+        else:  # h1
+            # Hourly data: 24 candles per day
+            limit = max(days * 24, 168)  # At least 1 week of H1 data
+
+        time_series = []
+        db_indicators = {}
+        raw_data_sample = []
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
+                    params={"limit": limit}
+                )
+                response.raise_for_status()
+
+                data = response.json()
+                rows = data.get('data', [])
+
+                for i, row in enumerate(rows):
+                    try:
+                        # Parse timestamp
+                        timestamp_str = row.get('snapshot_time')
+                        if not timestamp_str:
+                            continue
+
+                        timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+
+                        # Select OHLC fields based on interval
+                        if interval == "m15":
+                            open_price = float(row.get('m15_open', 0))
+                            high_price = float(row.get('m15_high', 0))
+                            low_price = float(row.get('m15_low', 0))
+                            close_price = float(row.get('m15_close', 0))
+                        elif interval == "d1":
+                            open_price = float(row.get('d1_open', 0))
+                            high_price = float(row.get('d1_high', 0))
+                            low_price = float(row.get('d1_low', 0))
+                            close_price = float(row.get('d1_close', 0))
+                        else:  # h1
+                            open_price = float(row.get('h1_open', 0))
+                            high_price = float(row.get('h1_high', 0))
+                            low_price = float(row.get('h1_low', 0))
+                            close_price = float(row.get('h1_close', 0))
+
+                        # Use interval-specific OHLC data with all available indicators
+                        ts_data = TimeSeriesData(
+                            timestamp=timestamp,
+                            symbol=symbol,
+                            open=open_price,
+                            high=high_price,
+                            low=low_price,
+                            close=close_price,
+                            volume=0.0,
+                            # Momentum Indicators
+                            rsi=row.get('rsi'),
+                            macd_main=row.get('macd_main'),
+                            macd_signal=row.get('macd_signal'),
+                            cci=row.get('cci'),
+                            stoch_k=row.get('sto_main'),
+                            stoch_d=row.get('sto_signal'),
+                            # Trend Indicators
+                            adx=row.get('adx_main'),
+                            adx_plus_di=row.get('adx_plusdi'),
+                            adx_minus_di=row.get('adx_minusdi'),
+                            ma100=row.get('ma_10'),
+                            # Volatility Indicators
+                            atr=row.get('atr_d1'),
+                            atr_pct=row.get('atr_pct_d1'),
+                            bb_upper=row.get('bb_upper'),
+                            bb_middle=row.get('bb_base'),
+                            bb_lower=row.get('bb_lower'),
+                            range_d1=row.get('range_d1'),
+                            # Ichimoku Cloud (complete)
+                            ichimoku_tenkan=row.get('ichimoku_tenkan'),
+                            ichimoku_kijun=row.get('ichimoku_kijun'),
+                            ichimoku_senkou_a=row.get('ichimoku_senkoua'),
+                            ichimoku_senkou_b=row.get('ichimoku_senkoub'),
+                            ichimoku_chikou=row.get('ichimoku_chikou'),
+                            # Strength Indicators
+                            strength_4h=row.get('strength_4h'),
+                            strength_1d=row.get('strength_1d'),
+                            strength_1w=row.get('strength_1w'),
+                            # Support/Resistance Pivot Points
+                            s1_level=row.get('s1_level_m5'),
+                            r1_level=row.get('r1_level_m5'),
+                            additional_data={
+                                'bid': row.get('bid'),
+                                'ask': row.get('ask'),
+                                'spread': row.get('spread'),
+                                'spread_pct': row.get('spread_pct'),
+                                'category': row.get('category'),
+                                'd1_open': row.get('d1_open'),
+                                'd1_high': row.get('d1_high'),
+                                'd1_low': row.get('d1_low'),
+                                'd1_close': row.get('d1_close'),
+                                'm15_open': row.get('m15_open'),
+                                'm15_high': row.get('m15_high'),
+                                'm15_low': row.get('m15_low'),
+                                'm15_close': row.get('m15_close'),
+                            }
+                        )
+                        time_series.append(ts_data)
+
+                        # Store raw data sample (first 3 rows)
+                        if i < 3:
+                            raw_data_sample.append({
+                                'timestamp': timestamp_str,
+                                'h1_close': row.get('h1_close'),
+                                'rsi': row.get('rsi'),
+                                'macd_main': row.get('macd_main'),
+                            })
+
+                    except Exception as row_error:
+                        logger.warning(f"Failed to parse row for {symbol}: {row_error}")
+                        continue
+
+                # Extract latest indicators for db_indicators dict
+                if rows:
+                    latest = rows[0]
+                    db_indicators = {
+                        'rsi14': latest.get('rsi'),
+                        'macd_main': latest.get('macd_main'),
+                        'macd_signal': latest.get('macd_signal'),
+                        'bb_upper': latest.get('bb_upper'),
+                        'bb_middle': latest.get('bb_base'),
+                        'bb_lower': latest.get('bb_lower'),
+                        'atr_d1': latest.get('atr_d1'),
+                        'ma100': latest.get('ma_10'),
+                        'adx_main': latest.get('adx_main'),
+                        'adx_plusdi': latest.get('adx_plusdi'),
+                        'adx_minusdi': latest.get('adx_minusdi'),
+                    }
+
+                logger.info(f"Fetched {len(time_series)} {interval.upper()} data points for {symbol} from EasyInsight API")
+
+        except Exception as e:
+            logger.error(f"Failed to fetch time series from EasyInsight API for {symbol}: {e}")
+
+        # Sort by timestamp (oldest first for analysis)
+        time_series.sort(key=lambda x: x.timestamp)
+
+        # Create detailed log
+        tsdb_log = TimescaleDBDataLog(
+            query_timestamp=datetime.now(),
+            tables_queried=["easyinsight_api"],
+            symbols_queried=[symbol],
+            time_range_start=start_date,
+            time_range_end=end_date,
+            rows_fetched=len(time_series),
+            ohlc_data={
+                interval: {
+                    'open': time_series[-1].open if time_series else None,
+                    'high': time_series[-1].high if time_series else None,
+                    'low': time_series[-1].low if time_series else None,
+                    'close': time_series[-1].close if time_series else None,
+                } if time_series else None
+            },
+            indicators_fetched=db_indicators,
+            raw_data_sample=raw_data_sample,
+            sql_queries=[f"GET /symbol-data-full/{symbol}?limit={limit}&interval={interval}"]
+        )
+
+        return time_series, tsdb_log, db_indicators
+
     async def get_available_symbols(self) -> list[str]:
         """Get list of available trading symbols from EasyInsight API."""
         try:
@@ -517,267 +722,6 @@ class AnalysisService:
             logger.error(f"Error fetching symbol info for {symbol}: {e}")
             return {"error": str(e)}
 
-
-    async def check_easyinsight_api(self) -> bool:
-            # Get latest data point and statistics with all indicators
-            query = """
-                SELECT
-                    symbol,
-                    MAX(data_timestamp) as last_timestamp,
-                    MIN(data_timestamp) as first_timestamp,
-                    COUNT(*) as total_records
-                FROM symbol
-                WHERE symbol = $1
-                GROUP BY symbol
-            """
-            stats_row = await conn.fetchrow(query, symbol)
-
-            if not stats_row:
-                return {"error": f"Symbol {symbol} not found in database"}
-
-            # Get latest record with all indicators
-            latest_query = """
-                SELECT
-                    data_timestamp,
-                    -- OHLC Data (Multiple Timeframes)
-                    d1_open, d1_high, d1_low, d1_close,
-                    h1_open, h1_high, h1_low, h1_close,
-                    m15_open, m15_high, m15_low, m15_close,
-                    -- Price Data
-                    bid, ask, spread,
-                    -- Momentum Indicators
-                    rsi14price_close,
-                    macd12269price_close_main_line,
-                    macd12269price_close_signal_line,
-                    sto533mode_smasto_lowhigh_main_line,
-                    sto533mode_smasto_lowhigh_signal_line,
-                    cci14price_typical,
-                    -- Trend Indicators
-                    adx14_main_line,
-                    adx14_plusdi_line,
-                    adx14_minusdi_line,
-                    ma100mode_smaprice_close,
-                    -- Ichimoku Cloud
-                    ichimoku92652_tenkansen_line,
-                    ichimoku92652_kijunsen_line,
-                    ichimoku92652_senkouspana_line,
-                    ichimoku92652_senkouspanb_line,
-                    ichimoku92652_chikouspan_line,
-                    -- Volatility Indicators
-                    bb200200price_close_upper_band,
-                    bb200200price_close_base_line,
-                    bb200200price_close_lower_band,
-                    atr_d1,
-                    range_d1,
-                    -- Support/Resistance
-                    r1_level_m5,
-                    s1_level_m5,
-                    -- Strength Indicators
-                    strength_4h,
-                    strength_1d,
-                    strength_1w
-                FROM symbol
-                WHERE symbol = $1
-                ORDER BY data_timestamp DESC
-                LIMIT 1
-            """
-            row = await conn.fetchrow(latest_query, symbol)
-
-            if not row:
-                return {"error": f"No data found for symbol {symbol}"}
-
-            # Helper function to safely convert to float
-            def safe_float(value):
-                return float(value) if value is not None else None
-
-            # Calculate derived indicators
-            macd_main = safe_float(row["macd12269price_close_main_line"])
-            macd_signal = safe_float(row["macd12269price_close_signal_line"])
-            macd_histogram = (macd_main - macd_signal) if (macd_main is not None and macd_signal is not None) else None
-
-            # Determine indicator signals
-            rsi_value = safe_float(row["rsi14price_close"])
-            rsi_signal = None
-            if rsi_value is not None:
-                if rsi_value > 70:
-                    rsi_signal = "overbought"
-                elif rsi_value < 30:
-                    rsi_signal = "oversold"
-                else:
-                    rsi_signal = "neutral"
-
-            macd_trend = None
-            if macd_main is not None and macd_signal is not None:
-                macd_trend = "bullish" if macd_main > macd_signal else "bearish"
-
-            stoch_k = safe_float(row["sto533mode_smasto_lowhigh_main_line"])
-            stoch_d = safe_float(row["sto533mode_smasto_lowhigh_signal_line"])
-            stoch_signal = None
-            if stoch_k is not None:
-                if stoch_k > 80:
-                    stoch_signal = "overbought"
-                elif stoch_k < 20:
-                    stoch_signal = "oversold"
-                else:
-                    stoch_signal = "neutral"
-
-            adx_main = safe_float(row["adx14_main_line"])
-            adx_plus_di = safe_float(row["adx14_plusdi_line"])
-            adx_minus_di = safe_float(row["adx14_minusdi_line"])
-            trend_strength = None
-            trend_direction = None
-            if adx_main is not None:
-                if adx_main > 25:
-                    trend_strength = "strong"
-                elif adx_main > 20:
-                    trend_strength = "moderate"
-                else:
-                    trend_strength = "weak"
-            if adx_plus_di is not None and adx_minus_di is not None:
-                trend_direction = "bullish" if adx_plus_di > adx_minus_di else "bearish"
-
-            ichimoku_tenkan = safe_float(row["ichimoku92652_tenkansen_line"])
-            ichimoku_kijun = safe_float(row["ichimoku92652_kijunsen_line"])
-            ichimoku_senkou_a = safe_float(row["ichimoku92652_senkouspana_line"])
-            ichimoku_senkou_b = safe_float(row["ichimoku92652_senkouspanb_line"])
-            ichimoku_tk_signal = None
-            ichimoku_cloud_signal = None
-            if ichimoku_tenkan is not None and ichimoku_kijun is not None:
-                ichimoku_tk_signal = "bullish" if ichimoku_tenkan > ichimoku_kijun else "bearish"
-            if ichimoku_senkou_a is not None and ichimoku_senkou_b is not None:
-                ichimoku_cloud_signal = "bullish" if ichimoku_senkou_a > ichimoku_senkou_b else "bearish"
-
-            bb_upper = safe_float(row["bb200200price_close_upper_band"])
-            bb_lower = safe_float(row["bb200200price_close_lower_band"])
-            bb_middle = safe_float(row["bb200200price_close_base_line"])
-            current_close = safe_float(row["d1_close"])
-            bb_position = None
-            if current_close is not None and bb_upper is not None and bb_lower is not None:
-                if current_close >= bb_upper:
-                    bb_position = "at_upper_band"
-                elif current_close <= bb_lower:
-                    bb_position = "at_lower_band"
-                else:
-                    bb_position = "within_bands"
-
-            return {
-                "symbol": stats_row["symbol"],
-                "last_timestamp": stats_row["last_timestamp"].isoformat() if stats_row["last_timestamp"] else None,
-                "first_timestamp": stats_row["first_timestamp"].isoformat() if stats_row["first_timestamp"] else None,
-                "total_records": stats_row["total_records"],
-                "data_timestamp": row["data_timestamp"].isoformat() if row["data_timestamp"] else None,
-
-                # OHLC Data - Daily (D1)
-                "ohlc_d1": {
-                    "open": safe_float(row["d1_open"]),
-                    "high": safe_float(row["d1_high"]),
-                    "low": safe_float(row["d1_low"]),
-                    "close": safe_float(row["d1_close"])
-                },
-                # OHLC Data - Hourly (H1)
-                "ohlc_h1": {
-                    "open": safe_float(row["h1_open"]),
-                    "high": safe_float(row["h1_high"]),
-                    "low": safe_float(row["h1_low"]),
-                    "close": safe_float(row["h1_close"])
-                },
-                # OHLC Data - 15 Minutes (M15)
-                "ohlc_m15": {
-                    "open": safe_float(row["m15_open"]),
-                    "high": safe_float(row["m15_high"]),
-                    "low": safe_float(row["m15_low"]),
-                    "close": safe_float(row["m15_close"])
-                },
-
-                # Price Data
-                "price": {
-                    "bid": safe_float(row["bid"]),
-                    "ask": safe_float(row["ask"]),
-                    "spread": safe_float(row["spread"])
-                },
-
-                # Momentum Indicators
-                "indicators": {
-                    "rsi": {
-                        "value": rsi_value,
-                        "period": 14,
-                        "signal": rsi_signal
-                    },
-                    "macd": {
-                        "main_line": macd_main,
-                        "signal_line": macd_signal,
-                        "histogram": macd_histogram,
-                        "parameters": "12,26,9",
-                        "trend": macd_trend
-                    },
-                    "stochastic": {
-                        "k_line": stoch_k,
-                        "d_line": stoch_d,
-                        "parameters": "5,3,3",
-                        "signal": stoch_signal
-                    },
-                    "cci": {
-                        "value": safe_float(row["cci14price_typical"]),
-                        "period": 14
-                    },
-                    "adx": {
-                        "main_line": adx_main,
-                        "plus_di": adx_plus_di,
-                        "minus_di": adx_minus_di,
-                        "period": 14,
-                        "trend_strength": trend_strength,
-                        "trend_direction": trend_direction
-                    },
-                    "ma100": {
-                        "value": safe_float(row["ma100mode_smaprice_close"]),
-                        "type": "SMA",
-                        "period": 100
-                    },
-                    "ichimoku": {
-                        "tenkan_sen": ichimoku_tenkan,
-                        "kijun_sen": ichimoku_kijun,
-                        "senkou_span_a": ichimoku_senkou_a,
-                        "senkou_span_b": ichimoku_senkou_b,
-                        "chikou_span": safe_float(row["ichimoku92652_chikouspan_line"]),
-                        "parameters": "9,26,52",
-                        "tk_signal": ichimoku_tk_signal,
-                        "cloud_signal": ichimoku_cloud_signal
-                    },
-                    "bollinger_bands": {
-                        "upper_band": bb_upper,
-                        "middle_band": bb_middle,
-                        "lower_band": bb_lower,
-                        "period": 200,
-                        "std_dev": 2,
-                        "price_position": bb_position
-                    },
-                    "atr": {
-                        "value": safe_float(row["atr_d1"]),
-                        "timeframe": "D1"
-                    },
-                    "range": {
-                        "value": safe_float(row["range_d1"]),
-                        "timeframe": "D1"
-                    }
-                },
-
-                # Support/Resistance (Pivot Points)
-                "pivot_points": {
-                    "r1": safe_float(row["r1_level_m5"]),
-                    "s1": safe_float(row["s1_level_m5"]),
-                    "timeframe": "M5"
-                },
-
-                # Strength Indicators (Multi-Timeframe)
-                "strength": {
-                    "h4": safe_float(row["strength_4h"]),
-                    "d1": safe_float(row["strength_1d"]),
-                    "w1": safe_float(row["strength_1w"])
-                }
-            }
-
-    # _get_market_data_snapshot removed - use fetch_latest_market_data()
-    pass
     async def check_easyinsight_api(self) -> bool:
         """Check if EasyInsight API is accessible."""
         try:
@@ -1480,7 +1424,7 @@ und {analysis.trend} Trend bei {analysis.volatility} Volatilität
             recommendation = self._generate_rule_based_recommendation(market_analysis, strategy)
 
         # Fetch and attach complete market data snapshot
-        market_data_snapshot = await self._get_market_data_snapshot(symbol)
+        market_data_snapshot = await self.fetch_latest_market_data(symbol)
         recommendation.market_data = market_data_snapshot
 
         processing_time = (time.time() - start_time) * 1000

@@ -220,6 +220,17 @@
             font-size: 0.9rem;
         }
 
+        .training-status .training-active {
+            color: #4ade80;
+            font-weight: 600;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
         .training-status .progress-bar {
             height: 8px;
             background: rgba(255, 255, 255, 0.1);
@@ -233,6 +244,15 @@
             background: linear-gradient(90deg, #64c8ff, #a78bfa);
             border-radius: 4px;
             transition: width 0.3s;
+        }
+
+        .training-status .progress-fill.active {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
         }
 
         .training-info {
@@ -305,8 +325,21 @@
         }
 
         .quick-actions button:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
+            background: rgba(100, 100, 100, 0.1);
+            border-color: rgba(100, 100, 100, 0.2);
+            color: #888;
+        }
+
+        .quick-actions button#btn-cancel:not(:disabled) {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+        }
+
+        .quick-actions button#btn-cancel:not(:disabled):hover {
+            background: rgba(239, 68, 68, 0.3);
         }
 
         footer {
@@ -604,7 +637,9 @@
 
                 if (data.training_in_progress) {
                     msgEl.textContent = `Training: ${data.current_symbol || '-'} (${data.completed_symbols}/${data.total_symbols})`;
-                    progressEl.style.width = `${data.progress_percent}%`;
+                    msgEl.classList.add('training-active');
+                    progressEl.style.width = `${Math.max(data.progress_percent, 5)}%`;
+                    progressEl.classList.add('active');
                     btnTrain.disabled = true;
                     btnCancel.disabled = false;
 
@@ -621,7 +656,9 @@
                     }
                 } else {
                     msgEl.textContent = data.message || 'Kein Training aktiv';
+                    msgEl.classList.remove('training-active');
                     progressEl.style.width = '0%';
+                    progressEl.classList.remove('active');
                     btnTrain.disabled = false;
                     btnCancel.disabled = true;
                     timingEl.style.display = 'none';

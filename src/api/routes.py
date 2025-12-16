@@ -1216,17 +1216,24 @@ async def retrain_poor_performers():
 async def get_forecast(
     symbol: str,
     horizon: int = 24,
-    retrain: bool = False
+    retrain: bool = False,
+    timeframe: str = "H1"
 ):
     """
     Generate NHITS price forecast for a symbol.
 
     Parameters:
     - symbol: Trading symbol (e.g., EURUSD)
-    - horizon: Forecast horizon in hours (default: 24, max: 168)
+    - horizon: Forecast horizon in hours (default: 24, max: 168) - NOTE: overridden by timeframe config
     - retrain: Force model retraining before forecast (default: false)
+    - timeframe: Data granularity - M15 (15-min, 2h horizon), H1 (hourly, 24h horizon), D1 (daily, 7d horizon)
 
     Returns predicted prices with confidence intervals for the specified horizon.
+
+    **Timeframe configurations:**
+    - **M15**: 15-minute candles, 8-step forecast (2 hours), 96-candle lookback (24 hours)
+    - **H1** (default): Hourly candles, 24-step forecast (24 hours), 168-candle lookback (7 days)
+    - **D1**: Daily candles, 7-step forecast (7 days), 30-candle lookback (30 days)
     """
     try:
         # Check if NHITS is enabled
@@ -1236,22 +1243,46 @@ async def get_forecast(
                 detail="NHITS forecasting is disabled. Enable it in settings."
             )
 
-        # Fetch time series data
+        # Validate timeframe
+        timeframe = timeframe.upper()
+        if timeframe not in ["M15", "H1", "D1"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid timeframe '{timeframe}'. Use M15, H1, or D1."
+            )
+
+        # Determine data requirements based on timeframe
         from datetime import timedelta
+        if timeframe == "M15":
+            # M15 needs ~24h of data for 96 candles input
+            days_needed = 2
+            interval = "m15"
+        elif timeframe == "D1":
+            # D1 needs ~30 days of data for 30 candles input + 7 horizon + buffer for sequences
+            days_needed = 60
+            interval = "d1"
+        else:  # H1
+            # H1 needs ~7 days of data for 168 candles input
+            days_needed = 30
+            interval = "h1"
+
+        # Fetch time series data with appropriate interval
         time_series = await analysis_service._fetch_time_series(
             symbol=symbol,
-            start_date=datetime.now() - timedelta(days=30),
-            end_date=datetime.now()
+            start_date=datetime.now() - timedelta(days=days_needed),
+            end_date=datetime.now(),
+            interval=interval
         )
 
         if not time_series:
-            raise HTTPException(status_code=404, detail=f"No data found for symbol {symbol}")
+            raise HTTPException(status_code=404, detail=f"No data found for symbol {symbol} with timeframe {timeframe}")
 
         # Create config
         config = ForecastConfig(
             symbol=symbol,
-            horizon=min(horizon, 168),  # Max 7 days
-            retrain=retrain
+            horizon=min(horizon, 168),  # Max 7 days (note: actual horizon depends on timeframe)
+            retrain=retrain,
+            timeframe=timeframe
         )
 
         # Generate forecast
@@ -1259,7 +1290,8 @@ async def get_forecast(
         result = await forecast_service.forecast(
             time_series=time_series,
             symbol=symbol,
-            config=config
+            config=config,
+            timeframe=timeframe
         )
 
         return result
@@ -1267,7 +1299,7 @@ async def get_forecast(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Forecast failed for {symbol}: {e}")
+        logger.error(f"Forecast failed for {symbol}/{timeframe}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -12,6 +12,8 @@ services:
     container_name: trading-frontend
     ports:
       - "3000:80"
+    volumes:
+      - ./docker/services/frontend/html:/usr/share/nginx/html:ro
     environment:
       - DATA_SERVICE_PORT=${DATA_SERVICE_PORT:-3001}
       - NHITS_SERVICE_PORT=${NHITS_SERVICE_PORT:-3002}
