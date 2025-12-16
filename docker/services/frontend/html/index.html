@@ -342,6 +342,116 @@
             background: rgba(239, 68, 68, 0.3);
         }
 
+        /* System Metrics Styles */
+        .metrics-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 800px) {
+            .metrics-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .metric-card h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .metric-icon {
+            font-size: 1.2rem;
+        }
+
+        .metric-bar-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            height: 24px;
+            overflow: hidden;
+            margin-bottom: 0.8rem;
+            position: relative;
+        }
+
+        .metric-bar {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.5s ease, background 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 40px;
+        }
+
+        .metric-bar.cpu {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        }
+
+        .metric-bar.memory {
+            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+        }
+
+        .metric-bar.gpu {
+            background: linear-gradient(90deg, #10b981, #34d399);
+        }
+
+        .metric-bar.gpu-memory {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
+        .metric-bar.high {
+            background: linear-gradient(90deg, #ef4444, #f87171) !important;
+        }
+
+        .metric-bar.medium {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
+        }
+
+        .metric-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .metric-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0.6rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .metric-detail .label {
+            opacity: 0.6;
+        }
+
+        .metric-detail .value {
+            font-weight: 500;
+        }
+
+        .gpu-unavailable {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.9rem;
+        }
+
         footer {
             text-align: center;
             padding: 1.5rem;
@@ -473,6 +583,85 @@
                 <div class="service-links">
                     <a href="/llm/docs" target="_blank">API Docs</a>
                     <a href="/llm/health" target="_blank">Health</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Metrics Section -->
+        <div class="metrics-section">
+            <!-- CPU & Memory Card -->
+            <div class="metric-card" id="cpu-card">
+                <h3><span class="metric-icon">&#128187;</span> CPU & Arbeitsspeicher</h3>
+
+                <div style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.8;">CPU-Auslastung</div>
+                <div class="metric-bar-container">
+                    <div class="metric-bar cpu" id="cpu-bar" style="width: 0%">
+                        <span id="cpu-percent">-</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.8;">Arbeitsspeicher</div>
+                <div class="metric-bar-container">
+                    <div class="metric-bar memory" id="memory-bar" style="width: 0%">
+                        <span id="memory-percent">-</span>
+                    </div>
+                </div>
+
+                <div class="metric-details">
+                    <div class="metric-detail">
+                        <span class="label">CPU Kerne</span>
+                        <span class="value" id="cpu-cores">-</span>
+                    </div>
+                    <div class="metric-detail">
+                        <span class="label">Frequenz</span>
+                        <span class="value" id="cpu-freq">-</span>
+                    </div>
+                    <div class="metric-detail">
+                        <span class="label">RAM gesamt</span>
+                        <span class="value" id="memory-total">-</span>
+                    </div>
+                    <div class="metric-detail">
+                        <span class="label">RAM verwendet</span>
+                        <span class="value" id="memory-used">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GPU Card -->
+            <div class="metric-card" id="gpu-card">
+                <h3><span class="metric-icon">&#127918;</span> GPU</h3>
+                <div id="gpu-content">
+                    <div style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.8;">GPU-Auslastung</div>
+                    <div class="metric-bar-container">
+                        <div class="metric-bar gpu" id="gpu-bar" style="width: 0%">
+                            <span id="gpu-percent">-</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.8;">GPU-Speicher</div>
+                    <div class="metric-bar-container">
+                        <div class="metric-bar gpu-memory" id="gpu-memory-bar" style="width: 0%">
+                            <span id="gpu-memory-percent">-</span>
+                        </div>
+                    </div>
+
+                    <div class="metric-details">
+                        <div class="metric-detail" style="grid-column: span 2;">
+                            <span class="label">Modell</span>
+                            <span class="value" id="gpu-name">-</span>
+                        </div>
+                        <div class="metric-detail">
+                            <span class="label">VRAM gesamt</span>
+                            <span class="value" id="gpu-memory-total">-</span>
+                        </div>
+                        <div class="metric-detail">
+                            <span class="label">VRAM verwendet</span>
+                            <span class="value" id="gpu-memory-allocated">-</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="gpu-unavailable" class="gpu-unavailable" style="display: none;">
+                    Keine GPU verfügbar
                 </div>
             </div>
         </div>
@@ -624,6 +813,85 @@
             }
         }
 
+        async function updateSystemMetrics() {
+            try {
+                const res = await fetch('/nhits/api/v1/system/metrics');
+                if (!res.ok) throw new Error('Metrics fetch failed');
+                const data = await res.json();
+
+                // Helper function to determine bar color class based on percentage
+                function getColorClass(percent) {
+                    if (percent >= 90) return 'high';
+                    if (percent >= 70) return 'medium';
+                    return '';
+                }
+
+                // CPU metrics
+                if (data.cpu) {
+                    const cpuPercent = Math.round(data.cpu.percent || 0);
+                    const cpuBar = document.getElementById('cpu-bar');
+                    cpuBar.style.width = `${Math.max(cpuPercent, 5)}%`;
+                    cpuBar.className = `metric-bar cpu ${getColorClass(cpuPercent)}`;
+                    document.getElementById('cpu-percent').textContent = `${cpuPercent}%`;
+                    document.getElementById('cpu-cores').textContent =
+                        `${data.cpu.cores_physical || '-'} / ${data.cpu.cores_logical || '-'}`;
+                    document.getElementById('cpu-freq').textContent =
+                        data.cpu.frequency_mhz ? `${Math.round(data.cpu.frequency_mhz)} MHz` : '-';
+                }
+
+                // Memory metrics
+                if (data.memory) {
+                    const memPercent = Math.round(data.memory.percent || 0);
+                    const memBar = document.getElementById('memory-bar');
+                    memBar.style.width = `${Math.max(memPercent, 5)}%`;
+                    memBar.className = `metric-bar memory ${getColorClass(memPercent)}`;
+                    document.getElementById('memory-percent').textContent = `${memPercent}%`;
+                    document.getElementById('memory-total').textContent = `${data.memory.total_gb} GB`;
+                    document.getElementById('memory-used').textContent = `${data.memory.used_gb} GB`;
+                }
+
+                // GPU metrics
+                const gpuContent = document.getElementById('gpu-content');
+                const gpuUnavailable = document.getElementById('gpu-unavailable');
+
+                if (data.gpu && data.gpu.available) {
+                    gpuContent.style.display = 'block';
+                    gpuUnavailable.style.display = 'none';
+
+                    // GPU utilization
+                    const gpuPercent = data.gpu.utilization_percent !== null
+                        ? Math.round(data.gpu.utilization_percent)
+                        : null;
+                    const gpuBar = document.getElementById('gpu-bar');
+                    if (gpuPercent !== null) {
+                        gpuBar.style.width = `${Math.max(gpuPercent, 5)}%`;
+                        gpuBar.className = `metric-bar gpu ${getColorClass(gpuPercent)}`;
+                        document.getElementById('gpu-percent').textContent = `${gpuPercent}%`;
+                    } else {
+                        gpuBar.style.width = '0%';
+                        document.getElementById('gpu-percent').textContent = 'N/A';
+                    }
+
+                    // GPU memory
+                    const gpuMemPercent = Math.round(data.gpu.memory_percent || 0);
+                    const gpuMemBar = document.getElementById('gpu-memory-bar');
+                    gpuMemBar.style.width = `${Math.max(gpuMemPercent, 5)}%`;
+                    gpuMemBar.className = `metric-bar gpu-memory ${getColorClass(gpuMemPercent)}`;
+                    document.getElementById('gpu-memory-percent').textContent = `${gpuMemPercent}%`;
+
+                    document.getElementById('gpu-name').textContent = data.gpu.name || '-';
+                    document.getElementById('gpu-memory-total').textContent = `${data.gpu.memory_total_gb} GB`;
+                    document.getElementById('gpu-memory-allocated').textContent = `${data.gpu.memory_allocated_gb} GB`;
+                } else {
+                    gpuContent.style.display = 'none';
+                    gpuUnavailable.style.display = 'block';
+                }
+
+            } catch (err) {
+                console.error('System metrics error:', err);
+            }
+        }
+
         async function updateTrainingStatus() {
             try {
                 const res = await fetch('/nhits/api/v1/forecast/training/progress');
@@ -676,7 +944,8 @@
                 updateDataInfo(),
                 updateRagInfo(),
                 updateEasyInsightInfo(),
-                updateTrainingStatus()
+                updateTrainingStatus(),
+                updateSystemMetrics()
             ]);
 
             document.getElementById('services-count').textContent = `Services: ${healthyServices}/5`;
@@ -716,8 +985,11 @@
         // Initial load
         refreshStatus();
 
-        // Auto-refresh every 10 seconds
+        // Auto-refresh service status every 10 seconds
         setInterval(refreshStatus, 10000);
+
+        // Update system metrics more frequently (every 3 seconds) for smoother monitoring
+        setInterval(updateSystemMetrics, 3000);
     </script>
 </body>
 </html>

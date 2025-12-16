@@ -115,7 +115,9 @@
       "Bash(tail:*)",
       "Bash(for i in 1 2 3 4 5)",
       "Bash(do echo \"=== Check $i ===\")",
-      "Bash(sudo docker-compose:*)"
+      "Bash(sudo docker-compose:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

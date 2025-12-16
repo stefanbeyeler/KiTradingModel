@@ -437,6 +437,86 @@ async def manual_sync(days_back: int = 7):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@system_router.get("/system/metrics")
+async def get_system_metrics():
+    """
+    Get real-time CPU and GPU utilization metrics.
+
+    Returns current usage percentages for monitoring dashboards.
+    Updates on each request - designed for polling (e.g., every 2-5 seconds).
+    """
+    import psutil
+
+    try:
+        # CPU metrics
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        cpu_count = psutil.cpu_count()
+        cpu_count_logical = psutil.cpu_count(logical=True)
+        cpu_freq = psutil.cpu_freq()
+
+        # Memory metrics
+        memory = psutil.virtual_memory()
+
+        metrics = {
+            "cpu": {
+                "percent": cpu_percent,
+                "cores_physical": cpu_count,
+                "cores_logical": cpu_count_logical,
+                "frequency_mhz": cpu_freq.current if cpu_freq else None,
+            },
+            "memory": {
+                "percent": memory.percent,
+                "total_gb": round(memory.total / (1024**3), 2),
+                "available_gb": round(memory.available / (1024**3), 2),
+                "used_gb": round(memory.used / (1024**3), 2),
+            },
+            "gpu": None,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        # GPU metrics (if available)
+        if torch.cuda.is_available():
+            try:
+                gpu_memory_total = torch.cuda.get_device_properties(0).total_memory
+                gpu_memory_allocated = torch.cuda.memory_allocated(0)
+                gpu_memory_reserved = torch.cuda.memory_reserved(0)
+
+                # Try to get GPU utilization via nvidia-smi
+                gpu_utilization = None
+                try:
+                    import subprocess
+                    result = subprocess.run(
+                        ['nvidia-smi', '--query-gpu=utilization.gpu', '--format=csv,noheader,nounits'],
+                        capture_output=True,
+                        text=True,
+                        timeout=2
+                    )
+                    if result.returncode == 0:
+                        gpu_utilization = float(result.stdout.strip().split('\n')[0])
+                except Exception:
+                    pass
+
+                metrics["gpu"] = {
+                    "available": True,
+                    "name": torch.cuda.get_device_name(0),
+                    "utilization_percent": gpu_utilization,
+                    "memory_percent": round((gpu_memory_allocated / gpu_memory_total) * 100, 1) if gpu_memory_total > 0 else 0,
+                    "memory_total_gb": round(gpu_memory_total / (1024**3), 2),
+                    "memory_allocated_gb": round(gpu_memory_allocated / (1024**3), 2),
+                    "memory_reserved_gb": round(gpu_memory_reserved / (1024**3), 2),
+                }
+            except Exception as e:
+                metrics["gpu"] = {"available": True, "error": str(e)}
+        else:
+            metrics["gpu"] = {"available": False}
+
+        return metrics
+
+    except Exception as e:
+        logger.error(f"System metrics failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @system_router.get("/system/info")
 async def get_system_info():
     """Get system and GPU information."""
