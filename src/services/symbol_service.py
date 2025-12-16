@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-import asyncpg
+import httpx
 from loguru import logger
 
 from ..config import settings
@@ -25,7 +25,7 @@ class SymbolService:
     def __init__(self):
         self._symbols: dict[str, ManagedSymbol] = {}
         self._data_file = Path("data/symbols.json")
-        self._pool: Optional[asyncpg.Pool] = None
+        self._http_client: Optional[httpx.AsyncClient] = None
         self._load_symbols()
 
     def _load_symbols(self):
@@ -53,19 +53,14 @@ class SymbolService:
         except Exception as e:
             logger.error(f"Failed to save symbols: {e}")
 
-    async def _get_pool(self) -> asyncpg.Pool:
-        """Get or create database connection pool."""
-        if self._pool is None:
-            self._pool = await asyncpg.create_pool(
-                host=settings.timescaledb_host,
-                port=settings.timescaledb_port,
-                database=settings.timescaledb_database,
-                user=settings.timescaledb_user,
-                password=settings.timescaledb_password,
-                min_size=1,
-                max_size=5
+    async def _get_http_client(self) -> httpx.AsyncClient:
+        """Get or create HTTP client for EasyInsight API."""
+        if self._http_client is None:
+            self._http_client = httpx.AsyncClient(
+                base_url=settings.easyinsight_api_url,
+                timeout=30.0
             )
-        return self._pool
+        return self._http_client
 
     def _detect_category(self, symbol: str) -> SymbolCategory:
         """Auto-detect symbol category based on naming patterns."""
@@ -166,8 +161,8 @@ class SymbolService:
             tags=request.tags,
         )
 
-        # Check TimescaleDB data availability
-        await self._update_timescaledb_info(symbol)
+        # Check data availability via EasyInsight API
+        await self._update_symbol_data_info(symbol)
 
         self._symbols[symbol_id] = symbol
         self._save_symbols()
@@ -229,37 +224,39 @@ class SymbolService:
 
         return symbol
 
-    async def _update_timescaledb_info(self, symbol: ManagedSymbol):
-        """Update symbol with TimescaleDB data information."""
+    async def _update_symbol_data_info(self, symbol: ManagedSymbol):
+        """Update symbol with data information from EasyInsight API."""
         try:
-            pool = await self._get_pool()
+            client = await self._get_http_client()
+            response = await client.get("/symbols")
+            response.raise_for_status()
 
-            async with pool.acquire() as conn:
-                row = await conn.fetchrow(
-                    """
-                    SELECT
-                        MIN(data_timestamp) as first_timestamp,
-                        MAX(data_timestamp) as last_timestamp,
-                        COUNT(*) as total_records
-                    FROM symbol
-                    WHERE symbol = $1
-                    """,
-                    symbol.symbol,
-                )
+            symbols_data = response.json()
 
-                if row and row["total_records"] > 0:
-                    symbol.has_timescaledb_data = True
-                    symbol.first_data_timestamp = row["first_timestamp"]
-                    symbol.last_data_timestamp = row["last_timestamp"]
-                    symbol.total_records = row["total_records"]
-                else:
-                    symbol.has_timescaledb_data = False
-                    symbol.first_data_timestamp = None
-                    symbol.last_data_timestamp = None
-                    symbol.total_records = 0
+            # Find the symbol in the API response
+            symbol_info = next(
+                (s for s in symbols_data if s.get("symbol") == symbol.symbol),
+                None
+            )
+
+            if symbol_info and symbol_info.get("count", 0) > 0:
+                symbol.has_timescaledb_data = True
+                # Parse ISO timestamps from API
+                earliest = symbol_info.get("earliest")
+                latest = symbol_info.get("latest")
+                if earliest:
+                    symbol.first_data_timestamp = datetime.fromisoformat(earliest.replace("+01:00", "+00:00").replace("+00:00", ""))
+                if latest:
+                    symbol.last_data_timestamp = datetime.fromisoformat(latest.replace("+01:00", "+00:00").replace("+00:00", ""))
+                symbol.total_records = symbol_info.get("count", 0)
+            else:
+                symbol.has_timescaledb_data = False
+                symbol.first_data_timestamp = None
+                symbol.last_data_timestamp = None
+                symbol.total_records = 0
 
         except Exception as e:
-            logger.warning(f"Failed to fetch TimescaleDB info for {symbol.symbol}: {e}")
+            logger.warning(f"Failed to fetch data info for {symbol.symbol}: {e}")
 
     async def _check_nhits_model(self, symbol: ManagedSymbol):
         """Check if NHITS model exists for symbol."""
@@ -278,8 +275,19 @@ class SymbolService:
             except Exception:
                 pass
 
-    async def import_from_timescaledb(self) -> SymbolImportResult:
-        """Import all symbols from TimescaleDB."""
+    def _map_api_category_to_enum(self, api_category: str) -> SymbolCategory:
+        """Map EasyInsight API category string to SymbolCategory enum."""
+        category_map = {
+            "Crypto": SymbolCategory.CRYPTO,
+            "Forex": SymbolCategory.FOREX,
+            "Indices": SymbolCategory.INDEX,
+            "Metals": SymbolCategory.COMMODITY,
+            "Extra": SymbolCategory.COMMODITY,  # Oil etc.
+        }
+        return category_map.get(api_category, SymbolCategory.OTHER)
+
+    async def import_from_easyinsight(self) -> SymbolImportResult:
+        """Import all symbols from EasyInsight API."""
         result = SymbolImportResult(
             total_found=0,
             imported=0,
@@ -288,101 +296,116 @@ class SymbolService:
         )
 
         try:
-            pool = await self._get_pool()
+            client = await self._get_http_client()
+            response = await client.get("/symbols")
+            response.raise_for_status()
 
-            async with pool.acquire() as conn:
-                # Get all distinct symbols with their data range
-                rows = await conn.fetch(
-                    """
-                    SELECT
-                        symbol,
-                        MIN(data_timestamp) as first_timestamp,
-                        MAX(data_timestamp) as last_timestamp,
-                        COUNT(*) as total_records
-                    FROM symbol
-                    WHERE symbol IS NOT NULL
-                    GROUP BY symbol
-                    ORDER BY symbol
-                    """
-                )
+            symbols_data = response.json()
+            result.total_found = len(symbols_data)
 
-                result.total_found = len(rows)
+            for symbol_info in symbols_data:
+                symbol_id = symbol_info.get("symbol")
+                if not symbol_id:
+                    continue
 
-                for row in rows:
-                    symbol_id = row["symbol"]
-                    if not symbol_id:
-                        continue
+                try:
+                    existing = self._symbols.get(symbol_id)
 
-                    try:
-                        existing = self._symbols.get(symbol_id)
+                    # Parse timestamps
+                    first_timestamp = None
+                    last_timestamp = None
+                    earliest = symbol_info.get("earliest")
+                    latest = symbol_info.get("latest")
+                    if earliest:
+                        try:
+                            first_timestamp = datetime.fromisoformat(earliest.replace("Z", "+00:00"))
+                        except ValueError:
+                            first_timestamp = datetime.fromisoformat(earliest.split("+")[0])
+                    if latest:
+                        try:
+                            last_timestamp = datetime.fromisoformat(latest.replace("Z", "+00:00"))
+                        except ValueError:
+                            last_timestamp = datetime.fromisoformat(latest.split("+")[0])
 
-                        if existing:
-                            # Update existing symbol with new data info
-                            existing.has_timescaledb_data = True
-                            existing.first_data_timestamp = row["first_timestamp"]
-                            existing.last_data_timestamp = row["last_timestamp"]
-                            existing.total_records = row["total_records"]
-                            existing.updated_at = datetime.utcnow()
+                    total_records = symbol_info.get("count", 0)
 
-                            # Check NHITS model
-                            await self._check_nhits_model(existing)
+                    if existing:
+                        # Update existing symbol with new data info
+                        existing.has_timescaledb_data = total_records > 0
+                        existing.first_data_timestamp = first_timestamp
+                        existing.last_data_timestamp = last_timestamp
+                        existing.total_records = total_records
+                        existing.updated_at = datetime.utcnow()
 
-                            self._symbols[symbol_id] = existing
-                            result.updated += 1
-                        else:
-                            # Create new symbol
-                            category = self._detect_category(symbol_id)
-                            base, quote = self._parse_forex_pair(symbol_id)
+                        # Update category from API if it was previously auto-detected
+                        api_category = symbol_info.get("category")
+                        if api_category:
+                            existing.category = self._map_api_category_to_enum(api_category)
 
-                            new_symbol = ManagedSymbol(
-                                symbol=symbol_id,
-                                display_name=symbol_id,
-                                category=category,
-                                status=SymbolStatus.ACTIVE,
-                                base_currency=base,
-                                quote_currency=quote,
-                                has_timescaledb_data=True,
-                                first_data_timestamp=row["first_timestamp"],
-                                last_data_timestamp=row["last_timestamp"],
-                                total_records=row["total_records"],
-                            )
+                        # Check NHITS model
+                        await self._check_nhits_model(existing)
 
-                            # Check NHITS model
-                            await self._check_nhits_model(new_symbol)
+                        self._symbols[symbol_id] = existing
+                        result.updated += 1
+                    else:
+                        # Create new symbol with category from API
+                        api_category = symbol_info.get("category")
+                        category = self._map_api_category_to_enum(api_category) if api_category else self._detect_category(symbol_id)
+                        base, quote = self._parse_forex_pair(symbol_id)
 
-                            self._symbols[symbol_id] = new_symbol
-                            result.imported += 1
+                        new_symbol = ManagedSymbol(
+                            symbol=symbol_id,
+                            display_name=symbol_id,
+                            category=category,
+                            status=SymbolStatus.ACTIVE,
+                            base_currency=base,
+                            quote_currency=quote,
+                            has_timescaledb_data=total_records > 0,
+                            first_data_timestamp=first_timestamp,
+                            last_data_timestamp=last_timestamp,
+                            total_records=total_records,
+                        )
 
-                        result.symbols.append(symbol_id)
+                        # Check NHITS model
+                        await self._check_nhits_model(new_symbol)
 
-                    except Exception as e:
-                        error_msg = f"Error processing {symbol_id}: {str(e)}"
-                        logger.warning(error_msg)
-                        result.errors.append(error_msg)
-                        result.skipped += 1
+                        self._symbols[symbol_id] = new_symbol
+                        result.imported += 1
 
-                self._save_symbols()
-                logger.info(
-                    f"Import complete: {result.imported} imported, "
-                    f"{result.updated} updated, {result.skipped} skipped"
-                )
+                    result.symbols.append(symbol_id)
+
+                except Exception as e:
+                    error_msg = f"Error processing {symbol_id}: {str(e)}"
+                    logger.warning(error_msg)
+                    result.errors.append(error_msg)
+                    result.skipped += 1
+
+            self._save_symbols()
+            logger.info(
+                f"Import complete: {result.imported} imported, "
+                f"{result.updated} updated, {result.skipped} skipped"
+            )
 
         except Exception as e:
-            error_msg = f"Import failed: {str(e)}"
+            error_msg = f"Import from EasyInsight API failed: {str(e)}"
             logger.error(error_msg)
             result.errors.append(error_msg)
 
         return result
 
+    async def import_from_timescaledb(self) -> SymbolImportResult:
+        """Import all symbols from EasyInsight API (legacy name for compatibility)."""
+        return await self.import_from_easyinsight()
+
     async def refresh_symbol_data(self, symbol_id: str) -> Optional[ManagedSymbol]:
-        """Refresh TimescaleDB data info for a specific symbol."""
+        """Refresh data info for a specific symbol from EasyInsight API."""
         symbol_id = symbol_id.upper()
         symbol = self._symbols.get(symbol_id)
 
         if not symbol:
             return None
 
-        await self._update_timescaledb_info(symbol)
+        await self._update_symbol_data_info(symbol)
         await self._check_nhits_model(symbol)
         symbol.updated_at = datetime.utcnow()
 
