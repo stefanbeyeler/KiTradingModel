@@ -118,7 +118,12 @@
       "Bash(sudo docker-compose:*)",
       "Bash(git pull:*)",
       "Bash(git stash:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(nvcc:*)",
+      "Bash(docker search:*)",
+      "Bash(docker pull:*)",
+      "Bash(pip3 index:*)",
+      "Bash(pip3 search:*)"
     ],
     "deny": [],
     "ask": []
