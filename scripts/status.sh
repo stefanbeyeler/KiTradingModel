@@ -69,9 +69,10 @@ check_service() {
     echo ""
 }
 
-check_service "trading-nhits" "3001" "NHITS Service (Training & Forecast)"
-check_service "trading-llm" "3002" "LLM Service (Analysis & RAG)"
-check_service "trading-data" "3003" "Data Service (Symbols & Sync)"
+check_service "trading-data" "3001" "Data Service (Symbols & Sync)"
+check_service "trading-nhits" "3002" "NHITS Service (Training & Forecast)"
+check_service "trading-rag" "3003" "RAG Service (Vector Search)"
+check_service "trading-llm" "3004" "LLM Service (Analysis)"
 check_service "trading-frontend" "3000" "Frontend (Dashboard)"
 
 # Health checks
@@ -80,7 +81,7 @@ echo "Service Health Checks:"
 echo "=========================================="
 echo ""
 
-for PORT in 3001 3002 3003; do
+for PORT in 3001 3002 3003 3004; do
     HEALTH=$(curl -s "http://localhost:$PORT/health" 2>/dev/null || echo "")
     if [ -n "$HEALTH" ]; then
         SERVICE=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('service','unknown'))" 2>/dev/null || echo "port-$PORT")
@@ -103,8 +104,9 @@ echo "               docker logs -f trading-llm"
 echo "               docker logs -f trading-data"
 echo ""
 echo "API Docs:"
-echo "  NHITS:       http://localhost:3001/docs"
-echo "  LLM:         http://localhost:3002/docs"
-echo "  Data:        http://localhost:3003/docs"
+echo "  Data:        http://localhost:3001/docs"
+echo "  NHITS:       http://localhost:3002/docs"
+echo "  RAG:         http://localhost:3003/docs"
+echo "  LLM:         http://localhost:3004/docs"
 echo "  Dashboard:   http://localhost:3000"
 echo "=========================================="

@@ -165,7 +165,7 @@
                 This dashboard provides access to all microservices. Each service has its own Swagger documentation for interactive API testing.
             </p>
             <p style="opacity: 0.9;">
-                <strong>Architecture:</strong> Frontend (Port 3000) → KI Trading (3011) + EasyInsight (10.1.19.102:3000) + NHITS (3001) + LLM (3002) + Data (3003)
+                <strong>Architecture:</strong> Frontend (Port 3000) → KI Trading (3011) + EasyInsight (10.1.19.102:3000) + Data (3001) + NHITS (3002) + RAG (3003) + LLM (3004)
             </p>
         </div>
 
@@ -191,9 +191,9 @@
             </div>
 
             <div class="service-card">
-                <h2><span class="emoji">🔮</span> NHITS Service</h2>
+                <h2><span class="emoji">📊</span> Data Service</h2>
                 <span class="status">● Online</span>
-                <p>Neural Hierarchical Interpolation for Time Series - Advanced price forecasting and model training.</p>
+                <p>Symbol management, strategies, and TimescaleDB synchronization - Your data backbone.</p>
                 <div>
                     <a href="http://10.1.19.101:3001/docs" target="_blank">📊 API Docs</a>
                     <a href="http://10.1.19.101:3001/health" target="_blank">🏥 Health</a>
@@ -201,9 +201,9 @@
             </div>
 
             <div class="service-card">
-                <h2><span class="emoji">🧠</span> LLM Service</h2>
+                <h2><span class="emoji">🔮</span> NHITS Service</h2>
                 <span class="status">● Online</span>
-                <p>Large Language Model analysis with RAG - Intelligent trading insights powered by Llama 3.1 70B.</p>
+                <p>Neural Hierarchical Interpolation for Time Series - Advanced price forecasting and model training.</p>
                 <div>
                     <a href="http://10.1.19.101:3002/docs" target="_blank">📊 API Docs</a>
                     <a href="http://10.1.19.101:3002/health" target="_blank">🏥 Health</a>
@@ -211,12 +211,22 @@
             </div>
 
             <div class="service-card">
-                <h2><span class="emoji">📊</span> Data Service</h2>
+                <h2><span class="emoji">🔍</span> RAG Service</h2>
                 <span class="status">● Online</span>
-                <p>Symbol management, strategies, and TimescaleDB synchronization - Your data backbone.</p>
+                <p>Vector Search & Knowledge Base - Retrieval Augmented Generation for trading insights.</p>
                 <div>
                     <a href="http://10.1.19.101:3003/docs" target="_blank">📊 API Docs</a>
                     <a href="http://10.1.19.101:3003/health" target="_blank">🏥 Health</a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <h2><span class="emoji">🧠</span> LLM Service</h2>
+                <span class="status">● Online</span>
+                <p>Large Language Model analysis - Intelligent trading insights powered by Llama 3.1 70B.</p>
+                <div>
+                    <a href="http://10.1.19.101:3004/docs" target="_blank">📊 API Docs</a>
+                    <a href="http://10.1.19.101:3004/health" target="_blank">🏥 Health</a>
                 </div>
             </div>
         </div>
@@ -242,9 +252,10 @@
         const services = [
             { name: 'KI Trading', url: 'http://10.1.19.101:3011/api/v1/health' },
             { name: 'EasyInsight', url: 'http://10.1.19.102:3000/api/symbols' },
-            { name: 'NHITS', url: 'http://10.1.19.101:3001/health' },
-            { name: 'LLM', url: 'http://10.1.19.101:3002/health' },
-            { name: 'Data', url: 'http://10.1.19.101:3003/health' }
+            { name: 'Data', url: 'http://10.1.19.101:3001/health' },
+            { name: 'NHITS', url: 'http://10.1.19.101:3002/health' },
+            { name: 'RAG', url: 'http://10.1.19.101:3003/health' },
+            { name: 'LLM', url: 'http://10.1.19.101:3004/health' }
         ];
 
         services.forEach(service => {

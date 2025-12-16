@@ -36,43 +36,44 @@ curl -X POST "http://10.1.19.101:3011/api/v1/forecast/train-all?force=true&backg
 curl "http://10.1.19.101:3011/api/v1/forecast/training/progress"
 ```
 
-## Port 3001 - Frontend Dashboard
+## Microservices Ports
 
-### Beschreibung
-
-Web-basiertes Dashboard mit integrierter Swagger-Dokumentation.
+| Service | Port | Beschreibung |
+|---------|------|--------------|
+| Frontend Dashboard | 3000 | Web-basiertes Dashboard mit API Gateway |
+| Data Service | 3001 | Symbol management, strategies, sync |
+| NHITS Service | 3002 | Training & Forecasting |
+| RAG Service | 3003 | Vector Search & Knowledge Base |
+| LLM Service | 3004 | Analysis & Recommendations |
 
 ### URLs
 
-- **Dashboard**: `http://10.1.19.101:3001`
-- **Swagger UI**: `http://10.1.19.101:3001/docs`
-
-### Verwendung
-
-- Interaktive Nutzung über Browser
-- Swagger UI mit "Try it out" Funktionalität
-- Visualisierung und Monitoring
+- **Dashboard**: `http://10.1.19.101:3000`
+- **Data API**: `http://10.1.19.101:3001/docs`
+- **NHITS API**: `http://10.1.19.101:3002/docs`
+- **RAG API**: `http://10.1.19.101:3003/docs`
+- **LLM API**: `http://10.1.19.101:3004/docs`
 
 ### Funktionsweise
 
-Das Frontend auf Port 3001 leitet alle API-Anfragen automatisch an das Backend auf Port 3011 weiter. Dies erfolgt transparent über einen Reverse Proxy oder API Gateway.
+Das Frontend auf Port 3000 leitet alle API-Anfragen automatisch an die jeweiligen Backend-Services weiter. Dies erfolgt transparent über einen Nginx Reverse Proxy.
 
 ```
-Browser (Port 3001) → Frontend Dashboard → Backend API (Port 3011)
+Browser (Port 3000) → Frontend Dashboard → Backend Services (3001-3004)
 ```
 
 ## Empfohlene Verwendung
 
 ### Für interaktive Nutzung
 
-Verwenden Sie **Port 3001** (Frontend Dashboard):
+Verwenden Sie **Port 3000** (Frontend Dashboard):
 
 - ✅ Swagger UI im Browser öffnen
 - ✅ "Try it out" für schnelle Tests
 - ✅ API-Dokumentation durchsuchen
 - ✅ Visualisierung von Ergebnissen
 
-**URL**: `http://10.1.19.101:3001/docs`
+**URL**: `http://10.1.19.101:3000`
 
 ### Für Automatisierung
 
@@ -92,20 +93,20 @@ Verwenden Sie **Port 3011** (Backend API):
 │                     Client (Browser/curl)                    │
 └────────────────┬──────────────────────┬─────────────────────┘
                  │                      │
-                 │                      │
-        Port 3001│                      │Port 3011
+        Port 3000│                      │Ports 3001-3004
                  │                      │
                  ▼                      ▼
 ┌────────────────────────┐  ┌──────────────────────────────┐
-│  Frontend Dashboard    │  │      Backend API             │
-│  - Swagger UI          │  │      - FastAPI Server        │
-│  - Web Interface       │  │      - REST Endpoints        │
-│  - Reverse Proxy       │──┤      - Business Logic        │
-└────────────────────────┘  └──────────────────────────────┘
+│  Frontend Dashboard    │  │      Microservices           │
+│  - Swagger UI          │  │      - Data (3001)           │
+│  - Web Interface       │  │      - NHITS (3002)          │
+│  - Nginx Reverse Proxy │──┤      - RAG (3003)            │
+└────────────────────────┘  │      - LLM (3004)            │
+                            └──────────────────────────────┘
                                       │
                                       ▼
                             ┌──────────────────┐
-                            │   TimescaleDB    │
+                            │   EasyInsight    │
                             │   Ollama LLM     │
                             └──────────────────┘
 ```
@@ -129,8 +130,14 @@ Verwenden Sie **Port 3011** (Backend API):
 # Backend-Health-Check (Port 3011)
 curl "http://10.1.19.101:3011/api/v1/health"
 
-# Über Frontend (Port 3001)
-curl "http://10.1.19.101:3001/api/v1/health"
+# Über Frontend (Port 3000)
+curl "http://10.1.19.101:3000/api/v1/health"
+
+# Microservices Health-Checks
+curl "http://10.1.19.101:3001/health"  # Data
+curl "http://10.1.19.101:3002/health"  # NHITS
+curl "http://10.1.19.101:3003/health"  # RAG
+curl "http://10.1.19.101:3004/health"  # LLM
 ```
 
 Beide sollten die gleichen Ergebnisse liefern.
@@ -146,22 +153,22 @@ docker ps | grep trading
 docker logs <container-id>
 ```
 
-### Problem: "Connection refused" auf Port 3001
+### Problem: "Connection refused" auf Port 3000
 
 **Lösung**: Frontend-Container prüfen
 
 ```bash
-docker ps | grep dashboard
-docker logs <container-id>
+docker ps | grep frontend
+docker logs trading-frontend
 ```
 
-### Problem: API-Calls funktionieren nicht über Port 3001
+### Problem: API-Calls funktionieren nicht über Port 3000
 
 **Prüfen**: Proxy-Konfiguration im Frontend
 
 ```bash
 # Nginx/Proxy-Config prüfen
-docker exec <frontend-container> cat /etc/nginx/nginx.conf
+docker exec trading-frontend cat /etc/nginx/nginx.conf
 ```
 
 ## Weiterführende Dokumentation
