@@ -14,6 +14,7 @@ from .macro_correlation import MacroCorrelationSource
 from .historical_patterns import HistoricalPatternsSource
 from .technical_levels import TechnicalLevelsSource
 from .regulatory_updates import RegulatoryUpdatesSource
+from .easyinsight_data import EasyInsightDataSource
 
 
 class DataFetcherService:
@@ -39,6 +40,7 @@ class DataFetcherService:
             DataSourceType.HISTORICAL_PATTERN: HistoricalPatternsSource(),
             DataSourceType.TECHNICAL_LEVEL: TechnicalLevelsSource(),
             DataSourceType.REGULATORY: RegulatoryUpdatesSource(),
+            DataSourceType.EASYINSIGHT: EasyInsightDataSource(),
         }
         logger.info(f"DataFetcherService initialized with {len(self._sources)} data sources")
 
@@ -259,6 +261,21 @@ class DataFetcherService:
             include_enforcement=include_enforcement
         )
 
+    async def fetch_easyinsight(
+        self,
+        symbol: Optional[str] = None,
+        include_symbols: bool = True,
+        include_stats: bool = True,
+        include_mt5_logs: bool = True
+    ) -> list[DataSourceResult]:
+        """Fetch EasyInsight managed symbols and MT5 logs."""
+        return await self._sources[DataSourceType.EASYINSIGHT].fetch(
+            symbol,
+            include_symbols=include_symbols,
+            include_stats=include_stats,
+            include_mt5_logs=include_mt5_logs
+        )
+
     async def fetch_trading_context(
         self,
         symbol: str,
@@ -282,6 +299,7 @@ class DataFetcherService:
                 - 'patterns': Historical patterns
                 - 'levels': Technical levels
                 - 'regulatory': Regulatory updates
+                - 'easyinsight': Managed symbols and MT5 logs
                 Default: All types
 
         Returns:
@@ -289,7 +307,7 @@ class DataFetcherService:
         """
         all_types = [
             'economic', 'onchain', 'sentiment', 'orderbook',
-            'macro', 'patterns', 'levels', 'regulatory'
+            'macro', 'patterns', 'levels', 'regulatory', 'easyinsight'
         ]
         types_to_fetch = include_types or all_types
 
@@ -315,6 +333,7 @@ class DataFetcherService:
             'patterns': (DataSourceType.HISTORICAL_PATTERN, self.fetch_historical_patterns),
             'levels': (DataSourceType.TECHNICAL_LEVEL, self.fetch_technical_levels),
             'regulatory': (DataSourceType.REGULATORY, self.fetch_regulatory),
+            'easyinsight': (DataSourceType.EASYINSIGHT, self.fetch_easyinsight),
         }
 
         # Fetch in parallel
@@ -406,6 +425,7 @@ class DataFetcherService:
             DataSourceType.HISTORICAL_PATTERN: "Historical patterns (seasonality, drawdowns, events)",
             DataSourceType.TECHNICAL_LEVEL: "Technical levels (S/R, Fibonacci, pivots, VWAP, MAs)",
             DataSourceType.REGULATORY: "Regulatory updates (SEC, ETFs, global regulation)",
+            DataSourceType.EASYINSIGHT: "EasyInsight data (managed symbols, MT5 logs, model status)",
         }
         return descriptions.get(source_type, "Unknown data source")
 

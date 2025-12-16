@@ -17,6 +17,7 @@ class DataSourceType(str, Enum):
     HISTORICAL_PATTERN = "historical_pattern"
     TECHNICAL_LEVEL = "technical_level"
     REGULATORY = "regulatory"
+    EASYINSIGHT = "easyinsight"
 
 
 class DataPriority(str, Enum):

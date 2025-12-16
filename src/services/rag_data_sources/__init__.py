@@ -9,6 +9,7 @@ from .macro_correlation import MacroCorrelationSource
 from .historical_patterns import HistoricalPatternsSource
 from .technical_levels import TechnicalLevelsSource
 from .regulatory_updates import RegulatoryUpdatesSource
+from .easyinsight_data import EasyInsightDataSource
 from .data_fetcher_service import DataFetcherService, get_data_fetcher_service
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "HistoricalPatternsSource",
     "TechnicalLevelsSource",
     "RegulatoryUpdatesSource",
+    "EasyInsightDataSource",
     "DataFetcherService",
     "get_data_fetcher_service",
 ]

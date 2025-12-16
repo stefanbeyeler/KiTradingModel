@@ -103,6 +103,10 @@ tags_metadata = [
         "description": "**Regulatorische Updates** - SEC/CFTC decisions, ETF approvals and flows, global regulation, enforcement actions.",
     },
     {
+        "name": "EasyInsight",
+        "description": "**EasyInsight Daten** - Managed symbols, symbol statistics, MT5 trading logs, NHITS model status.",
+    },
+    {
         "name": "Data Ingestion",
         "description": "Fetch and ingest data from all external sources into the RAG database.",
     },
@@ -114,7 +118,7 @@ app = FastAPI(
     description="""
 # RAG Service für Trading Intelligence
 
-Retrieval Augmented Generation Service mit **8 integrierten Datenquellen** für umfassende Marktanalyse.
+Retrieval Augmented Generation Service mit **9 integrierten Datenquellen** für umfassende Marktanalyse.
 
 ## Features
 
@@ -123,7 +127,7 @@ Retrieval Augmented Generation Service mit **8 integrierten Datenquellen** für 
 - GPU-beschleunigte Embeddings
 - Persistente Speicherung
 
-### 📊 8 Externe Datenquellen
+### 📊 9 Externe Datenquellen
 
 | Quelle | Beschreibung |
 |--------|--------------|
@@ -135,6 +139,7 @@ Retrieval Augmented Generation Service mit **8 integrierten Datenquellen** für 
 | **Historische Patterns** | Saisonalität, Drawdowns, Events |
 | **Technische Levels** | S/R, Fibonacci, Pivots, VWAP, MAs |
 | **Regulatorische Updates** | SEC, ETFs, Global Regulation |
+| **EasyInsight** | Managed Symbols, MT5 Logs, Model Status |
 
 ## Nutzung
 
@@ -700,6 +705,7 @@ class DataSourceTypeEnum(str, Enum):
     HISTORICAL_PATTERN = "historical_pattern"
     TECHNICAL_LEVEL = "technical_level"
     REGULATORY = "regulatory"
+    EASYINSIGHT = "easyinsight"
 
 
 class FetchDataRequest(BaseModel):
@@ -717,7 +723,7 @@ class TradingContextRequest(BaseModel):
     symbol: str = Field(..., description="Trading symbol")
     include_types: Optional[list[str]] = Field(
         None,
-        description="Data types to include: economic, onchain, sentiment, orderbook, macro, patterns, levels, regulatory"
+        description="Data types to include: economic, onchain, sentiment, orderbook, macro, patterns, levels, regulatory, easyinsight"
     )
 
 
@@ -1150,6 +1156,43 @@ async def get_regulatory_updates(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/v1/rag/easyinsight", tags=["EasyInsight"])
+async def get_easyinsight_data(
+    symbol: Optional[str] = Query(None, description="Filter by specific symbol"),
+    include_symbols: bool = Query(True, description="Include managed symbols"),
+    include_stats: bool = Query(True, description="Include statistics"),
+    include_mt5_logs: bool = Query(True, description="Include MT5 trading logs")
+):
+    """
+    Get EasyInsight managed symbols and MT5 logs.
+
+    **Data includes:**
+    - Managed trading symbols and their configurations
+    - Symbol statistics (by category, status, model availability)
+    - MT5 trading logs and history
+    - NHITS model training status
+    - TimescaleDB data availability
+    """
+    if not data_fetcher:
+        raise HTTPException(status_code=503, detail="Data fetcher not initialized")
+
+    try:
+        results = await data_fetcher.fetch_easyinsight(
+            symbol=symbol,
+            include_symbols=include_symbols,
+            include_stats=include_stats,
+            include_mt5_logs=include_mt5_logs
+        )
+        return {
+            "symbol": symbol,
+            "data_count": len(results),
+            "data": [r.to_rag_document() for r in results]
+        }
+    except Exception as e:
+        logger.error(f"Error fetching EasyInsight data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/v1/rag/ingest-all-sources", tags=["Data Ingestion"])
 async def ingest_all_sources(
     symbol: Optional[str] = Query(None, description="Symbol to fetch for"),
@@ -1162,7 +1205,7 @@ async def ingest_all_sources(
     Runs in background if background_tasks is provided.
 
     **Process:**
-    1. Fetches data from all 8 external sources
+    1. Fetches data from all 9 external sources
     2. Converts to RAG document format
     3. Stores with embeddings in FAISS index
     4. Persists database to disk
