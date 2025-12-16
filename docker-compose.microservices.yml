@@ -4,9 +4,19 @@ services:
     build:
       context: .
       dockerfile: docker/services/frontend/Dockerfile
+      args:
+        - DATA_SERVICE_PORT=${DATA_SERVICE_PORT:-3001}
+        - NHITS_SERVICE_PORT=${NHITS_SERVICE_PORT:-3002}
+        - RAG_SERVICE_PORT=${RAG_SERVICE_PORT:-3003}
+        - LLM_SERVICE_PORT=${LLM_SERVICE_PORT:-3004}
     container_name: trading-frontend
     ports:
       - "3000:80"
+    environment:
+      - DATA_SERVICE_PORT=${DATA_SERVICE_PORT:-3001}
+      - NHITS_SERVICE_PORT=${NHITS_SERVICE_PORT:-3002}
+      - RAG_SERVICE_PORT=${RAG_SERVICE_PORT:-3003}
+      - LLM_SERVICE_PORT=${LLM_SERVICE_PORT:-3004}
     depends_on:
       - nhits-service
       - llm-service
@@ -23,22 +33,24 @@ services:
       timeout: 3s
       retries: 3
 
-  # NHITS Service - Training & Forecasting (Port 3002)
+  # NHITS Service - Training & Forecasting
   nhits-service:
     build:
       context: .
       dockerfile: docker/services/nhits/Dockerfile
+      args:
+        - SERVICE_PORT=${NHITS_SERVICE_PORT:-3002}
     container_name: trading-nhits
     runtime: nvidia
     ports:
-      - "3002:3002"
+      - "${NHITS_SERVICE_PORT:-3002}:${NHITS_SERVICE_PORT:-3002}"
     volumes:
       - models-data:/app/data/models
       - ./src:/app/src:ro
       - ./logs:/app/logs
     environment:
       - SERVICE_NAME=nhits
-      - PORT=3002
+      - PORT=${NHITS_SERVICE_PORT:-3002}
       - ROOT_PATH=/nhits
       - NHITS_USE_GPU=1
       - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
@@ -59,28 +71,30 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${NHITS_SERVICE_PORT:-3002}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
-  # LLM Service - Analysis & RAG (Port 3004)
+  # LLM Service - Analysis & RAG
   llm-service:
     build:
       context: .
       dockerfile: docker/services/llm/Dockerfile
+      args:
+        - SERVICE_PORT=${LLM_SERVICE_PORT:-3004}
     container_name: trading-llm
     runtime: nvidia
     ports:
-      - "3004:3004"
+      - "${LLM_SERVICE_PORT:-3004}:${LLM_SERVICE_PORT:-3004}"
     volumes:
       - rag-data:/app/data/rag
       - ./src:/app/src:ro
       - ./logs:/app/logs
     environment:
       - SERVICE_NAME=llm
-      - PORT=3004
+      - PORT=${LLM_SERVICE_PORT:-3004}
       - ROOT_PATH=/llm
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1:70b}
       - OLLAMA_HOST=http://host.docker.internal:11434
@@ -102,28 +116,30 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${LLM_SERVICE_PORT:-3004}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
 
-  # RAG Service - Vector Search & Knowledge Base (Port 3003)
+  # RAG Service - Vector Search & Knowledge Base
   rag-service:
     build:
       context: .
       dockerfile: docker/services/rag/Dockerfile
+      args:
+        - SERVICE_PORT=${RAG_SERVICE_PORT:-3003}
     container_name: trading-rag
     runtime: nvidia
     ports:
-      - "3003:3003"
+      - "${RAG_SERVICE_PORT:-3003}:${RAG_SERVICE_PORT:-3003}"
     volumes:
       - rag-data:/app/data/faiss
       - ./src:/app/src:ro
       - ./logs:/app/logs
     environment:
       - SERVICE_NAME=rag
-      - PORT=3003
+      - PORT=${RAG_SERVICE_PORT:-3003}
       - ROOT_PATH=/rag
       - FAISS_USE_GPU=1
       - EMBEDDING_DEVICE=cuda
@@ -143,27 +159,29 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${RAG_SERVICE_PORT:-3003}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
 
-  # Data Service - Symbols, Strategies, Sync (Port 3001)
+  # Data Service - Symbols, Strategies, Sync
   data-service:
     build:
       context: .
       dockerfile: docker/services/data/Dockerfile
+      args:
+        - SERVICE_PORT=${DATA_SERVICE_PORT:-3001}
     container_name: trading-data
     ports:
-      - "3001:3001"
+      - "${DATA_SERVICE_PORT:-3001}:${DATA_SERVICE_PORT:-3001}"
     volumes:
       - ./src:/app/src:ro
       - ./logs:/app/logs
       - ./data/symbols:/app/data/symbols
     environment:
       - SERVICE_NAME=data
-      - PORT=3001
+      - PORT=${DATA_SERVICE_PORT:-3001}
       - ROOT_PATH=/data
       - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
       - OLLAMA_HOST=http://host.docker.internal:11434
@@ -177,7 +195,7 @@ services:
         limits:
           memory: 4G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${DATA_SERVICE_PORT:-3001}/health"]
       interval: 30s
       timeout: 10s
       retries: 3

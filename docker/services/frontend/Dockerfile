@@ -4,11 +4,27 @@ FROM nginx:alpine
 LABEL maintainer="KI Trading Model"
 LABEL service="frontend"
 
-# Copy nginx configuration
-COPY docker/services/frontend/nginx.conf /etc/nginx/nginx.conf
+# Build arguments for service ports
+ARG DATA_SERVICE_PORT=3001
+ARG NHITS_SERVICE_PORT=3002
+ARG RAG_SERVICE_PORT=3003
+ARG LLM_SERVICE_PORT=3004
 
-# Copy static HTML (placeholder - will be replaced with React/Vue later)
+# Set environment variables
+ENV DATA_SERVICE_PORT=${DATA_SERVICE_PORT}
+ENV NHITS_SERVICE_PORT=${NHITS_SERVICE_PORT}
+ENV RAG_SERVICE_PORT=${RAG_SERVICE_PORT}
+ENV LLM_SERVICE_PORT=${LLM_SERVICE_PORT}
+
+# Copy nginx template configuration
+COPY docker/services/frontend/nginx.conf.template /etc/nginx/nginx.conf.template
+
+# Copy static HTML
 COPY docker/services/frontend/html /usr/share/nginx/html
+
+# Copy startup script
+COPY docker/services/frontend/start.sh /start.sh
+RUN chmod +x /start.sh
 
 # Fix permissions
 RUN chmod -R 755 /usr/share/nginx/html && \
@@ -21,5 +37,5 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
     CMD wget --quiet --tries=1 --spider http://localhost/health || exit 1
 
-# Run nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start script handles envsubst and nginx
+CMD ["/start.sh"]

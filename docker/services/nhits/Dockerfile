@@ -4,6 +4,9 @@ FROM nvcr.io/nvidia/pytorch:23.08-py3
 LABEL maintainer="KI Trading Model"
 LABEL service="nhits"
 
+# Build argument for port
+ARG SERVICE_PORT=3002
+
 WORKDIR /app
 
 # Install system dependencies
@@ -25,14 +28,14 @@ RUN mkdir -p /app/data/models /app/logs
 # Set environment variables
 ENV PYTHONPATH=/app
 ENV SERVICE_NAME=nhits
-ENV PORT=3001
+ENV PORT=${SERVICE_PORT}
 
 # Expose port
-EXPOSE 3001
+EXPOSE ${SERVICE_PORT}
 
-# Health check
+# Health check - uses shell form to expand variable
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3001/health || exit 1
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
-# Run service
-CMD ["python", "-m", "uvicorn", "src.services.nhits_app.main:app", "--host", "0.0.0.0", "--port", "3001"]
+# Run service - uses shell form to expand variable
+CMD python -m uvicorn src.services.nhits_app.main:app --host 0.0.0.0 --port ${PORT}

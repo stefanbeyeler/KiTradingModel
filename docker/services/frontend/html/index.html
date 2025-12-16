@@ -379,7 +379,7 @@
                 </div>
                 <p>Symbol-Management, Trading-Strategien und Daten-Synchronisation mit EasyInsight.</p>
                 <div class="service-info" id="data-info">
-                    <div><span class="label">Port</span><span>3003</span></div>
+                    <div><span class="label">Port</span><span>3001</span></div>
                     <div><span class="label">EasyInsight</span><span id="data-easyinsight">-</span></div>
                     <div><span class="label">Sync</span><span id="data-sync">-</span></div>
                 </div>
@@ -397,7 +397,7 @@
                 </div>
                 <p>Neural Hierarchical Interpolation for Time Series - Preisprognosen und Modell-Training.</p>
                 <div class="service-info" id="nhits-info">
-                    <div><span class="label">Port</span><span>3001</span></div>
+                    <div><span class="label">Port</span><span>3002</span></div>
                     <div><span class="label">GPU</span><span id="nhits-gpu">-</span></div>
                     <div><span class="label">Training</span><span id="nhits-training">-</span></div>
                 </div>
@@ -415,7 +415,7 @@
                 </div>
                 <p>Vector Search & Knowledge Base - FAISS-basierte Dokumentensuche und Retrieval.</p>
                 <div class="service-info" id="rag-info">
-                    <div><span class="label">Port</span><span>3004</span></div>
+                    <div><span class="label">Port</span><span>3003</span></div>
                     <div><span class="label">Dokumente</span><span id="rag-docs">-</span></div>
                     <div><span class="label">GPU</span><span id="rag-gpu">-</span></div>
                 </div>
@@ -433,7 +433,7 @@
                 </div>
                 <p>Large Language Model Analyse mit RAG - Trading-Insights powered by Llama 3.1 70B.</p>
                 <div class="service-info" id="llm-info">
-                    <div><span class="label">Port</span><span>3002</span></div>
+                    <div><span class="label">Port</span><span>3004</span></div>
                     <div><span class="label">Modell</span><span id="llm-model">-</span></div>
                     <div><span class="label">RAG</span><span id="llm-rag">-</span></div>
                 </div>
@@ -524,7 +524,7 @@
         }
 
         async function updateNhitsInfo() {
-            const data = await checkHealth('nhits', 3001, 'nhits-status');
+            const data = await checkHealth('nhits', 3002, 'nhits-status');
             if (data) {
                 document.getElementById('nhits-gpu').textContent = data.gpu_enabled ? 'Aktiviert' : 'CPU';
                 document.getElementById('nhits-training').textContent = data.training_in_progress ? 'Aktiv' : 'Inaktiv';
@@ -540,7 +540,7 @@
         }
 
         async function updateLlmInfo() {
-            const data = await checkHealth('llm', 3002, 'llm-status');
+            const data = await checkHealth('llm', 3004, 'llm-status');
             if (data) {
                 document.getElementById('llm-model').textContent = data.llm_model || '-';
                 document.getElementById('llm-rag').textContent = data.rag_enabled ? 'Aktiviert' : 'Deaktiviert';
@@ -548,7 +548,7 @@
         }
 
         async function updateDataInfo() {
-            const data = await checkHealth('data', 3003, 'data-status');
+            const data = await checkHealth('data', 3001, 'data-status');
             if (data) {
                 document.getElementById('data-easyinsight').textContent = data.easyinsight_api ? 'Verbunden' : '-';
                 document.getElementById('data-sync').textContent = data.sync_service_status || '-';
@@ -556,7 +556,7 @@
         }
 
         async function updateRagInfo() {
-            const data = await checkHealth('rag', 3004, 'rag-status');
+            const data = await checkHealth('rag', 3003, 'rag-status');
             if (data) {
                 document.getElementById('rag-docs').textContent = data.document_count || 0;
                 document.getElementById('rag-gpu').textContent = data.faiss_gpu ? 'Aktiviert' : 'CPU';
