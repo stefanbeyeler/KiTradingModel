@@ -2172,148 +2172,168 @@
                    </div>`
                 : '';
 
+            const ei = data.easyinsight;
+            const td = data.twelvedata;
+            const changeColor = td && parseFloat(td.change) >= 0 ? '#4caf50' : '#f44336';
+
+            // Helper to create comparison row
+            function compareRow(label, eiValue, tdValue, options = {}) {
+                const eiFormatted = options.formatter ? options.formatter(eiValue, 'ei') : formatValue(eiValue, options.decimals);
+                const tdFormatted = options.formatter ? options.formatter(tdValue, 'td') : formatValue(tdValue, options.decimals);
+                const eiStyle = options.eiStyle || '';
+                const tdStyle = options.tdStyle || '';
+
+                // Check if values match (within tolerance for floats)
+                let matchIndicator = '';
+                if (eiValue !== null && eiValue !== undefined && tdValue !== null && tdValue !== undefined) {
+                    const eiNum = parseFloat(eiValue);
+                    const tdNum = parseFloat(tdValue);
+                    if (!isNaN(eiNum) && !isNaN(tdNum)) {
+                        const diff = Math.abs(eiNum - tdNum);
+                        const avg = (Math.abs(eiNum) + Math.abs(tdNum)) / 2;
+                        const pctDiff = avg > 0 ? (diff / avg) * 100 : 0;
+                        if (pctDiff < 0.01) {
+                            matchIndicator = '<span style="color: #4caf50; margin-left: 4px;" title="Werte stimmen überein">&#10003;</span>';
+                        } else if (pctDiff < 1) {
+                            matchIndicator = '<span style="color: #ffc107; margin-left: 4px;" title="Kleine Abweichung">&#8776;</span>';
+                        } else {
+                            matchIndicator = '<span style="color: #f44336; margin-left: 4px;" title="Unterschiedliche Werte">&#10007;</span>';
+                        }
+                    }
+                }
+
+                return `<tr>
+                    <td style="color: #aaa; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">${label}</td>
+                    <td style="text-align: right; font-family: monospace; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(33, 150, 243, 0.03); ${eiStyle}">${eiFormatted}</td>
+                    <td style="text-align: right; font-family: monospace; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(156, 39, 176, 0.03); ${tdStyle}">${tdFormatted}</td>
+                    <td style="text-align: center; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); width: 30px;">${matchIndicator}</td>
+                </tr>`;
+            }
+
+            // Section header row
+            function sectionHeader(title) {
+                return `<tr>
+                    <td colspan="4" style="background: rgba(255,255,255,0.03); padding: 10px 12px; font-weight: bold; color: #fff; border-bottom: 2px solid rgba(255,255,255,0.1);">
+                        ${title}
+                    </td>
+                </tr>`;
+            }
+
             let html = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <span style="color: #888;">Abgerufen: ${new Date(data.timestamp).toLocaleString('de-DE')}</span>
                     <button class="btn btn-secondary btn-sm" onclick="showLiveData('${data.symbol}')">&#8635; Aktualisieren</button>
                 </div>
                 ${errors}
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+
+                <!-- Timestamp Info -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: rgba(33, 150, 243, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                        <div style="color: #2196f3; font-weight: bold; margin-bottom: 0.25rem;">&#128202; EasyInsight</div>
+                        <div style="color: #888; font-size: 0.8rem;">${ei?.snapshot_time ? new Date(ei.snapshot_time).toLocaleString('de-DE') : 'Keine Daten'}</div>
+                    </div>
+                    <div style="background: rgba(156, 39, 176, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                        <div style="color: #9c27b0; font-weight: bold; margin-bottom: 0.25rem;">&#128200; TwelveData</div>
+                        <div style="color: #888; font-size: 0.8rem;">${td?.datetime || 'Keine Daten'}${td?.symbol_used ? ` (${td.symbol_used})` : ''}</div>
+                    </div>
+                </div>
+
+                <!-- Comparison Table -->
+                <div style="background: rgba(30,30,30,0.5); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="background: rgba(255,255,255,0.05);">
+                                <th style="text-align: left; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); width: 30%;">Indikator</th>
+                                <th style="text-align: right; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); color: #2196f3; width: 30%;">EasyInsight</th>
+                                <th style="text-align: right; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); color: #9c27b0; width: 30%;">TwelveData</th>
+                                <th style="text-align: center; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); width: 10%;" title="Vergleich">&#8596;</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${sectionHeader('&#128181; Bid/Ask & Spread')}
+                            ${compareRow('Bid', ei?.price?.bid, td?.bid_ask?.bid)}
+                            ${compareRow('Ask', ei?.price?.ask, td?.bid_ask?.ask)}
+                            ${compareRow('Spread', ei?.price?.spread, td?.bid_ask?.spread)}
+                            ${compareRow('Spread %', ei?.price?.spread_pct, td?.bid_ask?.spread_pct, {decimals: 4})}
+
+                            ${sectionHeader('&#128176; Preisdaten (OHLC)')}
+                            ${compareRow('Open', ei?.ohlc?.d1?.open, td?.price?.open)}
+                            ${compareRow('High', ei?.ohlc?.d1?.high, td?.price?.high, {eiStyle: 'color: #4caf50;', tdStyle: 'color: #4caf50;'})}
+                            ${compareRow('Low', ei?.ohlc?.d1?.low, td?.price?.low, {eiStyle: 'color: #f44336;', tdStyle: 'color: #f44336;'})}
+                            ${compareRow('Close', ei?.ohlc?.d1?.close, td?.price?.close)}
+                            ${compareRow('Prev. Close', null, td?.price?.previous_close)}
+
+                            ${sectionHeader('&#128200; Änderung')}
+                            ${compareRow('Änderung', null, td?.change, {tdStyle: `color: ${changeColor};`})}
+                            ${compareRow('Änderung %', null, td?.percent_change, {decimals: 2, tdStyle: `color: ${changeColor};`})}
+
+                            ${sectionHeader('&#128202; Technische Indikatoren')}
+                            ${compareRow('RSI (14)', ei?.indicators?.rsi, null, {
+                                formatter: (v) => {
+                                    if (v === null || v === undefined) return '-';
+                                    const num = parseFloat(v);
+                                    let color = '#ffc107';
+                                    if (num >= 70) color = '#f44336';
+                                    else if (num <= 30) color = '#4caf50';
+                                    return `<span style="color: ${color};">${num.toFixed(2)}</span>`;
+                                }
+                            })}
+                            ${compareRow('MACD Main', ei?.indicators?.macd?.main, null, {decimals: 5})}
+                            ${compareRow('MACD Signal', ei?.indicators?.macd?.signal, null, {decimals: 5})}
+                            ${compareRow('Stochastic %K', ei?.indicators?.stochastic?.main, null, {decimals: 2})}
+                            ${compareRow('Stochastic %D', ei?.indicators?.stochastic?.signal, null, {decimals: 2})}
+                            ${compareRow('CCI', ei?.indicators?.cci, null, {decimals: 2})}
+                            ${compareRow('ADX', ei?.indicators?.adx?.main, null, {decimals: 2})}
+                            ${compareRow('MA (10)', ei?.indicators?.ma_10, null)}
+                            ${compareRow('ATR (D1)', ei?.indicators?.atr?.d1, null)}
+                            ${compareRow('ATR % (D1)', ei?.indicators?.atr?.d1_pct, null, {decimals: 2})}
+
+                            ${sectionHeader('&#128200; Bollinger Bands')}
+                            ${compareRow('Upper Band', ei?.indicators?.bollinger?.upper, null)}
+                            ${compareRow('Middle Band', ei?.indicators?.bollinger?.base, null)}
+                            ${compareRow('Lower Band', ei?.indicators?.bollinger?.lower, null)}
+
+                            ${sectionHeader('&#128200; Trend-Stärke')}
+                            ${compareRow('4H Trend', ei?.indicators?.strength?.h4, null, {
+                                formatter: (v) => formatStrength(v)
+                            })}
+                            ${compareRow('1D Trend', ei?.indicators?.strength?.d1, null, {
+                                formatter: (v) => formatStrength(v)
+                            })}
+                            ${compareRow('1W Trend', ei?.indicators?.strength?.w1, null, {
+                                formatter: (v) => formatStrength(v)
+                            })}
+
+                            ${sectionHeader('&#128202; Volumen & Markt')}
+                            ${compareRow('Volumen', null, td?.volume, {
+                                formatter: (v) => v ? parseInt(v).toLocaleString() : '-'
+                            })}
+                            ${compareRow('Avg. Volumen', null, td?.average_volume, {
+                                formatter: (v) => v ? parseInt(v).toLocaleString() : '-'
+                            })}
+                            ${compareRow('Markt offen', null, td?.is_market_open, {
+                                formatter: (v) => v === true ? '<span style="color: #4caf50;">Ja</span>' : (v === false ? '<span style="color: #f44336;">Nein</span>' : '-')
+                            })}
+
+                            ${sectionHeader('&#128197; 52-Wochen Range')}
+                            ${compareRow('52W Low', null, td?.fifty_two_week?.low, {tdStyle: 'color: #f44336;'})}
+                            ${compareRow('52W High', null, td?.fifty_two_week?.high, {tdStyle: 'color: #4caf50;'})}
+
+                            ${sectionHeader('&#127970; Stammdaten')}
+                            ${compareRow('Name', null, td?.name, {formatter: (v) => v || '-'})}
+                            ${compareRow('Exchange', null, td?.exchange, {formatter: (v) => v || '-'})}
+                            ${compareRow('Währung', null, td?.currency, {formatter: (v) => v || '-'})}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Legend -->
+                <div style="margin-top: 1rem; display: flex; gap: 1.5rem; justify-content: center; font-size: 0.75rem; color: #888;">
+                    <span><span style="color: #4caf50;">&#10003;</span> Werte identisch (&lt;0.01%)</span>
+                    <span><span style="color: #ffc107;">&#8776;</span> Kleine Abweichung (&lt;1%)</span>
+                    <span><span style="color: #f44336;">&#10007;</span> Unterschiedlich (&gt;1%)</span>
+                </div>
             `;
-
-            // EasyInsight Column
-            html += `<div style="background: rgba(33, 150, 243, 0.05); border: 1px solid rgba(33, 150, 243, 0.2); border-radius: 12px; padding: 1rem;">
-                <h4 style="color: #2196f3; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="font-size: 1.2rem;">&#128202;</span> EasyInsight API
-                </h4>`;
-
-            if (data.easyinsight) {
-                const ei = data.easyinsight;
-                html += `
-                    <div style="font-size: 0.85rem; color: #888; margin-bottom: 1rem;">
-                        Snapshot: ${ei.snapshot_time ? new Date(ei.snapshot_time).toLocaleString('de-DE') : '-'}
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
-                        <h5 style="color: #64b5f6; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Preis</h5>
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <tr><td style="color: #888;">Bid</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.price?.bid)}</td></tr>
-                            <tr><td style="color: #888;">Ask</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.price?.ask)}</td></tr>
-                            <tr><td style="color: #888;">Spread</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.price?.spread)} (${formatValue(ei.price?.spread_pct, 4)}%)</td></tr>
-                        </table>
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
-                        <h5 style="color: #64b5f6; margin: 0 0 0.5rem 0; font-size: 0.9rem;">OHLC (D1)</h5>
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <tr><td style="color: #888;">Open</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.ohlc?.d1?.open)}</td></tr>
-                            <tr><td style="color: #888;">High</td><td style="text-align: right; font-family: monospace; color: #4caf50;">${formatValue(ei.ohlc?.d1?.high)}</td></tr>
-                            <tr><td style="color: #888;">Low</td><td style="text-align: right; font-family: monospace; color: #f44336;">${formatValue(ei.ohlc?.d1?.low)}</td></tr>
-                            <tr><td style="color: #888;">Close</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.ohlc?.d1?.close)}</td></tr>
-                        </table>
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
-                        <h5 style="color: #64b5f6; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Indikatoren</h5>
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <tr><td style="color: #888;">RSI</td><td style="text-align: right; font-family: monospace;">${formatIndicator(ei.indicators?.rsi, 'rsi')}</td></tr>
-                            <tr><td style="color: #888;">MACD</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.macd?.main, 5)} / ${formatValue(ei.indicators?.macd?.signal, 5)}</td></tr>
-                            <tr><td style="color: #888;">Stochastic</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.stochastic?.main, 2)} / ${formatValue(ei.indicators?.stochastic?.signal, 2)}</td></tr>
-                            <tr><td style="color: #888;">CCI</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.cci, 2)}</td></tr>
-                            <tr><td style="color: #888;">ADX</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.adx?.main, 2)}</td></tr>
-                            <tr><td style="color: #888;">MA(10)</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.ma_10)}</td></tr>
-                            <tr><td style="color: #888;">ATR (D1)</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.atr?.d1)} (${formatValue(ei.indicators?.atr?.d1_pct, 2)}%)</td></tr>
-                        </table>
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
-                        <h5 style="color: #64b5f6; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Bollinger Bands</h5>
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <tr><td style="color: #888;">Upper</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.bollinger?.upper)}</td></tr>
-                            <tr><td style="color: #888;">Base</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.bollinger?.base)}</td></tr>
-                            <tr><td style="color: #888;">Lower</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.bollinger?.lower)}</td></tr>
-                        </table>
-                    </div>
-
-                    <div>
-                        <h5 style="color: #64b5f6; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Trend-Starke</h5>
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <tr><td style="color: #888;">4H</td><td style="text-align: right; font-family: monospace;">${formatStrength(ei.indicators?.strength?.h4)}</td></tr>
-                            <tr><td style="color: #888;">1D</td><td style="text-align: right; font-family: monospace;">${formatStrength(ei.indicators?.strength?.d1)}</td></tr>
-                            <tr><td style="color: #888;">1W</td><td style="text-align: right; font-family: monospace;">${formatStrength(ei.indicators?.strength?.w1)}</td></tr>
-                        </table>
-                    </div>
-                `;
-            } else {
-                html += `<div style="color: #888; text-align: center; padding: 2rem;">Keine Daten verfugbar</div>`;
-            }
-            html += `</div>`;
-
-            // TwelveData Column
-            html += `<div style="background: rgba(156, 39, 176, 0.05); border: 1px solid rgba(156, 39, 176, 0.2); border-radius: 12px; padding: 1rem;">
-                <h4 style="color: #9c27b0; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="font-size: 1.2rem;">&#128200;</span> Twelve Data API
-                </h4>`;
-
-            if (data.twelvedata) {
-                const td = data.twelvedata;
-                const changeColor = parseFloat(td.change) >= 0 ? '#4caf50' : '#f44336';
-                html += `
-                    <div style="font-size: 0.85rem; color: #888; margin-bottom: 1rem;">
-                        Symbol: ${td.symbol_used || '-'} | ${td.datetime || '-'}
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
-                        <h5 style="color: #ce93d8; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Stammdaten</h5>
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <tr><td style="color: #888;">Name</td><td style="text-align: right;">${td.name || '-'}</td></tr>
-                            <tr><td style="color: #888;">Exchange</td><td style="text-align: right;">${td.exchange || '-'}</td></tr>
-                            <tr><td style="color: #888;">Wahrung</td><td style="text-align: right;">${td.currency || '-'}</td></tr>
-                            <tr><td style="color: #888;">Markt offen</td><td style="text-align: right;">${td.is_market_open ? '<span style="color: #4caf50;">Ja</span>' : '<span style="color: #f44336;">Nein</span>'}</td></tr>
-                        </table>
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
-                        <h5 style="color: #ce93d8; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Preis</h5>
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <tr><td style="color: #888;">Open</td><td style="text-align: right; font-family: monospace;">${formatValue(td.price?.open)}</td></tr>
-                            <tr><td style="color: #888;">High</td><td style="text-align: right; font-family: monospace; color: #4caf50;">${formatValue(td.price?.high)}</td></tr>
-                            <tr><td style="color: #888;">Low</td><td style="text-align: right; font-family: monospace; color: #f44336;">${formatValue(td.price?.low)}</td></tr>
-                            <tr><td style="color: #888;">Close</td><td style="text-align: right; font-family: monospace;">${formatValue(td.price?.close)}</td></tr>
-                            <tr><td style="color: #888;">Prev. Close</td><td style="text-align: right; font-family: monospace;">${formatValue(td.price?.previous_close)}</td></tr>
-                        </table>
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
-                        <h5 style="color: #ce93d8; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Anderung</h5>
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <tr><td style="color: #888;">Anderung</td><td style="text-align: right; font-family: monospace; color: ${changeColor};">${formatValue(td.change)}</td></tr>
-                            <tr><td style="color: #888;">Anderung %</td><td style="text-align: right; font-family: monospace; color: ${changeColor};">${formatValue(td.percent_change, 2)}%</td></tr>
-                        </table>
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
-                        <h5 style="color: #ce93d8; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Volumen</h5>
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <tr><td style="color: #888;">Volumen</td><td style="text-align: right; font-family: monospace;">${td.volume ? parseInt(td.volume).toLocaleString() : '-'}</td></tr>
-                            <tr><td style="color: #888;">Avg. Volumen</td><td style="text-align: right; font-family: monospace;">${td.average_volume ? parseInt(td.average_volume).toLocaleString() : '-'}</td></tr>
-                        </table>
-                    </div>
-
-                    <div>
-                        <h5 style="color: #ce93d8; margin: 0 0 0.5rem 0; font-size: 0.9rem;">52-Wochen Range</h5>
-                        <table style="width: 100%; font-size: 0.85rem;">
-                            <tr><td style="color: #888;">Low</td><td style="text-align: right; font-family: monospace; color: #f44336;">${formatValue(td.fifty_two_week?.low)}</td></tr>
-                            <tr><td style="color: #888;">High</td><td style="text-align: right; font-family: monospace; color: #4caf50;">${formatValue(td.fifty_two_week?.high)}</td></tr>
-                        </table>
-                    </div>
-                `;
-            } else {
-                html += `<div style="color: #888; text-align: center; padding: 2rem;">Keine Daten verfugbar</div>`;
-            }
-            html += `</div>`;
-
-            html += `</div>`; // Close grid
 
             content.innerHTML = html;
         }

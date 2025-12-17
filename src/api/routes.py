@@ -2454,6 +2454,22 @@ async def get_symbol_live_data(symbol: str):
     try:
         quote = await twelvedata_service.get_quote(symbol=td_symbol)
         if quote and "error" not in quote:
+            # Calculate spread from bid/ask if available, or estimate from close
+            td_bid = quote.get("bid")
+            td_ask = quote.get("ask")
+            td_spread = None
+            td_spread_pct = None
+
+            if td_bid and td_ask:
+                try:
+                    bid_val = float(td_bid)
+                    ask_val = float(td_ask)
+                    td_spread = ask_val - bid_val
+                    if bid_val > 0:
+                        td_spread_pct = (td_spread / bid_val) * 100
+                except (ValueError, TypeError):
+                    pass
+
             result["twelvedata"] = {
                 "source": "Twelve Data API",
                 "symbol_used": td_symbol,
@@ -2462,6 +2478,12 @@ async def get_symbol_live_data(symbol: str):
                 "currency": quote.get("currency"),
                 "datetime": quote.get("datetime"),
                 "timestamp": quote.get("timestamp"),
+                "bid_ask": {
+                    "bid": td_bid,
+                    "ask": td_ask,
+                    "spread": td_spread,
+                    "spread_pct": td_spread_pct,
+                },
                 "price": {
                     "open": quote.get("open"),
                     "high": quote.get("high"),
