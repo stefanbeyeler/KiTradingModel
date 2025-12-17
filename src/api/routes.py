@@ -40,6 +40,7 @@ from ..services import AnalysisService, LLMService, StrategyService
 from ..services.query_log_service import query_log_service, QueryLogEntry
 from ..services.symbol_service import symbol_service
 from ..services.event_based_training_service import event_based_training_service
+from ..services.twelvedata_service import twelvedata_service
 
 
 # Thematisch gruppierte Router für bessere API-Organisation
@@ -54,6 +55,7 @@ llm_router = APIRouter()  # LLM Service
 sync_router = APIRouter()  # TimescaleDB Sync
 system_router = APIRouter()  # System & Monitoring
 query_log_router = APIRouter()  # Query Logs & Analytics
+twelvedata_router = APIRouter()  # Twelve Data API
 
 # Service instances
 analysis_service = AnalysisService()
@@ -1766,6 +1768,200 @@ async def refresh_symbol_data(symbol_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== Twelve Data API ====================
+
+@twelvedata_router.get("/twelvedata/status")
+async def twelvedata_status():
+    """Get Twelve Data service status."""
+    return twelvedata_service.get_status()
+
+
+@twelvedata_router.get("/twelvedata/stocks")
+async def get_stocks(
+    exchange: Optional[str] = None,
+    country: Optional[str] = None,
+    symbol_type: str = "Common Stock",
+):
+    """
+    Get list of available stocks from Twelve Data.
+
+    Args:
+        exchange: Filter by exchange (e.g., 'NYSE', 'NASDAQ', 'XETRA')
+        country: Filter by country (e.g., 'United States', 'Germany')
+        symbol_type: Type of symbol (default: 'Common Stock')
+    """
+    stocks = await twelvedata_service.get_stock_list(
+        exchange=exchange,
+        country=country,
+        symbol_type=symbol_type,
+    )
+    return {"count": len(stocks), "stocks": stocks}
+
+
+@twelvedata_router.get("/twelvedata/forex")
+async def get_forex_pairs():
+    """Get list of available forex pairs from Twelve Data."""
+    pairs = await twelvedata_service.get_forex_pairs()
+    return {"count": len(pairs), "pairs": pairs}
+
+
+@twelvedata_router.get("/twelvedata/crypto")
+async def get_cryptocurrencies():
+    """Get list of available cryptocurrencies from Twelve Data."""
+    cryptos = await twelvedata_service.get_cryptocurrencies()
+    return {"count": len(cryptos), "cryptocurrencies": cryptos}
+
+
+@twelvedata_router.get("/twelvedata/etf")
+async def get_etfs():
+    """Get list of available ETFs from Twelve Data."""
+    etfs = await twelvedata_service.get_etf_list()
+    return {"count": len(etfs), "etfs": etfs}
+
+
+@twelvedata_router.get("/twelvedata/indices")
+async def get_indices():
+    """Get list of available indices from Twelve Data."""
+    indices = await twelvedata_service.get_indices()
+    return {"count": len(indices), "indices": indices}
+
+
+@twelvedata_router.get("/twelvedata/exchanges")
+async def get_exchanges(asset_type: str = "stock"):
+    """
+    Get list of available exchanges from Twelve Data.
+
+    Args:
+        asset_type: Type of asset ('stock', 'etf', 'index')
+    """
+    exchanges = await twelvedata_service.get_exchanges(asset_type=asset_type)
+    return {"count": len(exchanges), "exchanges": exchanges}
+
+
+@twelvedata_router.get("/twelvedata/search")
+async def search_symbols(query: str, limit: int = 20):
+    """
+    Search for symbols by name or ticker.
+
+    Args:
+        query: Search query (e.g., 'Apple', 'AAPL', 'Tesla')
+        limit: Maximum number of results (default: 20)
+    """
+    results = await twelvedata_service.get_symbol_search(query=query, outputsize=limit)
+    return {"count": len(results), "results": results}
+
+
+@twelvedata_router.get("/twelvedata/quote/{symbol}")
+async def get_quote(symbol: str, exchange: Optional[str] = None):
+    """
+    Get real-time quote for a symbol.
+
+    Args:
+        symbol: The symbol (e.g., 'AAPL', 'EUR/USD', 'BTC/USD')
+        exchange: Specific exchange (optional)
+    """
+    quote = await twelvedata_service.get_quote(symbol=symbol, exchange=exchange)
+    return quote
+
+
+@twelvedata_router.get("/twelvedata/price/{symbol}")
+async def get_price(symbol: str, exchange: Optional[str] = None):
+    """
+    Get current price for a symbol (lightweight endpoint).
+
+    Args:
+        symbol: The symbol (e.g., 'AAPL', 'EUR/USD')
+        exchange: Specific exchange (optional)
+    """
+    price = await twelvedata_service.get_price(symbol=symbol, exchange=exchange)
+    return price
+
+
+@twelvedata_router.get("/twelvedata/time_series/{symbol}")
+async def get_time_series(
+    symbol: str,
+    interval: str = "1day",
+    outputsize: int = 100,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    exchange: Optional[str] = None,
+):
+    """
+    Get time series (OHLCV) data for a symbol.
+
+    Args:
+        symbol: The symbol (e.g., 'AAPL', 'EUR/USD', 'BTC/USD')
+        interval: Time interval ('1min', '5min', '15min', '30min', '1h', '4h', '1day', '1week', '1month')
+        outputsize: Number of data points (max 5000, default: 100)
+        start_date: Start date (format: 'YYYY-MM-DD')
+        end_date: End date (format: 'YYYY-MM-DD')
+        exchange: Specific exchange (optional)
+    """
+    data = await twelvedata_service.get_time_series(
+        symbol=symbol,
+        interval=interval,
+        outputsize=outputsize,
+        start_date=start_date,
+        end_date=end_date,
+        exchange=exchange,
+    )
+    return data
+
+
+@twelvedata_router.get("/twelvedata/indicator/{symbol}/{indicator}")
+async def get_technical_indicator(
+    symbol: str,
+    indicator: str,
+    interval: str = "1day",
+    outputsize: int = 100,
+    time_period: int = 14,
+):
+    """
+    Get technical indicator data for a symbol.
+
+    Args:
+        symbol: The symbol (e.g., 'AAPL', 'EUR/USD')
+        indicator: Indicator name ('sma', 'ema', 'rsi', 'macd', 'bbands', 'stoch', 'adx', 'atr', 'cci', 'obv')
+        interval: Time interval (default: '1day')
+        outputsize: Number of data points (default: 100)
+        time_period: Period for indicator calculation (default: 14)
+    """
+    data = await twelvedata_service.get_technical_indicators(
+        symbol=symbol,
+        interval=interval,
+        indicator=indicator,
+        outputsize=outputsize,
+        time_period=time_period,
+    )
+    return data
+
+
+@twelvedata_router.get("/twelvedata/earnings")
+async def get_earnings_calendar(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+):
+    """
+    Get earnings calendar.
+
+    Args:
+        start_date: Start date (format: 'YYYY-MM-DD')
+        end_date: End date (format: 'YYYY-MM-DD')
+    """
+    earnings = await twelvedata_service.get_earnings_calendar(
+        start_date=start_date,
+        end_date=end_date,
+    )
+    return {"count": len(earnings), "earnings": earnings}
+
+
+@twelvedata_router.get("/twelvedata/usage")
+async def get_api_usage():
+    """Get Twelve Data API usage statistics."""
+    usage = await twelvedata_service.get_api_usage()
+    return usage
+
+
 # ==================== Router Export ====================
 
 def get_all_routers():
@@ -1815,5 +2011,9 @@ def get_all_routers():
         (query_log_router, "/api/v1", ["📝 Query Logs & Analytics"], {
             "name": "Analytics",
             "description": "Query logging, statistics, and audit trails"
+        }),
+        (twelvedata_router, "/api/v1", ["📈 Twelve Data API"], {
+            "name": "Twelve Data",
+            "description": "Access to Twelve Data API - stocks, forex, crypto, ETFs, indices, and technical indicators"
         }),
     ]

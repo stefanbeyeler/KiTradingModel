@@ -27,6 +27,7 @@ from src.api.routes import (
     sync_router,
     system_router,
     query_log_router,
+    twelvedata_router,
     router as general_router
 )
 from src.services.timescaledb_sync_service import TimescaleDBSyncService
@@ -77,6 +78,7 @@ app.include_router(strategy_router, prefix="/api/v1", tags=["🎯 Trading Strate
 app.include_router(sync_router, prefix="/api/v1", tags=["🔄 TimescaleDB Sync"])
 app.include_router(system_router, prefix="/api/v1", tags=["🖥️ System & Monitoring"])
 app.include_router(query_log_router, prefix="/api/v1", tags=["📝 Query Logs & Analytics"])
+app.include_router(twelvedata_router, prefix="/api/v1", tags=["📈 Twelve Data API"])
 
 
 @app.on_event("startup")

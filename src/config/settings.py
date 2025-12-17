@@ -94,6 +94,12 @@ class Settings(BaseSettings):
         description="Maximum number of documents to include in RAG context"
     )
 
+    # Twelve Data API Configuration
+    twelvedata_api_key: str = Field(
+        default="",
+        description="API key for Twelve Data market data service"
+    )
+
     # Performance Configuration
     use_half_precision: bool = Field(
         default=True,

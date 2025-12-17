@@ -271,19 +271,20 @@
 
     <div class="container">
         <h1>Data Service</h1>
-        <p class="subtitle">Symbol-Management, Trading-Strategien und Daten-Synchronisation</p>
+        <p class="subtitle">Symbol-Management, Trading-Strategien, Twelve Data API und Daten-Synchronisation</p>
 
         <div class="content-card">
             <h2>&#128202; Beschreibung</h2>
             <p>
                 Der Data Service ist die zentrale Datenverwaltungskomponente des KI Trading Model Systems.
-                Er fungiert als Vermittler zwischen der externen EasyInsight API und den internen Services
-                (NHITS, RAG, LLM) und stellt eine einheitliche Schnittstelle fur Marktdaten bereit.
+                Er fungiert als Vermittler zwischen externen Datenquellen (EasyInsight API, Twelve Data API)
+                und den internen Services (NHITS, RAG, LLM) und stellt eine einheitliche Schnittstelle fur
+                Marktdaten bereit.
             </p>
             <p>
                 Zusatzlich verwaltet der Service Trading-Strategien und ermoglicht die Synchronisation
                 von Symbolen zwischen verschiedenen Datenquellen. Er bietet CRUD-Operationen fur
-                Managed Symbols und Strategien.
+                Managed Symbols und Strategien sowie Zugriff auf globale Marktdaten uber die Twelve Data API.
             </p>
         </div>
 
@@ -307,6 +308,14 @@
                 <div class="feature-item">
                     <h4>&#128259; Daten-Synchronisation</h4>
                     <p>Automatische Synchronisation von Marktdaten zwischen EasyInsight und lokalen Services.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#127760; Twelve Data API</h4>
+                    <p>Zugriff auf globale Marktdaten: Aktien, Forex, Krypto, ETFs, Indizes und technische Indikatoren.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128202; Technische Analyse</h4>
+                    <p>Berechnung von Indikatoren wie SMA, EMA, RSI, MACD, Bollinger Bands uber Twelve Data.</p>
                 </div>
             </div>
 
@@ -381,6 +390,50 @@
                     <span class="endpoint-desc">Synchronisation stoppen</span>
                 </div>
             </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Twelve Data API</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/status</span>
+                    <span class="endpoint-desc">API-Status und Verfugbarkeit</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/search</span>
+                    <span class="endpoint-desc">Symbol-Suche (Aktien, Forex, Krypto)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/quote/{symbol}</span>
+                    <span class="endpoint-desc">Echtzeit-Kursdaten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/time_series/{symbol}</span>
+                    <span class="endpoint-desc">Historische OHLCV-Daten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/indicator/{symbol}/{ind}</span>
+                    <span class="endpoint-desc">Technische Indikatoren (RSI, MACD, etc.)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/stocks</span>
+                    <span class="endpoint-desc">Liste verfugbarer Aktien</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/forex</span>
+                    <span class="endpoint-desc">Liste verfugbarer Forex-Paare</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/crypto</span>
+                    <span class="endpoint-desc">Liste verfugbarer Kryptowahrungen</span>
+                </div>
+            </div>
         </div>
 
         <div class="content-card">
@@ -400,6 +453,26 @@
         </div>
 
         <div class="content-card">
+            <h2>&#127760; Twelve Data API</h2>
+            <p>
+                Die Twelve Data API bietet Zugriff auf globale Finanzmarktdaten fur uber 125.000 Instrumente
+                aus Aktien, Forex, Kryptowahrungen, ETFs und Indizes. Die Integration ermoglicht:
+            </p>
+            <ul>
+                <li><strong>Echtzeit-Kurse:</strong> Aktuelle Preise fur Aktien, Forex und Krypto</li>
+                <li><strong>Historische Daten:</strong> OHLCV-Zeitreihen in verschiedenen Intervallen (1min bis 1month)</li>
+                <li><strong>Technische Indikatoren:</strong> SMA, EMA, RSI, MACD, Bollinger Bands, Stochastik, ADX, ATR, CCI, OBV</li>
+                <li><strong>Symbol-Suche:</strong> Suche nach Instrumenten anhand von Name oder Ticker</li>
+                <li><strong>Earnings Calendar:</strong> Ubersicht uber kommende Gewinnberichte</li>
+            </ul>
+
+            <div class="info-box">
+                <strong>API-Limits:</strong> Der kostenlose Plan bietet 800 API-Aufrufe pro Tag.
+                Der aktuelle Verbrauch kann uber den /twelvedata/usage Endpoint abgefragt werden.
+            </div>
+        </div>
+
+        <div class="content-card">
             <h2>&#128295; Technologie-Stack</h2>
             <div class="tech-stack">
                 <span class="tech-tag">Python 3.11</span>
@@ -408,6 +481,7 @@
                 <span class="tech-tag">Pydantic</span>
                 <span class="tech-tag">httpx</span>
                 <span class="tech-tag">uvicorn</span>
+                <span class="tech-tag">twelvedata</span>
             </div>
         </div>
 
