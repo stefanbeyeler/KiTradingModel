@@ -860,6 +860,74 @@ async def list_forecast_models():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@forecast_router.get("/forecast/models/by-timeframe")
+async def list_models_by_timeframe():
+    """
+    List all trained NHITS models grouped by timeframe.
+
+    Returns models organized by their timeframe suffix (H1, M15, D1, or default).
+    """
+    try:
+        forecast_service = get_forecast_service()
+        models = forecast_service.list_models()
+
+        # Group models by timeframe
+        timeframe_groups = {
+            "default": [],  # No suffix (standard hourly)
+            "H1": [],       # Hourly
+            "M15": [],      # 15 minutes
+            "D1": [],       # Daily
+        }
+
+        for model in models:
+            if not model.model_exists:
+                continue
+            symbol = model.symbol
+
+            # Check for timeframe suffix
+            if symbol.endswith("_H1"):
+                timeframe_groups["H1"].append(symbol.replace("_H1", ""))
+            elif symbol.endswith("_M15"):
+                timeframe_groups["M15"].append(symbol.replace("_M15", ""))
+            elif symbol.endswith("_D1"):
+                timeframe_groups["D1"].append(symbol.replace("_D1", ""))
+            else:
+                timeframe_groups["default"].append(symbol)
+
+        # Sort symbols in each group
+        for key in timeframe_groups:
+            timeframe_groups[key].sort()
+
+        return {
+            "total_models": len([m for m in models if m.model_exists]),
+            "by_timeframe": {
+                "default": {
+                    "count": len(timeframe_groups["default"]),
+                    "label": "Standard (1H)",
+                    "symbols": timeframe_groups["default"]
+                },
+                "H1": {
+                    "count": len(timeframe_groups["H1"]),
+                    "label": "Stündlich (H1)",
+                    "symbols": timeframe_groups["H1"]
+                },
+                "M15": {
+                    "count": len(timeframe_groups["M15"]),
+                    "label": "15 Minuten (M15)",
+                    "symbols": timeframe_groups["M15"]
+                },
+                "D1": {
+                    "count": len(timeframe_groups["D1"]),
+                    "label": "Täglich (D1)",
+                    "symbols": timeframe_groups["D1"]
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Failed to list models by timeframe: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== NHITS Batch Training Endpoints ====================
 # NOTE: These must be defined BEFORE parameterized routes like /forecast/{symbol}
 

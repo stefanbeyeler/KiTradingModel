@@ -480,6 +480,225 @@
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #e8e8e8;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #e8e8e8;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .category-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .category-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .category-icon {
+            font-size: 1.2rem;
+        }
+
+        .category-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .category-count {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .symbols-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .symbol-chip {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #e8e8e8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+
+        .symbol-chip:hover {
+            background: rgba(100, 200, 255, 0.15);
+            border-color: rgba(100, 200, 255, 0.3);
+        }
+
+        .modal-summary {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .summary-stat {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .summary-stat .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .summary-stat .label {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        .clickable-symbol-count {
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 4px;
+            padding: 0.15rem 0.5rem;
+            margin: 0 -4px;
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .clickable-symbol-count::after {
+            content: '\25B6';
+            font-size: 0.6rem;
+            opacity: 0.7;
+        }
+
+        .clickable-symbol-count:hover {
+            background: rgba(100, 200, 255, 0.25);
+            border-color: rgba(100, 200, 255, 0.4);
+            color: #fff;
+            transform: translateX(2px);
+        }
+
+        .clickable-symbol-count:hover::after {
+            opacity: 1;
+        }
+
+        .modal-loading {
+            text-align: center;
+            padding: 3rem;
+            color: #64c8ff;
+        }
+
+        .modal-loading .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(100, 200, 255, 0.2);
+            border-top-color: #64c8ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -505,7 +724,7 @@
                 <p>Externe Datenquelle - OHLCV-Marktdaten und Symbol-Informationen via TimescaleDB.</p>
                 <div class="service-info" id="easyinsight-info">
                     <div><span class="label">Host</span><span>10.1.19.102:3000</span></div>
-                    <div><span class="label">Symbole</span><span id="easyinsight-symbols">-</span></div>
+                    <div><span class="label">Symbole</span><span id="easyinsight-symbols" class="clickable-symbol-count" onclick="openSymbolsModal()" title="Klicken f\u00fcr Details">-</span></div>
                     <div><span class="label">Latenz</span><span id="easyinsight-latency">-</span></div>
                 </div>
                 <div class="service-links">
@@ -678,7 +897,7 @@
                     <div class="training-info">
                         <div class="training-stat">
                             <div class="value" id="stat-models">-</div>
-                            <div class="label">Modelle</div>
+                            <div class="label">Modelle gesamt</div>
                         </div>
                         <div class="training-stat">
                             <div class="value" id="stat-successful">-</div>
@@ -687,6 +906,27 @@
                         <div class="training-stat">
                             <div class="value" id="stat-failed">-</div>
                             <div class="label">Fehlgeschlagen</div>
+                        </div>
+                    </div>
+                    <div class="timeframe-breakdown" id="timeframe-breakdown" style="margin-top: 1rem;">
+                        <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.5rem;">Modelle nach Timeframe:</div>
+                        <div class="training-info" style="grid-template-columns: repeat(4, 1fr);">
+                            <div class="training-stat" title="Standard stündliche Modelle">
+                                <div class="value" id="stat-tf-default">-</div>
+                                <div class="label">1H (Std)</div>
+                            </div>
+                            <div class="training-stat" title="Stündliche Modelle mit H1-Suffix">
+                                <div class="value" id="stat-tf-h1">-</div>
+                                <div class="label">H1</div>
+                            </div>
+                            <div class="training-stat" title="15-Minuten Modelle">
+                                <div class="value" id="stat-tf-m15">-</div>
+                                <div class="label">M15</div>
+                            </div>
+                            <div class="training-stat" title="Tägliche Modelle">
+                                <div class="value" id="stat-tf-d1">-</div>
+                                <div class="label">D1</div>
+                            </div>
                         </div>
                     </div>
                     <div class="training-timing" id="training-timing" style="display: none;">
@@ -717,6 +957,22 @@
     <footer>
         KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + Llama 3.1 70B + RAG
     </footer>
+
+    <!-- Symbols Modal -->
+    <div class="modal-overlay" id="symbols-modal" onclick="closeSymbolsModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>EasyInsight Symbole nach Kategorie</h2>
+                <button class="modal-close" onclick="closeSymbolsModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="symbols-modal-content">
+                <div class="modal-loading">
+                    <div class="spinner"></div>
+                    <div>Symbole werden geladen...</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="toast" id="toast"></div>
 
@@ -752,13 +1008,23 @@
                 document.getElementById('nhits-training').textContent = data.training_in_progress ? 'Aktiv' : 'Inaktiv';
             }
 
-            // Get models count
+            // Get models count with timeframe breakdown
             try {
-                const res = await fetch('/nhits/api/v1/forecast/models');
-                const models = await res.json();
-                document.getElementById('stat-models').textContent = models.length;
-                document.getElementById('models-count').textContent = `Modelle: ${models.length}`;
-            } catch (err) {}
+                const res = await fetch('/nhits/api/v1/forecast/models/by-timeframe');
+                const data = await res.json();
+                document.getElementById('stat-models').textContent = data.total_models;
+                document.getElementById('models-count').textContent = `Modelle: ${data.total_models}`;
+
+                // Update timeframe breakdown
+                if (data.by_timeframe) {
+                    document.getElementById('stat-tf-default').textContent = data.by_timeframe.default?.count || 0;
+                    document.getElementById('stat-tf-h1').textContent = data.by_timeframe.H1?.count || 0;
+                    document.getElementById('stat-tf-m15').textContent = data.by_timeframe.M15?.count || 0;
+                    document.getElementById('stat-tf-d1').textContent = data.by_timeframe.D1?.count || 0;
+                }
+            } catch (err) {
+                console.error('Failed to fetch model timeframes:', err);
+            }
         }
 
         async function updateLlmInfo() {
@@ -981,6 +1247,120 @@
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
+
+        // Symbol Modal Functions
+        let cachedSymbols = null;
+
+        // Category info mapping - uses EasyInsight API categories as master
+        const categoryInfo = {
+            'Forex': { icon: '\u{1F4B1}', name: 'Forex', order: 1 },
+            'Crypto': { icon: '\u{1FA99}', name: 'Krypto', order: 2 },
+            'Indices': { icon: '\u{1F4CA}', name: 'Indizes', order: 3 },
+            'Metals': { icon: '\u{1F947}', name: 'Metalle', order: 4 },
+            'Extra': { icon: '\u{2B50}', name: 'Extra', order: 5 },
+            'Other': { icon: '\u{2753}', name: 'Sonstige', order: 99 }
+        };
+
+        function groupSymbolsByCategory(symbols) {
+            const groups = {};
+
+            symbols.forEach(symbolData => {
+                // Use category from API directly
+                const symbol = symbolData.symbol || symbolData;
+                const category = symbolData.category || 'Other';
+
+                if (!groups[category]) {
+                    groups[category] = [];
+                }
+                groups[category].push(symbol);
+            });
+
+            // Sort symbols within each category
+            Object.keys(groups).forEach(cat => {
+                groups[cat].sort();
+            });
+
+            return groups;
+        }
+
+        function renderSymbolsModal(symbols) {
+            const groups = groupSymbolsByCategory(symbols);
+            const content = document.getElementById('symbols-modal-content');
+
+            // Summary stats
+            let html = '<div class="modal-summary">';
+            html += `<div class="summary-stat"><div class="value">${symbols.length}</div><div class="label">Gesamt</div></div>`;
+
+            const sortedCategories = Object.keys(groups).sort((a, b) =>
+                (categoryInfo[a]?.order || 99) - (categoryInfo[b]?.order || 99)
+            );
+
+            sortedCategories.forEach(cat => {
+                const info = categoryInfo[cat] || { icon: '\u2753', name: cat };
+                html += `<div class="summary-stat"><div class="value">${groups[cat].length}</div><div class="label">${info.icon} ${info.name}</div></div>`;
+            });
+            html += '</div>';
+
+            // Category groups
+            sortedCategories.forEach(cat => {
+                const info = categoryInfo[cat] || { icon: '\u2753', name: cat };
+                const symbolsList = groups[cat];
+
+                html += `
+                    <div class="category-group">
+                        <div class="category-header">
+                            <span class="category-icon">${info.icon}</span>
+                            <span class="category-name">${info.name}</span>
+                            <span class="category-count">${symbolsList.length}</span>
+                        </div>
+                        <div class="symbols-grid">
+                            ${symbolsList.map(s => `<span class="symbol-chip">${s}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            content.innerHTML = html;
+        }
+
+        async function openSymbolsModal() {
+            const modal = document.getElementById('symbols-modal');
+            const content = document.getElementById('symbols-modal-content');
+
+            // Show modal with loading state
+            modal.classList.add('show');
+            content.innerHTML = '<div class="modal-loading"><div class="spinner"></div><div>Symbole werden geladen...</div></div>';
+
+            try {
+                // Use cached symbols if available
+                if (cachedSymbols) {
+                    renderSymbolsModal(cachedSymbols);
+                    return;
+                }
+
+                const res = await fetch('/easyinsight/api/symbols');
+                if (res.ok) {
+                    cachedSymbols = await res.json();
+                    renderSymbolsModal(cachedSymbols);
+                } else {
+                    content.innerHTML = '<div class="modal-loading"><div>Fehler beim Laden der Symbole</div></div>';
+                }
+            } catch (err) {
+                content.innerHTML = '<div class="modal-loading"><div>Verbindungsfehler: ' + err.message + '</div></div>';
+            }
+        }
+
+        function closeSymbolsModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('symbols-modal').classList.remove('show');
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeSymbolsModal();
+            }
+        });
 
         // Initial load
         refreshStatus();
