@@ -1109,10 +1109,55 @@ class ForecastService:
     def list_models(self) -> List[ForecastModelInfo]:
         """List all trained models."""
         models = []
+        seen_symbols = set()
+
         for path in self.model_path.glob("*_model.pt"):
-            symbol = path.stem.replace("_model", "")
-            models.append(self.get_model_info(symbol))
+            # Extract symbol from filename (handles both BTCUSD_model.pt and BTCUSD_H1_model.pt)
+            stem = path.stem.replace("_model", "")
+
+            # Skip timeframe-suffixed duplicates (H1, M15, D1) - only count base models
+            if any(stem.endswith(f"_{tf}") for tf in ["H1", "M15", "D1", "H4", "W1"]):
+                continue
+
+            symbol = stem
+            if symbol in seen_symbols:
+                continue
+            seen_symbols.add(symbol)
+
+            # Check if model file actually exists (direct path, not via _get_model_path)
+            model_path_direct = self.model_path / f"{symbol}_model.pt"
+            metadata = self._load_metadata_direct(symbol)
+
+            metrics = {}
+            if metadata:
+                metrics = metadata.get('metrics', {})
+                metrics['n_features'] = metadata.get('n_features', 1)
+                metrics['feature_names'] = metadata.get('feature_names', ['close'])
+                metrics['final_loss'] = metadata.get('final_loss')
+
+            models.append(ForecastModelInfo(
+                symbol=symbol,
+                model_exists=model_path_direct.exists(),
+                model_path=str(model_path_direct) if model_path_direct.exists() else None,
+                last_trained=metadata.get('trained_at') if metadata else None,
+                training_samples=metadata.get('training_samples') if metadata else None,
+                horizon=self.horizon,
+                input_size=self.input_size,
+                metrics=metrics,
+            ))
         return models
+
+    def _load_metadata_direct(self, symbol: str) -> Optional[Dict]:
+        """Load metadata for a symbol without timeframe suffix."""
+        metadata_path = self.model_path / f"{symbol}_metadata.json"
+        if metadata_path.exists():
+            try:
+                import json
+                with open(metadata_path) as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return None
 
 
 # Singleton instance

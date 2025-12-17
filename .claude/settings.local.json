@@ -123,7 +123,8 @@
       "Bash(docker search:*)",
       "Bash(docker pull:*)",
       "Bash(pip3 index:*)",
-      "Bash(pip3 search:*)"
+      "Bash(pip3 search:*)",
+      "Bash(sort cat /tmp/nhits.txt echo \"\" echo \"=== Fehlende Modelle (EasyInsight ohne NHITS) ===\" comm -23 /tmp/easy.txt /tmp/nhits.txt)"
     ],
     "deny": [],
     "ask": []
