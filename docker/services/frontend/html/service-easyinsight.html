@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyInsight API - Service Dokumentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .service-badge {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .subtitle {
+            opacity: 0.7;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .content-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-card p {
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .content-card ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .content-card li {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tech-tag {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(167, 139, 250, 0.3);
+        }
+
+        .endpoint-list {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .endpoint {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .endpoint:last-child {
+            border-bottom: none;
+        }
+
+        .method {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .method.post {
+            background: rgba(33, 150, 243, 0.2);
+            color: #64b5f6;
+        }
+
+        .endpoint-path {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #ffd54f;
+        }
+
+        .endpoint-desc {
+            opacity: 0.7;
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .info-box {
+            background: rgba(100, 200, 255, 0.1);
+            border-left: 3px solid #64c8ff;
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+
+        .info-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .quick-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        .quick-links a:hover {
+            background: rgba(100, 200, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <span class="service-badge">Externer Service</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>EasyInsight API</h1>
+        <p class="subtitle">Externe Datenquelle fur OHLCV-Marktdaten und Symbol-Informationen</p>
+
+        <div class="content-card">
+            <h2>&#128202; Beschreibung</h2>
+            <p>
+                Die EasyInsight API ist die zentrale externe Datenquelle des KI Trading Model Systems.
+                Sie liefert historische und aktuelle Marktdaten (OHLCV - Open, High, Low, Close, Volume)
+                fur verschiedene Finanzinstrumente wie Kryptowahrungen, Forex-Paare, Indizes und Edelmetalle.
+            </p>
+            <p>
+                Die Daten werden in einer TimescaleDB gespeichert, einer zeitreihenoptimierten PostgreSQL-Erweiterung,
+                die besonders fur Finanzdaten mit hoher Schreiblast und komplexen Zeitabfragen geeignet ist.
+            </p>
+        </div>
+
+        <div class="content-card">
+            <h2>&#9881;&#65039; Funktionsweise</h2>
+            <p>Der Service funktioniert wie folgt:</p>
+            <ul>
+                <li><strong>Datensammlung:</strong> Automatisches Abrufen von Marktdaten von verschiedenen Borsen (Kraken, etc.)</li>
+                <li><strong>Speicherung:</strong> Persistente Speicherung in TimescaleDB mit optimierter Zeitreihen-Kompression</li>
+                <li><strong>API-Bereitstellung:</strong> RESTful API mit Swagger-Dokumentation fur einfachen Zugriff</li>
+                <li><strong>Kategorisierung:</strong> Automatische Kategorisierung der Symbole (Forex, Crypto, Indices, Metals)</li>
+            </ul>
+
+            <div class="info-box">
+                <strong>Hinweis:</strong> Dieser Service lauft auf einem separaten Server (10.1.19.102) und wird
+                vom KI Trading Model uber das Netzwerk angesprochen. Die Latenz wird im Dashboard angezeigt.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128279; Wichtige API-Endpunkte</h2>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/symbols</span>
+                    <span class="endpoint-desc">Liste aller verfugbaren Symbole</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/ohlcv/{symbol}</span>
+                    <span class="endpoint-desc">OHLCV-Daten fur ein Symbol</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/symbols/{symbol}/info</span>
+                    <span class="endpoint-desc">Detailinformationen zu einem Symbol</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/health</span>
+                    <span class="endpoint-desc">Service Health-Check</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128230; Datenstruktur</h2>
+            <p>Die OHLCV-Daten werden in folgendem Format bereitgestellt:</p>
+            <ul>
+                <li><strong>timestamp:</strong> Zeitstempel des Datenpunkts (UTC)</li>
+                <li><strong>open:</strong> Eroffnungspreis der Periode</li>
+                <li><strong>high:</strong> Hochstkurs der Periode</li>
+                <li><strong>low:</strong> Tiefstkurs der Periode</li>
+                <li><strong>close:</strong> Schlusskurs der Periode</li>
+                <li><strong>volume:</strong> Handelsvolumen der Periode</li>
+            </ul>
+
+            <div class="info-box warning">
+                <strong>Wichtig:</strong> Die Datenqualitat und -verfugbarkeit hangt von der jeweiligen Borse ab.
+                Nicht alle Symbole haben Daten fur alle Zeitraume verfugbar.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128295; Technologie-Stack</h2>
+            <div class="tech-stack">
+                <span class="tech-tag">TimescaleDB</span>
+                <span class="tech-tag">PostgreSQL</span>
+                <span class="tech-tag">Node.js</span>
+                <span class="tech-tag">Express</span>
+                <span class="tech-tag">Swagger/OpenAPI</span>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128640; Schnellzugriff</h2>
+            <div class="quick-links">
+                <a href="http://10.1.19.102:3000/swagger/" target="_blank">&#128196; API Dokumentation</a>
+                <a href="http://10.1.19.102:3000/api/symbols" target="_blank">&#128202; Symbolliste</a>
+                <a href="/" class="back-link">&#127968; Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        KI Trading Model - Service Dokumentation | EasyInsight API
+    </footer>
+</body>
+</html>

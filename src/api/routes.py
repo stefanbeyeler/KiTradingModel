@@ -1042,6 +1042,50 @@ async def get_trainable_symbols():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@training_router.get("/forecast/training/failed")
+async def get_failed_trainings():
+    """
+    Get details about failed model trainings from the current/last training run.
+
+    Returns:
+    - count: Number of failed models
+    - models: Dictionary with model_key -> error details
+    - training_in_progress: Whether training is still running
+
+    Use this endpoint to debug why certain models failed to train.
+    Common failure reasons:
+    - Insufficient data: Not enough historical data points for the timeframe
+    - No OHLCV data: Symbol doesn't have price data for the requested timeframe
+    - API errors: Failed to fetch data from EasyInsight API
+    """
+    try:
+        training_service = get_training_service()
+        return training_service.get_failed_models()
+    except Exception as e:
+        logger.error(f"Failed to get failed trainings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@training_router.get("/forecast/training/results")
+async def get_training_results():
+    """
+    Get comprehensive results from the current/last training run.
+
+    Returns:
+    - summary: Counts of total, completed, successful, failed, skipped
+    - failed_models: Details of all failed trainings with error messages
+    - successful_models: Details of all successful trainings
+
+    This endpoint provides full visibility into the training process.
+    """
+    try:
+        training_service = get_training_service()
+        return training_service.get_training_results()
+    except Exception as e:
+        logger.error(f"Failed to get training results: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @training_router.post("/forecast/train-all")
 async def train_all_models(
     symbols: list[str] | None = None,

@@ -167,22 +167,23 @@
 
         .service-links {
             display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
+            gap: 0.4rem;
+            flex-wrap: nowrap;
         }
 
         .service-links a {
             display: inline-flex;
             align-items: center;
-            gap: 0.3rem;
-            padding: 0.5rem 0.8rem;
+            justify-content: center;
+            padding: 0.4rem 0.5rem;
             background: rgba(100, 200, 255, 0.1);
             color: #64c8ff;
-            border-radius: 6px;
+            border-radius: 5px;
             text-decoration: none;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             transition: all 0.2s;
             border: 1px solid rgba(100, 200, 255, 0.2);
+            white-space: nowrap;
         }
 
         .service-links a:hover {
@@ -728,6 +729,7 @@
                     <div><span class="label">Latenz</span><span id="easyinsight-latency">-</span></div>
                 </div>
                 <div class="service-links">
+                    <a href="/service-easyinsight.html" target="_blank">Info</a>
                     <a href="http://10.1.19.102:3000/swagger/" target="_blank">API Docs</a>
                     <a href="http://10.1.19.102:3000/api/symbols" target="_blank">Symbols</a>
                 </div>
@@ -746,6 +748,7 @@
                     <div><span class="label">Sync</span><span id="data-sync">-</span></div>
                 </div>
                 <div class="service-links">
+                    <a href="/service-data.html" target="_blank">Info</a>
                     <a href="/data/docs" target="_blank">API Docs</a>
                     <a href="/data/health" target="_blank">Health</a>
                 </div>
@@ -764,6 +767,7 @@
                     <div><span class="label">Training</span><span id="nhits-training">-</span></div>
                 </div>
                 <div class="service-links">
+                    <a href="/service-nhits.html" target="_blank">Info</a>
                     <a href="/nhits/docs" target="_blank">API Docs</a>
                     <a href="/nhits/health" target="_blank">Health</a>
                 </div>
@@ -782,6 +786,7 @@
                     <div><span class="label">GPU</span><span id="rag-gpu">-</span></div>
                 </div>
                 <div class="service-links">
+                    <a href="/service-rag.html" target="_blank">Info</a>
                     <a href="/rag/docs" target="_blank">API Docs</a>
                     <a href="/rag/health" target="_blank">Health</a>
                 </div>
@@ -800,6 +805,7 @@
                     <div><span class="label">RAG</span><span id="llm-rag">-</span></div>
                 </div>
                 <div class="service-links">
+                    <a href="/service-llm.html" target="_blank">Info</a>
                     <a href="/llm/docs" target="_blank">API Docs</a>
                     <a href="/llm/health" target="_blank">Health</a>
                 </div>

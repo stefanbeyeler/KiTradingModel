@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Service - Service Dokumentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .subtitle {
+            opacity: 0.7;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .content-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-card p {
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .content-card ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .content-card li {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tech-tag {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(167, 139, 250, 0.3);
+        }
+
+        .endpoint-list {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .endpoint {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .endpoint:last-child {
+            border-bottom: none;
+        }
+
+        .method {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .method.post {
+            background: rgba(33, 150, 243, 0.2);
+            color: #64b5f6;
+        }
+
+        .endpoint-path {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #ffd54f;
+        }
+
+        .endpoint-desc {
+            opacity: 0.7;
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .info-box {
+            background: rgba(100, 200, 255, 0.1);
+            border-left: 3px solid #64c8ff;
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+
+        .info-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+        }
+
+        .info-box.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-left-color: #4caf50;
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .quick-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        .quick-links a:hover {
+            background: rgba(100, 200, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid #a78bfa;
+        }
+
+        .feature-item h4 {
+            color: #a78bfa;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .feature-item p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 0;
+        }
+
+        .model-specs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .model-specs {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .spec-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .spec-item .spec-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .spec-item .spec-label {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 0.3rem;
+        }
+
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .flow-step {
+            background: rgba(100, 200, 255, 0.1);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .flow-step .step-num {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-bottom: 0.25rem;
+        }
+
+        .flow-step .step-name {
+            font-weight: 500;
+            color: #64c8ff;
+            font-size: 0.9rem;
+        }
+
+        .flow-arrow {
+            color: #64c8ff;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <span class="service-badge">Port 3004</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>LLM Service</h1>
+        <p class="subtitle">Large Language Model Analyse mit RAG - Trading-Insights powered by Llama 3.1</p>
+
+        <div class="content-card">
+            <h2>&#129302; Beschreibung</h2>
+            <p>
+                Der LLM Service ist die naturlichsprachliche Schnittstelle des KI Trading Model Systems.
+                Er nutzt <strong>Llama 3.1 70B</strong>, eines der leistungsstarksten Open-Source
+                Sprachmodelle, um Trading-bezogene Fragen zu beantworten, Marktanalysen zu erstellen
+                und Handelsempfehlungen zu generieren.
+            </p>
+            <p>
+                Durch die Integration mit dem RAG Service kann das LLM auf die interne Wissensbasis
+                zugreifen und so kontextbezogene, fundierte Antworten liefern, die uber das
+                allgemeine Trainingswissen des Modells hinausgehen.
+            </p>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128202; Llama 3.1 70B Spezifikationen</h2>
+            <div class="model-specs">
+                <div class="spec-item">
+                    <div class="spec-value">70B</div>
+                    <div class="spec-label">Parameter</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-value">128K</div>
+                    <div class="spec-label">Kontext-Tokens</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-value">8K</div>
+                    <div class="spec-label">Output-Tokens</div>
+                </div>
+            </div>
+
+            <div class="info-box success">
+                <strong>Llama 3.1:</strong> Das Modell wurde im Juli 2024 von Meta AI veroffentlicht
+                und gilt als eines der besten Open-Source LLMs. Es unterstutzt multilingual Antworten
+                und hat exzellente Reasoning-Fahigkeiten.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#9881;&#65039; Funktionsweise</h2>
+            <p>Der LLM Service verarbeitet Anfragen in einem mehrstufigen Prozess:</p>
+
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="step-num">1</div>
+                    <div class="step-name">Anfrage</div>
+                </div>
+                <span class="flow-arrow">&#8594;</span>
+                <div class="flow-step">
+                    <div class="step-num">2</div>
+                    <div class="step-name">RAG Query</div>
+                </div>
+                <span class="flow-arrow">&#8594;</span>
+                <div class="flow-step">
+                    <div class="step-num">3</div>
+                    <div class="step-name">Kontext</div>
+                </div>
+                <span class="flow-arrow">&#8594;</span>
+                <div class="flow-step">
+                    <div class="step-num">4</div>
+                    <div class="step-name">LLM</div>
+                </div>
+                <span class="flow-arrow">&#8594;</span>
+                <div class="flow-step">
+                    <div class="step-num">5</div>
+                    <div class="step-name">Antwort</div>
+                </div>
+            </div>
+
+            <ul>
+                <li><strong>Anfrage-Empfang:</strong> Benutzeranfrage wird uber die API empfangen</li>
+                <li><strong>RAG-Abfrage:</strong> Relevante Dokumente werden aus der Wissensbasis abgerufen</li>
+                <li><strong>Kontext-Aufbau:</strong> Dokumente werden mit der Anfrage kombiniert</li>
+                <li><strong>LLM-Verarbeitung:</strong> Llama 3.1 generiert eine kontextbezogene Antwort</li>
+                <li><strong>Antwort-Ausgabe:</strong> Formatierte Antwort wird zuruckgegeben</li>
+            </ul>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128200; Anwendungsfalle</h2>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>&#128202; Marktanalyse</h4>
+                    <p>Analyse von Markttrends, Preisbewegungen und technischen Indikatoren in naturlicher Sprache.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128176; Trading-Empfehlungen</h4>
+                    <p>Generierung von Handelsempfehlungen basierend auf aktuellen Daten und historischen Mustern.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128218; Wissensabfragen</h4>
+                    <p>Beantwortung von Fragen zu Trading-Strategien, Marktmechanismen und Finanzkonzepten.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128221; Berichtserstellung</h4>
+                    <p>Automatische Erstellung von Marktberichten und Zusammenfassungen.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128279; Wichtige API-Endpunkte</h2>
+
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Analyse & Chat</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/analyze</span>
+                    <span class="endpoint-desc">Trading-Analyse anfragen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/chat</span>
+                    <span class="endpoint-desc">Chat-Konversation mit LLM</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/recommendation/{symbol}</span>
+                    <span class="endpoint-desc">Handelsempfehlung fur Symbol</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Modell-Verwaltung</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/llm/status</span>
+                    <span class="endpoint-desc">LLM-Status und Modellinfo</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/llm/pull</span>
+                    <span class="endpoint-desc">Modell herunterladen/aktualisieren</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/health</span>
+                    <span class="endpoint-desc">Service Health-Check</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/query-logs</span>
+                    <span class="endpoint-desc">Anfrage-Protokolle</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128421;&#65039; Ollama Integration</h2>
+            <p>
+                Der LLM Service nutzt <strong>Ollama</strong> als Backend fur die Modellausfuhrung.
+                Ollama ist eine leichtgewichtige Plattform zum lokalen Ausfuhren von LLMs und
+                bietet eine einfache API fur Inferenz.
+            </p>
+            <ul>
+                <li><strong>Modell-Management:</strong> Automatisches Herunterladen und Aktualisieren von Modellen</li>
+                <li><strong>GPU-Beschleunigung:</strong> Nutzt NVIDIA CUDA fur schnelle Inferenz</li>
+                <li><strong>Quantisierung:</strong> Unterstutzt verschiedene Quantisierungsstufen (Q4, Q8, etc.)</li>
+                <li><strong>Streaming:</strong> Unterstutzt Streaming-Responses fur interaktive Anwendungen</li>
+            </ul>
+
+            <div class="info-box warning">
+                <strong>VRAM-Anforderungen:</strong> Llama 3.1 70B benotigt ca. 40-48 GB VRAM fur volle
+                Prasission oder ca. 20-24 GB fur 4-bit Quantisierung. Auf der Jetson Orin wird
+                eine quantisierte Version verwendet.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128230; Prompt-Engineering</h2>
+            <p>
+                Der Service verwendet spezialisierte System-Prompts fur Trading-Analysen:
+            </p>
+            <ul>
+                <li><strong>Trading-Fokus:</strong> Das Modell ist auf Finanzmarkt-Analysen spezialisiert</li>
+                <li><strong>Strukturierte Ausgabe:</strong> Antworten folgen einem konsistenten Format</li>
+                <li><strong>Risiko-Hinweise:</strong> Automatische Einbindung von Risikowarnungen</li>
+                <li><strong>Daten-Integration:</strong> NHITS-Prognosen werden in den Kontext eingebunden</li>
+            </ul>
+
+            <div class="info-box">
+                <strong>RAG-Integration:</strong> Wenn RAG aktiviert ist, werden relevante Dokumente
+                aus der Wissensbasis automatisch in den Prompt eingebunden, um die Antwortqualitat
+                zu verbessern.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128295; Technologie-Stack</h2>
+            <div class="tech-stack">
+                <span class="tech-tag">Python 3.11</span>
+                <span class="tech-tag">Ollama</span>
+                <span class="tech-tag">Llama 3.1 70B</span>
+                <span class="tech-tag">FastAPI</span>
+                <span class="tech-tag">LangChain</span>
+                <span class="tech-tag">httpx</span>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128640; Schnellzugriff</h2>
+            <div class="quick-links">
+                <a href="/llm/docs" target="_blank">&#128196; API Dokumentation</a>
+                <a href="/llm/health" target="_blank">&#128154; Health Check</a>
+                <a href="/" class="back-link">&#127968; Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        KI Trading Model - Service Dokumentation | LLM Service
+    </footer>
+</body>
+</html>

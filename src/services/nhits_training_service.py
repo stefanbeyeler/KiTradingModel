@@ -34,6 +34,9 @@ class NHITSTrainingService:
         self._training_successful: int = 0
         self._training_failed: int = 0
         self._training_skipped: int = 0
+        # Detailed failure tracking for debugging
+        self._failed_models: Dict[str, Dict[str, Any]] = {}
+        self._successful_models: Dict[str, Dict[str, Any]] = {}
 
     async def start(self):
         """Start the scheduled training service."""
@@ -121,17 +124,26 @@ class NHITSTrainingService:
         try:
             import httpx
             from datetime import datetime
+            from .forecast_service import forecast_service
 
             tf = timeframe.upper()
 
+            # Get timeframe-specific requirements
+            tf_config = forecast_service.get_timeframe_config(tf)
+            min_required = tf_config["input_size"] + tf_config["horizon"]
+
             # Calculate limit based on timeframe
             # M15 = 96 candles/day, H1 = 24 candles/day, D1 = 1 candle/day
+            # For D1: API returns rows per snapshot, need more rows to get unique days
             if tf == "M15":
-                limit = days * 96
+                limit = max(days * 96, min_required * 2)  # Extra buffer for missing data
             elif tf == "D1":
-                limit = days
+                # D1 requires 60 input + 7 horizon = 67 unique days
+                # Since API stores ~4 snapshots per hour, we need many more rows to get 67 unique days
+                # Request enough rows to ensure we get at least min_required unique days
+                limit = max(min_required * 96, 5000)  # ~52 days worth of snapshots at 96/day
             else:  # H1 default
-                limit = days * 24
+                limit = max(days * 24, min_required * 2)
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
@@ -363,6 +375,9 @@ class NHITSTrainingService:
         self._training_failed = 0
         self._training_skipped = 0
         self._training_current_symbol = None
+        # Reset failure/success tracking for new training run
+        self._failed_models = {}
+        self._successful_models = {}
 
         try:
             # Get symbols to train
@@ -409,11 +424,17 @@ class NHITSTrainingService:
                         result = await self.train_symbol(symbol, force=force, timeframe=tf)
 
                         if isinstance(result, Exception):
-                            results[model_key] = {
+                            error_info = {
                                 "success": False,
-                                "error": str(result)
+                                "error": str(result),
+                                "timeframe": tf,
+                                "symbol": symbol,
+                                "timestamp": datetime.utcnow().isoformat()
                             }
+                            results[model_key] = error_info
+                            self._failed_models[model_key] = error_info
                             self._training_failed += 1
+                            logger.warning(f"Training failed for {model_key}: {result}")
                         elif result.success:
                             if "skipped" in (result.error_message or "").lower():
                                 results[model_key] = {
@@ -424,29 +445,44 @@ class NHITSTrainingService:
                                 }
                                 self._training_skipped += 1
                             else:
-                                results[model_key] = {
+                                success_info = {
                                     "success": True,
                                     "samples": result.training_samples,
                                     "duration": result.training_duration_seconds,
                                     "loss": result.metrics.final_loss if result.metrics else None,
-                                    "timeframe": tf
+                                    "timeframe": tf,
+                                    "symbol": symbol,
+                                    "timestamp": datetime.utcnow().isoformat()
                                 }
+                                results[model_key] = success_info
+                                self._successful_models[model_key] = success_info
                                 self._training_successful += 1
                         else:
-                            results[model_key] = {
+                            error_info = {
                                 "success": False,
                                 "error": result.error_message,
-                                "timeframe": tf
+                                "timeframe": tf,
+                                "symbol": symbol,
+                                "samples_found": result.training_samples,
+                                "timestamp": datetime.utcnow().isoformat()
                             }
+                            results[model_key] = error_info
+                            self._failed_models[model_key] = error_info
                             self._training_failed += 1
+                            logger.warning(f"Training failed for {model_key}: {result.error_message}")
 
                     except Exception as e:
-                        results[model_key] = {
+                        error_info = {
                             "success": False,
                             "error": str(e),
-                            "timeframe": tf
+                            "timeframe": tf,
+                            "symbol": symbol,
+                            "timestamp": datetime.utcnow().isoformat()
                         }
+                        results[model_key] = error_info
+                        self._failed_models[model_key] = error_info
                         self._training_failed += 1
+                        logger.error(f"Exception during training {model_key}: {e}")
 
                     self._training_completed_symbols += 1
 
@@ -549,6 +585,38 @@ class NHITSTrainingService:
             }
 
         return status
+
+    def get_failed_models(self) -> Dict[str, Any]:
+        """Get details about failed model trainings from the current/last run."""
+        return {
+            "count": len(self._failed_models),
+            "models": self._failed_models,
+            "training_in_progress": self._training_in_progress,
+        }
+
+    def get_successful_models(self) -> Dict[str, Any]:
+        """Get details about successful model trainings from the current/last run."""
+        return {
+            "count": len(self._successful_models),
+            "models": self._successful_models,
+            "training_in_progress": self._training_in_progress,
+        }
+
+    def get_training_results(self) -> Dict[str, Any]:
+        """Get comprehensive results from the current/last training run."""
+        return {
+            "training_in_progress": self._training_in_progress,
+            "summary": {
+                "total": self._training_total_symbols,
+                "completed": self._training_completed_symbols,
+                "successful": self._training_successful,
+                "failed": self._training_failed,
+                "skipped": self._training_skipped,
+            },
+            "failed_models": self._failed_models,
+            "successful_models": self._successful_models,
+            "last_training_run": self._last_training_run.isoformat() if self._last_training_run else None,
+        }
 
 
 # Singleton instance
