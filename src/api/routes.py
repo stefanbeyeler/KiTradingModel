@@ -1,6 +1,7 @@
 """API routes for the KI Trading Model service."""
 # Health check now includes NHITS status
 
+import json
 from datetime import datetime
 from typing import Optional
 import torch
@@ -1766,6 +1767,155 @@ async def refresh_symbol_data(symbol_id: str):
         raise
     except Exception as e:
         logger.error(f"Failed to refresh symbol: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Config Export/Import ====================
+
+from ..services.config_export_service import (
+    config_export_service,
+    ConfigExportMetadata,
+    ConfigExportResult,
+    ConfigImportResult,
+)
+from fastapi.responses import JSONResponse
+
+config_router = APIRouter()  # Config Export/Import
+
+
+@config_router.get("/config/exports", response_model=list[ConfigExportMetadata])
+async def list_config_exports():
+    """List all available configuration exports."""
+    try:
+        exports = await config_export_service.list_exports()
+        return exports
+    except Exception as e:
+        logger.error(f"Failed to list exports: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@config_router.post("/config/export", response_model=ConfigExportResult)
+async def create_config_export(
+    description: Optional[str] = None,
+    include_symbols: bool = True,
+    include_strategies: bool = True,
+    filename: Optional[str] = None,
+):
+    """
+    Create a new configuration export.
+
+    Exports symbols and strategies to a JSON file stored in the data volume.
+    """
+    try:
+        result = await config_export_service.export_config(
+            description=description,
+            include_symbols=include_symbols,
+            include_strategies=include_strategies,
+            filename=filename,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Failed to create export: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@config_router.get("/config/exports/{filename}")
+async def get_config_export(filename: str):
+    """Get a specific export file for download."""
+    try:
+        data = await config_export_service.get_export(filename)
+        if data is None:
+            raise HTTPException(status_code=404, detail=f"Export '{filename}' not found")
+
+        return JSONResponse(
+            content=data,
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "application/json",
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get export: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@config_router.delete("/config/exports/{filename}")
+async def delete_config_export(filename: str):
+    """Delete a saved export file."""
+    try:
+        success = await config_export_service.delete_export(filename)
+        if not success:
+            raise HTTPException(status_code=404, detail=f"Export '{filename}' not found")
+        return {"success": True, "message": f"Export '{filename}' deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete export: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@config_router.post("/config/import", response_model=ConfigImportResult)
+async def import_config(
+    file: UploadFile = File(...),
+    import_symbols: bool = True,
+    import_strategies: bool = True,
+    overwrite_existing: bool = False,
+):
+    """
+    Import configuration from uploaded JSON file.
+
+    Args:
+        file: JSON file containing configuration data
+        import_symbols: Import symbols from file
+        import_strategies: Import strategies from file
+        overwrite_existing: Overwrite existing entries with same ID
+    """
+    try:
+        content = await file.read()
+        data = json.loads(content.decode("utf-8"))
+
+        result = await config_export_service.import_config(
+            data=data,
+            import_symbols=import_symbols,
+            import_strategies=import_strategies,
+            overwrite_existing=overwrite_existing,
+        )
+        return result
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON file: {str(e)}")
+    except Exception as e:
+        logger.error(f"Failed to import config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@config_router.post("/config/import/{filename}", response_model=ConfigImportResult)
+async def import_from_saved_export(
+    filename: str,
+    import_symbols: bool = True,
+    import_strategies: bool = True,
+    overwrite_existing: bool = False,
+):
+    """
+    Import configuration from a previously saved export file.
+
+    Args:
+        filename: Name of the saved export file
+        import_symbols: Import symbols from file
+        import_strategies: Import strategies from file
+        overwrite_existing: Overwrite existing entries with same ID
+    """
+    try:
+        result = await config_export_service.import_from_saved(
+            filename=filename,
+            import_symbols=import_symbols,
+            import_strategies=import_strategies,
+            overwrite_existing=overwrite_existing,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Failed to import from saved export: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

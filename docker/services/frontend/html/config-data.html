@@ -561,6 +561,7 @@
         <div class="tabs">
             <button class="tab-btn active" data-tab="symbols">Symbole</button>
             <button class="tab-btn" data-tab="strategies">Trading-Strategien</button>
+            <button class="tab-btn" data-tab="export">Export / Import</button>
         </div>
 
         <!-- Symbols Tab -->
@@ -621,6 +622,7 @@
                         <input type="checkbox" id="favorites-only" onchange="filterSymbols()">
                         <span>Nur Favoriten</span>
                     </label>
+                    <button class="btn btn-secondary btn-sm" onclick="clearFilters()" title="Filter zurücksetzen">✕ Filter</button>
                 </div>
 
                 <div class="table-container">
@@ -656,6 +658,123 @@
 
                 <div id="strategies-list">
                     <div class="loading"><div class="spinner"></div><br>Lade Strategien...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export/Import Tab -->
+        <div id="export-tab" class="tab-content">
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-value" id="export-count">-</div>
+                    <div class="stat-label">Gespeicherte Exports</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="export-symbols-total">-</div>
+                    <div class="stat-label">Symbole aktuell</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="export-strategies-total">-</div>
+                    <div class="stat-label">Strategien aktuell</div>
+                </div>
+            </div>
+
+            <!-- Export Section -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h2 class="card-title">Konfiguration exportieren</h2>
+                </div>
+                <div style="padding: 1rem;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Beschreibung (optional)</label>
+                            <input type="text" class="form-input" id="export-description" placeholder="z.B. Backup vor Update...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Dateiname (optional)</label>
+                            <input type="text" class="form-input" id="export-filename" placeholder="config_backup.json">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="export-symbols" checked>
+                                <span>Symbole exportieren</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="export-strategies" checked>
+                                <span>Strategien exportieren</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                        <button class="btn btn-primary" onclick="createExport()">Export erstellen & speichern</button>
+                        <button class="btn btn-success" onclick="downloadCurrentConfig()">Direkt herunterladen</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Import Section -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h2 class="card-title">Konfiguration importieren</h2>
+                </div>
+                <div style="padding: 1rem;">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 2;">
+                            <label class="form-label">JSON-Datei hochladen</label>
+                            <input type="file" class="form-input" id="import-file" accept=".json" style="padding: 0.5rem;">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="import-overwrite">
+                                <span>Bestehende überschreiben</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="import-symbols" checked>
+                                <span>Symbole importieren</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="import-strategies" checked>
+                                <span>Strategien importieren</span>
+                            </label>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="uploadAndImport()" style="margin-top: 1rem;">Datei importieren</button>
+                </div>
+            </div>
+
+            <!-- Saved Exports List -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Gespeicherte Exports</h2>
+                    <button class="btn btn-secondary" onclick="loadExports()">Aktualisieren</button>
+                </div>
+                <div class="table-container">
+                    <table id="exports-table">
+                        <thead>
+                            <tr>
+                                <th>Dateiname</th>
+                                <th>Beschreibung</th>
+                                <th>Erstellt</th>
+                                <th>Symbole</th>
+                                <th>Strategien</th>
+                                <th>Größe</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exports-body">
+                            <tr><td colspan="7" class="loading"><div class="spinner"></div><br>Lade Exports...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -930,6 +1049,17 @@
             }
         }
 
+        // Clear all filters
+        function clearFilters() {
+            document.getElementById('symbol-search').value = '';
+            document.getElementById('category-filter').value = '';
+            document.getElementById('subcategory-filter').value = '';
+            document.getElementById('status-filter').value = '';
+            document.getElementById('favorites-only').checked = false;
+            updateSubcategoryFilter();
+            filterSymbols();
+        }
+
         // Tab switching
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -954,7 +1084,8 @@
                 const response = await fetch(`${API_BASE}/managed-symbols?favorites_only=false&with_data_only=false`);
                 allSymbols = await response.json();
                 updateSymbolStats();
-                renderSymbols();
+                // Apply current filters instead of rendering all
+                filterSymbols();
             } catch (error) {
                 console.error('Error loading symbols:', error);
                 showToast('Fehler beim Laden der Symbole', 'error');
@@ -1287,9 +1418,273 @@
             }
         }
 
+        // ==================== Export/Import Functions ====================
+
+        let allExports = [];
+
+        async function loadExports() {
+            try {
+                const response = await fetch(`${API_BASE}/config/exports`);
+                allExports = await response.json();
+                renderExports();
+                updateExportStats();
+            } catch (error) {
+                console.error('Error loading exports:', error);
+                showToast('Fehler beim Laden der Exports', 'error');
+            }
+        }
+
+        function updateExportStats() {
+            document.getElementById('export-count').textContent = allExports.length;
+            document.getElementById('export-symbols-total').textContent = allSymbols.length;
+            document.getElementById('export-strategies-total').textContent = allStrategies.length;
+        }
+
+        function renderExports() {
+            const tbody = document.getElementById('exports-body');
+
+            if (allExports.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="empty-state">
+                    <div class="empty-state-icon">&#128230;</div>
+                    Keine gespeicherten Exports vorhanden
+                </td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = allExports.map(e => `
+                <tr data-filename="${e.filename}">
+                    <td><strong>${e.filename}</strong></td>
+                    <td>${e.description || '-'}</td>
+                    <td>${formatDate(e.created_at)}</td>
+                    <td>${e.symbols_count}</td>
+                    <td>${e.strategies_count}</td>
+                    <td>${formatFileSize(e.file_size)}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="downloadExport('${e.filename}')" title="Herunterladen">&#8681;</button>
+                        <button class="btn btn-primary btn-sm" onclick="importFromSaved('${e.filename}')" title="Importieren">&#8678;</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteExport('${e.filename}')" title="Löschen">&#10006;</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleString('de-DE', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes) return '-';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        async function createExport() {
+            const description = document.getElementById('export-description').value;
+            const filename = document.getElementById('export-filename').value;
+            const includeSymbols = document.getElementById('export-symbols').checked;
+            const includeStrategies = document.getElementById('export-strategies').checked;
+
+            if (!includeSymbols && !includeStrategies) {
+                showToast('Bitte mindestens eine Option wählen', 'error');
+                return;
+            }
+
+            try {
+                showToast('Erstelle Export...', 'info');
+                const params = new URLSearchParams();
+                if (description) params.append('description', description);
+                if (filename) params.append('filename', filename);
+                params.append('include_symbols', includeSymbols);
+                params.append('include_strategies', includeStrategies);
+
+                const response = await fetch(`${API_BASE}/config/export?${params}`, { method: 'POST' });
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    document.getElementById('export-description').value = '';
+                    document.getElementById('export-filename').value = '';
+                    await loadExports();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Export error:', error);
+                showToast('Fehler beim Export', 'error');
+            }
+        }
+
+        async function downloadCurrentConfig() {
+            const includeSymbols = document.getElementById('export-symbols').checked;
+            const includeStrategies = document.getElementById('export-strategies').checked;
+
+            if (!includeSymbols && !includeStrategies) {
+                showToast('Bitte mindestens eine Option wählen', 'error');
+                return;
+            }
+
+            try {
+                // Create config object locally
+                const config = {
+                    version: '1.0',
+                    exported_at: new Date().toISOString(),
+                    description: document.getElementById('export-description').value || 'Direkter Download',
+                    symbols: includeSymbols ? allSymbols : [],
+                    strategies: includeStrategies ? allStrategies : []
+                };
+
+                const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = document.getElementById('export-filename').value || `config_${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Konfiguration heruntergeladen', 'success');
+            } catch (error) {
+                console.error('Download error:', error);
+                showToast('Fehler beim Download', 'error');
+            }
+        }
+
+        async function downloadExport(filename) {
+            try {
+                const response = await fetch(`${API_BASE}/config/exports/${filename}`);
+                const data = await response.json();
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Export heruntergeladen', 'success');
+            } catch (error) {
+                console.error('Download error:', error);
+                showToast('Fehler beim Download', 'error');
+            }
+        }
+
+        async function deleteExport(filename) {
+            if (!confirm(`Export "${filename}" wirklich löschen?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/config/exports/${filename}`, { method: 'DELETE' });
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Export gelöscht', 'success');
+                    await loadExports();
+                } else {
+                    showToast('Fehler beim Löschen', 'error');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                showToast('Fehler beim Löschen', 'error');
+            }
+        }
+
+        async function uploadAndImport() {
+            const fileInput = document.getElementById('import-file');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showToast('Bitte eine Datei auswählen', 'error');
+                return;
+            }
+
+            const importSymbols = document.getElementById('import-symbols').checked;
+            const importStrategies = document.getElementById('import-strategies').checked;
+            const overwrite = document.getElementById('import-overwrite').checked;
+
+            if (!importSymbols && !importStrategies) {
+                showToast('Bitte mindestens eine Import-Option wählen', 'error');
+                return;
+            }
+
+            try {
+                showToast('Importiere Konfiguration...', 'info');
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const params = new URLSearchParams();
+                params.append('import_symbols', importSymbols);
+                params.append('import_strategies', importStrategies);
+                params.append('overwrite_existing', overwrite);
+
+                const response = await fetch(`${API_BASE}/config/import?${params}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    fileInput.value = '';
+                    // Reload data
+                    await loadSymbols();
+                    await loadStrategies();
+                    updateExportStats();
+                } else {
+                    showToast(result.message, 'error');
+                }
+
+                if (result.errors && result.errors.length > 0) {
+                    console.warn('Import warnings:', result.errors);
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                showToast('Fehler beim Import', 'error');
+            }
+        }
+
+        async function importFromSaved(filename) {
+            const overwrite = confirm('Bestehende Einträge überschreiben?\n\nOK = Überschreiben\nAbbrechen = Nur neue hinzufügen');
+
+            try {
+                showToast('Importiere aus gespeichertem Export...', 'info');
+
+                const params = new URLSearchParams();
+                params.append('import_symbols', true);
+                params.append('import_strategies', true);
+                params.append('overwrite_existing', overwrite);
+
+                const response = await fetch(`${API_BASE}/config/import/${filename}?${params}`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    await loadSymbols();
+                    await loadStrategies();
+                    updateExportStats();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                showToast('Fehler beim Import', 'error');
+            }
+        }
+
         // Initialize
         loadSymbols();
         loadStrategies();
+        loadExports();
     </script>
 </body>
 </html>
