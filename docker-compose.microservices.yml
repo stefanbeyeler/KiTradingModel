@@ -180,13 +180,14 @@ services:
     volumes:
       - ./src:/app/src:ro
       - ./logs:/app/logs
-      - ./data/symbols:/app/data/symbols
+      - data-storage:/app/data
     environment:
       - SERVICE_NAME=data
       - PORT=${DATA_SERVICE_PORT:-3001}
       - ROOT_PATH=/data
       - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
       - OLLAMA_HOST=http://host.docker.internal:11434
+      - FAISS_PERSIST_DIRECTORY=/app/data/faiss
     networks:
       - trading-net
     extra_hosts:
@@ -207,6 +208,8 @@ volumes:
   models-data:
     driver: local
   rag-data:
+    driver: local
+  data-storage:
     driver: local
 
 networks:

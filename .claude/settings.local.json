@@ -129,7 +129,9 @@
       "Bash(trading-frontend)",
       "Bash(docker network:*)",
       "Bash(docker network inspect:*)",
-      "Bash(trading-nhits:cu130)"
+      "Bash(trading-nhits:cu130)",
+      "Bash(docker cp:*)",
+      "Bash(docker volume ls:*)"
     ],
     "deny": [],
     "ask": []

@@ -71,14 +71,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(general_router, prefix="/api/v1", tags=["General"])
-app.include_router(symbol_router, prefix="/api/v1", tags=["📈 Symbol Management"])
-app.include_router(strategy_router, prefix="/api/v1", tags=["🎯 Trading Strategies"])
-app.include_router(sync_router, prefix="/api/v1", tags=["🔄 TimescaleDB Sync"])
-app.include_router(system_router, prefix="/api/v1", tags=["🖥️ System & Monitoring"])
-app.include_router(query_log_router, prefix="/api/v1", tags=["📝 Query Logs & Analytics"])
-app.include_router(twelvedata_router, prefix="/api/v1", tags=["📈 Twelve Data API"])
+# Include routers - Reihenfolge bestimmt Swagger UI Darstellung
+app.include_router(system_router, prefix="/api/v1", tags=["1. System & Monitoring"])
+app.include_router(symbol_router, prefix="/api/v1", tags=["2. Symbol Management (EasyInsight)"])
+app.include_router(strategy_router, prefix="/api/v1", tags=["3. Trading Strategies"])
+app.include_router(twelvedata_router, prefix="/api/v1", tags=["4. Twelve Data API"])
+app.include_router(sync_router, prefix="/api/v1", tags=["5. TimescaleDB Sync"])
+app.include_router(query_log_router, prefix="/api/v1", tags=["6. Query Logs & Analytics"])
+app.include_router(general_router, prefix="/api/v1", tags=["7. General"])
 
 
 @app.on_event("startup")

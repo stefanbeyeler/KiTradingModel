@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Service - Konfiguration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+        }
+
+        .tab-btn.active {
+            background: rgba(100, 200, 255, 0.15);
+            color: #64c8ff;
+            border-bottom: 2px solid #64c8ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.6rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.9rem;
+        }
+
+        .search-box::placeholder {
+            color: #888;
+        }
+
+        .filter-select {
+            padding: 0.6rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .filter-select option {
+            background: #1a1a2e;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.2);
+            position: sticky;
+            top: 0;
+            font-weight: 500;
+            color: #a0a0a0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-crypto { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .badge-forex { background: rgba(33, 150, 243, 0.2); color: #64b5f6; }
+        .badge-indices { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
+        .badge-metals { background: rgba(158, 158, 158, 0.2); color: #bdbdbd; }
+        .badge-extra { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-active { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-inactive { background: rgba(158, 158, 158, 0.2); color: #9e9e9e; }
+
+        /* Star for favorites */
+        .favorite-star {
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+
+        .favorite-star:hover {
+            transform: scale(1.2);
+        }
+
+        .favorite-star.active {
+            color: #ffc107;
+        }
+
+        .favorite-star:not(.active) {
+            color: #555;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            color: #64c8ff;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #a0a0a0;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.9rem;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        .form-select option {
+            background: #1a1a2e;
+        }
+
+        .form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-checkbox input {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            z-index: 2000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success { background: #2e7d32; }
+        .toast-error { background: #c62828; }
+        .toast-info { background: #1565c0; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(100, 200, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #64c8ff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Strategy card */
+        .strategy-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 3px solid #64c8ff;
+        }
+
+        .strategy-card.default {
+            border-left-color: #81c784;
+        }
+
+        .strategy-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .strategy-name {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .strategy-badges {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .strategy-desc {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 0.75rem;
+        }
+
+        .strategy-meta {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+
+        .strategy-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        /* Risk level colors */
+        .risk-low { color: #81c784; }
+        .risk-moderate { color: #ffb74d; }
+        .risk-high { color: #e57373; }
+        .risk-aggressive { color: #f44336; }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <span class="header-title">Data Service Konfiguration</span>
+            <span class="service-badge">Port 3001</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="symbols">Symbole</button>
+            <button class="tab-btn" data-tab="strategies">Trading-Strategien</button>
+        </div>
+
+        <!-- Symbols Tab -->
+        <div id="symbols-tab" class="tab-content active">
+            <div class="stats-bar" id="symbol-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="total-symbols">-</div>
+                    <div class="stat-label">Gesamt</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="active-symbols">-</div>
+                    <div class="stat-label">Aktiv</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="favorite-symbols">-</div>
+                    <div class="stat-label">Favoriten</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="crypto-count">-</div>
+                    <div class="stat-label">Crypto</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="forex-count">-</div>
+                    <div class="stat-label">Forex</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Symbol-Verwaltung</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-success" onclick="importFromEasyInsight()">EasyInsight Import</button>
+                        <button class="btn btn-primary" onclick="openSymbolModal()">+ Neues Symbol</button>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <input type="text" class="search-box" id="symbol-search" placeholder="Symbol suchen..." oninput="filterSymbols()">
+                    <select class="filter-select" id="category-filter" onchange="filterSymbols()">
+                        <option value="">Alle Kategorien</option>
+                        <option value="Crypto">Crypto</option>
+                        <option value="Forex">Forex</option>
+                        <option value="Indices">Indices</option>
+                        <option value="Metals">Metals</option>
+                        <option value="Extra">Extra</option>
+                    </select>
+                    <select class="filter-select" id="status-filter" onchange="filterSymbols()">
+                        <option value="">Alle Status</option>
+                        <option value="active">Aktiv</option>
+                        <option value="inactive">Inaktiv</option>
+                    </select>
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="favorites-only" onchange="filterSymbols()">
+                        <span>Nur Favoriten</span>
+                    </label>
+                </div>
+
+                <div class="table-container">
+                    <table id="symbols-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"></th>
+                                <th>Symbol</th>
+                                <th>Anzeigename</th>
+                                <th>Kategorie</th>
+                                <th>Beschreibung</th>
+                                <th>Status</th>
+                                <th>Datenpunkte</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="symbols-body">
+                            <tr><td colspan="8" class="loading"><div class="spinner"></div><br>Lade Symbole...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Strategies Tab -->
+        <div id="strategies-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Trading-Strategien</h2>
+                    <button class="btn btn-primary" onclick="openStrategyModal()">+ Neue Strategie</button>
+                </div>
+
+                <div id="strategies-list">
+                    <div class="loading"><div class="spinner"></div><br>Lade Strategien...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Symbol Modal -->
+    <div class="modal-overlay" id="symbol-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="symbol-modal-title">Symbol bearbeiten</h3>
+                <button class="modal-close" onclick="closeSymbolModal()">&times;</button>
+            </div>
+            <form id="symbol-form" onsubmit="saveSymbol(event)">
+                <input type="hidden" id="symbol-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Symbol *</label>
+                        <input type="text" class="form-input" id="symbol-name" required placeholder="z.B. BTCUSD">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Anzeigename</label>
+                        <input type="text" class="form-input" id="symbol-display-name" placeholder="z.B. Bitcoin/USD">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Kategorie *</label>
+                        <select class="form-select" id="symbol-category" required>
+                            <option value="Crypto">Crypto</option>
+                            <option value="Forex">Forex</option>
+                            <option value="Indices">Indices</option>
+                            <option value="Metals">Metals</option>
+                            <option value="Extra">Extra</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="symbol-status">
+                            <option value="active">Aktiv</option>
+                            <option value="inactive">Inaktiv</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Beschreibung</label>
+                    <textarea class="form-textarea" id="symbol-description" placeholder="Optionale Beschreibung des Symbols..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Basiswahrung</label>
+                        <input type="text" class="form-input" id="symbol-base-currency" placeholder="z.B. BTC">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gegenwahrung</label>
+                        <input type="text" class="form-input" id="symbol-quote-currency" placeholder="z.B. USD">
+                    </div>
+                </div>
+                <div class="form-checkbox" style="margin-bottom: 1rem;">
+                    <input type="checkbox" id="symbol-favorite">
+                    <label>Als Favorit markieren</label>
+                </div>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-danger" onclick="closeSymbolModal()">Abbrechen</button>
+                    <button type="submit" class="btn btn-success">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Strategy Modal -->
+    <div class="modal-overlay" id="strategy-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="strategy-modal-title">Strategie bearbeiten</h3>
+                <button class="modal-close" onclick="closeStrategyModal()">&times;</button>
+            </div>
+            <form id="strategy-form" onsubmit="saveStrategy(event)">
+                <input type="hidden" id="strategy-id">
+                <div class="form-group">
+                    <label class="form-label">Name *</label>
+                    <input type="text" class="form-input" id="strategy-name" required placeholder="Strategiename">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Beschreibung</label>
+                    <textarea class="form-textarea" id="strategy-description" placeholder="Beschreibung der Strategie..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Strategietyp</label>
+                        <select class="form-select" id="strategy-type">
+                            <option value="trend_following">Trend Following</option>
+                            <option value="mean_reversion">Mean Reversion</option>
+                            <option value="momentum">Momentum</option>
+                            <option value="breakout">Breakout</option>
+                            <option value="scalping">Scalping</option>
+                            <option value="swing">Swing Trading</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Risikostufe</label>
+                        <select class="form-select" id="strategy-risk">
+                            <option value="low">Niedrig</option>
+                            <option value="moderate">Moderat</option>
+                            <option value="high">Hoch</option>
+                            <option value="aggressive">Aggressiv</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Min. Kaufsignale</label>
+                        <input type="number" class="form-input" id="strategy-min-buy" value="3" min="1" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Min. Verkaufsignale</label>
+                        <input type="number" class="form-input" id="strategy-min-sell" value="3" min="1" max="10">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Stop-Loss (ATR Mult.)</label>
+                        <input type="number" class="form-input" id="strategy-stop-loss" value="2.0" min="0.5" max="5" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Take-Profit (ATR Mult.)</label>
+                        <input type="number" class="form-input" id="strategy-take-profit" value="3.0" min="1" max="10" step="0.1">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-danger" onclick="closeStrategyModal()">Abbrechen</button>
+                    <button type="submit" class="btn btn-success">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <footer>
+        KI Trading Model - Data Service Konfiguration
+    </footer>
+
+    <script>
+        const API_BASE = '/data/api/v1';
+        let allSymbols = [];
+        let allStrategies = [];
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab + '-tab').classList.add('active');
+            });
+        });
+
+        // Toast notifications
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast toast-' + type + ' show';
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Load symbols
+        async function loadSymbols() {
+            try {
+                const response = await fetch(`${API_BASE}/managed-symbols?favorites_only=false&with_data_only=false`);
+                allSymbols = await response.json();
+                updateSymbolStats();
+                renderSymbols();
+            } catch (error) {
+                console.error('Error loading symbols:', error);
+                showToast('Fehler beim Laden der Symbole', 'error');
+            }
+        }
+
+        function updateSymbolStats() {
+            const active = allSymbols.filter(s => s.status === 'active').length;
+            const favorites = allSymbols.filter(s => s.is_favorite).length;
+            const crypto = allSymbols.filter(s => s.category === 'Crypto').length;
+            const forex = allSymbols.filter(s => s.category === 'Forex').length;
+
+            document.getElementById('total-symbols').textContent = allSymbols.length;
+            document.getElementById('active-symbols').textContent = active;
+            document.getElementById('favorite-symbols').textContent = favorites;
+            document.getElementById('crypto-count').textContent = crypto;
+            document.getElementById('forex-count').textContent = forex;
+        }
+
+        function filterSymbols() {
+            const search = document.getElementById('symbol-search').value.toLowerCase();
+            const category = document.getElementById('category-filter').value;
+            const status = document.getElementById('status-filter').value;
+            const favoritesOnly = document.getElementById('favorites-only').checked;
+
+            const filtered = allSymbols.filter(s => {
+                if (search && !s.symbol.toLowerCase().includes(search) &&
+                    !(s.display_name || '').toLowerCase().includes(search)) return false;
+                if (category && s.category !== category) return false;
+                if (status && s.status !== status) return false;
+                if (favoritesOnly && !s.is_favorite) return false;
+                return true;
+            });
+
+            renderSymbols(filtered);
+        }
+
+        function renderSymbols(symbols = allSymbols) {
+            const tbody = document.getElementById('symbols-body');
+
+            if (symbols.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="empty-state">
+                    <div class="empty-state-icon">&#128202;</div>
+                    Keine Symbole gefunden
+                </td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = symbols.map(s => `
+                <tr data-id="${s.id}">
+                    <td>
+                        <span class="favorite-star ${s.is_favorite ? 'active' : ''}"
+                              onclick="toggleFavorite('${s.id}', ${!s.is_favorite})">
+                            ${s.is_favorite ? '&#9733;' : '&#9734;'}
+                        </span>
+                    </td>
+                    <td><strong>${s.symbol}</strong></td>
+                    <td>${s.display_name || '-'}</td>
+                    <td><span class="badge badge-${s.category.toLowerCase()}">${s.category}</span></td>
+                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${s.description || '-'}</td>
+                    <td><span class="badge badge-${s.status}">${s.status === 'active' ? 'Aktiv' : 'Inaktiv'}</span></td>
+                    <td>${s.total_records ? s.total_records.toLocaleString() : '-'}</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="editSymbol('${s.id}')">Bearbeiten</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteSymbol('${s.id}')">Loschen</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function toggleFavorite(id, isFavorite) {
+            try {
+                await fetch(`${API_BASE}/managed-symbols/${id}/favorite`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_favorite: isFavorite })
+                });
+                await loadSymbols();
+                showToast(isFavorite ? 'Favorit hinzugefugt' : 'Favorit entfernt', 'success');
+            } catch (error) {
+                showToast('Fehler beim Aktualisieren', 'error');
+            }
+        }
+
+        function openSymbolModal(symbol = null) {
+            document.getElementById('symbol-modal-title').textContent = symbol ? 'Symbol bearbeiten' : 'Neues Symbol';
+            document.getElementById('symbol-id').value = symbol?.id || '';
+            document.getElementById('symbol-name').value = symbol?.symbol || '';
+            document.getElementById('symbol-display-name').value = symbol?.display_name || '';
+            document.getElementById('symbol-category').value = symbol?.category || 'Forex';
+            document.getElementById('symbol-status').value = symbol?.status || 'active';
+            document.getElementById('symbol-description').value = symbol?.description || '';
+            document.getElementById('symbol-base-currency').value = symbol?.base_currency || '';
+            document.getElementById('symbol-quote-currency').value = symbol?.quote_currency || '';
+            document.getElementById('symbol-favorite').checked = symbol?.is_favorite || false;
+            document.getElementById('symbol-name').disabled = !!symbol;
+            document.getElementById('symbol-modal').classList.add('active');
+        }
+
+        function closeSymbolModal() {
+            document.getElementById('symbol-modal').classList.remove('active');
+        }
+
+        function editSymbol(id) {
+            const symbol = allSymbols.find(s => s.id === id);
+            if (symbol) openSymbolModal(symbol);
+        }
+
+        async function saveSymbol(event) {
+            event.preventDefault();
+            const id = document.getElementById('symbol-id').value;
+            const data = {
+                symbol: document.getElementById('symbol-name').value,
+                display_name: document.getElementById('symbol-display-name').value || null,
+                category: document.getElementById('symbol-category').value,
+                status: document.getElementById('symbol-status').value,
+                description: document.getElementById('symbol-description').value || null,
+                base_currency: document.getElementById('symbol-base-currency').value || null,
+                quote_currency: document.getElementById('symbol-quote-currency').value || null,
+                is_favorite: document.getElementById('symbol-favorite').checked
+            };
+
+            try {
+                const url = id ? `${API_BASE}/managed-symbols/${id}` : `${API_BASE}/managed-symbols`;
+                const method = id ? 'PUT' : 'POST';
+                await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                closeSymbolModal();
+                await loadSymbols();
+                showToast('Symbol gespeichert', 'success');
+            } catch (error) {
+                showToast('Fehler beim Speichern', 'error');
+            }
+        }
+
+        async function deleteSymbol(id) {
+            if (!confirm('Symbol wirklich loschen?')) return;
+            try {
+                await fetch(`${API_BASE}/managed-symbols/${id}`, { method: 'DELETE' });
+                await loadSymbols();
+                showToast('Symbol geloscht', 'success');
+            } catch (error) {
+                showToast('Fehler beim Loschen', 'error');
+            }
+        }
+
+        async function importFromEasyInsight() {
+            if (!confirm('Alle Symbole von EasyInsight importieren?')) return;
+            try {
+                showToast('Importiere Symbole...', 'info');
+                const response = await fetch(`${API_BASE}/managed-symbols/import`, { method: 'POST' });
+                const result = await response.json();
+                await loadSymbols();
+                showToast(`${result.imported} Symbole importiert, ${result.updated} aktualisiert`, 'success');
+            } catch (error) {
+                showToast('Fehler beim Import', 'error');
+            }
+        }
+
+        // Strategies
+        async function loadStrategies() {
+            try {
+                const response = await fetch(`${API_BASE}/strategies`);
+                allStrategies = await response.json();
+                renderStrategies();
+            } catch (error) {
+                console.error('Error loading strategies:', error);
+                showToast('Fehler beim Laden der Strategien', 'error');
+            }
+        }
+
+        function renderStrategies() {
+            const container = document.getElementById('strategies-list');
+
+            if (allStrategies.length === 0) {
+                container.innerHTML = `<div class="empty-state">
+                    <div class="empty-state-icon">&#128200;</div>
+                    Keine Strategien vorhanden
+                </div>`;
+                return;
+            }
+
+            container.innerHTML = allStrategies.map(s => `
+                <div class="strategy-card ${s.is_default ? 'default' : ''}">
+                    <div class="strategy-header">
+                        <div>
+                            <div class="strategy-name">${s.name}</div>
+                        </div>
+                        <div class="strategy-badges">
+                            ${s.is_default ? '<span class="badge badge-active">Standard</span>' : ''}
+                            <span class="badge risk-${s.risk_level}">${getRiskLabel(s.risk_level)}</span>
+                            <span class="badge badge-forex">${getTypeLabel(s.strategy_type)}</span>
+                        </div>
+                    </div>
+                    <div class="strategy-desc">${s.description || 'Keine Beschreibung'}</div>
+                    <div class="strategy-meta">
+                        <span>Min. Kaufsignale: ${s.min_buy_signals}</span>
+                        <span>Min. Verkaufsignale: ${s.min_sell_signals}</span>
+                        <span>Stop-Loss: ${s.stop_loss_atr_multiplier}x ATR</span>
+                        <span>Take-Profit: ${s.take_profit_atr_multiplier}x ATR</span>
+                    </div>
+                    <div class="strategy-actions">
+                        <button class="btn btn-primary btn-sm" onclick="editStrategy('${s.id}')">Bearbeiten</button>
+                        ${!s.is_default ? `<button class="btn btn-success btn-sm" onclick="setDefault('${s.id}')">Als Standard</button>` : ''}
+                        <button class="btn btn-warning btn-sm" onclick="exportStrategy('${s.id}')">Exportieren</button>
+                        ${!s.id.startsWith('default_') ? `<button class="btn btn-danger btn-sm" onclick="deleteStrategy('${s.id}')">Loschen</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getRiskLabel(risk) {
+            const labels = { low: 'Niedrig', moderate: 'Moderat', high: 'Hoch', aggressive: 'Aggressiv' };
+            return labels[risk] || risk;
+        }
+
+        function getTypeLabel(type) {
+            const labels = {
+                trend_following: 'Trend Following',
+                mean_reversion: 'Mean Reversion',
+                momentum: 'Momentum',
+                breakout: 'Breakout',
+                scalping: 'Scalping',
+                swing: 'Swing Trading',
+                custom: 'Custom'
+            };
+            return labels[type] || type;
+        }
+
+        function openStrategyModal(strategy = null) {
+            document.getElementById('strategy-modal-title').textContent = strategy ? 'Strategie bearbeiten' : 'Neue Strategie';
+            document.getElementById('strategy-id').value = strategy?.id || '';
+            document.getElementById('strategy-name').value = strategy?.name || '';
+            document.getElementById('strategy-description').value = strategy?.description || '';
+            document.getElementById('strategy-type').value = strategy?.strategy_type || 'custom';
+            document.getElementById('strategy-risk').value = strategy?.risk_level || 'moderate';
+            document.getElementById('strategy-min-buy').value = strategy?.min_buy_signals || 3;
+            document.getElementById('strategy-min-sell').value = strategy?.min_sell_signals || 3;
+            document.getElementById('strategy-stop-loss').value = strategy?.stop_loss_atr_multiplier || 2.0;
+            document.getElementById('strategy-take-profit').value = strategy?.take_profit_atr_multiplier || 3.0;
+            document.getElementById('strategy-modal').classList.add('active');
+        }
+
+        function closeStrategyModal() {
+            document.getElementById('strategy-modal').classList.remove('active');
+        }
+
+        function editStrategy(id) {
+            const strategy = allStrategies.find(s => s.id === id);
+            if (strategy) openStrategyModal(strategy);
+        }
+
+        async function saveStrategy(event) {
+            event.preventDefault();
+            const id = document.getElementById('strategy-id').value;
+            const data = {
+                id: id || 'custom_' + Date.now(),
+                name: document.getElementById('strategy-name').value,
+                description: document.getElementById('strategy-description').value,
+                strategy_type: document.getElementById('strategy-type').value,
+                risk_level: document.getElementById('strategy-risk').value,
+                min_buy_signals: parseInt(document.getElementById('strategy-min-buy').value),
+                min_sell_signals: parseInt(document.getElementById('strategy-min-sell').value),
+                stop_loss_atr_multiplier: parseFloat(document.getElementById('strategy-stop-loss').value),
+                take_profit_atr_multiplier: parseFloat(document.getElementById('strategy-take-profit').value),
+                indicators: []
+            };
+
+            try {
+                const url = id ? `${API_BASE}/strategies/${id}` : `${API_BASE}/strategies`;
+                const method = id ? 'PUT' : 'POST';
+                await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                closeStrategyModal();
+                await loadStrategies();
+                showToast('Strategie gespeichert', 'success');
+            } catch (error) {
+                showToast('Fehler beim Speichern', 'error');
+            }
+        }
+
+        async function deleteStrategy(id) {
+            if (!confirm('Strategie wirklich loschen?')) return;
+            try {
+                await fetch(`${API_BASE}/strategies/${id}`, { method: 'DELETE' });
+                await loadStrategies();
+                showToast('Strategie geloscht', 'success');
+            } catch (error) {
+                showToast('Fehler beim Loschen', 'error');
+            }
+        }
+
+        async function setDefault(id) {
+            try {
+                await fetch(`${API_BASE}/strategies/${id}/set-default`, { method: 'POST' });
+                await loadStrategies();
+                showToast('Standard-Strategie gesetzt', 'success');
+            } catch (error) {
+                showToast('Fehler beim Setzen', 'error');
+            }
+        }
+
+        async function exportStrategy(id) {
+            try {
+                const response = await fetch(`${API_BASE}/strategies/${id}/export`);
+                const text = await response.text();
+                const blob = new Blob([text], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `strategy_${id}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Strategie exportiert', 'success');
+            } catch (error) {
+                showToast('Fehler beim Export', 'error');
+            }
+        }
+
+        // Initialize
+        loadSymbols();
+        loadStrategies();
+    </script>
+</body>
+</html>
