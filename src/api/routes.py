@@ -21,6 +21,7 @@ from ..models.trading_data import (
 from ..models.symbol_data import (
     ManagedSymbol,
     SymbolCategory,
+    SymbolSubcategory,
     SymbolStatus,
     SymbolCreateRequest,
     SymbolUpdateRequest,

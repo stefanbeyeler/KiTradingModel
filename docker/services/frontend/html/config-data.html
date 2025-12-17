@@ -294,9 +294,11 @@
 
         .badge-crypto { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
         .badge-forex { background: rgba(33, 150, 243, 0.2); color: #64b5f6; }
-        .badge-indices { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
-        .badge-metals { background: rgba(158, 158, 158, 0.2); color: #bdbdbd; }
-        .badge-extra { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-index { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
+        .badge-commodity { background: rgba(158, 158, 158, 0.2); color: #bdbdbd; }
+        .badge-stock { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-etf { background: rgba(0, 188, 212, 0.2); color: #4dd0e1; }
+        .badge-other { background: rgba(121, 85, 72, 0.2); color: #a1887f; }
         .badge-active { background: rgba(76, 175, 80, 0.2); color: #81c784; }
         .badge-inactive { background: rgba(158, 158, 158, 0.2); color: #9e9e9e; }
 
@@ -597,13 +599,18 @@
 
                 <div class="toolbar">
                     <input type="text" class="search-box" id="symbol-search" placeholder="Symbol suchen..." oninput="filterSymbols()">
-                    <select class="filter-select" id="category-filter" onchange="filterSymbols()">
+                    <select class="filter-select" id="category-filter" onchange="updateSubcategoryFilter(); filterSymbols()">
                         <option value="">Alle Kategorien</option>
-                        <option value="Crypto">Crypto</option>
-                        <option value="Forex">Forex</option>
-                        <option value="Indices">Indices</option>
-                        <option value="Metals">Metals</option>
-                        <option value="Extra">Extra</option>
+                        <option value="crypto">Crypto</option>
+                        <option value="forex">Forex</option>
+                        <option value="index">Indices</option>
+                        <option value="commodity">Metals/Commodities</option>
+                        <option value="stock">Stocks</option>
+                        <option value="etf">ETFs</option>
+                        <option value="other">Andere</option>
+                    </select>
+                    <select class="filter-select" id="subcategory-filter" onchange="filterSymbols()">
+                        <option value="">Alle Sub-Kategorien</option>
                     </select>
                     <select class="filter-select" id="status-filter" onchange="filterSymbols()">
                         <option value="">Alle Status</option>
@@ -624,6 +631,7 @@
                                 <th>Symbol</th>
                                 <th>Anzeigename</th>
                                 <th>Kategorie</th>
+                                <th>Sub-Kategorie</th>
                                 <th>Beschreibung</th>
                                 <th>Status</th>
                                 <th>Datenpunkte</th>
@@ -631,7 +639,7 @@
                             </tr>
                         </thead>
                         <tbody id="symbols-body">
-                            <tr><td colspan="8" class="loading"><div class="spinner"></div><br>Lade Symbole...</td></tr>
+                            <tr><td colspan="9" class="loading"><div class="spinner"></div><br>Lade Symbole...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -675,14 +683,24 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Kategorie *</label>
-                        <select class="form-select" id="symbol-category" required>
-                            <option value="Crypto">Crypto</option>
-                            <option value="Forex">Forex</option>
-                            <option value="Indices">Indices</option>
-                            <option value="Metals">Metals</option>
-                            <option value="Extra">Extra</option>
+                        <select class="form-select" id="symbol-category" required onchange="updateModalSubcategories()">
+                            <option value="crypto">Crypto</option>
+                            <option value="forex">Forex</option>
+                            <option value="index">Indices</option>
+                            <option value="commodity">Metals/Commodities</option>
+                            <option value="stock">Stocks</option>
+                            <option value="etf">ETFs</option>
+                            <option value="other">Andere</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Sub-Kategorie</label>
+                        <select class="form-select" id="symbol-subcategory">
+                            <option value="">Keine</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Status</label>
                         <select class="form-select" id="symbol-status">
@@ -690,6 +708,7 @@
                             <option value="inactive">Inaktiv</option>
                         </select>
                     </div>
+                    <div class="form-group"></div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Beschreibung</label>
@@ -797,6 +816,120 @@
         let allSymbols = [];
         let allStrategies = [];
 
+        // Subcategory mapping per category (using backend enum values)
+        const SUBCATEGORIES = {
+            'crypto': [
+                { value: 'large_cap', label: 'Large Cap' },
+                { value: 'mid_cap', label: 'Mid Cap' },
+                { value: 'small_cap', label: 'Small Cap' },
+                { value: 'defi', label: 'DeFi' },
+                { value: 'meme', label: 'Meme' },
+                { value: 'stablecoin', label: 'Stablecoin' },
+                { value: 'other', label: 'Andere' }
+            ],
+            'forex': [
+                { value: 'major', label: 'Major' },
+                { value: 'minor', label: 'Minor' },
+                { value: 'exotic', label: 'Exotic' },
+                { value: 'other', label: 'Andere' }
+            ],
+            'index': [
+                { value: 'global', label: 'Global' },
+                { value: 'regional', label: 'Regional' },
+                { value: 'sector', label: 'Sektor' },
+                { value: 'other', label: 'Andere' }
+            ],
+            'commodity': [
+                { value: 'precious_metal', label: 'Edelmetall' },
+                { value: 'base_metal', label: 'Basismetall' },
+                { value: 'agriculture', label: 'Agrar' },
+                { value: 'energy_commodity', label: 'Energie' },
+                { value: 'other', label: 'Andere' }
+            ],
+            'stock': [
+                { value: 'tech', label: 'Tech' },
+                { value: 'finance', label: 'Finanzen' },
+                { value: 'healthcare', label: 'Gesundheit' },
+                { value: 'energy', label: 'Energie' },
+                { value: 'consumer', label: 'Konsum' },
+                { value: 'industrial', label: 'Industrie' },
+                { value: 'other', label: 'Andere' }
+            ],
+            'etf': [
+                { value: 'global', label: 'Global' },
+                { value: 'sector', label: 'Sektor' },
+                { value: 'other', label: 'Andere' }
+            ],
+            'other': [
+                { value: 'other', label: 'Andere' }
+            ]
+        };
+
+        // Category display names
+        const CATEGORY_LABELS = {
+            'crypto': 'Crypto',
+            'forex': 'Forex',
+            'index': 'Indices',
+            'commodity': 'Metals/Commodities',
+            'stock': 'Stocks',
+            'etf': 'ETFs',
+            'other': 'Andere'
+        };
+
+        // Get subcategory label from value
+        function getSubcategoryLabel(category, subcategory) {
+            if (!subcategory || !category) return '-';
+            const subs = SUBCATEGORIES[category] || [];
+            const found = subs.find(s => s.value === subcategory);
+            return found ? found.label : subcategory;
+        }
+
+        // Update subcategory filter dropdown based on selected category
+        function updateSubcategoryFilter() {
+            const category = document.getElementById('category-filter').value;
+            const subcategoryFilter = document.getElementById('subcategory-filter');
+
+            subcategoryFilter.innerHTML = '<option value="">Alle Sub-Kategorien</option>';
+
+            if (category && SUBCATEGORIES[category]) {
+                SUBCATEGORIES[category].forEach(sub => {
+                    subcategoryFilter.innerHTML += `<option value="${sub.value}">${sub.label}</option>`;
+                });
+            } else {
+                // Show all subcategories when no category selected
+                const allSubs = new Set();
+                Object.values(SUBCATEGORIES).forEach(cats => {
+                    cats.forEach(sub => allSubs.add(JSON.stringify(sub)));
+                });
+                Array.from(allSubs).map(s => JSON.parse(s)).forEach(sub => {
+                    subcategoryFilter.innerHTML += `<option value="${sub.value}">${sub.label}</option>`;
+                });
+            }
+        }
+
+        // Update modal subcategory dropdown based on selected category
+        function updateModalSubcategories() {
+            const category = document.getElementById('symbol-category').value;
+            const subcategorySelect = document.getElementById('symbol-subcategory');
+            const currentValue = subcategorySelect.value;
+
+            subcategorySelect.innerHTML = '<option value="">Keine</option>';
+
+            if (category && SUBCATEGORIES[category]) {
+                SUBCATEGORIES[category].forEach(sub => {
+                    subcategorySelect.innerHTML += `<option value="${sub.value}">${sub.label}</option>`;
+                });
+            }
+
+            // Restore previous value if still valid
+            if (currentValue) {
+                const options = Array.from(subcategorySelect.options).map(o => o.value);
+                if (options.includes(currentValue)) {
+                    subcategorySelect.value = currentValue;
+                }
+            }
+        }
+
         // Tab switching
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -844,6 +977,7 @@
         function filterSymbols() {
             const search = document.getElementById('symbol-search').value.toLowerCase();
             const category = document.getElementById('category-filter').value;
+            const subcategory = document.getElementById('subcategory-filter').value;
             const status = document.getElementById('status-filter').value;
             const favoritesOnly = document.getElementById('favorites-only').checked;
 
@@ -851,6 +985,7 @@
                 if (search && !s.symbol.toLowerCase().includes(search) &&
                     !(s.display_name || '').toLowerCase().includes(search)) return false;
                 if (category && s.category !== category) return false;
+                if (subcategory && s.subcategory !== subcategory) return false;
                 if (status && s.status !== status) return false;
                 if (favoritesOnly && !s.is_favorite) return false;
                 return true;
@@ -863,7 +998,7 @@
             const tbody = document.getElementById('symbols-body');
 
             if (symbols.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="empty-state">
+                tbody.innerHTML = `<tr><td colspan="9" class="empty-state">
                     <div class="empty-state-icon">&#128202;</div>
                     Keine Symbole gefunden
                 </td></tr>`;
@@ -871,22 +1006,23 @@
             }
 
             tbody.innerHTML = symbols.map(s => `
-                <tr data-id="${s.id}">
+                <tr data-id="${s.symbol}">
                     <td>
                         <span class="favorite-star ${s.is_favorite ? 'active' : ''}"
-                              onclick="toggleFavorite('${s.id}', ${!s.is_favorite})">
+                              onclick="toggleFavorite('${s.symbol}', ${!s.is_favorite})">
                             ${s.is_favorite ? '&#9733;' : '&#9734;'}
                         </span>
                     </td>
                     <td><strong>${s.symbol}</strong></td>
                     <td>${s.display_name || '-'}</td>
-                    <td><span class="badge badge-${s.category.toLowerCase()}">${s.category}</span></td>
+                    <td><span class="badge badge-${s.category}">${CATEGORY_LABELS[s.category] || s.category}</span></td>
+                    <td>${s.subcategory ? `<span class="badge" style="background: rgba(100, 200, 255, 0.15); color: #64c8ff;">${getSubcategoryLabel(s.category, s.subcategory)}</span>` : '-'}</td>
                     <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${s.description || '-'}</td>
                     <td><span class="badge badge-${s.status}">${s.status === 'active' ? 'Aktiv' : 'Inaktiv'}</span></td>
                     <td>${s.total_records ? s.total_records.toLocaleString() : '-'}</td>
                     <td>
-                        <button class="btn btn-primary btn-sm" onclick="editSymbol('${s.id}')">Bearbeiten</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteSymbol('${s.id}')">Loschen</button>
+                        <button class="btn btn-primary btn-sm" onclick="editSymbol('${s.symbol}')">Bearbeiten</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteSymbol('${s.symbol}')">Loschen</button>
                     </td>
                 </tr>
             `).join('');
@@ -906,18 +1042,21 @@
             }
         }
 
-        function openSymbolModal(symbol = null) {
-            document.getElementById('symbol-modal-title').textContent = symbol ? 'Symbol bearbeiten' : 'Neues Symbol';
-            document.getElementById('symbol-id').value = symbol?.id || '';
-            document.getElementById('symbol-name').value = symbol?.symbol || '';
-            document.getElementById('symbol-display-name').value = symbol?.display_name || '';
-            document.getElementById('symbol-category').value = symbol?.category || 'Forex';
-            document.getElementById('symbol-status').value = symbol?.status || 'active';
-            document.getElementById('symbol-description').value = symbol?.description || '';
-            document.getElementById('symbol-base-currency').value = symbol?.base_currency || '';
-            document.getElementById('symbol-quote-currency').value = symbol?.quote_currency || '';
-            document.getElementById('symbol-favorite').checked = symbol?.is_favorite || false;
-            document.getElementById('symbol-name').disabled = !!symbol;
+        function openSymbolModal(symbolData = null) {
+            document.getElementById('symbol-modal-title').textContent = symbolData ? 'Symbol bearbeiten' : 'Neues Symbol';
+            document.getElementById('symbol-id').value = symbolData?.symbol || '';
+            document.getElementById('symbol-name').value = symbolData?.symbol || '';
+            document.getElementById('symbol-display-name').value = symbolData?.display_name || '';
+            document.getElementById('symbol-category').value = symbolData?.category || 'forex';
+            // Update subcategory options based on category
+            updateModalSubcategories();
+            document.getElementById('symbol-subcategory').value = symbolData?.subcategory || '';
+            document.getElementById('symbol-status').value = symbolData?.status || 'active';
+            document.getElementById('symbol-description').value = symbolData?.description || '';
+            document.getElementById('symbol-base-currency').value = symbolData?.base_currency || '';
+            document.getElementById('symbol-quote-currency').value = symbolData?.quote_currency || '';
+            document.getElementById('symbol-favorite').checked = symbolData?.is_favorite || false;
+            document.getElementById('symbol-name').disabled = !!symbolData;
             document.getElementById('symbol-modal').classList.add('active');
         }
 
@@ -925,9 +1064,9 @@
             document.getElementById('symbol-modal').classList.remove('active');
         }
 
-        function editSymbol(id) {
-            const symbol = allSymbols.find(s => s.id === id);
-            if (symbol) openSymbolModal(symbol);
+        function editSymbol(symbolId) {
+            const symbolData = allSymbols.find(s => s.symbol === symbolId);
+            if (symbolData) openSymbolModal(symbolData);
         }
 
         async function saveSymbol(event) {
@@ -937,6 +1076,7 @@
                 symbol: document.getElementById('symbol-name').value,
                 display_name: document.getElementById('symbol-display-name').value || null,
                 category: document.getElementById('symbol-category').value,
+                subcategory: document.getElementById('symbol-subcategory').value || null,
                 status: document.getElementById('symbol-status').value,
                 description: document.getElementById('symbol-description').value || null,
                 base_currency: document.getElementById('symbol-base-currency').value || null,

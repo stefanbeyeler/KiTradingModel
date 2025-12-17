@@ -11,6 +11,7 @@ from ..config import settings
 from ..models.symbol_data import (
     ManagedSymbol,
     SymbolCategory,
+    SymbolSubcategory,
     SymbolStatus,
     SymbolCreateRequest,
     SymbolUpdateRequest,
@@ -150,6 +151,7 @@ class SymbolService:
             symbol=symbol_id,
             display_name=request.display_name or symbol_id,
             category=category,
+            subcategory=request.subcategory,
             status=SymbolStatus.ACTIVE,
             description=request.description,
             base_currency=base,
@@ -424,6 +426,12 @@ class SymbolService:
             if count > 0:
                 by_category[cat.value] = count
 
+        by_subcategory = {}
+        for subcat in SymbolSubcategory:
+            count = len([s for s in symbols if s.subcategory == subcat])
+            if count > 0:
+                by_subcategory[subcat.value] = count
+
         return SymbolStats(
             total_symbols=len(symbols),
             active_symbols=len([s for s in symbols if s.status == SymbolStatus.ACTIVE]),
@@ -432,6 +440,7 @@ class SymbolService:
             with_timescaledb_data=len([s for s in symbols if s.has_timescaledb_data]),
             with_nhits_model=len([s for s in symbols if s.has_nhits_model]),
             by_category=by_category,
+            by_subcategory=by_subcategory,
             favorites_count=len([s for s in symbols if s.is_favorite]),
         )
 
