@@ -1046,17 +1046,26 @@ async def get_trainable_symbols():
 async def train_all_models(
     symbols: list[str] | None = None,
     force: bool = False,
-    background: bool = True
+    background: bool = True,
+    timeframes: list[str] | None = None
 ):
     """
-    Train NHITS models for all (or specified) symbols.
+    Train NHITS models for all (or specified) symbols across multiple timeframes.
 
     Parameters:
     - symbols: Optional list of specific symbols to train (default: all available)
     - force: Force retraining even if models are up to date
     - background: Run training in background (default: True)
+    - timeframes: List of timeframes to train (default: ["M15", "H1", "D1"])
 
     Returns training summary or task status if running in background.
+
+    **Multi-Timeframe Training:**
+    With 64 symbols and 3 timeframes, this will train 192 models total.
+    Each timeframe uses different input/output configurations:
+    - M15: 15-minute candles, 2-hour forecast
+    - H1: Hourly candles, 24-hour forecast
+    - D1: Daily candles, 7-day forecast
     """
     import asyncio
     try:
@@ -1068,24 +1077,38 @@ async def train_all_models(
 
         training_service = get_training_service()
 
+        # Validate timeframes if provided
+        if timeframes:
+            valid_timeframes = ["M15", "H1", "D1"]
+            invalid = [tf for tf in timeframes if tf.upper() not in valid_timeframes]
+            if invalid:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid timeframes: {invalid}. Valid options: {valid_timeframes}"
+                )
+            timeframes = [tf.upper() for tf in timeframes]
+
         if background:
             # Start training in background
             asyncio.create_task(
                 training_service.train_all_symbols(
                     symbols=symbols,
-                    force=force
+                    force=force,
+                    timeframes=timeframes
                 )
             )
             return {
                 "status": "started",
-                "message": "Training started in background",
-                "symbols": symbols or "all available"
+                "message": "Multi-timeframe training started in background",
+                "symbols": symbols or "all available",
+                "timeframes": timeframes or ["M15", "H1", "D1"]
             }
         else:
             # Run training synchronously
             result = await training_service.train_all_symbols(
                 symbols=symbols,
-                force=force
+                force=force,
+                timeframes=timeframes
             )
             return result
 
@@ -1455,7 +1478,8 @@ async def get_forecast(
 async def train_forecast_model(
     symbol: str,
     days: int = 90,
-    force: bool = False
+    force: bool = False,
+    timeframe: str = "H1"
 ):
     """
     Train or retrain the NHITS model for a symbol.
@@ -1464,8 +1488,10 @@ async def train_forecast_model(
     - symbol: Trading symbol
     - days: Number of days of historical data to use (default: 90)
     - force: Force retraining even if model is up to date
+    - timeframe: Timeframe for the model (M15, H1, D1) - default: H1
 
     This will train a new model or replace the existing one.
+    The model will be saved with a timeframe suffix (e.g., EURUSD_M15, EURUSD_H1).
     """
     try:
         if not settings.nhits_enabled:
@@ -1474,9 +1500,21 @@ async def train_forecast_model(
                 detail="NHITS forecasting is disabled. Enable it in settings."
             )
 
+        # Validate timeframe
+        timeframe = timeframe.upper()
+        if timeframe not in ["M15", "H1", "D1"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid timeframe '{timeframe}'. Use M15, H1, or D1."
+            )
+
         # Use nhits_training_service which supports EasyInsight API
         from ..services.nhits_training_service import nhits_training_service
-        result = await nhits_training_service.train_symbol(symbol=symbol, force=force)
+        result = await nhits_training_service.train_symbol(
+            symbol=symbol,
+            force=force,
+            timeframe=timeframe
+        )
 
         if not result.success:
             raise HTTPException(status_code=500, detail=result.error_message)
@@ -1486,7 +1524,7 @@ async def train_forecast_model(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Training failed for {symbol}: {e}")
+        logger.error(f"Training failed for {symbol}/{timeframe}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

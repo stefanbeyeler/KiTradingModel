@@ -108,17 +108,30 @@ class NHITSTrainingService:
     async def get_training_data(
         self,
         symbol: str,
-        days: int = 30
+        days: int = 30,
+        timeframe: str = "H1"
     ) -> List[TimeSeriesData]:
-        """Fetch training data for a symbol from EasyInsight API."""
+        """Fetch training data for a symbol from EasyInsight API.
+
+        Args:
+            symbol: Trading symbol
+            days: Number of days of data to fetch
+            timeframe: Timeframe for OHLCV data (M15, H1, D1)
+        """
         try:
             import httpx
             from datetime import datetime
 
-            # Request enough data points. The API returns snapshots which may be
-            # more frequent than daily. Request days * 24 to ensure we get enough hourly data.
-            # For daily training we'll filter to unique days later.
-            limit = days * 24
+            tf = timeframe.upper()
+
+            # Calculate limit based on timeframe
+            # M15 = 96 candles/day, H1 = 24 candles/day, D1 = 1 candle/day
+            if tf == "M15":
+                limit = days * 96
+            elif tf == "D1":
+                limit = days
+            else:  # H1 default
+                limit = days * 24
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
@@ -130,7 +143,17 @@ class NHITSTrainingService:
                 data = response.json()
                 rows = data.get('data', [])
 
+                # Define OHLCV field prefixes based on timeframe
+                if tf == "M15":
+                    ohlc_prefix = "m15_"
+                elif tf == "D1":
+                    ohlc_prefix = "d1_"
+                else:  # H1 default
+                    ohlc_prefix = "h1_"
+
                 time_series = []
+                seen_timestamps = set()  # For D1, deduplicate by date
+
                 for row in rows:
                     try:
                         # Parse timestamp
@@ -141,14 +164,30 @@ class NHITSTrainingService:
                         # Parse ISO format timestamp
                         timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
 
-                        # Use h1_ (hourly) data for training with ALL available indicators
+                        # For D1, deduplicate by date (only keep one row per day)
+                        if tf == "D1":
+                            date_key = timestamp.date()
+                            if date_key in seen_timestamps:
+                                continue
+                            seen_timestamps.add(date_key)
+
+                        # Get OHLCV based on timeframe
+                        open_val = row.get(f'{ohlc_prefix}open', 0)
+                        high_val = row.get(f'{ohlc_prefix}high', 0)
+                        low_val = row.get(f'{ohlc_prefix}low', 0)
+                        close_val = row.get(f'{ohlc_prefix}close', 0)
+
+                        # Skip rows with missing OHLCV data
+                        if not all([open_val, high_val, low_val, close_val]):
+                            continue
+
                         time_series.append(TimeSeriesData(
                             timestamp=timestamp,
                             symbol=symbol,
-                            open=float(row.get('h1_open', 0)),
-                            high=float(row.get('h1_high', 0)),
-                            low=float(row.get('h1_low', 0)),
-                            close=float(row.get('h1_close', 0)),
+                            open=float(open_val),
+                            high=float(high_val),
+                            low=float(low_val),
+                            close=float(close_val),
                             volume=0.0,  # Volume not available in API response
                             # Momentum Indicators
                             rsi=row.get('rsi'),
@@ -189,91 +228,91 @@ class NHITSTrainingService:
                                 'spread': row.get('spread'),
                                 'spread_pct': row.get('spread_pct'),
                                 'category': row.get('category'),
-                                'd1_open': row.get('d1_open'),
-                                'd1_high': row.get('d1_high'),
-                                'd1_low': row.get('d1_low'),
-                                'd1_close': row.get('d1_close'),
-                                'm15_open': row.get('m15_open'),
-                                'm15_high': row.get('m15_high'),
-                                'm15_low': row.get('m15_low'),
-                                'm15_close': row.get('m15_close')
+                                'timeframe': tf
                             }
                         ))
                     except Exception as row_error:
-                        logger.warning(f"Failed to parse row for {symbol}: {row_error}")
+                        logger.warning(f"Failed to parse row for {symbol}/{tf}: {row_error}")
                         continue
 
                 logger.info(
-                    f"Fetched {len(time_series)} data points for {symbol} from EasyInsight API"
+                    f"Fetched {len(time_series)} data points for {symbol}/{tf} from EasyInsight API"
                 )
                 return time_series
 
         except Exception as e:
-            logger.error(f"Failed to get training data from EasyInsight API for {symbol}: {e}")
+            logger.error(f"Failed to get training data from EasyInsight API for {symbol}/{tf}: {e}")
             return []
 
     async def train_symbol(
         self,
         symbol: str,
-        force: bool = False
+        force: bool = False,
+        timeframe: str = "H1"
     ) -> ForecastTrainingResult:
-        """Train NHITS model for a single symbol."""
+        """Train NHITS model for a single symbol and timeframe."""
         from .forecast_service import forecast_service
 
+        tf = timeframe.upper()
+        model_key = f"{symbol}_{tf}" if tf != "H1" else symbol
+
         try:
-            # Get training data
-            time_series = await self.get_training_data(symbol)
+            # Get training data for specific timeframe
+            time_series = await self.get_training_data(symbol, timeframe=tf)
 
             if not time_series:
                 return ForecastTrainingResult(
-                    symbol=symbol,
+                    symbol=model_key,
                     trained_at=datetime.utcnow(),
                     training_samples=0,
                     training_duration_seconds=0,
                     model_path="",
                     metrics=TrainingMetrics(),
                     success=False,
-                    error_message="No training data available"
+                    error_message=f"No training data available for {tf}"
                 )
 
-            min_required = settings.nhits_input_size + settings.nhits_horizon
+            # Get timeframe-specific requirements
+            tf_config = forecast_service.get_timeframe_config(tf)
+            min_required = tf_config["input_size"] + tf_config["horizon"]
+
             if len(time_series) < min_required:
                 return ForecastTrainingResult(
-                    symbol=symbol,
+                    symbol=model_key,
                     trained_at=datetime.utcnow(),
                     training_samples=len(time_series),
                     training_duration_seconds=0,
                     model_path="",
                     metrics=TrainingMetrics(),
                     success=False,
-                    error_message=f"Insufficient data: {len(time_series)} < {min_required}"
+                    error_message=f"Insufficient data for {tf}: {len(time_series)} < {min_required}"
                 )
 
             # Check if retraining is needed
-            if not force and not forecast_service._should_retrain(symbol):
-                logger.info(f"Model for {symbol} is up to date, skipping")
-                info = forecast_service.get_model_info(symbol)
+            if not force and not forecast_service._should_retrain(symbol, timeframe=tf):
+                logger.info(f"Model for {symbol}/{tf} is up to date, skipping")
+                info = forecast_service.get_model_info(symbol, timeframe=tf)
                 return ForecastTrainingResult(
-                    symbol=symbol,
+                    symbol=model_key,
                     trained_at=info.last_trained or datetime.utcnow(),
                     training_samples=info.training_samples or 0,
                     training_duration_seconds=0,
-                    model_path=str(forecast_service._get_model_path(symbol)),
+                    model_path=str(forecast_service._get_model_path(symbol, tf)),
                     metrics=TrainingMetrics(),
                     success=True,
                     error_message="Model up to date (skipped)"
                 )
 
-            # Train model
-            result = await forecast_service.train(time_series, symbol)
-            self._training_results[symbol] = result
+            # Train model with timeframe
+            result = await forecast_service.train(time_series, symbol, timeframe=tf)
+            self._training_results[model_key] = result
 
             return result
 
         except Exception as e:
-            logger.error(f"Failed to train {symbol}: {e}")
+            logger.error(f"Failed to train {symbol}/{tf}: {e}")
             return ForecastTrainingResult(
-                symbol=symbol,
+                symbol=model_key,
                 trained_at=datetime.utcnow(),
                 training_samples=0,
                 training_duration_seconds=0,
@@ -287,15 +326,17 @@ class NHITSTrainingService:
         self,
         symbols: Optional[List[str]] = None,
         force: bool = False,
-        max_concurrent: int = 2
+        max_concurrent: int = 2,
+        timeframes: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
-        Train NHITS models for all (or specified) symbols.
+        Train NHITS models for all (or specified) symbols across multiple timeframes.
 
         Args:
             symbols: List of symbols to train (None = all available)
             force: Force retraining even if model is up to date
             max_concurrent: Maximum concurrent training tasks
+            timeframes: List of timeframes to train (default: ["M15", "H1", "D1"])
 
         Returns:
             Summary of training results
@@ -311,6 +352,10 @@ class NHITSTrainingService:
         self._training_cancelled = False
         start_time = datetime.utcnow()
         self._current_training_start = start_time
+
+        # Default timeframes for multi-timeframe training
+        if timeframes is None:
+            timeframes = ["M15", "H1", "D1"]
 
         # Reset progress counters
         self._training_completed_symbols = 0
@@ -335,82 +380,107 @@ class NHITSTrainingService:
                     "results": {}
                 }
 
-            self._training_total_symbols = len(symbols_to_train)
+            # Total training tasks = symbols × timeframes
+            total_tasks = len(symbols_to_train) * len(timeframes)
+            self._training_total_symbols = total_tasks
 
             logger.info(
-                f"Starting batch training for {len(symbols_to_train)} symbols"
+                f"Starting multi-timeframe batch training: "
+                f"{len(symbols_to_train)} symbols × {len(timeframes)} timeframes = {total_tasks} models"
             )
 
             results = {}
 
-            # Train sequentially to track progress properly
+            # Train sequentially: each symbol across all timeframes
             for symbol in symbols_to_train:
                 # Check if cancelled
                 if self._training_cancelled:
                     logger.info("Training cancelled by user")
                     break
 
-                self._training_current_symbol = symbol
+                for tf in timeframes:
+                    if self._training_cancelled:
+                        break
 
-                try:
-                    result = await self.train_symbol(symbol, force=force)
+                    model_key = f"{symbol}_{tf}"
+                    self._training_current_symbol = model_key
 
-                    if isinstance(result, Exception):
-                        results[symbol] = {
-                            "success": False,
-                            "error": str(result)
-                        }
-                        self._training_failed += 1
-                    elif result.success:
-                        if "skipped" in (result.error_message or "").lower():
-                            results[symbol] = {
-                                "success": True,
-                                "skipped": True,
-                                "samples": result.training_samples
+                    try:
+                        result = await self.train_symbol(symbol, force=force, timeframe=tf)
+
+                        if isinstance(result, Exception):
+                            results[model_key] = {
+                                "success": False,
+                                "error": str(result)
                             }
-                            self._training_skipped += 1
+                            self._training_failed += 1
+                        elif result.success:
+                            if "skipped" in (result.error_message or "").lower():
+                                results[model_key] = {
+                                    "success": True,
+                                    "skipped": True,
+                                    "samples": result.training_samples,
+                                    "timeframe": tf
+                                }
+                                self._training_skipped += 1
+                            else:
+                                results[model_key] = {
+                                    "success": True,
+                                    "samples": result.training_samples,
+                                    "duration": result.training_duration_seconds,
+                                    "loss": result.metrics.final_loss if result.metrics else None,
+                                    "timeframe": tf
+                                }
+                                self._training_successful += 1
                         else:
-                            results[symbol] = {
-                                "success": True,
-                                "samples": result.training_samples,
-                                "duration": result.training_duration_seconds,
-                                "loss": result.metrics.final_loss if result.metrics else None
+                            results[model_key] = {
+                                "success": False,
+                                "error": result.error_message,
+                                "timeframe": tf
                             }
-                            self._training_successful += 1
-                    else:
-                        results[symbol] = {
+                            self._training_failed += 1
+
+                    except Exception as e:
+                        results[model_key] = {
                             "success": False,
-                            "error": result.error_message
+                            "error": str(e),
+                            "timeframe": tf
                         }
                         self._training_failed += 1
 
-                except Exception as e:
-                    results[symbol] = {
-                        "success": False,
-                        "error": str(e)
-                    }
-                    self._training_failed += 1
-
-                self._training_completed_symbols += 1
+                    self._training_completed_symbols += 1
 
             duration = (datetime.utcnow() - start_time).total_seconds()
             self._last_training_run = datetime.utcnow()
 
             status = "cancelled" if self._training_cancelled else "completed"
 
+            # Count by timeframe
+            by_timeframe = {}
+            for tf in timeframes:
+                tf_results = {k: v for k, v in results.items() if v.get("timeframe") == tf}
+                by_timeframe[tf] = {
+                    "successful": sum(1 for v in tf_results.values() if v.get("success") and not v.get("skipped")),
+                    "failed": sum(1 for v in tf_results.values() if not v.get("success")),
+                    "skipped": sum(1 for v in tf_results.values() if v.get("skipped"))
+                }
+
             summary = {
                 "status": status,
                 "started_at": start_time.isoformat(),
                 "duration_seconds": duration,
                 "total_symbols": len(symbols_to_train),
+                "timeframes": timeframes,
+                "total_models": total_tasks,
                 "successful": self._training_successful,
                 "failed": self._training_failed,
                 "skipped": self._training_skipped,
+                "by_timeframe": by_timeframe,
                 "results": results
             }
 
             logger.info(
-                f"Batch training {status}: "
+                f"Multi-timeframe batch training {status}: "
                 f"{self._training_successful} successful, {self._training_failed} failed, {self._training_skipped} skipped "
                 f"in {duration:.1f}s"
             )

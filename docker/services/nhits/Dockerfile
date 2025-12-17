@@ -19,9 +19,9 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install PyTorch with CUDA support (uses host CUDA via nvidia runtime)
-# PyTorch 2.5+ supports sm_110 (Thor) when using CUDA 13.x from host
-RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu124
+# Install PyTorch Nightly with CUDA 13.0 support for NVIDIA Thor (sm_110)
+# Thor requires sm_110 compute capability which is only in PyTorch 2.10+ with CUDA 13.0
+RUN pip install --no-cache-dir --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu130
 
 # Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt

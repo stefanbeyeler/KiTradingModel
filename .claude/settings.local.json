@@ -124,7 +124,12 @@
       "Bash(docker pull:*)",
       "Bash(pip3 index:*)",
       "Bash(pip3 search:*)",
-      "Bash(sort cat /tmp/nhits.txt echo \"\" echo \"=== Fehlende Modelle (EasyInsight ohne NHITS) ===\" comm -23 /tmp/easy.txt /tmp/nhits.txt)"
+      "Bash(sort cat /tmp/nhits.txt echo \"\" echo \"=== Fehlende Modelle (EasyInsight ohne NHITS) ===\" comm -23 /tmp/easy.txt /tmp/nhits.txt)",
+      "Bash(trading-nhits)",
+      "Bash(trading-frontend)",
+      "Bash(docker network:*)",
+      "Bash(docker network inspect:*)",
+      "Bash(trading-nhits:cu130)"
     ],
     "deny": [],
     "ask": []

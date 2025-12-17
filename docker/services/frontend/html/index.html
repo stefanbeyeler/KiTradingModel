@@ -946,7 +946,7 @@
             <div class="panel">
                 <h3>Schnellaktionen</h3>
                 <div class="quick-actions">
-                    <button onclick="startTraining()" id="btn-train">Alle Modelle trainieren</button>
+                    <button onclick="startTraining()" id="btn-train">Multi-Timeframe Training (M15, H1, D1)</button>
                     <button onclick="cancelTraining()" id="btn-cancel" disabled>Training abbrechen</button>
                     <button onclick="refreshStatus()">Status aktualisieren</button>
                 </div>
@@ -1218,12 +1218,22 @@
             document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
         }
 
-        async function startTraining() {
+        async function startTraining(timeframes = null) {
             try {
-                showToast('Training wird gestartet...');
-                const res = await fetch('/nhits/api/v1/forecast/train-all?force=false&background=true', { method: 'POST' });
+                let url = '/nhits/api/v1/forecast/train-all?force=false&background=true';
+                // Default: train all timeframes (Multi-Timeframe)
+                if (!timeframes) {
+                    url += '&timeframes=M15&timeframes=H1&timeframes=D1';
+                } else if (Array.isArray(timeframes)) {
+                    timeframes.forEach(tf => url += `&timeframes=${tf}`);
+                }
+
+                showToast('Multi-Timeframe Training wird gestartet (M15, H1, D1)...');
+                const res = await fetch(url, { method: 'POST' });
                 const data = await res.json();
-                showToast(`Training gestartet: ${data.message || 'OK'}`);
+
+                const tfInfo = data.timeframes ? ` [${data.timeframes.join(', ')}]` : '';
+                showToast(`Training gestartet${tfInfo}: ${data.message || 'OK'}`);
                 setTimeout(refreshStatus, 1000);
             } catch (err) {
                 showToast('Fehler beim Starten des Trainings');
