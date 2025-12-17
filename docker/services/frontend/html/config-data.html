@@ -593,7 +593,8 @@
                 <div class="card-header">
                     <h2 class="card-title">Symbol-Verwaltung</h2>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn btn-success" onclick="importFromEasyInsight()">EasyInsight Import</button>
+                        <button class="btn btn-success" onclick="openImportModal('easyinsight')">EasyInsight Import</button>
+                        <button class="btn btn-info" onclick="openImportModal('twelvedata')" style="background: #17a2b8;">Twelve Data Import</button>
                         <button class="btn btn-primary" onclick="openSymbolModal()">+ Neues Symbol</button>
                     </div>
                 </div>
@@ -923,6 +924,107 @@
         </div>
     </div>
 
+    <!-- Symbol Import Modal -->
+    <div class="modal-overlay" id="import-modal">
+        <div class="modal" style="max-width: 900px; max-height: 85vh;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="import-modal-title">Symbole importieren</h3>
+                <button class="modal-close" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div style="padding: 1rem;">
+                <!-- Source Selection -->
+                <div class="form-row" style="margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Quelle</label>
+                        <select class="form-select" id="import-source" onchange="loadImportSymbols()">
+                            <option value="easyinsight">EasyInsight (TimescaleDB)</option>
+                            <option value="twelvedata">Twelve Data API</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="twelvedata-category-group" style="display: none;">
+                        <label class="form-label">Asset-Typ</label>
+                        <select class="form-select" id="import-category" onchange="loadImportSymbols()">
+                            <option value="crypto">Crypto</option>
+                            <option value="forex">Forex</option>
+                            <option value="stocks">Stocks</option>
+                            <option value="etf">ETFs</option>
+                            <option value="indices">Indices</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Kategorie-Filter</label>
+                        <select class="form-select" id="import-category-filter" onchange="filterImportSymbols()">
+                            <option value="">Alle Kategorien</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="exchange-filter-group">
+                        <label class="form-label">Exchange</label>
+                        <select class="form-select" id="import-exchange-filter" onchange="filterImportSymbols()">
+                            <option value="">Alle Exchanges</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Suche</label>
+                        <input type="text" class="form-input" id="import-search" placeholder="Symbol suchen..." oninput="filterImportSymbols()">
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-bar" style="margin-bottom: 1rem; padding: 0.5rem;">
+                    <div class="stat-item">
+                        <div class="stat-value" id="import-total">-</div>
+                        <div class="stat-label">Verfugbar</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="import-already">-</div>
+                        <div class="stat-label">Bereits importiert</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="import-selected">0</div>
+                        <div class="stat-label">Ausgewahlt</div>
+                    </div>
+                </div>
+
+                <!-- Selection Controls -->
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <button class="btn btn-secondary btn-sm" onclick="selectAllImportSymbols(true)">Alle auswahlen</button>
+                    <button class="btn btn-secondary btn-sm" onclick="selectAllImportSymbols(false)">Alle abwahlen</button>
+                    <button class="btn btn-secondary btn-sm" onclick="selectNewImportSymbols()">Nur neue auswahlen</button>
+                    <label class="form-checkbox" style="margin-left: auto;">
+                        <input type="checkbox" id="import-hide-existing" onchange="filterImportSymbols()">
+                        <span>Bereits importierte ausblenden</span>
+                    </label>
+                </div>
+
+                <!-- Symbol List -->
+                <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                    <table id="import-symbols-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">
+                                    <input type="checkbox" id="import-select-all" onchange="toggleAllVisibleImportSymbols(this.checked)">
+                                </th>
+                                <th>Symbol</th>
+                                <th>Name / Kategorie</th>
+                                <th>Details</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="import-symbols-body">
+                            <tr><td colspan="5" class="loading"><div class="spinner"></div><br>Wahle eine Quelle...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+                    <button type="button" class="btn btn-danger" onclick="closeImportModal()">Abbrechen</button>
+                    <button type="button" class="btn btn-success" onclick="importSelectedSymbols()">Ausgewahlte importieren</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
@@ -1140,7 +1242,7 @@
                 <tr data-id="${s.symbol}">
                     <td>
                         <span class="favorite-star ${s.is_favorite ? 'active' : ''}"
-                              onclick="toggleFavorite('${s.symbol}', ${!s.is_favorite})">
+                              onclick="toggleFavorite('${s.symbol.replace(/'/g, "\\'")}', ${!s.is_favorite})">
                             ${s.is_favorite ? '&#9733;' : '&#9734;'}
                         </span>
                     </td>
@@ -1152,8 +1254,8 @@
                     <td><span class="badge badge-${s.status}">${s.status === 'active' ? 'Aktiv' : 'Inaktiv'}</span></td>
                     <td>${s.total_records ? s.total_records.toLocaleString() : '-'}</td>
                     <td>
-                        <button class="btn btn-primary btn-sm" onclick="editSymbol('${s.symbol}')">Bearbeiten</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteSymbol('${s.symbol}')">Loschen</button>
+                        <button class="btn btn-primary btn-sm" onclick="editSymbol('${s.symbol.replace(/'/g, "\\'")}')">Bearbeiten</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteSymbol('${s.symbol.replace(/'/g, "\\'")}')">Löschen</button>
                     </td>
                 </tr>
             `).join('');
@@ -1161,7 +1263,7 @@
 
         async function toggleFavorite(id, isFavorite) {
             try {
-                await fetch(`${API_BASE}/managed-symbols/${id}/favorite`, {
+                const response = await fetch(`${API_BASE}/managed-symbols/${encodeURIComponent(id)}/favorite`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ is_favorite: isFavorite })
@@ -1232,30 +1334,342 @@
         }
 
         async function deleteSymbol(id) {
-            if (!confirm('Symbol wirklich loschen?')) return;
+            if (!confirm(`Symbol "${id}" wirklich löschen?`)) return;
             try {
-                await fetch(`${API_BASE}/managed-symbols/${id}`, { method: 'DELETE' });
+                const response = await fetch(`${API_BASE}/managed-symbols/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Löschen fehlgeschlagen');
+                }
                 await loadSymbols();
-                showToast('Symbol geloscht', 'success');
+                showToast('Symbol gelöscht', 'success');
             } catch (error) {
-                showToast('Fehler beim Loschen', 'error');
+                console.error('Delete error:', error);
+                showToast(`Fehler beim Löschen: ${error.message}`, 'error');
             }
         }
 
-        async function importFromEasyInsight() {
-            if (!confirm('Alle Symbole von EasyInsight importieren?')) return;
+        // ==================== Symbol Import Modal ====================
+
+        let importSymbols = [];
+        let selectedImportSymbols = new Set();
+
+        function openImportModal(source = 'easyinsight') {
+            document.getElementById('import-source').value = source;
+            document.getElementById('import-search').value = '';
+            document.getElementById('import-hide-existing').checked = false;
+            selectedImportSymbols.clear();
+            updateImportSelectedCount();
+
+            // Show/hide Twelve Data category selector
+            const categoryGroup = document.getElementById('twelvedata-category-group');
+            categoryGroup.style.display = source === 'twelvedata' ? 'block' : 'none';
+
+            document.getElementById('import-modal').classList.add('active');
+            loadImportSymbols();
+        }
+
+        function closeImportModal() {
+            document.getElementById('import-modal').classList.remove('active');
+            importSymbols = [];
+            selectedImportSymbols.clear();
+        }
+
+        async function loadImportSymbols() {
+            const source = document.getElementById('import-source').value;
+            const tbody = document.getElementById('import-symbols-body');
+
+            tbody.innerHTML = `<tr><td colspan="5" class="loading"><div class="spinner"></div><br>Lade Symbole...</td></tr>`;
+
+            // Show/hide Twelve Data category selector
+            const categoryGroup = document.getElementById('twelvedata-category-group');
+            categoryGroup.style.display = source === 'twelvedata' ? 'block' : 'none';
+
             try {
-                showToast('Importiere Symbole...', 'info');
-                const response = await fetch(`${API_BASE}/managed-symbols/import`, { method: 'POST' });
-                const result = await response.json();
-                await loadSymbols();
-                showToast(`${result.imported} Symbole importiert, ${result.updated} aktualisiert`, 'success');
+                let url;
+                if (source === 'easyinsight') {
+                    url = `${API_BASE}/managed-symbols/available/easyinsight`;
+                } else {
+                    const category = document.getElementById('import-category').value;
+                    url = `${API_BASE}/managed-symbols/available/twelvedata?category=${category}`;
+                }
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Fehler beim Laden');
+                }
+
+                const data = await response.json();
+                importSymbols = data.symbols || [];
+
+                // Update stats
+                document.getElementById('import-total').textContent = data.total || 0;
+                document.getElementById('import-already').textContent = data.already_imported || 0;
+
+                // Clear selection
+                selectedImportSymbols.clear();
+                updateImportSelectedCount();
+
+                // Update category filter dropdown
+                updateImportCategoryFilter();
+
+                filterImportSymbols();
             } catch (error) {
+                console.error('Error loading import symbols:', error);
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Fehler: ${error.message}</td></tr>`;
+                showToast('Fehler beim Laden der Symbole', 'error');
+            }
+        }
+
+        function updateImportCategoryFilter() {
+            const categoryFilter = document.getElementById('import-category-filter');
+            const exchangeFilter = document.getElementById('import-exchange-filter');
+            const source = document.getElementById('import-source').value;
+
+            // Collect unique categories from loaded symbols
+            const categories = new Set();
+            const exchanges = new Set();
+
+            importSymbols.forEach(s => {
+                if (s.category) {
+                    categories.add(s.category);
+                }
+                if (s.exchange) {
+                    exchanges.add(s.exchange);
+                }
+            });
+
+            // Sort categories alphabetically
+            const sortedCategories = Array.from(categories).sort();
+            const sortedExchanges = Array.from(exchanges).sort();
+
+            // Rebuild category dropdown
+            categoryFilter.innerHTML = '<option value="">Alle Kategorien</option>';
+            sortedCategories.forEach(cat => {
+                // Use CATEGORY_LABELS if available, otherwise use the raw category
+                const label = CATEGORY_LABELS[cat.toLowerCase()] || cat;
+                categoryFilter.innerHTML += `<option value="${cat}">${label}</option>`;
+            });
+
+            // Rebuild exchange dropdown
+            exchangeFilter.innerHTML = '<option value="">Alle Exchanges</option>';
+            sortedExchanges.forEach(ex => {
+                exchangeFilter.innerHTML += `<option value="${ex}">${ex}</option>`;
+            });
+
+            // Show/hide exchange filter based on data availability
+            const exchangeGroup = document.getElementById('exchange-filter-group');
+            exchangeGroup.style.display = sortedExchanges.length > 0 ? 'block' : 'none';
+        }
+
+        function filterImportSymbols() {
+            const search = document.getElementById('import-search').value.toLowerCase();
+            const hideExisting = document.getElementById('import-hide-existing').checked;
+            const categoryFilter = document.getElementById('import-category-filter').value;
+            const exchangeFilter = document.getElementById('import-exchange-filter').value;
+
+            let filtered = importSymbols;
+
+            // Apply category filter
+            if (categoryFilter) {
+                filtered = filtered.filter(s => s.category === categoryFilter);
+            }
+
+            // Apply exchange filter
+            if (exchangeFilter) {
+                filtered = filtered.filter(s => s.exchange === exchangeFilter);
+            }
+
+            // Apply search filter
+            if (search) {
+                filtered = filtered.filter(s =>
+                    s.symbol.toLowerCase().includes(search) ||
+                    (s.name || '').toLowerCase().includes(search) ||
+                    (s.category || '').toLowerCase().includes(search) ||
+                    (s.exchange || '').toLowerCase().includes(search) ||
+                    (s.country || '').toLowerCase().includes(search)
+                );
+            }
+
+            // Hide already imported
+            if (hideExisting) {
+                filtered = filtered.filter(s => !s.already_imported);
+            }
+
+            // Update filtered count in stats
+            updateFilteredStats(filtered);
+
+            renderImportSymbols(filtered);
+        }
+
+        function updateFilteredStats(filtered) {
+            const total = importSymbols.length;
+            const filteredCount = filtered.length;
+            const totalLabel = document.getElementById('import-total');
+
+            if (filteredCount < total) {
+                totalLabel.textContent = `${filteredCount} / ${total}`;
+            } else {
+                totalLabel.textContent = total;
+            }
+        }
+
+        function renderImportSymbols(symbols) {
+            const tbody = document.getElementById('import-symbols-body');
+            const source = document.getElementById('import-source').value;
+
+            if (symbols.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Keine Symbole gefunden</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = symbols.map(s => {
+                const isSelected = selectedImportSymbols.has(s.symbol);
+                const isImported = s.already_imported;
+
+                let detailsCol = '';
+                if (source === 'easyinsight') {
+                    detailsCol = s.count ? `${s.count.toLocaleString()} Datenpunkte` : '-';
+                } else {
+                    detailsCol = [s.exchange, s.currency, s.country].filter(Boolean).join(' | ') || '-';
+                }
+
+                return `
+                    <tr class="${isImported ? 'imported-row' : ''}" style="${isImported ? 'opacity: 0.6;' : ''}">
+                        <td>
+                            <input type="checkbox"
+                                   ${isSelected ? 'checked' : ''}
+                                   ${isImported ? 'disabled' : ''}
+                                   onchange="toggleImportSymbol('${s.symbol}', this.checked)">
+                        </td>
+                        <td><strong>${s.symbol}</strong></td>
+                        <td>${s.name || s.category || '-'}</td>
+                        <td style="font-size: 0.85rem; color: #888;">${detailsCol}</td>
+                        <td>
+                            ${isImported
+                                ? '<span class="badge badge-active">Importiert</span>'
+                                : '<span class="badge" style="background: rgba(255,193,7,0.2); color: #ffc107;">Neu</span>'
+                            }
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleImportSymbol(symbol, checked) {
+            if (checked) {
+                selectedImportSymbols.add(symbol);
+            } else {
+                selectedImportSymbols.delete(symbol);
+            }
+            updateImportSelectedCount();
+        }
+
+        function updateImportSelectedCount() {
+            document.getElementById('import-selected').textContent = selectedImportSymbols.size;
+        }
+
+        function selectAllImportSymbols(select) {
+            if (select) {
+                importSymbols.filter(s => !s.already_imported).forEach(s => selectedImportSymbols.add(s.symbol));
+            } else {
+                selectedImportSymbols.clear();
+            }
+            updateImportSelectedCount();
+            filterImportSymbols();
+        }
+
+        function selectNewImportSymbols() {
+            selectedImportSymbols.clear();
+            importSymbols.filter(s => !s.already_imported).forEach(s => selectedImportSymbols.add(s.symbol));
+            updateImportSelectedCount();
+            filterImportSymbols();
+        }
+
+        function toggleAllVisibleImportSymbols(checked) {
+            const search = document.getElementById('import-search').value.toLowerCase();
+            const hideExisting = document.getElementById('import-hide-existing').checked;
+            const categoryFilter = document.getElementById('import-category-filter').value;
+            const exchangeFilter = document.getElementById('import-exchange-filter').value;
+
+            let filtered = importSymbols;
+
+            // Apply category filter
+            if (categoryFilter) {
+                filtered = filtered.filter(s => s.category === categoryFilter);
+            }
+
+            // Apply exchange filter
+            if (exchangeFilter) {
+                filtered = filtered.filter(s => s.exchange === exchangeFilter);
+            }
+
+            // Apply search filter
+            if (search) {
+                filtered = filtered.filter(s =>
+                    s.symbol.toLowerCase().includes(search) ||
+                    (s.name || '').toLowerCase().includes(search) ||
+                    (s.exchange || '').toLowerCase().includes(search)
+                );
+            }
+
+            // Hide existing
+            if (hideExisting) {
+                filtered = filtered.filter(s => !s.already_imported);
+            }
+
+            filtered.filter(s => !s.already_imported).forEach(s => {
+                if (checked) {
+                    selectedImportSymbols.add(s.symbol);
+                } else {
+                    selectedImportSymbols.delete(s.symbol);
+                }
+            });
+
+            updateImportSelectedCount();
+            filterImportSymbols();
+        }
+
+        async function importSelectedSymbols() {
+            if (selectedImportSymbols.size === 0) {
+                showToast('Bitte mindestens ein Symbol auswahlen', 'error');
+                return;
+            }
+
+            const source = document.getElementById('import-source').value;
+            const symbols = Array.from(selectedImportSymbols);
+
+            try {
+                showToast(`Importiere ${symbols.length} Symbole...`, 'info');
+
+                const response = await fetch(`${API_BASE}/managed-symbols/import/selected?source=${source}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(symbols)
+                });
+
+                const result = await response.json();
+
+                if (result.errors && result.errors.length > 0) {
+                    console.warn('Import errors:', result.errors);
+                }
+
+                showToast(`${result.imported} Symbole importiert, ${result.skipped} ubersprungen`, 'success');
+                closeImportModal();
+                await loadSymbols();
+            } catch (error) {
+                console.error('Import error:', error);
                 showToast('Fehler beim Import', 'error');
             }
         }
 
-        // Strategies
+        // Legacy function for backwards compatibility
+        async function importFromEasyInsight() {
+            openImportModal('easyinsight');
+        }
+
+        // ==================== Strategies ====================
         async function loadStrategies() {
             try {
                 const response = await fetch(`${API_BASE}/strategies`);

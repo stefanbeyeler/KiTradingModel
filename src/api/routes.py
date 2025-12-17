@@ -1674,6 +1674,210 @@ async def import_symbols_from_timescaledb():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@symbol_router.get("/managed-symbols/available/easyinsight")
+async def get_available_easyinsight_symbols():
+    """
+    Get list of available symbols from EasyInsight API for import selection.
+
+    Returns symbols with their data availability info, marking which ones
+    are already imported into the symbol management.
+    """
+    import httpx
+
+    try:
+        # Fetch symbols from EasyInsight API
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(f"{settings.easyinsight_api_url}/symbols")
+            response.raise_for_status()
+            easyinsight_symbols = response.json()
+
+        # Get already imported symbols
+        existing_symbols = {s.symbol for s in await symbol_service.get_all_symbols()}
+
+        # Prepare result with import status
+        result = []
+        for s in easyinsight_symbols:
+            symbol_id = s.get("symbol", "")
+            result.append({
+                "symbol": symbol_id,
+                "category": s.get("category", "Other"),
+                "count": s.get("count", 0),
+                "earliest": s.get("earliest"),
+                "latest": s.get("latest"),
+                "already_imported": symbol_id in existing_symbols
+            })
+
+        return {
+            "source": "easyinsight",
+            "total": len(result),
+            "already_imported": sum(1 for r in result if r["already_imported"]),
+            "symbols": sorted(result, key=lambda x: (x["already_imported"], x["symbol"]))
+        }
+    except httpx.HTTPError as e:
+        logger.error(f"Failed to fetch EasyInsight symbols: {e}")
+        raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Failed to get available symbols: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@symbol_router.get("/managed-symbols/available/twelvedata")
+async def get_available_twelvedata_symbols(
+    category: str = "crypto",
+    exchange: Optional[str] = None,
+    country: Optional[str] = None,
+    search: Optional[str] = None,
+):
+    """
+    Get list of available symbols from Twelve Data API for import selection.
+
+    Args:
+        category: Asset category ('crypto', 'forex', 'stocks', 'etf', 'indices')
+        exchange: Filter by exchange (e.g., 'NYSE', 'NASDAQ')
+        country: Filter by country (e.g., 'United States')
+        search: Search query for symbol name
+
+    Returns symbols with their details, marking which ones are already imported.
+    """
+    try:
+        if not twelvedata_service.is_available():
+            raise HTTPException(status_code=503, detail="Twelve Data service not available")
+
+        # Fetch symbols based on category
+        symbols_data = []
+        if category == "crypto":
+            symbols_data = await twelvedata_service.get_cryptocurrencies()
+        elif category == "forex":
+            symbols_data = await twelvedata_service.get_forex_pairs()
+        elif category == "stocks":
+            symbols_data = await twelvedata_service.get_stock_list(exchange=exchange, country=country)
+        elif category == "etf":
+            symbols_data = await twelvedata_service.get_etf_list()
+        elif category == "indices":
+            symbols_data = await twelvedata_service.get_indices()
+
+        # Apply search filter if provided
+        if search:
+            search_lower = search.lower()
+            symbols_data = [
+                s for s in symbols_data
+                if search_lower in s.get("symbol", "").lower()
+                or search_lower in s.get("name", "").lower()
+                or search_lower in s.get("currency_base", "").lower()
+            ]
+
+        # Get already imported symbols
+        existing_symbols = {s.symbol for s in await symbol_service.get_all_symbols()}
+
+        # Prepare result with import status
+        result = []
+        for s in symbols_data[:500]:  # Limit to 500 symbols for performance
+            symbol_id = s.get("symbol", "")
+            result.append({
+                "symbol": symbol_id,
+                "name": s.get("name") or s.get("currency_base", ""),
+                "exchange": s.get("exchange", ""),
+                "currency": s.get("currency") or s.get("currency_quote", ""),
+                "country": s.get("country", ""),
+                "type": s.get("type", category),
+                "already_imported": symbol_id in existing_symbols
+            })
+
+        return {
+            "source": "twelvedata",
+            "category": category,
+            "total": len(result),
+            "already_imported": sum(1 for r in result if r["already_imported"]),
+            "symbols": sorted(result, key=lambda x: (x["already_imported"], x["symbol"]))
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get Twelve Data symbols: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@symbol_router.post("/managed-symbols/import/selected")
+async def import_selected_symbols(
+    symbols: list[str],
+    source: str = "easyinsight",
+):
+    """
+    Import selected symbols into the symbol management.
+
+    Args:
+        symbols: List of symbol IDs to import
+        source: Data source ('easyinsight' or 'twelvedata')
+
+    Returns import result with counts.
+    """
+    import httpx
+
+    result = {
+        "imported": 0,
+        "updated": 0,
+        "skipped": 0,
+        "errors": [],
+        "symbols": []
+    }
+
+    try:
+        existing_symbols = {s.symbol: s for s in await symbol_service.get_all_symbols()}
+
+        if source == "easyinsight":
+            # Fetch full data from EasyInsight
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(f"{settings.easyinsight_api_url}/symbols")
+                response.raise_for_status()
+                easyinsight_data = {s["symbol"]: s for s in response.json()}
+
+            for symbol_id in symbols:
+                try:
+                    if symbol_id in existing_symbols:
+                        result["skipped"] += 1
+                        continue
+
+                    symbol_info = easyinsight_data.get(symbol_id, {})
+                    category = symbol_service._map_api_category_to_enum(symbol_info.get("category", "Other"))
+
+                    request = SymbolCreateRequest(
+                        symbol=symbol_id,
+                        display_name=symbol_id,
+                        category=category,
+                    )
+                    await symbol_service.create_symbol(request)
+                    result["imported"] += 1
+                    result["symbols"].append(symbol_id)
+                except Exception as e:
+                    result["errors"].append(f"{symbol_id}: {str(e)}")
+
+        elif source == "twelvedata":
+            for symbol_id in symbols:
+                try:
+                    if symbol_id in existing_symbols:
+                        result["skipped"] += 1
+                        continue
+
+                    # Auto-detect category
+                    category = symbol_service._detect_category(symbol_id)
+
+                    request = SymbolCreateRequest(
+                        symbol=symbol_id,
+                        display_name=symbol_id,
+                        category=category,
+                    )
+                    await symbol_service.create_symbol(request)
+                    result["imported"] += 1
+                    result["symbols"].append(symbol_id)
+                except Exception as e:
+                    result["errors"].append(f"{symbol_id}: {str(e)}")
+
+        return result
+    except Exception as e:
+        logger.error(f"Failed to import selected symbols: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @symbol_router.post("/managed-symbols", response_model=ManagedSymbol)
 async def create_managed_symbol(request: SymbolCreateRequest):
     """
