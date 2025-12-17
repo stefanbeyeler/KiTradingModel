@@ -2317,6 +2317,176 @@ async def get_api_usage():
     return usage
 
 
+# ==================== Live Data ====================
+
+@symbol_router.get("/managed-symbols/{symbol}/live-data")
+async def get_symbol_live_data(symbol: str):
+    """
+    Get live market data for a symbol from EasyInsight and TwelveData APIs.
+
+    Returns the latest values and indicators from both data sources for comparison.
+
+    Args:
+        symbol: The symbol to get data for (e.g., 'EURUSD', 'BTCUSD')
+    """
+    import httpx
+
+    result = {
+        "symbol": symbol,
+        "timestamp": datetime.utcnow().isoformat(),
+        "easyinsight": None,
+        "twelvedata": None,
+        "errors": []
+    }
+
+    # Get symbol info for aliases
+    managed_symbol = await symbol_service.get_symbol(symbol)
+    aliases = managed_symbol.aliases if managed_symbol else []
+
+    # Fetch EasyInsight data
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
+                params={"limit": 1}
+            )
+            if response.status_code == 200:
+                response_data = response.json()
+                # Handle structured response with columns and data
+                data = None
+                if isinstance(response_data, dict) and "data" in response_data:
+                    data_list = response_data.get("data", [])
+                    if data_list:
+                        data = data_list[0]
+                elif isinstance(response_data, list) and response_data:
+                    data = response_data[0]
+                elif isinstance(response_data, dict):
+                    data = response_data
+                if data:
+                    result["easyinsight"] = {
+                        "source": "EasyInsight API",
+                        "snapshot_time": data.get("snapshot_time"),
+                        "category": data.get("category"),
+                        "price": {
+                            "bid": data.get("bid"),
+                            "ask": data.get("ask"),
+                            "spread": data.get("spread"),
+                            "spread_pct": data.get("spread_pct"),
+                        },
+                        "ohlc": {
+                            "m15": {
+                                "open": data.get("m15_open"),
+                                "high": data.get("m15_high"),
+                                "low": data.get("m15_low"),
+                                "close": data.get("m15_close"),
+                            },
+                            "h1": {
+                                "open": data.get("h1_open"),
+                                "high": data.get("h1_high"),
+                                "low": data.get("h1_low"),
+                                "close": data.get("h1_close"),
+                            },
+                            "d1": {
+                                "open": data.get("d1_open"),
+                                "high": data.get("d1_high"),
+                                "low": data.get("d1_low"),
+                                "close": data.get("d1_close"),
+                            },
+                        },
+                        "indicators": {
+                            "rsi": data.get("rsi"),
+                            "macd": {
+                                "main": data.get("macd_main"),
+                                "signal": data.get("macd_signal"),
+                            },
+                            "stochastic": {
+                                "main": data.get("sto_main"),
+                                "signal": data.get("sto_signal"),
+                            },
+                            "cci": data.get("cci"),
+                            "adx": {
+                                "main": data.get("adx_main"),
+                                "plus_di": data.get("adx_plusdi"),
+                                "minus_di": data.get("adx_minusdi"),
+                            },
+                            "ma_10": data.get("ma_10"),
+                            "ichimoku": {
+                                "tenkan": data.get("ichimoku_tenkan"),
+                                "kijun": data.get("ichimoku_kijun"),
+                                "senkou_a": data.get("ichimoku_senkoua"),
+                                "senkou_b": data.get("ichimoku_senkoub"),
+                                "chikou": data.get("ichimoku_chikou"),
+                            },
+                            "bollinger": {
+                                "upper": data.get("bb_upper"),
+                                "base": data.get("bb_base"),
+                                "lower": data.get("bb_lower"),
+                            },
+                            "atr": {
+                                "d1": data.get("atr_d1"),
+                                "d1_pct": data.get("atr_pct_d1"),
+                            },
+                            "range_d1": data.get("range_d1"),
+                            "pivot_points": {
+                                "s1_m5": data.get("s1_level_m5"),
+                                "r1_m5": data.get("r1_level_m5"),
+                            },
+                            "strength": {
+                                "h4": data.get("strength_4h"),
+                                "d1": data.get("strength_1d"),
+                                "w1": data.get("strength_1w"),
+                            },
+                        },
+                    }
+            else:
+                result["errors"].append(f"EasyInsight: HTTP {response.status_code}")
+    except Exception as e:
+        result["errors"].append(f"EasyInsight: {str(e)}")
+
+    # Fetch TwelveData quote - try symbol and aliases
+    td_symbol = symbol
+    # Convert symbol format for TwelveData (e.g., EURUSD -> EUR/USD)
+    for alias in aliases:
+        if "/" in alias:
+            td_symbol = alias
+            break
+
+    try:
+        quote = await twelvedata_service.get_quote(symbol=td_symbol)
+        if quote and "error" not in quote:
+            result["twelvedata"] = {
+                "source": "Twelve Data API",
+                "symbol_used": td_symbol,
+                "name": quote.get("name"),
+                "exchange": quote.get("exchange"),
+                "currency": quote.get("currency"),
+                "datetime": quote.get("datetime"),
+                "timestamp": quote.get("timestamp"),
+                "price": {
+                    "open": quote.get("open"),
+                    "high": quote.get("high"),
+                    "low": quote.get("low"),
+                    "close": quote.get("close"),
+                    "previous_close": quote.get("previous_close"),
+                },
+                "change": quote.get("change"),
+                "percent_change": quote.get("percent_change"),
+                "volume": quote.get("volume"),
+                "average_volume": quote.get("average_volume"),
+                "is_market_open": quote.get("is_market_open"),
+                "fifty_two_week": {
+                    "low": quote.get("fifty_two_week", {}).get("low") if isinstance(quote.get("fifty_two_week"), dict) else None,
+                    "high": quote.get("fifty_two_week", {}).get("high") if isinstance(quote.get("fifty_two_week"), dict) else None,
+                },
+            }
+        elif quote and "error" in quote:
+            result["errors"].append(f"TwelveData: {quote.get('error')}")
+    except Exception as e:
+        result["errors"].append(f"TwelveData: {str(e)}")
+
+    return result
+
+
 # ==================== Router Export ====================
 
 def get_all_routers():

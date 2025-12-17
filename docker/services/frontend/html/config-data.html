@@ -1030,6 +1030,21 @@
         </div>
     </div>
 
+    <!-- Live Data Modal -->
+    <div class="modal-overlay" id="live-data-modal">
+        <div class="modal" style="max-width: 1100px; max-height: 90vh;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="live-data-modal-title">Live-Daten</h3>
+                <button class="modal-close" onclick="closeLiveDataModal()">&times;</button>
+            </div>
+            <div style="padding: 1rem; overflow-y: auto; max-height: calc(90vh - 80px);">
+                <div id="live-data-content">
+                    <div class="loading"><div class="spinner"></div><br>Lade Live-Daten...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
@@ -1266,7 +1281,8 @@
                     <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${s.description || '-'}</td>
                     <td><span class="badge badge-${s.status}">${s.status === 'active' ? 'Aktiv' : 'Inaktiv'}</span></td>
                     <td>${s.total_records ? s.total_records.toLocaleString() : '-'}</td>
-                    <td>
+                    <td style="white-space: nowrap;">
+                        <button class="btn btn-info btn-sm" onclick="showLiveData('${s.symbol.replace(/'/g, "\\'")}')" style="background: #17a2b8;" title="Live-Daten anzeigen">&#128200;</button>
                         <button class="btn btn-primary btn-sm" onclick="editSymbol('${s.symbol.replace(/'/g, "\\'")}')">Bearbeiten</button>
                         <button class="btn btn-danger btn-sm" onclick="deleteSymbol('${s.symbol.replace(/'/g, "\\'")}')">Löschen</button>
                     </td>
@@ -2115,6 +2131,225 @@
                 console.error('Import error:', error);
                 showToast('Fehler beim Import', 'error');
             }
+        }
+
+        // ==================== Live Data Modal ====================
+
+        function closeLiveDataModal() {
+            document.getElementById('live-data-modal').classList.remove('active');
+        }
+
+        async function showLiveData(symbol) {
+            document.getElementById('live-data-modal-title').textContent = `Live-Daten: ${symbol}`;
+            document.getElementById('live-data-content').innerHTML = `
+                <div class="loading"><div class="spinner"></div><br>Lade Live-Daten von EasyInsight und TwelveData...</div>
+            `;
+            document.getElementById('live-data-modal').classList.add('active');
+
+            try {
+                const response = await fetch(`${API_BASE}/managed-symbols/${encodeURIComponent(symbol)}/live-data`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                renderLiveData(data);
+            } catch (error) {
+                console.error('Error loading live data:', error);
+                document.getElementById('live-data-content').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#9888;</div>
+                        Fehler beim Laden der Live-Daten: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function renderLiveData(data) {
+            const content = document.getElementById('live-data-content');
+            const errors = data.errors && data.errors.length > 0
+                ? `<div style="background: rgba(220,53,69,0.1); border: 1px solid rgba(220,53,69,0.3); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; color: #dc3545;">
+                    <strong>Hinweise:</strong> ${data.errors.join(', ')}
+                   </div>`
+                : '';
+
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <span style="color: #888;">Abgerufen: ${new Date(data.timestamp).toLocaleString('de-DE')}</span>
+                    <button class="btn btn-secondary btn-sm" onclick="showLiveData('${data.symbol}')">&#8635; Aktualisieren</button>
+                </div>
+                ${errors}
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            `;
+
+            // EasyInsight Column
+            html += `<div style="background: rgba(33, 150, 243, 0.05); border: 1px solid rgba(33, 150, 243, 0.2); border-radius: 12px; padding: 1rem;">
+                <h4 style="color: #2196f3; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.2rem;">&#128202;</span> EasyInsight API
+                </h4>`;
+
+            if (data.easyinsight) {
+                const ei = data.easyinsight;
+                html += `
+                    <div style="font-size: 0.85rem; color: #888; margin-bottom: 1rem;">
+                        Snapshot: ${ei.snapshot_time ? new Date(ei.snapshot_time).toLocaleString('de-DE') : '-'}
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <h5 style="color: #64b5f6; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Preis</h5>
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <tr><td style="color: #888;">Bid</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.price?.bid)}</td></tr>
+                            <tr><td style="color: #888;">Ask</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.price?.ask)}</td></tr>
+                            <tr><td style="color: #888;">Spread</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.price?.spread)} (${formatValue(ei.price?.spread_pct, 4)}%)</td></tr>
+                        </table>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <h5 style="color: #64b5f6; margin: 0 0 0.5rem 0; font-size: 0.9rem;">OHLC (D1)</h5>
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <tr><td style="color: #888;">Open</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.ohlc?.d1?.open)}</td></tr>
+                            <tr><td style="color: #888;">High</td><td style="text-align: right; font-family: monospace; color: #4caf50;">${formatValue(ei.ohlc?.d1?.high)}</td></tr>
+                            <tr><td style="color: #888;">Low</td><td style="text-align: right; font-family: monospace; color: #f44336;">${formatValue(ei.ohlc?.d1?.low)}</td></tr>
+                            <tr><td style="color: #888;">Close</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.ohlc?.d1?.close)}</td></tr>
+                        </table>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <h5 style="color: #64b5f6; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Indikatoren</h5>
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <tr><td style="color: #888;">RSI</td><td style="text-align: right; font-family: monospace;">${formatIndicator(ei.indicators?.rsi, 'rsi')}</td></tr>
+                            <tr><td style="color: #888;">MACD</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.macd?.main, 5)} / ${formatValue(ei.indicators?.macd?.signal, 5)}</td></tr>
+                            <tr><td style="color: #888;">Stochastic</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.stochastic?.main, 2)} / ${formatValue(ei.indicators?.stochastic?.signal, 2)}</td></tr>
+                            <tr><td style="color: #888;">CCI</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.cci, 2)}</td></tr>
+                            <tr><td style="color: #888;">ADX</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.adx?.main, 2)}</td></tr>
+                            <tr><td style="color: #888;">MA(10)</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.ma_10)}</td></tr>
+                            <tr><td style="color: #888;">ATR (D1)</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.atr?.d1)} (${formatValue(ei.indicators?.atr?.d1_pct, 2)}%)</td></tr>
+                        </table>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <h5 style="color: #64b5f6; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Bollinger Bands</h5>
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <tr><td style="color: #888;">Upper</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.bollinger?.upper)}</td></tr>
+                            <tr><td style="color: #888;">Base</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.bollinger?.base)}</td></tr>
+                            <tr><td style="color: #888;">Lower</td><td style="text-align: right; font-family: monospace;">${formatValue(ei.indicators?.bollinger?.lower)}</td></tr>
+                        </table>
+                    </div>
+
+                    <div>
+                        <h5 style="color: #64b5f6; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Trend-Starke</h5>
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <tr><td style="color: #888;">4H</td><td style="text-align: right; font-family: monospace;">${formatStrength(ei.indicators?.strength?.h4)}</td></tr>
+                            <tr><td style="color: #888;">1D</td><td style="text-align: right; font-family: monospace;">${formatStrength(ei.indicators?.strength?.d1)}</td></tr>
+                            <tr><td style="color: #888;">1W</td><td style="text-align: right; font-family: monospace;">${formatStrength(ei.indicators?.strength?.w1)}</td></tr>
+                        </table>
+                    </div>
+                `;
+            } else {
+                html += `<div style="color: #888; text-align: center; padding: 2rem;">Keine Daten verfugbar</div>`;
+            }
+            html += `</div>`;
+
+            // TwelveData Column
+            html += `<div style="background: rgba(156, 39, 176, 0.05); border: 1px solid rgba(156, 39, 176, 0.2); border-radius: 12px; padding: 1rem;">
+                <h4 style="color: #9c27b0; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.2rem;">&#128200;</span> Twelve Data API
+                </h4>`;
+
+            if (data.twelvedata) {
+                const td = data.twelvedata;
+                const changeColor = parseFloat(td.change) >= 0 ? '#4caf50' : '#f44336';
+                html += `
+                    <div style="font-size: 0.85rem; color: #888; margin-bottom: 1rem;">
+                        Symbol: ${td.symbol_used || '-'} | ${td.datetime || '-'}
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <h5 style="color: #ce93d8; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Stammdaten</h5>
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <tr><td style="color: #888;">Name</td><td style="text-align: right;">${td.name || '-'}</td></tr>
+                            <tr><td style="color: #888;">Exchange</td><td style="text-align: right;">${td.exchange || '-'}</td></tr>
+                            <tr><td style="color: #888;">Wahrung</td><td style="text-align: right;">${td.currency || '-'}</td></tr>
+                            <tr><td style="color: #888;">Markt offen</td><td style="text-align: right;">${td.is_market_open ? '<span style="color: #4caf50;">Ja</span>' : '<span style="color: #f44336;">Nein</span>'}</td></tr>
+                        </table>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <h5 style="color: #ce93d8; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Preis</h5>
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <tr><td style="color: #888;">Open</td><td style="text-align: right; font-family: monospace;">${formatValue(td.price?.open)}</td></tr>
+                            <tr><td style="color: #888;">High</td><td style="text-align: right; font-family: monospace; color: #4caf50;">${formatValue(td.price?.high)}</td></tr>
+                            <tr><td style="color: #888;">Low</td><td style="text-align: right; font-family: monospace; color: #f44336;">${formatValue(td.price?.low)}</td></tr>
+                            <tr><td style="color: #888;">Close</td><td style="text-align: right; font-family: monospace;">${formatValue(td.price?.close)}</td></tr>
+                            <tr><td style="color: #888;">Prev. Close</td><td style="text-align: right; font-family: monospace;">${formatValue(td.price?.previous_close)}</td></tr>
+                        </table>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <h5 style="color: #ce93d8; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Anderung</h5>
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <tr><td style="color: #888;">Anderung</td><td style="text-align: right; font-family: monospace; color: ${changeColor};">${formatValue(td.change)}</td></tr>
+                            <tr><td style="color: #888;">Anderung %</td><td style="text-align: right; font-family: monospace; color: ${changeColor};">${formatValue(td.percent_change, 2)}%</td></tr>
+                        </table>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <h5 style="color: #ce93d8; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Volumen</h5>
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <tr><td style="color: #888;">Volumen</td><td style="text-align: right; font-family: monospace;">${td.volume ? parseInt(td.volume).toLocaleString() : '-'}</td></tr>
+                            <tr><td style="color: #888;">Avg. Volumen</td><td style="text-align: right; font-family: monospace;">${td.average_volume ? parseInt(td.average_volume).toLocaleString() : '-'}</td></tr>
+                        </table>
+                    </div>
+
+                    <div>
+                        <h5 style="color: #ce93d8; margin: 0 0 0.5rem 0; font-size: 0.9rem;">52-Wochen Range</h5>
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <tr><td style="color: #888;">Low</td><td style="text-align: right; font-family: monospace; color: #f44336;">${formatValue(td.fifty_two_week?.low)}</td></tr>
+                            <tr><td style="color: #888;">High</td><td style="text-align: right; font-family: monospace; color: #4caf50;">${formatValue(td.fifty_two_week?.high)}</td></tr>
+                        </table>
+                    </div>
+                `;
+            } else {
+                html += `<div style="color: #888; text-align: center; padding: 2rem;">Keine Daten verfugbar</div>`;
+            }
+            html += `</div>`;
+
+            html += `</div>`; // Close grid
+
+            content.innerHTML = html;
+        }
+
+        function formatValue(value, decimals = 5) {
+            if (value === null || value === undefined) return '-';
+            const num = parseFloat(value);
+            if (isNaN(num)) return value;
+            return num.toFixed(decimals);
+        }
+
+        function formatIndicator(value, type) {
+            if (value === null || value === undefined) return '-';
+            const num = parseFloat(value);
+            if (isNaN(num)) return value;
+
+            let color = '#fff';
+            if (type === 'rsi') {
+                if (num >= 70) color = '#f44336';
+                else if (num <= 30) color = '#4caf50';
+                else color = '#ffc107';
+            }
+            return `<span style="color: ${color};">${num.toFixed(2)}</span>`;
+        }
+
+        function formatStrength(value) {
+            if (value === null || value === undefined) return '-';
+            const num = parseFloat(value);
+            if (isNaN(num)) return value;
+
+            let color = '#ffc107';
+            let label = 'Neutral';
+            if (num > 0.3) { color = '#4caf50'; label = 'Bullish'; }
+            else if (num < -0.3) { color = '#f44336'; label = 'Bearish'; }
+
+            return `<span style="color: ${color};">${num.toFixed(2)} (${label})</span>`;
         }
 
         // Initialize
