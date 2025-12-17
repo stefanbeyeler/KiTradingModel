@@ -1895,7 +1895,7 @@ async def create_managed_symbol(request: SymbolCreateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@symbol_router.get("/managed-symbols/{symbol_id}", response_model=ManagedSymbol)
+@symbol_router.get("/managed-symbols/{symbol_id:path}", response_model=ManagedSymbol)
 async def get_managed_symbol(symbol_id: str):
     """Get a specific managed symbol by ID."""
     try:
@@ -1910,7 +1910,7 @@ async def get_managed_symbol(symbol_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@symbol_router.put("/managed-symbols/{symbol_id}", response_model=ManagedSymbol)
+@symbol_router.put("/managed-symbols/{symbol_id:path}", response_model=ManagedSymbol)
 async def update_managed_symbol(symbol_id: str, request: SymbolUpdateRequest):
     """Update an existing managed symbol."""
     try:
@@ -1925,7 +1925,7 @@ async def update_managed_symbol(symbol_id: str, request: SymbolUpdateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@symbol_router.delete("/managed-symbols/{symbol_id}")
+@symbol_router.delete("/managed-symbols/{symbol_id:path}")
 async def delete_managed_symbol(symbol_id: str):
     """Delete a managed symbol."""
     try:
@@ -1940,7 +1940,7 @@ async def delete_managed_symbol(symbol_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@symbol_router.post("/managed-symbols/{symbol_id}/favorite", response_model=ManagedSymbol)
+@symbol_router.post("/managed-symbols/{symbol_id:path}/favorite", response_model=ManagedSymbol)
 async def toggle_symbol_favorite(symbol_id: str):
     """Toggle favorite status for a symbol."""
     try:
@@ -1955,7 +1955,7 @@ async def toggle_symbol_favorite(symbol_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@symbol_router.post("/managed-symbols/{symbol_id}/refresh", response_model=ManagedSymbol)
+@symbol_router.post("/managed-symbols/{symbol_id:path}/refresh", response_model=ManagedSymbol)
 async def refresh_symbol_data(symbol_id: str):
     """
     Refresh TimescaleDB data information for a symbol.
@@ -2319,7 +2319,7 @@ async def get_api_usage():
 
 # ==================== Live Data ====================
 
-@symbol_router.get("/managed-symbols/{symbol}/live-data")
+@symbol_router.get("/managed-symbols/{symbol:path}/live-data")
 async def get_symbol_live_data(symbol: str):
     """
     Get live market data for a symbol from EasyInsight and TwelveData APIs.

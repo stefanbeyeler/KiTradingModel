@@ -131,7 +131,8 @@
       "Bash(docker network inspect:*)",
       "Bash(trading-nhits:cu130)",
       "Bash(docker cp:*)",
-      "Bash(docker volume ls:*)"
+      "Bash(docker volume ls:*)",
+      "Bash(sudo docker restart:*)"
     ],
     "deny": [],
     "ask": []

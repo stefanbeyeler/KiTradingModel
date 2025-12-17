@@ -587,6 +587,26 @@
                     <div class="stat-value" id="forex-count">-</div>
                     <div class="stat-label">Forex</div>
                 </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="index-count">-</div>
+                    <div class="stat-label">Indices</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="commodity-count">-</div>
+                    <div class="stat-label">Commodities</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stock-count">-</div>
+                    <div class="stat-label">Stocks</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="etf-count">-</div>
+                    <div class="stat-label">ETFs</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="other-count">-</div>
+                    <div class="stat-label">Andere</div>
+                </div>
             </div>
 
             <div class="card">
@@ -1217,14 +1237,24 @@
         function updateSymbolStats() {
             const active = allSymbols.filter(s => s.status === 'active').length;
             const favorites = allSymbols.filter(s => s.is_favorite).length;
-            const crypto = allSymbols.filter(s => s.category === 'Crypto').length;
-            const forex = allSymbols.filter(s => s.category === 'Forex').length;
+            const crypto = allSymbols.filter(s => s.category === 'crypto').length;
+            const forex = allSymbols.filter(s => s.category === 'forex').length;
+            const index = allSymbols.filter(s => s.category === 'index').length;
+            const commodity = allSymbols.filter(s => s.category === 'commodity').length;
+            const stock = allSymbols.filter(s => s.category === 'stock').length;
+            const etf = allSymbols.filter(s => s.category === 'etf').length;
+            const other = allSymbols.filter(s => s.category === 'other').length;
 
             document.getElementById('total-symbols').textContent = allSymbols.length;
             document.getElementById('active-symbols').textContent = active;
             document.getElementById('favorite-symbols').textContent = favorites;
             document.getElementById('crypto-count').textContent = crypto;
             document.getElementById('forex-count').textContent = forex;
+            document.getElementById('index-count').textContent = index;
+            document.getElementById('commodity-count').textContent = commodity;
+            document.getElementById('stock-count').textContent = stock;
+            document.getElementById('etf-count').textContent = etf;
+            document.getElementById('other-count').textContent = other;
         }
 
         function filterSymbols() {
