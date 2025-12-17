@@ -92,6 +92,7 @@ class ManagedSymbol(BaseModel):
     is_favorite: bool = Field(default=False, description="User marked as favorite")
     notes: Optional[str] = Field(None, description="User notes about this symbol")
     tags: list[str] = Field(default_factory=list, description="User-defined tags")
+    aliases: list[str] = Field(default_factory=list, description="Alternative symbol names (e.g., BTC/USD for BTCUSD)")
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -112,6 +113,7 @@ class SymbolCreateRequest(BaseModel):
     max_lot_size: Optional[float] = 100.0
     notes: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
+    aliases: list[str] = Field(default_factory=list)
 
 
 class SymbolUpdateRequest(BaseModel):
@@ -129,6 +131,7 @@ class SymbolUpdateRequest(BaseModel):
     is_favorite: Optional[bool] = None
     notes: Optional[str] = None
     tags: Optional[list[str]] = None
+    aliases: Optional[list[str]] = None
 
 
 class SymbolImportResult(BaseModel):

@@ -632,7 +632,7 @@
                             <tr>
                                 <th style="width: 40px;"></th>
                                 <th>Symbol</th>
-                                <th>Anzeigename</th>
+                                <th>Aliase</th>
                                 <th>Kategorie</th>
                                 <th>Sub-Kategorie</th>
                                 <th>Beschreibung</th>
@@ -840,9 +840,14 @@
                         <input type="text" class="form-input" id="symbol-base-currency" placeholder="z.B. BTC">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Gegenwahrung</label>
+                        <label class="form-label">Gegenwährung</label>
                         <input type="text" class="form-input" id="symbol-quote-currency" placeholder="z.B. USD">
                     </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Synonyme / Aliase</label>
+                    <input type="text" class="form-input" id="symbol-aliases" placeholder="z.B. BTC/USD, XBTUSD (kommagetrennt)">
+                    <small style="color: #888; font-size: 0.8rem;">Alternative Bezeichnungen für dieses Symbol, kommagetrennt eingeben</small>
                 </div>
                 <div class="form-checkbox" style="margin-bottom: 1rem;">
                     <input type="checkbox" id="symbol-favorite">
@@ -1215,8 +1220,12 @@
             const favoritesOnly = document.getElementById('favorites-only').checked;
 
             const filtered = allSymbols.filter(s => {
-                if (search && !s.symbol.toLowerCase().includes(search) &&
-                    !(s.display_name || '').toLowerCase().includes(search)) return false;
+                if (search) {
+                    const matchesSymbol = s.symbol.toLowerCase().includes(search);
+                    const matchesDisplayName = (s.display_name || '').toLowerCase().includes(search);
+                    const matchesAlias = (s.aliases || []).some(a => a.toLowerCase().includes(search));
+                    if (!matchesSymbol && !matchesDisplayName && !matchesAlias) return false;
+                }
                 if (category && s.category !== category) return false;
                 if (subcategory && s.subcategory !== subcategory) return false;
                 if (status && s.status !== status) return false;
@@ -1238,7 +1247,11 @@
                 return;
             }
 
-            tbody.innerHTML = symbols.map(s => `
+            tbody.innerHTML = symbols.map(s => {
+                const aliasesDisplay = (s.aliases && s.aliases.length > 0)
+                    ? s.aliases.map(a => `<span class="badge" style="background: rgba(180, 180, 180, 0.15); color: #aaa; margin-right: 3px;">${a}</span>`).join('')
+                    : '-';
+                return `
                 <tr data-id="${s.symbol}">
                     <td>
                         <span class="favorite-star ${s.is_favorite ? 'active' : ''}"
@@ -1247,7 +1260,7 @@
                         </span>
                     </td>
                     <td><strong>${s.symbol}</strong></td>
-                    <td>${s.display_name || '-'}</td>
+                    <td style="max-width: 150px;">${aliasesDisplay}</td>
                     <td><span class="badge badge-${s.category}">${CATEGORY_LABELS[s.category] || s.category}</span></td>
                     <td>${s.subcategory ? `<span class="badge" style="background: rgba(100, 200, 255, 0.15); color: #64c8ff;">${getSubcategoryLabel(s.category, s.subcategory)}</span>` : '-'}</td>
                     <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${s.description || '-'}</td>
@@ -1258,7 +1271,8 @@
                         <button class="btn btn-danger btn-sm" onclick="deleteSymbol('${s.symbol.replace(/'/g, "\\'")}')">Löschen</button>
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         }
 
         async function toggleFavorite(id, isFavorite) {
@@ -1288,6 +1302,7 @@
             document.getElementById('symbol-description').value = symbolData?.description || '';
             document.getElementById('symbol-base-currency').value = symbolData?.base_currency || '';
             document.getElementById('symbol-quote-currency').value = symbolData?.quote_currency || '';
+            document.getElementById('symbol-aliases').value = (symbolData?.aliases || []).join(', ');
             document.getElementById('symbol-favorite').checked = symbolData?.is_favorite || false;
             document.getElementById('symbol-name').disabled = !!symbolData;
             document.getElementById('symbol-modal').classList.add('active');
@@ -1305,6 +1320,12 @@
         async function saveSymbol(event) {
             event.preventDefault();
             const id = document.getElementById('symbol-id').value;
+            // Parse aliases from comma-separated string
+            const aliasesStr = document.getElementById('symbol-aliases').value;
+            const aliases = aliasesStr
+                ? aliasesStr.split(',').map(a => a.trim()).filter(a => a.length > 0)
+                : [];
+
             const data = {
                 symbol: document.getElementById('symbol-name').value,
                 display_name: document.getElementById('symbol-display-name').value || null,
@@ -1314,6 +1335,7 @@
                 description: document.getElementById('symbol-description').value || null,
                 base_currency: document.getElementById('symbol-base-currency').value || null,
                 quote_currency: document.getElementById('symbol-quote-currency').value || null,
+                aliases: aliases,
                 is_favorite: document.getElementById('symbol-favorite').checked
             };
 

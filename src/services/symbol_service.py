@@ -128,6 +128,23 @@ class SymbolService:
         """Get a specific managed symbol."""
         return self._symbols.get(symbol.upper())
 
+    async def get_symbol_by_alias(self, alias: str) -> Optional[ManagedSymbol]:
+        """Get a symbol by its alias."""
+        alias_upper = alias.upper()
+        for symbol in self._symbols.values():
+            if alias_upper in [a.upper() for a in symbol.aliases]:
+                return symbol
+        return None
+
+    async def resolve_symbol(self, identifier: str) -> Optional[ManagedSymbol]:
+        """Resolve a symbol by its ID or any of its aliases."""
+        # First try direct lookup
+        symbol = await self.get_symbol(identifier)
+        if symbol:
+            return symbol
+        # Then try alias lookup
+        return await self.get_symbol_by_alias(identifier)
+
     async def create_symbol(self, request: SymbolCreateRequest) -> ManagedSymbol:
         """Create a new managed symbol."""
         symbol_id = request.symbol.upper()
@@ -161,6 +178,7 @@ class SymbolService:
             max_lot_size=request.max_lot_size,
             notes=request.notes,
             tags=request.tags,
+            aliases=request.aliases,
         )
 
         # Check data availability via EasyInsight API
@@ -449,7 +467,7 @@ class SymbolService:
         query: str,
         limit: int = 20,
     ) -> list[ManagedSymbol]:
-        """Search symbols by name, description, or tags."""
+        """Search symbols by name, description, tags, or aliases."""
         query = query.lower()
         results = []
 
@@ -459,21 +477,30 @@ class SymbolService:
             # Exact match on symbol
             if symbol.symbol.lower() == query:
                 score = 100
+            # Exact match on alias
+            elif any(alias.lower() == query for alias in symbol.aliases):
+                score = 95
             # Symbol starts with query
             elif symbol.symbol.lower().startswith(query):
                 score = 80
+            # Alias starts with query
+            elif any(alias.lower().startswith(query) for alias in symbol.aliases):
+                score = 75
             # Symbol contains query
             elif query in symbol.symbol.lower():
                 score = 60
+            # Alias contains query
+            elif any(query in alias.lower() for alias in symbol.aliases):
+                score = 55
             # Display name match
             elif symbol.display_name and query in symbol.display_name.lower():
                 score = 50
-            # Description match
-            elif symbol.description and query in symbol.description.lower():
-                score = 30
             # Tag match
             elif any(query in tag.lower() for tag in symbol.tags):
                 score = 40
+            # Description match
+            elif symbol.description and query in symbol.description.lower():
+                score = 30
 
             if score > 0:
                 results.append((score, symbol))
