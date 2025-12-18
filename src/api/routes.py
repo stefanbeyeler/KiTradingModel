@@ -1592,6 +1592,75 @@ async def get_forecast_model_info(symbol: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== Training Data Cache Endpoints ====================
+
+@forecast_router.get("/forecast/training/cache/stats")
+async def get_training_cache_stats():
+    """
+    Get statistics about the training data cache.
+
+    Returns cache size, hit rate, entries by timeframe, and more.
+    """
+    from ..services.training_data_cache_service import training_data_cache
+    return training_data_cache.get_stats()
+
+
+@forecast_router.get("/forecast/training/cache/symbols")
+async def get_cached_symbols():
+    """
+    Get list of symbols currently cached, grouped by timeframe.
+    """
+    from ..services.training_data_cache_service import training_data_cache
+    return training_data_cache.get_cached_symbols()
+
+
+@forecast_router.delete("/forecast/training/cache")
+async def clear_training_cache():
+    """
+    Clear all training data cache.
+
+    Use this to free disk space or force fresh data fetch on next training.
+    """
+    from ..services.training_data_cache_service import training_data_cache
+    removed = training_data_cache.clear_all()
+    return {
+        "status": "success",
+        "message": f"Cleared {removed} cache files"
+    }
+
+
+@forecast_router.delete("/forecast/training/cache/expired")
+async def cleanup_expired_cache():
+    """
+    Remove only expired cache entries.
+
+    Expired entries are automatically cleaned up after training,
+    but this endpoint allows manual cleanup.
+    """
+    from ..services.training_data_cache_service import training_data_cache
+    removed = training_data_cache.cleanup_expired()
+    return {
+        "status": "success",
+        "message": f"Removed {removed} expired cache entries"
+    }
+
+
+@forecast_router.delete("/forecast/training/cache/{symbol}")
+async def clear_symbol_cache(symbol: str):
+    """
+    Clear cache for a specific symbol (all timeframes).
+
+    Args:
+        symbol: The symbol to clear cache for
+    """
+    from ..services.training_data_cache_service import training_data_cache
+    removed = training_data_cache.clear_for_symbols([symbol])
+    return {
+        "status": "success",
+        "message": f"Cleared {removed} cache entries for {symbol}"
+    }
+
+
 # ==================== Symbol Management Endpoints ====================
 
 @symbol_router.get("/managed-symbols", response_model=list[ManagedSymbol])

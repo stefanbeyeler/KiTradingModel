@@ -2,6 +2,7 @@
 NHITS Auto-Training Service.
 
 Provides scheduled and batch training for NHITS models.
+Includes persistent data caching to reduce API calls during batch training.
 """
 
 import asyncio
@@ -12,6 +13,7 @@ from typing import List, Optional, Dict, Any
 from ..config.settings import settings
 from ..models.trading_data import TimeSeriesData
 from ..models.forecast_data import ForecastTrainingResult, TrainingMetrics
+from .training_data_cache_service import training_data_cache
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +114,8 @@ class NHITSTrainingService:
         self,
         symbol: str,
         days: int = 30,
-        timeframe: str = "H1"
+        timeframe: str = "H1",
+        use_cache: bool = True
     ) -> List[TimeSeriesData]:
         """Fetch training data for a symbol from EasyInsight API.
 
@@ -120,6 +123,7 @@ class NHITSTrainingService:
             symbol: Trading symbol
             days: Number of days of data to fetch
             timeframe: Timeframe for OHLCV data (M15, H1, D1)
+            use_cache: Whether to use cached data if available
         """
         try:
             import httpx
@@ -145,112 +149,130 @@ class NHITSTrainingService:
             else:  # H1 default
                 limit = max(days * 24, min_required * 2)
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
-                    params={"limit": limit}
-                )
-                response.raise_for_status()
+            # Try to get data from cache first
+            rows = None
+            from_cache = False
+            if use_cache:
+                cached_data = training_data_cache.get_cached_data(symbol, tf, "easyinsight")
+                if cached_data:
+                    rows = cached_data
+                    from_cache = True
+                    logger.info(f"Using cached data for {symbol}/{tf}: {len(rows)} rows")
 
-                data = response.json()
-                rows = data.get('data', [])
+            # Fetch from API if no cache
+            if rows is None:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.get(
+                        f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
+                        params={"limit": limit}
+                    )
+                    response.raise_for_status()
 
-                # Define OHLCV field prefixes based on timeframe
-                if tf == "M15":
-                    ohlc_prefix = "m15_"
-                elif tf == "D1":
-                    ohlc_prefix = "d1_"
-                else:  # H1 default
-                    ohlc_prefix = "h1_"
+                    data = response.json()
+                    rows = data.get('data', [])
 
-                time_series = []
-                seen_timestamps = set()  # For D1, deduplicate by date
+                    # Cache the data for future use
+                    if rows and use_cache:
+                        training_data_cache.cache_data(symbol, tf, rows, "easyinsight")
+                        logger.debug(f"Cached {len(rows)} rows for {symbol}/{tf}")
 
-                for row in rows:
-                    try:
-                        # Parse timestamp
-                        timestamp_str = row.get('snapshot_time')
-                        if not timestamp_str:
-                            continue
+            # Define OHLCV field prefixes based on timeframe
+            if tf == "M15":
+                ohlc_prefix = "m15_"
+            elif tf == "D1":
+                ohlc_prefix = "d1_"
+            else:  # H1 default
+                ohlc_prefix = "h1_"
 
-                        # Parse ISO format timestamp
-                        timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+            time_series = []
+            seen_timestamps = set()  # For D1, deduplicate by date
 
-                        # For D1, deduplicate by date (only keep one row per day)
-                        if tf == "D1":
-                            date_key = timestamp.date()
-                            if date_key in seen_timestamps:
-                                continue
-                            seen_timestamps.add(date_key)
-
-                        # Get OHLCV based on timeframe
-                        open_val = row.get(f'{ohlc_prefix}open', 0)
-                        high_val = row.get(f'{ohlc_prefix}high', 0)
-                        low_val = row.get(f'{ohlc_prefix}low', 0)
-                        close_val = row.get(f'{ohlc_prefix}close', 0)
-
-                        # Skip rows with missing OHLCV data
-                        if not all([open_val, high_val, low_val, close_val]):
-                            continue
-
-                        time_series.append(TimeSeriesData(
-                            timestamp=timestamp,
-                            symbol=symbol,
-                            open=float(open_val),
-                            high=float(high_val),
-                            low=float(low_val),
-                            close=float(close_val),
-                            volume=0.0,  # Volume not available in API response
-                            # Momentum Indicators
-                            rsi=row.get('rsi'),
-                            macd_main=row.get('macd_main'),
-                            macd_signal=row.get('macd_signal'),
-                            cci=row.get('cci'),
-                            stoch_k=row.get('sto_main'),
-                            stoch_d=row.get('sto_signal'),
-                            # Trend Indicators
-                            adx=row.get('adx_main'),
-                            adx_plus_di=row.get('adx_plusdi'),
-                            adx_minus_di=row.get('adx_minusdi'),
-                            ma100=row.get('ma_10'),
-                            # Volatility Indicators
-                            atr=row.get('atr_d1'),
-                            atr_pct=row.get('atr_pct_d1'),
-                            bb_upper=row.get('bb_upper'),
-                            bb_middle=row.get('bb_base'),
-                            bb_lower=row.get('bb_lower'),
-                            range_d1=row.get('range_d1'),
-                            # Ichimoku Cloud (complete)
-                            ichimoku_tenkan=row.get('ichimoku_tenkan'),
-                            ichimoku_kijun=row.get('ichimoku_kijun'),
-                            ichimoku_senkou_a=row.get('ichimoku_senkoua'),
-                            ichimoku_senkou_b=row.get('ichimoku_senkoub'),
-                            ichimoku_chikou=row.get('ichimoku_chikou'),
-                            # Strength Indicators
-                            strength_4h=row.get('strength_4h'),
-                            strength_1d=row.get('strength_1d'),
-                            strength_1w=row.get('strength_1w'),
-                            # Support/Resistance Pivot Points
-                            s1_level=row.get('s1_level_m5'),
-                            r1_level=row.get('r1_level_m5'),
-                            # Store additional data for LLM context
-                            additional_data={
-                                'bid': row.get('bid'),
-                                'ask': row.get('ask'),
-                                'spread': row.get('spread'),
-                                'spread_pct': row.get('spread_pct'),
-                                'category': row.get('category'),
-                                'timeframe': tf
-                            }
-                        ))
-                    except Exception as row_error:
-                        logger.warning(f"Failed to parse row for {symbol}/{tf}: {row_error}")
+            for row in rows:
+                try:
+                    # Parse timestamp
+                    timestamp_str = row.get('snapshot_time')
+                    if not timestamp_str:
                         continue
 
-                logger.info(
-                    f"Fetched {len(time_series)} data points for {symbol}/{tf} from EasyInsight API"
-                )
-                return time_series
+                    # Parse ISO format timestamp
+                    timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+
+                    # For D1, deduplicate by date (only keep one row per day)
+                    if tf == "D1":
+                        date_key = timestamp.date()
+                        if date_key in seen_timestamps:
+                            continue
+                        seen_timestamps.add(date_key)
+
+                    # Get OHLCV based on timeframe
+                    open_val = row.get(f'{ohlc_prefix}open', 0)
+                    high_val = row.get(f'{ohlc_prefix}high', 0)
+                    low_val = row.get(f'{ohlc_prefix}low', 0)
+                    close_val = row.get(f'{ohlc_prefix}close', 0)
+
+                    # Skip rows with missing OHLCV data
+                    if not all([open_val, high_val, low_val, close_val]):
+                        continue
+
+                    time_series.append(TimeSeriesData(
+                        timestamp=timestamp,
+                        symbol=symbol,
+                        open=float(open_val),
+                        high=float(high_val),
+                        low=float(low_val),
+                        close=float(close_val),
+                        volume=0.0,  # Volume not available in API response
+                        # Momentum Indicators
+                        rsi=row.get('rsi'),
+                        macd_main=row.get('macd_main'),
+                        macd_signal=row.get('macd_signal'),
+                        cci=row.get('cci'),
+                        stoch_k=row.get('sto_main'),
+                        stoch_d=row.get('sto_signal'),
+                        # Trend Indicators
+                        adx=row.get('adx_main'),
+                        adx_plus_di=row.get('adx_plusdi'),
+                        adx_minus_di=row.get('adx_minusdi'),
+                        ma100=row.get('ma_10'),
+                        # Volatility Indicators
+                        atr=row.get('atr_d1'),
+                        atr_pct=row.get('atr_pct_d1'),
+                        bb_upper=row.get('bb_upper'),
+                        bb_middle=row.get('bb_base'),
+                        bb_lower=row.get('bb_lower'),
+                        range_d1=row.get('range_d1'),
+                        # Ichimoku Cloud (complete)
+                        ichimoku_tenkan=row.get('ichimoku_tenkan'),
+                        ichimoku_kijun=row.get('ichimoku_kijun'),
+                        ichimoku_senkou_a=row.get('ichimoku_senkoua'),
+                        ichimoku_senkou_b=row.get('ichimoku_senkoub'),
+                        ichimoku_chikou=row.get('ichimoku_chikou'),
+                        # Strength Indicators
+                        strength_4h=row.get('strength_4h'),
+                        strength_1d=row.get('strength_1d'),
+                        strength_1w=row.get('strength_1w'),
+                        # Support/Resistance Pivot Points
+                        s1_level=row.get('s1_level_m5'),
+                        r1_level=row.get('r1_level_m5'),
+                        # Store additional data for LLM context
+                        additional_data={
+                            'bid': row.get('bid'),
+                            'ask': row.get('ask'),
+                            'spread': row.get('spread'),
+                            'spread_pct': row.get('spread_pct'),
+                            'category': row.get('category'),
+                            'timeframe': tf
+                        }
+                    ))
+                except Exception as row_error:
+                    logger.warning(f"Failed to parse row for {symbol}/{tf}: {row_error}")
+                    continue
+
+            logger.info(
+                f"Fetched {len(time_series)} data points for {symbol}/{tf} "
+                f"{'(from cache)' if from_cache else '(from API)'}"
+            )
+            return time_series
 
         except Exception as e:
             logger.error(f"Failed to get training data from EasyInsight API for {symbol}/{tf}: {e}")
@@ -521,6 +543,21 @@ class NHITSTrainingService:
                 f"in {duration:.1f}s"
             )
 
+            # Clear cache for trained symbols after training completes
+            cache_stats = training_data_cache.get_stats()
+            if symbols_to_train:
+                cleared = training_data_cache.clear_for_symbols(symbols_to_train)
+                logger.info(
+                    f"Training cache cleared: {cleared} entries removed "
+                    f"(was: {cache_stats.get('total_entries', 0)} entries, "
+                    f"hit rate: {cache_stats.get('hit_rate', 0)}%)"
+                )
+                summary["cache_stats"] = {
+                    "entries_cleared": cleared,
+                    "hit_rate_during_training": cache_stats.get("hit_rate", 0),
+                    "bytes_saved": cache_stats.get("bytes_saved", 0)
+                }
+
             return summary
 
         except Exception as e:
@@ -535,6 +572,8 @@ class NHITSTrainingService:
             self._training_in_progress = False
             self._training_cancelled = False
             self._training_current_symbol = None
+            # Always cleanup expired cache entries
+            training_data_cache.cleanup_expired()
             self._current_training_start = None
 
     def cancel_training(self) -> bool:
