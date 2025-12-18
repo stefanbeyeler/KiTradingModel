@@ -2177,7 +2177,7 @@
             document.getElementById('live-data-modal').classList.add('active');
 
             try {
-                const response = await fetch(`${API_BASE}/managed-symbols/${encodeURIComponent(symbol)}/live-data`);
+                const response = await fetch(`${API_BASE}/managed-symbols/live-data/${encodeURIComponent(symbol)}`);
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
