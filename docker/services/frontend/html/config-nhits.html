@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NHITS Service - Konfiguration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .service-badge.offline {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+        }
+
+        .tab-btn.active {
+            background: rgba(100, 200, 255, 0.15);
+            color: #64c8ff;
+            border-bottom: 2px solid #64c8ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Training Status */
+        .training-status {
+            font-size: 0.9rem;
+        }
+
+        .training-status .training-active {
+            color: #4ade80;
+            font-weight: 600;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .progress-bar {
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 0.75rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #64c8ff, #a78bfa);
+            border-radius: 6px;
+            transition: width 0.3s;
+        }
+
+        .progress-fill.active {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .training-info {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .training-timing {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .timing-stat {
+            text-align: center;
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .timing-stat .value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #a78bfa;
+        }
+
+        .timing-stat .label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-top: 0.3rem;
+        }
+
+        .training-stat {
+            text-align: center;
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .training-stat .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .training-stat .label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-top: 0.3rem;
+        }
+
+        .timeframe-breakdown {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .quick-actions .btn {
+            width: 100%;
+            justify-content: center;
+            padding: 0.9rem;
+        }
+
+        /* Cache Stats */
+        .cache-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .cache-stat {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .cache-stat .value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .cache-stat .label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-top: 0.3rem;
+        }
+
+        /* Models Table */
+        .table-container {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.2);
+            position: sticky;
+            top: 0;
+            font-weight: 500;
+            color: #a0a0a0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-m15 { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+        .badge-h1 { background: rgba(33, 150, 243, 0.2); color: #64b5f6; }
+        .badge-d1 { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-success { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-failed { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.6rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.9rem;
+        }
+
+        .search-box::placeholder {
+            color: #888;
+        }
+
+        .filter-select {
+            padding: 0.6rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .filter-select option {
+            background: #1a1a2e;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            border-left: 4px solid #64c8ff;
+            display: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Failed Models List */
+        .failed-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .failed-item {
+            padding: 0.75rem;
+            background: rgba(244, 67, 54, 0.1);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #e57373;
+        }
+
+        .failed-item .symbol {
+            font-weight: 600;
+            color: #e57373;
+        }
+
+        .failed-item .error {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-top: 0.3rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Dashboard</a>
+            <span class="header-title">NHITS Service - Konfiguration</span>
+            <span class="service-badge" id="service-status">Laden...</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('training')">Training</button>
+            <button class="tab-btn" onclick="switchTab('models')">Modelle</button>
+            <button class="tab-btn" onclick="switchTab('cache')">Cache</button>
+            <button class="tab-btn" onclick="switchTab('performance')">Performance</button>
+        </div>
+
+        <!-- Training Tab -->
+        <div id="tab-training" class="tab-content active">
+            <div class="grid-2">
+                <!-- Training Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Training Status</h2>
+                        <button class="btn btn-sm btn-primary" onclick="refreshStatus()">Aktualisieren</button>
+                    </div>
+                    <div class="training-status">
+                        <div id="training-message" style="font-size: 1.1rem; margin-bottom: 0.5rem;">Kein Training aktiv</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="training-progress" style="width: 0%"></div>
+                        </div>
+                        <div class="training-info">
+                            <div class="training-stat">
+                                <div class="value" id="stat-completed">-</div>
+                                <div class="label">Abgeschlossen</div>
+                            </div>
+                            <div class="training-stat">
+                                <div class="value" id="stat-successful">-</div>
+                                <div class="label">Erfolgreich</div>
+                            </div>
+                            <div class="training-stat">
+                                <div class="value" id="stat-failed">-</div>
+                                <div class="label">Fehlgeschlagen</div>
+                            </div>
+                        </div>
+                        <div class="training-timing" id="training-timing" style="display: none;">
+                            <div class="timing-stat">
+                                <div class="value" id="stat-elapsed">-</div>
+                                <div class="label">Vergangen</div>
+                            </div>
+                            <div class="timing-stat">
+                                <div class="value" id="stat-eta">-</div>
+                                <div class="label">Verbleibend (ETA)</div>
+                            </div>
+                        </div>
+                        <div class="timeframe-breakdown">
+                            <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.75rem;">Modelle nach Timeframe:</div>
+                            <div class="training-info" style="grid-template-columns: repeat(4, 1fr);">
+                                <div class="training-stat" title="Standard stündliche Modelle">
+                                    <div class="value" id="stat-tf-default">-</div>
+                                    <div class="label">1H (Std)</div>
+                                </div>
+                                <div class="training-stat" title="Stündliche Modelle mit H1-Suffix">
+                                    <div class="value" id="stat-tf-h1">-</div>
+                                    <div class="label">H1</div>
+                                </div>
+                                <div class="training-stat" title="15-Minuten Modelle">
+                                    <div class="value" id="stat-tf-m15">-</div>
+                                    <div class="label">M15</div>
+                                </div>
+                                <div class="training-stat" title="Tägliche Modelle">
+                                    <div class="value" id="stat-tf-d1">-</div>
+                                    <div class="label">D1</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Schnellaktionen</h2>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="btn btn-success" onclick="startTraining(['M15', 'H1', 'D1'])" id="btn-train-all">
+                            Multi-Timeframe Training (M15, H1, D1)
+                        </button>
+                        <button class="btn btn-primary" onclick="startTraining(['H1'])" id="btn-train-h1">
+                            Nur H1 Training
+                        </button>
+                        <button class="btn btn-primary" onclick="startTraining(['M15'])" id="btn-train-m15">
+                            Nur M15 Training
+                        </button>
+                        <button class="btn btn-primary" onclick="startTraining(['D1'])" id="btn-train-d1">
+                            Nur D1 Training
+                        </button>
+                        <button class="btn btn-danger" onclick="cancelTraining()" id="btn-cancel" disabled>
+                            Training abbrechen
+                        </button>
+                        <button class="btn btn-warning" onclick="retrainFailed()" id="btn-retrain-failed">
+                            Fehlgeschlagene erneut trainieren
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Failed Training Card -->
+            <div class="card" id="failed-card" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">Fehlgeschlagene Trainings</h2>
+                    <span class="badge badge-failed" id="failed-count">0</span>
+                </div>
+                <div class="failed-list" id="failed-list">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Models Tab -->
+        <div id="tab-models" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Trainierte Modelle</h2>
+                    <span id="models-total" style="opacity: 0.7;">- Modelle</span>
+                </div>
+                <div class="toolbar">
+                    <input type="text" class="search-box" id="model-search" placeholder="Symbol suchen..." oninput="filterModels()">
+                    <select class="filter-select" id="timeframe-filter" onchange="filterModels()">
+                        <option value="">Alle Timeframes</option>
+                        <option value="M15">M15</option>
+                        <option value="H1">H1</option>
+                        <option value="D1">D1</option>
+                        <option value="default">1H (Standard)</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="loadModels()">Aktualisieren</button>
+                </div>
+                <div class="table-container">
+                    <table id="models-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Timeframe</th>
+                                <th>Trainiert am</th>
+                                <th>Samples</th>
+                                <th>Loss</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="models-tbody">
+                            <tr><td colspan="6" style="text-align: center; opacity: 0.5;">Lade Modelle...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cache Tab -->
+        <div id="tab-cache" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Training Data Cache</h2>
+                        <button class="btn btn-sm btn-primary" onclick="loadCacheStats()">Aktualisieren</button>
+                    </div>
+                    <p style="opacity: 0.7; margin-bottom: 1rem;">
+                        Zwischenspeicher für API-Daten um Anfragen an EasyInsight und Twelve Data zu reduzieren.
+                    </p>
+                    <div class="cache-stats">
+                        <div class="cache-stat">
+                            <div class="value" id="cache-entries">-</div>
+                            <div class="label">Einträge</div>
+                        </div>
+                        <div class="cache-stat">
+                            <div class="value" id="cache-size">-</div>
+                            <div class="label">Grösse (MB)</div>
+                        </div>
+                        <div class="cache-stat">
+                            <div class="value" id="cache-hits">-</div>
+                            <div class="label">Cache Hits</div>
+                        </div>
+                        <div class="cache-stat">
+                            <div class="value" id="cache-hit-rate">-</div>
+                            <div class="label">Hit Rate</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.75rem;">Nach Quelle:</div>
+                        <div class="cache-stats">
+                            <div class="cache-stat">
+                                <div class="value" id="cache-easyinsight">-</div>
+                                <div class="label">EasyInsight</div>
+                            </div>
+                            <div class="cache-stat">
+                                <div class="value" id="cache-twelvedata">-</div>
+                                <div class="label">Twelve Data</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.75rem;">Nach Timeframe:</div>
+                        <div class="cache-stats" style="grid-template-columns: repeat(3, 1fr);">
+                            <div class="cache-stat">
+                                <div class="value" id="cache-m15">-</div>
+                                <div class="label">M15</div>
+                            </div>
+                            <div class="cache-stat">
+                                <div class="value" id="cache-h1">-</div>
+                                <div class="label">H1</div>
+                            </div>
+                            <div class="cache-stat">
+                                <div class="value" id="cache-d1">-</div>
+                                <div class="label">D1</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Cache Aktionen</h2>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="btn btn-warning" onclick="clearExpiredCache()">
+                            Abgelaufene Einträge löschen
+                        </button>
+                        <button class="btn btn-danger" onclick="clearAllCache()">
+                            Gesamten Cache löschen
+                        </button>
+                    </div>
+                    <div style="margin-top: 1.5rem; font-size: 0.85rem; opacity: 0.7;">
+                        <p><strong>TTL (Time-to-Live):</strong></p>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                            <li>M15: 6 Stunden</li>
+                            <li>H1: 12 Stunden</li>
+                            <li>D1: 48 Stunden</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Tab -->
+        <div id="tab-performance" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Modell Performance</h2>
+                    <button class="btn btn-sm btn-primary" onclick="loadPerformance()">Aktualisieren</button>
+                </div>
+                <p style="opacity: 0.7; margin-bottom: 1rem;">
+                    Übersicht der Prognosegenauigkeit basierend auf historischen Evaluierungen.
+                </p>
+                <div class="table-container">
+                    <table id="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Timeframe</th>
+                                <th>MAE</th>
+                                <th>MAPE</th>
+                                <th>Evaluiert am</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="performance-tbody">
+                            <tr><td colspan="6" style="text-align: center; opacity: 0.5;">Lade Performance-Daten...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '/nhits/api/v1';
+        let allModels = [];
+        let trainingInterval = null;
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // Load data for the selected tab
+            if (tabName === 'models') loadModels();
+            if (tabName === 'cache') loadCacheStats();
+            if (tabName === 'performance') loadPerformance();
+        }
+
+        // Check service health
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${API_BASE.replace('/api/v1', '')}/health`);
+                const data = await res.json();
+                const badge = document.getElementById('service-status');
+                if (data.status === 'healthy') {
+                    badge.textContent = 'Online';
+                    badge.classList.remove('offline');
+                } else {
+                    badge.textContent = 'Degraded';
+                    badge.classList.add('offline');
+                }
+            } catch (err) {
+                const badge = document.getElementById('service-status');
+                badge.textContent = 'Offline';
+                badge.classList.add('offline');
+            }
+        }
+
+        // Training status
+        async function updateTrainingStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/training/progress`);
+                const data = await res.json();
+
+                const msgEl = document.getElementById('training-message');
+                const progressEl = document.getElementById('training-progress');
+                const timingEl = document.getElementById('training-timing');
+                const btnCancel = document.getElementById('btn-cancel');
+                const trainButtons = ['btn-train-all', 'btn-train-h1', 'btn-train-m15', 'btn-train-d1'];
+
+                if (data.training_in_progress) {
+                    msgEl.textContent = `Training: ${data.current_symbol || '-'} (${data.completed_symbols}/${data.total_symbols})`;
+                    msgEl.classList.add('training-active');
+                    progressEl.style.width = `${Math.max(data.progress_percent, 5)}%`;
+                    progressEl.classList.add('active');
+                    btnCancel.disabled = false;
+                    trainButtons.forEach(id => document.getElementById(id).disabled = true);
+
+                    document.getElementById('stat-completed').textContent = data.completed_symbols || 0;
+                    document.getElementById('stat-successful').textContent = data.results?.successful || 0;
+                    document.getElementById('stat-failed').textContent = data.results?.failed || 0;
+
+                    if (data.timing) {
+                        timingEl.style.display = 'grid';
+                        document.getElementById('stat-elapsed').textContent = data.timing.elapsed_formatted || '-';
+                        document.getElementById('stat-eta').textContent = data.timing.eta_formatted || '-';
+                    }
+
+                    // Start polling if not already
+                    if (!trainingInterval) {
+                        trainingInterval = setInterval(updateTrainingStatus, 2000);
+                    }
+                } else {
+                    msgEl.textContent = data.message || 'Kein Training aktiv';
+                    msgEl.classList.remove('training-active');
+                    progressEl.style.width = '0%';
+                    progressEl.classList.remove('active');
+                    btnCancel.disabled = true;
+                    trainButtons.forEach(id => document.getElementById(id).disabled = false);
+                    timingEl.style.display = 'none';
+
+                    // Stop polling
+                    if (trainingInterval) {
+                        clearInterval(trainingInterval);
+                        trainingInterval = null;
+                    }
+                }
+
+                // Load failed trainings
+                await loadFailedTrainings();
+
+            } catch (err) {
+                console.error('Training status error:', err);
+            }
+        }
+
+        // Load model counts by timeframe
+        async function loadModelCounts() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/models/by-timeframe`);
+                const data = await res.json();
+
+                document.getElementById('stat-tf-default').textContent = data.by_timeframe?.default?.count || 0;
+                document.getElementById('stat-tf-h1').textContent = data.by_timeframe?.H1?.count || 0;
+                document.getElementById('stat-tf-m15').textContent = data.by_timeframe?.M15?.count || 0;
+                document.getElementById('stat-tf-d1').textContent = data.by_timeframe?.D1?.count || 0;
+            } catch (err) {
+                console.error('Failed to load model counts:', err);
+            }
+        }
+
+        // Load failed trainings
+        async function loadFailedTrainings() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/training/failed`);
+                const data = await res.json();
+
+                const failedCard = document.getElementById('failed-card');
+                const failedList = document.getElementById('failed-list');
+                const failedCount = document.getElementById('failed-count');
+
+                if (data.count > 0) {
+                    failedCard.style.display = 'block';
+                    failedCount.textContent = data.count;
+
+                    let html = '';
+                    for (const [key, info] of Object.entries(data.models)) {
+                        html += `
+                            <div class="failed-item">
+                                <div class="symbol">${info.symbol} (${info.timeframe})</div>
+                                <div class="error">${info.error}</div>
+                            </div>
+                        `;
+                    }
+                    failedList.innerHTML = html;
+                } else {
+                    failedCard.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Failed to load failed trainings:', err);
+            }
+        }
+
+        // Start training
+        async function startTraining(timeframes) {
+            try {
+                let url = `${API_BASE}/forecast/train-all?force=false&background=true`;
+                timeframes.forEach(tf => url += `&timeframes=${tf}`);
+
+                showToast(`Training wird gestartet (${timeframes.join(', ')})...`);
+                const res = await fetch(url, { method: 'POST' });
+                const data = await res.json();
+
+                showToast(data.message || 'Training gestartet');
+                setTimeout(updateTrainingStatus, 1000);
+            } catch (err) {
+                showToast('Fehler beim Starten des Trainings');
+            }
+        }
+
+        // Cancel training
+        async function cancelTraining() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/training/cancel`, { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message || 'Training wird abgebrochen...');
+                setTimeout(updateTrainingStatus, 1000);
+            } catch (err) {
+                showToast('Fehler beim Abbrechen');
+            }
+        }
+
+        // Retrain failed
+        async function retrainFailed() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/retrain-poor-performers`, { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message || 'Retraining gestartet');
+                setTimeout(updateTrainingStatus, 1000);
+            } catch (err) {
+                showToast('Fehler beim Starten des Retrainings');
+            }
+        }
+
+        // Load models
+        async function loadModels() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/models/by-timeframe`);
+                const data = await res.json();
+
+                document.getElementById('models-total').textContent = `${data.total_models} Modelle`;
+
+                allModels = [];
+                for (const [tf, tfData] of Object.entries(data.by_timeframe || {})) {
+                    for (const symbol of tfData.symbols || []) {
+                        allModels.push({
+                            symbol: symbol,
+                            timeframe: tf === 'default' ? 'H1 (Std)' : tf,
+                            timeframeKey: tf
+                        });
+                    }
+                }
+
+                filterModels();
+            } catch (err) {
+                console.error('Failed to load models:', err);
+            }
+        }
+
+        // Filter models
+        function filterModels() {
+            const search = document.getElementById('model-search').value.toLowerCase();
+            const tfFilter = document.getElementById('timeframe-filter').value;
+
+            const filtered = allModels.filter(m => {
+                const matchSearch = m.symbol.toLowerCase().includes(search);
+                const matchTf = !tfFilter || m.timeframeKey === tfFilter;
+                return matchSearch && matchTf;
+            });
+
+            const tbody = document.getElementById('models-tbody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; opacity: 0.5;">Keine Modelle gefunden</td></tr>';
+                return;
+            }
+
+            let html = '';
+            for (const model of filtered) {
+                const tfClass = model.timeframeKey === 'M15' ? 'badge-m15' :
+                               model.timeframeKey === 'D1' ? 'badge-d1' : 'badge-h1';
+                html += `
+                    <tr>
+                        <td><strong>${model.symbol}</strong></td>
+                        <td><span class="badge ${tfClass}">${model.timeframe}</span></td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="trainSingle('${model.symbol}', '${model.timeframeKey}')">Train</button>
+                        </td>
+                    </tr>
+                `;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // Train single model
+        async function trainSingle(symbol, timeframe) {
+            try {
+                const tf = timeframe === 'default' ? 'H1' : timeframe;
+                showToast(`Training ${symbol}/${tf}...`);
+                const res = await fetch(`${API_BASE}/forecast/${symbol}/train?timeframe=${tf}&force=true`, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success) {
+                    showToast(`${symbol}/${tf} erfolgreich trainiert`);
+                } else {
+                    showToast(`Fehler: ${data.error_message || 'Unbekannt'}`);
+                }
+            } catch (err) {
+                showToast('Fehler beim Training');
+            }
+        }
+
+        // Load cache stats
+        async function loadCacheStats() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/training/cache/stats`);
+                const data = await res.json();
+
+                document.getElementById('cache-entries').textContent = data.total_entries || 0;
+                document.getElementById('cache-size').textContent = data.total_size_mb || 0;
+                document.getElementById('cache-hits').textContent = data.cache_hits || 0;
+                document.getElementById('cache-hit-rate').textContent = `${data.hit_rate || 0}%`;
+
+                document.getElementById('cache-easyinsight').textContent = data.by_source?.easyinsight || 0;
+                document.getElementById('cache-twelvedata').textContent = data.by_source?.twelvedata || 0;
+
+                document.getElementById('cache-m15').textContent = data.by_timeframe?.M15 || 0;
+                document.getElementById('cache-h1').textContent = data.by_timeframe?.H1 || 0;
+                document.getElementById('cache-d1').textContent = data.by_timeframe?.D1 || 0;
+            } catch (err) {
+                console.error('Failed to load cache stats:', err);
+            }
+        }
+
+        // Clear expired cache
+        async function clearExpiredCache() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/training/cache/expired`, { method: 'DELETE' });
+                const data = await res.json();
+                showToast(`${data.removed || 0} abgelaufene Einträge gelöscht`);
+                loadCacheStats();
+            } catch (err) {
+                showToast('Fehler beim Löschen');
+            }
+        }
+
+        // Clear all cache
+        async function clearAllCache() {
+            if (!confirm('Gesamten Cache wirklich löschen?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/forecast/training/cache`, { method: 'DELETE' });
+                const data = await res.json();
+                showToast(`${data.removed || 0} Einträge gelöscht`);
+                loadCacheStats();
+            } catch (err) {
+                showToast('Fehler beim Löschen');
+            }
+        }
+
+        // Load performance
+        async function loadPerformance() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/evaluated`);
+                const data = await res.json();
+
+                const tbody = document.getElementById('performance-tbody');
+                if (!data.models || data.models.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; opacity: 0.5;">Keine Evaluierungen vorhanden</td></tr>';
+                    return;
+                }
+
+                let html = '';
+                for (const model of data.models) {
+                    const statusClass = model.mape && model.mape < 5 ? 'badge-success' : 'badge-failed';
+                    const statusText = model.mape && model.mape < 5 ? 'Gut' : 'Verbesserungswürdig';
+                    html += `
+                        <tr>
+                            <td><strong>${model.symbol}</strong></td>
+                            <td>${model.timeframe || 'H1'}</td>
+                            <td>${model.mae?.toFixed(4) || '-'}</td>
+                            <td>${model.mape?.toFixed(2) || '-'}%</td>
+                            <td>${model.evaluated_at || '-'}</td>
+                            <td><span class="badge ${statusClass}">${statusText}</span></td>
+                        </tr>
+                    `;
+                }
+                tbody.innerHTML = html;
+            } catch (err) {
+                console.error('Failed to load performance:', err);
+                document.getElementById('performance-tbody').innerHTML =
+                    '<tr><td colspan="6" style="text-align: center; opacity: 0.5;">Fehler beim Laden</td></tr>';
+            }
+        }
+
+        // Refresh all status
+        async function refreshStatus() {
+            await Promise.all([
+                checkHealth(),
+                updateTrainingStatus(),
+                loadModelCounts()
+            ]);
+        }
+
+        // Toast notification
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Initial load
+        refreshStatus();
+
+        // Auto-refresh every 10 seconds
+        setInterval(refreshStatus, 10000);
+    </script>
+</body>
+</html>

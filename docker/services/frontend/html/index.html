@@ -198,158 +198,6 @@
             transform: translateY(-1px);
         }
 
-        .bottom-section {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 1.5rem;
-        }
-
-        @media (max-width: 800px) {
-            .bottom-section {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .panel {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .panel h3 {
-            font-size: 1rem;
-            margin-bottom: 1rem;
-            opacity: 0.9;
-        }
-
-        .training-status {
-            font-size: 0.9rem;
-        }
-
-        .training-status .training-active {
-            color: #4ade80;
-            font-weight: 600;
-            animation: blink 1s ease-in-out infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        .training-status .progress-bar {
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 0.5rem 0;
-        }
-
-        .training-status .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #64c8ff, #a78bfa);
-            border-radius: 4px;
-            transition: width 0.3s;
-        }
-
-        .training-status .progress-fill.active {
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-
-        .training-info {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .training-timing {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .timing-stat {
-            text-align: center;
-            padding: 0.8rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-        }
-
-        .timing-stat .value {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #a78bfa;
-        }
-
-        .timing-stat .label {
-            font-size: 0.75rem;
-            opacity: 0.6;
-            margin-top: 0.3rem;
-        }
-
-        .training-stat {
-            text-align: center;
-            padding: 0.8rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-        }
-
-        .training-stat .value {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #64c8ff;
-        }
-
-        .training-stat .label {
-            font-size: 0.75rem;
-            opacity: 0.6;
-            margin-top: 0.3rem;
-        }
-
-        .quick-actions button {
-            width: 100%;
-            padding: 0.8rem;
-            margin-bottom: 0.5rem;
-            background: rgba(100, 200, 255, 0.1);
-            border: 1px solid rgba(100, 200, 255, 0.2);
-            color: #64c8ff;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-        }
-
-        .quick-actions button:hover {
-            background: rgba(100, 200, 255, 0.2);
-        }
-
-        .quick-actions button:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            background: rgba(100, 100, 100, 0.1);
-            border-color: rgba(100, 100, 100, 0.2);
-            color: #888;
-        }
-
-        .quick-actions button#btn-cancel:not(:disabled) {
-            background: rgba(239, 68, 68, 0.2);
-            border-color: rgba(239, 68, 68, 0.4);
-            color: #ef4444;
-        }
-
-        .quick-actions button#btn-cancel:not(:disabled):hover {
-            background: rgba(239, 68, 68, 0.3);
-        }
-
         /* System Metrics Styles */
         .metrics-section {
             display: grid;
@@ -776,6 +624,7 @@
                 </div>
                 <div class="service-links">
                     <a href="/service-nhits.html" target="_blank">Info</a>
+                    <a href="/config-nhits.html" target="_blank">Config</a>
                     <a href="/nhits/docs" target="_blank">API Docs</a>
                     <a href="/nhits/health" target="_blank">Health</a>
                 </div>
@@ -899,73 +748,6 @@
             </div>
         </div>
 
-        <div class="bottom-section">
-            <!-- Training Status -->
-            <div class="panel">
-                <h3>NHITS Training Status</h3>
-                <div class="training-status">
-                    <div id="training-message">Kein Training aktiv</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="training-progress" style="width: 0%"></div>
-                    </div>
-                    <div class="training-info">
-                        <div class="training-stat">
-                            <div class="value" id="stat-models">-</div>
-                            <div class="label">Modelle gesamt</div>
-                        </div>
-                        <div class="training-stat">
-                            <div class="value" id="stat-successful">-</div>
-                            <div class="label">Erfolgreich</div>
-                        </div>
-                        <div class="training-stat">
-                            <div class="value" id="stat-failed">-</div>
-                            <div class="label">Fehlgeschlagen</div>
-                        </div>
-                    </div>
-                    <div class="timeframe-breakdown" id="timeframe-breakdown" style="margin-top: 1rem;">
-                        <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.5rem;">Modelle nach Timeframe:</div>
-                        <div class="training-info" style="grid-template-columns: repeat(4, 1fr);">
-                            <div class="training-stat" title="Standard stündliche Modelle">
-                                <div class="value" id="stat-tf-default">-</div>
-                                <div class="label">1H (Std)</div>
-                            </div>
-                            <div class="training-stat" title="Stündliche Modelle mit H1-Suffix">
-                                <div class="value" id="stat-tf-h1">-</div>
-                                <div class="label">H1</div>
-                            </div>
-                            <div class="training-stat" title="15-Minuten Modelle">
-                                <div class="value" id="stat-tf-m15">-</div>
-                                <div class="label">M15</div>
-                            </div>
-                            <div class="training-stat" title="Tägliche Modelle">
-                                <div class="value" id="stat-tf-d1">-</div>
-                                <div class="label">D1</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="training-timing" id="training-timing" style="display: none;">
-                        <div class="timing-stat">
-                            <div class="value" id="stat-elapsed">-</div>
-                            <div class="label">Vergangen</div>
-                        </div>
-                        <div class="timing-stat">
-                            <div class="value" id="stat-eta">-</div>
-                            <div class="label">Verbleibend (ETA)</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="panel">
-                <h3>Schnellaktionen</h3>
-                <div class="quick-actions">
-                    <button onclick="startTraining()" id="btn-train">Multi-Timeframe Training (M15, H1, D1)</button>
-                    <button onclick="cancelTraining()" id="btn-cancel" disabled>Training abbrechen</button>
-                    <button onclick="refreshStatus()">Status aktualisieren</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <footer>
@@ -1022,22 +804,13 @@
                 document.getElementById('nhits-training').textContent = data.training_in_progress ? 'Aktiv' : 'Inaktiv';
             }
 
-            // Get models count with timeframe breakdown
+            // Get models count
             try {
                 const res = await fetch('/nhits/api/v1/forecast/models/by-timeframe');
                 const data = await res.json();
-                document.getElementById('stat-models').textContent = data.total_models;
                 document.getElementById('models-count').textContent = `Modelle: ${data.total_models}`;
-
-                // Update timeframe breakdown
-                if (data.by_timeframe) {
-                    document.getElementById('stat-tf-default').textContent = data.by_timeframe.default?.count || 0;
-                    document.getElementById('stat-tf-h1').textContent = data.by_timeframe.H1?.count || 0;
-                    document.getElementById('stat-tf-m15').textContent = data.by_timeframe.M15?.count || 0;
-                    document.getElementById('stat-tf-d1').textContent = data.by_timeframe.D1?.count || 0;
-                }
             } catch (err) {
-                console.error('Failed to fetch model timeframes:', err);
+                console.error('Failed to fetch model count:', err);
             }
         }
 
@@ -1172,50 +945,6 @@
             }
         }
 
-        async function updateTrainingStatus() {
-            try {
-                const res = await fetch('/nhits/api/v1/forecast/training/progress');
-                const data = await res.json();
-
-                const msgEl = document.getElementById('training-message');
-                const progressEl = document.getElementById('training-progress');
-                const btnTrain = document.getElementById('btn-train');
-                const btnCancel = document.getElementById('btn-cancel');
-                const timingEl = document.getElementById('training-timing');
-
-                if (data.training_in_progress) {
-                    msgEl.textContent = `Training: ${data.current_symbol || '-'} (${data.completed_symbols}/${data.total_symbols})`;
-                    msgEl.classList.add('training-active');
-                    progressEl.style.width = `${Math.max(data.progress_percent, 5)}%`;
-                    progressEl.classList.add('active');
-                    btnTrain.disabled = true;
-                    btnCancel.disabled = false;
-
-                    document.getElementById('stat-successful').textContent = data.results?.successful || 0;
-                    document.getElementById('stat-failed').textContent = data.results?.failed || 0;
-
-                    // Show timing information
-                    if (data.timing) {
-                        timingEl.style.display = 'grid';
-                        document.getElementById('stat-elapsed').textContent = data.timing.elapsed_formatted || '-';
-                        document.getElementById('stat-eta').textContent = data.timing.eta_formatted || '-';
-                    } else {
-                        timingEl.style.display = 'none';
-                    }
-                } else {
-                    msgEl.textContent = data.message || 'Kein Training aktiv';
-                    msgEl.classList.remove('training-active');
-                    progressEl.style.width = '0%';
-                    progressEl.classList.remove('active');
-                    btnTrain.disabled = false;
-                    btnCancel.disabled = true;
-                    timingEl.style.display = 'none';
-                }
-            } catch (err) {
-                console.error('Training status error:', err);
-            }
-        }
-
         async function refreshStatus() {
             healthyServices = 0;
             await Promise.all([
@@ -1224,45 +953,11 @@
                 updateDataInfo(),
                 updateRagInfo(),
                 updateEasyInsightInfo(),
-                updateTrainingStatus(),
                 updateSystemMetrics()
             ]);
 
             document.getElementById('services-count').textContent = `Services: ${healthyServices}/5`;
             document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
-        }
-
-        async function startTraining(timeframes = null) {
-            try {
-                let url = '/nhits/api/v1/forecast/train-all?force=false&background=true';
-                // Default: train all timeframes (Multi-Timeframe)
-                if (!timeframes) {
-                    url += '&timeframes=M15&timeframes=H1&timeframes=D1';
-                } else if (Array.isArray(timeframes)) {
-                    timeframes.forEach(tf => url += `&timeframes=${tf}`);
-                }
-
-                showToast('Multi-Timeframe Training wird gestartet (M15, H1, D1)...');
-                const res = await fetch(url, { method: 'POST' });
-                const data = await res.json();
-
-                const tfInfo = data.timeframes ? ` [${data.timeframes.join(', ')}]` : '';
-                showToast(`Training gestartet${tfInfo}: ${data.message || 'OK'}`);
-                setTimeout(refreshStatus, 1000);
-            } catch (err) {
-                showToast('Fehler beim Starten des Trainings');
-            }
-        }
-
-        async function cancelTraining() {
-            try {
-                const res = await fetch('/nhits/api/v1/forecast/training/cancel', { method: 'POST' });
-                const data = await res.json();
-                showToast(data.message || 'Training wird abgebrochen...');
-                setTimeout(refreshStatus, 1000);
-            } catch (err) {
-                showToast('Fehler beim Abbrechen');
-            }
         }
 
         function showToast(message) {
