@@ -521,6 +521,105 @@ async def get_system_metrics():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@system_router.get("/system/storage")
+async def get_storage_metrics():
+    """
+    Get storage metrics including disk usage and application data directory sizes.
+
+    Returns disk space and data directory information for the KITradingModel project.
+    """
+    import psutil
+    import os
+
+    def get_directory_size(path: str) -> int:
+        """Get total size of a directory in bytes."""
+        total_size = 0
+        try:
+            if os.path.exists(path):
+                for dirpath, dirnames, filenames in os.walk(path):
+                    for filename in filenames:
+                        filepath = os.path.join(dirpath, filename)
+                        try:
+                            total_size += os.path.getsize(filepath)
+                        except (OSError, FileNotFoundError):
+                            pass
+        except Exception:
+            pass
+        return total_size
+
+    def format_size(size_bytes: int) -> str:
+        """Format bytes to human readable string."""
+        if size_bytes >= 1024**3:
+            return f"{size_bytes / (1024**3):.2f} GB"
+        elif size_bytes >= 1024**2:
+            return f"{size_bytes / (1024**2):.2f} MB"
+        elif size_bytes >= 1024:
+            return f"{size_bytes / 1024:.2f} KB"
+        return f"{size_bytes} B"
+
+    try:
+        # Disk metrics
+        disk = psutil.disk_usage('/')
+        disk_info = {
+            "total_gb": round(disk.total / (1024**3), 2),
+            "used_gb": round(disk.used / (1024**3), 2),
+            "free_gb": round(disk.free / (1024**3), 2),
+            "percent": round(disk.percent, 1)
+        }
+
+        # Application data directories - these are the mounted volumes
+        data_dirs = {
+            "models": "/app/data/models",
+            "logs": "/app/logs",
+            "data": "/app/data"
+        }
+
+        volumes = []
+        total_app_size = 0
+
+        for name, path in data_dirs.items():
+            size = get_directory_size(path)
+            total_app_size += size
+            if os.path.exists(path):
+                volumes.append({
+                    "name": name,
+                    "path": path,
+                    "size": format_size(size),
+                    "size_bytes": size
+                })
+
+        # Known project containers (static list since we can't query Docker from inside)
+        containers = [
+            {"name": "trading-nhits", "service": "NHITS Service", "port": 3002},
+            {"name": "trading-data", "service": "Data Service", "port": 3001},
+            {"name": "trading-rag", "service": "RAG Service", "port": 3003},
+            {"name": "trading-llm", "service": "LLM Service", "port": 3004},
+            {"name": "trading-frontend", "service": "Frontend", "port": 3000}
+        ]
+
+        # Docker usage summary based on data directories
+        docker_usage = {
+            "app_data_size": format_size(total_app_size),
+            "models_size": format_size(get_directory_size("/app/data/models")),
+            "logs_size": format_size(get_directory_size("/app/logs")),
+            "total_data_size": format_size(get_directory_size("/app/data"))
+        }
+
+        return {
+            "disk": disk_info,
+            "app_storage": {
+                "usage": docker_usage,
+                "volumes": volumes,
+                "containers": containers
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Storage metrics failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @system_router.get("/system/info")
 async def get_system_info():
     """Get system and GPU information."""

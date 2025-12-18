@@ -308,6 +308,187 @@
             font-size: 0.9rem;
         }
 
+        /* Storage Section Styles */
+        .storage-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .storage-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .storage-card h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .storage-overview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 800px) {
+            .storage-overview {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .storage-disk {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .storage-disk h4 {
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .metric-bar.disk {
+            background: linear-gradient(90deg, #06b6d4, #22d3ee);
+        }
+
+        .storage-docker-summary {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .storage-docker-summary h4 {
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .docker-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .docker-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0.6rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .docker-stat .label {
+            opacity: 0.6;
+        }
+
+        .docker-stat .value {
+            font-weight: 500;
+            color: #64c8ff;
+        }
+
+        .storage-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .storage-details {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .storage-containers, .storage-volumes {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .storage-containers h4, .storage-volumes h4 {
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .container-list, .volume-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .container-item, .volume-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .container-item:hover, .volume-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(100, 200, 255, 0.2);
+        }
+
+        .container-name, .volume-name {
+            font-weight: 500;
+            color: #e8e8e8;
+        }
+
+        .container-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-dot.running {
+            background: #4caf50;
+            box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+        }
+
+        .status-dot.stopped {
+            background: #f44336;
+        }
+
+        .container-size, .volume-driver {
+            font-size: 0.75rem;
+            opacity: 0.6;
+        }
+
+        .storage-loading {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.9rem;
+        }
+
         footer {
             text-align: center;
             padding: 1.5rem;
@@ -748,6 +929,86 @@
             </div>
         </div>
 
+        <!-- Storage Section -->
+        <div class="storage-section">
+            <div class="storage-card">
+                <h3><span class="metric-icon">&#128190;</span> Storage</h3>
+
+                <!-- Overview: Disk + Docker Summary -->
+                <div class="storage-overview">
+                    <!-- Disk Usage -->
+                    <div class="storage-disk">
+                        <h4>&#128421; Festplattenspeicher</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar disk" id="disk-bar" style="width: 0%">
+                                <span id="disk-percent">-</span>
+                            </div>
+                        </div>
+                        <div class="metric-details">
+                            <div class="metric-detail">
+                                <span class="label">Gesamt</span>
+                                <span class="value" id="disk-total">-</span>
+                            </div>
+                            <div class="metric-detail">
+                                <span class="label">Verwendet</span>
+                                <span class="value" id="disk-used">-</span>
+                            </div>
+                            <div class="metric-detail">
+                                <span class="label">Verfügbar</span>
+                                <span class="value" id="disk-free">-</span>
+                            </div>
+                            <div class="metric-detail">
+                                <span class="label">Auslastung</span>
+                                <span class="value" id="disk-percent-text">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- App Storage Summary -->
+                    <div class="storage-docker-summary">
+                        <h4>&#128451; Anwendungsdaten</h4>
+                        <div class="docker-stats-grid">
+                            <div class="docker-stat">
+                                <span class="label">Modelle</span>
+                                <span class="value" id="storage-models-size">-</span>
+                            </div>
+                            <div class="docker-stat">
+                                <span class="label">Logs</span>
+                                <span class="value" id="storage-logs-size">-</span>
+                            </div>
+                            <div class="docker-stat">
+                                <span class="label">Daten</span>
+                                <span class="value" id="storage-data-size">-</span>
+                            </div>
+                            <div class="docker-stat">
+                                <span class="label">Gesamt</span>
+                                <span class="value" id="storage-total-size">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Details: Containers + Volumes -->
+                <div class="storage-details">
+                    <!-- Containers -->
+                    <div class="storage-containers">
+                        <h4>&#128230; Container</h4>
+                        <div class="container-list" id="container-list">
+                            <div class="storage-loading">Lade Container...</div>
+                        </div>
+                    </div>
+
+                    <!-- Volumes -->
+                    <div class="storage-volumes">
+                        <h4>&#128451; Volumes</h4>
+                        <div class="volume-list" id="volume-list">
+                            <div class="storage-loading">Lade Volumes...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <footer>
@@ -945,6 +1206,97 @@
             }
         }
 
+        async function updateStorageMetrics() {
+            try {
+                const res = await fetch('/nhits/api/v1/system/storage');
+                if (!res.ok) throw new Error('Storage metrics fetch failed');
+                const data = await res.json();
+
+                // Helper function to determine bar color class based on percentage
+                function getColorClass(percent) {
+                    if (percent >= 90) return 'high';
+                    if (percent >= 70) return 'medium';
+                    return '';
+                }
+
+                // Disk metrics
+                if (data.disk) {
+                    const diskPercent = Math.round(data.disk.percent || 0);
+                    const diskBar = document.getElementById('disk-bar');
+                    diskBar.style.width = `${Math.max(diskPercent, 5)}%`;
+                    diskBar.className = `metric-bar disk ${getColorClass(diskPercent)}`;
+                    document.getElementById('disk-percent').textContent = `${diskPercent}%`;
+                    document.getElementById('disk-total').textContent = `${data.disk.total_gb} GB`;
+                    document.getElementById('disk-used').textContent = `${data.disk.used_gb} GB`;
+                    document.getElementById('disk-free').textContent = `${data.disk.free_gb} GB`;
+                    document.getElementById('disk-percent-text').textContent = `${diskPercent}%`;
+                }
+
+                // App storage summary
+                if (data.app_storage && data.app_storage.usage) {
+                    document.getElementById('storage-models-size').textContent = data.app_storage.usage.models_size || '-';
+                    document.getElementById('storage-logs-size').textContent = data.app_storage.usage.logs_size || '-';
+                    document.getElementById('storage-data-size').textContent = data.app_storage.usage.total_data_size || '-';
+                    document.getElementById('storage-total-size').textContent = data.app_storage.usage.app_data_size || '-';
+                }
+
+                // Containers list - use data from API with health check status
+                const containerList = document.getElementById('container-list');
+                if (data.app_storage && data.app_storage.containers && data.app_storage.containers.length > 0) {
+                    // Map container names to health status elements
+                    const healthMap = {
+                        'trading-nhits': 'nhits-status',
+                        'trading-data': 'data-status',
+                        'trading-rag': 'rag-status',
+                        'trading-llm': 'llm-status',
+                        'trading-frontend': null  // Always healthy if we're seeing this
+                    };
+
+                    containerList.innerHTML = data.app_storage.containers.map(container => {
+                        const statusEl = healthMap[container.name];
+                        const isHealthy = statusEl
+                            ? document.getElementById(statusEl)?.textContent === 'Online'
+                            : true;
+                        return `
+                            <div class="container-item">
+                                <div>
+                                    <div class="container-name">${container.name}</div>
+                                    <div class="container-size">${container.service} (Port ${container.port})</div>
+                                </div>
+                                <div class="container-status">
+                                    <span class="status-dot ${isHealthy ? 'running' : 'stopped'}"></span>
+                                    <span>${isHealthy ? 'Running' : 'Stopped'}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    containerList.innerHTML = '<div class="storage-loading">Keine Container-Daten</div>';
+                }
+
+                // Volumes list
+                const volumeList = document.getElementById('volume-list');
+                if (data.app_storage && data.app_storage.volumes && data.app_storage.volumes.length > 0) {
+                    volumeList.innerHTML = data.app_storage.volumes.map(volume => `
+                        <div class="volume-item">
+                            <div>
+                                <div class="volume-name">${volume.name}</div>
+                                <div class="container-size">${volume.path}</div>
+                            </div>
+                            <div class="volume-driver">${volume.size}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    volumeList.innerHTML = '<div class="storage-loading">Keine Volume-Daten</div>';
+                }
+
+            } catch (err) {
+                console.error('Storage metrics error:', err);
+                document.getElementById('container-list').innerHTML = '<div class="storage-loading">Fehler beim Laden</div>';
+                document.getElementById('volume-list').innerHTML = '<div class="storage-loading">Fehler beim Laden</div>';
+            }
+        }
+
         async function refreshStatus() {
             healthyServices = 0;
             await Promise.all([
@@ -953,7 +1305,8 @@
                 updateDataInfo(),
                 updateRagInfo(),
                 updateEasyInsightInfo(),
-                updateSystemMetrics()
+                updateSystemMetrics(),
+                updateStorageMetrics()
             ]);
 
             document.getElementById('services-count').textContent = `Services: ${healthyServices}/5`;
