@@ -543,20 +543,21 @@ class NHITSTrainingService:
                 f"in {duration:.1f}s"
             )
 
-            # Clear cache for trained symbols after training completes
+            # Keep cache for future re-training - data expires based on TTL per timeframe
+            # This reduces API calls especially for Twelve Data which has daily limits
             cache_stats = training_data_cache.get_stats()
-            if symbols_to_train:
-                cleared = training_data_cache.clear_for_symbols(symbols_to_train)
-                logger.info(
-                    f"Training cache cleared: {cleared} entries removed "
-                    f"(was: {cache_stats.get('total_entries', 0)} entries, "
-                    f"hit rate: {cache_stats.get('hit_rate', 0)}%)"
-                )
-                summary["cache_stats"] = {
-                    "entries_cleared": cleared,
-                    "hit_rate_during_training": cache_stats.get("hit_rate", 0),
-                    "bytes_saved": cache_stats.get("bytes_saved", 0)
-                }
+            summary["cache_stats"] = {
+                "entries_cached": cache_stats.get("total_entries", 0),
+                "cache_size_mb": cache_stats.get("total_size_mb", 0),
+                "hit_rate_during_training": cache_stats.get("hit_rate", 0),
+                "bytes_saved": cache_stats.get("bytes_saved", 0)
+            }
+            logger.info(
+                f"Training cache retained for future re-training: "
+                f"{cache_stats.get('total_entries', 0)} entries, "
+                f"{cache_stats.get('total_size_mb', 0):.2f} MB, "
+                f"hit rate: {cache_stats.get('hit_rate', 0)}%"
+            )
 
             return summary
 

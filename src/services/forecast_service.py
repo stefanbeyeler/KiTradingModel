@@ -1082,10 +1082,11 @@ class ForecastService:
             model_confidence=0.0,
         )
 
-    def get_model_info(self, symbol: str) -> ForecastModelInfo:
+    def get_model_info(self, symbol: str, timeframe: str = "H1") -> ForecastModelInfo:
         """Get information about a trained model including multi-variate features."""
-        model_path = self._get_model_path(symbol)
-        metadata = self._load_metadata(symbol)
+        tf = timeframe.upper()
+        model_path = self._get_model_path(symbol, tf)
+        metadata = self._load_metadata(symbol, tf)
 
         # Build metrics including feature information
         metrics = {}
@@ -1095,14 +1096,17 @@ class ForecastService:
             metrics['feature_names'] = metadata.get('feature_names', ['close'])
             metrics['final_loss'] = metadata.get('final_loss')
 
+        # Get timeframe-specific config
+        tf_config = self.get_timeframe_config(tf)
+
         return ForecastModelInfo(
-            symbol=symbol,
+            symbol=self._get_model_key(symbol, tf),
             model_exists=model_path.exists(),
             model_path=str(model_path) if model_path.exists() else None,
             last_trained=metadata.get('trained_at') if metadata else None,
             training_samples=metadata.get('training_samples') if metadata else None,
-            horizon=self.horizon,
-            input_size=self.input_size,
+            horizon=tf_config["horizon"],
+            input_size=tf_config["input_size"],
             metrics=metrics,
         )
 

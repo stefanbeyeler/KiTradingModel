@@ -4,7 +4,9 @@ Training Data Cache Service.
 Provides persistent caching of training data from EasyInsight and TwelveData APIs
 to reduce API calls during batch NHITS model training.
 
-Data is cached on disk and automatically cleaned up after training completes.
+Data is cached on disk with TTL per timeframe. Cache entries expire automatically
+and are cleaned up periodically. This is especially important for Twelve Data API
+which has daily request limits.
 """
 
 import json
@@ -41,11 +43,12 @@ class TrainingDataCacheService:
     after training completes.
     """
 
-    # TTL in hours per timeframe
+    # TTL in hours per timeframe - optimized for reducing API calls
+    # Especially important for Twelve Data which has daily request limits
     DEFAULT_TTL = {
-        "M15": 2,    # 2 hours - changes frequently
-        "H1": 4,     # 4 hours - moderate change rate
-        "D1": 24,    # 24 hours - only one new candle per day
+        "M15": 6,    # 6 hours - reasonable for intraday retraining
+        "H1": 12,    # 12 hours - covers multiple training runs per day
+        "D1": 48,    # 48 hours - D1 data changes slowly (1 new candle/day)
     }
 
     def __init__(self, cache_dir: Optional[Path] = None):
