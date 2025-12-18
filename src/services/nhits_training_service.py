@@ -270,13 +270,176 @@ class NHITSTrainingService:
 
             logger.info(
                 f"Fetched {len(time_series)} data points for {symbol}/{tf} "
-                f"{'(from cache)' if from_cache else '(from API)'}"
+                f"{'(from cache)' if from_cache else '(from EasyInsight API)'}"
             )
             return time_series
 
         except Exception as e:
             logger.error(f"Failed to get training data from EasyInsight API for {symbol}/{tf}: {e}")
             return []
+
+    async def get_training_data_twelvedata(
+        self,
+        symbol: str,
+        timeframe: str = "H1",
+        use_cache: bool = True
+    ) -> List[TimeSeriesData]:
+        """Fetch training data for a symbol from Twelve Data API.
+
+        This is used as fallback when EasyInsight doesn't have enough data.
+
+        Args:
+            symbol: Trading symbol (will be converted to Twelve Data format)
+            timeframe: Timeframe for OHLCV data (M15, H1, D1)
+            use_cache: Whether to use cached data if available
+        """
+        try:
+            from .twelvedata_service import twelvedata_service
+            from .forecast_service import forecast_service
+            from .symbol_service import symbol_service
+
+            tf = timeframe.upper()
+
+            # Check if Twelve Data is available
+            if not twelvedata_service.is_available():
+                logger.warning("Twelve Data API not available")
+                return []
+
+            # Get timeframe-specific requirements
+            tf_config = forecast_service.get_timeframe_config(tf)
+            min_required = tf_config["input_size"] + tf_config["horizon"]
+
+            # Map timeframe to Twelve Data interval
+            interval_map = {
+                "M15": "15min",
+                "H1": "1h",
+                "D1": "1day"
+            }
+            interval = interval_map.get(tf, "1h")
+
+            # Calculate outputsize based on timeframe
+            if tf == "M15":
+                outputsize = min(5000, min_required * 3)  # Extra buffer
+            elif tf == "D1":
+                outputsize = min(5000, min_required * 2)
+            else:  # H1
+                outputsize = min(5000, min_required * 2)
+
+            # Try to get symbol alias for Twelve Data format (e.g., EURUSD -> EUR/USD)
+            td_symbol = symbol
+            managed_symbol = await symbol_service.get_symbol(symbol)
+            if managed_symbol and managed_symbol.aliases:
+                for alias in managed_symbol.aliases:
+                    if "/" in alias:
+                        td_symbol = alias
+                        break
+
+            # If no alias found, try to auto-convert common formats
+            if td_symbol == symbol and "/" not in td_symbol:
+                # Check if it's a crypto pair (ends with USD, EUR, BTC, etc.)
+                crypto_bases = ["USD", "EUR", "GBP", "USDT", "BTC", "ETH"]
+                for base in crypto_bases:
+                    if td_symbol.endswith(base) and len(td_symbol) > len(base):
+                        crypto = td_symbol[:-len(base)]
+                        td_symbol = f"{crypto}/{base}"
+                        logger.debug(f"Auto-converted {symbol} to {td_symbol} for Twelve Data")
+                        break
+
+            # Try to get data from cache first
+            if use_cache:
+                cached_data = training_data_cache.get_cached_data(symbol, tf, "twelvedata")
+                if cached_data:
+                    logger.info(f"Using cached Twelve Data for {symbol}/{tf}: {len(cached_data)} rows")
+                    return self._parse_twelvedata_response(cached_data, symbol, tf)
+
+            # Fetch from Twelve Data API
+            logger.info(f"Fetching {symbol}/{tf} from Twelve Data API (symbol: {td_symbol}, interval: {interval})")
+            response = await twelvedata_service.get_time_series(
+                symbol=td_symbol,
+                interval=interval,
+                outputsize=outputsize
+            )
+
+            if "error" in response:
+                logger.warning(f"Twelve Data error for {symbol}/{tf}: {response.get('error')}")
+                return []
+
+            values = response.get("values", [])
+            if not values:
+                logger.warning(f"No data from Twelve Data for {symbol}/{tf}")
+                return []
+
+            # Cache the data
+            if use_cache:
+                training_data_cache.cache_data(symbol, tf, values, "twelvedata")
+                logger.debug(f"Cached {len(values)} Twelve Data rows for {symbol}/{tf}")
+
+            return self._parse_twelvedata_response(values, symbol, tf)
+
+        except Exception as e:
+            logger.error(f"Failed to get training data from Twelve Data for {symbol}/{tf}: {e}")
+            return []
+
+    def _parse_twelvedata_response(
+        self,
+        values: List[dict],
+        symbol: str,
+        timeframe: str
+    ) -> List[TimeSeriesData]:
+        """Parse Twelve Data time series response into TimeSeriesData objects."""
+        from datetime import datetime
+
+        time_series = []
+        for row in values:
+            try:
+                # Parse timestamp
+                timestamp_str = row.get("datetime")
+                if not timestamp_str:
+                    continue
+
+                # Twelve Data returns format: "2024-01-15 14:30:00" or "2024-01-15"
+                try:
+                    if " " in timestamp_str:
+                        timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                    else:
+                        timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d")
+                except ValueError:
+                    timestamp = datetime.fromisoformat(timestamp_str)
+
+                # Get OHLCV
+                open_val = row.get("open")
+                high_val = row.get("high")
+                low_val = row.get("low")
+                close_val = row.get("close")
+                volume = row.get("volume", 0)
+
+                if not all([open_val, high_val, low_val, close_val]):
+                    continue
+
+                time_series.append(TimeSeriesData(
+                    timestamp=timestamp,
+                    symbol=symbol,
+                    open=float(open_val),
+                    high=float(high_val),
+                    low=float(low_val),
+                    close=float(close_val),
+                    volume=float(volume) if volume else 0.0,
+                    # Twelve Data doesn't provide indicators in time series
+                    # These will be None but NHITS can still train on OHLCV
+                    additional_data={
+                        'source': 'twelvedata',
+                        'timeframe': timeframe
+                    }
+                ))
+            except Exception as e:
+                logger.warning(f"Failed to parse Twelve Data row: {e}")
+                continue
+
+        # Sort by timestamp (oldest first for training)
+        time_series.sort(key=lambda x: x.timestamp)
+
+        logger.info(f"Parsed {len(time_series)} data points from Twelve Data for {symbol}/{timeframe}")
+        return time_series
 
     async def train_symbol(
         self,
@@ -291,8 +454,29 @@ class NHITSTrainingService:
         model_key = f"{symbol}_{tf}" if tf != "H1" else symbol
 
         try:
-            # Get training data for specific timeframe
+            # Get timeframe-specific requirements first
+            tf_config = forecast_service.get_timeframe_config(tf)
+            min_required = tf_config["input_size"] + tf_config["horizon"]
+
+            # Get training data from EasyInsight first
             time_series = await self.get_training_data(symbol, timeframe=tf)
+            data_source = "easyinsight"
+
+            # If EasyInsight doesn't have enough data, try Twelve Data as fallback
+            if len(time_series) < min_required:
+                logger.info(
+                    f"EasyInsight has insufficient data for {symbol}/{tf} "
+                    f"({len(time_series)} < {min_required}), trying Twelve Data..."
+                )
+                td_data = await self.get_training_data_twelvedata(symbol, timeframe=tf)
+                if len(td_data) >= min_required:
+                    time_series = td_data
+                    data_source = "twelvedata"
+                    logger.info(f"Using Twelve Data for {symbol}/{tf}: {len(time_series)} samples")
+                elif len(td_data) > len(time_series):
+                    # Use Twelve Data if it has more data, even if still insufficient
+                    time_series = td_data
+                    data_source = "twelvedata"
 
             if not time_series:
                 return ForecastTrainingResult(
@@ -303,12 +487,8 @@ class NHITSTrainingService:
                     model_path="",
                     metrics=TrainingMetrics(),
                     success=False,
-                    error_message=f"No training data available for {tf}"
+                    error_message=f"No training data available for {tf} (tried EasyInsight and Twelve Data)"
                 )
-
-            # Get timeframe-specific requirements
-            tf_config = forecast_service.get_timeframe_config(tf)
-            min_required = tf_config["input_size"] + tf_config["horizon"]
 
             if len(time_series) < min_required:
                 return ForecastTrainingResult(
@@ -319,7 +499,7 @@ class NHITSTrainingService:
                     model_path="",
                     metrics=TrainingMetrics(),
                     success=False,
-                    error_message=f"Insufficient data for {tf}: {len(time_series)} < {min_required}"
+                    error_message=f"Insufficient data for {tf}: {len(time_series)} < {min_required} (source: {data_source})"
                 )
 
             # Check if retraining is needed
