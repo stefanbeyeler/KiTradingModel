@@ -1691,73 +1691,68 @@ async def get_forecast_model_info(symbol: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ==================== Training Data Cache Endpoints ====================
+# ==================== Training Data Cache Endpoints (Proxy to Data-Service) ====================
+# Note: Training data cache is now managed by Data-Service.
+# These endpoints proxy to the Data-Service for backwards compatibility.
 
 @forecast_router.get("/forecast/training/cache/stats")
 async def get_training_cache_stats():
     """
-    Get statistics about the training data cache.
-
-    Returns cache size, hit rate, entries by timeframe, and more.
+    Get statistics about the training data cache (from Data-Service).
     """
-    from ..services.training_data_cache_service import training_data_cache
-    return training_data_cache.get_stats()
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get("http://trading-data:3001/api/v1/training-data/cache/stats")
+            return response.json()
+    except Exception as e:
+        logger.error(f"Failed to get cache stats from Data-Service: {e}")
+        return {"error": str(e), "total_entries": 0}
 
 
 @forecast_router.get("/forecast/training/cache/symbols")
 async def get_cached_symbols():
     """
-    Get list of symbols currently cached, grouped by timeframe.
+    Get list of symbols currently cached (from Data-Service).
     """
-    from ..services.training_data_cache_service import training_data_cache
-    return training_data_cache.get_cached_symbols()
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get("http://trading-data:3001/api/v1/training-data/cache/symbols")
+            return response.json()
+    except Exception as e:
+        logger.error(f"Failed to get cached symbols from Data-Service: {e}")
+        return {"error": str(e)}
 
 
 @forecast_router.delete("/forecast/training/cache")
 async def clear_training_cache():
     """
-    Clear all training data cache.
-
-    Use this to free disk space or force fresh data fetch on next training.
+    Clear all training data cache (via Data-Service).
     """
-    from ..services.training_data_cache_service import training_data_cache
-    removed = training_data_cache.clear_all()
-    return {
-        "status": "success",
-        "message": f"Cleared {removed} cache files"
-    }
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.delete("http://trading-data:3001/api/v1/training-data/cache")
+            return response.json()
+    except Exception as e:
+        logger.error(f"Failed to clear cache via Data-Service: {e}")
+        return {"error": str(e), "removed": 0}
 
 
 @forecast_router.delete("/forecast/training/cache/expired")
 async def cleanup_expired_cache():
     """
-    Remove only expired cache entries.
-
-    Expired entries are automatically cleaned up after training,
-    but this endpoint allows manual cleanup.
+    Remove only expired cache entries (via Data-Service).
     """
-    from ..services.training_data_cache_service import training_data_cache
-    removed = training_data_cache.cleanup_expired()
-    return {
-        "status": "success",
-        "message": f"Removed {removed} expired cache entries"
-    }
-
-
-@forecast_router.delete("/forecast/training/cache/{symbol}")
-async def clear_symbol_cache(symbol: str):
-    """
-    Clear cache for a specific symbol (all timeframes).
-
-    Args:
-        symbol: The symbol to clear cache for
-    """
-    from ..services.training_data_cache_service import training_data_cache
-    removed = training_data_cache.clear_for_symbols([symbol])
-    return {
-        "status": "success",
-        "message": f"Cleared {removed} cache entries for {symbol}"
-    }
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.delete("http://trading-data:3001/api/v1/training-data/cache/expired")
+            return response.json()
+    except Exception as e:
+        logger.error(f"Failed to cleanup expired cache via Data-Service: {e}")
+        return {"error": str(e), "removed": 0}
 
 
 # ==================== Symbol Management Endpoints ====================
@@ -2677,6 +2672,186 @@ async def get_api_usage():
     """Get Twelve Data API usage statistics."""
     usage = await twelvedata_service.get_api_usage()
     return usage
+
+
+# ==================== Training Data Cache (for NHITS Service) ====================
+
+@twelvedata_router.get("/training-data/{symbol}")
+async def get_training_data(
+    symbol: str,
+    timeframe: str = "H1",
+    days: int = 30,
+    use_cache: bool = True
+):
+    """
+    Get training data for NHITS model training with caching.
+
+    This endpoint is used by the NHITS service to fetch training data.
+    Data is cached to reduce API calls to EasyInsight and Twelve Data.
+
+    Args:
+        symbol: Trading symbol (e.g., BTCUSD, EURUSD)
+        timeframe: Timeframe for data (M15, H1, D1)
+        days: Number of days of data to fetch
+        use_cache: Whether to use cached data if available
+
+    Returns:
+        Training data with OHLCV and technical indicators
+    """
+    from ..services.training_data_cache_service import training_data_cache
+    import httpx
+    from datetime import datetime
+
+    tf = timeframe.upper()
+
+    # Calculate limit based on timeframe
+    if tf == "M15":
+        limit = max(days * 96, 500)  # 96 candles/day for M15
+    elif tf == "D1":
+        limit = max(days * 4, 300)  # ~4 snapshots/hour for daily unique days
+    else:  # H1 default
+        limit = max(days * 24, 500)  # 24 candles/day for H1
+
+    # Try to get data from cache first
+    rows = None
+    from_cache = False
+    if use_cache:
+        cached_data = training_data_cache.get_cached_data(symbol, tf, "easyinsight")
+        if cached_data:
+            rows = cached_data
+            from_cache = True
+            logger.info(f"Using cached data for {symbol}/{tf}: {len(rows)} rows")
+
+    # Fetch from EasyInsight API if no cache
+    if rows is None:
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
+                    params={"limit": limit}
+                )
+                response.raise_for_status()
+
+                data = response.json()
+                rows = data.get('data', [])
+
+                # Cache the data for future use
+                if rows and use_cache:
+                    training_data_cache.cache_data(symbol, tf, rows, "easyinsight")
+                    logger.debug(f"Cached {len(rows)} rows for {symbol}/{tf}")
+
+        except Exception as e:
+            logger.warning(f"EasyInsight API failed for {symbol}: {e}")
+            rows = []
+
+    # If EasyInsight has insufficient data, try Twelve Data
+    if len(rows) < 50:
+        try:
+            td_data = await _fetch_twelvedata_training_data(symbol, tf, use_cache)
+            if td_data:
+                return {
+                    "symbol": symbol,
+                    "timeframe": tf,
+                    "source": "twelvedata",
+                    "from_cache": from_cache,
+                    "count": len(td_data),
+                    "data": td_data
+                }
+        except Exception as e:
+            logger.warning(f"Twelve Data fallback failed for {symbol}: {e}")
+
+    return {
+        "symbol": symbol,
+        "timeframe": tf,
+        "source": "easyinsight",
+        "from_cache": from_cache,
+        "count": len(rows),
+        "data": rows
+    }
+
+
+async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache: bool) -> list:
+    """Fetch training data from Twelve Data API as fallback."""
+    from ..services.training_data_cache_service import training_data_cache
+    from ..services.symbol_service import symbol_service
+
+    # Try to get from cache first
+    if use_cache:
+        cached_data = training_data_cache.get_cached_data(symbol, timeframe, "twelvedata")
+        if cached_data:
+            logger.info(f"Using cached Twelve Data for {symbol}/{timeframe}: {len(cached_data)} rows")
+            return cached_data
+
+    # Get Twelve Data symbol format
+    td_symbol = None
+    try:
+        sym = await symbol_service.get_symbol(symbol)
+        if sym and sym.twelvedata_symbol:
+            td_symbol = sym.twelvedata_symbol
+    except:
+        pass
+
+    # Fallback: convert XXXYYY to XXX/YYY
+    if not td_symbol:
+        if len(symbol) == 6:
+            td_symbol = f"{symbol[:3]}/{symbol[3:]}"
+        else:
+            td_symbol = symbol
+
+    # Map timeframe to Twelve Data interval
+    interval_map = {"M15": "15min", "H1": "1h", "D1": "1day"}
+    interval = interval_map.get(timeframe, "1h")
+
+    # Fetch from Twelve Data
+    try:
+        data = await twelvedata_service.get_time_series(
+            symbol=td_symbol,
+            interval=interval,
+            outputsize=500
+        )
+
+        values = data.get("values", [])
+
+        # Cache the data
+        if values and use_cache:
+            training_data_cache.cache_data(symbol, timeframe, values, "twelvedata")
+            logger.debug(f"Cached {len(values)} Twelve Data rows for {symbol}/{timeframe}")
+
+        return values
+
+    except Exception as e:
+        logger.error(f"Failed to fetch Twelve Data for {symbol}: {e}")
+        return []
+
+
+@twelvedata_router.get("/training-data/cache/stats")
+async def get_training_cache_stats():
+    """Get training data cache statistics."""
+    from ..services.training_data_cache_service import training_data_cache
+    return training_data_cache.get_stats()
+
+
+@twelvedata_router.get("/training-data/cache/symbols")
+async def get_cached_training_symbols():
+    """Get list of symbols currently in training data cache."""
+    from ..services.training_data_cache_service import training_data_cache
+    return training_data_cache.get_cached_symbols()
+
+
+@twelvedata_router.delete("/training-data/cache")
+async def clear_training_cache():
+    """Clear all training data cache."""
+    from ..services.training_data_cache_service import training_data_cache
+    removed = training_data_cache.clear_all()
+    return {"removed": removed, "message": f"Cleared {removed} cache files"}
+
+
+@twelvedata_router.delete("/training-data/cache/expired")
+async def cleanup_expired_training_cache():
+    """Remove only expired training cache entries."""
+    from ..services.training_data_cache_service import training_data_cache
+    removed = training_data_cache.cleanup_expired()
+    return {"removed": removed, "message": f"Removed {removed} expired cache entries"}
 
 
 # ==================== Router Export ====================

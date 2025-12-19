@@ -522,7 +522,6 @@
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('training')">Training</button>
             <button class="tab-btn" onclick="switchTab('models')">Modelle</button>
-            <button class="tab-btn" onclick="switchTab('cache')">Cache</button>
             <button class="tab-btn" onclick="switchTab('performance')">Performance</button>
         </div>
 
@@ -666,91 +665,6 @@
             </div>
         </div>
 
-        <!-- Cache Tab -->
-        <div id="tab-cache" class="tab-content">
-            <div class="grid-2">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">Training Data Cache</h2>
-                        <button class="btn btn-sm btn-primary" onclick="loadCacheStats()">Aktualisieren</button>
-                    </div>
-                    <p style="opacity: 0.7; margin-bottom: 1rem;">
-                        Zwischenspeicher für API-Daten um Anfragen an EasyInsight und Twelve Data zu reduzieren.
-                    </p>
-                    <div class="cache-stats">
-                        <div class="cache-stat">
-                            <div class="value" id="cache-entries">-</div>
-                            <div class="label">Einträge</div>
-                        </div>
-                        <div class="cache-stat">
-                            <div class="value" id="cache-size">-</div>
-                            <div class="label">Grösse (MB)</div>
-                        </div>
-                        <div class="cache-stat">
-                            <div class="value" id="cache-hits">-</div>
-                            <div class="label">Cache Hits</div>
-                        </div>
-                        <div class="cache-stat">
-                            <div class="value" id="cache-hit-rate">-</div>
-                            <div class="label">Hit Rate</div>
-                        </div>
-                    </div>
-                    <div style="margin-top: 1.5rem;">
-                        <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.75rem;">Nach Quelle:</div>
-                        <div class="cache-stats">
-                            <div class="cache-stat">
-                                <div class="value" id="cache-easyinsight">-</div>
-                                <div class="label">EasyInsight</div>
-                            </div>
-                            <div class="cache-stat">
-                                <div class="value" id="cache-twelvedata">-</div>
-                                <div class="label">Twelve Data</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="margin-top: 1.5rem;">
-                        <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.75rem;">Nach Timeframe:</div>
-                        <div class="cache-stats" style="grid-template-columns: repeat(3, 1fr);">
-                            <div class="cache-stat">
-                                <div class="value" id="cache-m15">-</div>
-                                <div class="label">M15</div>
-                            </div>
-                            <div class="cache-stat">
-                                <div class="value" id="cache-h1">-</div>
-                                <div class="label">H1</div>
-                            </div>
-                            <div class="cache-stat">
-                                <div class="value" id="cache-d1">-</div>
-                                <div class="label">D1</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">Cache Aktionen</h2>
-                    </div>
-                    <div class="quick-actions">
-                        <button class="btn btn-warning" onclick="clearExpiredCache()">
-                            Abgelaufene Einträge löschen
-                        </button>
-                        <button class="btn btn-danger" onclick="clearAllCache()">
-                            Gesamten Cache löschen
-                        </button>
-                    </div>
-                    <div style="margin-top: 1.5rem; font-size: 0.85rem; opacity: 0.7;">
-                        <p><strong>TTL (Time-to-Live):</strong></p>
-                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
-                            <li>M15: 6 Stunden</li>
-                            <li>H1: 12 Stunden</li>
-                            <li>D1: 48 Stunden</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Performance Tab -->
         <div id="tab-performance" class="tab-content">
             <div class="card">
@@ -799,7 +713,6 @@
 
             // Load data for the selected tab
             if (tabName === 'models') loadModels();
-            if (tabName === 'cache') loadCacheStats();
             if (tabName === 'performance') loadPerformance();
         }
 
@@ -1080,53 +993,6 @@
                 }
             } catch (err) {
                 showToast('Fehler beim Training');
-            }
-        }
-
-        // Load cache stats
-        async function loadCacheStats() {
-            try {
-                const res = await fetch(`${API_BASE}/forecast/training/cache/stats`);
-                const data = await res.json();
-
-                document.getElementById('cache-entries').textContent = data.total_entries || 0;
-                document.getElementById('cache-size').textContent = data.total_size_mb || 0;
-                document.getElementById('cache-hits').textContent = data.cache_hits || 0;
-                document.getElementById('cache-hit-rate').textContent = `${data.hit_rate || 0}%`;
-
-                document.getElementById('cache-easyinsight').textContent = data.by_source?.easyinsight || 0;
-                document.getElementById('cache-twelvedata').textContent = data.by_source?.twelvedata || 0;
-
-                document.getElementById('cache-m15').textContent = data.by_timeframe?.M15 || 0;
-                document.getElementById('cache-h1').textContent = data.by_timeframe?.H1 || 0;
-                document.getElementById('cache-d1').textContent = data.by_timeframe?.D1 || 0;
-            } catch (err) {
-                console.error('Failed to load cache stats:', err);
-            }
-        }
-
-        // Clear expired cache
-        async function clearExpiredCache() {
-            try {
-                const res = await fetch(`${API_BASE}/forecast/training/cache/expired`, { method: 'DELETE' });
-                const data = await res.json();
-                showToast(`${data.removed || 0} abgelaufene Einträge gelöscht`);
-                loadCacheStats();
-            } catch (err) {
-                showToast('Fehler beim Löschen');
-            }
-        }
-
-        // Clear all cache
-        async function clearAllCache() {
-            if (!confirm('Gesamten Cache wirklich löschen?')) return;
-            try {
-                const res = await fetch(`${API_BASE}/forecast/training/cache`, { method: 'DELETE' });
-                const data = await res.json();
-                showToast(`${data.removed || 0} Einträge gelöscht`);
-                loadCacheStats();
-            } catch (err) {
-                showToast('Fehler beim Löschen');
             }
         }
 
