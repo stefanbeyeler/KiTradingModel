@@ -969,23 +969,46 @@
             }
         }
 
-        // Load models
+        // Load models with full details
         async function loadModels() {
             try {
-                const res = await fetch(`${API_BASE}/forecast/models/by-timeframe`);
+                const res = await fetch(`${API_BASE}/forecast/models`);
                 const data = await res.json();
 
-                document.getElementById('models-total').textContent = `${data.total_models} Modelle`;
+                document.getElementById('models-total').textContent = `${data.length} Modelle`;
 
                 allModels = [];
-                for (const [tf, tfData] of Object.entries(data.by_timeframe || {})) {
-                    for (const symbol of tfData.symbols || []) {
-                        allModels.push({
-                            symbol: symbol,
-                            timeframe: tf === 'default' ? 'H1 (Std)' : tf,
-                            timeframeKey: tf
-                        });
+                for (const model of data) {
+                    if (!model.model_exists) continue;
+
+                    // Parse timeframe from symbol (e.g., BTCUSD_H1 -> H1, BTCUSD -> default)
+                    let baseSymbol = model.symbol;
+                    let timeframeKey = 'default';
+                    let timeframeLabel = 'H1 (Std)';
+
+                    if (model.symbol.endsWith('_M15')) {
+                        baseSymbol = model.symbol.replace('_M15', '');
+                        timeframeKey = 'M15';
+                        timeframeLabel = 'M15';
+                    } else if (model.symbol.endsWith('_H1')) {
+                        baseSymbol = model.symbol.replace('_H1', '');
+                        timeframeKey = 'H1';
+                        timeframeLabel = 'H1';
+                    } else if (model.symbol.endsWith('_D1')) {
+                        baseSymbol = model.symbol.replace('_D1', '');
+                        timeframeKey = 'D1';
+                        timeframeLabel = 'D1';
                     }
+
+                    allModels.push({
+                        symbol: baseSymbol,
+                        fullSymbol: model.symbol,
+                        timeframe: timeframeLabel,
+                        timeframeKey: timeframeKey,
+                        lastTrained: model.last_trained,
+                        samples: model.training_samples,
+                        loss: model.metrics?.final_loss
+                    });
                 }
 
                 filterModels();
@@ -1015,13 +1038,24 @@
             for (const model of filtered) {
                 const tfClass = model.timeframeKey === 'M15' ? 'badge-m15' :
                                model.timeframeKey === 'D1' ? 'badge-d1' : 'badge-h1';
+
+                // Format date
+                let trainedDate = '-';
+                if (model.lastTrained) {
+                    const d = new Date(model.lastTrained);
+                    trainedDate = d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                }
+
+                // Format loss
+                const lossStr = model.loss ? model.loss.toFixed(4) : '-';
+
                 html += `
                     <tr>
                         <td><strong>${model.symbol}</strong></td>
                         <td><span class="badge ${tfClass}">${model.timeframe}</span></td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
+                        <td>${trainedDate}</td>
+                        <td>${model.samples || '-'}</td>
+                        <td>${lossStr}</td>
                         <td>
                             <button class="btn btn-sm btn-primary" onclick="trainSingle('${model.symbol}', '${model.timeframeKey}')">Train</button>
                         </td>
