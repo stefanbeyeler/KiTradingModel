@@ -968,17 +968,16 @@ async def list_models_by_timeframe():
     """
     List all trained NHITS models grouped by timeframe.
 
-    Returns models organized by their timeframe suffix (H1, M15, D1, or default).
+    Returns models organized by their timeframe suffix (M15, H1, D1).
     """
     try:
         forecast_service = get_forecast_service()
         models = forecast_service.list_models()
 
-        # Group models by timeframe
+        # Group models by timeframe (only M15, H1, D1)
         timeframe_groups = {
-            "default": [],  # No suffix (standard hourly)
-            "H1": [],       # Hourly
             "M15": [],      # 15 minutes
+            "H1": [],       # Hourly
             "D1": [],       # Daily
         }
 
@@ -988,36 +987,32 @@ async def list_models_by_timeframe():
             symbol = model.symbol
 
             # Check for timeframe suffix
-            if symbol.endswith("_H1"):
-                timeframe_groups["H1"].append(symbol.replace("_H1", ""))
-            elif symbol.endswith("_M15"):
+            if symbol.endswith("_M15"):
                 timeframe_groups["M15"].append(symbol.replace("_M15", ""))
+            elif symbol.endswith("_H1"):
+                timeframe_groups["H1"].append(symbol.replace("_H1", ""))
             elif symbol.endswith("_D1"):
                 timeframe_groups["D1"].append(symbol.replace("_D1", ""))
-            else:
-                timeframe_groups["default"].append(symbol)
+            # Skip models without timeframe suffix (legacy models)
 
         # Sort symbols in each group
         for key in timeframe_groups:
             timeframe_groups[key].sort()
 
+        total = sum(len(timeframe_groups[tf]) for tf in timeframe_groups)
+
         return {
-            "total_models": len([m for m in models if m.model_exists]),
+            "total_models": total,
             "by_timeframe": {
-                "default": {
-                    "count": len(timeframe_groups["default"]),
-                    "label": "Standard (1H)",
-                    "symbols": timeframe_groups["default"]
+                "M15": {
+                    "count": len(timeframe_groups["M15"]),
+                    "label": "15 Minuten (M15)",
+                    "symbols": timeframe_groups["M15"]
                 },
                 "H1": {
                     "count": len(timeframe_groups["H1"]),
                     "label": "Stündlich (H1)",
                     "symbols": timeframe_groups["H1"]
-                },
-                "M15": {
-                    "count": len(timeframe_groups["M15"]),
-                    "label": "15 Minuten (M15)",
-                    "symbols": timeframe_groups["M15"]
                 },
                 "D1": {
                     "count": len(timeframe_groups["D1"]),
