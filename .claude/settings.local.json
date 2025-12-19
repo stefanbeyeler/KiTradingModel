@@ -132,7 +132,9 @@
       "Bash(trading-nhits:cu130)",
       "Bash(docker cp:*)",
       "Bash(docker volume ls:*)",
-      "Bash(sudo docker restart:*)"
+      "Bash(sudo docker restart:*)",
+      "Bash(for symbol in GBPUSD BTCUSD ETHUSD XAUUSD USDJPY AUDUSD NZDUSD USDCAD USDCHF)",
+      "Bash(do)"
     ],
     "deny": [],
     "ask": []

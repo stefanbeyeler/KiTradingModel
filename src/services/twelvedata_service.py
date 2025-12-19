@@ -1,5 +1,10 @@
-"""Twelve Data API Service - Access to real-time and historical market data."""
+"""Twelve Data API Service - Access to real-time and historical market data.
 
+Includes rate limiting to respect API limits (8 calls/minute for free tier).
+"""
+
+import asyncio
+import time
 from datetime import datetime
 from typing import Optional
 from loguru import logger
@@ -15,13 +20,86 @@ except ImportError:
 from ..config import settings
 
 
+class RateLimiter:
+    """Token bucket rate limiter for API calls."""
+
+    def __init__(self, calls_per_minute: int = 8):
+        """
+        Initialize rate limiter.
+
+        Args:
+            calls_per_minute: Maximum API calls allowed per minute (default: 8 for free tier)
+        """
+        self.calls_per_minute = calls_per_minute
+        self.min_interval = 60.0 / calls_per_minute  # Minimum seconds between calls
+        self._call_times: list[float] = []
+        self._lock = asyncio.Lock()
+
+    async def acquire(self) -> float:
+        """
+        Acquire permission to make an API call.
+
+        Returns:
+            Number of seconds waited before acquiring.
+        """
+        async with self._lock:
+            now = time.time()
+
+            # Remove calls older than 1 minute
+            cutoff = now - 60.0
+            self._call_times = [t for t in self._call_times if t > cutoff]
+
+            wait_time = 0.0
+
+            # If we've hit the limit, wait until the oldest call expires
+            if len(self._call_times) >= self.calls_per_minute:
+                oldest_call = self._call_times[0]
+                wait_time = (oldest_call + 60.0) - now + 0.1  # Add 100ms buffer
+
+                if wait_time > 0:
+                    logger.info(
+                        f"Rate limit reached ({len(self._call_times)}/{self.calls_per_minute} calls). "
+                        f"Waiting {wait_time:.1f}s..."
+                    )
+                    await asyncio.sleep(wait_time)
+
+                    # Recalculate after waiting
+                    now = time.time()
+                    cutoff = now - 60.0
+                    self._call_times = [t for t in self._call_times if t > cutoff]
+
+            # Record this call
+            self._call_times.append(now)
+            return wait_time
+
+    def get_status(self) -> dict:
+        """Get current rate limiter status."""
+        now = time.time()
+        cutoff = now - 60.0
+        recent_calls = [t for t in self._call_times if t > cutoff]
+
+        return {
+            "calls_per_minute_limit": self.calls_per_minute,
+            "calls_in_last_minute": len(recent_calls),
+            "calls_remaining": max(0, self.calls_per_minute - len(recent_calls)),
+            "next_slot_in_seconds": (
+                max(0, (recent_calls[0] + 60.0 - now)) if len(recent_calls) >= self.calls_per_minute else 0
+            ),
+        }
+
+
 class TwelveDataService:
-    """Service for accessing Twelve Data API for market data."""
+    """Service for accessing Twelve Data API for market data with rate limiting."""
 
     def __init__(self):
         self._api_key: str = settings.twelvedata_api_key
         self._client: Optional[TDClient] = None
         self._initialized: bool = False
+        # Rate limiter: 8 calls/minute for free tier, configurable via settings
+        calls_per_minute = getattr(settings, 'twelvedata_rate_limit', 8)
+        self._rate_limiter = RateLimiter(calls_per_minute=calls_per_minute)
+        self._total_calls: int = 0
+        self._total_wait_time: float = 0.0
 
     def _get_client(self) -> Optional[TDClient]:
         """Get or create Twelve Data client."""
@@ -183,7 +261,7 @@ class TwelveDataService:
         exchange: Optional[str] = None,
     ) -> dict:
         """
-        Get time series (OHLCV) data for a symbol.
+        Get time series (OHLCV) data for a symbol with rate limiting.
 
         Args:
             symbol: The symbol to get data for (e.g., 'AAPL', 'EUR/USD')
@@ -202,6 +280,14 @@ class TwelveDataService:
             return {"meta": {}, "values": [], "error": "Twelve Data client not available"}
 
         try:
+            # Apply rate limiting before making the API call
+            wait_time = await self._rate_limiter.acquire()
+            self._total_calls += 1
+            self._total_wait_time += wait_time
+
+            if wait_time > 0:
+                logger.debug(f"Rate limiter: waited {wait_time:.1f}s before calling API for {symbol}")
+
             params = {
                 "symbol": symbol,
                 "interval": interval,
@@ -428,14 +514,24 @@ class TwelveDataService:
             return {"error": str(e)}
 
     def get_status(self) -> dict:
-        """Get service status information."""
+        """Get service status information including rate limiter stats."""
+        rate_limiter_status = self._rate_limiter.get_status()
         return {
             "service": "Twelve Data",
             "available": self.is_available(),
             "package_installed": TWELVEDATA_AVAILABLE,
             "api_key_configured": bool(self._api_key),
             "client_initialized": self._initialized,
+            "rate_limiter": rate_limiter_status,
+            "session_stats": {
+                "total_calls": self._total_calls,
+                "total_wait_time_seconds": round(self._total_wait_time, 1),
+            },
         }
+
+    def get_rate_limiter_status(self) -> dict:
+        """Get current rate limiter status."""
+        return self._rate_limiter.get_status()
 
 
 # Global service instance

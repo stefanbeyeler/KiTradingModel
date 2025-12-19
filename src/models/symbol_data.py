@@ -88,6 +88,9 @@ class ManagedSymbol(BaseModel):
     has_nhits_model: bool = Field(default=False, description="Whether NHITS model exists")
     nhits_model_trained_at: Optional[datetime] = Field(None, description="When NHITS model was last trained")
 
+    # External API symbol mappings
+    twelvedata_symbol: Optional[str] = Field(None, description="Symbol format for Twelve Data API (e.g., BTC/USD, EUR/USD)")
+
     # User preferences
     is_favorite: bool = Field(default=False, description="User marked as favorite")
     notes: Optional[str] = Field(None, description="User notes about this symbol")
@@ -111,6 +114,7 @@ class SymbolCreateRequest(BaseModel):
     pip_value: Optional[float] = None
     min_lot_size: Optional[float] = 0.01
     max_lot_size: Optional[float] = 100.0
+    twelvedata_symbol: Optional[str] = None
     notes: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
     aliases: list[str] = Field(default_factory=list)
@@ -128,6 +132,7 @@ class SymbolUpdateRequest(BaseModel):
     pip_value: Optional[float] = None
     min_lot_size: Optional[float] = None
     max_lot_size: Optional[float] = None
+    twelvedata_symbol: Optional[str] = None
     is_favorite: Optional[bool] = None
     notes: Optional[str] = None
     tags: Optional[list[str]] = None

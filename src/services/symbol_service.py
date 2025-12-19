@@ -100,6 +100,62 @@ class SymbolService:
             return symbol[:3].upper(), symbol[3:].upper()
         return None, None
 
+    def _generate_twelvedata_symbol(self, symbol: str, category: SymbolCategory) -> Optional[str]:
+        """
+        Generate the Twelve Data API symbol format.
+
+        Twelve Data uses formats like:
+        - Forex: EUR/USD, GBP/USD
+        - Crypto: BTC/USD, ETH/USD
+        - Commodities: XAU/USD, XAG/USD
+        - Indices: Vary by index (some need special handling)
+
+        Args:
+            symbol: Internal symbol (e.g., BTCUSD, EURUSD)
+            category: Symbol category
+
+        Returns:
+            Twelve Data formatted symbol or None if unknown format
+        """
+        symbol_upper = symbol.upper()
+
+        # Special mappings for symbols that don't follow standard patterns
+        special_mappings = {
+            # Crypto with non-standard abbreviations
+            "AVXUSD": "AVAX/USD",   # Avalanche
+            "DOGUSD": "DOGE/USD",   # Dogecoin
+            "LNKUSD": "LINK/USD",   # Chainlink
+            "MTCUSD": "MATIC/USD",  # Polygon (MATIC)
+            # Indices
+            "AUS200": "XJO",        # ASX 200
+            "EURO50": "STOXX50E",   # Euro Stoxx 50
+            "FRA40": "FCHI",        # CAC 40
+            "GER40": "GDAXI",       # DAX 40
+            "JP225": "N225",        # Nikkei 225
+            "NAS100": "NDX",        # Nasdaq 100
+            "UK100": "FTSE",        # FTSE 100
+            "US30": "DJI",          # Dow Jones
+            "US500": "SPX",         # S&P 500
+            # Commodities/Oil
+            "XTIUSD": "CL/USD",     # Crude Oil WTI
+        }
+
+        if symbol_upper in special_mappings:
+            return special_mappings[symbol_upper]
+
+        # Standard forex/crypto/commodity pattern: XXXYYY -> XXX/YYY
+        if len(symbol_upper) == 6:
+            base = symbol_upper[:3]
+            quote = symbol_upper[3:]
+            return f"{base}/{quote}"
+
+        # 5-character patterns (rare)
+        if len(symbol_upper) == 5:
+            # Check if it's like BTCUS -> BTC/US (unlikely but handle)
+            return None
+
+        return None
+
     async def get_all_symbols(
         self,
         category: Optional[SymbolCategory] = None,
@@ -164,6 +220,11 @@ class SymbolService:
         if request.quote_currency:
             quote = request.quote_currency
 
+        # Generate Twelve Data symbol if not provided
+        twelvedata_sym = request.twelvedata_symbol
+        if not twelvedata_sym:
+            twelvedata_sym = self._generate_twelvedata_symbol(symbol_id, category)
+
         symbol = ManagedSymbol(
             symbol=symbol_id,
             display_name=request.display_name or symbol_id,
@@ -176,6 +237,7 @@ class SymbolService:
             pip_value=request.pip_value,
             min_lot_size=request.min_lot_size,
             max_lot_size=request.max_lot_size,
+            twelvedata_symbol=twelvedata_sym,
             notes=request.notes,
             tags=request.tags,
             aliases=request.aliases,
@@ -362,6 +424,10 @@ class SymbolService:
                         if api_category:
                             existing.category = self._map_api_category_to_enum(api_category)
 
+                        # Generate Twelve Data symbol if not set
+                        if not existing.twelvedata_symbol:
+                            existing.twelvedata_symbol = self._generate_twelvedata_symbol(symbol_id, existing.category)
+
                         # Check NHITS model
                         await self._check_nhits_model(existing)
 
@@ -372,6 +438,9 @@ class SymbolService:
                         api_category = symbol_info.get("category")
                         category = self._map_api_category_to_enum(api_category) if api_category else self._detect_category(symbol_id)
                         base, quote = self._parse_forex_pair(symbol_id)
+
+                        # Generate Twelve Data symbol
+                        twelvedata_sym = self._generate_twelvedata_symbol(symbol_id, category)
 
                         new_symbol = ManagedSymbol(
                             symbol=symbol_id,
@@ -384,6 +453,7 @@ class SymbolService:
                             first_data_timestamp=first_timestamp,
                             last_data_timestamp=last_timestamp,
                             total_records=total_records,
+                            twelvedata_symbol=twelvedata_sym,
                         )
 
                         # Check NHITS model

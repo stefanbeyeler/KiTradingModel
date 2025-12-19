@@ -1111,26 +1111,20 @@ class ForecastService:
         )
 
     def list_models(self) -> List[ForecastModelInfo]:
-        """List all trained models."""
+        """List all trained models including timeframe-specific ones."""
         models = []
-        seen_symbols = set()
+        seen_model_keys = set()
 
         for path in self.model_path.glob("*_model.pt"):
-            # Extract symbol from filename (handles both BTCUSD_model.pt and BTCUSD_H1_model.pt)
-            stem = path.stem.replace("_model", "")
+            # Extract model key from filename (e.g., BTCUSD, BTCUSD_H1, BTCUSD_D1)
+            model_key = path.stem.replace("_model", "")
 
-            # Skip timeframe-suffixed duplicates (H1, M15, D1) - only count base models
-            if any(stem.endswith(f"_{tf}") for tf in ["H1", "M15", "D1", "H4", "W1"]):
+            if model_key in seen_model_keys:
                 continue
+            seen_model_keys.add(model_key)
 
-            symbol = stem
-            if symbol in seen_symbols:
-                continue
-            seen_symbols.add(symbol)
-
-            # Check if model file actually exists (direct path, not via _get_model_path)
-            model_path_direct = self.model_path / f"{symbol}_model.pt"
-            metadata = self._load_metadata_direct(symbol)
+            # Load metadata for this specific model
+            metadata = self._load_metadata_for_model(model_key)
 
             metrics = {}
             if metadata:
@@ -1140,9 +1134,9 @@ class ForecastService:
                 metrics['final_loss'] = metadata.get('final_loss')
 
             models.append(ForecastModelInfo(
-                symbol=symbol,
-                model_exists=model_path_direct.exists(),
-                model_path=str(model_path_direct) if model_path_direct.exists() else None,
+                symbol=model_key,  # Now includes timeframe suffix if present
+                model_exists=path.exists(),
+                model_path=str(path) if path.exists() else None,
                 last_trained=metadata.get('trained_at') if metadata else None,
                 training_samples=metadata.get('training_samples') if metadata else None,
                 horizon=self.horizon,
@@ -1150,6 +1144,18 @@ class ForecastService:
                 metrics=metrics,
             ))
         return models
+
+    def _load_metadata_for_model(self, model_key: str) -> Optional[Dict]:
+        """Load metadata for a model (with or without timeframe suffix)."""
+        metadata_path = self.model_path / f"{model_key}_metadata.json"
+        if metadata_path.exists():
+            try:
+                import json
+                with open(metadata_path) as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return None
 
     def _load_metadata_direct(self, symbol: str) -> Optional[Dict]:
         """Load metadata for a symbol without timeframe suffix."""

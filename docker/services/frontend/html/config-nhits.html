@@ -567,6 +567,10 @@
                         <div class="timeframe-breakdown">
                             <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.75rem;">Modelle nach Timeframe:</div>
                             <div class="training-info" style="grid-template-columns: repeat(4, 1fr);">
+                                <div class="training-stat" title="15-Minuten Modelle">
+                                    <div class="value" id="stat-tf-m15">-</div>
+                                    <div class="label">M15</div>
+                                </div>
                                 <div class="training-stat" title="Standard stündliche Modelle">
                                     <div class="value" id="stat-tf-default">-</div>
                                     <div class="label">1H (Std)</div>
@@ -574,10 +578,6 @@
                                 <div class="training-stat" title="Stündliche Modelle mit H1-Suffix">
                                     <div class="value" id="stat-tf-h1">-</div>
                                     <div class="label">H1</div>
-                                </div>
-                                <div class="training-stat" title="15-Minuten Modelle">
-                                    <div class="value" id="stat-tf-m15">-</div>
-                                    <div class="label">M15</div>
                                 </div>
                                 <div class="training-stat" title="Tägliche Modelle">
                                     <div class="value" id="stat-tf-d1">-</div>
@@ -597,11 +597,11 @@
                         <button class="btn btn-success" onclick="startTraining(['M15', 'H1', 'D1'])" id="btn-train-all">
                             Multi-Timeframe Training (M15, H1, D1)
                         </button>
-                        <button class="btn btn-primary" onclick="startTraining(['H1'])" id="btn-train-h1">
-                            Nur H1 Training
-                        </button>
                         <button class="btn btn-primary" onclick="startTraining(['M15'])" id="btn-train-m15">
                             Nur M15 Training
+                        </button>
+                        <button class="btn btn-primary" onclick="startTraining(['H1'])" id="btn-train-h1">
+                            Nur H1 Training
                         </button>
                         <button class="btn btn-primary" onclick="startTraining(['D1'])" id="btn-train-d1">
                             Nur D1 Training
@@ -640,9 +640,9 @@
                     <select class="filter-select" id="timeframe-filter" onchange="filterModels()">
                         <option value="">Alle Timeframes</option>
                         <option value="M15">M15</option>
+                        <option value="default">1H (Standard)</option>
                         <option value="H1">H1</option>
                         <option value="D1">D1</option>
-                        <option value="default">1H (Standard)</option>
                     </select>
                     <button class="btn btn-primary" onclick="loadModels()">Aktualisieren</button>
                 </div>

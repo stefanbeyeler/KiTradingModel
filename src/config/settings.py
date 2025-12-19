@@ -99,6 +99,10 @@ class Settings(BaseSettings):
         default="",
         description="API key for Twelve Data market data service"
     )
+    twelvedata_rate_limit: int = Field(
+        default=8,
+        description="Max API calls per minute for Twelve Data (8 for free tier)"
+    )
 
     # Performance Configuration
     use_half_precision: bool = Field(
