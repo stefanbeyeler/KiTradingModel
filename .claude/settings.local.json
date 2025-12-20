@@ -136,7 +136,8 @@
       "Bash(for symbol in GBPUSD BTCUSD ETHUSD XAUUSD USDJPY AUDUSD NZDUSD USDCAD USDCHF)",
       "Bash(do)",
       "Bash(sudo chown:*)",
-      "Bash(du:*)"
+      "Bash(du:*)",
+      "Bash(sudo docker cp:*)"
     ],
     "deny": [],
     "ask": []

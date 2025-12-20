@@ -132,21 +132,21 @@
         /* Toolbar */
         .toolbar {
             display: flex;
-            gap: 0.75rem;
+            gap: 0.5rem;
             margin-bottom: 1rem;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             align-items: center;
         }
 
         .search-box {
-            flex: 1;
-            min-width: 200px;
-            padding: 0.6rem 1rem;
+            width: 120px;
+            min-width: 100px;
+            padding: 0.4rem 0.6rem;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            border-radius: 6px;
             background: rgba(0, 0, 0, 0.2);
             color: #e8e8e8;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
         .search-box::placeholder {
@@ -154,12 +154,12 @@
         }
 
         .filter-select {
-            padding: 0.6rem 1rem;
+            padding: 0.4rem 0.5rem;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            border-radius: 6px;
             background: rgba(0, 0, 0, 0.2);
             color: #e8e8e8;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             cursor: pointer;
         }
 
@@ -169,11 +169,12 @@
 
         /* Buttons */
         .btn {
-            padding: 0.6rem 1.2rem;
+            padding: 0.4rem 0.8rem;
             border: none;
-            border-radius: 8px;
-            font-size: 0.9rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
             cursor: pointer;
+            white-space: nowrap;
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
@@ -279,6 +280,118 @@
         .badge-h1 { background: rgba(33, 150, 243, 0.2); color: #64b5f6; }
         .badge-h4 { background: rgba(103, 58, 183, 0.2); color: #b39ddb; }
         .badge-d1 { background: rgba(255, 87, 34, 0.2); color: #ff8a65; }
+
+        /* Favorites List - Two Columns */
+        .favorites-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem 1.5rem;
+        }
+
+        @media (max-width: 1200px) {
+            .favorites-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .favorite-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.4rem 0.6rem;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.15s;
+        }
+
+        .favorite-row:hover {
+            background: rgba(0, 0, 0, 0.25);
+            border-color: rgba(100, 200, 255, 0.2);
+        }
+
+        .favorite-row.no-pattern {
+            opacity: 0.5;
+        }
+
+        .favorite-symbol {
+            font-weight: 600;
+            color: #fff;
+            min-width: 70px;
+            font-size: 0.85rem;
+        }
+
+        .favorite-pattern-name {
+            color: #64c8ff;
+            font-size: 0.8rem;
+            min-width: 140px;
+        }
+
+        .favorite-badges {
+            display: flex;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+        }
+
+        .favorite-badges .badge {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+        }
+
+        .favorite-confidence-mini {
+            font-size: 0.75rem;
+            color: #aaa;
+            min-width: 45px;
+            text-align: right;
+        }
+
+        .favorite-time {
+            font-size: 0.7rem;
+            color: #666;
+            min-width: 70px;
+            text-align: right;
+        }
+
+        .favorite-no-pattern-text {
+            color: #555;
+            font-style: italic;
+            font-size: 0.75rem;
+        }
+
+        .favorites-category {
+            margin-bottom: 0.75rem;
+        }
+
+        .favorites-category:last-child {
+            margin-bottom: 0;
+        }
+
+        .favorites-category-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 0.25rem;
+        }
+
+        .favorites-category-header.forex { color: #64b5f6; border-color: rgba(100, 181, 246, 0.3); }
+        .favorites-category-header.crypto { color: #ffb74d; border-color: rgba(255, 183, 77, 0.3); }
+        .favorites-category-header.index { color: #ce93d8; border-color: rgba(206, 147, 216, 0.3); }
+        .favorites-category-header.commodity { color: #a5d6a7; border-color: rgba(165, 214, 167, 0.3); }
+        .favorites-category-header.other { color: #90a4ae; border-color: rgba(144, 164, 174, 0.3); }
+
+        .favorites-category-count {
+            font-size: 0.7rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+        }
 
         /* Scan Status */
         .scan-status {
@@ -403,15 +516,81 @@
         .pattern-name {
             font-weight: 500;
             color: #fff;
+            cursor: help;
+            position: relative;
+        }
+
+        /* Tooltip styling - simple fixed positioning */
+        .pattern-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+
+        .pattern-tooltip .tooltip-content {
+            display: none;
+            width: 320px;
+            background: rgba(20, 20, 40, 0.98);
+            color: #e8e8e8;
+            text-align: left;
+            border-radius: 8px;
+            padding: 12px 14px;
+            position: fixed;
+            z-index: 9999;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            font-size: 0.85rem;
+            line-height: 1.5;
+            pointer-events: none;
+        }
+
+        .pattern-tooltip .tooltip-content.visible {
+            display: block;
+        }
+
+        .tooltip-title {
+            color: #64c8ff;
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .tooltip-description {
+            color: #ccc;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .tooltip-implication {
+            color: #81c784;
+            font-style: italic;
+            display: block;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tooltip-implication.bearish {
+            color: #e57373;
+        }
+
+        .tooltip-implication.neutral {
+            color: #ffb74d;
         }
 
         /* Responsive */
+        @media (max-width: 1200px) {
+            .toolbar {
+                flex-wrap: wrap;
+            }
+        }
+
         @media (max-width: 768px) {
             .toolbar {
                 flex-direction: column;
             }
 
-            .search-box, .filter-select {
+            .search-box, .filter-select, .btn {
                 width: 100%;
             }
 
@@ -483,6 +662,19 @@
             </div>
         </div>
 
+        <!-- Favorites Overview -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Favoriten - Aktuelle Patterns (max. 4h)</h2>
+            </div>
+            <div class="favorites-list" id="favoritesList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Lade Favoriten...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Pattern History -->
         <div class="card">
             <div class="card-header">
@@ -510,8 +702,25 @@
                     <option value="H4">H4</option>
                     <option value="D1">D1</option>
                 </select>
+                <select class="filter-select" id="filterStrength" onchange="filterPatterns()">
+                    <option value="">Alle Stärken</option>
+                    <option value="strong">Stark</option>
+                    <option value="moderate">Mittel</option>
+                    <option value="weak">Schwach</option>
+                </select>
+                <select class="filter-select" id="filterConfidence" onchange="filterPatterns()">
+                    <option value="">Alle Konfidenzen</option>
+                    <option value="0.9">≥ 90%</option>
+                    <option value="0.8">≥ 80%</option>
+                    <option value="0.7">≥ 70%</option>
+                    <option value="0.6">≥ 60%</option>
+                    <option value="0.5">≥ 50%</option>
+                </select>
                 <button class="btn btn-primary" onclick="loadPatterns()">
                     Aktualisieren
+                </button>
+                <button class="btn btn-warning" onclick="resetFilters()">
+                    Filter zurücksetzen
                 </button>
             </div>
 
@@ -550,6 +759,133 @@
         const API_BASE = '/data/api/v1';
         let allPatterns = [];
         let isAutoScanRunning = false;
+
+        // Pattern descriptions in German
+        const patternDescriptions = {
+            // Reversal Patterns - Bullish
+            'hammer': {
+                name: 'Hammer',
+                description: 'Kleine Kerze mit langem unteren Schatten (mindestens 2x Körpergrösse). Signalisiert Kaufdruck am Tiefpunkt.',
+                implication: 'Potenzielle bullische Umkehr nach Abwärtstrend. Käufer übernehmen die Kontrolle.'
+            },
+            'inverted_hammer': {
+                name: 'Invertierter Hammer',
+                description: 'Kleine Kerze mit langem oberen Schatten am Ende eines Abwärtstrends.',
+                implication: 'Potenzielle bullische Umkehr, Bestätigung durch nächste Kerze erforderlich.'
+            },
+            'bullish_engulfing': {
+                name: 'Bullish Engulfing',
+                description: 'Grosse grüne Kerze, die die vorherige rote Kerze vollständig umschliesst.',
+                implication: 'Starkes bullisches Umkehrsignal. Käufer dominieren den Markt.'
+            },
+            'morning_star': {
+                name: 'Morning Star',
+                description: '3-Kerzen-Muster: Lange rote Kerze, kleine Kerze/Doji mit Gap, lange grüne Kerze.',
+                implication: 'Zuverlässiges bullisches Umkehrsignal am Ende eines Abwärtstrends.'
+            },
+            'piercing_line': {
+                name: 'Piercing Line',
+                description: 'Grüne Kerze öffnet unter dem Tief und schliesst über 50% der vorherigen roten Kerze.',
+                implication: 'Bullisches Umkehrsignal, weniger stark als Engulfing.'
+            },
+            'dragonfly_doji': {
+                name: 'Dragonfly Doji',
+                description: 'Doji mit langem unteren Schatten und keinem oberen Schatten. T-förmig.',
+                implication: 'Potenzielle bullische Umkehr am Support-Level.'
+            },
+
+            // Reversal Patterns - Bearish
+            'shooting_star': {
+                name: 'Shooting Star',
+                description: 'Kleine Kerze mit langem oberen Schatten nach einem Aufwärtstrend. Verkaufsdruck am Hoch.',
+                implication: 'Potenzielle bärische Umkehr. Verkäufer drücken den Preis zurück.'
+            },
+            'hanging_man': {
+                name: 'Hanging Man',
+                description: 'Hammer-förmige Kerze in einem Aufwärtstrend. Warnsignal trotz bullischer Form.',
+                implication: 'Warnzeichen für potenzielle bärische Umkehr.'
+            },
+            'bearish_engulfing': {
+                name: 'Bearish Engulfing',
+                description: 'Grosse rote Kerze, die die vorherige grüne Kerze vollständig umschliesst.',
+                implication: 'Starkes bärisches Umkehrsignal. Verkäufer dominieren.'
+            },
+            'evening_star': {
+                name: 'Evening Star',
+                description: '3-Kerzen-Muster: Lange grüne Kerze, kleine Kerze/Doji mit Gap, lange rote Kerze.',
+                implication: 'Zuverlässiges bärisches Umkehrsignal am Ende eines Aufwärtstrends.'
+            },
+            'dark_cloud_cover': {
+                name: 'Dark Cloud Cover',
+                description: 'Rote Kerze öffnet über dem Hoch und schliesst unter 50% der vorherigen grünen Kerze.',
+                implication: 'Bärisches Umkehrsignal, weniger stark als Engulfing.'
+            },
+            'gravestone_doji': {
+                name: 'Gravestone Doji',
+                description: 'Doji mit langem oberen Schatten und keinem unteren Schatten. Umgekehrtes T.',
+                implication: 'Potenzielle bärische Umkehr am Widerstand-Level.'
+            },
+
+            // Neutral Doji
+            'doji': {
+                name: 'Doji',
+                description: 'Open und Close sind nahezu identisch. Zeigt Gleichgewicht zwischen Käufern und Verkäufern.',
+                implication: 'Marktunentschlossenheit, potenzielle Trendwende möglich.'
+            },
+
+            // Continuation Patterns
+            'three_white_soldiers': {
+                name: 'Three White Soldiers',
+                description: 'Drei aufeinanderfolgende lange grüne Kerzen mit höheren Schlusskursen.',
+                implication: 'Starkes bullisches Fortsetzungssignal. Aufwärtstrend gewinnt an Stärke.'
+            },
+            'three_black_crows': {
+                name: 'Three Black Crows',
+                description: 'Drei aufeinanderfolgende lange rote Kerzen mit tieferen Schlusskursen.',
+                implication: 'Starkes bärisches Fortsetzungssignal. Abwärtstrend verstärkt sich.'
+            },
+            'rising_three_methods': {
+                name: 'Rising Three Methods',
+                description: 'Bullische Fortsetzung: Lange grüne Kerze, 3 kleine Korrekturkerzen, lange grüne Kerze.',
+                implication: 'Bullischer Trend wird nach kurzer Konsolidierung fortgesetzt.'
+            },
+            'falling_three_methods': {
+                name: 'Falling Three Methods',
+                description: 'Bärische Fortsetzung: Lange rote Kerze, 3 kleine Korrekturkerzen, lange rote Kerze.',
+                implication: 'Bärischer Trend wird nach kurzer Konsolidierung fortgesetzt.'
+            },
+
+            // Indecision Patterns
+            'spinning_top': {
+                name: 'Spinning Top',
+                description: 'Kleine Kerze mit langen Schatten auf beiden Seiten. Zeigt Unsicherheit.',
+                implication: 'Marktunentschlossenheit, Konsolidierung oder Trendwende möglich.'
+            },
+            'bullish_harami': {
+                name: 'Bullish Harami',
+                description: 'Kleine grüne Kerze komplett innerhalb des Körpers der vorherigen grossen roten Kerze.',
+                implication: 'Potenzielle bullische Umkehr, Bestätigung erforderlich.'
+            },
+            'bearish_harami': {
+                name: 'Bearish Harami',
+                description: 'Kleine rote Kerze komplett innerhalb des Körpers der vorherigen grossen grünen Kerze.',
+                implication: 'Potenzielle bärische Umkehr, Bestätigung erforderlich.'
+            },
+            'harami_cross': {
+                name: 'Harami Cross',
+                description: 'Doji innerhalb des Körpers der vorherigen grossen Kerze. Stärker als normales Harami.',
+                implication: 'Stärkeres Umkehrsignal als normales Harami, Richtung vom Trend abhängig.'
+            }
+        };
+
+        // Get pattern info with fallback
+        function getPatternInfo(patternType) {
+            return patternDescriptions[patternType] || {
+                name: formatPatternType(patternType),
+                description: 'Candlestick-Muster',
+                implication: 'Analyse erforderlich'
+            };
+        }
 
         // Format timestamp for display
         function formatTimestamp(isoString) {
@@ -675,11 +1011,23 @@
                 return;
             }
 
-            tbody.innerHTML = patterns.map(p => `
+            tbody.innerHTML = patterns.map(p => {
+                const info = getPatternInfo(p.pattern_type);
+                const implicationClass = p.direction === 'bearish' ? 'bearish' : (p.direction === 'neutral' ? 'neutral' : '');
+                return `
                 <tr>
                     <td>${formatTimestamp(p.timestamp)}</td>
                     <td><strong>${p.symbol}</strong></td>
-                    <td class="pattern-name">${formatPatternType(p.pattern_type)}</td>
+                    <td>
+                        <span class="pattern-tooltip">
+                            <span class="pattern-name">${info.name}</span>
+                            <span class="tooltip-content">
+                                <span class="tooltip-title">${info.name}</span>
+                                <span class="tooltip-description">${info.description}</span>
+                                <span class="tooltip-implication ${implicationClass}">${info.implication}</span>
+                            </span>
+                        </span>
+                    </td>
                     <td><span class="badge badge-${p.category}">${p.category}</span></td>
                     <td><span class="badge badge-${p.direction}">${p.direction}</span></td>
                     <td><span class="badge badge-${p.strength}">${p.strength}</span></td>
@@ -693,7 +1041,7 @@
                     <td><span class="badge badge-${p.timeframe.toLowerCase()}">${p.timeframe}</span></td>
                     <td>${p.price_at_detection?.toFixed(p.price_at_detection > 100 ? 2 : 5) || '-'}</td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         // Filter patterns
@@ -702,16 +1050,31 @@
             const direction = document.getElementById('filterDirection').value;
             const category = document.getElementById('filterCategory').value;
             const timeframe = document.getElementById('filterTimeframe').value;
+            const strength = document.getElementById('filterStrength').value;
+            const minConfidence = parseFloat(document.getElementById('filterConfidence').value) || 0;
 
             const filtered = allPatterns.filter(p => {
                 if (search && !p.symbol.toLowerCase().includes(search)) return false;
                 if (direction && p.direction !== direction) return false;
                 if (category && p.category !== category) return false;
                 if (timeframe && p.timeframe !== timeframe) return false;
+                if (strength && p.strength !== strength) return false;
+                if (minConfidence && p.confidence < minConfidence) return false;
                 return true;
             });
 
             renderPatterns(filtered);
+        }
+
+        // Reset all filters
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterDirection').value = '';
+            document.getElementById('filterCategory').value = '';
+            document.getElementById('filterTimeframe').value = '';
+            document.getElementById('filterStrength').value = '';
+            document.getElementById('filterConfidence').value = '';
+            renderPatterns(allPatterns);
         }
 
         // Trigger manual scan
@@ -779,15 +1142,207 @@
             }
         }
 
+        // Tooltip positioning - ensures tooltip is always visible
+        let activeTooltip = null;
+
+        function setupTooltipPositioning() {
+            // Show tooltip on mouseenter
+            document.addEventListener('mouseenter', (e) => {
+                const trigger = e.target.closest('.pattern-tooltip');
+                if (!trigger) return;
+
+                const tooltip = trigger.querySelector('.tooltip-content');
+                if (!tooltip) return;
+
+                // Hide any other active tooltip
+                if (activeTooltip && activeTooltip !== tooltip) {
+                    activeTooltip.classList.remove('visible');
+                }
+
+                // Show tooltip to measure it
+                tooltip.classList.add('visible');
+                activeTooltip = tooltip;
+
+                // Get dimensions
+                const triggerRect = trigger.getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+                const margin = 8;
+
+                // Calculate position - try to show above first
+                let top = triggerRect.top - tooltipRect.height - margin;
+                let left = triggerRect.left + (triggerRect.width / 2) - (tooltipRect.width / 2);
+
+                // If too high, show below
+                if (top < margin) {
+                    top = triggerRect.bottom + margin;
+                }
+
+                // If still outside viewport (bottom), clamp to visible area
+                if (top + tooltipRect.height > window.innerHeight - margin) {
+                    top = window.innerHeight - tooltipRect.height - margin;
+                }
+
+                // Clamp top to minimum
+                if (top < margin) {
+                    top = margin;
+                }
+
+                // Horizontal bounds
+                if (left < margin) {
+                    left = margin;
+                } else if (left + tooltipRect.width > window.innerWidth - margin) {
+                    left = window.innerWidth - tooltipRect.width - margin;
+                }
+
+                tooltip.style.top = `${top}px`;
+                tooltip.style.left = `${left}px`;
+            }, true);
+
+            // Hide tooltip on mouseleave
+            document.addEventListener('mouseleave', (e) => {
+                const trigger = e.target.closest('.pattern-tooltip');
+                if (!trigger) return;
+
+                const tooltip = trigger.querySelector('.tooltip-content');
+                if (tooltip) {
+                    tooltip.classList.remove('visible');
+                    if (activeTooltip === tooltip) {
+                        activeTooltip = null;
+                    }
+                }
+            }, true);
+        }
+
+        // Load favorite symbols from API (with category info)
+        async function loadFavoriteSymbols() {
+            try {
+                const res = await fetch(`${API_BASE}/managed-symbols`);
+                const data = await res.json();
+                // Filter favorites and include category
+                return data
+                    .filter(s => s.is_favorite)
+                    .map(s => ({ symbol: s.symbol, category: s.category || 'other' }));
+            } catch (error) {
+                console.error('Failed to load favorite symbols:', error);
+                return [];
+            }
+        }
+
+        // Get latest pattern for a symbol (max 4 hours old)
+        function getLatestPatternForSymbol(symbol, patterns) {
+            const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+
+            const symbolPatterns = patterns
+                .filter(p => p.symbol === symbol)
+                .filter(p => new Date(p.timestamp) > fourHoursAgo)
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            return symbolPatterns.length > 0 ? symbolPatterns[0] : null;
+        }
+
+        // Render favorites as compact list grouped by asset category
+        async function renderFavoritesGrid() {
+            const list = document.getElementById('favoritesList');
+            const favorites = await loadFavoriteSymbols();
+
+            if (favorites.length === 0) {
+                list.innerHTML = `<div class="empty-state"><p>Keine Favoriten-Symbole konfiguriert</p></div>`;
+                return;
+            }
+
+            // Group symbols by asset category
+            const groups = { forex: [], crypto: [], index: [], commodity: [], other: [] };
+
+            favorites.forEach(({ symbol, category }) => {
+                const pattern = getLatestPatternForSymbol(symbol, allPatterns);
+                const cat = groups[category] ? category : 'other';
+                groups[cat].push({ symbol, pattern });
+            });
+
+            // Sort each group by symbol name
+            Object.keys(groups).forEach(cat => {
+                groups[cat].sort((a, b) => a.symbol.localeCompare(b.symbol));
+            });
+
+            // Render row helper
+            const renderRow = (symbol, pattern) => {
+                if (pattern) {
+                    const info = getPatternInfo(pattern.pattern_type);
+                    const timeAgo = getTimeAgo(pattern.timestamp);
+                    return `
+                        <div class="favorite-row">
+                            <span class="favorite-symbol">${symbol}</span>
+                            <span class="favorite-pattern-name">${info.name}</span>
+                            <div class="favorite-badges">
+                                <span class="badge badge-${pattern.direction}">${pattern.direction}</span>
+                                <span class="badge badge-${pattern.strength}">${pattern.strength}</span>
+                                <span class="badge badge-${pattern.timeframe.toLowerCase()}">${pattern.timeframe}</span>
+                            </div>
+                            <span class="favorite-confidence-mini">${Math.round(pattern.confidence * 100)}%</span>
+                            <span class="favorite-time">${timeAgo}</span>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="favorite-row no-pattern">
+                            <span class="favorite-symbol">${symbol}</span>
+                            <span class="favorite-no-pattern-text">—</span>
+                        </div>
+                    `;
+                }
+            };
+
+            // Render category helper
+            const renderCategory = (items, label, cssClass) => {
+                if (items.length === 0) return '';
+                const rows = items.map(({ symbol, pattern }) => renderRow(symbol, pattern)).join('');
+                return `
+                    <div class="favorites-category">
+                        <div class="favorites-category-header ${cssClass}">
+                            ${label}
+                            <span class="favorites-category-count">${items.length}</span>
+                        </div>
+                        ${rows}
+                    </div>
+                `;
+            };
+
+            let html = '';
+            html += renderCategory(groups.forex, 'Forex', 'forex');
+            html += renderCategory(groups.crypto, 'Crypto', 'crypto');
+            html += renderCategory(groups.index, 'Indizes', 'index');
+            html += renderCategory(groups.commodity, 'Commodities', 'commodity');
+            html += renderCategory(groups.other, 'Andere', 'other');
+
+            list.innerHTML = html;
+        }
+
+        // Get human-readable time ago
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const then = new Date(timestamp);
+            const diffMs = now - then;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+
+            if (diffMins < 1) return 'gerade eben';
+            if (diffMins < 60) return `vor ${diffMins} Min.`;
+            if (diffHours < 24) return `vor ${diffHours} Std.`;
+            return formatTimestamp(timestamp);
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
+            setupTooltipPositioning();
             await loadStatistics();
             await loadPatterns();
+            await renderFavoritesGrid();
 
             // Auto-refresh every 30 seconds
             setInterval(async () => {
                 await loadStatistics();
                 await loadPatterns();
+                await renderFavoritesGrid();
             }, 30000);
         });
     </script>

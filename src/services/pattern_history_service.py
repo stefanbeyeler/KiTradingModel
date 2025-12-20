@@ -112,6 +112,66 @@ class PatternHistoryService:
         if removed > 0:
             logger.debug(f"Cleaned up {removed} old pattern entries")
 
+    def _get_timeframe_minutes(self, timeframe: str) -> int:
+        """Gibt die Anzahl Minuten für einen Timeframe zurück."""
+        tf_minutes = {
+            "M15": 15,
+            "H1": 60,
+            "H4": 240,
+            "D1": 1440,
+        }
+        return tf_minutes.get(timeframe, 60)
+
+    def _is_duplicate(self, symbol: str, timeframe: str, pattern_type: str, pattern_ts: str) -> bool:
+        """
+        Prüft ob ein Pattern bereits in der History existiert.
+
+        Ein Pattern gilt als Duplikat wenn Symbol, Timeframe, Pattern-Typ
+        übereinstimmen und der Timestamp innerhalb des Timeframe-Intervalls liegt.
+        Dies verhindert, dass überlappende Patterns (z.B. Three White Soldiers
+        auf Kerzen 1-2-3 und 2-3-4) mehrfach gespeichert werden.
+        """
+        try:
+            # Parse den neuen Pattern-Timestamp
+            new_ts = datetime.fromisoformat(pattern_ts.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            # Fallback: exakter String-Vergleich
+            for entry in self._history:
+                if (entry.symbol == symbol and
+                    entry.timeframe == timeframe and
+                    entry.pattern_type == pattern_type):
+                    if entry.id.endswith(pattern_ts):
+                        return True
+            return False
+
+        # Zeitfenster basierend auf Timeframe (Patterns innerhalb einer Kerze = Duplikat)
+        timeframe_minutes = self._get_timeframe_minutes(timeframe)
+        tolerance = timedelta(minutes=timeframe_minutes)
+
+        for entry in self._history:
+            if (entry.symbol == symbol and
+                entry.timeframe == timeframe and
+                entry.pattern_type == pattern_type):
+                try:
+                    # Extrahiere Timestamp aus der ID (letzter Teil nach dem letzten _)
+                    entry_ts_str = entry.id.split('_')[-1]
+                    # Versuche verschiedene Formate
+                    try:
+                        entry_ts = datetime.fromisoformat(entry_ts_str.replace('Z', '+00:00'))
+                    except ValueError:
+                        # Timestamp könnte + statt +00:00 haben
+                        entry_ts = datetime.fromisoformat(entry_ts_str)
+
+                    # Prüfe ob innerhalb des Tolerance-Fensters
+                    if abs((new_ts - entry_ts).total_seconds()) < tolerance.total_seconds():
+                        return True
+                except (ValueError, AttributeError, IndexError):
+                    # Fallback: exakter Vergleich
+                    if entry.id.endswith(pattern_ts):
+                        return True
+
+        return False
+
     async def scan_all_symbols(self) -> int:
         """
         Scanne alle Symbole nach Patterns.
@@ -159,10 +219,18 @@ class PatternHistoryService:
                         response.result.d1.patterns
                     )
 
-                    # Füge nur neue/aktuelle Patterns hinzu
+                    # Füge nur neue/aktuelle Patterns hinzu (Duplikat-Prüfung)
                     for pattern in all_patterns:
+                        # Erstelle eindeutige ID basierend auf Pattern-Timestamp, Symbol, Timeframe und Typ
+                        pattern_ts = pattern.timestamp.isoformat() if pattern.timestamp else scan_time.isoformat()
+                        unique_key = f"{symbol}_{pattern.timeframe.value}_{pattern.pattern_type.value}_{pattern_ts}"
+
+                        # Prüfe ob dieses Pattern bereits existiert
+                        if self._is_duplicate(symbol, pattern.timeframe.value, pattern.pattern_type.value, pattern_ts):
+                            continue
+
                         entry = PatternHistoryEntry(
-                            id=f"{symbol}_{pattern.timeframe.value}_{pattern.pattern_type.value}_{scan_time.timestamp()}",
+                            id=unique_key,
                             timestamp=scan_time.isoformat(),
                             symbol=symbol,
                             pattern_type=pattern.pattern_type.value,
