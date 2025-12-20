@@ -6,6 +6,7 @@ from .analysis_service import AnalysisService
 from .timescaledb_sync_service import TimescaleDBSyncService
 from .strategy_service import StrategyService
 from .symbol_service import SymbolService
+from .data_gateway_service import DataGatewayService, data_gateway
 
 __all__ = [
     "LLMService",
@@ -14,4 +15,6 @@ __all__ = [
     "TimescaleDBSyncService",
     "StrategyService",
     "SymbolService",
+    "DataGatewayService",
+    "data_gateway",
 ]

@@ -1,13 +1,19 @@
-"""Symbol Management Service - CRUD operations for trading symbols."""
+"""Symbol Management Service - CRUD operations for trading symbols.
+
+WICHTIG: Dieser Service verwendet den DataGatewayService für alle externen
+Datenzugriffe. Direkte API-Aufrufe zu EasyInsight sind NICHT erlaubt.
+
+Siehe: DEVELOPMENT_GUIDELINES.md - Datenzugriff-Architektur
+"""
 
 import json
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-import httpx
 from loguru import logger
 
 from ..config import settings
+from .data_gateway_service import data_gateway
 from ..models.symbol_data import (
     ManagedSymbol,
     SymbolCategory,
@@ -26,7 +32,6 @@ class SymbolService:
     def __init__(self):
         self._symbols: dict[str, ManagedSymbol] = {}
         self._data_file = Path("data/symbols.json")
-        self._http_client: Optional[httpx.AsyncClient] = None
         self._load_symbols()
 
     def _load_symbols(self):
@@ -53,15 +58,6 @@ class SymbolService:
             logger.debug(f"Saved {len(self._symbols)} symbols to {self._data_file}")
         except Exception as e:
             logger.error(f"Failed to save symbols: {e}")
-
-    async def _get_http_client(self) -> httpx.AsyncClient:
-        """Get or create HTTP client for EasyInsight API."""
-        if self._http_client is None:
-            self._http_client = httpx.AsyncClient(
-                base_url=settings.easyinsight_api_url,
-                timeout=30.0
-            )
-        return self._http_client
 
     def _detect_category(self, symbol: str) -> SymbolCategory:
         """Auto-detect symbol category based on naming patterns."""
@@ -307,19 +303,13 @@ class SymbolService:
         return symbol
 
     async def _update_symbol_data_info(self, symbol: ManagedSymbol):
-        """Update symbol with data information from EasyInsight API."""
+        """
+        Update symbol with data information via Data Gateway.
+
+        Verwendet: DataGatewayService (siehe DEVELOPMENT_GUIDELINES.md)
+        """
         try:
-            client = await self._get_http_client()
-            response = await client.get("/symbols")
-            response.raise_for_status()
-
-            symbols_data = response.json()
-
-            # Find the symbol in the API response
-            symbol_info = next(
-                (s for s in symbols_data if s.get("symbol") == symbol.symbol),
-                None
-            )
+            symbol_info = await data_gateway.get_symbol_info(symbol.symbol)
 
             if symbol_info and symbol_info.get("count", 0) > 0:
                 symbol.has_timescaledb_data = True
@@ -369,7 +359,11 @@ class SymbolService:
         return category_map.get(api_category, SymbolCategory.OTHER)
 
     async def import_from_easyinsight(self) -> SymbolImportResult:
-        """Import all symbols from EasyInsight API."""
+        """
+        Import all symbols via Data Gateway.
+
+        Verwendet: DataGatewayService (siehe DEVELOPMENT_GUIDELINES.md)
+        """
         result = SymbolImportResult(
             total_found=0,
             imported=0,
@@ -378,11 +372,8 @@ class SymbolService:
         )
 
         try:
-            client = await self._get_http_client()
-            response = await client.get("/symbols")
-            response.raise_for_status()
-
-            symbols_data = response.json()
+            # Verwende Data Gateway anstelle von direktem API-Zugriff
+            symbols_data = await data_gateway.get_available_symbols()
             result.total_found = len(symbols_data)
 
             for symbol_info in symbols_data:
@@ -477,18 +468,18 @@ class SymbolService:
             )
 
         except Exception as e:
-            error_msg = f"Import from EasyInsight API failed: {str(e)}"
+            error_msg = f"Import via Data Gateway failed: {str(e)}"
             logger.error(error_msg)
             result.errors.append(error_msg)
 
         return result
 
     async def import_from_timescaledb(self) -> SymbolImportResult:
-        """Import all symbols from EasyInsight API (legacy name for compatibility)."""
+        """Import all symbols via Data Gateway (legacy name for compatibility)."""
         return await self.import_from_easyinsight()
 
     async def refresh_symbol_data(self, symbol_id: str) -> Optional[ManagedSymbol]:
-        """Refresh data info for a specific symbol from EasyInsight API."""
+        """Refresh data info for a specific symbol via Data Gateway."""
         symbol_id = symbol_id.upper()
         symbol = self._symbols.get(symbol_id)
 

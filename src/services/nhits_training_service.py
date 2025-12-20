@@ -3,6 +3,11 @@ NHITS Auto-Training Service.
 
 Provides scheduled and batch training for NHITS models.
 Fetches training data from Data-Service which handles caching.
+
+WICHTIG: Dieser Service verwendet den DataGatewayService für alle externen
+Datenzugriffe. Direkte API-Aufrufe zu EasyInsight sind NICHT erlaubt.
+
+Siehe: DEVELOPMENT_GUIDELINES.md - Datenzugriff-Architektur
 """
 
 import asyncio
@@ -13,6 +18,7 @@ from typing import List, Optional, Dict, Any
 from ..config.settings import settings
 from ..models.trading_data import TimeSeriesData
 from ..models.forecast_data import ForecastTrainingResult, TrainingMetrics
+from .data_gateway_service import data_gateway
 
 logger = logging.getLogger(__name__)
 
@@ -93,23 +99,17 @@ class NHITSTrainingService:
                 await asyncio.sleep(60)  # Wait before retrying
 
     async def get_available_symbols(self) -> List[str]:
-        """Get list of symbols available for training from EasyInsight API."""
+        """
+        Get list of symbols available for training via Data Gateway.
+
+        Verwendet: DataGatewayService (siehe DEVELOPMENT_GUIDELINES.md)
+        """
         try:
-            import httpx
-
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(f"{settings.easyinsight_api_url}/symbols")
-                response.raise_for_status()
-
-                data = response.json()
-                # API returns list of dicts with 'symbol', 'category', etc.
-                symbols = [item.get('symbol') for item in data if item.get('symbol')]
-
-                logger.info(f"Found {len(symbols)} symbols for NHITS training from EasyInsight API")
-                return symbols
-
+            symbols = await data_gateway.get_symbol_names()
+            logger.info(f"Found {len(symbols)} symbols for NHITS training via Data Gateway")
+            return symbols
         except Exception as e:
-            logger.error(f"Failed to get symbols from EasyInsight API: {e}")
+            logger.error(f"Failed to get symbols via Data Gateway: {e}")
             return []
 
     async def get_training_data(

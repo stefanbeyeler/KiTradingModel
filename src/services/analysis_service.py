@@ -1,4 +1,11 @@
-"""Analysis Service - Main pipeline for generating trading recommendations."""
+"""Analysis Service - Main pipeline for generating trading recommendations.
+
+WICHTIG: Dieser Service verwendet den DataGatewayService für alle externen
+Datenzugriffe. Direkte API-Aufrufe zu EasyInsight oder anderen externen
+Datenquellen sind NICHT erlaubt.
+
+Siehe: DEVELOPMENT_GUIDELINES.md - Datenzugriff-Architektur
+"""
 
 import asyncio
 import time
@@ -45,6 +52,7 @@ from ..models.trading_data import (
 from .llm_service import LLMService
 from .rag_service import RAGService
 from .query_log_service import TimescaleDBDataLog, RAGContextLog
+from .data_gateway_service import data_gateway
 from ..config.settings import settings as app_settings
 
 
@@ -54,109 +62,106 @@ class AnalysisService:
     def __init__(self):
         self.llm_service = LLMService()
         self.rag_service = RAGService()
+        self.data_gateway = data_gateway
 
     async def fetch_latest_market_data(self, symbol: str) -> Optional[MarketDataSnapshot]:
         """
-        Fetch the latest market data snapshot from EasyInsight API.
+        Fetch the latest market data snapshot via Data Gateway.
 
         This includes all OHLC data, technical indicators, and market conditions
         for comprehensive LLM analysis.
+
+        Verwendet: DataGatewayService (siehe DEVELOPMENT_GUIDELINES.md)
         """
         try:
-            import httpx
+            # Verwende Data Gateway anstelle von direktem API-Zugriff
+            data = await self.data_gateway.get_latest_market_data(symbol)
 
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(
-                    f"{settings.easyinsight_api_url}/symbol-latest-full/{symbol}"
-                )
-                response.raise_for_status()
+            if not data:
+                logger.warning(f"No data returned from Data Gateway for {symbol}")
+                return None
 
-                data = response.json()
-                if not data:
-                    logger.warning(f"No data returned from EasyInsight API for {symbol}")
-                    return None
+            # Parse snapshot_time
+            snapshot_time = datetime.fromisoformat(
+                data['snapshot_time'].replace('Z', '+00:00')
+            )
 
-                # Parse snapshot_time
-                snapshot_time = datetime.fromisoformat(
-                    data['snapshot_time'].replace('Z', '+00:00')
-                )
-
-                # Create comprehensive market data snapshot
-                snapshot = MarketDataSnapshot(
-                    symbol=symbol,
-                    snapshot_time=snapshot_time,
-                    category=data.get('category', 'Unknown'),
-                    price=PriceData(
-                        bid=data.get('bid'),
-                        ask=data.get('ask'),
-                        spread=data.get('spread'),
-                        spread_pct=data.get('spread_pct')
+            # Create comprehensive market data snapshot
+            snapshot = MarketDataSnapshot(
+                symbol=symbol,
+                snapshot_time=snapshot_time,
+                category=data.get('category', 'Unknown'),
+                price=PriceData(
+                    bid=data.get('bid'),
+                    ask=data.get('ask'),
+                    spread=data.get('spread'),
+                    spread_pct=data.get('spread_pct')
+                ),
+                ohlc=OHLCData(
+                    m15_open=data.get('m15_open'),
+                    m15_high=data.get('m15_high'),
+                    m15_low=data.get('m15_low'),
+                    m15_close=data.get('m15_close'),
+                    h1_open=data.get('h1_open'),
+                    h1_high=data.get('h1_high'),
+                    h1_low=data.get('h1_low'),
+                    h1_close=data.get('h1_close'),
+                    d1_open=data.get('d1_open'),
+                    d1_high=data.get('d1_high'),
+                    d1_low=data.get('d1_low'),
+                    d1_close=data.get('d1_close')
+                ),
+                indicators=AllIndicators(
+                    rsi=RSIIndicator(value=data.get('rsi')),
+                    macd=MACDIndicator(
+                        main=data.get('macd_main'),
+                        signal=data.get('macd_signal')
                     ),
-                    ohlc=OHLCData(
-                        m15_open=data.get('m15_open'),
-                        m15_high=data.get('m15_high'),
-                        m15_low=data.get('m15_low'),
-                        m15_close=data.get('m15_close'),
-                        h1_open=data.get('h1_open'),
-                        h1_high=data.get('h1_high'),
-                        h1_low=data.get('h1_low'),
-                        h1_close=data.get('h1_close'),
-                        d1_open=data.get('d1_open'),
-                        d1_high=data.get('d1_high'),
-                        d1_low=data.get('d1_low'),
-                        d1_close=data.get('d1_close')
+                    stochastic=StochasticIndicator(
+                        main=data.get('sto_main'),
+                        signal=data.get('sto_signal')
                     ),
-                    indicators=AllIndicators(
-                        rsi=RSIIndicator(value=data.get('rsi')),
-                        macd=MACDIndicator(
-                            main=data.get('macd_main'),
-                            signal=data.get('macd_signal')
-                        ),
-                        stochastic=StochasticIndicator(
-                            main=data.get('sto_main'),
-                            signal=data.get('sto_signal')
-                        ),
-                        cci=CCIIndicator(value=data.get('cci')),
-                        adx=ADXIndicator(
-                            main=data.get('adx_main'),
-                            plus_di=data.get('adx_plusdi'),
-                            minus_di=data.get('adx_minusdi')
-                        ),
-                        ma=MAIndicator(ma_10=data.get('ma_10')),
-                        ichimoku=IchimokuIndicator(
-                            tenkan=data.get('ichimoku_tenkan'),
-                            kijun=data.get('ichimoku_kijun'),
-                            senkou_a=data.get('ichimoku_senkoua'),
-                            senkou_b=data.get('ichimoku_senkoub'),
-                            chikou=data.get('ichimoku_chikou')
-                        ),
-                        bollinger=BollingerBandsIndicator(
-                            upper=data.get('bb_upper'),
-                            base=data.get('bb_base'),
-                            lower=data.get('bb_lower')
-                        ),
-                        atr=ATRIndicator(
-                            d1=data.get('atr_d1'),
-                            d1_pct=data.get('atr_pct_d1')
-                        ),
-                        range=RangeIndicator(d1=data.get('range_d1')),
-                        pivot_points=PivotPoints(
-                            s1_m5=data.get('s1_level_m5'),
-                            r1_m5=data.get('r1_level_m5')
-                        ),
-                        strength=StrengthIndicators(
-                            h4=data.get('strength_4h'),
-                            d1=data.get('strength_1d'),
-                            w1=data.get('strength_1w')
-                        )
+                    cci=CCIIndicator(value=data.get('cci')),
+                    adx=ADXIndicator(
+                        main=data.get('adx_main'),
+                        plus_di=data.get('adx_plusdi'),
+                        minus_di=data.get('adx_minusdi')
+                    ),
+                    ma=MAIndicator(ma_10=data.get('ma_10')),
+                    ichimoku=IchimokuIndicator(
+                        tenkan=data.get('ichimoku_tenkan'),
+                        kijun=data.get('ichimoku_kijun'),
+                        senkou_a=data.get('ichimoku_senkoua'),
+                        senkou_b=data.get('ichimoku_senkoub'),
+                        chikou=data.get('ichimoku_chikou')
+                    ),
+                    bollinger=BollingerBandsIndicator(
+                        upper=data.get('bb_upper'),
+                        base=data.get('bb_base'),
+                        lower=data.get('bb_lower')
+                    ),
+                    atr=ATRIndicator(
+                        d1=data.get('atr_d1'),
+                        d1_pct=data.get('atr_pct_d1')
+                    ),
+                    range=RangeIndicator(d1=data.get('range_d1')),
+                    pivot_points=PivotPoints(
+                        s1_m5=data.get('s1_level_m5'),
+                        r1_m5=data.get('r1_level_m5')
+                    ),
+                    strength=StrengthIndicators(
+                        h4=data.get('strength_4h'),
+                        d1=data.get('strength_1d'),
+                        w1=data.get('strength_1w')
                     )
                 )
+            )
 
-                logger.info(f"Fetched latest market data for {symbol} from EasyInsight API")
-                return snapshot
+            logger.info(f"Fetched latest market data for {symbol} via Data Gateway")
+            return snapshot
 
         except Exception as e:
-            logger.error(f"Failed to fetch latest market data from EasyInsight API for {symbol}: {e}")
+            logger.error(f"Failed to fetch latest market data for {symbol}: {e}")
             return None
 
     async def _fetch_time_series(
@@ -185,7 +190,9 @@ class AnalysisService:
         interval: str = "h1"
     ) -> tuple[list[TimeSeriesData], TimescaleDBDataLog, dict]:
         """
-        Fetch time series data from EasyInsight API with detailed logging.
+        Fetch time series data via Data Gateway with detailed logging.
+
+        Verwendet: DataGatewayService (siehe DEVELOPMENT_GUIDELINES.md)
 
         Args:
             symbol: Trading symbol
@@ -196,8 +203,6 @@ class AnalysisService:
         Returns:
             tuple: (time_series_data, tsdb_log, db_indicators)
         """
-        import httpx
-
         # Normalize interval
         interval = interval.lower()
         if interval not in ["m15", "h1", "d1"]:
@@ -220,135 +225,132 @@ class AnalysisService:
         raw_data_sample = []
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
-                    params={"limit": limit}
-                )
-                response.raise_for_status()
+            # Verwende Data Gateway anstelle von direktem API-Zugriff
+            rows = await self.data_gateway.get_historical_data(
+                symbol=symbol,
+                limit=limit,
+                timeframe=interval.upper()
+            )
 
-                data = response.json()
-                rows = data.get('data', [])
-
-                for i, row in enumerate(rows):
-                    try:
-                        # Parse timestamp
-                        timestamp_str = row.get('snapshot_time')
-                        if not timestamp_str:
-                            continue
-
-                        timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-
-                        # Select OHLC fields based on interval
-                        if interval == "m15":
-                            open_price = float(row.get('m15_open', 0))
-                            high_price = float(row.get('m15_high', 0))
-                            low_price = float(row.get('m15_low', 0))
-                            close_price = float(row.get('m15_close', 0))
-                        elif interval == "d1":
-                            open_price = float(row.get('d1_open', 0))
-                            high_price = float(row.get('d1_high', 0))
-                            low_price = float(row.get('d1_low', 0))
-                            close_price = float(row.get('d1_close', 0))
-                        else:  # h1
-                            open_price = float(row.get('h1_open', 0))
-                            high_price = float(row.get('h1_high', 0))
-                            low_price = float(row.get('h1_low', 0))
-                            close_price = float(row.get('h1_close', 0))
-
-                        # Use interval-specific OHLC data with all available indicators
-                        ts_data = TimeSeriesData(
-                            timestamp=timestamp,
-                            symbol=symbol,
-                            open=open_price,
-                            high=high_price,
-                            low=low_price,
-                            close=close_price,
-                            volume=0.0,
-                            # Momentum Indicators
-                            rsi=row.get('rsi'),
-                            macd_main=row.get('macd_main'),
-                            macd_signal=row.get('macd_signal'),
-                            cci=row.get('cci'),
-                            stoch_k=row.get('sto_main'),
-                            stoch_d=row.get('sto_signal'),
-                            # Trend Indicators
-                            adx=row.get('adx_main'),
-                            adx_plus_di=row.get('adx_plusdi'),
-                            adx_minus_di=row.get('adx_minusdi'),
-                            ma100=row.get('ma_10'),
-                            # Volatility Indicators
-                            atr=row.get('atr_d1'),
-                            atr_pct=row.get('atr_pct_d1'),
-                            bb_upper=row.get('bb_upper'),
-                            bb_middle=row.get('bb_base'),
-                            bb_lower=row.get('bb_lower'),
-                            range_d1=row.get('range_d1'),
-                            # Ichimoku Cloud (complete)
-                            ichimoku_tenkan=row.get('ichimoku_tenkan'),
-                            ichimoku_kijun=row.get('ichimoku_kijun'),
-                            ichimoku_senkou_a=row.get('ichimoku_senkoua'),
-                            ichimoku_senkou_b=row.get('ichimoku_senkoub'),
-                            ichimoku_chikou=row.get('ichimoku_chikou'),
-                            # Strength Indicators
-                            strength_4h=row.get('strength_4h'),
-                            strength_1d=row.get('strength_1d'),
-                            strength_1w=row.get('strength_1w'),
-                            # Support/Resistance Pivot Points
-                            s1_level=row.get('s1_level_m5'),
-                            r1_level=row.get('r1_level_m5'),
-                            additional_data={
-                                'bid': row.get('bid'),
-                                'ask': row.get('ask'),
-                                'spread': row.get('spread'),
-                                'spread_pct': row.get('spread_pct'),
-                                'category': row.get('category'),
-                                'd1_open': row.get('d1_open'),
-                                'd1_high': row.get('d1_high'),
-                                'd1_low': row.get('d1_low'),
-                                'd1_close': row.get('d1_close'),
-                                'm15_open': row.get('m15_open'),
-                                'm15_high': row.get('m15_high'),
-                                'm15_low': row.get('m15_low'),
-                                'm15_close': row.get('m15_close'),
-                            }
-                        )
-                        time_series.append(ts_data)
-
-                        # Store raw data sample (first 3 rows)
-                        if i < 3:
-                            raw_data_sample.append({
-                                'timestamp': timestamp_str,
-                                'h1_close': row.get('h1_close'),
-                                'rsi': row.get('rsi'),
-                                'macd_main': row.get('macd_main'),
-                            })
-
-                    except Exception as row_error:
-                        logger.warning(f"Failed to parse row for {symbol}: {row_error}")
+            for i, row in enumerate(rows):
+                try:
+                    # Parse timestamp
+                    timestamp_str = row.get('snapshot_time')
+                    if not timestamp_str:
                         continue
 
-                # Extract latest indicators for db_indicators dict
-                if rows:
-                    latest = rows[0]
-                    db_indicators = {
-                        'rsi14': latest.get('rsi'),
-                        'macd_main': latest.get('macd_main'),
-                        'macd_signal': latest.get('macd_signal'),
-                        'bb_upper': latest.get('bb_upper'),
-                        'bb_middle': latest.get('bb_base'),
-                        'bb_lower': latest.get('bb_lower'),
-                        'atr_d1': latest.get('atr_d1'),
-                        'ma100': latest.get('ma_10'),
-                        'adx_main': latest.get('adx_main'),
-                        'adx_plusdi': latest.get('adx_plusdi'),
-                        'adx_minusdi': latest.get('adx_minusdi'),
-                    }
+                    timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
 
-                logger.info(f"Fetched {len(time_series)} {interval.upper()} data points for {symbol} from EasyInsight API")
+                    # Select OHLC fields based on interval
+                    if interval == "m15":
+                        open_price = float(row.get('m15_open', 0))
+                        high_price = float(row.get('m15_high', 0))
+                        low_price = float(row.get('m15_low', 0))
+                        close_price = float(row.get('m15_close', 0))
+                    elif interval == "d1":
+                        open_price = float(row.get('d1_open', 0))
+                        high_price = float(row.get('d1_high', 0))
+                        low_price = float(row.get('d1_low', 0))
+                        close_price = float(row.get('d1_close', 0))
+                    else:  # h1
+                        open_price = float(row.get('h1_open', 0))
+                        high_price = float(row.get('h1_high', 0))
+                        low_price = float(row.get('h1_low', 0))
+                        close_price = float(row.get('h1_close', 0))
+
+                    # Use interval-specific OHLC data with all available indicators
+                    ts_data = TimeSeriesData(
+                        timestamp=timestamp,
+                        symbol=symbol,
+                        open=open_price,
+                        high=high_price,
+                        low=low_price,
+                        close=close_price,
+                        volume=0.0,
+                        # Momentum Indicators
+                        rsi=row.get('rsi'),
+                        macd_main=row.get('macd_main'),
+                        macd_signal=row.get('macd_signal'),
+                        cci=row.get('cci'),
+                        stoch_k=row.get('sto_main'),
+                        stoch_d=row.get('sto_signal'),
+                        # Trend Indicators
+                        adx=row.get('adx_main'),
+                        adx_plus_di=row.get('adx_plusdi'),
+                        adx_minus_di=row.get('adx_minusdi'),
+                        ma100=row.get('ma_10'),
+                        # Volatility Indicators
+                        atr=row.get('atr_d1'),
+                        atr_pct=row.get('atr_pct_d1'),
+                        bb_upper=row.get('bb_upper'),
+                        bb_middle=row.get('bb_base'),
+                        bb_lower=row.get('bb_lower'),
+                        range_d1=row.get('range_d1'),
+                        # Ichimoku Cloud (complete)
+                        ichimoku_tenkan=row.get('ichimoku_tenkan'),
+                        ichimoku_kijun=row.get('ichimoku_kijun'),
+                        ichimoku_senkou_a=row.get('ichimoku_senkoua'),
+                        ichimoku_senkou_b=row.get('ichimoku_senkoub'),
+                        ichimoku_chikou=row.get('ichimoku_chikou'),
+                        # Strength Indicators
+                        strength_4h=row.get('strength_4h'),
+                        strength_1d=row.get('strength_1d'),
+                        strength_1w=row.get('strength_1w'),
+                        # Support/Resistance Pivot Points
+                        s1_level=row.get('s1_level_m5'),
+                        r1_level=row.get('r1_level_m5'),
+                        additional_data={
+                            'bid': row.get('bid'),
+                            'ask': row.get('ask'),
+                            'spread': row.get('spread'),
+                            'spread_pct': row.get('spread_pct'),
+                            'category': row.get('category'),
+                            'd1_open': row.get('d1_open'),
+                            'd1_high': row.get('d1_high'),
+                            'd1_low': row.get('d1_low'),
+                            'd1_close': row.get('d1_close'),
+                            'm15_open': row.get('m15_open'),
+                            'm15_high': row.get('m15_high'),
+                            'm15_low': row.get('m15_low'),
+                            'm15_close': row.get('m15_close'),
+                        }
+                    )
+                    time_series.append(ts_data)
+
+                    # Store raw data sample (first 3 rows)
+                    if i < 3:
+                        raw_data_sample.append({
+                            'timestamp': timestamp_str,
+                            'h1_close': row.get('h1_close'),
+                            'rsi': row.get('rsi'),
+                            'macd_main': row.get('macd_main'),
+                        })
+
+                except Exception as row_error:
+                    logger.warning(f"Failed to parse row for {symbol}: {row_error}")
+                    continue
+
+            # Extract latest indicators for db_indicators dict
+            if rows:
+                latest = rows[0]
+                db_indicators = {
+                    'rsi14': latest.get('rsi'),
+                    'macd_main': latest.get('macd_main'),
+                    'macd_signal': latest.get('macd_signal'),
+                    'bb_upper': latest.get('bb_upper'),
+                    'bb_middle': latest.get('bb_base'),
+                    'bb_lower': latest.get('bb_lower'),
+                    'atr_d1': latest.get('atr_d1'),
+                    'ma100': latest.get('ma_10'),
+                    'adx_main': latest.get('adx_main'),
+                    'adx_plusdi': latest.get('adx_plusdi'),
+                    'adx_minusdi': latest.get('adx_minusdi'),
+                }
+
+            logger.info(f"Fetched {len(time_series)} {interval.upper()} data points for {symbol} via Data Gateway")
 
         except Exception as e:
-            logger.error(f"Failed to fetch time series from EasyInsight API for {symbol}: {e}")
+            logger.error(f"Failed to fetch time series for {symbol}: {e}")
 
         # Sort by timestamp (oldest first for analysis)
         time_series.sort(key=lambda x: x.timestamp)
@@ -377,137 +379,113 @@ class AnalysisService:
         return time_series, tsdb_log, db_indicators
 
     async def get_available_symbols(self) -> list[str]:
-        """Get list of available trading symbols from EasyInsight API."""
-        try:
-            import httpx
+        """
+        Get list of available trading symbols via Data Gateway.
 
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(f"{settings.easyinsight_api_url}/symbols")
-                response.raise_for_status()
-
-                data = response.json()
-                # API returns list of dicts with 'symbol', 'category', etc.
-                symbols = [item.get('symbol') for item in data if item.get('symbol')]
-
-                logger.info(f"Fetched {len(symbols)} symbols from EasyInsight API")
-                return sorted(symbols)
-
-        except Exception as e:
-            logger.warning(f"Failed to fetch symbols from EasyInsight API: {e}, falling back to direct DB access")
-
-            # Fallback to direct TimescaleDB access
-            pool = await self._get_pool()
-            async with pool.acquire() as conn:
-                rows = await conn.fetch(
-                    "SELECT DISTINCT symbol FROM symbol WHERE symbol IS NOT NULL ORDER BY symbol LIMIT 100"
-                )
-                return [row["symbol"] for row in rows if row["symbol"]]
+        Verwendet: DataGatewayService (siehe DEVELOPMENT_GUIDELINES.md)
+        HINWEIS: Direkter DB-Zugriff wurde entfernt - nur noch API via Data Gateway.
+        """
+        return await self.data_gateway.get_symbol_names()
 
     async def fetch_all_latest_market_data(self) -> list[MarketDataSnapshot]:
         """
-        Fetch latest market data for all available symbols from EasyInsight API.
+        Fetch latest market data for all available symbols via Data Gateway.
 
         Returns a list of MarketDataSnapshot objects with complete indicator data.
+
+        Verwendet: DataGatewayService (siehe DEVELOPMENT_GUIDELINES.md)
         """
         try:
-            import httpx
+            # Verwende Data Gateway anstelle von direktem API-Zugriff
+            data_rows = await self.data_gateway.get_all_latest_market_data()
+            snapshots = []
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    f"{settings.easyinsight_api_url}/symbol-data-full",
-                    params={"limit": 1}  # Get only latest snapshot for each symbol
-                )
-                response.raise_for_status()
+            for row in data_rows:
+                try:
+                    snapshot_time = datetime.fromisoformat(
+                        row['snapshot_time'].replace('Z', '+00:00')
+                    )
 
-                data = response.json()
-                snapshots = []
-
-                for row in data.get('data', []):
-                    try:
-                        snapshot_time = datetime.fromisoformat(
-                            row['snapshot_time'].replace('Z', '+00:00')
-                        )
-
-                        snapshot = MarketDataSnapshot(
-                            symbol=row['symbol'],
-                            snapshot_time=snapshot_time,
-                            category=row.get('category', 'Unknown'),
-                            price=PriceData(
-                                bid=row.get('bid'),
-                                ask=row.get('ask'),
-                                spread=row.get('spread'),
-                                spread_pct=row.get('spread_pct')
+                    snapshot = MarketDataSnapshot(
+                        symbol=row['symbol'],
+                        snapshot_time=snapshot_time,
+                        category=row.get('category', 'Unknown'),
+                        price=PriceData(
+                            bid=row.get('bid'),
+                            ask=row.get('ask'),
+                            spread=row.get('spread'),
+                            spread_pct=row.get('spread_pct')
+                        ),
+                        ohlc=OHLCData(
+                            m15_open=row.get('m15_open'),
+                            m15_high=row.get('m15_high'),
+                            m15_low=row.get('m15_low'),
+                            m15_close=row.get('m15_close'),
+                            h1_open=row.get('h1_open'),
+                            h1_high=row.get('h1_high'),
+                            h1_low=row.get('h1_low'),
+                            h1_close=row.get('h1_close'),
+                            d1_open=row.get('d1_open'),
+                            d1_high=row.get('d1_high'),
+                            d1_low=row.get('d1_low'),
+                            d1_close=row.get('d1_close')
+                        ),
+                        indicators=AllIndicators(
+                            rsi=RSIIndicator(value=row.get('rsi')),
+                            macd=MACDIndicator(
+                                main=row.get('macd_main'),
+                                signal=row.get('macd_signal')
                             ),
-                            ohlc=OHLCData(
-                                m15_open=row.get('m15_open'),
-                                m15_high=row.get('m15_high'),
-                                m15_low=row.get('m15_low'),
-                                m15_close=row.get('m15_close'),
-                                h1_open=row.get('h1_open'),
-                                h1_high=row.get('h1_high'),
-                                h1_low=row.get('h1_low'),
-                                h1_close=row.get('h1_close'),
-                                d1_open=row.get('d1_open'),
-                                d1_high=row.get('d1_high'),
-                                d1_low=row.get('d1_low'),
-                                d1_close=row.get('d1_close')
+                            stochastic=StochasticIndicator(
+                                main=row.get('sto_main'),
+                                signal=row.get('sto_signal')
                             ),
-                            indicators=AllIndicators(
-                                rsi=RSIIndicator(value=row.get('rsi')),
-                                macd=MACDIndicator(
-                                    main=row.get('macd_main'),
-                                    signal=row.get('macd_signal')
-                                ),
-                                stochastic=StochasticIndicator(
-                                    main=row.get('sto_main'),
-                                    signal=row.get('sto_signal')
-                                ),
-                                cci=CCIIndicator(value=row.get('cci')),
-                                adx=ADXIndicator(
-                                    main=row.get('adx_main'),
-                                    plus_di=row.get('adx_plusdi'),
-                                    minus_di=row.get('adx_minusdi')
-                                ),
-                                ma=MAIndicator(ma_10=row.get('ma_10')),
-                                ichimoku=IchimokuIndicator(
-                                    tenkan=row.get('ichimoku_tenkan'),
-                                    kijun=row.get('ichimoku_kijun'),
-                                    senkou_a=row.get('ichimoku_senkoua'),
-                                    senkou_b=row.get('ichimoku_senkoub'),
-                                    chikou=row.get('ichimoku_chikou')
-                                ),
-                                bollinger=BollingerBandsIndicator(
-                                    upper=row.get('bb_upper'),
-                                    base=row.get('bb_base'),
-                                    lower=row.get('bb_lower')
-                                ),
-                                atr=ATRIndicator(
-                                    d1=row.get('atr_d1'),
-                                    d1_pct=row.get('atr_pct_d1')
-                                ),
-                                range=RangeIndicator(d1=row.get('range_d1')),
-                                pivot_points=PivotPoints(
-                                    s1_m5=row.get('s1_level_m5'),
-                                    r1_m5=row.get('r1_level_m5')
-                                ),
-                                strength=StrengthIndicators(
-                                    h4=row.get('strength_4h'),
-                                    d1=row.get('strength_1d'),
-                                    w1=row.get('strength_1w')
-                                )
+                            cci=CCIIndicator(value=row.get('cci')),
+                            adx=ADXIndicator(
+                                main=row.get('adx_main'),
+                                plus_di=row.get('adx_plusdi'),
+                                minus_di=row.get('adx_minusdi')
+                            ),
+                            ma=MAIndicator(ma_10=row.get('ma_10')),
+                            ichimoku=IchimokuIndicator(
+                                tenkan=row.get('ichimoku_tenkan'),
+                                kijun=row.get('ichimoku_kijun'),
+                                senkou_a=row.get('ichimoku_senkoua'),
+                                senkou_b=row.get('ichimoku_senkoub'),
+                                chikou=row.get('ichimoku_chikou')
+                            ),
+                            bollinger=BollingerBandsIndicator(
+                                upper=row.get('bb_upper'),
+                                base=row.get('bb_base'),
+                                lower=row.get('bb_lower')
+                            ),
+                            atr=ATRIndicator(
+                                d1=row.get('atr_d1'),
+                                d1_pct=row.get('atr_pct_d1')
+                            ),
+                            range=RangeIndicator(d1=row.get('range_d1')),
+                            pivot_points=PivotPoints(
+                                s1_m5=row.get('s1_level_m5'),
+                                r1_m5=row.get('r1_level_m5')
+                            ),
+                            strength=StrengthIndicators(
+                                h4=row.get('strength_4h'),
+                                d1=row.get('strength_1d'),
+                                w1=row.get('strength_1w')
                             )
                         )
-                        snapshots.append(snapshot)
+                    )
+                    snapshots.append(snapshot)
 
-                    except Exception as row_error:
-                        logger.warning(f"Failed to parse market data for {row.get('symbol')}: {row_error}")
-                        continue
+                except Exception as row_error:
+                    logger.warning(f"Failed to parse market data for {row.get('symbol')}: {row_error}")
+                    continue
 
-                logger.info(f"Fetched latest market data for {len(snapshots)} symbols from EasyInsight API")
-                return snapshots
+            logger.info(f"Fetched latest market data for {len(snapshots)} symbols via Data Gateway")
+            return snapshots
 
         except Exception as e:
-            logger.error(f"Failed to fetch all latest market data from EasyInsight API: {e}")
+            logger.error(f"Failed to fetch all latest market data: {e}")
             return []
 
     async def get_symbol_info(self, symbol: str) -> dict:
@@ -723,15 +701,12 @@ class AnalysisService:
             return {"error": str(e)}
 
     async def check_easyinsight_api(self) -> bool:
-        """Check if EasyInsight API is accessible."""
-        try:
-            import httpx
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(f"{settings.easyinsight_api_url}/symbols")
-                return response.status_code == 200
-        except Exception as e:
-            logger.warning(f"EasyInsight API connection check failed: {e}")
-            return False
+        """
+        Check if EasyInsight API is accessible via Data Gateway.
+
+        Verwendet: DataGatewayService (siehe DEVELOPMENT_GUIDELINES.md)
+        """
+        return await self.data_gateway.check_easyinsight_health()
 
     async def analyze(self, request: AnalysisRequest) -> AnalysisResponse:
         """
