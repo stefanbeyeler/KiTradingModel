@@ -300,6 +300,7 @@ class NHITSTrainingService:
             from .twelvedata_service import twelvedata_service
             from .forecast_service import forecast_service
             from .symbol_service import symbol_service
+            from .training_data_cache_service import training_data_cache
 
             tf = timeframe.upper()
 
@@ -487,8 +488,25 @@ class NHITSTrainingService:
             tf_config = forecast_service.get_timeframe_config(tf)
             min_required = tf_config["input_size"] + tf_config["horizon"]
 
+            # Calculate required days based on timeframe
+            # For D1: min_required is in days, add buffer
+            # For H1: min_required is in hours, convert to days
+            # For M15: min_required is in 15-min intervals, convert to days
+            step_minutes = tf_config["step_minutes"]
+            if step_minutes == 1440:  # D1
+                required_days = min_required + 14  # Add 2 week buffer for D1
+            elif step_minutes == 60:  # H1
+                required_days = (min_required // 24) + 7  # Convert hours to days + buffer
+            else:  # M15
+                required_days = (min_required // 96) + 3  # 96 = 24*4 (15min intervals per day)
+
+            logger.info(
+                f"Training {symbol}/{tf}: min_required={min_required} samples, "
+                f"requesting {required_days} days of data"
+            )
+
             # Get training data from EasyInsight first
-            time_series = await self.get_training_data(symbol, timeframe=tf)
+            time_series = await self.get_training_data(symbol, days=required_days, timeframe=tf)
             data_source = "easyinsight"
 
             # If EasyInsight doesn't have enough data, try Twelve Data as fallback
