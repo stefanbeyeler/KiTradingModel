@@ -562,6 +562,7 @@
             <button class="tab-btn active" data-tab="symbols">Symbole</button>
             <button class="tab-btn" data-tab="strategies">Trading-Strategien</button>
             <button class="tab-btn" data-tab="explorer">Daten-Explorer</button>
+            <button class="tab-btn" data-tab="external">External Sources</button>
             <button class="tab-btn" data-tab="export">Export / Import</button>
         </div>
 
@@ -680,6 +681,312 @@
 
                 <div id="strategies-list">
                     <div class="loading"><div class="spinner"></div><br>Lade Strategien...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- External Sources Tab -->
+        <div id="external-tab" class="tab-content">
+            <div class="stats-bar" id="external-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="external-total-sources">9</div>
+                    <div class="stat-label">Datenquellen</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="external-available">-</div>
+                    <div class="stat-label">Verfügbar</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="external-last-fetch">-</div>
+                    <div class="stat-label">Letzter Abruf</div>
+                </div>
+            </div>
+
+            <!-- Source Selection -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h2 class="card-title">External Data Sources</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-success" onclick="fetchAllExternalSources()">Alle abrufen</button>
+                        <button class="btn btn-primary" onclick="fetchTradingContext()">Trading Context</button>
+                    </div>
+                </div>
+                <div style="padding: 1rem;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Symbol (optional)</label>
+                            <select class="form-select" id="external-symbol">
+                                <option value="">Alle / Kein Symbol</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Datenquelle</label>
+                            <select class="form-select" id="external-source-select" onchange="updateExternalSourceOptions()">
+                                <option value="economic-calendar">Economic Calendar</option>
+                                <option value="sentiment">Sentiment</option>
+                                <option value="onchain">On-Chain</option>
+                                <option value="orderbook">Orderbook</option>
+                                <option value="macro">Macro</option>
+                                <option value="historical-patterns">Historical Patterns</option>
+                                <option value="technical-levels">Technical Levels</option>
+                                <option value="regulatory">Regulatory</option>
+                                <option value="easyinsight">EasyInsight</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Source-specific options -->
+                    <div id="external-source-options">
+                        <!-- Economic Calendar Options -->
+                        <div id="options-economic-calendar" class="source-options">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Tage voraus</label>
+                                    <select class="form-select" id="ec-days-ahead">
+                                        <option value="1">1 Tag</option>
+                                        <option value="3">3 Tage</option>
+                                        <option value="7" selected>7 Tage</option>
+                                        <option value="14">14 Tage</option>
+                                        <option value="30">30 Tage</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="ec-high-impact" checked><span>Nur High Impact</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sentiment Options -->
+                        <div id="options-sentiment" class="source-options" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="sent-fear-greed" checked><span>Fear & Greed</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="sent-social" checked><span>Social Media</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="sent-vix" checked><span>VIX</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- On-Chain Options -->
+                        <div id="options-onchain" class="source-options" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="oc-whale" checked><span>Whale Alerts</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="oc-exchange" checked><span>Exchange Flows</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #ffc107; margin-top: 0.5rem;">Hinweis: Symbol erforderlich (z.B. BTCUSD)</div>
+                        </div>
+
+                        <!-- Orderbook Options -->
+                        <div id="options-orderbook" class="source-options" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Tiefe</label>
+                                    <select class="form-select" id="ob-depth">
+                                        <option value="20">20</option>
+                                        <option value="50" selected>50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="ob-liquidations" checked><span>Liquidations</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #ffc107; margin-top: 0.5rem;">Hinweis: Symbol erforderlich</div>
+                        </div>
+
+                        <!-- Macro Options -->
+                        <div id="options-macro" class="source-options" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="macro-dxy" checked><span>DXY</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="macro-yields" checked><span>Bond Yields</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="macro-corr" checked><span>Korrelationen</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Historical Patterns Options -->
+                        <div id="options-historical-patterns" class="source-options" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="hp-seasonality" checked><span>Saisonalität</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="hp-drawdowns" checked><span>Drawdowns</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Technical Levels Options -->
+                        <div id="options-technical-levels" class="source-options" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="tl-sr" checked><span>S/R Levels</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="tl-fib" checked><span>Fibonacci</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="tl-pivots" checked><span>Pivots</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #ffc107; margin-top: 0.5rem;">Hinweis: Symbol erforderlich</div>
+                        </div>
+
+                        <!-- Regulatory Options -->
+                        <div id="options-regulatory" class="source-options" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="reg-sec" checked><span>SEC</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="reg-etf" checked><span>ETF News</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- EasyInsight Options -->
+                        <div id="options-easyinsight" class="source-options" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-symbols" checked><span>Managed Symbols</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-logs" checked><span>MT5 Logs</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                        <button class="btn btn-primary" onclick="fetchExternalSource()">Daten abrufen</button>
+                        <button class="btn btn-secondary" onclick="clearExternalResults()">Ergebnisse löschen</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Display -->
+            <div class="card" id="external-results" style="display: none;">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 class="card-title" id="external-result-title">Ergebnisse</h2>
+                    <div id="external-result-info" style="font-size: 0.85rem; color: #888;"></div>
+                </div>
+                <div id="external-result-content" style="padding: 1rem; max-height: 600px; overflow: auto;">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="external-loading" style="display: none; text-align: center; padding: 3rem;">
+                <div class="spinner"></div>
+                <p style="margin-top: 1rem; color: #888;">Lade externe Daten...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="external-error" style="display: none;" class="card">
+                <div style="padding: 2rem; text-align: center; color: #f44336;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#9888;</div>
+                    <p id="external-error-msg">Fehler beim Laden der Daten</p>
+                </div>
+            </div>
+
+            <!-- Source Overview Cards -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Datenquellen-Übersicht</h2>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; padding: 1rem;">
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #64c8ff;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #64c8ff;">Economic Calendar</strong>
+                            <span class="badge badge-active" id="status-economic-calendar">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Fed, ECB, CPI, NFP, GDP Events</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('economic-calendar')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ffc107;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #ffc107;">Sentiment</strong>
+                            <span class="badge badge-active" id="status-sentiment">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Fear & Greed, Social Media, VIX</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('sentiment')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #81c784;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #81c784;">On-Chain</strong>
+                            <span class="badge badge-active" id="status-onchain">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Whale Alerts, Exchange Flows</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('onchain')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ce93d8;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #ce93d8;">Orderbook</strong>
+                            <span class="badge badge-active" id="status-orderbook">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Bid/Ask Walls, Liquidations</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('orderbook')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #64b5f6;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #64b5f6;">Macro</strong>
+                            <span class="badge badge-active" id="status-macro">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">DXY, Bond Yields, Korrelationen</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('macro')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ffb74d;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #ffb74d;">Historical Patterns</strong>
+                            <span class="badge badge-active" id="status-historical-patterns">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Saisonalität, Drawdowns</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('historical-patterns')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #4dd0e1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #4dd0e1;">Technical Levels</strong>
+                            <span class="badge badge-active" id="status-technical-levels">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">S/R, Fibonacci, Pivots</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('technical-levels')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #e57373;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #e57373;">Regulatory</strong>
+                            <span class="badge badge-active" id="status-regulatory">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">SEC, ETF News, Regulation</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('regulatory')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #a1887f;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #a1887f;">EasyInsight</strong>
+                            <span class="badge badge-active" id="status-easyinsight">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Managed Symbols, MT5 Logs</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('easyinsight')">Abrufen</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3736,6 +4043,422 @@
             showToast('CSV Export erfolgreich', 'success');
         }
 
+        // =====================================================
+        // EXTERNAL SOURCES FUNCTIONS
+        // =====================================================
+
+        const SOURCE_NAMES = {
+            'economic-calendar': 'Economic Calendar',
+            'sentiment': 'Sentiment',
+            'onchain': 'On-Chain',
+            'orderbook': 'Orderbook',
+            'macro': 'Macro',
+            'historical-patterns': 'Historical Patterns',
+            'technical-levels': 'Technical Levels',
+            'regulatory': 'Regulatory',
+            'easyinsight': 'EasyInsight'
+        };
+
+        // Update source options visibility
+        function updateExternalSourceOptions() {
+            const source = document.getElementById('external-source-select').value;
+            document.querySelectorAll('.source-options').forEach(el => el.style.display = 'none');
+            const optionsEl = document.getElementById(`options-${source}`);
+            if (optionsEl) optionsEl.style.display = 'block';
+        }
+
+        // Populate external symbol dropdown
+        function populateExternalSymbols() {
+            const select = document.getElementById('external-symbol');
+            if (!select || !allSymbols) return;
+
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Alle / Kein Symbol</option>';
+
+            const activeSymbols = allSymbols.filter(s => s.status === 'active');
+            activeSymbols.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.symbol;
+                opt.textContent = s.symbol + (s.display_name ? ` (${s.display_name})` : '');
+                select.appendChild(opt);
+            });
+
+            if (currentValue) select.value = currentValue;
+        }
+
+        // Show loading state
+        function showExternalLoading(show) {
+            document.getElementById('external-loading').style.display = show ? 'block' : 'none';
+            document.getElementById('external-results').style.display = 'none';
+            document.getElementById('external-error').style.display = 'none';
+        }
+
+        // Show error state
+        function showExternalError(message) {
+            document.getElementById('external-loading').style.display = 'none';
+            document.getElementById('external-results').style.display = 'none';
+            document.getElementById('external-error').style.display = 'block';
+            document.getElementById('external-error-msg').textContent = message;
+        }
+
+        // Clear results
+        function clearExternalResults() {
+            document.getElementById('external-results').style.display = 'none';
+            document.getElementById('external-loading').style.display = 'none';
+            document.getElementById('external-error').style.display = 'none';
+        }
+
+        // Build query params for each source
+        function buildExternalParams(source, symbol) {
+            const params = new URLSearchParams();
+            if (symbol) params.append('symbol', symbol);
+
+            switch (source) {
+                case 'economic-calendar':
+                    params.append('days_ahead', document.getElementById('ec-days-ahead').value);
+                    params.append('high_impact_only', document.getElementById('ec-high-impact').checked);
+                    break;
+                case 'sentiment':
+                    params.append('include_fear_greed', document.getElementById('sent-fear-greed').checked);
+                    params.append('include_social', document.getElementById('sent-social').checked);
+                    params.append('include_vix', document.getElementById('sent-vix').checked);
+                    break;
+                case 'onchain':
+                    params.append('include_whale_alerts', document.getElementById('oc-whale').checked);
+                    params.append('include_exchange_flows', document.getElementById('oc-exchange').checked);
+                    break;
+                case 'orderbook':
+                    params.append('depth', document.getElementById('ob-depth').value);
+                    params.append('include_liquidations', document.getElementById('ob-liquidations').checked);
+                    break;
+                case 'macro':
+                    params.append('include_dxy', document.getElementById('macro-dxy').checked);
+                    params.append('include_yields', document.getElementById('macro-yields').checked);
+                    params.append('include_correlations', document.getElementById('macro-corr').checked);
+                    break;
+                case 'historical-patterns':
+                    params.append('include_seasonality', document.getElementById('hp-seasonality').checked);
+                    params.append('include_drawdowns', document.getElementById('hp-drawdowns').checked);
+                    break;
+                case 'technical-levels':
+                    params.append('include_sr', document.getElementById('tl-sr').checked);
+                    params.append('include_fibonacci', document.getElementById('tl-fib').checked);
+                    params.append('include_pivots', document.getElementById('tl-pivots').checked);
+                    break;
+                case 'regulatory':
+                    params.append('include_sec', document.getElementById('reg-sec').checked);
+                    params.append('include_etf', document.getElementById('reg-etf').checked);
+                    break;
+                case 'easyinsight':
+                    params.append('include_symbols', document.getElementById('ei-symbols').checked);
+                    params.append('include_logs', document.getElementById('ei-logs').checked);
+                    break;
+            }
+            return params;
+        }
+
+        // Fetch single external source
+        async function fetchExternalSource() {
+            const source = document.getElementById('external-source-select').value;
+            const symbol = document.getElementById('external-symbol').value;
+
+            // Check if symbol is required
+            const requiresSymbol = ['onchain', 'orderbook', 'technical-levels'];
+            if (requiresSymbol.includes(source) && !symbol) {
+                showToast(`${SOURCE_NAMES[source]} benötigt ein Symbol`, 'error');
+                return;
+            }
+
+            showExternalLoading(true);
+
+            try {
+                const params = buildExternalParams(source, symbol);
+                let url;
+
+                if (['onchain', 'orderbook', 'technical-levels'].includes(source)) {
+                    url = `${API_BASE}/external-sources/${source}/${symbol}?${params.toString()}`;
+                } else {
+                    url = `${API_BASE}/external-sources/${source}?${params.toString()}`;
+                }
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                displayExternalResults(source, data, symbol);
+                updateExternalStats();
+
+            } catch (error) {
+                console.error('Error fetching external source:', error);
+                showExternalError(`Fehler: ${error.message}`);
+            }
+        }
+
+        // Quick fetch from source cards
+        async function quickFetchSource(source) {
+            const symbol = document.getElementById('external-symbol')?.value || '';
+
+            const requiresSymbol = ['onchain', 'orderbook', 'technical-levels'];
+            if (requiresSymbol.includes(source) && !symbol) {
+                showToast(`${SOURCE_NAMES[source]} benötigt ein Symbol - bitte zuerst auswählen`, 'error');
+                return;
+            }
+
+            showExternalLoading(true);
+            const statusEl = document.getElementById(`status-${source}`);
+            if (statusEl) statusEl.textContent = '...';
+
+            try {
+                let url;
+                if (['onchain', 'orderbook', 'technical-levels'].includes(source)) {
+                    url = `${API_BASE}/external-sources/${source}/${symbol}`;
+                } else {
+                    url = `${API_BASE}/external-sources/${source}${symbol ? '?symbol=' + symbol : ''}`;
+                }
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                displayExternalResults(source, data, symbol);
+
+                if (statusEl) statusEl.textContent = 'OK';
+                updateExternalStats();
+
+            } catch (error) {
+                console.error('Error fetching:', error);
+                if (statusEl) statusEl.textContent = 'Err';
+                showExternalError(`Fehler bei ${SOURCE_NAMES[source]}: ${error.message}`);
+            }
+        }
+
+        // Fetch all sources
+        async function fetchAllExternalSources() {
+            const symbol = document.getElementById('external-symbol')?.value || null;
+
+            showExternalLoading(true);
+
+            try {
+                const response = await fetch(`${API_BASE}/external-sources/fetch-all`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol: symbol })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                displayAllSourcesResults(data);
+                updateExternalStats();
+
+            } catch (error) {
+                console.error('Error fetching all sources:', error);
+                showExternalError(`Fehler: ${error.message}`);
+            }
+        }
+
+        // Fetch trading context for symbol
+        async function fetchTradingContext() {
+            const symbol = document.getElementById('external-symbol')?.value;
+
+            if (!symbol) {
+                showToast('Trading Context benötigt ein Symbol', 'error');
+                return;
+            }
+
+            showExternalLoading(true);
+
+            try {
+                const response = await fetch(`${API_BASE}/external-sources/trading-context/${symbol}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                displayTradingContext(data, symbol);
+                updateExternalStats();
+
+            } catch (error) {
+                console.error('Error fetching trading context:', error);
+                showExternalError(`Fehler: ${error.message}`);
+            }
+        }
+
+        // Display results for a single source
+        function displayExternalResults(source, data, symbol) {
+            document.getElementById('external-loading').style.display = 'none';
+            document.getElementById('external-error').style.display = 'none';
+            document.getElementById('external-results').style.display = 'block';
+
+            const titleEl = document.getElementById('external-result-title');
+            const infoEl = document.getElementById('external-result-info');
+            const contentEl = document.getElementById('external-result-content');
+
+            titleEl.textContent = SOURCE_NAMES[source] || source;
+            infoEl.textContent = symbol ? `Symbol: ${symbol}` : 'Alle Symbole';
+
+            contentEl.innerHTML = formatDataAsHtml(data);
+        }
+
+        // Display all sources results
+        function displayAllSourcesResults(data) {
+            document.getElementById('external-loading').style.display = 'none';
+            document.getElementById('external-error').style.display = 'none';
+            document.getElementById('external-results').style.display = 'block';
+
+            const titleEl = document.getElementById('external-result-title');
+            const infoEl = document.getElementById('external-result-info');
+            const contentEl = document.getElementById('external-result-content');
+
+            titleEl.textContent = 'Alle Datenquellen';
+
+            const successCount = Object.values(data).filter(v => v && !v.error).length;
+            infoEl.textContent = `${successCount} von ${Object.keys(data).length} erfolgreich`;
+
+            let html = '';
+            for (const [source, sourceData] of Object.entries(data)) {
+                html += `
+                    <div style="margin-bottom: 1.5rem; border-left: 3px solid #64c8ff; padding-left: 1rem;">
+                        <h4 style="color: #64c8ff; margin-bottom: 0.5rem;">${SOURCE_NAMES[source] || source}</h4>
+                        ${formatDataAsHtml(sourceData)}
+                    </div>
+                `;
+            }
+            contentEl.innerHTML = html;
+        }
+
+        // Display trading context
+        function displayTradingContext(data, symbol) {
+            document.getElementById('external-loading').style.display = 'none';
+            document.getElementById('external-error').style.display = 'none';
+            document.getElementById('external-results').style.display = 'block';
+
+            const titleEl = document.getElementById('external-result-title');
+            const infoEl = document.getElementById('external-result-info');
+            const contentEl = document.getElementById('external-result-content');
+
+            titleEl.textContent = `Trading Context: ${symbol}`;
+            infoEl.textContent = new Date().toLocaleString('de-CH');
+
+            contentEl.innerHTML = formatDataAsHtml(data);
+        }
+
+        // Format data object as readable HTML
+        function formatDataAsHtml(data) {
+            if (!data) return '<p style="color: #888;">Keine Daten verfügbar</p>';
+            if (data.error) return `<p style="color: #e57373;">Fehler: ${data.error}</p>`;
+
+            // If it's an array
+            if (Array.isArray(data)) {
+                if (data.length === 0) return '<p style="color: #888;">Keine Einträge</p>';
+                return `
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="background: rgba(0,0,0,0.2);">
+                                    ${Object.keys(data[0]).map(k => `<th style="padding: 0.5rem; text-align: left; color: #888;">${k}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.slice(0, 50).map(row => `
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        ${Object.values(row).map(v => `<td style="padding: 0.5rem;">${formatValue(v)}</td>`).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ${data.length > 50 ? `<p style="color: #888; margin-top: 0.5rem;">... und ${data.length - 50} weitere Einträge</p>` : ''}
+                    </div>
+                `;
+            }
+
+            // If it's an object
+            if (typeof data === 'object') {
+                let html = '<div style="display: grid; gap: 0.5rem;">';
+                for (const [key, value] of Object.entries(data)) {
+                    if (value === null || value === undefined) continue;
+
+                    if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
+                        html += `
+                            <div style="margin-top: 1rem;">
+                                <strong style="color: #64c8ff;">${key}</strong>
+                                ${formatDataAsHtml(value)}
+                            </div>
+                        `;
+                    } else if (typeof value === 'object' && !Array.isArray(value)) {
+                        html += `
+                            <div style="margin-top: 1rem;">
+                                <strong style="color: #64c8ff;">${key}</strong>
+                                <div style="padding-left: 1rem; border-left: 1px solid rgba(255,255,255,0.1);">
+                                    ${formatDataAsHtml(value)}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div style="display: flex; gap: 1rem;">
+                                <span style="color: #888; min-width: 150px;">${key}:</span>
+                                <span>${formatValue(value)}</span>
+                            </div>
+                        `;
+                    }
+                }
+                html += '</div>';
+                return html;
+            }
+
+            return `<pre style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 4px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        // Format individual values
+        function formatValue(value) {
+            if (value === null || value === undefined) return '-';
+            if (typeof value === 'boolean') return value ? '&#10003;' : '&#10007;';
+            if (typeof value === 'number') {
+                if (Number.isInteger(value)) return value.toLocaleString();
+                return value.toFixed(4);
+            }
+            if (Array.isArray(value)) {
+                if (value.length === 0) return '-';
+                if (typeof value[0] === 'object') return `[${value.length} Einträge]`;
+                return value.join(', ');
+            }
+            if (typeof value === 'object') return '[Objekt]';
+
+            // Check if it's a date string
+            if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
+                try {
+                    return new Date(value).toLocaleString('de-CH');
+                } catch {
+                    return value;
+                }
+            }
+
+            return String(value);
+        }
+
+        // Update stats
+        function updateExternalStats() {
+            document.getElementById('external-available').textContent = '9';
+            document.getElementById('external-last-fetch').textContent = new Date().toLocaleTimeString('de-CH');
+        }
+
+        // Check source availability on load
+        async function checkExternalSourcesAvailability() {
+            try {
+                const response = await fetch(`${API_BASE}/external-sources`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('external-available').textContent = data.available_sources?.length || 9;
+                }
+            } catch (error) {
+                console.error('Error checking sources:', error);
+            }
+        }
+
         // Initialize
         loadSymbols();
         loadStrategies();
@@ -3743,6 +4466,10 @@
 
         // Populate explorer symbols after loading
         setTimeout(populateExplorerSymbols, 1000);
+        // Populate external symbols
+        setTimeout(populateExternalSymbols, 1200);
+        // Check external sources availability
+        setTimeout(checkExternalSourcesAvailability, 1500);
     </script>
 </body>
 </html>

@@ -287,63 +287,104 @@
             white-space: nowrap;
         }
 
-        /* Symbol Summary Card */
-        .symbol-summary {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .symbol-card {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            padding: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        /* Clickable elements in table */
+        .clickable {
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .symbol-card:hover {
-            background: rgba(100, 200, 255, 0.1);
-            border-color: rgba(100, 200, 255, 0.3);
+        .clickable:hover {
+            text-decoration: underline;
+            opacity: 0.8;
         }
 
-        .symbol-card.active {
+        td.clickable:hover {
             background: rgba(100, 200, 255, 0.15);
-            border-color: rgba(100, 200, 255, 0.4);
         }
 
-        .symbol-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
+        .badge.clickable:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
-        .symbol-card-name {
+        /* Symbol Summary Table */
+        .symbol-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .symbol-table th {
+            text-align: left;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.75rem;
             font-weight: 600;
-            font-size: 1rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: #0d1525;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .symbol-table th.col-count {
+            text-align: center;
+            width: 80px;
+        }
+
+        .symbol-table td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .symbol-table tr {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .symbol-table tr:hover td {
+            background: rgba(100, 200, 255, 0.1);
+        }
+
+        .symbol-table tr.active td {
+            background: rgba(100, 200, 255, 0.15);
+        }
+
+        .symbol-table .col-symbol {
+            font-weight: 600;
             color: #64c8ff;
         }
 
-        .symbol-card-count {
+        .symbol-table .col-count {
+            text-align: center;
+        }
+
+        .symbol-table .col-count .count-badge {
             background: rgba(100, 200, 255, 0.2);
             color: #64c8ff;
             padding: 0.2rem 0.5rem;
             border-radius: 10px;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 500;
         }
 
-        .symbol-card-details {
+        .symbol-table .col-indicators {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.4rem;
             flex-wrap: wrap;
         }
 
-        .symbol-card-details .badge {
-            font-size: 0.7rem;
-            padding: 0.15rem 0.4rem;
+        .symbol-table .col-time {
+            text-align: right;
+            color: #888;
+            font-size: 0.8rem;
+        }
+
+        .symbol-table-container {
+            max-height: 350px;
+            overflow-y: auto;
         }
 
         /* Log Content Modal */
@@ -594,11 +635,25 @@
             <div class="card-header">
                 <h2 class="card-title">Logs pro Symbol</h2>
             </div>
-            <div class="symbol-summary" id="symbolSummary">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Lade Symbole...</p>
-                </div>
+            <div class="symbol-table-container">
+                <table class="symbol-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th class="col-count">Total</th>
+                            <th>Indikatoren</th>
+                            <th style="text-align: right;">Letzter Log</th>
+                        </tr>
+                    </thead>
+                    <tbody id="symbolSummary">
+                        <tr>
+                            <td colspan="4" class="loading">
+                                <div class="spinner"></div>
+                                <p>Lade Symbole...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -612,11 +667,7 @@
                 <input type="text" class="search-box" id="searchInput" placeholder="Symbol suchen..." oninput="filterLogs()">
                 <select class="filter-select" id="filterIndicator" onchange="filterLogs()">
                     <option value="">Alle Indikatoren</option>
-                    <option value="ATR">ATR</option>
-                    <option value="FXL">FXL (S/R)</option>
-                    <option value="trade">Trade</option>
-                    <option value="order">Order</option>
-                    <option value="signal">Signal</option>
+                    <!-- Options will be populated dynamically -->
                 </select>
                 <select class="filter-select" id="filterLimit" onchange="loadLogs()">
                     <option value="100">Letzte 100</option>
@@ -736,13 +787,18 @@
 
         // Load logs from EasyInsight API
         async function loadLogs() {
+            console.log('loadLogs() called');
             const limit = document.getElementById('filterLimit').value;
             const btnRefresh = document.getElementById('btnRefresh');
             btnRefresh.disabled = true;
             btnRefresh.textContent = 'Laden...';
 
+            const url = `${EASYINSIGHT_API}/logs?limit=${limit}`;
+            console.log('Fetching:', url);
+
             try {
-                const response = await fetch(`${EASYINSIGHT_API}/logs?limit=${limit}`);
+                const response = await fetch(url);
+                console.log('Response status:', response.status);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -753,6 +809,7 @@
 
                 updateConnectionStatus(true);
                 updateStatistics();
+                populateIndicatorFilter();
                 renderSymbolSummary();
                 renderLogs(allLogs);
 
@@ -821,7 +878,7 @@
             document.getElementById('symbolCount').textContent = stats.symbols.size;
         }
 
-        // Render symbol summary cards
+        // Render symbol summary table
         function renderSymbolSummary() {
             const summary = {};
 
@@ -830,21 +887,23 @@
                 if (!summary[symbol]) {
                     summary[symbol] = {
                         total: 0,
-                        atr: 0,
-                        fxl: 0,
-                        trade: 0,
+                        indicators: {},
                         lastTime: null
                     };
                 }
 
                 summary[symbol].total++;
 
-                const indicator = (log.indicator || log.type || '').toLowerCase();
-                if (indicator.includes('atr')) summary[symbol].atr++;
-                else if (indicator.includes('fxl') || indicator.includes('sr')) summary[symbol].fxl++;
-                else if (indicator.includes('trade') || indicator.includes('order')) summary[symbol].trade++;
+                // Count each indicator individually
+                const indicator = log.indicator || log.type || 'unknown';
+                if (!summary[symbol].indicators[indicator]) {
+                    summary[symbol].indicators[indicator] = 0;
+                }
+                summary[symbol].indicators[indicator]++;
 
-                const logTime = new Date(log.timestamp || log.time);
+                // Use log_time (actual MT5 event time) over timestamp/created_at (import time)
+                const logTimeStr = log.log_time || log.event_time || log.timestamp || log.time;
+                const logTime = new Date(logTimeStr);
                 if (!summary[symbol].lastTime || logTime > summary[symbol].lastTime) {
                     summary[symbol].lastTime = logTime;
                 }
@@ -854,34 +913,75 @@
             const sortedSymbols = Object.entries(summary)
                 .sort((a, b) => b[1].total - a[1].total);
 
-            const container = document.getElementById('symbolSummary');
+            const tbody = document.getElementById('symbolSummary');
 
             if (sortedSymbols.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">&#128202;</div>
-                        <p>Keine Logs vorhanden</p>
-                    </div>
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="empty-state">
+                            <div class="empty-state-icon">&#128202;</div>
+                            <p>Keine Logs vorhanden</p>
+                        </td>
+                    </tr>
                 `;
                 return;
             }
 
-            container.innerHTML = sortedSymbols.map(([symbol, data]) => `
-                <div class="symbol-card ${selectedSymbol === symbol ? 'active' : ''}" onclick="selectSymbol('${symbol}')">
-                    <div class="symbol-card-header">
-                        <span class="symbol-card-name">${symbol}</span>
-                        <span class="symbol-card-count">${data.total}</span>
-                    </div>
-                    <div class="symbol-card-details">
-                        ${data.atr > 0 ? `<span class="badge badge-atr">ATR: ${data.atr}</span>` : ''}
-                        ${data.fxl > 0 ? `<span class="badge badge-fxl">FXL: ${data.fxl}</span>` : ''}
-                        ${data.trade > 0 ? `<span class="badge badge-trade">Trade: ${data.trade}</span>` : ''}
-                    </div>
-                </div>
+            tbody.innerHTML = sortedSymbols.map(([symbol, data]) => {
+                // Build indicator badges dynamically
+                const indicatorBadges = Object.entries(data.indicators)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([ind, count]) =>
+                        `<span class="badge ${getIndicatorBadgeClass(ind)} clickable" onclick="filterBySymbolAndIndicator('${symbol}', '${ind}')" title="Nach ${symbol} + ${ind} filtern">${ind}: ${count}</span>`
+                    ).join('');
+
+                return `
+                <tr class="${selectedSymbol === symbol ? 'active' : ''}">
+                    <td class="col-symbol clickable" onclick="filterBySymbol('${symbol}')" title="Nach Symbol filtern">${symbol}</td>
+                    <td class="col-count" onclick="filterBySymbol('${symbol}')" style="cursor: pointer;"><span class="count-badge">${data.total}</span></td>
+                    <td class="col-indicators">${indicatorBadges}
+                    </td>
+                    <td class="col-time" onclick="filterBySymbol('${symbol}')" style="cursor: pointer;">${getTimeAgo(data.lastTime)}</td>
+                </tr>
             `).join('');
         }
 
-        // Select a symbol filter
+        // Populate indicator filter dropdown dynamically
+        function populateIndicatorFilter() {
+            const indicators = new Map();
+
+            allLogs.forEach(log => {
+                const indicator = log.indicator || log.type || 'unknown';
+                if (!indicators.has(indicator)) {
+                    indicators.set(indicator, 0);
+                }
+                indicators.set(indicator, indicators.get(indicator) + 1);
+            });
+
+            // Sort by count descending
+            const sortedIndicators = Array.from(indicators.entries())
+                .sort((a, b) => b[1] - a[1]);
+
+            const select = document.getElementById('filterIndicator');
+            const currentValue = select.value;
+
+            // Keep first option, replace rest
+            select.innerHTML = '<option value="">Alle Indikatoren</option>';
+
+            sortedIndicators.forEach(([ind, count]) => {
+                const option = document.createElement('option');
+                option.value = ind;
+                option.textContent = `${ind} (${count})`;
+                select.appendChild(option);
+            });
+
+            // Restore previous selection if still valid
+            if (currentValue && indicators.has(currentValue)) {
+                select.value = currentValue;
+            }
+        }
+
+        // Select a symbol filter (toggle from symbol summary table)
         function selectSymbol(symbol) {
             if (selectedSymbol === symbol) {
                 selectedSymbol = null;
@@ -889,6 +989,28 @@
                 selectedSymbol = symbol;
             }
             document.getElementById('searchInput').value = selectedSymbol || '';
+            renderSymbolSummary();
+            filterLogs();
+        }
+
+        // Filter by symbol only (from log table click)
+        function filterBySymbol(symbol) {
+            event.stopPropagation();
+            selectedSymbol = symbol;
+            document.getElementById('searchInput').value = symbol;
+            document.getElementById('filterIndicator').value = '';
+            renderSymbolSummary();
+            filterLogs();
+        }
+
+        // Filter by symbol and indicator (from log table badge click)
+        function filterBySymbolAndIndicator(symbol, indicator) {
+            event.stopPropagation();
+            selectedSymbol = symbol;
+            document.getElementById('searchInput').value = symbol;
+
+            // Use exact indicator value
+            document.getElementById('filterIndicator').value = indicator;
             renderSymbolSummary();
             filterLogs();
         }
@@ -913,15 +1035,16 @@
                 const symbol = log.symbol || 'Unknown';
                 const indicator = log.indicator || log.type || 'info';
                 const content = log.content || log.message || log.comment || '-';
-                const timestamp = log.timestamp || log.time;
-                const timeAgo = getTimeAgo(timestamp);
+                // Use log_time (actual MT5 event time) over timestamp/created_at (import time)
+                const logTime = log.log_time || log.event_time || log.timestamp || log.time;
+                const timeAgo = getTimeAgo(logTime);
 
                 return `
-                    <tr onclick="showLogDetail(${index})" style="cursor: pointer;">
-                        <td class="col-symbol">${symbol}</td>
-                        <td><span class="badge ${getIndicatorBadgeClass(indicator)}">${indicator}</span></td>
-                        <td class="col-content" title="${content}">${content}</td>
-                        <td class="col-time">${timeAgo}</td>
+                    <tr>
+                        <td class="col-symbol clickable" onclick="filterBySymbol('${symbol}')" title="Nach Symbol filtern">${symbol}</td>
+                        <td><span class="badge ${getIndicatorBadgeClass(indicator)} clickable" onclick="filterBySymbolAndIndicator('${symbol}', '${indicator}')" title="Nach Symbol und Indikator filtern">${indicator}</span></td>
+                        <td class="col-content" onclick="showLogDetail(${index})" style="cursor: pointer;" title="${content}">${content}</td>
+                        <td class="col-time" onclick="showLogDetail(${index})" style="cursor: pointer;">${timeAgo}</td>
                     </tr>
                 `;
             }).join('');
@@ -929,16 +1052,17 @@
 
         // Filter logs
         function filterLogs() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const indicator = document.getElementById('filterIndicator').value.toLowerCase();
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
+            const indicator = document.getElementById('filterIndicator').value;
 
             const filtered = allLogs.filter(log => {
                 const logSymbol = (log.symbol || '').toLowerCase();
-                const logIndicator = (log.indicator || log.type || '').toLowerCase();
-                const logContent = (log.content || log.message || '').toLowerCase();
+                const logIndicator = log.indicator || log.type || '';
 
-                if (search && !logSymbol.includes(search) && !logContent.includes(search)) return false;
-                if (indicator && !logIndicator.includes(indicator)) return false;
+                // Symbol filter: exact match only
+                if (search && logSymbol !== search) return false;
+                // Indicator filter: exact match
+                if (indicator && logIndicator !== indicator) return false;
                 return true;
             });
 
@@ -986,7 +1110,8 @@
 
             document.getElementById('modalTitle').textContent = `${symbol} - ${indicator}`;
 
-            // Build meta info
+            // Build meta info - use log_time for actual MT5 event time
+            const logTime = log.log_time || log.event_time || log.timestamp || log.time;
             const metaHtml = `
                 <div class="modal-meta-item">
                     <div class="modal-meta-label">Symbol</div>
@@ -997,8 +1122,8 @@
                     <div class="modal-meta-value">${indicator}</div>
                 </div>
                 <div class="modal-meta-item">
-                    <div class="modal-meta-label">Zeitpunkt</div>
-                    <div class="modal-meta-value">${formatTimestamp(log.timestamp || log.time)}</div>
+                    <div class="modal-meta-label">Log-Zeitpunkt</div>
+                    <div class="modal-meta-value">${formatTimestamp(logTime)}</div>
                 </div>
                 ${log.price ? `<div class="modal-meta-item"><div class="modal-meta-label">Preis</div><div class="modal-meta-value">${log.price}</div></div>` : ''}
                 ${log.volume ? `<div class="modal-meta-item"><div class="modal-meta-label">Volumen</div><div class="modal-meta-value">${log.volume}</div></div>` : ''}
@@ -1013,16 +1138,17 @@
 
         // Get currently filtered logs
         function getFilteredLogs() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const indicator = document.getElementById('filterIndicator').value.toLowerCase();
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
+            const indicator = document.getElementById('filterIndicator').value;
 
             return allLogs.filter(log => {
                 const logSymbol = (log.symbol || '').toLowerCase();
-                const logIndicator = (log.indicator || log.type || '').toLowerCase();
-                const logContent = (log.content || log.message || '').toLowerCase();
+                const logIndicator = log.indicator || log.type || '';
 
-                if (search && !logSymbol.includes(search) && !logContent.includes(search)) return false;
-                if (indicator && !logIndicator.includes(indicator)) return false;
+                // Symbol filter: exact match only
+                if (search && logSymbol !== search) return false;
+                // Indicator filter: exact match
+                if (indicator && logIndicator !== indicator) return false;
                 return true;
             });
         }
@@ -1050,9 +1176,19 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('MT5 Logs: DOMContentLoaded fired');
             setupModal();
             loadLogs();
         });
+
+        // Fallback if DOMContentLoaded already fired
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            console.log('MT5 Logs: Document already ready, calling loadLogs');
+            setTimeout(() => {
+                setupModal();
+                loadLogs();
+            }, 100);
+        }
     </script>
 </body>
 </html>
