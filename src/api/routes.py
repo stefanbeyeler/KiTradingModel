@@ -60,6 +60,8 @@ system_router = APIRouter()  # System & Monitoring
 query_log_router = APIRouter()  # Query Logs & Analytics
 twelvedata_router = APIRouter()  # Twelve Data API
 config_router = APIRouter()  # Configuration & Settings
+patterns_router = APIRouter()  # Candlestick Pattern Detection
+yfinance_router = APIRouter()  # Yahoo Finance API
 
 # Service instances
 analysis_service = AnalysisService()
@@ -3573,6 +3575,384 @@ async def list_common_timezones():
     }
 
 
+# ==================== Yahoo Finance API ====================
+
+from ..services.yfinance_service import yfinance_service
+
+
+@yfinance_router.get("/yfinance/status")
+async def yfinance_status():
+    """Get Yahoo Finance service status."""
+    return yfinance_service.get_status()
+
+
+@yfinance_router.get("/yfinance/symbols")
+async def get_yfinance_symbols():
+    """Get list of supported Yahoo Finance symbol mappings."""
+    from ..services.yfinance_service import SYMBOL_MAPPING
+    return {
+        "total_mappings": len(SYMBOL_MAPPING),
+        "mappings": SYMBOL_MAPPING,
+        "categories": {
+            "forex": [s for s in SYMBOL_MAPPING if SYMBOL_MAPPING[s].endswith("=X")],
+            "crypto": [s for s in SYMBOL_MAPPING if "-USD" in SYMBOL_MAPPING[s]],
+            "indices": [s for s in SYMBOL_MAPPING if SYMBOL_MAPPING[s].startswith("^")],
+            "commodities": [s for s in SYMBOL_MAPPING if "=F" in SYMBOL_MAPPING[s]],
+        }
+    }
+
+
+@yfinance_router.get("/yfinance/time-series/{symbol}")
+async def get_yfinance_time_series(
+    symbol: str,
+    interval: str = "1d",
+    outputsize: int = 100,
+):
+    """
+    Get historical time series data from Yahoo Finance.
+
+    Args:
+        symbol: Trading symbol (e.g., BTCUSD, EURUSD, GER40)
+        interval: Time interval (M15, H1, H4, D1 or yfinance format: 15m, 1h, 1d)
+        outputsize: Number of data points (approximate)
+
+    Yahoo Finance is a free data source with extensive historical data.
+    """
+    if not yfinance_service.is_available():
+        raise HTTPException(status_code=503, detail="Yahoo Finance service not available (yfinance not installed)")
+
+    result = await yfinance_service.get_time_series(
+        symbol=symbol.upper(),
+        interval=interval,
+        outputsize=outputsize,
+    )
+
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    return result
+
+
+@yfinance_router.get("/yfinance/quote/{symbol}")
+async def get_yfinance_quote(symbol: str):
+    """
+    Get current quote/price for a symbol from Yahoo Finance.
+
+    Returns latest price data including open, high, low, close, volume.
+    """
+    if not yfinance_service.is_available():
+        raise HTTPException(status_code=503, detail="Yahoo Finance service not available")
+
+    result = await yfinance_service.get_time_series(
+        symbol=symbol.upper(),
+        interval="1d",
+        outputsize=1,
+    )
+
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    if result.get("values") and len(result["values"]) > 0:
+        latest = result["values"][0]
+        return {
+            "symbol": symbol.upper(),
+            "yahoo_symbol": result.get("symbol"),
+            "datetime": latest.get("datetime"),
+            "open": latest.get("open"),
+            "high": latest.get("high"),
+            "low": latest.get("low"),
+            "close": latest.get("close"),
+            "volume": latest.get("volume"),
+        }
+
+    raise HTTPException(status_code=404, detail=f"No data available for {symbol}")
+
+
+# ==================== Candlestick Pattern Detection ====================
+
+from ..models.candlestick_patterns import (
+    PatternScanRequest,
+    PatternScanResponse,
+    MultiTimeframePatternResult,
+    Timeframe,
+    PatternCategory,
+    PatternDirection,
+    PatternType,
+)
+from ..services.candlestick_pattern_service import candlestick_pattern_service
+
+
+@patterns_router.get("/patterns/types")
+async def get_pattern_types():
+    """
+    Get all supported candlestick pattern types with descriptions.
+
+    Returns categorized list of all detectable patterns:
+    - Reversal patterns (Hammer, Shooting Star, Doji, Engulfing, Morning/Evening Star)
+    - Continuation patterns (Three White Soldiers, Three Black Crows)
+    - Indecision patterns (Spinning Top, Harami)
+    """
+    patterns_by_category = {
+        "reversal": {
+            "bullish": [],
+            "bearish": [],
+            "neutral": [],
+        },
+        "continuation": {
+            "bullish": [],
+            "bearish": [],
+        },
+        "indecision": {
+            "bullish": [],
+            "bearish": [],
+            "neutral": [],
+        },
+    }
+
+    for pattern_type in PatternType:
+        info = candlestick_pattern_service._pattern_descriptions.get(pattern_type, {})
+        category = info.get("category", PatternCategory.INDECISION).value
+        direction = info.get("direction", PatternDirection.NEUTRAL).value
+
+        pattern_info = {
+            "type": pattern_type.value,
+            "description": info.get("description", ""),
+            "trading_implication": info.get("implication", ""),
+        }
+
+        if direction in patterns_by_category.get(category, {}):
+            patterns_by_category[category][direction].append(pattern_info)
+
+    return {
+        "total_patterns": len(PatternType),
+        "categories": patterns_by_category,
+        "supported_timeframes": [tf.value for tf in Timeframe],
+    }
+
+
+@patterns_router.post("/patterns/scan", response_model=PatternScanResponse)
+async def scan_patterns(request: PatternScanRequest):
+    """
+    Scan for candlestick patterns on a symbol across multiple timeframes.
+
+    Performs multi-timeframe analysis (M15, H1, H4, D1) to detect:
+
+    **Reversal Patterns:**
+    - Hammer, Inverted Hammer, Shooting Star, Hanging Man
+    - Doji (Standard, Dragonfly, Gravestone)
+    - Bullish/Bearish Engulfing
+    - Morning Star, Evening Star
+    - Piercing Line, Dark Cloud Cover
+
+    **Continuation Patterns:**
+    - Three White Soldiers, Three Black Crows
+
+    **Indecision Patterns:**
+    - Spinning Top
+    - Bullish/Bearish Harami
+    - Harami Cross
+
+    Returns patterns with confidence scores and trading implications.
+    """
+    try:
+        response = await candlestick_pattern_service.scan_patterns(request)
+        return response
+    except Exception as e:
+        logger.error(f"Pattern scan failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@patterns_router.get("/patterns/scan/{symbol}", response_model=PatternScanResponse)
+async def scan_patterns_simple(
+    symbol: str,
+    timeframes: str = "M15,H1,H4,D1",
+    lookback: int = 100,
+    min_confidence: float = 0.5,
+):
+    """
+    Simple GET endpoint for pattern scanning (alternative to POST).
+
+    Args:
+        symbol: Trading symbol (e.g., BTCUSD, EURUSD)
+        timeframes: Comma-separated timeframes (M15,H1,H4,D1)
+        lookback: Number of candles to analyze per timeframe (10-500)
+        min_confidence: Minimum pattern confidence threshold (0.0-1.0)
+
+    Example: GET /api/v1/patterns/scan/BTCUSD?timeframes=H1,H4&min_confidence=0.6
+    """
+    try:
+        # Parse timeframes
+        tf_list = []
+        for tf in timeframes.upper().split(","):
+            tf = tf.strip()
+            if tf in [t.value for t in Timeframe]:
+                tf_list.append(Timeframe(tf))
+
+        if not tf_list:
+            tf_list = [Timeframe.M15, Timeframe.H1, Timeframe.H4, Timeframe.D1]
+
+        request = PatternScanRequest(
+            symbol=symbol.upper(),
+            timeframes=tf_list,
+            lookback_candles=min(max(lookback, 10), 500),
+            min_confidence=min(max(min_confidence, 0.0), 1.0),
+        )
+
+        response = await candlestick_pattern_service.scan_patterns(request)
+        return response
+    except Exception as e:
+        logger.error(f"Pattern scan failed for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@patterns_router.get("/patterns/summary/{symbol}")
+async def get_pattern_summary(
+    symbol: str,
+    timeframes: str = "M15,H1,H4,D1",
+):
+    """
+    Get a simplified pattern summary for a symbol.
+
+    Returns a condensed view with:
+    - Dominant market direction (bullish/bearish/neutral)
+    - Confluence score across timeframes
+    - Count of patterns by type
+    - Most significant pattern detected
+    """
+    try:
+        tf_list = []
+        for tf in timeframes.upper().split(","):
+            tf = tf.strip()
+            if tf in [t.value for t in Timeframe]:
+                tf_list.append(Timeframe(tf))
+
+        if not tf_list:
+            tf_list = [Timeframe.M15, Timeframe.H1, Timeframe.H4, Timeframe.D1]
+
+        request = PatternScanRequest(
+            symbol=symbol.upper(),
+            timeframes=tf_list,
+            lookback_candles=50,
+            min_confidence=0.5,
+        )
+
+        response = await candlestick_pattern_service.scan_patterns(request)
+        result = response.result
+
+        # Build summary
+        summary = {
+            "symbol": symbol.upper(),
+            "scan_timestamp": result.scan_timestamp.isoformat(),
+            "dominant_direction": result.dominant_direction.value if result.dominant_direction else "neutral",
+            "confluence_score": round(result.confluence_score, 2),
+            "total_patterns": result.total_patterns_found,
+            "pattern_counts": {
+                "bullish": result.bullish_patterns_count,
+                "bearish": result.bearish_patterns_count,
+                "neutral": result.neutral_patterns_count,
+            },
+            "timeframe_summary": {},
+        }
+
+        # Add per-timeframe summary
+        for tf_name, tf_result in [
+            ("M15", result.m15),
+            ("H1", result.h1),
+            ("H4", result.h4),
+            ("D1", result.d1),
+        ]:
+            if tf_result.patterns:
+                summary["timeframe_summary"][tf_name] = {
+                    "patterns_found": len(tf_result.patterns),
+                    "candles_analyzed": tf_result.candles_analyzed,
+                    "patterns": [
+                        {
+                            "type": p.pattern_type.value,
+                            "direction": p.direction.value,
+                            "confidence": round(p.confidence, 2),
+                        }
+                        for p in tf_result.patterns
+                    ],
+                }
+
+        # Add strongest pattern
+        if result.strongest_pattern:
+            summary["strongest_pattern"] = {
+                "type": result.strongest_pattern.pattern_type.value,
+                "direction": result.strongest_pattern.direction.value,
+                "timeframe": result.strongest_pattern.timeframe.value,
+                "confidence": round(result.strongest_pattern.confidence, 2),
+                "description": result.strongest_pattern.description,
+                "trading_implication": result.strongest_pattern.trading_implication,
+            }
+
+        return summary
+
+    except Exception as e:
+        logger.error(f"Pattern summary failed for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@patterns_router.get("/patterns/scan-all")
+async def scan_all_symbols(
+    min_confidence: float = 0.6,
+    timeframes: str = "H1,H4",
+):
+    """
+    Scan all available symbols for candlestick patterns.
+
+    Warning: This can take a while depending on the number of symbols.
+
+    Args:
+        min_confidence: Minimum pattern confidence threshold (default: 0.6)
+        timeframes: Comma-separated timeframes to scan (default: H1,H4)
+
+    Returns summary of patterns found across all symbols.
+    """
+    try:
+        tf_list = []
+        for tf in timeframes.upper().split(","):
+            tf = tf.strip()
+            if tf in [t.value for t in Timeframe]:
+                tf_list.append(Timeframe(tf))
+
+        if not tf_list:
+            tf_list = [Timeframe.H1, Timeframe.H4]
+
+        results = await candlestick_pattern_service.scan_all_symbols(
+            timeframes=tf_list,
+            min_confidence=min_confidence,
+        )
+
+        # Build summary
+        symbols_with_patterns = []
+        for symbol, result in results.items():
+            if result.total_patterns_found > 0:
+                symbols_with_patterns.append({
+                    "symbol": symbol,
+                    "total_patterns": result.total_patterns_found,
+                    "dominant_direction": result.dominant_direction.value if result.dominant_direction else "neutral",
+                    "confluence_score": round(result.confluence_score, 2),
+                    "bullish": result.bullish_patterns_count,
+                    "bearish": result.bearish_patterns_count,
+                })
+
+        # Sort by total patterns (descending)
+        symbols_with_patterns.sort(key=lambda x: x["total_patterns"], reverse=True)
+
+        return {
+            "total_symbols_scanned": len(results),
+            "symbols_with_patterns": len(symbols_with_patterns),
+            "timeframes_scanned": [tf.value for tf in tf_list],
+            "min_confidence": min_confidence,
+            "results": symbols_with_patterns,
+        }
+
+    except Exception as e:
+        logger.error(f"Scan all symbols failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== Router Export ====================
 
 def get_all_routers():
@@ -3630,5 +4010,9 @@ def get_all_routers():
         (config_router, "/api/v1", ["⚙️ Configuration"], {
             "name": "Configuration",
             "description": "System configuration and settings management"
+        }),
+        (patterns_router, "/api/v1", ["🕯️ Candlestick Patterns"], {
+            "name": "Patterns",
+            "description": "Candlestick pattern detection - reversal, continuation, and indecision patterns with multi-timeframe scanning"
         }),
     ]

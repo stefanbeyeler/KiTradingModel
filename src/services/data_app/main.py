@@ -1,11 +1,12 @@
 """
-Data Service - Symbol Management & Sync Microservice
+Data Service - Symbol Management, Sync & Pattern Detection Microservice
 
 Handles:
 - Symbol Management
 - Trading Strategies
-- TimescaleDB Synchronization
+- RAG Synchronization
 - Query Logs
+- Candlestick Pattern Detection
 - System Monitoring
 """
 
@@ -29,6 +30,9 @@ from src.api.routes import (
     query_log_router,
     twelvedata_router,
     config_router,
+    patterns_router,
+    yfinance_router,
+    training_router,
     router as general_router
 )
 from src.services.timescaledb_sync_service import TimescaleDBSyncService
@@ -53,13 +57,77 @@ logger.add(
     level=settings.log_level
 )
 
+# OpenAPI Tags für Swagger UI Dokumentation
+openapi_tags = [
+    {
+        "name": "1. System",
+        "description": "Health checks, version info, system status, and general utilities"
+    },
+    {
+        "name": "2. Symbol Management",
+        "description": "Manage trading symbols from EasyInsight API"
+    },
+    {
+        "name": "3. Trading Strategies",
+        "description": "Create, update, and manage trading strategies"
+    },
+    {
+        "name": "4. Config Export/Import",
+        "description": "Export and import configuration (symbols, strategies)"
+    },
+    {
+        "name": "5. Twelve Data API",
+        "description": "Access TwelveData market data and technical indicators"
+    },
+    {
+        "name": "6. Yahoo Finance",
+        "description": "Yahoo Finance market data integration for historical prices, quotes, and symbol information"
+    },
+    {
+        "name": "7. Candlestick Patterns",
+        "description": "Multi-Timeframe Candlestick Pattern Detection (M15, H1, H4, D1). Reversal: Hammer, Shooting Star, Doji, Engulfing, Morning/Evening Star. Continuation: Three White Soldiers, Three Black Crows. Indecision: Spinning Top, Harami."
+    },
+    {
+        "name": "8. NHITS Training",
+        "description": "NHITS model training, evaluation, and performance monitoring. Train forecasting models, track progress, and manage retraining workflows."
+    },
+    {
+        "name": "9. RAG Sync",
+        "description": "Synchronization of market data to RAG knowledge base (optional, disabled by default)"
+    },
+    {
+        "name": "10. Query Logs & Analytics",
+        "description": "Query logging and analytics for monitoring"
+    },
+]
+
 # Create FastAPI application
 app = FastAPI(
     title="Data Service",
-    description="Data Management Service - Symbols, Strategies, Sync & Monitoring",
+    description="""## Data Management Service
+
+Zentraler Service für Datenmanagement im KI Trading Model System.
+
+### Hauptfunktionen
+
+- **Symbol Management**: Verwaltung von Trading-Symbolen (Forex, Crypto, Indizes)
+- **Trading Strategies**: Konfiguration und Verwaltung von Handelsstrategien
+- **Candlestick Patterns**: Multi-Timeframe Pattern-Erkennung
+- **TwelveData Integration**: Marktdaten und technische Indikatoren
+- **RAG Sync**: Synchronisation von Marktdaten zur RAG Knowledge Base
+
+### Architektur
+
+Dieser Service fungiert als **Data Gateway** für alle externen Datenquellen:
+- EasyInsight API (primär)
+- TwelveData API (Fallback)
+
+Andere Services (NHITS, RAG, LLM) greifen auf Daten ausschließlich über diesen Service zu.
+""",
     version=VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_tags=openapi_tags,
     root_path=os.getenv("ROOT_PATH", "")
 )
 
@@ -73,14 +141,17 @@ app.add_middleware(
 )
 
 # Include routers - Reihenfolge bestimmt Swagger UI Darstellung
-app.include_router(system_router, prefix="/api/v1", tags=["1. System & Monitoring"])
-app.include_router(symbol_router, prefix="/api/v1", tags=["2. Symbol Management (EasyInsight)"])
+app.include_router(system_router, prefix="/api/v1", tags=["1. System"])
+app.include_router(general_router, prefix="/api/v1", tags=["1. System"])
+app.include_router(symbol_router, prefix="/api/v1", tags=["2. Symbol Management"])
 app.include_router(strategy_router, prefix="/api/v1", tags=["3. Trading Strategies"])
 app.include_router(config_router, prefix="/api/v1", tags=["4. Config Export/Import"])
 app.include_router(twelvedata_router, prefix="/api/v1", tags=["5. Twelve Data API"])
-app.include_router(sync_router, prefix="/api/v1", tags=["6. TimescaleDB Sync"])
-app.include_router(query_log_router, prefix="/api/v1", tags=["7. Query Logs & Analytics"])
-app.include_router(general_router, prefix="/api/v1", tags=["8. General"])
+app.include_router(yfinance_router, prefix="/api/v1", tags=["6. Yahoo Finance"])
+app.include_router(patterns_router, prefix="/api/v1", tags=["7. Candlestick Patterns"])
+app.include_router(training_router, prefix="/api/v1", tags=["8. NHITS Training"])
+app.include_router(sync_router, prefix="/api/v1", tags=["9. RAG Sync"])
+app.include_router(query_log_router, prefix="/api/v1", tags=["10. Query Logs & Analytics"])
 
 
 @app.on_event("startup")

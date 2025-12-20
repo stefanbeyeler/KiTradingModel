@@ -63,13 +63,33 @@ class NHITSTrainingService:
 
 ## Microservices Ports
 
-| Service | Port |
-|---------|------|
-| Frontend | 3000 |
-| Data Service | 3001 |
-| NHITS Service | 3002 |
-| RAG Service | 3003 |
-| LLM Service | 3004 |
+| Service | Port | Swagger UI |
+|---------|------|------------|
+| Frontend (Dashboard) | 3000 | - |
+| Data Service | 3001 | /docs |
+| NHITS Service | 3002 | /docs |
+| RAG Service | 3003 | /docs |
+| LLM Service | 3004 | /docs |
+
+## API-Dokumentation (Swagger UI)
+
+Die Swagger-Dokumentationen aller Microservices sind zentral über das Dashboard erreichbar:
+
+**Dashboard URL:** `http://10.1.19.101:3000/`
+
+Jeder Service-Bereich im Dashboard enthält einen Button, der direkt zur jeweiligen Swagger UI führt:
+
+| Dashboard-Bereich | Swagger UI URL |
+|-------------------|----------------|
+| Daten & Symbole | http://10.1.19.101:3001/docs |
+| NHITS Prognose | http://10.1.19.101:3002/docs |
+| RAG System | http://10.1.19.101:3003/docs |
+| LLM Chat | http://10.1.19.101:3004/docs |
+
+Die Swagger UI bietet:
+- Interaktive API-Dokumentation
+- Request/Response-Schemas
+- Direkte API-Tests im Browser
 
 ## Commit-Konvention
 
