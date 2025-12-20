@@ -91,6 +91,47 @@ Die Swagger UI bietet:
 - Request/Response-Schemas
 - Direkte API-Tests im Browser
 
+## TwelveData Technical Indicators
+
+Der `TwelveDataService` (`src/services/twelvedata_service.py`) bietet Zugriff auf technische Indikatoren:
+
+### Verfügbare Indikatoren
+
+| Kategorie | Indikatoren |
+|-----------|-------------|
+| **Trend/Moving Averages** | SMA, EMA, WMA, DEMA, TEMA, KAMA, MAMA, T3, TRIMA, VWAP |
+| **Momentum** | RSI, MACD, Stoch, StochRSI, Williams %R, CCI, CMO, ROC, MOM, PPO, APO, Aroon, AroonOsc, BOP, MFI, DX, ADX, ADXR, +DI, -DI, **Connors RSI** |
+| **Volatilität** | Bollinger Bands, ATR, NATR, TRange, **Percent B** |
+| **Volumen** | OBV, A/D, ADOSC |
+| **Trend-Filter** | Supertrend, Ichimoku, Parabolic SAR |
+| **ML-Features** | **Linear Regression Slope**, **Hilbert Trend Mode** |
+
+### Neue Indikatoren für ML/NHITS
+
+| Indikator | API-Endpoint | Beschreibung |
+|-----------|--------------|--------------|
+| **VWAP** | `/twelvedata/vwap/{symbol}` | Volume Weighted Average Price - Institutioneller Benchmark |
+| **Connors RSI** | `/twelvedata/crsi/{symbol}` | 3-Komponenten RSI für Mean-Reversion |
+| **Linear Reg Slope** | `/twelvedata/linearregslope/{symbol}` | Trendstärke als numerischer Wert |
+| **Hilbert Trend Mode** | `/twelvedata/ht_trendmode/{symbol}` | Trend (1) vs. Range (0) Klassifikation |
+| **Percent B** | `/twelvedata/percent_b/{symbol}` | BBands-Position normalisiert (0-1) |
+
+### Beispiel
+
+```python
+from src.services.twelvedata_service import twelvedata_service
+
+# Einzelner Indikator
+data = await twelvedata_service.get_connors_rsi("AAPL", interval="1day")
+
+# Mehrere Indikatoren
+data = await twelvedata_service.get_multiple_indicators(
+    symbol="BTCUSD",
+    indicators=["rsi", "crsi", "linearregslope", "ht_trendmode"],
+    interval="1h"
+)
+```
+
 ## Commit-Konvention
 
 ```

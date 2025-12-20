@@ -398,12 +398,13 @@ class TwelveDataService:
     SUPPORTED_INDICATORS = [
         # Overlap Studies (Moving Averages)
         "sma", "ema", "wma", "dema", "tema", "kama", "mama", "t3", "trima",
+        "vwap",
         # Momentum Indicators
         "rsi", "macd", "stoch", "stochrsi", "willr", "cci", "cmo", "roc", "mom",
         "ppo", "apo", "aroon", "aroonosc", "bop", "mfi", "dx", "adx", "adxr",
-        "plus_di", "minus_di", "plus_dm", "minus_dm",
+        "plus_di", "minus_di", "plus_dm", "minus_dm", "crsi",
         # Volatility Indicators
-        "bbands", "atr", "natr", "trange",
+        "bbands", "atr", "natr", "trange", "percent_b",
         # Volume Indicators
         "obv", "ad", "adosc",
         # Trend Indicators
@@ -412,6 +413,10 @@ class TwelveDataService:
         "avgprice", "medprice", "typprice", "wclprice",
         # Pattern Recognition
         "pivot_points_hl",
+        # Statistical Functions
+        "linearregslope",
+        # Cycle Indicators
+        "ht_trendmode",
     ]
 
     async def get_technical_indicators(
@@ -768,6 +773,140 @@ class TwelveDataService:
             indicator="pivot_points_hl",
             outputsize=outputsize,
             time_period=time_period,
+        )
+
+    async def get_vwap(
+        self,
+        symbol: str,
+        interval: str = "1h",
+        outputsize: int = 100,
+    ) -> dict:
+        """
+        Get VWAP (Volume Weighted Average Price) indicator.
+
+        VWAP is particularly useful for intraday trading as it shows
+        the average price weighted by volume. Institutional traders
+        often use VWAP as a benchmark.
+
+        Note: VWAP resets daily, so it's most useful for intraday intervals.
+        """
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="vwap",
+            outputsize=outputsize,
+        )
+
+    async def get_connors_rsi(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        rsi_period: int = 3,
+        streak_rsi_period: int = 2,
+        pct_rank_period: int = 100,
+        outputsize: int = 100,
+    ) -> dict:
+        """
+        Get Connors RSI indicator.
+
+        Connors RSI combines three components:
+        1. Short-term RSI (default: 3-period)
+        2. Up/Down streak length RSI (default: 2-period)
+        3. Percent rank of price change (default: 100-period)
+
+        Better suited for mean-reversion strategies than standard RSI.
+        """
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="crsi",
+            outputsize=outputsize,
+            rsi_period=rsi_period,
+            streak_rsi_period=streak_rsi_period,
+            pct_rank_period=pct_rank_period,
+        )
+
+    async def get_linear_regression_slope(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 14,
+        series_type: str = "close",
+        outputsize: int = 100,
+    ) -> dict:
+        """
+        Get Linear Regression Slope indicator.
+
+        Returns the slope of the linear regression line, which quantifies
+        trend strength and direction as a numerical value:
+        - Positive slope = uptrend
+        - Negative slope = downtrend
+        - Magnitude indicates trend strength
+
+        Useful as a feature for ML models like NHITS.
+        """
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="linearregslope",
+            outputsize=outputsize,
+            time_period=time_period,
+            series_type=series_type,
+        )
+
+    async def get_hilbert_trendmode(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        series_type: str = "close",
+        outputsize: int = 100,
+    ) -> dict:
+        """
+        Get Hilbert Transform - Trend vs Cycle Mode indicator.
+
+        Returns a value indicating whether the market is in:
+        - Trend mode (value = 1): Trending market, use trend-following strategies
+        - Cycle mode (value = 0): Ranging market, use mean-reversion strategies
+
+        Useful for adaptive strategy selection and as a regime filter.
+        """
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="ht_trendmode",
+            outputsize=outputsize,
+            series_type=series_type,
+        )
+
+    async def get_percent_b(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 20,
+        sd: float = 2.0,
+        ma_type: str = "SMA",
+        outputsize: int = 100,
+    ) -> dict:
+        """
+        Get Percent B (%B) indicator.
+
+        Shows where price is relative to Bollinger Bands as a normalized value:
+        - %B > 1: Price is above upper band (overbought)
+        - %B = 1: Price is at upper band
+        - %B = 0.5: Price is at middle band (SMA)
+        - %B = 0: Price is at lower band
+        - %B < 0: Price is below lower band (oversold)
+
+        More suitable for ML models than raw Bollinger Bands as it's normalized.
+        """
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="percent_b",
+            outputsize=outputsize,
+            time_period=time_period,
+            sd=sd,
+            ma_type=ma_type,
         )
 
     # ==================== Batch Indicator Method ====================

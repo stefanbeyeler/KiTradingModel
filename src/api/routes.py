@@ -3271,6 +3271,174 @@ async def get_sma(
     )
 
 
+@twelvedata_router.get("/twelvedata/vwap/{symbol:path}")
+async def get_vwap(
+    symbol: str,
+    interval: str = "1h",
+    outputsize: int = 100,
+):
+    """
+    Get VWAP (Volume Weighted Average Price) indicator.
+
+    VWAP is particularly useful for intraday trading as it shows
+    the average price weighted by volume. Institutional traders
+    often use VWAP as a benchmark for execution quality.
+
+    Note: VWAP resets daily, so it's most useful for intraday intervals.
+
+    Args:
+        symbol: Trading symbol (e.g., AAPL, EUR/USD)
+        interval: Time interval (default: 1h, recommended: 1min-1h for intraday)
+        outputsize: Number of data points to return
+    """
+    return await twelvedata_service.get_vwap(
+        symbol=symbol,
+        interval=interval,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/crsi/{symbol:path}")
+async def get_connors_rsi(
+    symbol: str,
+    interval: str = "1day",
+    rsi_period: int = 3,
+    streak_rsi_period: int = 2,
+    pct_rank_period: int = 100,
+    outputsize: int = 100,
+):
+    """
+    Get Connors RSI indicator.
+
+    Connors RSI combines three components for better mean-reversion signals:
+    1. Short-term RSI (default: 3-period)
+    2. Up/Down streak length RSI (default: 2-period)
+    3. Percent rank of price change (default: 100-period)
+
+    Better suited for mean-reversion strategies than standard RSI.
+
+    Args:
+        symbol: Trading symbol (e.g., AAPL, EUR/USD)
+        interval: Time interval
+        rsi_period: Period for the RSI calculation (default: 3)
+        streak_rsi_period: Period for the streak RSI (default: 2)
+        pct_rank_period: Period for percent rank (default: 100)
+        outputsize: Number of data points to return
+    """
+    return await twelvedata_service.get_connors_rsi(
+        symbol=symbol,
+        interval=interval,
+        rsi_period=rsi_period,
+        streak_rsi_period=streak_rsi_period,
+        pct_rank_period=pct_rank_period,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/linearregslope/{symbol:path}")
+async def get_linear_regression_slope(
+    symbol: str,
+    interval: str = "1day",
+    time_period: int = 14,
+    series_type: str = "close",
+    outputsize: int = 100,
+):
+    """
+    Get Linear Regression Slope indicator.
+
+    Returns the slope of the linear regression line, which quantifies
+    trend strength and direction as a numerical value:
+    - Positive slope = uptrend
+    - Negative slope = downtrend
+    - Magnitude indicates trend strength
+
+    Useful as a feature for ML models like NHITS.
+
+    Args:
+        symbol: Trading symbol (e.g., AAPL, EUR/USD)
+        interval: Time interval
+        time_period: Number of periods for regression (default: 14)
+        series_type: Price type to use (close, open, high, low)
+        outputsize: Number of data points to return
+    """
+    return await twelvedata_service.get_linear_regression_slope(
+        symbol=symbol,
+        interval=interval,
+        time_period=time_period,
+        series_type=series_type,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/ht_trendmode/{symbol:path}")
+async def get_hilbert_trendmode(
+    symbol: str,
+    interval: str = "1day",
+    series_type: str = "close",
+    outputsize: int = 100,
+):
+    """
+    Get Hilbert Transform - Trend vs Cycle Mode indicator.
+
+    Returns a value indicating whether the market is in:
+    - Trend mode (value = 1): Trending market, use trend-following strategies
+    - Cycle mode (value = 0): Ranging market, use mean-reversion strategies
+
+    Useful for adaptive strategy selection and as a regime filter for ML models.
+
+    Args:
+        symbol: Trading symbol (e.g., AAPL, EUR/USD)
+        interval: Time interval
+        series_type: Price type to use (close, open, high, low)
+        outputsize: Number of data points to return
+    """
+    return await twelvedata_service.get_hilbert_trendmode(
+        symbol=symbol,
+        interval=interval,
+        series_type=series_type,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/percent_b/{symbol:path}")
+async def get_percent_b(
+    symbol: str,
+    interval: str = "1day",
+    time_period: int = 20,
+    sd: float = 2.0,
+    ma_type: str = "SMA",
+    outputsize: int = 100,
+):
+    """
+    Get Percent B (%B) indicator.
+
+    Shows where price is relative to Bollinger Bands as a normalized value:
+    - %B > 1: Price is above upper band (overbought)
+    - %B = 1: Price is at upper band
+    - %B = 0.5: Price is at middle band (SMA)
+    - %B = 0: Price is at lower band
+    - %B < 0: Price is below lower band (oversold)
+
+    More suitable for ML models than raw Bollinger Bands as it's normalized (0-1 range).
+
+    Args:
+        symbol: Trading symbol (e.g., AAPL, EUR/USD)
+        interval: Time interval
+        time_period: Period for Bollinger Bands (default: 20)
+        sd: Standard deviation multiplier (default: 2.0)
+        ma_type: Moving average type (SMA, EMA, etc.)
+        outputsize: Number of data points to return
+    """
+    return await twelvedata_service.get_percent_b(
+        symbol=symbol,
+        interval=interval,
+        time_period=time_period,
+        sd=sd,
+        ma_type=ma_type,
+        outputsize=outputsize,
+    )
+
+
 @twelvedata_router.get("/twelvedata/earnings")
 async def get_earnings_calendar(
     start_date: Optional[str] = None,

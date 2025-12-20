@@ -77,11 +77,24 @@ openapi_tags = [
     },
     {
         "name": "5. Twelve Data API",
-        "description": "Access TwelveData market data and technical indicators"
+        "description": """Access TwelveData market data and technical indicators.
+
+**Technical Indicators:**
+- **Trend:** SMA, EMA, WMA, DEMA, TEMA, KAMA, Ichimoku, SAR, Supertrend, VWAP
+- **Momentum:** RSI, MACD, Stochastic, Williams %R, CCI, ADX, Aroon, MFI, Connors RSI
+- **Volatility:** Bollinger Bands, ATR, Percent B
+- **Volume:** OBV, A/D
+- **ML Features:** Linear Regression Slope, Hilbert Trend Mode"""
     },
     {
         "name": "6. Yahoo Finance",
-        "description": "Yahoo Finance market data integration for historical prices, quotes, and symbol information"
+        "description": """Yahoo Finance market data integration (2. Fallback nach TwelveData).
+
+**Funktionen:**
+- Historische OHLCV-Daten (kostenlos, ohne API-Key)
+- Echtzeit-Quotes und Marktdaten
+- Symbol-Informationen und Fundamentaldaten
+- Unterstützt Aktien, ETFs, Indizes, Forex, Crypto"""
     },
     {
         "name": "7. Candlestick Patterns",
@@ -114,13 +127,15 @@ Zentraler Service für Datenmanagement im KI Trading Model System.
 - **Trading Strategies**: Konfiguration und Verwaltung von Handelsstrategien
 - **Candlestick Patterns**: Multi-Timeframe Pattern-Erkennung
 - **TwelveData Integration**: Marktdaten und technische Indikatoren
+- **Yahoo Finance Integration**: Historische Kursdaten als Fallback
 - **RAG Sync**: Synchronisation von Marktdaten zur RAG Knowledge Base
 
 ### Architektur
 
 Dieser Service fungiert als **Data Gateway** für alle externen Datenquellen:
-- EasyInsight API (primär)
-- TwelveData API (Fallback)
+- **EasyInsight API** (primär) - TimescaleDB mit Echtzeit-Daten
+- **TwelveData API** (1. Fallback) - Globale Marktdaten & technische Indikatoren
+- **Yahoo Finance** (2. Fallback) - Kostenlose historische Daten
 
 Andere Services (NHITS, RAG, LLM) greifen auf Daten ausschließlich über diesen Service zu.
 """,

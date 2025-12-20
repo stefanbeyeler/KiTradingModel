@@ -461,10 +461,58 @@
             <ul>
                 <li><strong>Echtzeit-Kurse:</strong> Aktuelle Preise fur Aktien, Forex und Krypto</li>
                 <li><strong>Historische Daten:</strong> OHLCV-Zeitreihen in verschiedenen Intervallen (1min bis 1month)</li>
-                <li><strong>Technische Indikatoren:</strong> SMA, EMA, RSI, MACD, Bollinger Bands, Stochastik, ADX, ATR, CCI, OBV</li>
                 <li><strong>Symbol-Suche:</strong> Suche nach Instrumenten anhand von Name oder Ticker</li>
                 <li><strong>Earnings Calendar:</strong> Ubersicht uber kommende Gewinnberichte</li>
             </ul>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; color: #a78bfa;">Technische Indikatoren</h3>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>Trend / Moving Averages</h4>
+                    <p>SMA, EMA, WMA, DEMA, TEMA, KAMA, VWAP, Ichimoku, SAR, Supertrend</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Momentum</h4>
+                    <p>RSI, MACD, Stochastic, Williams %R, CCI, ADX, Aroon, MFI, Connors RSI</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Volatilitat</h4>
+                    <p>Bollinger Bands, ATR, NATR, Percent B</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Volumen</h4>
+                    <p>OBV, Accumulation/Distribution, ADOSC</p>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; color: #81c784;">Neue ML-Features</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/vwap/{symbol}</span>
+                    <span class="endpoint-desc">Volume Weighted Average Price</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/crsi/{symbol}</span>
+                    <span class="endpoint-desc">Connors RSI (Mean-Reversion)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/linearregslope/{symbol}</span>
+                    <span class="endpoint-desc">Linear Regression Slope (Trendstarke)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/ht_trendmode/{symbol}</span>
+                    <span class="endpoint-desc">Hilbert Trend Mode (Trend vs Range)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/percent_b/{symbol}</span>
+                    <span class="endpoint-desc">Percent B (BBands normalisiert 0-1)</span>
+                </div>
+            </div>
 
             <div class="info-box">
                 <strong>API-Limits:</strong> Der kostenlose Plan bietet 800 API-Aufrufe pro Tag.
