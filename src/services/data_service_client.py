@@ -1,0 +1,251 @@
+"""Data Service Client - HTTP client for accessing external data sources via Data Service.
+
+This client follows the architecture rule that all external data access goes through
+the Data Service (Port 3001). The RAG Service uses this client instead of directly
+accessing external data sources.
+"""
+
+import httpx
+from typing import Optional
+from loguru import logger
+
+from ..config import settings
+
+
+class DataServiceClient:
+    """HTTP client for Data Service external sources API."""
+
+    def __init__(self, base_url: Optional[str] = None):
+        """Initialize the client.
+
+        Args:
+            base_url: Data Service URL, defaults to settings.data_service_url
+        """
+        self._base_url = base_url or getattr(settings, 'data_service_url', 'http://localhost:3001')
+        self._timeout = 30.0
+        logger.info(f"DataServiceClient initialized with base URL: {self._base_url}")
+
+    async def _get(self, endpoint: str, params: Optional[dict] = None) -> dict:
+        """Make GET request to Data Service."""
+        url = f"{self._base_url}/api/v1{endpoint}"
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from Data Service: {e.response.status_code} - {e.response.text}")
+            return {"error": str(e), "status_code": e.response.status_code}
+        except Exception as e:
+            logger.error(f"Error calling Data Service: {e}")
+            return {"error": str(e)}
+
+    async def _post(self, endpoint: str, json: Optional[dict] = None) -> dict:
+        """Make POST request to Data Service."""
+        url = f"{self._base_url}/api/v1{endpoint}"
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.post(url, json=json)
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from Data Service: {e.response.status_code} - {e.response.text}")
+            return {"error": str(e), "status_code": e.response.status_code}
+        except Exception as e:
+            logger.error(f"Error calling Data Service: {e}")
+            return {"error": str(e)}
+
+    async def get_available_sources(self) -> dict:
+        """Get list of all available external data sources."""
+        return await self._get("/external-sources")
+
+    async def get_economic_calendar(
+        self,
+        symbol: Optional[str] = None,
+        days_ahead: int = 7,
+        days_back: int = 1
+    ) -> dict:
+        """Get economic calendar events."""
+        params = {"days_ahead": days_ahead, "days_back": days_back}
+        if symbol:
+            params["symbol"] = symbol
+        return await self._get("/external-sources/economic-calendar", params)
+
+    async def get_sentiment(
+        self,
+        symbol: Optional[str] = None,
+        include_fear_greed: bool = True,
+        include_social: bool = True,
+        include_options: bool = True,
+        include_volatility: bool = True
+    ) -> dict:
+        """Get market sentiment data."""
+        params = {
+            "include_fear_greed": include_fear_greed,
+            "include_social": include_social,
+            "include_options": include_options,
+            "include_volatility": include_volatility,
+        }
+        if symbol:
+            params["symbol"] = symbol
+        return await self._get("/external-sources/sentiment", params)
+
+    async def get_onchain(
+        self,
+        symbol: str,
+        include_whale_alerts: bool = True,
+        include_exchange_flows: bool = True,
+        include_mining: bool = True,
+        include_defi: bool = True
+    ) -> dict:
+        """Get on-chain data for a cryptocurrency."""
+        params = {
+            "include_whale_alerts": include_whale_alerts,
+            "include_exchange_flows": include_exchange_flows,
+            "include_mining": include_mining,
+            "include_defi": include_defi,
+        }
+        return await self._get(f"/external-sources/onchain/{symbol}", params)
+
+    async def get_orderbook(
+        self,
+        symbol: str,
+        depth: int = 50,
+        include_liquidations: bool = True,
+        include_cvd: bool = True
+    ) -> dict:
+        """Get orderbook and liquidity data."""
+        params = {
+            "depth": depth,
+            "include_liquidations": include_liquidations,
+            "include_cvd": include_cvd,
+        }
+        return await self._get(f"/external-sources/orderbook/{symbol}", params)
+
+    async def get_macro(
+        self,
+        symbol: Optional[str] = None,
+        include_dxy: bool = True,
+        include_bonds: bool = True,
+        include_correlations: bool = True,
+        include_sectors: bool = True
+    ) -> dict:
+        """Get macro economic and correlation data."""
+        params = {
+            "include_dxy": include_dxy,
+            "include_bonds": include_bonds,
+            "include_correlations": include_correlations,
+            "include_sectors": include_sectors,
+        }
+        if symbol:
+            params["symbol"] = symbol
+        return await self._get("/external-sources/macro", params)
+
+    async def get_historical_patterns(
+        self,
+        symbol: Optional[str] = None,
+        include_seasonality: bool = True,
+        include_drawdowns: bool = True,
+        include_events: bool = True,
+        include_comparable: bool = True
+    ) -> dict:
+        """Get historical pattern analysis."""
+        params = {
+            "include_seasonality": include_seasonality,
+            "include_drawdowns": include_drawdowns,
+            "include_events": include_events,
+            "include_comparable": include_comparable,
+        }
+        if symbol:
+            params["symbol"] = symbol
+        return await self._get("/external-sources/historical-patterns", params)
+
+    async def get_technical_levels(
+        self,
+        symbol: str,
+        include_sr: bool = True,
+        include_fib: bool = True,
+        include_pivots: bool = True,
+        include_vwap: bool = True,
+        include_ma: bool = True
+    ) -> dict:
+        """Get technical price levels."""
+        params = {
+            "include_sr": include_sr,
+            "include_fib": include_fib,
+            "include_pivots": include_pivots,
+            "include_vwap": include_vwap,
+            "include_ma": include_ma,
+        }
+        return await self._get(f"/external-sources/technical-levels/{symbol}", params)
+
+    async def get_regulatory(
+        self,
+        symbol: Optional[str] = None,
+        include_sec: bool = True,
+        include_etf: bool = True,
+        include_global: bool = True,
+        include_enforcement: bool = True
+    ) -> dict:
+        """Get regulatory updates."""
+        params = {
+            "include_sec": include_sec,
+            "include_etf": include_etf,
+            "include_global": include_global,
+            "include_enforcement": include_enforcement,
+        }
+        if symbol:
+            params["symbol"] = symbol
+        return await self._get("/external-sources/regulatory", params)
+
+    async def get_easyinsight(
+        self,
+        symbol: Optional[str] = None,
+        include_symbols: bool = True,
+        include_stats: bool = True,
+        include_mt5_logs: bool = True
+    ) -> dict:
+        """Get EasyInsight managed data."""
+        params = {
+            "include_symbols": include_symbols,
+            "include_stats": include_stats,
+            "include_mt5_logs": include_mt5_logs,
+        }
+        if symbol:
+            params["symbol"] = symbol
+        return await self._get("/external-sources/easyinsight", params)
+
+    async def fetch_all(
+        self,
+        symbol: Optional[str] = None,
+        source_types: Optional[list[str]] = None,
+        min_priority: str = "low"
+    ) -> dict:
+        """Fetch data from all or selected external sources."""
+        json_data = {
+            "symbol": symbol,
+            "source_types": source_types,
+            "min_priority": min_priority,
+        }
+        return await self._post("/external-sources/fetch-all", json_data)
+
+    async def fetch_trading_context(
+        self,
+        symbol: str,
+        include_types: Optional[list[str]] = None
+    ) -> dict:
+        """Fetch comprehensive trading context for a symbol."""
+        json_data = {"include_types": include_types} if include_types else None
+        return await self._post(f"/external-sources/trading-context/{symbol}", json_data)
+
+
+# Singleton instance
+_data_service_client: Optional[DataServiceClient] = None
+
+
+def get_data_service_client() -> DataServiceClient:
+    """Get or create the singleton DataServiceClient instance."""
+    global _data_service_client
+    if _data_service_client is None:
+        _data_service_client = DataServiceClient()
+    return _data_service_client

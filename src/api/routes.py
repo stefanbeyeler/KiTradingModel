@@ -62,6 +62,7 @@ twelvedata_router = APIRouter()  # Twelve Data API
 config_router = APIRouter()  # Configuration & Settings
 patterns_router = APIRouter()  # Candlestick Pattern Detection
 yfinance_router = APIRouter()  # Yahoo Finance API
+external_sources_router = APIRouter()  # External Data Sources (Economic, Sentiment, etc.)
 
 # Service instances
 analysis_service = AnalysisService()
@@ -3467,7 +3468,7 @@ async def get_api_usage():
 
 # ==================== Training Data Cache (for NHITS Service) ====================
 
-@twelvedata_router.get("/training-data/{symbol}")
+@twelvedata_router.get("/training-data/{symbol}", tags=["8. NHITS Training"])
 async def get_training_data(
     symbol: str,
     timeframe: str = "H1",
@@ -3478,7 +3479,10 @@ async def get_training_data(
     Get training data for NHITS model training with caching.
 
     This endpoint is used by the NHITS service to fetch training data.
-    Data is cached to reduce API calls to EasyInsight and Twelve Data.
+    Data sources (in order of priority):
+    1. **EasyInsight API** (primär)
+    2. **TwelveData API** (Fallback wenn < 50 Datenpunkte)
+    3. **Yahoo Finance** (2. Fallback)
 
     Args:
         symbol: Trading symbol (e.g., BTCUSD, EURUSD)
@@ -3615,21 +3619,21 @@ async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache
         return []
 
 
-@twelvedata_router.get("/training-data/cache/stats")
+@twelvedata_router.get("/training-data/cache/stats", tags=["8. NHITS Training"])
 async def get_training_cache_stats():
     """Get training data cache statistics."""
     from ..services.training_data_cache_service import training_data_cache
     return training_data_cache.get_stats()
 
 
-@twelvedata_router.get("/training-data/cache/symbols")
+@twelvedata_router.get("/training-data/cache/symbols", tags=["8. NHITS Training"])
 async def get_cached_training_symbols():
     """Get list of symbols currently in training data cache."""
     from ..services.training_data_cache_service import training_data_cache
     return training_data_cache.get_cached_symbols()
 
 
-@twelvedata_router.delete("/training-data/cache")
+@twelvedata_router.delete("/training-data/cache", tags=["8. NHITS Training"])
 async def clear_training_cache():
     """Clear all training data cache."""
     from ..services.training_data_cache_service import training_data_cache
@@ -3637,7 +3641,7 @@ async def clear_training_cache():
     return {"removed": removed, "message": f"Cleared {removed} cache files"}
 
 
-@twelvedata_router.delete("/training-data/cache/expired")
+@twelvedata_router.delete("/training-data/cache/expired", tags=["8. NHITS Training"])
 async def cleanup_expired_training_cache():
     """Remove only expired training cache entries."""
     from ..services.training_data_cache_service import training_data_cache
@@ -4249,6 +4253,432 @@ async def clear_pattern_history():
     }
 
 
+# ==================== External Data Sources ====================
+
+from ..services.data_app.external_sources import (
+    DataSourceType,
+    DataPriority,
+    get_data_fetcher_service,
+)
+
+
+def get_external_data_fetcher():
+    """Get the data fetcher service singleton."""
+    return get_data_fetcher_service()
+
+
+@external_sources_router.get("/external-sources")
+async def get_available_sources():
+    """
+    Get list of all available external data sources.
+
+    Returns information about each data source including:
+    - Source type (economic_calendar, sentiment, etc.)
+    - Description
+    - Data categories provided
+    """
+    fetcher = get_external_data_fetcher()
+    return {
+        "sources": fetcher.get_available_sources(),
+        "total_sources": len(fetcher.get_available_sources()),
+    }
+
+
+@external_sources_router.get("/external-sources/economic-calendar")
+async def get_economic_calendar(
+    symbol: Optional[str] = None,
+    days_ahead: int = 7,
+    days_back: int = 1
+):
+    """
+    Get economic calendar events.
+
+    Returns upcoming and recent economic events including:
+    - Central bank decisions (Fed, ECB, BOJ, etc.)
+    - Economic releases (CPI, NFP, GDP, etc.)
+    - Market-moving events
+
+    Args:
+        symbol: Optional symbol to filter relevant events
+        days_ahead: Days to look ahead (default: 7)
+        days_back: Days to look back (default: 1)
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_economic_calendar(symbol, days_ahead, days_back)
+    return {
+        "source": "economic_calendar",
+        "symbol": symbol,
+        "days_ahead": days_ahead,
+        "days_back": days_back,
+        "events": [r.to_rag_document() for r in results],
+        "total_events": len(results),
+    }
+
+
+@external_sources_router.get("/external-sources/sentiment")
+async def get_sentiment_data(
+    symbol: Optional[str] = None,
+    include_fear_greed: bool = True,
+    include_social: bool = True,
+    include_options: bool = True,
+    include_volatility: bool = True
+):
+    """
+    Get market sentiment data.
+
+    Returns sentiment indicators including:
+    - Fear & Greed Index (Crypto and Traditional)
+    - Social media sentiment
+    - Options market sentiment (Put/Call ratio)
+    - Volatility indicators (VIX)
+    - Funding rates (Crypto)
+
+    Args:
+        symbol: Optional symbol for specific sentiment
+        include_fear_greed: Include Fear & Greed Index
+        include_social: Include social media sentiment
+        include_options: Include options sentiment
+        include_volatility: Include VIX/volatility data
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_sentiment(
+        symbol, include_fear_greed, include_social, include_options, include_volatility
+    )
+    return {
+        "source": "sentiment",
+        "symbol": symbol,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
+@external_sources_router.get("/external-sources/onchain/{symbol}")
+async def get_onchain_data(
+    symbol: str,
+    include_whale_alerts: bool = True,
+    include_exchange_flows: bool = True,
+    include_mining: bool = True,
+    include_defi: bool = True
+):
+    """
+    Get on-chain data for a cryptocurrency.
+
+    Returns on-chain metrics including:
+    - Whale alerts (large transactions)
+    - Exchange inflows/outflows
+    - Mining metrics (hashrate, difficulty)
+    - DeFi TVL and protocol data
+
+    Args:
+        symbol: Crypto symbol (e.g., BTCUSD, ETHUSD)
+        include_whale_alerts: Include whale transaction alerts
+        include_exchange_flows: Include exchange flow data
+        include_mining: Include mining metrics
+        include_defi: Include DeFi metrics
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_onchain(
+        symbol, include_whale_alerts, include_exchange_flows, include_mining, include_defi
+    )
+    return {
+        "source": "onchain",
+        "symbol": symbol,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
+@external_sources_router.get("/external-sources/orderbook/{symbol}")
+async def get_orderbook_data(
+    symbol: str,
+    depth: int = 50,
+    include_liquidations: bool = True,
+    include_cvd: bool = True
+):
+    """
+    Get orderbook and liquidity data.
+
+    Returns orderbook analysis including:
+    - Bid/Ask depth analysis
+    - Order walls and support/resistance
+    - Liquidation levels
+    - Cumulative Volume Delta (CVD)
+
+    Args:
+        symbol: Trading symbol
+        depth: Orderbook depth levels
+        include_liquidations: Include liquidation heatmap
+        include_cvd: Include CVD analysis
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_orderbook(symbol, depth, include_liquidations, include_cvd)
+    return {
+        "source": "orderbook",
+        "symbol": symbol,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
+@external_sources_router.get("/external-sources/macro")
+async def get_macro_data(
+    symbol: Optional[str] = None,
+    include_dxy: bool = True,
+    include_bonds: bool = True,
+    include_correlations: bool = True,
+    include_sectors: bool = True
+):
+    """
+    Get macro economic and correlation data.
+
+    Returns macro data including:
+    - DXY (US Dollar Index) analysis
+    - Bond yields (2Y, 10Y, 30Y)
+    - Cross-asset correlations
+    - Sector rotation analysis
+
+    Args:
+        symbol: Optional symbol for specific correlations
+        include_dxy: Include DXY analysis
+        include_bonds: Include bond yield data
+        include_correlations: Include correlation matrices
+        include_sectors: Include sector data
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_macro(
+        symbol, include_dxy, include_bonds, include_correlations, include_sectors
+    )
+    return {
+        "source": "macro_correlation",
+        "symbol": symbol,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
+@external_sources_router.get("/external-sources/historical-patterns")
+async def get_historical_patterns(
+    symbol: Optional[str] = None,
+    include_seasonality: bool = True,
+    include_drawdowns: bool = True,
+    include_events: bool = True,
+    include_comparable: bool = True
+):
+    """
+    Get historical pattern analysis.
+
+    Returns historical data including:
+    - Seasonality patterns (monthly, weekly)
+    - Historical drawdowns
+    - Event-based analysis (halvings, FOMC)
+    - Comparable market phases
+
+    Args:
+        symbol: Optional symbol for specific patterns
+        include_seasonality: Include seasonality data
+        include_drawdowns: Include drawdown history
+        include_events: Include event analysis
+        include_comparable: Include comparable phases
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_historical_patterns(
+        symbol, include_seasonality, include_drawdowns, include_events, include_comparable
+    )
+    return {
+        "source": "historical_patterns",
+        "symbol": symbol,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
+@external_sources_router.get("/external-sources/technical-levels/{symbol}")
+async def get_technical_levels(
+    symbol: str,
+    include_sr: bool = True,
+    include_fib: bool = True,
+    include_pivots: bool = True,
+    include_vwap: bool = True,
+    include_ma: bool = True
+):
+    """
+    Get technical price levels.
+
+    Returns technical levels including:
+    - Support/Resistance zones
+    - Fibonacci retracements
+    - Pivot points (daily, weekly, monthly)
+    - VWAP levels
+    - Moving average levels
+
+    Args:
+        symbol: Trading symbol
+        include_sr: Include S/R zones
+        include_fib: Include Fibonacci levels
+        include_pivots: Include pivot points
+        include_vwap: Include VWAP
+        include_ma: Include moving averages
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_technical_levels(
+        symbol, include_sr, include_fib, include_pivots, include_vwap, include_ma
+    )
+    return {
+        "source": "technical_levels",
+        "symbol": symbol,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
+@external_sources_router.get("/external-sources/regulatory")
+async def get_regulatory_updates(
+    symbol: Optional[str] = None,
+    include_sec: bool = True,
+    include_etf: bool = True,
+    include_global: bool = True,
+    include_enforcement: bool = True
+):
+    """
+    Get regulatory updates.
+
+    Returns regulatory information including:
+    - SEC/CFTC decisions and positions
+    - ETF news and approvals
+    - Global regulation (EU MiCA, UK FCA, Asia)
+    - Enforcement actions
+
+    Args:
+        symbol: Optional symbol for specific updates
+        include_sec: Include SEC/CFTC updates
+        include_etf: Include ETF news
+        include_global: Include global regulation
+        include_enforcement: Include enforcement actions
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_regulatory(
+        symbol, include_sec, include_etf, include_global, include_enforcement
+    )
+    return {
+        "source": "regulatory",
+        "symbol": symbol,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
+@external_sources_router.get("/external-sources/easyinsight")
+async def get_easyinsight_data(
+    symbol: Optional[str] = None,
+    include_symbols: bool = True,
+    include_stats: bool = True,
+    include_mt5_logs: bool = True
+):
+    """
+    Get EasyInsight managed data.
+
+    Returns EasyInsight information including:
+    - Managed trading symbols
+    - Data availability statistics
+    - MT5 trading logs
+
+    Args:
+        symbol: Optional symbol filter
+        include_symbols: Include symbol configurations
+        include_stats: Include data statistics
+        include_mt5_logs: Include MT5 logs
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_easyinsight(
+        symbol, include_symbols, include_stats, include_mt5_logs
+    )
+    return {
+        "source": "easyinsight",
+        "symbol": symbol,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
+@external_sources_router.post("/external-sources/fetch-all")
+async def fetch_all_sources(
+    symbol: Optional[str] = None,
+    source_types: Optional[list[str]] = None,
+    min_priority: str = "low"
+):
+    """
+    Fetch data from all or selected external sources.
+
+    Args:
+        symbol: Optional symbol filter
+        source_types: List of source types to fetch (None = all)
+            Valid types: economic_calendar, onchain, sentiment, orderbook,
+            macro_correlation, historical_pattern, technical_level, regulatory, easyinsight
+        min_priority: Minimum priority level (critical, high, medium, low)
+
+    Returns:
+        Aggregated data from all requested sources
+    """
+    fetcher = get_external_data_fetcher()
+
+    # Map string source types to enum
+    types_enum = None
+    if source_types:
+        type_mapping = {
+            "economic_calendar": DataSourceType.ECONOMIC_CALENDAR,
+            "onchain": DataSourceType.ONCHAIN,
+            "sentiment": DataSourceType.SENTIMENT,
+            "orderbook": DataSourceType.ORDERBOOK,
+            "macro_correlation": DataSourceType.MACRO_CORRELATION,
+            "historical_pattern": DataSourceType.HISTORICAL_PATTERN,
+            "technical_level": DataSourceType.TECHNICAL_LEVEL,
+            "regulatory": DataSourceType.REGULATORY,
+            "easyinsight": DataSourceType.EASYINSIGHT,
+        }
+        types_enum = [type_mapping[t] for t in source_types if t in type_mapping]
+
+    # Map priority string to enum
+    priority_mapping = {
+        "critical": DataPriority.CRITICAL,
+        "high": DataPriority.HIGH,
+        "medium": DataPriority.MEDIUM,
+        "low": DataPriority.LOW,
+    }
+    priority = priority_mapping.get(min_priority.lower(), DataPriority.LOW)
+
+    results = await fetcher.fetch_all(symbol, types_enum, priority)
+    return {
+        "symbol": symbol,
+        "source_types": source_types or "all",
+        "min_priority": min_priority,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
+@external_sources_router.post("/external-sources/trading-context/{symbol}")
+async def fetch_trading_context(
+    symbol: str,
+    include_types: Optional[list[str]] = None
+):
+    """
+    Fetch comprehensive trading context for a symbol.
+
+    Provides a complete market view by aggregating data from multiple sources.
+
+    Args:
+        symbol: Trading symbol
+        include_types: Optional list of data types to include:
+            economic, onchain, sentiment, orderbook, macro, patterns, levels, regulatory, easyinsight
+
+    Returns:
+        Structured trading context with summary of critical events
+    """
+    fetcher = get_external_data_fetcher()
+    context = await fetcher.fetch_trading_context(symbol, include_types)
+    return context
+
+
 # ==================== Router Export ====================
 
 def get_all_routers():
@@ -4310,5 +4740,9 @@ def get_all_routers():
         (patterns_router, "/api/v1", ["🕯️ Candlestick Patterns"], {
             "name": "Patterns",
             "description": "Candlestick pattern detection - reversal, continuation, and indecision patterns with multi-timeframe scanning"
+        }),
+        (external_sources_router, "/api/v1", ["🌐 External Data Sources"], {
+            "name": "External Sources",
+            "description": "External data sources - economic calendar, sentiment, on-chain, orderbook, macro, regulatory updates"
         }),
     ]

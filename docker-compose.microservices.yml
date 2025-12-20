@@ -146,6 +146,7 @@ services:
       - FAISS_USE_GPU=1
       - EMBEDDING_DEVICE=cuda
       - FAISS_PERSIST_DIRECTORY=/app/data/faiss
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
     networks:
       - trading-net
     extra_hosts:

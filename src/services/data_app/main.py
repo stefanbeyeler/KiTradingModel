@@ -33,6 +33,7 @@ from src.api.routes import (
     patterns_router,
     yfinance_router,
     training_router,
+    external_sources_router,
     router as general_router
 )
 from src.services.timescaledb_sync_service import TimescaleDBSyncService
@@ -112,6 +113,20 @@ openapi_tags = [
         "name": "10. Query Logs & Analytics",
         "description": "Query logging and analytics for monitoring"
     },
+    {
+        "name": "11. External Data Sources",
+        "description": """Externe Datenquellen für Trading Intelligence (Gateway für RAG Service).
+
+**Datenquellen:**
+- **Economic Calendar**: Fed, ECB, CPI, NFP, GDP und andere Wirtschaftsereignisse
+- **Sentiment**: Fear & Greed Index, Social Media, Options, VIX
+- **On-Chain**: Whale Alerts, Exchange Flows, Mining, DeFi TVL
+- **Orderbook**: Bid/Ask Depth, Liquidations, CVD
+- **Macro**: DXY, Bond Yields, Cross-Asset Korrelationen
+- **Historical Patterns**: Saisonalität, Drawdowns, Events
+- **Technical Levels**: S/R Zonen, Fibonacci, Pivots, VWAP
+- **Regulatory**: SEC/CFTC, ETF News, Global Regulation"""
+    },
 ]
 
 # Create FastAPI application
@@ -167,6 +182,7 @@ app.include_router(patterns_router, prefix="/api/v1", tags=["7. Candlestick Patt
 app.include_router(training_router, prefix="/api/v1", tags=["8. NHITS Training"])
 app.include_router(sync_router, prefix="/api/v1", tags=["9. RAG Sync"])
 app.include_router(query_log_router, prefix="/api/v1", tags=["10. Query Logs & Analytics"])
+app.include_router(external_sources_router, prefix="/api/v1", tags=["11. External Data Sources"])
 
 
 @app.on_event("startup")

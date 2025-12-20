@@ -84,6 +84,12 @@ class Settings(BaseSettings):
     service_port: int = Field(default=3011)
     log_level: str = Field(default="INFO")
 
+    # Microservice URLs (for inter-service communication)
+    data_service_url: str = Field(
+        default="http://localhost:3001",
+        description="URL of the Data Service for external data access"
+    )
+
     # Trading Analysis Configuration
     default_lookback_days: int = Field(
         default=30,

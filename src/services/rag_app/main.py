@@ -27,16 +27,35 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 from src.config import settings
 from src.version import VERSION
 from src.services.rag_service import RAGService
-from src.services.rag_data_sources import (
-    DataFetcherService,
-    DataSourceType,
-    DataPriority,
-    get_data_fetcher_service
-)
+from src.services.data_fetcher_proxy import DataFetcherProxy, get_data_fetcher_proxy
+
+# Enums for API compatibility (data sources are now in Data Service)
+class DataSourceTypeEnum(str, Enum):
+    """Data source type enum for API compatibility."""
+    ECONOMIC_CALENDAR = "economic_calendar"
+    ONCHAIN = "onchain"
+    SENTIMENT = "sentiment"
+    ORDERBOOK = "orderbook"
+    MACRO_CORRELATION = "macro_correlation"
+    HISTORICAL_PATTERN = "historical_pattern"
+    TECHNICAL_LEVEL = "technical_level"
+    REGULATORY = "regulatory"
+    EASYINSIGHT = "easyinsight"
+
+class DataPriorityEnum(str, Enum):
+    """Priority enum for API compatibility."""
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+# Compatibility aliases
+DataSourceType = DataSourceTypeEnum
+DataPriority = DataPriorityEnum
 
 # Global service instances
 rag_service: Optional[RAGService] = None
-data_fetcher: Optional[DataFetcherService] = None
+data_fetcher: Optional[DataFetcherProxy] = None
 
 # Configure logging
 logger.remove()
@@ -259,6 +278,7 @@ async def startup_event():
     logger.info(f"Embedding Model: {settings.embedding_model}")
     logger.info(f"FAISS Directory: {settings.faiss_persist_directory}")
     logger.info(f"Device: {settings.device}")
+    logger.info(f"Data Service URL: {settings.data_service_url}")
 
     # Initialize RAG Service
     try:
@@ -269,13 +289,12 @@ async def startup_event():
         logger.error(f"Failed to initialize RAG Service: {e}")
         raise
 
-    # Initialize Data Fetcher Service
+    # Initialize Data Fetcher Proxy (fetches data via Data Service gateway)
     try:
-        data_fetcher = get_data_fetcher_service()
-        sources = data_fetcher.get_available_sources()
-        logger.info(f"Data Fetcher initialized with {len(sources)} data sources")
+        data_fetcher = get_data_fetcher_proxy()
+        logger.info(f"Data Service Client initialized - URL: {settings.data_service_url}")
     except Exception as e:
-        logger.error(f"Failed to initialize Data Fetcher: {e}")
+        logger.error(f"Failed to initialize Data Service Client: {e}")
         # Non-fatal - RAG can work without external data sources
 
     logger.info("RAG Service started successfully")
@@ -694,19 +713,6 @@ async def rebuild_index(background_tasks: BackgroundTasks):
 # =====================================================
 # External Data Sources Endpoints
 # =====================================================
-
-class DataSourceTypeEnum(str, Enum):
-    """Available data source types."""
-    ECONOMIC_CALENDAR = "economic_calendar"
-    ONCHAIN = "onchain"
-    SENTIMENT = "sentiment"
-    ORDERBOOK = "orderbook"
-    MACRO_CORRELATION = "macro_correlation"
-    HISTORICAL_PATTERN = "historical_pattern"
-    TECHNICAL_LEVEL = "technical_level"
-    REGULATORY = "regulatory"
-    EASYINSIGHT = "easyinsight"
-
 
 class FetchDataRequest(BaseModel):
     """Request model for fetching external data."""
@@ -1283,7 +1289,7 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]
 # =====================================================
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "3004"))
+    port = int(os.getenv("PORT", "3003"))
     uvicorn.run(
         app,
         host="0.0.0.0",

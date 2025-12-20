@@ -132,6 +132,47 @@ data = await twelvedata_service.get_multiple_indicators(
 )
 ```
 
+## External Data Sources (Gateway)
+
+Der Data Service stellt 9 externe Datenquellen als Gateway für den RAG Service bereit:
+
+### Verfügbare Quellen
+
+| Quelle | Endpoint | Beschreibung |
+|--------|----------|--------------|
+| **Economic Calendar** | `/external-sources/economic-calendar` | Fed, ECB, CPI, NFP, GDP Events |
+| **Sentiment** | `/external-sources/sentiment` | Fear & Greed, Social Media, VIX |
+| **On-Chain** | `/external-sources/onchain/{symbol}` | Whale Alerts, Exchange Flows |
+| **Orderbook** | `/external-sources/orderbook/{symbol}` | Bid/Ask Walls, Liquidations |
+| **Macro** | `/external-sources/macro` | DXY, Bond Yields, Korrelationen |
+| **Historical Patterns** | `/external-sources/historical-patterns` | Saisonalität, Drawdowns |
+| **Technical Levels** | `/external-sources/technical-levels/{symbol}` | S/R, Fibonacci, Pivots |
+| **Regulatory** | `/external-sources/regulatory` | SEC, ETF News, Regulation |
+| **EasyInsight** | `/external-sources/easyinsight` | Managed Symbols, MT5 Logs |
+
+### Aggregierte Endpoints
+
+| Endpoint | Beschreibung |
+|----------|--------------|
+| `POST /external-sources/fetch-all` | Alle Quellen parallel abrufen |
+| `POST /external-sources/trading-context/{symbol}` | Kompletter Trading-Kontext |
+
+### Architektur
+
+```
+RAG Service (Port 3003)
+        │
+        │ DataFetcherProxy
+        ▼
+Data Service (Port 3001)
+        │
+        │ /api/v1/external-sources/*
+        ▼
+External APIs (Alternative.me, EasyInsight, etc.)
+```
+
+Der RAG Service nutzt den `DataFetcherProxy` um Daten vom Data Service Gateway abzurufen.
+
 ## Commit-Konvention
 
 ```
