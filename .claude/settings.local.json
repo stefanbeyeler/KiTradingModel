@@ -135,7 +135,8 @@
       "Bash(sudo docker restart:*)",
       "Bash(for symbol in GBPUSD BTCUSD ETHUSD XAUUSD USDJPY AUDUSD NZDUSD USDCAD USDCHF)",
       "Bash(do)",
-      "Bash(sudo chown:*)"
+      "Bash(sudo chown:*)",
+      "Bash(du:*)"
     ],
     "deny": [],
     "ask": []
