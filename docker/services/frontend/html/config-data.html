@@ -841,26 +841,107 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Datenquelle</label>
-                            <select class="form-select" id="explorer-source">
-                                <option value="twelvedata" selected>TwelveData</option>
-                                <option value="yfinance">Yahoo Finance</option>
+                            <select class="form-select" id="explorer-source" onchange="updateIndicatorOptions()">
+                                <option value="easyinsight" selected>EasyInsight (Historisch)</option>
+                                <option value="twelvedata">TwelveData (Historisch)</option>
+                                <option value="yfinance">Yahoo Finance (Historisch)</option>
                             </select>
                         </div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Indikatoren</label>
-                            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
-                                <label class="form-checkbox"><input type="checkbox" id="ind-rsi" checked><span>RSI</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="ind-macd" checked><span>MACD</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="ind-bbands" checked><span>Bollinger</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="ind-stoch"><span>Stochastic</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="ind-adx"><span>ADX</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="ind-atr"><span>ATR</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="ind-ema"><span>EMA</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="ind-sma"><span>SMA</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="ind-vwap"><span>VWAP</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="ind-ichimoku"><span>Ichimoku</span></label>
+
+                    <!-- Indicator section - dynamically updated based on source -->
+                    <div id="indicator-section">
+                        <!-- EasyInsight Indicators (default) -->
+                        <div id="indicators-easyinsight">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Preis & Spread</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-bidask" checked><span>Bid/Ask/Spread</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-ohlc-m15"><span>M15 OHLC</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-ohlc-h1"><span>H1 OHLC</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-ohlc-d1"><span>D1 OHLC</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-sr-levels"><span>S1/R1 (M5)</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Momentum-Indikatoren</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-rsi" checked><span>RSI</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-macd" checked><span>MACD</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-stoch" checked><span>Stochastic</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-cci"><span>CCI</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-adx"><span>ADX (+DI/-DI)</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Trend & Volatilität</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-ma10"><span>MA(10)</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-ichimoku"><span>Ichimoku (5)</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-bbands" checked><span>Bollinger</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-atr"><span>ATR/Range D1</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ei-strength"><span>Strength (4H/D1/W1)</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #888; margin-top: 0.5rem;">
+                                EasyInsight liefert historische Daten mit allen verfügbaren Indikatoren
+                            </div>
+                        </div>
+
+                        <!-- TwelveData Indicators -->
+                        <div id="indicators-twelvedata" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Trend-Indikatoren</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-ema"><span>EMA(20)</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-sma"><span>SMA(20)</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-supertrend"><span>Supertrend</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-ichimoku"><span>Ichimoku</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-ht_trendmode"><span>HT Trend</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-linearregslope"><span>LinReg Slope</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Momentum-Indikatoren</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-rsi" checked><span>RSI</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-crsi"><span>Connors RSI</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-macd" checked><span>MACD</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-stoch"><span>Stochastic</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-willr"><span>Williams %R</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-adx"><span>ADX</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-aroon"><span>Aroon</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-mfi"><span>MFI</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Volatilität & Volumen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-bbands" checked><span>Bollinger</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-percent_b"><span>Percent B</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-atr"><span>ATR</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-obv"><span>OBV</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="ind-vwap"><span>VWAP</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Yahoo Finance - no indicators -->
+                        <div id="indicators-yfinance" style="display: none;">
+                            <div style="padding: 1rem; background: rgba(255,152,0,0.1); border-radius: 4px; color: #ffc107;">
+                                Yahoo Finance liefert nur OHLCV-Daten ohne technische Indikatoren.
                             </div>
                         </div>
                     </div>
@@ -877,9 +958,9 @@
                     <h2 class="card-title" id="explorer-title">Ergebnisse</h2>
                     <div id="explorer-info" style="font-size: 0.85rem; color: #888;"></div>
                 </div>
-                <div style="padding: 1rem; overflow-x: auto;">
-                    <table id="explorer-table" style="width: 100%; font-size: 0.8rem;">
-                        <thead id="explorer-thead"></thead>
+                <div id="explorer-table-container" style="padding: 0.5rem; max-height: 500px; overflow: auto; position: relative;">
+                    <table id="explorer-table" style="width: max-content; min-width: 100%; font-size: 0.8rem; border-collapse: separate; border-spacing: 0;">
+                        <thead id="explorer-thead" style="position: sticky; top: 0; z-index: 2;"></thead>
                         <tbody id="explorer-tbody"></tbody>
                     </table>
                 </div>
@@ -2895,6 +2976,150 @@
             });
         }
 
+        // Convert EasyInsight historical data response to explorer format
+        function convertEasyInsightHistoricalData(trainingData, indicators) {
+            const data = trainingData.data || [];
+            if (!data.length) return [];
+
+            return data.map(row => {
+                const result = {
+                    datetime: row.snapshot_time || row.timestamp,
+                    open: parseFloat(row.open) || null,
+                    high: parseFloat(row.high) || null,
+                    low: parseFloat(row.low) || null,
+                    close: parseFloat(row.close) || null,
+                    volume: row.volume ? parseFloat(row.volume) : null
+                };
+
+                // Bid/Ask/Spread
+                if (indicators.includes('bidask')) {
+                    result.bid = row.bid ? parseFloat(row.bid) : null;
+                    result.ask = row.ask ? parseFloat(row.ask) : null;
+                    result.spread = row.spread ? parseFloat(row.spread) : null;
+                    result.spread_pct = row.spread_pct ? parseFloat(row.spread_pct) : null;
+                }
+
+                // M15 OHLC
+                if (indicators.includes('ohlc_m15')) {
+                    result.m15_open = row.m15_open ? parseFloat(row.m15_open) : null;
+                    result.m15_high = row.m15_high ? parseFloat(row.m15_high) : null;
+                    result.m15_low = row.m15_low ? parseFloat(row.m15_low) : null;
+                    result.m15_close = row.m15_close ? parseFloat(row.m15_close) : null;
+                }
+
+                // H1 OHLC
+                if (indicators.includes('ohlc_h1')) {
+                    result.h1_open = row.h1_open ? parseFloat(row.h1_open) : null;
+                    result.h1_high = row.h1_high ? parseFloat(row.h1_high) : null;
+                    result.h1_low = row.h1_low ? parseFloat(row.h1_low) : null;
+                    result.h1_close = row.h1_close ? parseFloat(row.h1_close) : null;
+                }
+
+                // D1 OHLC
+                if (indicators.includes('ohlc_d1')) {
+                    result.d1_open = row.d1_open ? parseFloat(row.d1_open) : null;
+                    result.d1_high = row.d1_high ? parseFloat(row.d1_high) : null;
+                    result.d1_low = row.d1_low ? parseFloat(row.d1_low) : null;
+                    result.d1_close = row.d1_close ? parseFloat(row.d1_close) : null;
+                }
+
+                // S1/R1 Support/Resistance Levels (M5)
+                if (indicators.includes('sr_levels')) {
+                    result.s1_level = row.s1_level_m5 ? parseFloat(row.s1_level_m5) : null;
+                    result.r1_level = row.r1_level_m5 ? parseFloat(row.r1_level_m5) : null;
+                }
+
+                // RSI
+                if (indicators.includes('rsi') && row.rsi !== undefined) {
+                    result.rsi = parseFloat(row.rsi);
+                }
+
+                // MACD
+                if (indicators.includes('macd')) {
+                    result.macd = row.macd_main ? parseFloat(row.macd_main) : null;
+                    result.macd_signal = row.macd_signal ? parseFloat(row.macd_signal) : null;
+                }
+
+                // Stochastic
+                if (indicators.includes('stoch')) {
+                    result.stoch_k = row.sto_main ? parseFloat(row.sto_main) : null;
+                    result.stoch_d = row.sto_signal ? parseFloat(row.sto_signal) : null;
+                }
+
+                // CCI
+                if (indicators.includes('cci') && row.cci !== undefined) {
+                    result.cci = parseFloat(row.cci);
+                }
+
+                // ADX with +DI/-DI
+                if (indicators.includes('adx')) {
+                    result.adx = row.adx_main ? parseFloat(row.adx_main) : null;
+                    result.adx_plus = row.adx_plusdi ? parseFloat(row.adx_plusdi) : null;
+                    result.adx_minus = row.adx_minusdi ? parseFloat(row.adx_minusdi) : null;
+                }
+
+                // MA(10)
+                if (indicators.includes('ma10') && row.ma_10 !== undefined) {
+                    result.ma10 = parseFloat(row.ma_10);
+                }
+
+                // Ichimoku (5 components)
+                if (indicators.includes('ichimoku')) {
+                    result.ichi_tenkan = row.ichimoku_tenkan ? parseFloat(row.ichimoku_tenkan) : null;
+                    result.ichi_kijun = row.ichimoku_kijun ? parseFloat(row.ichimoku_kijun) : null;
+                    result.ichi_senkou_a = row.ichimoku_senkoua ? parseFloat(row.ichimoku_senkoua) : null;
+                    result.ichi_senkou_b = row.ichimoku_senkoub ? parseFloat(row.ichimoku_senkoub) : null;
+                    result.ichi_chikou = row.ichimoku_chikou ? parseFloat(row.ichimoku_chikou) : null;
+                }
+
+                // Bollinger Bands
+                if (indicators.includes('bbands')) {
+                    result.bb_upper = row.bb_upper ? parseFloat(row.bb_upper) : null;
+                    result.bb_middle = row.bb_base ? parseFloat(row.bb_base) : null;
+                    result.bb_lower = row.bb_lower ? parseFloat(row.bb_lower) : null;
+                }
+
+                // ATR/Range D1
+                if (indicators.includes('atr')) {
+                    result.atr_d1 = row.atr_d1 ? parseFloat(row.atr_d1) : null;
+                    result.range_d1 = row.range_d1 ? parseFloat(row.range_d1) : null;
+                    result.atr_pct_d1 = row.atr_pct_d1 ? parseFloat(row.atr_pct_d1) : null;
+                }
+
+                // Strength (4H/D1/W1)
+                if (indicators.includes('strength')) {
+                    result.strength_4h = row.strength_4h ? parseFloat(row.strength_4h) : null;
+                    result.strength_1d = row.strength_1d ? parseFloat(row.strength_1d) : null;
+                    result.strength_1w = row.strength_1w ? parseFloat(row.strength_1w) : null;
+                }
+
+                return result;
+            });
+        }
+
+        // Update indicator options based on selected source
+        function updateIndicatorOptions() {
+            const source = document.getElementById('explorer-source').value;
+            document.getElementById('indicators-easyinsight').style.display = source === 'easyinsight' ? 'block' : 'none';
+            document.getElementById('indicators-twelvedata').style.display = source === 'twelvedata' ? 'block' : 'none';
+            document.getElementById('indicators-yfinance').style.display = source === 'yfinance' ? 'block' : 'none';
+
+            // EasyInsight now supports historical data with timeframe selection
+            const intervalGroup = document.getElementById('explorer-interval').parentElement;
+            const limitGroup = document.getElementById('explorer-limit').parentElement;
+            intervalGroup.style.opacity = '1';
+            limitGroup.style.opacity = '1';
+            intervalGroup.title = '';
+            limitGroup.title = '';
+
+            // Update interval label based on source
+            if (source === 'easyinsight') {
+                intervalGroup.querySelector('.form-label').textContent = 'Timeframe';
+            } else {
+                intervalGroup.querySelector('.form-label').textContent = 'Interval';
+            }
+        }
+
         // Convert symbol to TwelveData format (EURUSD -> EUR/USD, BTCUSD -> BTC/USD)
         function toTwelveDataSymbol(symbol) {
             // Forex pairs (6 chars)
@@ -2932,18 +3157,51 @@
             // Convert symbol for TwelveData API
             const symbol = source === 'twelvedata' ? toTwelveDataSymbol(rawSymbol) : rawSymbol;
 
-            // Get selected indicators
+            // Get selected indicators based on source
             const indicators = [];
-            if (document.getElementById('ind-rsi').checked) indicators.push('rsi');
-            if (document.getElementById('ind-macd').checked) indicators.push('macd');
-            if (document.getElementById('ind-bbands').checked) indicators.push('bbands');
-            if (document.getElementById('ind-stoch').checked) indicators.push('stoch');
-            if (document.getElementById('ind-adx').checked) indicators.push('adx');
-            if (document.getElementById('ind-atr').checked) indicators.push('atr');
-            if (document.getElementById('ind-ema').checked) indicators.push('ema');
-            if (document.getElementById('ind-sma').checked) indicators.push('sma');
-            if (document.getElementById('ind-vwap').checked) indicators.push('vwap');
-            if (document.getElementById('ind-ichimoku').checked) indicators.push('ichimoku');
+            if (source === 'easyinsight') {
+                // EasyInsight indicators - Price & Spread
+                if (document.getElementById('ei-bidask')?.checked) indicators.push('bidask');
+                if (document.getElementById('ei-ohlc-m15')?.checked) indicators.push('ohlc_m15');
+                if (document.getElementById('ei-ohlc-h1')?.checked) indicators.push('ohlc_h1');
+                if (document.getElementById('ei-ohlc-d1')?.checked) indicators.push('ohlc_d1');
+                if (document.getElementById('ei-sr-levels')?.checked) indicators.push('sr_levels');
+                // Momentum
+                if (document.getElementById('ei-rsi')?.checked) indicators.push('rsi');
+                if (document.getElementById('ei-macd')?.checked) indicators.push('macd');
+                if (document.getElementById('ei-stoch')?.checked) indicators.push('stoch');
+                if (document.getElementById('ei-cci')?.checked) indicators.push('cci');
+                if (document.getElementById('ei-adx')?.checked) indicators.push('adx');
+                // Trend & Volatility
+                if (document.getElementById('ei-ma10')?.checked) indicators.push('ma10');
+                if (document.getElementById('ei-ichimoku')?.checked) indicators.push('ichimoku');
+                if (document.getElementById('ei-bbands')?.checked) indicators.push('bbands');
+                if (document.getElementById('ei-atr')?.checked) indicators.push('atr');
+                if (document.getElementById('ei-strength')?.checked) indicators.push('strength');
+            } else if (source === 'twelvedata') {
+                // TwelveData indicators - Trend
+                if (document.getElementById('ind-ema')?.checked) indicators.push('ema');
+                if (document.getElementById('ind-sma')?.checked) indicators.push('sma');
+                if (document.getElementById('ind-supertrend')?.checked) indicators.push('supertrend');
+                if (document.getElementById('ind-ichimoku')?.checked) indicators.push('ichimoku');
+                if (document.getElementById('ind-ht_trendmode')?.checked) indicators.push('ht_trendmode');
+                if (document.getElementById('ind-linearregslope')?.checked) indicators.push('linearregslope');
+                // Momentum
+                if (document.getElementById('ind-rsi')?.checked) indicators.push('rsi');
+                if (document.getElementById('ind-crsi')?.checked) indicators.push('crsi');
+                if (document.getElementById('ind-macd')?.checked) indicators.push('macd');
+                if (document.getElementById('ind-stoch')?.checked) indicators.push('stoch');
+                if (document.getElementById('ind-willr')?.checked) indicators.push('willr');
+                if (document.getElementById('ind-adx')?.checked) indicators.push('adx');
+                if (document.getElementById('ind-aroon')?.checked) indicators.push('aroon');
+                if (document.getElementById('ind-mfi')?.checked) indicators.push('mfi');
+                // Volatility & Volume
+                if (document.getElementById('ind-bbands')?.checked) indicators.push('bbands');
+                if (document.getElementById('ind-percent_b')?.checked) indicators.push('percent_b');
+                if (document.getElementById('ind-atr')?.checked) indicators.push('atr');
+                if (document.getElementById('ind-obv')?.checked) indicators.push('obv');
+                if (document.getElementById('ind-vwap')?.checked) indicators.push('vwap');
+            }
 
             document.getElementById('explorer-results').style.display = 'none';
             document.getElementById('explorer-error').style.display = 'none';
@@ -2951,74 +3209,94 @@
 
             try {
                 let data;
-                if (source === 'twelvedata') {
+                if (source === 'easyinsight') {
+                    // Map interval to timeframe for EasyInsight API
+                    const timeframeMap = {
+                        '15min': 'M15', '1h': 'H1', '4h': 'H4', '1day': 'D1',
+                        'M15': 'M15', 'H1': 'H1', 'H4': 'H4', 'D1': 'D1'
+                    };
+                    const timeframe = timeframeMap[interval] || 'H1';
+
+                    // Calculate days based on limit and timeframe
+                    let days = 7;
+                    if (timeframe === 'M15') days = Math.ceil(parseInt(limit) / 96) + 1;
+                    else if (timeframe === 'H1') days = Math.ceil(parseInt(limit) / 24) + 1;
+                    else if (timeframe === 'D1') days = Math.ceil(parseInt(limit) / 1) + 1;
+                    days = Math.min(days, 90); // Max 90 days
+
+                    // Fetch from EasyInsight via training-data endpoint (historical data)
+                    const res = await fetch(`${API_BASE}/training-data/${rawSymbol}?timeframe=${timeframe}&days=${days}&use_cache=false`);
+                    if (!res.ok) throw new Error('Fehler beim Laden der EasyInsight-Daten');
+                    const trainingData = await res.json();
+
+                    // Convert EasyInsight response to explorer format
+                    data = convertEasyInsightHistoricalData(trainingData, indicators);
+
+                    // Limit to requested amount
+                    if (data.length > parseInt(limit)) {
+                        data = data.slice(0, parseInt(limit));
+                    }
+
+                } else if (source === 'twelvedata') {
                     // Fetch OHLCV data
                     const ohlcvRes = await fetch(`${API_BASE}/twelvedata/time_series/${symbol}?interval=${interval}&outputsize=${limit}`);
                     if (!ohlcvRes.ok) throw new Error('Fehler beim Laden der OHLCV-Daten');
                     const ohlcv = await ohlcvRes.json();
 
-                    // Fetch indicators in parallel
-                    const indicatorPromises = [];
+                    // Fetch indicators in parallel - dynamic configuration
+                    const indicatorConfig = {
+                        // Trend indicators
+                        'ema': { endpoint: 'ema', params: '&time_period=20' },
+                        'sma': { endpoint: 'sma', params: '&time_period=20' },
+                        'supertrend': { endpoint: 'supertrend', params: '' },
+                        'ichimoku': { endpoint: 'ichimoku', params: '' },
+                        'ht_trendmode': { endpoint: 'ht_trendmode', params: '' },
+                        'linearregslope': { endpoint: 'linearregslope', params: '' },
+                        // Momentum indicators
+                        'rsi': { endpoint: 'rsi', params: '' },
+                        'crsi': { endpoint: 'crsi', params: '' },
+                        'macd': { endpoint: 'macd', params: '' },
+                        'stoch': { endpoint: 'stoch', params: '' },
+                        'willr': { endpoint: 'willr', params: '' },
+                        'adx': { endpoint: 'adx', params: '' },
+                        'aroon': { endpoint: 'aroon', params: '' },
+                        'mfi': { endpoint: 'mfi', params: '' },
+                        // Volatility & Volume
+                        'bbands': { endpoint: 'bbands', params: '' },
+                        'percent_b': { endpoint: 'percent_b', params: '' },
+                        'atr': { endpoint: 'atr', params: '' },
+                        'obv': { endpoint: 'obv', params: '' },
+                        'vwap': { endpoint: 'vwap', params: '' }
+                    };
 
-                    if (indicators.includes('rsi')) {
-                        indicatorPromises.push(
-                            fetch(`${API_BASE}/twelvedata/rsi/${symbol}?interval=${interval}&outputsize=${limit}`)
-                                .then(r => r.json()).then(d => ({ name: 'rsi', data: d })).catch(() => null)
-                        );
-                    }
-                    if (indicators.includes('macd')) {
-                        indicatorPromises.push(
-                            fetch(`${API_BASE}/twelvedata/macd/${symbol}?interval=${interval}&outputsize=${limit}`)
-                                .then(r => r.json()).then(d => ({ name: 'macd', data: d })).catch(() => null)
-                        );
-                    }
-                    if (indicators.includes('bbands')) {
-                        indicatorPromises.push(
-                            fetch(`${API_BASE}/twelvedata/bbands/${symbol}?interval=${interval}&outputsize=${limit}`)
-                                .then(r => r.json()).then(d => ({ name: 'bbands', data: d })).catch(() => null)
-                        );
-                    }
-                    if (indicators.includes('stoch')) {
-                        indicatorPromises.push(
-                            fetch(`${API_BASE}/twelvedata/stoch/${symbol}?interval=${interval}&outputsize=${limit}`)
-                                .then(r => r.json()).then(d => ({ name: 'stoch', data: d })).catch(() => null)
-                        );
-                    }
-                    if (indicators.includes('adx')) {
-                        indicatorPromises.push(
-                            fetch(`${API_BASE}/twelvedata/adx/${symbol}?interval=${interval}&outputsize=${limit}`)
-                                .then(r => r.json()).then(d => ({ name: 'adx', data: d })).catch(() => null)
-                        );
-                    }
-                    if (indicators.includes('atr')) {
-                        indicatorPromises.push(
-                            fetch(`${API_BASE}/twelvedata/atr/${symbol}?interval=${interval}&outputsize=${limit}`)
-                                .then(r => r.json()).then(d => ({ name: 'atr', data: d })).catch(() => null)
-                        );
-                    }
-                    if (indicators.includes('ema')) {
-                        indicatorPromises.push(
-                            fetch(`${API_BASE}/twelvedata/ema/${symbol}?interval=${interval}&outputsize=${limit}&time_period=20`)
-                                .then(r => r.json()).then(d => ({ name: 'ema', data: d })).catch(() => null)
-                        );
-                    }
-                    if (indicators.includes('sma')) {
-                        indicatorPromises.push(
-                            fetch(`${API_BASE}/twelvedata/sma/${symbol}?interval=${interval}&outputsize=${limit}&time_period=20`)
-                                .then(r => r.json()).then(d => ({ name: 'sma', data: d })).catch(() => null)
-                        );
-                    }
+                    const indicatorPromises = indicators.map(ind => {
+                        const config = indicatorConfig[ind];
+                        if (!config) return null;
+                        const url = `${API_BASE}/twelvedata/${config.endpoint}/${symbol}?interval=${interval}&outputsize=${limit}${config.params}`;
+                        return fetch(url)
+                            .then(r => r.json())
+                            .then(d => ({ name: ind, data: d }))
+                            .catch(() => null);
+                    }).filter(p => p !== null);
 
                     const indicatorResults = await Promise.all(indicatorPromises);
 
                     // Merge data
                     data = mergeExplorerData(ohlcv, indicatorResults.filter(r => r !== null));
                 } else {
-                    // Yahoo Finance
-                    const res = await fetch(`${API_BASE}/yfinance/time-series/${symbol}?interval=${interval}&outputsize=${limit}`);
+                    // Yahoo Finance - use rawSymbol (not TwelveData formatted)
+                    const res = await fetch(`${API_BASE}/yfinance/time-series/${rawSymbol}?interval=${interval}&outputsize=${limit}`);
                     if (!res.ok) throw new Error('Fehler beim Laden der Yahoo Finance Daten');
-                    data = await res.json();
-                    data = data.data || data.values || data;
+                    const yData = await res.json();
+                    // Yahoo Finance returns {symbol, interval, values: [...]}
+                    data = (yData.values || []).map(v => ({
+                        datetime: v.datetime,
+                        open: v.open,
+                        high: v.high,
+                        low: v.low,
+                        close: v.close,
+                        volume: v.volume || null
+                    }));
                 }
 
                 explorerData = data;
@@ -3052,35 +3330,55 @@
             const dtMap = {};
             result.forEach((r, i) => dtMap[r.datetime] = i);
 
-            // Merge indicators
+            // Merge indicators - mapping for all indicator types
+            const indicatorFieldMap = {
+                'ema': v => ({ ema: parseFloat(v.ema) }),
+                'sma': v => ({ sma: parseFloat(v.sma) }),
+                'supertrend': v => ({ supertrend: parseFloat(v.supertrend), supertrend_dir: v.supertrend_direction }),
+                'ichimoku': v => ({
+                    ichi_tenkan: parseFloat(v.tenkan_sen),
+                    ichi_kijun: parseFloat(v.kijun_sen),
+                    ichi_senkou_a: parseFloat(v.senkou_span_a),
+                    ichi_senkou_b: parseFloat(v.senkou_span_b)
+                }),
+                'ht_trendmode': v => ({ ht_trend: parseInt(v.integer || v.ht_trendmode) }),
+                'linearregslope': v => ({ linreg_slope: parseFloat(v.linearregslope) }),
+                'rsi': v => ({ rsi: parseFloat(v.rsi) }),
+                'crsi': v => ({ crsi: parseFloat(v.crsi) }),
+                'macd': v => ({
+                    macd: parseFloat(v.macd),
+                    macd_signal: parseFloat(v.macd_signal),
+                    macd_hist: parseFloat(v.macd_hist)
+                }),
+                'stoch': v => ({ stoch_k: parseFloat(v.slow_k), stoch_d: parseFloat(v.slow_d) }),
+                'willr': v => ({ willr: parseFloat(v.willr) }),
+                'adx': v => ({ adx: parseFloat(v.adx) }),
+                'aroon': v => ({ aroon_up: parseFloat(v.aroon_up), aroon_down: parseFloat(v.aroon_down) }),
+                'mfi': v => ({ mfi: parseFloat(v.mfi) }),
+                'bbands': v => ({
+                    bb_upper: parseFloat(v.upper_band),
+                    bb_middle: parseFloat(v.middle_band),
+                    bb_lower: parseFloat(v.lower_band)
+                }),
+                'percent_b': v => ({ percent_b: parseFloat(v.percent_b) }),
+                'atr': v => ({ atr: parseFloat(v.atr) }),
+                'obv': v => ({ obv: parseInt(v.obv) }),
+                'vwap': v => ({ vwap: parseFloat(v.vwap) })
+            };
+
             indicators.forEach(ind => {
                 if (!ind || !ind.data) return;
                 const indValues = ind.data.data || ind.data.values || ind.data || [];
+                const mapper = indicatorFieldMap[ind.name];
+                if (!mapper) return;
 
                 indValues.forEach(v => {
                     const idx = dtMap[v.datetime];
                     if (idx !== undefined) {
-                        if (ind.name === 'rsi') {
-                            result[idx].rsi = parseFloat(v.rsi);
-                        } else if (ind.name === 'macd') {
-                            result[idx].macd = parseFloat(v.macd);
-                            result[idx].macd_signal = parseFloat(v.macd_signal);
-                            result[idx].macd_hist = parseFloat(v.macd_hist);
-                        } else if (ind.name === 'bbands') {
-                            result[idx].bb_upper = parseFloat(v.upper_band);
-                            result[idx].bb_middle = parseFloat(v.middle_band);
-                            result[idx].bb_lower = parseFloat(v.lower_band);
-                        } else if (ind.name === 'stoch') {
-                            result[idx].stoch_k = parseFloat(v.slow_k);
-                            result[idx].stoch_d = parseFloat(v.slow_d);
-                        } else if (ind.name === 'adx') {
-                            result[idx].adx = parseFloat(v.adx);
-                        } else if (ind.name === 'atr') {
-                            result[idx].atr = parseFloat(v.atr);
-                        } else if (ind.name === 'ema') {
-                            result[idx].ema = parseFloat(v.ema);
-                        } else if (ind.name === 'sma') {
-                            result[idx].sma = parseFloat(v.sma);
+                        try {
+                            Object.assign(result[idx], mapper(v));
+                        } catch (e) {
+                            // Skip invalid values
                         }
                     }
                 });
@@ -3093,72 +3391,285 @@
             const thead = document.getElementById('explorer-thead');
             const tbody = document.getElementById('explorer-tbody');
 
+            const sourceLabels = {
+                'easyinsight': 'EasyInsight',
+                'twelvedata': 'TwelveData',
+                'yfinance': 'Yahoo Finance'
+            };
+
             document.getElementById('explorer-title').textContent = `${symbol} - ${interval}`;
             document.getElementById('explorer-info').textContent =
-                `${explorerData.length} Datenpunkte | Quelle: ${source === 'twelvedata' ? 'TwelveData' : 'Yahoo Finance'}`;
+                `${explorerData.length} Datenpunkte | Quelle: ${sourceLabels[source] || source}`;
 
-            // Build header
+            // Common header cell style
+            const thStyle = 'padding: 8px 10px; text-align: right; white-space: nowrap; background: #1a1a2e; border-bottom: 2px solid #333;';
+            const thStyleHighlight = (color) => `${thStyle} background: linear-gradient(180deg, rgba(${color},0.15) 0%, #1a1a2e 100%);`;
+
+            // Build header - organized by category
             let headerHtml = '<tr>';
-            headerHtml += '<th style="position: sticky; left: 0; background: #1a1a2e; z-index: 1;">Datum/Zeit</th>';
-            headerHtml += '<th>Open</th><th>High</th><th>Low</th><th style="background: rgba(100,200,255,0.1);">Close</th>';
-            headerHtml += '<th>Volume</th>';
+            // First column is sticky both horizontally and vertically
+            headerHtml += `<th style="${thStyle} position: sticky; left: 0; z-index: 3; min-width: 160px; text-align: left;">Datum/Zeit</th>`;
 
-            if (indicators.includes('rsi')) headerHtml += '<th style="background: rgba(156,39,176,0.1);">RSI</th>';
-            if (indicators.includes('macd')) headerHtml += '<th>MACD</th><th>Signal</th><th>Hist</th>';
-            if (indicators.includes('bbands')) headerHtml += '<th>BB Upper</th><th>BB Mid</th><th>BB Lower</th>';
-            if (indicators.includes('stoch')) headerHtml += '<th>Stoch %K</th><th>Stoch %D</th>';
-            if (indicators.includes('adx')) headerHtml += '<th>ADX</th>';
-            if (indicators.includes('atr')) headerHtml += '<th>ATR</th>';
-            if (indicators.includes('ema')) headerHtml += '<th>EMA(20)</th>';
-            if (indicators.includes('sma')) headerHtml += '<th>SMA(20)</th>';
+            // Standard OHLC
+            headerHtml += `<th style="${thStyle}">Open</th><th style="${thStyle}">High</th><th style="${thStyle}">Low</th>`;
+            headerHtml += `<th style="${thStyleHighlight('100,200,255')}">Close</th>`;
+            if (source !== 'easyinsight') {
+                headerHtml += `<th style="${thStyle}">Volume</th>`;
+            }
+
+            // EasyInsight specific: Bid/Ask/Spread
+            if (indicators.includes('bidask')) {
+                headerHtml += `<th style="${thStyle}">Bid</th><th style="${thStyle}">Ask</th><th style="${thStyle}">Spread</th><th style="${thStyle}">Spread%</th>`;
+            }
+
+            // EasyInsight: M15 OHLC
+            if (indicators.includes('ohlc_m15')) {
+                headerHtml += `<th style="${thStyle}">M15 O</th><th style="${thStyle}">M15 H</th><th style="${thStyle}">M15 L</th><th style="${thStyle}">M15 C</th>`;
+            }
+
+            // EasyInsight: H1 OHLC
+            if (indicators.includes('ohlc_h1')) {
+                headerHtml += `<th style="${thStyle}">H1 O</th><th style="${thStyle}">H1 H</th><th style="${thStyle}">H1 L</th><th style="${thStyle}">H1 C</th>`;
+            }
+
+            // EasyInsight: D1 OHLC
+            if (indicators.includes('ohlc_d1')) {
+                headerHtml += `<th style="${thStyle}">D1 O</th><th style="${thStyle}">D1 H</th><th style="${thStyle}">D1 L</th><th style="${thStyle}">D1 C</th>`;
+            }
+
+            // EasyInsight: S1/R1 Levels
+            if (indicators.includes('sr_levels')) {
+                headerHtml += `<th style="${thStyleHighlight('255,87,34')}">S1 (M5)</th><th style="${thStyleHighlight('76,175,80')}">R1 (M5)</th>`;
+            }
+
+            // Trend indicators
+            if (indicators.includes('ma10')) headerHtml += `<th style="${thStyleHighlight('33,150,243')}">MA(10)</th>`;
+            if (indicators.includes('ema')) headerHtml += `<th style="${thStyleHighlight('33,150,243')}">EMA(20)</th>`;
+            if (indicators.includes('sma')) headerHtml += `<th style="${thStyleHighlight('33,150,243')}">SMA(20)</th>`;
+            if (indicators.includes('supertrend')) headerHtml += `<th style="${thStyleHighlight('33,150,243')}">Supertrend</th><th style="${thStyle}">Dir</th>`;
+            if (indicators.includes('ichimoku')) {
+                headerHtml += `<th style="${thStyle}">Tenkan</th><th style="${thStyle}">Kijun</th><th style="${thStyle}">Senkou A</th><th style="${thStyle}">Senkou B</th>`;
+                if (source === 'easyinsight') headerHtml += `<th style="${thStyle}">Chikou</th>`;
+            }
+            if (indicators.includes('ht_trendmode')) headerHtml += `<th style="${thStyle}">HT Trend</th>`;
+            if (indicators.includes('linearregslope')) headerHtml += `<th style="${thStyle}">LinReg Slope</th>`;
+
+            // Momentum indicators
+            if (indicators.includes('rsi')) headerHtml += `<th style="${thStyleHighlight('156,39,176')}">RSI</th>`;
+            if (indicators.includes('crsi')) headerHtml += `<th style="${thStyleHighlight('156,39,176')}">CRSI</th>`;
+            if (indicators.includes('cci')) headerHtml += `<th style="${thStyleHighlight('156,39,176')}">CCI</th>`;
+            if (indicators.includes('macd')) headerHtml += `<th style="${thStyle}">MACD</th><th style="${thStyle}">Signal</th>`;
+            if (source !== 'easyinsight' && indicators.includes('macd')) headerHtml += `<th style="${thStyle}">Hist</th>`;
+            if (indicators.includes('stoch')) headerHtml += `<th style="${thStyle}">Stoch %K</th><th style="${thStyle}">Stoch %D</th>`;
+            if (indicators.includes('willr')) headerHtml += `<th style="${thStyle}">Williams %R</th>`;
+            if (indicators.includes('adx')) {
+                headerHtml += `<th style="${thStyle}">ADX</th>`;
+                if (source === 'easyinsight') headerHtml += `<th style="${thStyle}">+DI</th><th style="${thStyle}">-DI</th>`;
+            }
+            if (indicators.includes('aroon')) headerHtml += `<th style="${thStyle}">Aroon Up</th><th style="${thStyle}">Aroon Down</th>`;
+            if (indicators.includes('mfi')) headerHtml += `<th style="${thStyle}">MFI</th>`;
+
+            // Volatility & Volume
+            if (indicators.includes('bbands')) headerHtml += `<th style="${thStyleHighlight('255,152,0')}">BB Upper</th><th style="${thStyle}">BB Mid</th><th style="${thStyleHighlight('255,152,0')}">BB Lower</th>`;
+            if (indicators.includes('percent_b')) headerHtml += `<th style="${thStyleHighlight('255,152,0')}">%B</th>`;
+            if (indicators.includes('atr')) {
+                if (source === 'easyinsight') {
+                    headerHtml += `<th style="${thStyle}">ATR D1</th><th style="${thStyle}">Range D1</th><th style="${thStyle}">ATR%</th>`;
+                } else {
+                    headerHtml += `<th style="${thStyle}">ATR</th>`;
+                }
+            }
+            if (indicators.includes('obv')) headerHtml += `<th style="${thStyle}">OBV</th>`;
+            if (indicators.includes('vwap')) headerHtml += `<th style="${thStyle}">VWAP</th>`;
+
+            // EasyInsight: Strength indicators
+            if (indicators.includes('strength')) {
+                headerHtml += `<th style="${thStyleHighlight('0,188,212')}">Str 4H</th><th style="${thStyle}">Str D1</th><th style="${thStyle}">Str W1</th>`;
+            }
+
             headerHtml += '</tr>';
             thead.innerHTML = headerHtml;
 
+            // Common cell styles
+            const tdStyle = 'padding: 6px 10px; text-align: right; font-family: monospace; white-space: nowrap; border-bottom: 1px solid #2a2a3e;';
+            const tdStyleSticky = `${tdStyle} position: sticky; left: 0; background: #1a1a2e; z-index: 1; text-align: left;`;
+
             // Build body
             let bodyHtml = '';
-            explorerData.forEach(row => {
+            explorerData.forEach((row, idx) => {
                 const changeColor = row.close >= row.open ? '#4caf50' : '#f44336';
+                const rowBg = idx % 2 === 0 ? '' : 'background: rgba(255,255,255,0.02);';
 
-                bodyHtml += '<tr>';
-                bodyHtml += `<td style="position: sticky; left: 0; background: #1a1a2e; white-space: nowrap; font-family: monospace;">${formatDateTime(row.datetime)}</td>`;
-                bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.open)}</td>`;
-                bodyHtml += `<td style="font-family: monospace; color: #4caf50;">${formatPrice(row.high)}</td>`;
-                bodyHtml += `<td style="font-family: monospace; color: #f44336;">${formatPrice(row.low)}</td>`;
-                bodyHtml += `<td style="font-family: monospace; background: rgba(100,200,255,0.05); color: ${changeColor}; font-weight: bold;">${formatPrice(row.close)}</td>`;
-                bodyHtml += `<td style="font-family: monospace; color: #888;">${row.volume ? row.volume.toLocaleString() : '-'}</td>`;
+                bodyHtml += `<tr style="${rowBg}">`;
+                // Format datetime for display
+                const dtDisplay = formatDateTime(row.datetime);
+                bodyHtml += `<td style="${tdStyleSticky}">${dtDisplay}</td>`;
 
+                // Standard OHLC
+                bodyHtml += `<td style="${tdStyle}">${formatPrice(row.open)}</td>`;
+                bodyHtml += `<td style="${tdStyle} color: #4caf50;">${formatPrice(row.high)}</td>`;
+                bodyHtml += `<td style="${tdStyle} color: #f44336;">${formatPrice(row.low)}</td>`;
+                bodyHtml += `<td style="${tdStyle} background: rgba(100,200,255,0.05); color: ${changeColor}; font-weight: bold;">${formatPrice(row.close)}</td>`;
+
+                if (source !== 'easyinsight') {
+                    bodyHtml += `<td style="${tdStyle} color: #888;">${row.volume ? row.volume.toLocaleString() : '-'}</td>`;
+                }
+
+                // EasyInsight: Bid/Ask/Spread
+                if (indicators.includes('bidask')) {
+                    bodyHtml += `<td style="${tdStyle} color: #4caf50;">${formatPrice(row.bid)}</td>`;
+                    bodyHtml += `<td style="${tdStyle} color: #f44336;">${formatPrice(row.ask)}</td>`;
+                    bodyHtml += `<td style="${tdStyle} color: #888;">${row.spread?.toFixed(5) || '-'}</td>`;
+                    bodyHtml += `<td style="${tdStyle} color: #888;">${row.spread_pct?.toFixed(4) || '-'}%</td>`;
+                }
+
+                // EasyInsight: M15 OHLC
+                if (indicators.includes('ohlc_m15')) {
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.m15_open)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.m15_high)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.m15_low)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.m15_close)}</td>`;
+                }
+
+                // EasyInsight: H1 OHLC
+                if (indicators.includes('ohlc_h1')) {
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.h1_open)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.h1_high)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.h1_low)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.h1_close)}</td>`;
+                }
+
+                // EasyInsight: D1 OHLC
+                if (indicators.includes('ohlc_d1')) {
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.d1_open)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.d1_high)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.d1_low)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.d1_close)}</td>`;
+                }
+
+                // EasyInsight: S1/R1 Levels
+                if (indicators.includes('sr_levels')) {
+                    bodyHtml += `<td style="${tdStyle} background: rgba(255,87,34,0.05); color: #ff5722;">${formatPrice(row.s1_level)}</td>`;
+                    bodyHtml += `<td style="${tdStyle} background: rgba(76,175,80,0.05); color: #4caf50;">${formatPrice(row.r1_level)}</td>`;
+                }
+
+                // Trend indicators
+                if (indicators.includes('ma10')) {
+                    bodyHtml += `<td style="${tdStyle} background: rgba(33,150,243,0.03);">${formatPrice(row.ma10)}</td>`;
+                }
+                if (indicators.includes('ema')) {
+                    bodyHtml += `<td style="${tdStyle} background: rgba(33,150,243,0.03);">${formatPrice(row.ema)}</td>`;
+                }
+                if (indicators.includes('sma')) {
+                    bodyHtml += `<td style="${tdStyle} background: rgba(33,150,243,0.03);">${formatPrice(row.sma)}</td>`;
+                }
+                if (indicators.includes('supertrend')) {
+                    const stColor = row.supertrend_dir === 'up' ? '#4caf50' : '#f44336';
+                    bodyHtml += `<td style="${tdStyle} background: rgba(33,150,243,0.03);">${formatPrice(row.supertrend)}</td>`;
+                    bodyHtml += `<td style="${tdStyle} color: ${stColor};">${row.supertrend_dir || '-'}</td>`;
+                }
+                if (indicators.includes('ichimoku')) {
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_tenkan)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_kijun)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_senkou_a)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_senkou_b)}</td>`;
+                    if (source === 'easyinsight') {
+                        bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_chikou)}</td>`;
+                    }
+                }
+                if (indicators.includes('ht_trendmode')) {
+                    const htColor = row.ht_trend === 1 ? '#4caf50' : '#f44336';
+                    bodyHtml += `<td style="${tdStyle} color: ${htColor};">${row.ht_trend !== undefined ? row.ht_trend : '-'}</td>`;
+                }
+                if (indicators.includes('linearregslope')) {
+                    const slopeColor = row.linreg_slope > 0 ? '#4caf50' : '#f44336';
+                    bodyHtml += `<td style="${tdStyle} color: ${slopeColor};">${row.linreg_slope?.toFixed(6) || '-'}</td>`;
+                }
+
+                // Momentum indicators
                 if (indicators.includes('rsi')) {
                     const rsiColor = row.rsi > 70 ? '#f44336' : (row.rsi < 30 ? '#4caf50' : '#ffc107');
-                    bodyHtml += `<td style="font-family: monospace; background: rgba(156,39,176,0.05); color: ${rsiColor};">${row.rsi?.toFixed(2) || '-'}</td>`;
+                    bodyHtml += `<td style="${tdStyle} background: rgba(156,39,176,0.05); color: ${rsiColor};">${row.rsi?.toFixed(2) || '-'}</td>`;
+                }
+                if (indicators.includes('crsi')) {
+                    const crsiColor = row.crsi > 80 ? '#f44336' : (row.crsi < 20 ? '#4caf50' : '#ffc107');
+                    bodyHtml += `<td style="${tdStyle} background: rgba(156,39,176,0.05); color: ${crsiColor};">${row.crsi?.toFixed(2) || '-'}</td>`;
+                }
+                if (indicators.includes('cci')) {
+                    const cciColor = row.cci > 100 ? '#f44336' : (row.cci < -100 ? '#4caf50' : '#ffc107');
+                    bodyHtml += `<td style="${tdStyle} background: rgba(156,39,176,0.05); color: ${cciColor};">${row.cci?.toFixed(2) || '-'}</td>`;
                 }
                 if (indicators.includes('macd')) {
                     const macdColor = row.macd_hist > 0 ? '#4caf50' : '#f44336';
-                    bodyHtml += `<td style="font-family: monospace;">${row.macd?.toFixed(5) || '-'}</td>`;
-                    bodyHtml += `<td style="font-family: monospace;">${row.macd_signal?.toFixed(5) || '-'}</td>`;
-                    bodyHtml += `<td style="font-family: monospace; color: ${macdColor};">${row.macd_hist?.toFixed(5) || '-'}</td>`;
-                }
-                if (indicators.includes('bbands')) {
-                    bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.bb_upper)}</td>`;
-                    bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.bb_middle)}</td>`;
-                    bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.bb_lower)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${row.macd?.toFixed(5) || '-'}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${row.macd_signal?.toFixed(5) || '-'}</td>`;
+                    if (source !== 'easyinsight') {
+                        bodyHtml += `<td style="${tdStyle} color: ${macdColor};">${row.macd_hist?.toFixed(5) || '-'}</td>`;
+                    }
                 }
                 if (indicators.includes('stoch')) {
-                    bodyHtml += `<td style="font-family: monospace;">${row.stoch_k?.toFixed(2) || '-'}</td>`;
-                    bodyHtml += `<td style="font-family: monospace;">${row.stoch_d?.toFixed(2) || '-'}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${row.stoch_k?.toFixed(2) || '-'}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${row.stoch_d?.toFixed(2) || '-'}</td>`;
+                }
+                if (indicators.includes('willr')) {
+                    const willrColor = row.willr < -80 ? '#4caf50' : (row.willr > -20 ? '#f44336' : '#ffc107');
+                    bodyHtml += `<td style="${tdStyle} color: ${willrColor};">${row.willr?.toFixed(2) || '-'}</td>`;
                 }
                 if (indicators.includes('adx')) {
                     const adxColor = row.adx > 25 ? '#4caf50' : '#888';
-                    bodyHtml += `<td style="font-family: monospace; color: ${adxColor};">${row.adx?.toFixed(2) || '-'}</td>`;
+                    bodyHtml += `<td style="${tdStyle} color: ${adxColor};">${row.adx?.toFixed(2) || '-'}</td>`;
+                    // EasyInsight also has +DI/-DI
+                    if (source === 'easyinsight') {
+                        bodyHtml += `<td style="${tdStyle} color: #4caf50;">${row.adx_plus?.toFixed(2) || '-'}</td>`;
+                        bodyHtml += `<td style="${tdStyle} color: #f44336;">${row.adx_minus?.toFixed(2) || '-'}</td>`;
+                    }
+                }
+                if (indicators.includes('aroon')) {
+                    bodyHtml += `<td style="${tdStyle} color: #4caf50;">${row.aroon_up?.toFixed(2) || '-'}</td>`;
+                    bodyHtml += `<td style="${tdStyle} color: #f44336;">${row.aroon_down?.toFixed(2) || '-'}</td>`;
+                }
+                if (indicators.includes('mfi')) {
+                    const mfiColor = row.mfi > 80 ? '#f44336' : (row.mfi < 20 ? '#4caf50' : '#ffc107');
+                    bodyHtml += `<td style="${tdStyle} color: ${mfiColor};">${row.mfi?.toFixed(2) || '-'}</td>`;
+                }
+
+                // Volatility & Volume
+                if (indicators.includes('bbands')) {
+                    bodyHtml += `<td style="${tdStyle} background: rgba(255,152,0,0.03);">${formatPrice(row.bb_upper)}</td>`;
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.bb_middle)}</td>`;
+                    bodyHtml += `<td style="${tdStyle} background: rgba(255,152,0,0.03);">${formatPrice(row.bb_lower)}</td>`;
+                }
+                if (indicators.includes('percent_b')) {
+                    const pbColor = row.percent_b > 1 ? '#f44336' : (row.percent_b < 0 ? '#4caf50' : '#ffc107');
+                    bodyHtml += `<td style="${tdStyle} background: rgba(255,152,0,0.03); color: ${pbColor};">${row.percent_b?.toFixed(4) || '-'}</td>`;
                 }
                 if (indicators.includes('atr')) {
-                    bodyHtml += `<td style="font-family: monospace;">${row.atr?.toFixed(5) || '-'}</td>`;
+                    if (source === 'easyinsight') {
+                        bodyHtml += `<td style="${tdStyle}">${row.atr_d1?.toFixed(5) || '-'}</td>`;
+                        bodyHtml += `<td style="${tdStyle}">${row.range_d1?.toFixed(5) || '-'}</td>`;
+                        bodyHtml += `<td style="${tdStyle}">${row.atr_pct_d1?.toFixed(2) || '-'}%</td>`;
+                    } else {
+                        bodyHtml += `<td style="${tdStyle}">${row.atr?.toFixed(5) || '-'}</td>`;
+                    }
                 }
-                if (indicators.includes('ema')) {
-                    bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.ema)}</td>`;
+                if (indicators.includes('obv')) {
+                    const obvColor = row.obv > 0 ? '#4caf50' : '#f44336';
+                    bodyHtml += `<td style="${tdStyle} color: ${obvColor};">${row.obv?.toLocaleString() || '-'}</td>`;
                 }
-                if (indicators.includes('sma')) {
-                    bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.sma)}</td>`;
+                if (indicators.includes('vwap')) {
+                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.vwap)}</td>`;
                 }
+
+                // EasyInsight: Strength indicators
+                if (indicators.includes('strength')) {
+                    const str4hColor = row.strength_4h > 0 ? '#4caf50' : (row.strength_4h < 0 ? '#f44336' : '#888');
+                    const str1dColor = row.strength_1d > 0 ? '#4caf50' : (row.strength_1d < 0 ? '#f44336' : '#888');
+                    const str1wColor = row.strength_1w > 0 ? '#4caf50' : (row.strength_1w < 0 ? '#f44336' : '#888');
+                    bodyHtml += `<td style="${tdStyle} background: rgba(0,188,212,0.05); color: ${str4hColor};">${row.strength_4h?.toFixed(2) || '-'}</td>`;
+                    bodyHtml += `<td style="${tdStyle} color: ${str1dColor};">${row.strength_1d?.toFixed(2) || '-'}</td>`;
+                    bodyHtml += `<td style="${tdStyle} color: ${str1wColor};">${row.strength_1w?.toFixed(2) || '-'}</td>`;
+                }
+
                 bodyHtml += '</tr>';
             });
             tbody.innerHTML = bodyHtml;
