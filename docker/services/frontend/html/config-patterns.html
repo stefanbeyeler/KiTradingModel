@@ -281,116 +281,81 @@
         .badge-h4 { background: rgba(103, 58, 183, 0.2); color: #b39ddb; }
         .badge-d1 { background: rgba(255, 87, 34, 0.2); color: #ff8a65; }
 
-        /* Favorites List - Two Columns */
-        .favorites-list {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem 1.5rem;
+        /* Favorites Table */
+        .favorites-table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        @media (max-width: 1200px) {
-            .favorites-list {
-                grid-template-columns: 1fr;
-            }
+        .favorites-table th {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .favorite-row {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.4rem 0.6rem;
+        .favorites-table td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .favorites-table tr:hover td {
             background: rgba(0, 0, 0, 0.15);
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.15s;
         }
 
-        .favorite-row:hover {
-            background: rgba(0, 0, 0, 0.25);
-            border-color: rgba(100, 200, 255, 0.2);
-        }
-
-        .favorite-row.no-pattern {
+        .favorites-table tr.no-pattern td {
             opacity: 0.5;
         }
 
-        .favorite-symbol {
+        .favorites-table .col-symbol {
             font-weight: 600;
             color: #fff;
-            min-width: 70px;
-            font-size: 0.85rem;
         }
 
-        .favorite-pattern-name {
+        .favorites-table .col-category {
+            font-size: 0.75rem;
+        }
+
+        .favorites-table .col-category.forex { color: #64b5f6; }
+        .favorites-table .col-category.crypto { color: #ffb74d; }
+        .favorites-table .col-category.index { color: #ce93d8; }
+        .favorites-table .col-category.commodity { color: #a5d6a7; }
+        .favorites-table .col-category.other { color: #90a4ae; }
+
+        .favorites-table .col-pattern {
             color: #64c8ff;
-            font-size: 0.8rem;
-            min-width: 140px;
         }
 
-        .favorite-badges {
+        .favorites-table .col-badges {
             display: flex;
             gap: 0.3rem;
             flex-wrap: wrap;
         }
 
-        .favorite-badges .badge {
+        .favorites-table .col-badges .badge {
             font-size: 0.7rem;
             padding: 0.15rem 0.4rem;
         }
 
-        .favorite-confidence-mini {
-            font-size: 0.75rem;
+        .favorites-table .col-confidence {
             color: #aaa;
-            min-width: 45px;
             text-align: right;
         }
 
-        .favorite-time {
-            font-size: 0.7rem;
+        .favorites-table .col-time {
+            font-size: 0.75rem;
             color: #666;
-            min-width: 70px;
             text-align: right;
         }
 
-        .favorite-no-pattern-text {
+        .favorites-table .no-pattern-text {
             color: #555;
             font-style: italic;
-            font-size: 0.75rem;
-        }
-
-        .favorites-category {
-            margin-bottom: 0.75rem;
-        }
-
-        .favorites-category:last-child {
-            margin-bottom: 0;
-        }
-
-        .favorites-category-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.3rem 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #888;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 0.25rem;
-        }
-
-        .favorites-category-header.forex { color: #64b5f6; border-color: rgba(100, 181, 246, 0.3); }
-        .favorites-category-header.crypto { color: #ffb74d; border-color: rgba(255, 183, 77, 0.3); }
-        .favorites-category-header.index { color: #ce93d8; border-color: rgba(206, 147, 216, 0.3); }
-        .favorites-category-header.commodity { color: #a5d6a7; border-color: rgba(165, 214, 167, 0.3); }
-        .favorites-category-header.other { color: #90a4ae; border-color: rgba(144, 164, 174, 0.3); }
-
-        .favorites-category-count {
-            font-size: 0.7rem;
-            padding: 0.1rem 0.4rem;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
         }
 
         /* Scan Status */
@@ -512,70 +477,180 @@
         .confidence-fill.medium { background: #ffc107; }
         .confidence-fill.low { background: #e57373; }
 
-        /* Pattern name styling */
-        .pattern-name {
-            font-weight: 500;
-            color: #fff;
-            cursor: help;
-            position: relative;
-        }
-
-        /* Tooltip styling - simple fixed positioning */
-        .pattern-tooltip {
-            position: relative;
-            display: inline-block;
-            cursor: help;
-        }
-
-        .pattern-tooltip .tooltip-content {
-            display: none;
-            width: 320px;
-            background: rgba(20, 20, 40, 0.98);
-            color: #e8e8e8;
-            text-align: left;
-            border-radius: 8px;
-            padding: 12px 14px;
-            position: fixed;
-            z-index: 9999;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(100, 200, 255, 0.3);
-            font-size: 0.85rem;
-            line-height: 1.5;
-            pointer-events: none;
-        }
-
-        .pattern-tooltip .tooltip-content.visible {
-            display: block;
-        }
-
-        .tooltip-title {
+        /* Pattern Link */
+        .pattern-link {
             color: #64c8ff;
+            text-decoration: none;
+            cursor: pointer;
+            border-bottom: 1px dashed rgba(100, 200, 255, 0.4);
+            transition: all 0.2s;
+        }
+
+        .pattern-link:hover {
+            color: #90d8ff;
+            border-bottom-color: #90d8ff;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 5000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-title {
+            color: #64c8ff;
+            font-size: 1.2rem;
             font-weight: 600;
-            font-size: 0.95rem;
-            margin-bottom: 6px;
-            display: block;
         }
 
-        .tooltip-description {
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+        }
+
+        .modal-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .modal-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .modal-section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-description {
             color: #ccc;
-            margin-bottom: 8px;
-            display: block;
+            line-height: 1.6;
         }
 
-        .tooltip-implication {
-            color: #81c784;
+        .modal-implication {
+            padding: 0.75rem;
+            border-radius: 6px;
             font-style: italic;
-            display: block;
-            padding-top: 6px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .tooltip-implication.bearish {
+        .modal-implication.bullish {
+            background: rgba(76, 175, 80, 0.15);
+            color: #81c784;
+            border-left: 3px solid #81c784;
+        }
+
+        .modal-implication.bearish {
+            background: rgba(244, 67, 54, 0.15);
             color: #e57373;
+            border-left: 3px solid #e57373;
         }
 
-        .tooltip-implication.neutral {
+        .modal-implication.neutral {
+            background: rgba(255, 152, 0, 0.15);
             color: #ffb74d;
+            border-left: 3px solid #ffb74d;
+        }
+
+        /* Pattern Visual */
+        .pattern-visual {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 4px;
+            height: 100px;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .candle {
+            width: 20px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .candle-wick {
+            width: 2px;
+            background: #666;
+        }
+
+        .candle-body {
+            width: 14px;
+            min-height: 8px;
+            border-radius: 2px;
+        }
+
+        .candle-body.bullish {
+            background: #81c784;
+        }
+
+        .candle-body.bearish {
+            background: #e57373;
+        }
+
+        .candle-body.doji {
+            background: #888;
+            height: 3px !important;
+            min-height: 3px;
+        }
+
+        .modal-badges {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .modal-badges .badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.6rem;
         }
 
         /* Responsive */
@@ -667,11 +742,29 @@
             <div class="card-header">
                 <h2 class="card-title">Favoriten - Aktuelle Patterns (max. 4h)</h2>
             </div>
-            <div class="favorites-list" id="favoritesList">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Lade Favoriten...</p>
-                </div>
+            <div class="table-container">
+                <table class="favorites-table" id="favoritesTable">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Kategorie</th>
+                            <th>Pattern</th>
+                            <th>Richtung</th>
+                            <th>Stärke</th>
+                            <th>Timeframe</th>
+                            <th style="text-align: right;">Konfidenz</th>
+                            <th style="text-align: right;">Zeit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="favoritesBody">
+                        <tr>
+                            <td colspan="8" class="loading">
+                                <div class="spinner"></div>
+                                <p>Lade Favoriten...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -1142,75 +1235,161 @@
             }
         }
 
-        // Tooltip positioning - ensures tooltip is always visible
-        let activeTooltip = null;
+        // Pattern visuals - SVG-like candle representations
+        const patternVisuals = {
+            'hammer': [
+                { wick: 30, body: 15, type: 'bullish' }
+            ],
+            'inverted_hammer': [
+                { wickTop: 30, body: 15, type: 'bullish' }
+            ],
+            'shooting_star': [
+                { wickTop: 30, body: 15, type: 'bearish' }
+            ],
+            'hanging_man': [
+                { wick: 30, body: 15, type: 'bearish' }
+            ],
+            'bullish_engulfing': [
+                { body: 20, type: 'bearish' },
+                { body: 35, type: 'bullish' }
+            ],
+            'bearish_engulfing': [
+                { body: 20, type: 'bullish' },
+                { body: 35, type: 'bearish' }
+            ],
+            'morning_star': [
+                { body: 30, type: 'bearish' },
+                { body: 10, type: 'doji' },
+                { body: 30, type: 'bullish' }
+            ],
+            'evening_star': [
+                { body: 30, type: 'bullish' },
+                { body: 10, type: 'doji' },
+                { body: 30, type: 'bearish' }
+            ],
+            'doji': [
+                { wickTop: 20, wick: 20, body: 3, type: 'doji' }
+            ],
+            'dragonfly_doji': [
+                { wick: 35, body: 3, type: 'doji' }
+            ],
+            'gravestone_doji': [
+                { wickTop: 35, body: 3, type: 'doji' }
+            ],
+            'three_white_soldiers': [
+                { body: 25, type: 'bullish' },
+                { body: 28, type: 'bullish' },
+                { body: 30, type: 'bullish' }
+            ],
+            'three_black_crows': [
+                { body: 30, type: 'bearish' },
+                { body: 28, type: 'bearish' },
+                { body: 25, type: 'bearish' }
+            ],
+            'bullish_harami': [
+                { body: 35, type: 'bearish' },
+                { body: 15, type: 'bullish' }
+            ],
+            'bearish_harami': [
+                { body: 35, type: 'bullish' },
+                { body: 15, type: 'bearish' }
+            ],
+            'spinning_top': [
+                { wickTop: 20, wick: 20, body: 12, type: 'neutral' }
+            ],
+            'dark_cloud_cover': [
+                { body: 30, type: 'bullish' },
+                { body: 25, type: 'bearish' }
+            ],
+            'piercing_line': [
+                { body: 30, type: 'bearish' },
+                { body: 25, type: 'bullish' }
+            ],
+            'harami_cross': [
+                { body: 30, type: 'bearish' },
+                { wickTop: 15, wick: 15, body: 3, type: 'doji' }
+            ],
+            'rising_three_methods': [
+                { body: 35, type: 'bullish' },
+                { body: 10, type: 'bearish' },
+                { body: 10, type: 'bearish' },
+                { body: 10, type: 'bearish' },
+                { body: 38, type: 'bullish' }
+            ],
+            'falling_three_methods': [
+                { body: 35, type: 'bearish' },
+                { body: 10, type: 'bullish' },
+                { body: 10, type: 'bullish' },
+                { body: 10, type: 'bullish' },
+                { body: 38, type: 'bearish' }
+            ]
+        };
 
-        function setupTooltipPositioning() {
-            // Show tooltip on mouseenter
-            document.addEventListener('mouseenter', (e) => {
-                const trigger = e.target.closest('.pattern-tooltip');
-                if (!trigger) return;
+        // Generate candle HTML
+        function generateCandleHTML(candle) {
+            const wickTop = candle.wickTop || 5;
+            const wickBottom = candle.wick || 5;
+            const bodyHeight = candle.body || 20;
+            const bodyClass = candle.type === 'doji' ? 'doji' :
+                             candle.type === 'neutral' ? 'bullish' : candle.type;
 
-                const tooltip = trigger.querySelector('.tooltip-content');
-                if (!tooltip) return;
+            return `
+                <div class="candle">
+                    <div class="candle-wick" style="height: ${wickTop}px;"></div>
+                    <div class="candle-body ${bodyClass}" style="height: ${bodyHeight}px;"></div>
+                    <div class="candle-wick" style="height: ${wickBottom}px;"></div>
+                </div>
+            `;
+        }
 
-                // Hide any other active tooltip
-                if (activeTooltip && activeTooltip !== tooltip) {
-                    activeTooltip.classList.remove('visible');
+        // Generate pattern visual
+        function generatePatternVisual(patternType) {
+            const candles = patternVisuals[patternType];
+            if (!candles) {
+                return '<div class="pattern-visual"><span style="color: #666;">Keine Vorschau verfügbar</span></div>';
+            }
+
+            const candlesHTML = candles.map(c => generateCandleHTML(c)).join('');
+            return `<div class="pattern-visual">${candlesHTML}</div>`;
+        }
+
+        // Show pattern modal
+        function showPatternModal(patternType, direction) {
+            const info = getPatternInfo(patternType);
+            const implClass = direction === 'bullish' ? 'bullish' :
+                             direction === 'bearish' ? 'bearish' : 'neutral';
+
+            const modal = document.getElementById('patternModal');
+            document.getElementById('modalPatternName').textContent = info.name;
+            document.getElementById('modalPatternVisual').innerHTML = generatePatternVisual(patternType);
+            document.getElementById('modalPatternDescription').textContent = info.description;
+
+            const implEl = document.getElementById('modalPatternImplication');
+            implEl.textContent = info.implication;
+            implEl.className = 'modal-implication ' + implClass;
+
+            modal.classList.add('show');
+        }
+
+        // Close modal
+        function closePatternModal() {
+            document.getElementById('patternModal').classList.remove('show');
+        }
+
+        // Setup modal events
+        function setupModal() {
+            const modal = document.getElementById('patternModal');
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closePatternModal();
                 }
+            });
 
-                // Show tooltip to measure it
-                tooltip.classList.add('visible');
-                activeTooltip = tooltip;
-
-                // Get dimensions
-                const triggerRect = trigger.getBoundingClientRect();
-                const tooltipRect = tooltip.getBoundingClientRect();
-                const margin = 8;
-
-                // Calculate position - try to show above first
-                let top = triggerRect.top - tooltipRect.height - margin;
-                let left = triggerRect.left + (triggerRect.width / 2) - (tooltipRect.width / 2);
-
-                // If too high, show below
-                if (top < margin) {
-                    top = triggerRect.bottom + margin;
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closePatternModal();
                 }
-
-                // If still outside viewport (bottom), clamp to visible area
-                if (top + tooltipRect.height > window.innerHeight - margin) {
-                    top = window.innerHeight - tooltipRect.height - margin;
-                }
-
-                // Clamp top to minimum
-                if (top < margin) {
-                    top = margin;
-                }
-
-                // Horizontal bounds
-                if (left < margin) {
-                    left = margin;
-                } else if (left + tooltipRect.width > window.innerWidth - margin) {
-                    left = window.innerWidth - tooltipRect.width - margin;
-                }
-
-                tooltip.style.top = `${top}px`;
-                tooltip.style.left = `${left}px`;
-            }, true);
-
-            // Hide tooltip on mouseleave
-            document.addEventListener('mouseleave', (e) => {
-                const trigger = e.target.closest('.pattern-tooltip');
-                if (!trigger) return;
-
-                const tooltip = trigger.querySelector('.tooltip-content');
-                if (tooltip) {
-                    tooltip.classList.remove('visible');
-                    if (activeTooltip === tooltip) {
-                        activeTooltip = null;
-                    }
-                }
-            }, true);
+            });
         }
 
         // Load favorite symbols from API (with category info)
@@ -1240,81 +1419,70 @@
             return symbolPatterns.length > 0 ? symbolPatterns[0] : null;
         }
 
-        // Render favorites as compact list grouped by asset category
+        // Category labels
+        const categoryLabels = {
+            forex: 'Forex',
+            crypto: 'Crypto',
+            index: 'Index',
+            commodity: 'Commodity',
+            other: 'Andere'
+        };
+
+        // Render favorites as table
         async function renderFavoritesGrid() {
-            const list = document.getElementById('favoritesList');
+            const tbody = document.getElementById('favoritesBody');
             const favorites = await loadFavoriteSymbols();
 
             if (favorites.length === 0) {
-                list.innerHTML = `<div class="empty-state"><p>Keine Favoriten-Symbole konfiguriert</p></div>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><p>Keine Favoriten-Symbole konfiguriert</p></td></tr>`;
                 return;
             }
 
-            // Group symbols by asset category
-            const groups = { forex: [], crypto: [], index: [], commodity: [], other: [] };
-
-            favorites.forEach(({ symbol, category }) => {
+            // Build rows with pattern data
+            const rows = favorites.map(({ symbol, category }) => {
                 const pattern = getLatestPatternForSymbol(symbol, allPatterns);
-                const cat = groups[category] ? category : 'other';
-                groups[cat].push({ symbol, pattern });
+                return { symbol, category, pattern };
             });
 
-            // Sort each group by symbol name
-            Object.keys(groups).forEach(cat => {
-                groups[cat].sort((a, b) => a.symbol.localeCompare(b.symbol));
+            // Sort by category, then symbol
+            const categoryOrder = ['forex', 'crypto', 'index', 'commodity', 'other'];
+            rows.sort((a, b) => {
+                const catA = categoryOrder.indexOf(a.category) >= 0 ? categoryOrder.indexOf(a.category) : 99;
+                const catB = categoryOrder.indexOf(b.category) >= 0 ? categoryOrder.indexOf(b.category) : 99;
+                if (catA !== catB) return catA - catB;
+                return a.symbol.localeCompare(b.symbol);
             });
 
-            // Render row helper
-            const renderRow = (symbol, pattern) => {
+            // Render table rows
+            let html = '';
+            for (const { symbol, category, pattern } of rows) {
                 if (pattern) {
                     const info = getPatternInfo(pattern.pattern_type);
                     const timeAgo = getTimeAgo(pattern.timestamp);
-                    return `
-                        <div class="favorite-row">
-                            <span class="favorite-symbol">${symbol}</span>
-                            <span class="favorite-pattern-name">${info.name}</span>
-                            <div class="favorite-badges">
-                                <span class="badge badge-${pattern.direction}">${pattern.direction}</span>
-                                <span class="badge badge-${pattern.strength}">${pattern.strength}</span>
-                                <span class="badge badge-${pattern.timeframe.toLowerCase()}">${pattern.timeframe}</span>
-                            </div>
-                            <span class="favorite-confidence-mini">${Math.round(pattern.confidence * 100)}%</span>
-                            <span class="favorite-time">${timeAgo}</span>
-                        </div>
+                    html += `
+                        <tr>
+                            <td class="col-symbol">${symbol}</td>
+                            <td class="col-category ${category}">${categoryLabels[category] || category}</td>
+                            <td><a class="pattern-link" onclick="showPatternModal('${pattern.pattern_type}', '${pattern.direction}')">${info.name}</a></td>
+                            <td><span class="badge badge-${pattern.direction}">${pattern.direction}</span></td>
+                            <td><span class="badge badge-${pattern.strength}">${pattern.strength}</span></td>
+                            <td><span class="badge badge-${pattern.timeframe.toLowerCase()}">${pattern.timeframe}</span></td>
+                            <td class="col-confidence">${Math.round(pattern.confidence * 100)}%</td>
+                            <td class="col-time">${timeAgo}</td>
+                        </tr>
                     `;
                 } else {
-                    return `
-                        <div class="favorite-row no-pattern">
-                            <span class="favorite-symbol">${symbol}</span>
-                            <span class="favorite-no-pattern-text">—</span>
-                        </div>
+                    html += `
+                        <tr class="no-pattern">
+                            <td class="col-symbol">${symbol}</td>
+                            <td class="col-category ${category}">${categoryLabels[category] || category}</td>
+                            <td colspan="6" class="no-pattern-text">— Kein Pattern in den letzten 4h</td>
+                        </tr>
                     `;
                 }
-            };
+            }
 
-            // Render category helper
-            const renderCategory = (items, label, cssClass) => {
-                if (items.length === 0) return '';
-                const rows = items.map(({ symbol, pattern }) => renderRow(symbol, pattern)).join('');
-                return `
-                    <div class="favorites-category">
-                        <div class="favorites-category-header ${cssClass}">
-                            ${label}
-                            <span class="favorites-category-count">${items.length}</span>
-                        </div>
-                        ${rows}
-                    </div>
-                `;
-            };
-
-            let html = '';
-            html += renderCategory(groups.forex, 'Forex', 'forex');
-            html += renderCategory(groups.crypto, 'Crypto', 'crypto');
-            html += renderCategory(groups.index, 'Indizes', 'index');
-            html += renderCategory(groups.commodity, 'Commodities', 'commodity');
-            html += renderCategory(groups.other, 'Andere', 'other');
-
-            list.innerHTML = html;
+            tbody.innerHTML = html;
         }
 
         // Get human-readable time ago
@@ -1333,7 +1501,7 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
-            setupTooltipPositioning();
+            setupModal();
             await loadStatistics();
             await loadPatterns();
             await renderFavoritesGrid();
@@ -1346,5 +1514,29 @@
             }, 30000);
         });
     </script>
+
+    <!-- Pattern Modal -->
+    <div class="modal-overlay" id="patternModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalPatternName">Pattern Name</h3>
+                <button class="modal-close" onclick="closePatternModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <div class="modal-section-title">Visuelle Darstellung</div>
+                    <div id="modalPatternVisual"></div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">Beschreibung</div>
+                    <div class="modal-description" id="modalPatternDescription"></div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">Trading-Implikation</div>
+                    <div class="modal-implication" id="modalPatternImplication"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
