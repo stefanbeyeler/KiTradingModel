@@ -744,7 +744,6 @@
             <h1>KI Trading Model</h1>
             <div class="header-status">
                 <span id="services-count">Services: -/5</span>
-                <span id="models-count">Modelle: -</span>
                 <span id="last-update">Update: -</span>
             </div>
         </div>
@@ -1062,14 +1061,6 @@
                 document.getElementById('nhits-training').textContent = data.training_in_progress ? 'Aktiv' : 'Inaktiv';
             }
 
-            // Get models count
-            try {
-                const res = await fetch('/nhits/api/v1/forecast/models/by-timeframe');
-                const data = await res.json();
-                document.getElementById('models-count').textContent = `Modelle: ${data.total_models}`;
-            } catch (err) {
-                console.error('Failed to fetch model count:', err);
-            }
         }
 
         async function updateLlmInfo() {
