@@ -26,6 +26,7 @@ asyncpg>=0.29.0
 
 # Market Data APIs
 twelvedata>=1.2.0
+yfinance>=0.2.36
 
 # Data Processing
 pandas>=2.0.0
