@@ -935,6 +935,16 @@
                 return matchSearch && matchTf;
             });
 
+            // Sort by 1. Symbol, 2. Timeframe (M15, H1, D1)
+            const timeframeOrder = { 'M15': 1, 'H1': 2, 'D1': 3, 'default': 2 };
+            filtered.sort((a, b) => {
+                // First sort by symbol alphabetically
+                const symbolCompare = a.symbol.localeCompare(b.symbol);
+                if (symbolCompare !== 0) return symbolCompare;
+                // Then sort by timeframe order
+                return (timeframeOrder[a.timeframeKey] || 99) - (timeframeOrder[b.timeframeKey] || 99);
+            });
+
             const tbody = document.getElementById('models-tbody');
             if (filtered.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; opacity: 0.5;">Keine Modelle gefunden</td></tr>';
@@ -976,17 +986,32 @@
         async function trainSingle(symbol, timeframe) {
             try {
                 const tf = timeframe === 'default' ? 'H1' : timeframe;
-                showToast(`Training ${symbol}/${tf}...`);
-                const res = await fetch(`${API_BASE}/forecast/${symbol}/train?timeframe=${tf}&force=true`, { method: 'POST' });
+                showToast(`Training ${symbol}/${tf} gestartet... (kann bis zu 60s dauern)`, 60000);
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+
+                const res = await fetch(`${API_BASE}/forecast/${symbol}/train?timeframe=${tf}&force=true`, {
+                    method: 'POST',
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
                 const data = await res.json();
 
                 if (data.success) {
-                    showToast(`${symbol}/${tf} erfolgreich trainiert`);
+                    const duration = data.training_duration_seconds ? ` (${Math.round(data.training_duration_seconds)}s)` : '';
+                    showToast(`✓ ${symbol}/${tf} erfolgreich trainiert${duration}`);
+                    loadModels(); // Refresh models list
                 } else {
-                    showToast(`Fehler: ${data.error_message || 'Unbekannt'}`);
+                    showToast(`✗ Fehler: ${data.error_message || 'Unbekannt'}`);
                 }
             } catch (err) {
-                showToast('Fehler beim Training');
+                if (err.name === 'AbortError') {
+                    showToast('Training Timeout - bitte Status prüfen');
+                } else {
+                    showToast(`Fehler beim Training: ${err.message}`);
+                }
             }
         }
 
@@ -1035,11 +1060,13 @@
         }
 
         // Toast notification
-        function showToast(message) {
+        let toastTimeout = null;
+        function showToast(message, duration = 3000) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), duration);
         }
 
         // Initial load

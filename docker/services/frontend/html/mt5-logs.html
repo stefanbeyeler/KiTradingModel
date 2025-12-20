@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MT5 Logs - KI Trading Model</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-value.atr { color: #81c784; }
+        .stat-value.fxl { color: #ce93d8; }
+        .stat-value.trade { color: #ffb74d; }
+        .stat-value.error { color: #e57373; }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: nowrap;
+            align-items: center;
+        }
+
+        .search-box {
+            width: 150px;
+            min-width: 120px;
+            padding: 0.4rem 0.6rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.8rem;
+        }
+
+        .search-box::placeholder {
+            color: #888;
+        }
+
+        .filter-select {
+            padding: 0.4rem 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .filter-select option {
+            background: #1a1a2e;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.4rem 0.8rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            background: #0d1525;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-weight: 500;
+            color: #a0a0a0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .badge-atr { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-fxl { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
+        .badge-trade { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
+        .badge-order { background: rgba(33, 150, 243, 0.2); color: #64b5f6; }
+        .badge-error { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+        .badge-warning { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .badge-info { background: rgba(0, 188, 212, 0.2); color: #4dd0e1; }
+        .badge-signal { background: rgba(103, 58, 183, 0.2); color: #b39ddb; }
+
+        /* Symbol Styles */
+        .col-symbol {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .col-content {
+            max-width: 400px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .col-time {
+            font-size: 0.8rem;
+            color: #888;
+            white-space: nowrap;
+        }
+
+        /* Symbol Summary Card */
+        .symbol-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .symbol-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .symbol-card:hover {
+            background: rgba(100, 200, 255, 0.1);
+            border-color: rgba(100, 200, 255, 0.3);
+        }
+
+        .symbol-card.active {
+            background: rgba(100, 200, 255, 0.15);
+            border-color: rgba(100, 200, 255, 0.4);
+        }
+
+        .symbol-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .symbol-card-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #64c8ff;
+        }
+
+        .symbol-card-count {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+
+        .symbol-card-details {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .symbol-card-details .badge {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+        }
+
+        /* Log Content Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 5000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-title {
+            color: #64c8ff;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+        }
+
+        .modal-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .modal-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .modal-section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-content-text {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .modal-meta {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .modal-meta-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .modal-meta-label {
+            color: #888;
+            font-size: 0.75rem;
+        }
+
+        .modal-meta-value {
+            color: #e8e8e8;
+            font-weight: 500;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            z-index: 2000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success { background: #2e7d32; }
+        .toast-error { background: #c62828; }
+        .toast-info { background: #1565c0; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(100, 200, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #64c8ff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toolbar {
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+            }
+
+            .search-box, .filter-select, .btn {
+                width: 100%;
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="index.html" class="back-link">&larr; Zuruck zum Dashboard</a>
+            <h1 class="header-title">MT5 Logs</h1>
+            <span class="service-badge" id="connectionStatus">Verbinde...</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Statistics -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-card">
+                <div class="stat-value" id="totalLogs">-</div>
+                <div class="stat-label">Logs Total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value atr" id="atrCount">-</div>
+                <div class="stat-label">ATR Signale</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value fxl" id="fxlCount">-</div>
+                <div class="stat-label">FXL (S/R)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value trade" id="tradeCount">-</div>
+                <div class="stat-label">Trades</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="symbolCount">-</div>
+                <div class="stat-label">Symbole</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="lastUpdate">-</div>
+                <div class="stat-label">Letztes Update</div>
+            </div>
+        </div>
+
+        <!-- Control Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">MT5 Log Viewer</h2>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" id="btnRefresh" onclick="loadLogs()">
+                        Aktualisieren
+                    </button>
+                    <button class="btn btn-success" id="btnAutoRefresh" onclick="toggleAutoRefresh()">
+                        Auto-Refresh: Aus
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Symbol Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Logs pro Symbol</h2>
+            </div>
+            <div class="symbol-summary" id="symbolSummary">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Lade Symbole...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log Table -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Log-Meldungen</h2>
+            </div>
+
+            <div class="toolbar">
+                <input type="text" class="search-box" id="searchInput" placeholder="Symbol suchen..." oninput="filterLogs()">
+                <select class="filter-select" id="filterIndicator" onchange="filterLogs()">
+                    <option value="">Alle Indikatoren</option>
+                    <option value="ATR">ATR</option>
+                    <option value="FXL">FXL (S/R)</option>
+                    <option value="trade">Trade</option>
+                    <option value="order">Order</option>
+                    <option value="signal">Signal</option>
+                </select>
+                <select class="filter-select" id="filterLimit" onchange="loadLogs()">
+                    <option value="100">Letzte 100</option>
+                    <option value="250">Letzte 250</option>
+                    <option value="500">Letzte 500</option>
+                    <option value="1000">Letzte 1000</option>
+                </select>
+                <button class="btn btn-warning" onclick="resetFilters()">
+                    Filter zurucksetzen
+                </button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Indikator</th>
+                            <th>Inhalt</th>
+                            <th style="text-align: right;">Zeitpunkt</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTable">
+                        <tr>
+                            <td colspan="4" class="loading">
+                                <div class="spinner"></div>
+                                <p>Lade Logs...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Log Detail Modal -->
+    <div class="modal-overlay" id="logModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Log Details</h3>
+                <button class="modal-close" onclick="closeLogModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <div class="modal-section-title">Metadaten</div>
+                    <div class="modal-meta" id="modalMeta"></div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">Inhalt</div>
+                    <div class="modal-content-text" id="modalContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // EasyInsight API Base URL (via nginx proxy)
+        const EASYINSIGHT_API = '/easyinsight/api';
+
+        let allLogs = [];
+        let autoRefreshInterval = null;
+        let selectedSymbol = null;
+
+        // Format timestamp for display
+        function formatTimestamp(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            return date.toLocaleString('de-CH', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        // Get human-readable time ago
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const then = new Date(timestamp);
+            const diffMs = now - then;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+
+            if (diffMins < 1) return 'gerade eben';
+            if (diffMins < 60) return `vor ${diffMins} Min.`;
+            if (diffHours < 24) return `vor ${diffHours} Std.`;
+            return formatTimestamp(timestamp);
+        }
+
+        // Get badge class for indicator type
+        function getIndicatorBadgeClass(indicator) {
+            const lowerIndicator = (indicator || '').toLowerCase();
+            if (lowerIndicator.includes('atr')) return 'badge-atr';
+            if (lowerIndicator.includes('fxl') || lowerIndicator.includes('sr') || lowerIndicator.includes('support') || lowerIndicator.includes('resistance')) return 'badge-fxl';
+            if (lowerIndicator.includes('trade')) return 'badge-trade';
+            if (lowerIndicator.includes('order')) return 'badge-order';
+            if (lowerIndicator.includes('error')) return 'badge-error';
+            if (lowerIndicator.includes('warning')) return 'badge-warning';
+            if (lowerIndicator.includes('signal')) return 'badge-signal';
+            return 'badge-info';
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Load logs from EasyInsight API
+        async function loadLogs() {
+            const limit = document.getElementById('filterLimit').value;
+            const btnRefresh = document.getElementById('btnRefresh');
+            btnRefresh.disabled = true;
+            btnRefresh.textContent = 'Laden...';
+
+            try {
+                const response = await fetch(`${EASYINSIGHT_API}/logs?limit=${limit}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                allLogs = data.data || data || [];
+
+                updateConnectionStatus(true);
+                updateStatistics();
+                renderSymbolSummary();
+                renderLogs(allLogs);
+
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('de-CH');
+
+            } catch (error) {
+                console.error('Failed to load logs:', error);
+                updateConnectionStatus(false);
+                showToast('Fehler beim Laden der Logs: ' + error.message, 'error');
+
+                document.getElementById('logsTable').innerHTML = `
+                    <tr>
+                        <td colspan="4" class="empty-state">
+                            <div class="empty-state-icon">&#9888;</div>
+                            <p>Fehler beim Laden der MT5 Logs</p>
+                            <p style="font-size: 0.85rem; margin-top: 0.5rem;">EasyInsight API nicht erreichbar</p>
+                        </td>
+                    </tr>
+                `;
+            } finally {
+                btnRefresh.disabled = false;
+                btnRefresh.textContent = 'Aktualisieren';
+            }
+        }
+
+        // Update connection status badge
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.textContent = 'Verbunden';
+                statusEl.style.background = 'rgba(76, 175, 80, 0.2)';
+                statusEl.style.color = '#81c784';
+            } else {
+                statusEl.textContent = 'Offline';
+                statusEl.style.background = 'rgba(244, 67, 54, 0.2)';
+                statusEl.style.color = '#e57373';
+            }
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const stats = {
+                total: allLogs.length,
+                atr: 0,
+                fxl: 0,
+                trade: 0,
+                symbols: new Set()
+            };
+
+            allLogs.forEach(log => {
+                const indicator = (log.indicator || log.type || '').toLowerCase();
+
+                if (indicator.includes('atr')) stats.atr++;
+                else if (indicator.includes('fxl') || indicator.includes('sr') || indicator.includes('support') || indicator.includes('resistance')) stats.fxl++;
+                else if (indicator.includes('trade') || indicator.includes('order')) stats.trade++;
+
+                if (log.symbol) {
+                    stats.symbols.add(log.symbol);
+                }
+            });
+
+            document.getElementById('totalLogs').textContent = stats.total;
+            document.getElementById('atrCount').textContent = stats.atr;
+            document.getElementById('fxlCount').textContent = stats.fxl;
+            document.getElementById('tradeCount').textContent = stats.trade;
+            document.getElementById('symbolCount').textContent = stats.symbols.size;
+        }
+
+        // Render symbol summary cards
+        function renderSymbolSummary() {
+            const summary = {};
+
+            allLogs.forEach(log => {
+                const symbol = log.symbol || 'Unknown';
+                if (!summary[symbol]) {
+                    summary[symbol] = {
+                        total: 0,
+                        atr: 0,
+                        fxl: 0,
+                        trade: 0,
+                        lastTime: null
+                    };
+                }
+
+                summary[symbol].total++;
+
+                const indicator = (log.indicator || log.type || '').toLowerCase();
+                if (indicator.includes('atr')) summary[symbol].atr++;
+                else if (indicator.includes('fxl') || indicator.includes('sr')) summary[symbol].fxl++;
+                else if (indicator.includes('trade') || indicator.includes('order')) summary[symbol].trade++;
+
+                const logTime = new Date(log.timestamp || log.time);
+                if (!summary[symbol].lastTime || logTime > summary[symbol].lastTime) {
+                    summary[symbol].lastTime = logTime;
+                }
+            });
+
+            // Sort by total count
+            const sortedSymbols = Object.entries(summary)
+                .sort((a, b) => b[1].total - a[1].total);
+
+            const container = document.getElementById('symbolSummary');
+
+            if (sortedSymbols.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#128202;</div>
+                        <p>Keine Logs vorhanden</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = sortedSymbols.map(([symbol, data]) => `
+                <div class="symbol-card ${selectedSymbol === symbol ? 'active' : ''}" onclick="selectSymbol('${symbol}')">
+                    <div class="symbol-card-header">
+                        <span class="symbol-card-name">${symbol}</span>
+                        <span class="symbol-card-count">${data.total}</span>
+                    </div>
+                    <div class="symbol-card-details">
+                        ${data.atr > 0 ? `<span class="badge badge-atr">ATR: ${data.atr}</span>` : ''}
+                        ${data.fxl > 0 ? `<span class="badge badge-fxl">FXL: ${data.fxl}</span>` : ''}
+                        ${data.trade > 0 ? `<span class="badge badge-trade">Trade: ${data.trade}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Select a symbol filter
+        function selectSymbol(symbol) {
+            if (selectedSymbol === symbol) {
+                selectedSymbol = null;
+            } else {
+                selectedSymbol = symbol;
+            }
+            document.getElementById('searchInput').value = selectedSymbol || '';
+            renderSymbolSummary();
+            filterLogs();
+        }
+
+        // Render logs table
+        function renderLogs(logs) {
+            const tbody = document.getElementById('logsTable');
+
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="empty-state">
+                            <div class="empty-state-icon">&#128196;</div>
+                            <p>Keine Logs gefunden</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = logs.map((log, index) => {
+                const symbol = log.symbol || 'Unknown';
+                const indicator = log.indicator || log.type || 'info';
+                const content = log.content || log.message || log.comment || '-';
+                const timestamp = log.timestamp || log.time;
+                const timeAgo = getTimeAgo(timestamp);
+
+                return `
+                    <tr onclick="showLogDetail(${index})" style="cursor: pointer;">
+                        <td class="col-symbol">${symbol}</td>
+                        <td><span class="badge ${getIndicatorBadgeClass(indicator)}">${indicator}</span></td>
+                        <td class="col-content" title="${content}">${content}</td>
+                        <td class="col-time">${timeAgo}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Filter logs
+        function filterLogs() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const indicator = document.getElementById('filterIndicator').value.toLowerCase();
+
+            const filtered = allLogs.filter(log => {
+                const logSymbol = (log.symbol || '').toLowerCase();
+                const logIndicator = (log.indicator || log.type || '').toLowerCase();
+                const logContent = (log.content || log.message || '').toLowerCase();
+
+                if (search && !logSymbol.includes(search) && !logContent.includes(search)) return false;
+                if (indicator && !logIndicator.includes(indicator)) return false;
+                return true;
+            });
+
+            renderLogs(filtered);
+        }
+
+        // Reset all filters
+        function resetFilters() {
+            selectedSymbol = null;
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterIndicator').value = '';
+            renderSymbolSummary();
+            renderLogs(allLogs);
+        }
+
+        // Toggle auto-refresh
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('btnAutoRefresh');
+
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                btn.textContent = 'Auto-Refresh: Aus';
+                btn.classList.remove('btn-warning');
+                btn.classList.add('btn-success');
+            } else {
+                autoRefreshInterval = setInterval(loadLogs, 10000); // Every 10 seconds
+                btn.textContent = 'Auto-Refresh: An';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-warning');
+                showToast('Auto-Refresh aktiviert (alle 10 Sek.)', 'info');
+            }
+        }
+
+        // Show log detail modal
+        function showLogDetail(index) {
+            const filteredLogs = getFilteredLogs();
+            const log = filteredLogs[index];
+
+            if (!log) return;
+
+            const modal = document.getElementById('logModal');
+            const symbol = log.symbol || 'Unknown';
+            const indicator = log.indicator || log.type || 'info';
+
+            document.getElementById('modalTitle').textContent = `${symbol} - ${indicator}`;
+
+            // Build meta info
+            const metaHtml = `
+                <div class="modal-meta-item">
+                    <div class="modal-meta-label">Symbol</div>
+                    <div class="modal-meta-value">${symbol}</div>
+                </div>
+                <div class="modal-meta-item">
+                    <div class="modal-meta-label">Indikator</div>
+                    <div class="modal-meta-value">${indicator}</div>
+                </div>
+                <div class="modal-meta-item">
+                    <div class="modal-meta-label">Zeitpunkt</div>
+                    <div class="modal-meta-value">${formatTimestamp(log.timestamp || log.time)}</div>
+                </div>
+                ${log.price ? `<div class="modal-meta-item"><div class="modal-meta-label">Preis</div><div class="modal-meta-value">${log.price}</div></div>` : ''}
+                ${log.volume ? `<div class="modal-meta-item"><div class="modal-meta-label">Volumen</div><div class="modal-meta-value">${log.volume}</div></div>` : ''}
+                ${log.profit ? `<div class="modal-meta-item"><div class="modal-meta-label">Profit</div><div class="modal-meta-value">${log.profit}</div></div>` : ''}
+            `;
+
+            document.getElementById('modalMeta').innerHTML = metaHtml;
+            document.getElementById('modalContent').textContent = log.content || log.message || log.comment || JSON.stringify(log, null, 2);
+
+            modal.classList.add('show');
+        }
+
+        // Get currently filtered logs
+        function getFilteredLogs() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const indicator = document.getElementById('filterIndicator').value.toLowerCase();
+
+            return allLogs.filter(log => {
+                const logSymbol = (log.symbol || '').toLowerCase();
+                const logIndicator = (log.indicator || log.type || '').toLowerCase();
+                const logContent = (log.content || log.message || '').toLowerCase();
+
+                if (search && !logSymbol.includes(search) && !logContent.includes(search)) return false;
+                if (indicator && !logIndicator.includes(indicator)) return false;
+                return true;
+            });
+        }
+
+        // Close log modal
+        function closeLogModal() {
+            document.getElementById('logModal').classList.remove('show');
+        }
+
+        // Setup modal events
+        function setupModal() {
+            const modal = document.getElementById('logModal');
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeLogModal();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeLogModal();
+                }
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setupModal();
+            loadLogs();
+        });
+    </script>
+</body>
+</html>
