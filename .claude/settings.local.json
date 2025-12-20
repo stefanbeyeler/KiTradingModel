@@ -134,7 +134,8 @@
       "Bash(docker volume ls:*)",
       "Bash(sudo docker restart:*)",
       "Bash(for symbol in GBPUSD BTCUSD ETHUSD XAUUSD USDJPY AUDUSD NZDUSD USDCAD USDCHF)",
-      "Bash(do)"
+      "Bash(do)",
+      "Bash(sudo chown:*)"
     ],
     "deny": [],
     "ask": []
