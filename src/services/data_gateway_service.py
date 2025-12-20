@@ -374,6 +374,307 @@ class DataGatewayService:
             "client_active": self._http_client is not None and not self._http_client.is_closed
         }
 
+    # ==================== TwelveData Indicators ====================
+
+    async def get_indicator(
+        self,
+        symbol: str,
+        indicator: str,
+        interval: str = "1h",
+        outputsize: int = 100,
+        **kwargs,
+    ) -> dict:
+        """
+        Get technical indicator data for a symbol via TwelveData.
+
+        This method provides access to TwelveData's technical indicators
+        when EasyInsight data is insufficient or unavailable.
+
+        Args:
+            symbol: Trading symbol (will be converted to TwelveData format)
+            indicator: Indicator name (rsi, macd, bbands, stoch, adx, etc.)
+            interval: Time interval ('1min', '5min', '15min', '1h', '4h', '1day')
+            outputsize: Number of data points
+            **kwargs: Additional indicator-specific parameters
+
+        Returns:
+            Dictionary with indicator values or error
+        """
+        try:
+            from .twelvedata_service import twelvedata_service
+            from .symbol_service import symbol_service
+
+            # Get TwelveData symbol format
+            managed_symbol = await symbol_service.get_symbol(symbol)
+            td_symbol = None
+            if managed_symbol and managed_symbol.twelvedata_symbol:
+                td_symbol = managed_symbol.twelvedata_symbol
+            else:
+                # Generate TwelveData symbol format
+                td_symbol = symbol_service._generate_twelvedata_symbol(
+                    symbol,
+                    managed_symbol.category if managed_symbol else None
+                )
+
+            if not td_symbol:
+                return {"error": f"No TwelveData symbol mapping for {symbol}"}
+
+            # Map interval formats
+            td_interval_map = {
+                "M15": "15min", "15min": "15min",
+                "H1": "1h", "1h": "1h",
+                "H4": "4h", "4h": "4h",
+                "D1": "1day", "1day": "1day",
+            }
+            td_interval = td_interval_map.get(interval.upper(), interval)
+
+            # Fetch indicator from TwelveData
+            result = await twelvedata_service.get_technical_indicators(
+                symbol=td_symbol,
+                interval=td_interval,
+                indicator=indicator,
+                outputsize=outputsize,
+                **kwargs,
+            )
+
+            # Add original symbol to result
+            if "error" not in result:
+                result["original_symbol"] = symbol
+                result["twelvedata_symbol"] = td_symbol
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to get indicator {indicator} for {symbol}: {e}")
+            return {"error": str(e), "symbol": symbol, "indicator": indicator}
+
+    async def get_rsi(
+        self,
+        symbol: str,
+        interval: str = "1h",
+        time_period: int = 14,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get RSI indicator via TwelveData."""
+        return await self.get_indicator(
+            symbol=symbol,
+            indicator="rsi",
+            interval=interval,
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_macd(
+        self,
+        symbol: str,
+        interval: str = "1h",
+        fast_period: int = 12,
+        slow_period: int = 26,
+        signal_period: int = 9,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get MACD indicator via TwelveData."""
+        return await self.get_indicator(
+            symbol=symbol,
+            indicator="macd",
+            interval=interval,
+            outputsize=outputsize,
+            fast_period=fast_period,
+            slow_period=slow_period,
+            signal_period=signal_period,
+        )
+
+    async def get_bollinger_bands(
+        self,
+        symbol: str,
+        interval: str = "1h",
+        time_period: int = 20,
+        sd: float = 2.0,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get Bollinger Bands indicator via TwelveData."""
+        return await self.get_indicator(
+            symbol=symbol,
+            indicator="bbands",
+            interval=interval,
+            outputsize=outputsize,
+            time_period=time_period,
+            sd=sd,
+        )
+
+    async def get_stochastic(
+        self,
+        symbol: str,
+        interval: str = "1h",
+        fast_k_period: int = 14,
+        slow_k_period: int = 3,
+        slow_d_period: int = 3,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get Stochastic Oscillator indicator via TwelveData."""
+        return await self.get_indicator(
+            symbol=symbol,
+            indicator="stoch",
+            interval=interval,
+            outputsize=outputsize,
+            fast_k_period=fast_k_period,
+            slow_k_period=slow_k_period,
+            slow_d_period=slow_d_period,
+        )
+
+    async def get_adx(
+        self,
+        symbol: str,
+        interval: str = "1h",
+        time_period: int = 14,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get ADX indicator via TwelveData."""
+        return await self.get_indicator(
+            symbol=symbol,
+            indicator="adx",
+            interval=interval,
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_atr(
+        self,
+        symbol: str,
+        interval: str = "1h",
+        time_period: int = 14,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get ATR indicator via TwelveData."""
+        return await self.get_indicator(
+            symbol=symbol,
+            indicator="atr",
+            interval=interval,
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_ichimoku(
+        self,
+        symbol: str,
+        interval: str = "1h",
+        outputsize: int = 100,
+    ) -> dict:
+        """Get Ichimoku Cloud indicator via TwelveData."""
+        return await self.get_indicator(
+            symbol=symbol,
+            indicator="ichimoku",
+            interval=interval,
+            outputsize=outputsize,
+        )
+
+    async def get_supertrend(
+        self,
+        symbol: str,
+        interval: str = "1h",
+        period: int = 10,
+        multiplier: float = 3.0,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get Supertrend indicator via TwelveData."""
+        return await self.get_indicator(
+            symbol=symbol,
+            indicator="supertrend",
+            interval=interval,
+            outputsize=outputsize,
+            period=period,
+            multiplier=multiplier,
+        )
+
+    async def get_multiple_indicators(
+        self,
+        symbol: str,
+        indicators: list[str],
+        interval: str = "1h",
+        outputsize: int = 100,
+    ) -> dict:
+        """
+        Get multiple technical indicators for a symbol via TwelveData.
+
+        Note: Each indicator requires a separate API call with rate limiting.
+
+        Args:
+            symbol: Trading symbol
+            indicators: List of indicator names
+            interval: Time interval
+            outputsize: Number of data points
+
+        Returns:
+            Dictionary with results for each indicator
+        """
+        try:
+            from .twelvedata_service import twelvedata_service
+            from .symbol_service import symbol_service
+
+            # Get TwelveData symbol format
+            managed_symbol = await symbol_service.get_symbol(symbol)
+            td_symbol = None
+            if managed_symbol and managed_symbol.twelvedata_symbol:
+                td_symbol = managed_symbol.twelvedata_symbol
+            else:
+                td_symbol = symbol_service._generate_twelvedata_symbol(
+                    symbol,
+                    managed_symbol.category if managed_symbol else None
+                )
+
+            if not td_symbol:
+                return {"error": f"No TwelveData symbol mapping for {symbol}"}
+
+            # Map interval
+            td_interval_map = {
+                "M15": "15min", "H1": "1h", "H4": "4h", "D1": "1day"
+            }
+            td_interval = td_interval_map.get(interval.upper(), interval)
+
+            result = await twelvedata_service.get_multiple_indicators(
+                symbol=td_symbol,
+                indicators=indicators,
+                interval=td_interval,
+                outputsize=outputsize,
+            )
+
+            result["original_symbol"] = symbol
+            result["twelvedata_symbol"] = td_symbol
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to get multiple indicators for {symbol}: {e}")
+            return {"error": str(e), "symbol": symbol}
+
+    async def get_complete_analysis(
+        self,
+        symbol: str,
+        interval: str = "1h",
+        outputsize: int = 100,
+    ) -> dict:
+        """
+        Get complete technical analysis with all major indicators via TwelveData.
+
+        Includes: RSI, MACD, Bollinger Bands, Stochastic, ADX, ATR, CCI, OBV
+
+        Note: This makes 8 API calls with rate limiting.
+
+        Args:
+            symbol: Trading symbol
+            interval: Time interval
+            outputsize: Number of data points
+
+        Returns:
+            Dictionary with all major indicator values
+        """
+        indicators = ["rsi", "macd", "bbands", "stoch", "adx", "atr", "cci", "obv"]
+        return await self.get_multiple_indicators(
+            symbol=symbol,
+            indicators=indicators,
+            interval=interval,
+            outputsize=outputsize,
+        )
+
 
 # Global singleton instance
 data_gateway = DataGatewayService()

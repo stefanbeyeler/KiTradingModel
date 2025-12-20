@@ -403,12 +403,12 @@ class TwelveDataService:
         **kwargs,
     ) -> dict:
         """
-        Get technical indicator data for a symbol.
+        Get technical indicator data for a symbol with rate limiting.
 
         Args:
             symbol: The symbol to analyze
             interval: Time interval
-            indicator: Indicator name (e.g., 'sma', 'ema', 'rsi', 'macd', 'bbands')
+            indicator: Indicator name (see SUPPORTED_INDICATORS for full list)
             outputsize: Number of data points
             **kwargs: Additional indicator-specific parameters (e.g., time_period=14)
 
@@ -420,23 +420,74 @@ class TwelveDataService:
             return {"error": "Twelve Data client not available"}
 
         try:
+            # Apply rate limiting before making the API call
+            wait_time = await self._rate_limiter.acquire()
+            self._total_calls += 1
+            self._total_wait_time += wait_time
+
+            if wait_time > 0:
+                logger.debug(f"Rate limiter: waited {wait_time:.1f}s before calling {indicator} API for {symbol}")
+
             # Map indicator names to client methods
             indicator_methods = {
+                # Overlap Studies (Moving Averages)
                 "sma": client.sma,
                 "ema": client.ema,
+                "wma": client.wma,
+                "dema": client.dema,
+                "tema": client.tema,
+                "kama": client.kama,
+                "mama": client.mama,
+                "t3": client.t3,
+                "trima": client.trima,
+                # Momentum Indicators
                 "rsi": client.rsi,
                 "macd": client.macd,
-                "bbands": client.bbands,
                 "stoch": client.stoch,
-                "adx": client.adx,
-                "atr": client.atr,
+                "stochrsi": client.stochrsi,
+                "willr": client.willr,
                 "cci": client.cci,
+                "cmo": client.cmo,
+                "roc": client.roc,
+                "mom": client.mom,
+                "ppo": client.ppo,
+                "apo": client.apo,
+                "aroon": client.aroon,
+                "aroonosc": client.aroonosc,
+                "bop": client.bop,
+                "mfi": client.mfi,
+                "dx": client.dx,
+                "adx": client.adx,
+                "adxr": client.adxr,
+                "plus_di": client.plus_di,
+                "minus_di": client.minus_di,
+                "plus_dm": client.plus_dm,
+                "minus_dm": client.minus_dm,
+                # Volatility Indicators
+                "bbands": client.bbands,
+                "atr": client.atr,
+                "natr": client.natr,
+                "trange": client.trange,
+                # Volume Indicators
                 "obv": client.obv,
+                "ad": client.ad,
+                "adosc": client.adosc,
+                # Trend Indicators
+                "supertrend": client.supertrend,
+                "ichimoku": client.ichimoku,
+                "sar": client.sar,
+                # Price Transform
+                "avgprice": client.avgprice,
+                "medprice": client.medprice,
+                "typprice": client.typprice,
+                "wclprice": client.wclprice,
+                # Pattern Recognition
+                "pivot_points_hl": client.pivot_points_hl,
             }
 
             method = indicator_methods.get(indicator.lower())
             if not method:
-                return {"error": f"Unknown indicator: {indicator}"}
+                return {"error": f"Unknown indicator: {indicator}. Supported: {list(indicator_methods.keys())}"}
 
             params = {
                 "symbol": symbol,
@@ -456,6 +507,362 @@ class TwelveDataService:
         except Exception as e:
             logger.error(f"Failed to get {indicator} for {symbol}: {e}")
             return {"indicator": indicator, "symbol": symbol, "error": str(e)}
+
+    # ==================== Specific Indicator Methods ====================
+
+    async def get_rsi(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 14,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get RSI (Relative Strength Index) indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="rsi",
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_macd(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        fast_period: int = 12,
+        slow_period: int = 26,
+        signal_period: int = 9,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get MACD (Moving Average Convergence Divergence) indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="macd",
+            outputsize=outputsize,
+            fast_period=fast_period,
+            slow_period=slow_period,
+            signal_period=signal_period,
+        )
+
+    async def get_bollinger_bands(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 20,
+        sd: float = 2.0,
+        ma_type: str = "SMA",
+        outputsize: int = 100,
+    ) -> dict:
+        """Get Bollinger Bands indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="bbands",
+            outputsize=outputsize,
+            time_period=time_period,
+            sd=sd,
+            ma_type=ma_type,
+        )
+
+    async def get_ema(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 20,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get EMA (Exponential Moving Average) indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="ema",
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_sma(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 20,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get SMA (Simple Moving Average) indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="sma",
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_stochastic(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        fast_k_period: int = 14,
+        slow_k_period: int = 3,
+        slow_d_period: int = 3,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get Stochastic Oscillator indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="stoch",
+            outputsize=outputsize,
+            fast_k_period=fast_k_period,
+            slow_k_period=slow_k_period,
+            slow_d_period=slow_d_period,
+        )
+
+    async def get_adx(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 14,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get ADX (Average Directional Index) indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="adx",
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_atr(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 14,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get ATR (Average True Range) indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="atr",
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_cci(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 20,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get CCI (Commodity Channel Index) indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="cci",
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_ichimoku(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        conversion_line_period: int = 9,
+        base_line_period: int = 26,
+        leading_span_b_period: int = 52,
+        lagging_span_period: int = 26,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get Ichimoku Cloud indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="ichimoku",
+            outputsize=outputsize,
+            conversion_line_period=conversion_line_period,
+            base_line_period=base_line_period,
+            leading_span_b_period=leading_span_b_period,
+            lagging_span_period=lagging_span_period,
+        )
+
+    async def get_supertrend(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        period: int = 10,
+        multiplier: float = 3.0,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get Supertrend indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="supertrend",
+            outputsize=outputsize,
+            period=period,
+            multiplier=multiplier,
+        )
+
+    async def get_williams_r(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 14,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get Williams %R indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="willr",
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_mfi(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 14,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get MFI (Money Flow Index) indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="mfi",
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_obv(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        outputsize: int = 100,
+    ) -> dict:
+        """Get OBV (On-Balance Volume) indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="obv",
+            outputsize=outputsize,
+        )
+
+    async def get_aroon(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 25,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get Aroon indicator (Aroon Up and Aroon Down)."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="aroon",
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    async def get_pivot_points(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        time_period: int = 1,
+        outputsize: int = 100,
+    ) -> dict:
+        """Get Pivot Points High/Low indicator."""
+        return await self.get_technical_indicators(
+            symbol=symbol,
+            interval=interval,
+            indicator="pivot_points_hl",
+            outputsize=outputsize,
+            time_period=time_period,
+        )
+
+    # ==================== Batch Indicator Method ====================
+
+    async def get_multiple_indicators(
+        self,
+        symbol: str,
+        indicators: list[str],
+        interval: str = "1day",
+        outputsize: int = 100,
+        **kwargs,
+    ) -> dict:
+        """
+        Get multiple technical indicators for a symbol.
+
+        Note: Each indicator requires a separate API call with rate limiting.
+
+        Args:
+            symbol: The symbol to analyze
+            indicators: List of indicator names (e.g., ['rsi', 'macd', 'bbands'])
+            interval: Time interval
+            outputsize: Number of data points
+            **kwargs: Additional parameters passed to all indicators
+
+        Returns:
+            Dictionary with results for each indicator
+        """
+        results = {
+            "symbol": symbol,
+            "interval": interval,
+            "indicators": {},
+            "errors": [],
+        }
+
+        for indicator in indicators:
+            try:
+                data = await self.get_technical_indicators(
+                    symbol=symbol,
+                    interval=interval,
+                    indicator=indicator,
+                    outputsize=outputsize,
+                    **kwargs,
+                )
+                if "error" in data:
+                    results["errors"].append({indicator: data["error"]})
+                else:
+                    results["indicators"][indicator.upper()] = data.get("values", [])
+            except Exception as e:
+                results["errors"].append({indicator: str(e)})
+
+        logger.info(f"Retrieved {len(results['indicators'])} indicators for {symbol}")
+        return results
+
+    async def get_complete_analysis(
+        self,
+        symbol: str,
+        interval: str = "1day",
+        outputsize: int = 100,
+    ) -> dict:
+        """
+        Get a complete technical analysis with all major indicators.
+
+        Includes: RSI, MACD, Bollinger Bands, Stochastic, ADX, ATR, CCI, OBV
+
+        Note: This makes 8 API calls with rate limiting, may take time.
+
+        Args:
+            symbol: The symbol to analyze
+            interval: Time interval
+            outputsize: Number of data points
+
+        Returns:
+            Dictionary with all major indicator values
+        """
+        indicators = ["rsi", "macd", "bbands", "stoch", "adx", "atr", "cci", "obv"]
+        return await self.get_multiple_indicators(
+            symbol=symbol,
+            indicators=indicators,
+            interval=interval,
+            outputsize=outputsize,
+        )
 
     async def get_earnings_calendar(
         self,

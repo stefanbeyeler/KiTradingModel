@@ -2792,11 +2792,20 @@ async def get_technical_indicator(
     """
     Get technical indicator data for a symbol.
 
+    Supported indicators:
+    - Overlap Studies: sma, ema, wma, dema, tema, kama, mama, t3, trima
+    - Momentum: rsi, macd, stoch, stochrsi, willr, cci, cmo, roc, mom, ppo, apo, aroon, aroonosc, bop, mfi, dx, adx, adxr, plus_di, minus_di
+    - Volatility: bbands, atr, natr, trange
+    - Volume: obv, ad, adosc
+    - Trend: supertrend, ichimoku, sar
+    - Price Transform: avgprice, medprice, typprice, wclprice
+    - Pattern: pivot_points_hl
+
     Args:
-        symbol: The symbol (e.g., 'AAPL', 'EUR/USD')
-        indicator: Indicator name ('sma', 'ema', 'rsi', 'macd', 'bbands', 'stoch', 'adx', 'atr', 'cci', 'obv')
-        interval: Time interval (default: '1day')
-        outputsize: Number of data points (default: 100)
+        symbol: The symbol (e.g., 'AAPL', 'EUR/USD', 'BTC/USD')
+        indicator: Indicator name (see above for full list)
+        interval: Time interval ('1min', '5min', '15min', '30min', '1h', '4h', '1day', '1week')
+        outputsize: Number of data points (default: 100, max: 5000)
         time_period: Period for indicator calculation (default: 14)
     """
     data = await twelvedata_service.get_technical_indicators(
@@ -2807,6 +2816,292 @@ async def get_technical_indicator(
         time_period=time_period,
     )
     return data
+
+
+@twelvedata_router.get("/twelvedata/indicators/{symbol}")
+async def get_multiple_indicators(
+    symbol: str,
+    indicators: str = "rsi,macd,bbands",
+    interval: str = "1day",
+    outputsize: int = 100,
+):
+    """
+    Get multiple technical indicators for a symbol in one request.
+
+    Note: Each indicator requires a separate API call with rate limiting (8 calls/min for free tier).
+
+    Args:
+        symbol: The symbol (e.g., 'AAPL', 'EUR/USD', 'BTC/USD')
+        indicators: Comma-separated list of indicator names (e.g., 'rsi,macd,bbands,stoch')
+        interval: Time interval (default: '1day')
+        outputsize: Number of data points (default: 100)
+    """
+    indicator_list = [i.strip().lower() for i in indicators.split(",")]
+    data = await twelvedata_service.get_multiple_indicators(
+        symbol=symbol,
+        indicators=indicator_list,
+        interval=interval,
+        outputsize=outputsize,
+    )
+    return data
+
+
+@twelvedata_router.get("/twelvedata/analysis/{symbol}")
+async def get_complete_analysis(
+    symbol: str,
+    interval: str = "1day",
+    outputsize: int = 100,
+):
+    """
+    Get complete technical analysis with all major indicators.
+
+    Includes: RSI, MACD, Bollinger Bands, Stochastic, ADX, ATR, CCI, OBV
+
+    Note: This makes 8 API calls with rate limiting, may take time.
+
+    Args:
+        symbol: The symbol (e.g., 'AAPL', 'EUR/USD', 'BTC/USD')
+        interval: Time interval (default: '1day')
+        outputsize: Number of data points (default: 100)
+    """
+    data = await twelvedata_service.get_complete_analysis(
+        symbol=symbol,
+        interval=interval,
+        outputsize=outputsize,
+    )
+    return data
+
+
+@twelvedata_router.get("/twelvedata/rsi/{symbol}")
+async def get_rsi(
+    symbol: str,
+    interval: str = "1day",
+    time_period: int = 14,
+    outputsize: int = 100,
+):
+    """Get RSI (Relative Strength Index) indicator."""
+    return await twelvedata_service.get_rsi(
+        symbol=symbol,
+        interval=interval,
+        time_period=time_period,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/macd/{symbol}")
+async def get_macd(
+    symbol: str,
+    interval: str = "1day",
+    fast_period: int = 12,
+    slow_period: int = 26,
+    signal_period: int = 9,
+    outputsize: int = 100,
+):
+    """Get MACD (Moving Average Convergence Divergence) indicator."""
+    return await twelvedata_service.get_macd(
+        symbol=symbol,
+        interval=interval,
+        fast_period=fast_period,
+        slow_period=slow_period,
+        signal_period=signal_period,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/bbands/{symbol}")
+async def get_bollinger_bands(
+    symbol: str,
+    interval: str = "1day",
+    time_period: int = 20,
+    sd: float = 2.0,
+    outputsize: int = 100,
+):
+    """Get Bollinger Bands indicator."""
+    return await twelvedata_service.get_bollinger_bands(
+        symbol=symbol,
+        interval=interval,
+        time_period=time_period,
+        sd=sd,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/stoch/{symbol}")
+async def get_stochastic(
+    symbol: str,
+    interval: str = "1day",
+    fast_k_period: int = 14,
+    slow_k_period: int = 3,
+    slow_d_period: int = 3,
+    outputsize: int = 100,
+):
+    """Get Stochastic Oscillator indicator."""
+    return await twelvedata_service.get_stochastic(
+        symbol=symbol,
+        interval=interval,
+        fast_k_period=fast_k_period,
+        slow_k_period=slow_k_period,
+        slow_d_period=slow_d_period,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/adx/{symbol}")
+async def get_adx(
+    symbol: str,
+    interval: str = "1day",
+    time_period: int = 14,
+    outputsize: int = 100,
+):
+    """Get ADX (Average Directional Index) indicator."""
+    return await twelvedata_service.get_adx(
+        symbol=symbol,
+        interval=interval,
+        time_period=time_period,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/atr/{symbol}")
+async def get_atr(
+    symbol: str,
+    interval: str = "1day",
+    time_period: int = 14,
+    outputsize: int = 100,
+):
+    """Get ATR (Average True Range) indicator."""
+    return await twelvedata_service.get_atr(
+        symbol=symbol,
+        interval=interval,
+        time_period=time_period,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/ichimoku/{symbol}")
+async def get_ichimoku(
+    symbol: str,
+    interval: str = "1day",
+    outputsize: int = 100,
+):
+    """Get Ichimoku Cloud indicator with all components (Tenkan, Kijun, Senkou A/B, Chikou)."""
+    return await twelvedata_service.get_ichimoku(
+        symbol=symbol,
+        interval=interval,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/supertrend/{symbol}")
+async def get_supertrend(
+    symbol: str,
+    interval: str = "1day",
+    period: int = 10,
+    multiplier: float = 3.0,
+    outputsize: int = 100,
+):
+    """Get Supertrend indicator."""
+    return await twelvedata_service.get_supertrend(
+        symbol=symbol,
+        interval=interval,
+        period=period,
+        multiplier=multiplier,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/willr/{symbol}")
+async def get_williams_r(
+    symbol: str,
+    interval: str = "1day",
+    time_period: int = 14,
+    outputsize: int = 100,
+):
+    """Get Williams %R indicator."""
+    return await twelvedata_service.get_williams_r(
+        symbol=symbol,
+        interval=interval,
+        time_period=time_period,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/mfi/{symbol}")
+async def get_mfi(
+    symbol: str,
+    interval: str = "1day",
+    time_period: int = 14,
+    outputsize: int = 100,
+):
+    """Get MFI (Money Flow Index) indicator."""
+    return await twelvedata_service.get_mfi(
+        symbol=symbol,
+        interval=interval,
+        time_period=time_period,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/obv/{symbol}")
+async def get_obv(
+    symbol: str,
+    interval: str = "1day",
+    outputsize: int = 100,
+):
+    """Get OBV (On-Balance Volume) indicator."""
+    return await twelvedata_service.get_obv(
+        symbol=symbol,
+        interval=interval,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/aroon/{symbol}")
+async def get_aroon(
+    symbol: str,
+    interval: str = "1day",
+    time_period: int = 25,
+    outputsize: int = 100,
+):
+    """Get Aroon indicator (Aroon Up and Aroon Down)."""
+    return await twelvedata_service.get_aroon(
+        symbol=symbol,
+        interval=interval,
+        time_period=time_period,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/ema/{symbol}")
+async def get_ema(
+    symbol: str,
+    interval: str = "1day",
+    time_period: int = 20,
+    outputsize: int = 100,
+):
+    """Get EMA (Exponential Moving Average) indicator."""
+    return await twelvedata_service.get_ema(
+        symbol=symbol,
+        interval=interval,
+        time_period=time_period,
+        outputsize=outputsize,
+    )
+
+
+@twelvedata_router.get("/twelvedata/sma/{symbol}")
+async def get_sma(
+    symbol: str,
+    interval: str = "1day",
+    time_period: int = 20,
+    outputsize: int = 100,
+):
+    """Get SMA (Simple Moving Average) indicator."""
+    return await twelvedata_service.get_sma(
+        symbol=symbol,
+        interval=interval,
+        time_period=time_period,
+        outputsize=outputsize,
+    )
 
 
 @twelvedata_router.get("/twelvedata/earnings")
