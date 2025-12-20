@@ -110,6 +110,24 @@ class Settings(BaseSettings):
         description="Use FP16 for embeddings on GPU (saves VRAM)"
     )
 
+    # Timezone Configuration
+    display_timezone: str = Field(
+        default="Europe/Zurich",
+        description="Timezone for displaying timestamps (e.g., 'Europe/Zurich', 'UTC', 'America/New_York')"
+    )
+    date_format: str = Field(
+        default="%d.%m.%Y",
+        description="Date format for display (strftime format)"
+    )
+    time_format: str = Field(
+        default="%H:%M:%S",
+        description="Time format for display (strftime format)"
+    )
+    datetime_format: str = Field(
+        default="%d.%m.%Y, %H:%M:%S",
+        description="Combined datetime format for display (strftime format)"
+    )
+
     # NHITS Neural Forecasting Configuration
     nhits_enabled: bool = Field(
         default=True,

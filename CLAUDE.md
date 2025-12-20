@@ -80,6 +80,46 @@ class NHITSTrainingService:
 Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`
 Scopes: `nhits`, `rag`, `llm`, `api`, `config`, `docker`, `data`
 
+## Zeitzonen-Handling (VERBINDLICH)
+
+### Grundregeln
+
+1. **Speicherung immer in UTC (ISO 8601)**
+   - Alle Timestamps intern als UTC speichern
+   - Format: `2024-01-15T10:30:45Z` oder `2024-01-15T10:30:45+00:00`
+   - Niemals naive datetime-Objekte verwenden
+
+2. **Präsentation in lokaler Zeit**
+   - Alle Timestamps für die Anzeige in die konfigurierte Zeitzone konvertieren
+   - Zeitzone ist konfigurierbar (Standard: `Europe/Zurich`)
+
+3. **Konfiguration**
+   - Zeitzone wird in `src/core/config.py` als `DISPLAY_TIMEZONE` definiert
+   - Umgebungsvariable: `DISPLAY_TIMEZONE`
+
+### Beispiele
+
+```python
+from src.utils.timezone_utils import to_utc, to_display_timezone, format_for_display
+
+# ❌ FALSCH: Naive datetime oder inkonsistente Zeitzonen
+timestamp = datetime.now()  # Naive, keine Zeitzone
+timestamp_str = data.get("snapshot_time")  # Direkt durchreichen
+
+# ✅ RICHTIG: UTC für Speicherung
+timestamp = datetime.now(timezone.utc)
+utc_timestamp = to_utc(data.get("snapshot_time"))
+
+# ✅ RICHTIG: Lokale Zeit für Anzeige
+display_time = to_display_timezone(utc_timestamp)
+formatted = format_for_display(utc_timestamp)  # "20.12.2024, 10:18:00 CET"
+```
+
+### API-Responses
+
+- Interne Felder (`*_utc`): ISO 8601 UTC-Format
+- Anzeige-Felder (`*_display`): Lokalisiertes Format mit Zeitzonenangabe
+
 ## Dokumentation
 
 Vollständige Entwicklungsrichtlinien: `DEVELOPMENT_GUIDELINES.md`

@@ -2,7 +2,7 @@
 # Health check now includes NHITS status
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import torch
 from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File
@@ -43,6 +43,7 @@ from ..services.query_log_service import query_log_service, QueryLogEntry
 from ..services.symbol_service import symbol_service
 from ..services.event_based_training_service import event_based_training_service
 from ..services.twelvedata_service import twelvedata_service
+from ..utils.timezone_utils import to_utc, format_for_display, format_utc_iso, get_timezone_info
 
 
 # Thematisch gruppierte Router für bessere API-Organisation
@@ -58,6 +59,7 @@ sync_router = APIRouter()  # TimescaleDB Sync
 system_router = APIRouter()  # System & Monitoring
 query_log_router = APIRouter()  # Query Logs & Analytics
 twelvedata_router = APIRouter()  # Twelve Data API
+config_router = APIRouter()  # Configuration & Settings
 
 # Service instances
 analysis_service = AnalysisService()
@@ -2218,9 +2220,12 @@ async def get_symbol_live_data(symbol: str):
     """
     import httpx
 
+    now_utc = datetime.now(timezone.utc)
     result = {
         "symbol": symbol,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp_utc": format_utc_iso(now_utc),
+        "timestamp_display": format_for_display(now_utc),
+        "timezone_info": get_timezone_info(),
         "easyinsight": None,
         "twelvedata": None,
         "errors": []
@@ -2250,9 +2255,11 @@ async def get_symbol_live_data(symbol: str):
                 elif isinstance(response_data, dict):
                     data = response_data
                 if data:
+                    ei_snapshot_time = data.get("snapshot_time")
                     result["easyinsight"] = {
                         "source": "EasyInsight API",
-                        "snapshot_time": data.get("snapshot_time"),
+                        "snapshot_time_utc": format_utc_iso(ei_snapshot_time),
+                        "snapshot_time_display": format_for_display(ei_snapshot_time),
                         "category": data.get("category"),
                         "price": {
                             "bid": data.get("bid"),
@@ -2357,14 +2364,15 @@ async def get_symbol_live_data(symbol: str):
                 except (ValueError, TypeError):
                     pass
 
+            td_datetime = quote.get("datetime")
             result["twelvedata"] = {
                 "source": "Twelve Data API",
                 "symbol_used": td_symbol,
                 "name": quote.get("name"),
                 "exchange": quote.get("exchange"),
                 "currency": quote.get("currency"),
-                "datetime": quote.get("datetime"),
-                "timestamp": quote.get("timestamp"),
+                "datetime_utc": format_utc_iso(td_datetime),
+                "datetime_display": format_for_display(td_datetime),
                 "bid_ask": {
                     "bid": td_bid,
                     "ask": td_ask,
@@ -2421,7 +2429,8 @@ async def get_symbol_live_data(symbol: str):
                     # Extract datetime from first successful indicator
                     if indicator_datetime is None and latest.get("datetime"):
                         indicator_datetime = latest.get("datetime")
-                        result["twelvedata"]["indicator_datetime"] = indicator_datetime
+                        result["twelvedata"]["indicator_datetime_utc"] = format_utc_iso(indicator_datetime)
+                        result["twelvedata"]["indicator_datetime_display"] = format_for_display(indicator_datetime)
 
                     if name == "rsi":
                         result["twelvedata"]["indicators"]["rsi"] = float(latest.get("rsi", 0)) if latest.get("rsi") else None
@@ -3379,6 +3388,104 @@ async def cleanup_expired_training_cache():
     return {"removed": removed, "message": f"Removed {removed} expired cache entries"}
 
 
+# ==================== Configuration Router ====================
+
+@config_router.get("/config/timezone")
+async def get_timezone_config():
+    """Get current timezone configuration.
+
+    Returns the configured display timezone and current time in both UTC and local format.
+    """
+    return get_timezone_info()
+
+
+@config_router.put("/config/timezone")
+async def update_timezone_config(timezone: str):
+    """Update the display timezone.
+
+    Note: This updates the runtime setting only. To persist across restarts,
+    set the DISPLAY_TIMEZONE environment variable.
+
+    Args:
+        timezone: IANA timezone identifier (e.g., 'Europe/Zurich', 'America/New_York', 'UTC')
+
+    Returns:
+        Updated timezone configuration
+    """
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    # Validate timezone
+    try:
+        ZoneInfo(timezone)
+    except ZoneInfoNotFoundError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid timezone: '{timezone}'. Use IANA timezone identifiers like 'Europe/Zurich', 'America/New_York', 'UTC'"
+        )
+
+    # Update runtime setting
+    settings.display_timezone = timezone
+
+    return {
+        "message": f"Timezone updated to {timezone}",
+        "note": "This change is not persisted. Set DISPLAY_TIMEZONE environment variable for persistence.",
+        **get_timezone_info()
+    }
+
+
+@config_router.get("/config/timezones")
+async def list_common_timezones():
+    """List common timezones for configuration.
+
+    Returns a list of commonly used IANA timezone identifiers grouped by region.
+    """
+    return {
+        "current": settings.display_timezone,
+        "timezones": {
+            "Europe": [
+                "Europe/Zurich",
+                "Europe/Berlin",
+                "Europe/London",
+                "Europe/Paris",
+                "Europe/Amsterdam",
+                "Europe/Vienna",
+                "Europe/Rome",
+                "Europe/Madrid",
+                "Europe/Warsaw",
+                "Europe/Moscow",
+            ],
+            "Americas": [
+                "America/New_York",
+                "America/Chicago",
+                "America/Denver",
+                "America/Los_Angeles",
+                "America/Toronto",
+                "America/Sao_Paulo",
+                "America/Mexico_City",
+            ],
+            "Asia": [
+                "Asia/Tokyo",
+                "Asia/Shanghai",
+                "Asia/Hong_Kong",
+                "Asia/Singapore",
+                "Asia/Dubai",
+                "Asia/Kolkata",
+                "Asia/Seoul",
+            ],
+            "Pacific": [
+                "Pacific/Auckland",
+                "Pacific/Sydney",
+                "Australia/Sydney",
+                "Australia/Melbourne",
+            ],
+            "Other": [
+                "UTC",
+                "GMT",
+            ]
+        }
+    }
+
+
 # ==================== Router Export ====================
 
 def get_all_routers():
@@ -3432,5 +3539,9 @@ def get_all_routers():
         (twelvedata_router, "/api/v1", ["📈 Twelve Data API"], {
             "name": "Twelve Data",
             "description": "Access to Twelve Data API - stocks, forex, crypto, ETFs, indices, and technical indicators"
+        }),
+        (config_router, "/api/v1", ["⚙️ Configuration"], {
+            "name": "Configuration",
+            "description": "System configuration and settings management"
         }),
     ]
