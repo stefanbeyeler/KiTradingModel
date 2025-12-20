@@ -2977,17 +2977,27 @@
         }
 
         // Convert EasyInsight historical data response to explorer format
-        function convertEasyInsightHistoricalData(trainingData, indicators) {
+        function convertEasyInsightHistoricalData(trainingData, indicators, timeframe) {
             const data = trainingData.data || [];
             if (!data.length) return [];
 
+            // Map timeframe to field prefix
+            const tfPrefix = {
+                'M15': 'm15', '15min': 'm15',
+                'H1': 'h1', '1h': 'h1',
+                'H4': 'h4', '4h': 'h4',
+                'D1': 'd1', '1day': 'd1'
+            };
+            const prefix = tfPrefix[timeframe] || 'h1';
+
             return data.map(row => {
+                // Use timeframe-specific OHLC as main OHLC (fallback to bid for close)
                 const result = {
                     datetime: row.snapshot_time || row.timestamp,
-                    open: parseFloat(row.open) || null,
-                    high: parseFloat(row.high) || null,
-                    low: parseFloat(row.low) || null,
-                    close: parseFloat(row.close) || null,
+                    open: row[`${prefix}_open`] ? parseFloat(row[`${prefix}_open`]) : null,
+                    high: row[`${prefix}_high`] ? parseFloat(row[`${prefix}_high`]) : null,
+                    low: row[`${prefix}_low`] ? parseFloat(row[`${prefix}_low`]) : null,
+                    close: row[`${prefix}_close`] ? parseFloat(row[`${prefix}_close`]) : (row.bid ? parseFloat(row.bid) : null),
                     volume: row.volume ? parseFloat(row.volume) : null
                 };
 
@@ -3229,8 +3239,8 @@
                     if (!res.ok) throw new Error('Fehler beim Laden der EasyInsight-Daten');
                     const trainingData = await res.json();
 
-                    // Convert EasyInsight response to explorer format
-                    data = convertEasyInsightHistoricalData(trainingData, indicators);
+                    // Convert EasyInsight response to explorer format (pass timeframe for OHLC mapping)
+                    data = convertEasyInsightHistoricalData(trainingData, indicators, timeframe);
 
                     // Limit to requested amount
                     if (data.length > parseInt(limit)) {
