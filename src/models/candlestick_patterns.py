@@ -59,6 +59,7 @@ class PatternType(str, Enum):
 
 class Timeframe(str, Enum):
     """Trading timeframes."""
+    M5 = "M5"
     M15 = "M15"
     H1 = "H1"
     H4 = "H4"
@@ -219,6 +220,10 @@ class MultiTimeframePatternResult(BaseModel):
     )
 
     # Results per timeframe
+    m5: TimeframePatterns = Field(
+        default_factory=lambda: TimeframePatterns(timeframe=Timeframe.M5),
+        description="5-minute timeframe patterns"
+    )
     m15: TimeframePatterns = Field(
         default_factory=lambda: TimeframePatterns(timeframe=Timeframe.M15),
         description="15-minute timeframe patterns"
@@ -275,6 +280,7 @@ class MultiTimeframePatternResult(BaseModel):
     def calculate_summary(self):
         """Calculate summary statistics from detected patterns."""
         all_patterns = (
+            self.m5.patterns +
             self.m15.patterns +
             self.h1.patterns +
             self.h4.patterns +

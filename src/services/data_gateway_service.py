@@ -178,6 +178,9 @@ class DataGatewayService:
         """
         Get historical data with TwelveData fallback.
 
+        For M5 and H4 timeframes, TwelveData is used as primary source since
+        EasyInsight doesn't provide native OHLC data for these timeframes.
+
         Args:
             symbol: Trading symbol
             limit: Number of data points
@@ -186,7 +189,15 @@ class DataGatewayService:
         Returns:
             Tuple of (data_list, source) where source is 'easyinsight' or 'twelvedata'
         """
-        # Try EasyInsight first
+        # For M5 and H4: Use TwelveData as primary source (EasyInsight doesn't have native support)
+        if timeframe.upper() in ("M5", "H4"):
+            td_data = await self._get_twelvedata_candles(symbol, timeframe, limit)
+            if td_data:
+                return td_data, "twelvedata"
+            # Fall through to EasyInsight as last resort
+            logger.warning(f"TwelveData failed for {symbol} {timeframe}, trying EasyInsight")
+
+        # Try EasyInsight first for supported timeframes (M15, H1, D1)
         data = await self.get_historical_data(symbol, limit, timeframe)
         if data and len(data) >= limit * 0.8:  # At least 80% of requested data
             return data, "easyinsight"
@@ -219,6 +230,7 @@ class DataGatewayService:
 
             # Map timeframe
             td_interval_map = {
+                "M5": "5min",
                 "M15": "15min",
                 "H1": "1h",
                 "H4": "4h",
@@ -280,6 +292,81 @@ class DataGatewayService:
                 continue
 
         return converted
+
+    async def _get_twelvedata_candles(
+        self,
+        symbol: str,
+        timeframe: str,
+        limit: int
+    ) -> list[dict]:
+        """
+        Get candle data directly from TwelveData.
+
+        Used as primary source for M5 and H4 timeframes since EasyInsight
+        doesn't provide native OHLC data for these.
+
+        Args:
+            symbol: Trading symbol (e.g., BTCUSD)
+            timeframe: Timeframe (M5, H4)
+            limit: Number of candles to fetch
+
+        Returns:
+            List of candle dictionaries in EasyInsight-compatible format
+        """
+        try:
+            from .twelvedata_service import twelvedata_service
+            from ..services.symbol_service import symbol_service
+
+            # Get TwelveData symbol format
+            managed_symbol = await symbol_service.get_symbol(symbol)
+            td_symbol = None
+            if managed_symbol and managed_symbol.twelvedata_symbol:
+                td_symbol = managed_symbol.twelvedata_symbol
+            else:
+                # Generate TwelveData symbol format
+                td_symbol = symbol_service._generate_twelvedata_symbol(
+                    symbol,
+                    managed_symbol.category if managed_symbol else None
+                )
+
+            if not td_symbol:
+                logger.warning(f"No TwelveData symbol mapping for {symbol}")
+                return []
+
+            # Map timeframe to TwelveData interval
+            td_interval_map = {
+                "M5": "5min",
+                "M15": "15min",
+                "H1": "1h",
+                "H4": "4h",
+                "D1": "1day"
+            }
+            td_interval = td_interval_map.get(timeframe.upper(), "1h")
+
+            # TwelveData max outputsize is 5000
+            fetch_limit = min(limit, 5000)
+
+            # Fetch from TwelveData
+            td_data = await twelvedata_service.get_time_series(
+                symbol=td_symbol,
+                interval=td_interval,
+                outputsize=fetch_limit
+            )
+
+            if td_data and td_data.get("values"):
+                # Convert to EasyInsight format
+                converted = self._convert_twelvedata_to_easyinsight(
+                    td_data["values"],
+                    symbol,
+                    timeframe
+                )
+                logger.info(f"TwelveData returned {len(converted)} {timeframe} candles for {symbol}")
+                return converted
+
+        except Exception as e:
+            logger.error(f"Failed to get TwelveData candles for {symbol} {timeframe}: {e}")
+
+        return []
 
     # ==================== Training Data (for NHITS) ====================
 

@@ -28,7 +28,8 @@ from .data_gateway_service import data_gateway
 class PatternHistoryEntry:
     """Ein Eintrag in der Pattern-History."""
     id: str
-    timestamp: str  # ISO 8601 UTC
+    timestamp: str  # ISO 8601 UTC - Pattern-Zeitpunkt (Kerzen-Close)
+    detected_at: str  # ISO 8601 UTC - Scan-Zeitpunkt
     symbol: str
     pattern_type: str
     category: str  # reversal, continuation, indecision
@@ -63,7 +64,7 @@ class PatternHistoryService:
         self._max_history_age_hours = 24  # Max Alter der Einträge
 
         # Timeframes für den automatischen Scan
-        self._scan_timeframes = [Timeframe.M15, Timeframe.H1, Timeframe.D1]
+        self._scan_timeframes = [Timeframe.M5, Timeframe.M15, Timeframe.H1, Timeframe.D1]
 
         # Lade bestehende History
         self._load_history()
@@ -76,9 +77,12 @@ class PatternHistoryService:
             if self._history_file.exists():
                 with open(self._history_file, 'r') as f:
                     data = json.load(f)
-                    self._history = [
-                        PatternHistoryEntry(**entry) for entry in data
-                    ]
+                    self._history = []
+                    for entry in data:
+                        # Migration: Alte Einträge ohne detected_at
+                        if 'detected_at' not in entry:
+                            entry['detected_at'] = entry.get('timestamp', '')
+                        self._history.append(PatternHistoryEntry(**entry))
                 logger.info(f"Loaded {len(self._history)} pattern history entries")
         except Exception as e:
             logger.error(f"Failed to load pattern history: {e}")
@@ -115,6 +119,7 @@ class PatternHistoryService:
     def _get_timeframe_minutes(self, timeframe: str) -> int:
         """Gibt die Anzahl Minuten für einen Timeframe zurück."""
         tf_minutes = {
+            "M5": 5,
             "M15": 15,
             "H1": 60,
             "H4": 240,
@@ -213,6 +218,7 @@ class PatternHistoryService:
 
                     # Sammle alle Patterns aus allen Timeframes
                     all_patterns = (
+                        response.result.m5.patterns +
                         response.result.m15.patterns +
                         response.result.h1.patterns +
                         response.result.h4.patterns +
@@ -231,7 +237,8 @@ class PatternHistoryService:
 
                         entry = PatternHistoryEntry(
                             id=unique_key,
-                            timestamp=scan_time.isoformat(),
+                            timestamp=pattern_ts,  # Pattern-Zeitpunkt (Kerzen-Close)
+                            detected_at=scan_time.isoformat(),  # Scan-Zeitpunkt
                             symbol=symbol,
                             pattern_type=pattern.pattern_type.value,
                             category=pattern.category.value,
@@ -387,7 +394,7 @@ class PatternHistoryService:
 
         by_direction = {"bullish": 0, "bearish": 0, "neutral": 0}
         by_category = {"reversal": 0, "continuation": 0, "indecision": 0}
-        by_timeframe = {"M15": 0, "H1": 0, "H4": 0, "D1": 0}
+        by_timeframe = {"M5": 0, "M15": 0, "H1": 0, "H4": 0, "D1": 0}
         symbols = set()
 
         for entry in self._history:

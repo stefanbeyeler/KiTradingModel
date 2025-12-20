@@ -191,10 +191,20 @@ class CandlestickPatternService:
     # ==================== Pattern Detection Methods ====================
 
     def _is_doji(self, candle: CandleData, avg_body: float) -> bool:
-        """Check if candle is a Doji (very small body)."""
-        if avg_body == 0:
-            return candle.body_size < candle.total_range * 0.1
-        return candle.body_size < avg_body * 0.1
+        """
+        Check if candle is a Doji (very small body relative to range).
+
+        A Doji is detected when:
+        - Body is less than 10% of the candle's total range, OR
+        - Body is less than 10% of the average body size
+
+        This dual check ensures Dojis are detected in both volatile and calm markets.
+        """
+        body_to_range_ratio = candle.body_size / candle.total_range if candle.total_range > 0 else 0
+        body_to_avg_ratio = candle.body_size / avg_body if avg_body > 0 else 0
+
+        # A Doji if body is small relative to either the range or the average
+        return body_to_range_ratio < 0.1 or (avg_body > 0 and body_to_avg_ratio < 0.1)
 
     def _is_dragonfly_doji(self, candle: CandleData, avg_body: float) -> bool:
         """Check for Dragonfly Doji (long lower shadow, no upper shadow)."""
@@ -747,6 +757,131 @@ class CandlestickPatternService:
 
     # ==================== Data Conversion ====================
 
+    def _get_timeframe_minutes(self, timeframe: str) -> int:
+        """Get the number of minutes for a timeframe."""
+        tf_map = {
+            "M5": 5,
+            "M15": 15,
+            "H1": 60,
+            "H4": 240,
+            "D1": 1440,
+        }
+        return tf_map.get(timeframe.upper(), 60)
+
+    def _get_candle_boundary(self, ts: datetime, timeframe: str) -> datetime:
+        """
+        Get the candle boundary (start time) for a timestamp.
+        For H1: rounds down to the start of the hour.
+        For D1: rounds down to the start of the day.
+        """
+        if timeframe.upper() == "D1":
+            return ts.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif timeframe.upper() == "H4":
+            hour = (ts.hour // 4) * 4
+            return ts.replace(hour=hour, minute=0, second=0, microsecond=0)
+        elif timeframe.upper() == "H1":
+            return ts.replace(minute=0, second=0, microsecond=0)
+        elif timeframe.upper() == "M15":
+            minute = (ts.minute // 15) * 15
+            return ts.replace(minute=minute, second=0, microsecond=0)
+        elif timeframe.upper() == "M5":
+            minute = (ts.minute // 5) * 5
+            return ts.replace(minute=minute, second=0, microsecond=0)
+        else:
+            return ts.replace(minute=0, second=0, microsecond=0)
+
+    def _aggregate_to_candles(
+        self,
+        data: list[dict],
+        timeframe: str
+    ) -> list[dict]:
+        """
+        Aggregate minute-level data to proper timeframe candles.
+
+        EasyInsight provides minute-by-minute snapshots with rolling OHLC values.
+        This function groups by timeframe boundaries and takes the final OHLC
+        values for each completed candle.
+        """
+        if not data:
+            return []
+
+        tf_lower = timeframe.lower()
+        aggregated: dict[str, dict] = {}
+
+        for row in data:
+            try:
+                ts_str = row.get("snapshot_time") or row.get("timestamp") or row.get("datetime")
+                if not ts_str:
+                    continue
+
+                # Parse timestamp
+                if isinstance(ts_str, str):
+                    try:
+                        from dateutil import parser as dateutil_parser
+                        ts = dateutil_parser.isoparse(ts_str)
+                        if ts.tzinfo is None:
+                            ts = ts.replace(tzinfo=timezone.utc)
+                    except (ImportError, ValueError):
+                        continue
+                else:
+                    ts = ts_str
+
+                # Get candle boundary
+                boundary = self._get_candle_boundary(ts, timeframe)
+                boundary_key = boundary.isoformat()
+
+                # Get OHLC values for the requested timeframe
+                open_keys = [f"{tf_lower}_open", "h1_open", "open"]
+                high_keys = [f"{tf_lower}_high", "h1_high", "high"]
+                low_keys = [f"{tf_lower}_low", "h1_low", "low"]
+                close_keys = [f"{tf_lower}_close", "h1_close", "close"]
+
+                open_val = high_val = low_val = close_val = None
+                for key in open_keys:
+                    if key in row and row[key] is not None:
+                        open_val = float(row[key])
+                        break
+                for key in high_keys:
+                    if key in row and row[key] is not None:
+                        high_val = float(row[key])
+                        break
+                for key in low_keys:
+                    if key in row and row[key] is not None:
+                        low_val = float(row[key])
+                        break
+                for key in close_keys:
+                    if key in row and row[key] is not None:
+                        close_val = float(row[key])
+                        break
+
+                if not all(v is not None for v in [open_val, high_val, low_val, close_val]):
+                    continue
+
+                # Store/update the candle for this boundary
+                # We keep the latest snapshot for each candle boundary (most complete OHLC)
+                if boundary_key not in aggregated or ts > aggregated[boundary_key]["_last_ts"]:
+                    aggregated[boundary_key] = {
+                        "snapshot_time": boundary.isoformat(),
+                        f"{tf_lower}_open": open_val,
+                        f"{tf_lower}_high": high_val,
+                        f"{tf_lower}_low": low_val,
+                        f"{tf_lower}_close": close_val,
+                        "_last_ts": ts,
+                    }
+
+            except Exception as e:
+                logger.warning(f"Failed to aggregate row: {e}")
+                continue
+
+        # Convert to list and sort by time
+        result = list(aggregated.values())
+        for r in result:
+            del r["_last_ts"]  # Remove internal field
+        result.sort(key=lambda x: x["snapshot_time"])
+
+        logger.debug(f"Aggregated {len(data)} rows to {len(result)} {timeframe} candles")
+        return result
+
     def _convert_ohlc_to_candles(
         self,
         data: list[dict],
@@ -859,10 +994,22 @@ class CandlestickPatternService:
         # Scan each requested timeframe
         for tf in request.timeframes:
             try:
+                # For M5 and H4: TwelveData provides ready candles, no aggregation needed
+                # For other timeframes: EasyInsight provides minute snapshots that need aggregation
+                use_twelvedata_directly = tf.value.upper() in ("M5", "H4")
+
+                if use_twelvedata_directly:
+                    # TwelveData returns actual candles, request exact count needed
+                    raw_limit = request.lookback_candles
+                else:
+                    # EasyInsight provides minute-level snapshots, so for H1 we need ~60x more data
+                    tf_minutes = self._get_timeframe_minutes(tf.value)
+                    raw_limit = request.lookback_candles * tf_minutes
+
                 # Fetch data via DataGatewayService
                 data, source = await data_gateway.get_historical_data_with_fallback(
                     symbol=request.symbol,
-                    limit=request.lookback_candles,
+                    limit=raw_limit,
                     timeframe=tf.value,
                 )
 
@@ -873,8 +1020,16 @@ class CandlestickPatternService:
                     logger.warning(f"[{request_id}] No data for {request.symbol} {tf.value}")
                     continue
 
+                # Aggregate minute-level data to proper timeframe candles
+                # Skip aggregation for TwelveData (already provides proper candles)
+                if source == "twelvedata":
+                    aggregated_data = data  # Already proper candles
+                else:
+                    # EasyInsight provides minute snapshots with rolling OHLC
+                    aggregated_data = self._aggregate_to_candles(data, tf.value)
+
                 # Convert to CandleData
-                candles = self._convert_ohlc_to_candles(data, tf.value)
+                candles = self._convert_ohlc_to_candles(aggregated_data, tf.value)
 
                 if len(candles) < 3:
                     logger.warning(f"[{request_id}] Insufficient candles for {request.symbol} {tf.value}")
@@ -896,7 +1051,9 @@ class CandlestickPatternService:
                     analysis_timestamp=datetime.now(timezone.utc),
                 )
 
-                if tf == Timeframe.M15:
+                if tf == Timeframe.M5:
+                    result.m5 = tf_result
+                elif tf == Timeframe.M15:
                     result.m15 = tf_result
                 elif tf == Timeframe.H1:
                     result.h1 = tf_result

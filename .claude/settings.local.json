@@ -137,7 +137,9 @@
       "Bash(do)",
       "Bash(sudo chown:*)",
       "Bash(du:*)",
-      "Bash(sudo docker cp:*)"
+      "Bash(sudo docker cp:*)",
+      "Bash(# Test über die data service patterns route mit debug curl -s -X POST \"\"http://localhost:3001/api/v1/patterns/scan\"\" \\\\ -H \"\"Content-Type: application/json\"\" \\\\ -d ''{\"\"symbol\"\": \"\"BTCUSD\"\", \"\"timeframes\"\": [\"\"M5\"\"], \"\"lookback_candles\"\": 10, \"\"min_confidence\"\": 0.1}'')",
+      "Bash(# Prüfe ob M1 close Werte existieren \\(für echte OHLC-Berechnung\\) curl -s \"\"http://localhost:3001/api/v1/symbols\"\")"
     ],
     "deny": [],
     "ask": []
