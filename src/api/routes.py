@@ -2828,7 +2828,7 @@ async def get_multiple_indicators(
     """
     Get multiple technical indicators for a symbol in one request.
 
-    Note: Each indicator requires a separate API call with rate limiting (8 calls/min for free tier).
+    Note: Each indicator requires a separate API call (377 credits/min for Grow plan).
 
     Args:
         symbol: The symbol (e.g., 'AAPL', 'EUR/USD', 'BTC/USD')

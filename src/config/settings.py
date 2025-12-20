@@ -94,14 +94,14 @@ class Settings(BaseSettings):
         description="Maximum number of documents to include in RAG context"
     )
 
-    # Twelve Data API Configuration
+    # Twelve Data API Configuration (Grow Plan: 377 credits/min, no daily limits)
     twelvedata_api_key: str = Field(
         default="",
         description="API key for Twelve Data market data service"
     )
     twelvedata_rate_limit: int = Field(
-        default=8,
-        description="Max API calls per minute for Twelve Data (8 for free tier)"
+        default=377,
+        description="Max API credits per minute for Twelve Data (377 for Grow plan)"
     )
 
     # Performance Configuration

@@ -1,6 +1,6 @@
 """Twelve Data API Service - Access to real-time and historical market data.
 
-Includes rate limiting to respect API limits (8 calls/minute for free tier).
+Includes rate limiting to respect API limits (377 credits/min for Grow plan).
 """
 
 import asyncio
@@ -23,12 +23,12 @@ from ..config import settings
 class RateLimiter:
     """Token bucket rate limiter for API calls."""
 
-    def __init__(self, calls_per_minute: int = 8):
+    def __init__(self, calls_per_minute: int = 377):
         """
         Initialize rate limiter.
 
         Args:
-            calls_per_minute: Maximum API calls allowed per minute (default: 8 for free tier)
+            calls_per_minute: Maximum API credits allowed per minute (default: 377 for Grow plan)
         """
         self.calls_per_minute = calls_per_minute
         self.min_interval = 60.0 / calls_per_minute  # Minimum seconds between calls
@@ -95,8 +95,8 @@ class TwelveDataService:
         self._api_key: str = settings.twelvedata_api_key
         self._client: Optional[TDClient] = None
         self._initialized: bool = False
-        # Rate limiter: 8 calls/minute for free tier, configurable via settings
-        calls_per_minute = getattr(settings, 'twelvedata_rate_limit', 8)
+        # Rate limiter: 377 credits/minute for Grow plan, configurable via settings
+        calls_per_minute = getattr(settings, 'twelvedata_rate_limit', 377)
         self._rate_limiter = RateLimiter(calls_per_minute=calls_per_minute)
         self._total_calls: int = 0
         self._total_wait_time: float = 0.0
