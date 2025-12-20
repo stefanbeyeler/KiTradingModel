@@ -2228,6 +2228,7 @@ async def get_symbol_live_data(symbol: str):
         "timezone_info": get_timezone_info(),
         "easyinsight": None,
         "twelvedata": None,
+        "yfinance": None,
         "errors": []
     }
 
@@ -2346,7 +2347,20 @@ async def get_symbol_live_data(symbol: str):
             break
 
     try:
-        quote = await twelvedata_service.get_quote(symbol=td_symbol)
+        import asyncio
+
+        # Fetch quote and M1 time series in parallel
+        quote_task = twelvedata_service.get_quote(symbol=td_symbol)
+        m1_task = twelvedata_service.get_time_series(symbol=td_symbol, interval="1min", outputsize=2)
+
+        quote, m1_data = await asyncio.gather(quote_task, m1_task, return_exceptions=True)
+
+        # Handle exceptions
+        if isinstance(quote, Exception):
+            quote = None
+        if isinstance(m1_data, Exception):
+            m1_data = None
+
         if quote and "error" not in quote:
             # Calculate spread from bid/ask if available, or estimate from close
             td_bid = quote.get("bid")
@@ -2364,22 +2378,48 @@ async def get_symbol_live_data(symbol: str):
                 except (ValueError, TypeError):
                     pass
 
+            # Use M1 data for real-time OHLC if available, fallback to quote (daily)
             td_datetime = quote.get("datetime")
+            m1_ohlc = None
+            m1_datetime = None
+
+            if m1_data and "error" not in m1_data and m1_data.get("values"):
+                m1_values = m1_data["values"]
+                if m1_values and len(m1_values) > 0:
+                    latest_m1 = m1_values[0]
+                    m1_datetime = latest_m1.get("datetime")
+                    m1_ohlc = {
+                        "open": latest_m1.get("open"),
+                        "high": latest_m1.get("high"),
+                        "low": latest_m1.get("low"),
+                        "close": latest_m1.get("close"),
+                    }
+
+            # Use M1 datetime if available (more current), otherwise quote datetime
+            display_datetime = m1_datetime or td_datetime
+
             result["twelvedata"] = {
                 "source": "Twelve Data API",
                 "symbol_used": td_symbol,
                 "name": quote.get("name"),
                 "exchange": quote.get("exchange"),
                 "currency": quote.get("currency"),
-                "datetime_utc": format_utc_iso(td_datetime),
-                "datetime_display": format_for_display(td_datetime),
+                "datetime_utc": format_utc_iso(display_datetime),
+                "datetime_display": format_for_display(display_datetime),
                 "bid_ask": {
                     "bid": td_bid,
                     "ask": td_ask,
                     "spread": td_spread,
                     "spread_pct": td_spread_pct,
                 },
-                "price": {
+                # Use M1 OHLC for real-time price, daily OHLC as secondary
+                "price": m1_ohlc or {
+                    "open": quote.get("open"),
+                    "high": quote.get("high"),
+                    "low": quote.get("low"),
+                    "close": quote.get("close"),
+                },
+                "price_daily": {
                     "open": quote.get("open"),
                     "high": quote.get("high"),
                     "low": quote.get("low"),
@@ -2399,7 +2439,6 @@ async def get_symbol_live_data(symbol: str):
             }
 
             # Fetch TwelveData technical indicators (parallel requests) - use 1min interval for real-time data
-            import asyncio
             td_interval = "1min"  # Minute data for real-time comparison
             indicator_tasks = {
                 "rsi": twelvedata_service.get_rsi(td_symbol, interval=td_interval, outputsize=1),
@@ -2470,6 +2509,54 @@ async def get_symbol_live_data(symbol: str):
             result["errors"].append(f"TwelveData: {quote.get('error')}")
     except Exception as e:
         result["errors"].append(f"TwelveData: {str(e)}")
+
+    # Fetch Yahoo Finance data as additional source
+    try:
+        from ..services.yfinance_service import yfinance_service
+
+        if yfinance_service.is_available():
+            # Get daily data for comparison
+            yf_data = await yfinance_service.get_time_series(
+                symbol=symbol,
+                interval="1d",
+                outputsize=5  # Last 5 days
+            )
+
+            if "error" not in yf_data and yf_data.get("values"):
+                values = yf_data["values"]
+                latest = values[0] if values else None
+
+                if latest:
+                    yf_datetime = latest.get("datetime")
+                    result["yfinance"] = {
+                        "source": "Yahoo Finance",
+                        "symbol_used": yfinance_service._map_symbol(symbol),
+                        "datetime_utc": format_utc_iso(yf_datetime),
+                        "datetime_display": format_for_display(yf_datetime),
+                        "price": {
+                            "open": latest.get("open"),
+                            "high": latest.get("high"),
+                            "low": latest.get("low"),
+                            "close": latest.get("close"),
+                        },
+                        "volume": latest.get("volume"),
+                        "data_points": len(values),
+                    }
+
+                    # Calculate change from previous day if available
+                    if len(values) >= 2:
+                        prev = values[1]
+                        if prev.get("close") and latest.get("close"):
+                            prev_close = float(prev["close"])
+                            curr_close = float(latest["close"])
+                            change = curr_close - prev_close
+                            change_pct = (change / prev_close * 100) if prev_close != 0 else 0
+                            result["yfinance"]["change"] = round(change, 5)
+                            result["yfinance"]["change_percent"] = round(change_pct, 2)
+            elif "error" in yf_data:
+                result["errors"].append(f"Yahoo Finance: {yf_data['error']}")
+    except Exception as e:
+        result["errors"].append(f"Yahoo Finance: {str(e)}")
 
     return result
 

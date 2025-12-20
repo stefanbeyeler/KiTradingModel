@@ -2531,30 +2531,35 @@
 
             const ei = data.easyinsight;
             const td = data.twelvedata;
+            const yf = data.yfinance;
             const changeColor = td && parseFloat(td.change) >= 0 ? '#4caf50' : '#f44336';
+            const yfChangeColor = yf && parseFloat(yf.change) >= 0 ? '#4caf50' : '#f44336';
 
-            // Helper to create comparison row
-            function compareRow(label, eiValue, tdValue, options = {}) {
+            // Helper to create comparison row with 3 data sources
+            function compareRow(label, eiValue, tdValue, yfValue, options = {}) {
                 const eiFormatted = options.formatter ? options.formatter(eiValue, 'ei') : formatValue(eiValue, options.decimals);
                 const tdFormatted = options.formatter ? options.formatter(tdValue, 'td') : formatValue(tdValue, options.decimals);
+                const yfFormatted = options.formatter ? options.formatter(yfValue, 'yf') : formatValue(yfValue, options.decimals);
                 const eiStyle = options.eiStyle || '';
                 const tdStyle = options.tdStyle || '';
+                const yfStyle = options.yfStyle || '';
 
                 // Check if values match (within tolerance for floats)
                 let matchIndicator = '';
-                if (eiValue !== null && eiValue !== undefined && tdValue !== null && tdValue !== undefined) {
-                    const eiNum = parseFloat(eiValue);
-                    const tdNum = parseFloat(tdValue);
-                    if (!isNaN(eiNum) && !isNaN(tdNum)) {
-                        const diff = Math.abs(eiNum - tdNum);
-                        const avg = (Math.abs(eiNum) + Math.abs(tdNum)) / 2;
-                        const pctDiff = avg > 0 ? (diff / avg) * 100 : 0;
+                const values = [eiValue, tdValue, yfValue].filter(v => v !== null && v !== undefined);
+                if (values.length >= 2) {
+                    const nums = values.map(v => parseFloat(v)).filter(n => !isNaN(n));
+                    if (nums.length >= 2) {
+                        const max = Math.max(...nums);
+                        const min = Math.min(...nums);
+                        const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+                        const pctDiff = avg > 0 ? ((max - min) / avg) * 100 : 0;
                         if (pctDiff < 0.01) {
-                            matchIndicator = '<span style="color: #4caf50; margin-left: 4px;" title="Werte stimmen überein">&#10003;</span>';
+                            matchIndicator = '<span style="color: #4caf50;" title="Werte stimmen überein">&#10003;</span>';
                         } else if (pctDiff < 1) {
-                            matchIndicator = '<span style="color: #ffc107; margin-left: 4px;" title="Kleine Abweichung">&#8776;</span>';
+                            matchIndicator = '<span style="color: #ffc107;" title="Kleine Abweichung">&#8776;</span>';
                         } else {
-                            matchIndicator = '<span style="color: #f44336; margin-left: 4px;" title="Unterschiedliche Werte">&#10007;</span>';
+                            matchIndicator = '<span style="color: #f44336;" title="Unterschiedliche Werte">&#10007;</span>';
                         }
                     }
                 }
@@ -2563,6 +2568,7 @@
                     <td style="color: #aaa; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">${label}</td>
                     <td style="text-align: right; font-family: monospace; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(33, 150, 243, 0.03); ${eiStyle}">${eiFormatted}</td>
                     <td style="text-align: right; font-family: monospace; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(156, 39, 176, 0.03); ${tdStyle}">${tdFormatted}</td>
+                    <td style="text-align: right; font-family: monospace; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255, 152, 0, 0.03); ${yfStyle}">${yfFormatted}</td>
                     <td style="text-align: center; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); width: 30px;">${matchIndicator}</td>
                 </tr>`;
             }
@@ -2570,7 +2576,7 @@
             // Section header row
             function sectionHeader(title) {
                 return `<tr>
-                    <td colspan="4" style="background: rgba(255,255,255,0.03); padding: 10px 12px; font-weight: bold; color: #fff; border-bottom: 2px solid rgba(255,255,255,0.1);">
+                    <td colspan="5" style="background: rgba(255,255,255,0.03); padding: 10px 12px; font-weight: bold; color: #fff; border-bottom: 2px solid rgba(255,255,255,0.1);">
                         ${title}
                     </td>
                 </tr>`;
@@ -2584,14 +2590,18 @@
                 ${errors}
 
                 <!-- Timestamp Info -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div style="background: rgba(33, 150, 243, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
                         <div style="color: #2196f3; font-weight: bold; margin-bottom: 0.25rem;">&#128202; EasyInsight</div>
-                        <div style="color: #888; font-size: 0.8rem;">${ei?.snapshot_time ? new Date(ei.snapshot_time).toLocaleString('de-DE') : 'Keine Daten'}</div>
+                        <div style="color: #888; font-size: 0.8rem;">${ei?.snapshot_time_display || 'Keine Daten'}</div>
                     </div>
                     <div style="background: rgba(156, 39, 176, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
                         <div style="color: #9c27b0; font-weight: bold; margin-bottom: 0.25rem;">&#128200; TwelveData${td?.symbol_used ? ` (${td.symbol_used})` : ''}</div>
-                        <div style="color: #888; font-size: 0.8rem;">${td?.indicator_datetime ? new Date(td.indicator_datetime).toLocaleString('de-DE') : (td?.datetime || 'Keine Daten')}</div>
+                        <div style="color: #888; font-size: 0.8rem;">${td?.indicator_datetime_display || td?.datetime_display || 'Keine Daten'}</div>
+                    </div>
+                    <div style="background: rgba(255, 152, 0, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                        <div style="color: #ff9800; font-weight: bold; margin-bottom: 0.25rem;">&#128200; Yahoo Finance${yf?.symbol_used ? ` (${yf.symbol_used})` : ''}</div>
+                        <div style="color: #888; font-size: 0.8rem;">${yf?.datetime_display || 'Keine Daten'}</div>
                     </div>
                 </div>
 
@@ -2600,37 +2610,38 @@
                     <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
                         <thead>
                             <tr style="background: rgba(255,255,255,0.05);">
-                                <th style="text-align: left; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); width: 30%;">Indikator</th>
-                                <th style="text-align: right; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); color: #2196f3; width: 30%;">EasyInsight</th>
-                                <th style="text-align: right; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); color: #9c27b0; width: 30%;">TwelveData</th>
-                                <th style="text-align: center; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); width: 10%;" title="Vergleich">&#8596;</th>
+                                <th style="text-align: left; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); width: 20%;">Indikator</th>
+                                <th style="text-align: right; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); color: #2196f3; width: 22%;">EasyInsight</th>
+                                <th style="text-align: right; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); color: #9c27b0; width: 22%;">TwelveData</th>
+                                <th style="text-align: right; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); color: #ff9800; width: 22%;">Yahoo Finance</th>
+                                <th style="text-align: center; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); width: 14%;" title="Vergleich">&#8596;</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${sectionHeader('&#128181; Bid/Ask & Spread')}
                             <tr>
-                                <td colspan="4" style="padding: 6px 12px; background: rgba(156,39,176,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                    <span style="color: #9c27b0; font-size: 0.75rem;">&#9432; TwelveData liefert keine Bid/Ask-Daten (nur Exchange OHLCV)</span>
+                                <td colspan="5" style="padding: 6px 12px; background: rgba(156,39,176,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <span style="color: #9c27b0; font-size: 0.75rem;">&#9432; TwelveData/Yahoo Finance liefern keine Bid/Ask-Daten (nur Exchange OHLCV)</span>
                                 </td>
                             </tr>
-                            ${compareRow('Bid', ei?.price?.bid, td?.bid_ask?.bid)}
-                            ${compareRow('Ask', ei?.price?.ask, td?.bid_ask?.ask)}
-                            ${compareRow('Spread', ei?.price?.spread, td?.bid_ask?.spread)}
-                            ${compareRow('Spread %', ei?.price?.spread_pct, td?.bid_ask?.spread_pct, {decimals: 4})}
+                            ${compareRow('Bid', ei?.price?.bid, td?.bid_ask?.bid, null)}
+                            ${compareRow('Ask', ei?.price?.ask, td?.bid_ask?.ask, null)}
+                            ${compareRow('Spread', ei?.price?.spread, td?.bid_ask?.spread, null)}
+                            ${compareRow('Spread %', ei?.price?.spread_pct, td?.bid_ask?.spread_pct, null, {decimals: 4})}
 
                             ${sectionHeader('&#128176; Preisdaten (OHLC)')}
-                            ${compareRow('Open', ei?.ohlc?.d1?.open, td?.price?.open)}
-                            ${compareRow('High', ei?.ohlc?.d1?.high, td?.price?.high, {eiStyle: 'color: #4caf50;', tdStyle: 'color: #4caf50;'})}
-                            ${compareRow('Low', ei?.ohlc?.d1?.low, td?.price?.low, {eiStyle: 'color: #f44336;', tdStyle: 'color: #f44336;'})}
-                            ${compareRow('Close', ei?.ohlc?.d1?.close, td?.price?.close)}
-                            ${compareRow('Prev. Close', null, td?.price?.previous_close)}
+                            ${compareRow('Open', ei?.ohlc?.d1?.open, td?.price?.open, yf?.price?.open)}
+                            ${compareRow('High', ei?.ohlc?.d1?.high, td?.price?.high, yf?.price?.high, {eiStyle: 'color: #4caf50;', tdStyle: 'color: #4caf50;', yfStyle: 'color: #4caf50;'})}
+                            ${compareRow('Low', ei?.ohlc?.d1?.low, td?.price?.low, yf?.price?.low, {eiStyle: 'color: #f44336;', tdStyle: 'color: #f44336;', yfStyle: 'color: #f44336;'})}
+                            ${compareRow('Close', ei?.ohlc?.d1?.close, td?.price?.close, yf?.price?.close)}
+                            ${compareRow('Prev. Close', null, td?.price?.previous_close, yf?.price?.previous_close)}
 
                             ${sectionHeader('&#128200; Änderung')}
-                            ${compareRow('Änderung', null, td?.change, {tdStyle: `color: ${changeColor};`})}
-                            ${compareRow('Änderung %', null, td?.percent_change, {decimals: 2, tdStyle: `color: ${changeColor};`})}
+                            ${compareRow('Änderung', null, td?.change, yf?.change, {tdStyle: `color: ${changeColor};`, yfStyle: `color: ${yfChangeColor};`})}
+                            ${compareRow('Änderung %', null, td?.percent_change, yf?.change_percent, {decimals: 2, tdStyle: `color: ${changeColor};`, yfStyle: `color: ${yfChangeColor};`})}
 
                             ${sectionHeader('&#128202; Technische Indikatoren')}
-                            ${compareRow('RSI (14)', ei?.indicators?.rsi, td?.indicators?.rsi, {
+                            ${compareRow('RSI (14)', ei?.indicators?.rsi, td?.indicators?.rsi, null, {
                                 formatter: (v) => {
                                     if (v === null || v === undefined) return '-';
                                     const num = parseFloat(v);
@@ -2640,67 +2651,70 @@
                                     return `<span style="color: ${color};">${num.toFixed(2)}</span>`;
                                 }
                             })}
-                            ${compareRow('MACD Main', ei?.indicators?.macd?.main, td?.indicators?.macd?.main, {decimals: 5})}
-                            ${compareRow('MACD Signal', ei?.indicators?.macd?.signal, td?.indicators?.macd?.signal, {decimals: 5})}
-                            ${compareRow('MACD Histogram', null, td?.indicators?.macd?.histogram, {decimals: 5})}
-                            ${compareRow('Stochastic %K', ei?.indicators?.stochastic?.main, td?.indicators?.stochastic?.k, {decimals: 2})}
-                            ${compareRow('Stochastic %D', ei?.indicators?.stochastic?.signal, td?.indicators?.stochastic?.d, {decimals: 2})}
-                            ${compareRow('CCI', ei?.indicators?.cci, null, {decimals: 2})}
-                            ${compareRow('ADX', ei?.indicators?.adx?.main, td?.indicators?.adx, {decimals: 2})}
-                            ${compareRow('MA/EMA (10)', ei?.indicators?.ma_10, td?.indicators?.ema_10)}
-                            ${compareRow('ATR (D1)', ei?.indicators?.atr?.d1, td?.indicators?.atr)}
-                            ${compareRow('ATR % (D1)', ei?.indicators?.atr?.d1_pct, null, {decimals: 2})}
+                            ${compareRow('MACD Main', ei?.indicators?.macd?.main, td?.indicators?.macd?.main, null, {decimals: 5})}
+                            ${compareRow('MACD Signal', ei?.indicators?.macd?.signal, td?.indicators?.macd?.signal, null, {decimals: 5})}
+                            ${compareRow('MACD Histogram', null, td?.indicators?.macd?.histogram, null, {decimals: 5})}
+                            ${compareRow('Stochastic %K', ei?.indicators?.stochastic?.main, td?.indicators?.stochastic?.k, null, {decimals: 2})}
+                            ${compareRow('Stochastic %D', ei?.indicators?.stochastic?.signal, td?.indicators?.stochastic?.d, null, {decimals: 2})}
+                            ${compareRow('CCI', ei?.indicators?.cci, null, null, {decimals: 2})}
+                            ${compareRow('ADX', ei?.indicators?.adx?.main, td?.indicators?.adx, null, {decimals: 2})}
+                            ${compareRow('MA/EMA (10)', ei?.indicators?.ma_10, td?.indicators?.ema_10, null)}
+                            ${compareRow('ATR (D1)', ei?.indicators?.atr?.d1, td?.indicators?.atr, null)}
+                            ${compareRow('ATR % (D1)', ei?.indicators?.atr?.d1_pct, null, null, {decimals: 2})}
 
                             ${sectionHeader('&#128200; Bollinger Bands')}
-                            ${compareRow('Upper Band', ei?.indicators?.bollinger?.upper, td?.indicators?.bollinger?.upper)}
-                            ${compareRow('Middle Band', ei?.indicators?.bollinger?.base, td?.indicators?.bollinger?.middle)}
-                            ${compareRow('Lower Band', ei?.indicators?.bollinger?.lower, td?.indicators?.bollinger?.lower)}
+                            ${compareRow('Upper Band', ei?.indicators?.bollinger?.upper, td?.indicators?.bollinger?.upper, null)}
+                            ${compareRow('Middle Band', ei?.indicators?.bollinger?.base, td?.indicators?.bollinger?.middle, null)}
+                            ${compareRow('Lower Band', ei?.indicators?.bollinger?.lower, td?.indicators?.bollinger?.lower, null)}
 
                             ${sectionHeader('&#9729; Ichimoku Cloud')}
-                            ${compareRow('Tenkan-sen', ei?.indicators?.ichimoku?.tenkan, td?.indicators?.ichimoku?.tenkan)}
-                            ${compareRow('Kijun-sen', ei?.indicators?.ichimoku?.kijun, td?.indicators?.ichimoku?.kijun)}
-                            ${compareRow('Senkou Span A', ei?.indicators?.ichimoku?.senkou_a, td?.indicators?.ichimoku?.senkou_a)}
-                            ${compareRow('Senkou Span B', ei?.indicators?.ichimoku?.senkou_b, td?.indicators?.ichimoku?.senkou_b)}
-                            ${compareRow('Chikou Span', ei?.indicators?.ichimoku?.chikou, td?.indicators?.ichimoku?.chikou)}
+                            ${compareRow('Tenkan-sen', ei?.indicators?.ichimoku?.tenkan, td?.indicators?.ichimoku?.tenkan, null)}
+                            ${compareRow('Kijun-sen', ei?.indicators?.ichimoku?.kijun, td?.indicators?.ichimoku?.kijun, null)}
+                            ${compareRow('Senkou Span A', ei?.indicators?.ichimoku?.senkou_a, td?.indicators?.ichimoku?.senkou_a, null)}
+                            ${compareRow('Senkou Span B', ei?.indicators?.ichimoku?.senkou_b, td?.indicators?.ichimoku?.senkou_b, null)}
+                            ${compareRow('Chikou Span', ei?.indicators?.ichimoku?.chikou, td?.indicators?.ichimoku?.chikou, null)}
 
                             ${sectionHeader('&#128200; Trend-Stärke')}
-                            ${compareRow('4H Trend', ei?.indicators?.strength?.h4, null, {
+                            ${compareRow('4H Trend', ei?.indicators?.strength?.h4, null, null, {
                                 formatter: (v) => formatStrength(v)
                             })}
-                            ${compareRow('1D Trend', ei?.indicators?.strength?.d1, null, {
+                            ${compareRow('1D Trend', ei?.indicators?.strength?.d1, null, null, {
                                 formatter: (v) => formatStrength(v)
                             })}
-                            ${compareRow('1W Trend', ei?.indicators?.strength?.w1, null, {
+                            ${compareRow('1W Trend', ei?.indicators?.strength?.w1, null, null, {
                                 formatter: (v) => formatStrength(v)
                             })}
 
                             ${sectionHeader('&#128202; Volumen & Markt')}
-                            ${compareRow('Volumen', null, td?.volume, {
+                            ${compareRow('Volumen', null, td?.volume, yf?.price?.volume, {
                                 formatter: (v) => v ? parseInt(v).toLocaleString() : '-'
                             })}
-                            ${compareRow('Avg. Volumen', null, td?.average_volume, {
+                            ${compareRow('Avg. Volumen', null, td?.average_volume, null, {
                                 formatter: (v) => v ? parseInt(v).toLocaleString() : '-'
                             })}
-                            ${compareRow('Markt offen', null, td?.is_market_open, {
+                            ${compareRow('Markt offen', null, td?.is_market_open, null, {
                                 formatter: (v) => v === true ? '<span style="color: #4caf50;">Ja</span>' : (v === false ? '<span style="color: #f44336;">Nein</span>' : '-')
                             })}
 
                             ${sectionHeader('&#128197; 52-Wochen Range')}
-                            ${compareRow('52W Low', null, td?.fifty_two_week?.low, {tdStyle: 'color: #f44336;'})}
-                            ${compareRow('52W High', null, td?.fifty_two_week?.high, {tdStyle: 'color: #4caf50;'})}
+                            ${compareRow('52W Low', null, td?.fifty_two_week?.low, null, {tdStyle: 'color: #f44336;'})}
+                            ${compareRow('52W High', null, td?.fifty_two_week?.high, null, {tdStyle: 'color: #4caf50;'})}
 
                             ${sectionHeader('&#127970; Stammdaten')}
-                            ${compareRow('Name', null, td?.name, {formatter: (v) => v || '-'})}
-                            ${compareRow('Exchange', null, td?.exchange, {formatter: (v) => v || '-'})}
-                            ${compareRow('Währung', null, td?.currency, {formatter: (v) => v || '-'})}
+                            ${compareRow('Name', null, td?.name, yf?.name, {formatter: (v) => v || '-'})}
+                            ${compareRow('Exchange', null, td?.exchange, yf?.exchange, {formatter: (v) => v || '-'})}
+                            ${compareRow('Währung', null, td?.currency, yf?.currency, {formatter: (v) => v || '-'})}
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Legend -->
-                <div style="margin-top: 1rem; display: flex; gap: 1.5rem; justify-content: center; font-size: 0.75rem; color: #888;">
-                    <span><span style="color: #4caf50;">&#10003;</span> Werte identisch (&lt;0.01%)</span>
-                    <span><span style="color: #ffc107;">&#8776;</span> Kleine Abweichung (&lt;1%)</span>
+                <div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; font-size: 0.75rem; color: #888;">
+                    <span><span style="color: #2196f3;">&#9632;</span> EasyInsight</span>
+                    <span><span style="color: #9c27b0;">&#9632;</span> TwelveData</span>
+                    <span><span style="color: #ff9800;">&#9632;</span> Yahoo Finance</span>
+                    <span style="margin-left: 1rem;"><span style="color: #4caf50;">&#10003;</span> Identisch (&lt;0.01%)</span>
+                    <span><span style="color: #ffc107;">&#8776;</span> Abweichung (&lt;1%)</span>
                     <span><span style="color: #f44336;">&#10007;</span> Unterschiedlich (&gt;1%)</span>
                 </div>
             `;
