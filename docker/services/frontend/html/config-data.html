@@ -561,6 +561,7 @@
         <div class="tabs">
             <button class="tab-btn active" data-tab="symbols">Symbole</button>
             <button class="tab-btn" data-tab="strategies">Trading-Strategien</button>
+            <button class="tab-btn" data-tab="explorer">Daten-Explorer</button>
             <button class="tab-btn" data-tab="export">Export / Import</button>
         </div>
 
@@ -796,6 +797,105 @@
                             <tr><td colspan="7" class="loading"><div class="spinner"></div><br>Lade Exports...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daten-Explorer Tab -->
+        <div id="explorer-tab" class="tab-content">
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h2 class="card-title">&#128202; Daten-Explorer</h2>
+                </div>
+                <div style="padding: 1rem;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Symbol *</label>
+                            <select class="form-select" id="explorer-symbol">
+                                <option value="">Symbol wählen...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Zeitrahmen</label>
+                            <select class="form-select" id="explorer-interval">
+                                <option value="1min">1 Minute</option>
+                                <option value="5min">5 Minuten</option>
+                                <option value="15min">15 Minuten</option>
+                                <option value="30min">30 Minuten</option>
+                                <option value="1h" selected>1 Stunde</option>
+                                <option value="4h">4 Stunden</option>
+                                <option value="1day">1 Tag</option>
+                                <option value="1week">1 Woche</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Datenpunkte</label>
+                            <select class="form-select" id="explorer-limit">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50" selected>50</option>
+                                <option value="100">100</option>
+                                <option value="200">200</option>
+                                <option value="500">500</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Datenquelle</label>
+                            <select class="form-select" id="explorer-source">
+                                <option value="twelvedata" selected>TwelveData</option>
+                                <option value="yfinance">Yahoo Finance</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Indikatoren</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                <label class="form-checkbox"><input type="checkbox" id="ind-rsi" checked><span>RSI</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="ind-macd" checked><span>MACD</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="ind-bbands" checked><span>Bollinger</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="ind-stoch"><span>Stochastic</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="ind-adx"><span>ADX</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="ind-atr"><span>ATR</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="ind-ema"><span>EMA</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="ind-sma"><span>SMA</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="ind-vwap"><span>VWAP</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="ind-ichimoku"><span>Ichimoku</span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn btn-primary" onclick="loadExplorerData()">&#128269; Daten laden</button>
+                        <button class="btn btn-secondary" onclick="exportExplorerData()">&#128190; Als CSV exportieren</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Display -->
+            <div class="card" id="explorer-results" style="display: none;">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 class="card-title" id="explorer-title">Ergebnisse</h2>
+                    <div id="explorer-info" style="font-size: 0.85rem; color: #888;"></div>
+                </div>
+                <div style="padding: 1rem; overflow-x: auto;">
+                    <table id="explorer-table" style="width: 100%; font-size: 0.8rem;">
+                        <thead id="explorer-thead"></thead>
+                        <tbody id="explorer-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="explorer-loading" style="display: none; text-align: center; padding: 3rem;">
+                <div class="spinner"></div>
+                <p style="margin-top: 1rem; color: #888;">Lade Daten...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="explorer-error" style="display: none;" class="card">
+                <div style="padding: 2rem; text-align: center; color: #f44336;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#9888;</div>
+                    <p id="explorer-error-msg">Fehler beim Laden der Daten</p>
                 </div>
             </div>
         </div>
@@ -2756,10 +2856,372 @@
             return `<span style="color: ${color};">${num.toFixed(2)} (${label})</span>`;
         }
 
+        // ==================== Daten-Explorer ====================
+
+        let explorerData = [];
+
+        function populateExplorerSymbols() {
+            const select = document.getElementById('explorer-symbol');
+            select.innerHTML = '<option value="">Symbol wählen...</option>';
+
+            // Group by category
+            const categories = {};
+            allSymbols.forEach(s => {
+                const cat = s.category || 'other';
+                if (!categories[cat]) categories[cat] = [];
+                categories[cat].push(s);
+            });
+
+            const catLabels = {
+                'crypto': 'Crypto',
+                'forex': 'Forex',
+                'index': 'Indices',
+                'commodity': 'Commodities',
+                'stock': 'Stocks',
+                'etf': 'ETFs',
+                'other': 'Andere'
+            };
+
+            Object.keys(categories).sort().forEach(cat => {
+                const group = document.createElement('optgroup');
+                group.label = catLabels[cat] || cat;
+                categories[cat].sort((a, b) => a.symbol.localeCompare(b.symbol)).forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.symbol;
+                    opt.textContent = `${s.symbol}${s.display_name ? ' - ' + s.display_name : ''}`;
+                    group.appendChild(opt);
+                });
+                select.appendChild(group);
+            });
+        }
+
+        // Convert symbol to TwelveData format (EURUSD -> EUR/USD, BTCUSD -> BTC/USD)
+        function toTwelveDataSymbol(symbol) {
+            // Forex pairs (6 chars)
+            const forexCurrencies = ['EUR', 'USD', 'GBP', 'JPY', 'CHF', 'AUD', 'NZD', 'CAD'];
+            if (symbol.length === 6) {
+                const base = symbol.substring(0, 3);
+                const quote = symbol.substring(3, 6);
+                if (forexCurrencies.includes(base) && forexCurrencies.includes(quote)) {
+                    return `${base}/${quote}`;
+                }
+            }
+            // Crypto pairs (e.g., BTCUSD, ETHUSD)
+            const cryptoCurrencies = ['BTC', 'ETH', 'SOL', 'ADA', 'BNB', 'XRP', 'DOT', 'LTC', 'LINK', 'AVAX'];
+            for (const crypto of cryptoCurrencies) {
+                if (symbol.startsWith(crypto) && symbol.length > crypto.length) {
+                    const quote = symbol.substring(crypto.length);
+                    return `${crypto}/${quote}`;
+                }
+            }
+            // Indices and others - keep as is
+            return symbol;
+        }
+
+        async function loadExplorerData() {
+            const rawSymbol = document.getElementById('explorer-symbol').value;
+            const interval = document.getElementById('explorer-interval').value;
+            const limit = document.getElementById('explorer-limit').value;
+            const source = document.getElementById('explorer-source').value;
+
+            if (!rawSymbol) {
+                showToast('Bitte ein Symbol auswählen', 'error');
+                return;
+            }
+
+            // Convert symbol for TwelveData API
+            const symbol = source === 'twelvedata' ? toTwelveDataSymbol(rawSymbol) : rawSymbol;
+
+            // Get selected indicators
+            const indicators = [];
+            if (document.getElementById('ind-rsi').checked) indicators.push('rsi');
+            if (document.getElementById('ind-macd').checked) indicators.push('macd');
+            if (document.getElementById('ind-bbands').checked) indicators.push('bbands');
+            if (document.getElementById('ind-stoch').checked) indicators.push('stoch');
+            if (document.getElementById('ind-adx').checked) indicators.push('adx');
+            if (document.getElementById('ind-atr').checked) indicators.push('atr');
+            if (document.getElementById('ind-ema').checked) indicators.push('ema');
+            if (document.getElementById('ind-sma').checked) indicators.push('sma');
+            if (document.getElementById('ind-vwap').checked) indicators.push('vwap');
+            if (document.getElementById('ind-ichimoku').checked) indicators.push('ichimoku');
+
+            document.getElementById('explorer-results').style.display = 'none';
+            document.getElementById('explorer-error').style.display = 'none';
+            document.getElementById('explorer-loading').style.display = 'block';
+
+            try {
+                let data;
+                if (source === 'twelvedata') {
+                    // Fetch OHLCV data
+                    const ohlcvRes = await fetch(`${API_BASE}/twelvedata/time_series/${symbol}?interval=${interval}&outputsize=${limit}`);
+                    if (!ohlcvRes.ok) throw new Error('Fehler beim Laden der OHLCV-Daten');
+                    const ohlcv = await ohlcvRes.json();
+
+                    // Fetch indicators in parallel
+                    const indicatorPromises = [];
+
+                    if (indicators.includes('rsi')) {
+                        indicatorPromises.push(
+                            fetch(`${API_BASE}/twelvedata/rsi/${symbol}?interval=${interval}&outputsize=${limit}`)
+                                .then(r => r.json()).then(d => ({ name: 'rsi', data: d })).catch(() => null)
+                        );
+                    }
+                    if (indicators.includes('macd')) {
+                        indicatorPromises.push(
+                            fetch(`${API_BASE}/twelvedata/macd/${symbol}?interval=${interval}&outputsize=${limit}`)
+                                .then(r => r.json()).then(d => ({ name: 'macd', data: d })).catch(() => null)
+                        );
+                    }
+                    if (indicators.includes('bbands')) {
+                        indicatorPromises.push(
+                            fetch(`${API_BASE}/twelvedata/bbands/${symbol}?interval=${interval}&outputsize=${limit}`)
+                                .then(r => r.json()).then(d => ({ name: 'bbands', data: d })).catch(() => null)
+                        );
+                    }
+                    if (indicators.includes('stoch')) {
+                        indicatorPromises.push(
+                            fetch(`${API_BASE}/twelvedata/stoch/${symbol}?interval=${interval}&outputsize=${limit}`)
+                                .then(r => r.json()).then(d => ({ name: 'stoch', data: d })).catch(() => null)
+                        );
+                    }
+                    if (indicators.includes('adx')) {
+                        indicatorPromises.push(
+                            fetch(`${API_BASE}/twelvedata/adx/${symbol}?interval=${interval}&outputsize=${limit}`)
+                                .then(r => r.json()).then(d => ({ name: 'adx', data: d })).catch(() => null)
+                        );
+                    }
+                    if (indicators.includes('atr')) {
+                        indicatorPromises.push(
+                            fetch(`${API_BASE}/twelvedata/atr/${symbol}?interval=${interval}&outputsize=${limit}`)
+                                .then(r => r.json()).then(d => ({ name: 'atr', data: d })).catch(() => null)
+                        );
+                    }
+                    if (indicators.includes('ema')) {
+                        indicatorPromises.push(
+                            fetch(`${API_BASE}/twelvedata/ema/${symbol}?interval=${interval}&outputsize=${limit}&time_period=20`)
+                                .then(r => r.json()).then(d => ({ name: 'ema', data: d })).catch(() => null)
+                        );
+                    }
+                    if (indicators.includes('sma')) {
+                        indicatorPromises.push(
+                            fetch(`${API_BASE}/twelvedata/sma/${symbol}?interval=${interval}&outputsize=${limit}&time_period=20`)
+                                .then(r => r.json()).then(d => ({ name: 'sma', data: d })).catch(() => null)
+                        );
+                    }
+
+                    const indicatorResults = await Promise.all(indicatorPromises);
+
+                    // Merge data
+                    data = mergeExplorerData(ohlcv, indicatorResults.filter(r => r !== null));
+                } else {
+                    // Yahoo Finance
+                    const res = await fetch(`${API_BASE}/yfinance/time-series/${symbol}?interval=${interval}&outputsize=${limit}`);
+                    if (!res.ok) throw new Error('Fehler beim Laden der Yahoo Finance Daten');
+                    data = await res.json();
+                    data = data.data || data.values || data;
+                }
+
+                explorerData = data;
+                renderExplorerTable(rawSymbol, interval, source, indicators);
+
+                document.getElementById('explorer-loading').style.display = 'none';
+                document.getElementById('explorer-results').style.display = 'block';
+
+            } catch (err) {
+                console.error('Explorer error:', err);
+                document.getElementById('explorer-loading').style.display = 'none';
+                document.getElementById('explorer-error').style.display = 'block';
+                document.getElementById('explorer-error-msg').textContent = err.message;
+            }
+        }
+
+        function mergeExplorerData(ohlcv, indicators) {
+            if (!ohlcv.data && !ohlcv.values) return [];
+
+            const values = ohlcv.data || ohlcv.values || [];
+            const result = values.map(v => ({
+                datetime: v.datetime,
+                open: parseFloat(v.open),
+                high: parseFloat(v.high),
+                low: parseFloat(v.low),
+                close: parseFloat(v.close),
+                volume: v.volume ? parseInt(v.volume) : null
+            }));
+
+            // Create datetime index map
+            const dtMap = {};
+            result.forEach((r, i) => dtMap[r.datetime] = i);
+
+            // Merge indicators
+            indicators.forEach(ind => {
+                if (!ind || !ind.data) return;
+                const indValues = ind.data.data || ind.data.values || ind.data || [];
+
+                indValues.forEach(v => {
+                    const idx = dtMap[v.datetime];
+                    if (idx !== undefined) {
+                        if (ind.name === 'rsi') {
+                            result[idx].rsi = parseFloat(v.rsi);
+                        } else if (ind.name === 'macd') {
+                            result[idx].macd = parseFloat(v.macd);
+                            result[idx].macd_signal = parseFloat(v.macd_signal);
+                            result[idx].macd_hist = parseFloat(v.macd_hist);
+                        } else if (ind.name === 'bbands') {
+                            result[idx].bb_upper = parseFloat(v.upper_band);
+                            result[idx].bb_middle = parseFloat(v.middle_band);
+                            result[idx].bb_lower = parseFloat(v.lower_band);
+                        } else if (ind.name === 'stoch') {
+                            result[idx].stoch_k = parseFloat(v.slow_k);
+                            result[idx].stoch_d = parseFloat(v.slow_d);
+                        } else if (ind.name === 'adx') {
+                            result[idx].adx = parseFloat(v.adx);
+                        } else if (ind.name === 'atr') {
+                            result[idx].atr = parseFloat(v.atr);
+                        } else if (ind.name === 'ema') {
+                            result[idx].ema = parseFloat(v.ema);
+                        } else if (ind.name === 'sma') {
+                            result[idx].sma = parseFloat(v.sma);
+                        }
+                    }
+                });
+            });
+
+            return result;
+        }
+
+        function renderExplorerTable(symbol, interval, source, indicators) {
+            const thead = document.getElementById('explorer-thead');
+            const tbody = document.getElementById('explorer-tbody');
+
+            document.getElementById('explorer-title').textContent = `${symbol} - ${interval}`;
+            document.getElementById('explorer-info').textContent =
+                `${explorerData.length} Datenpunkte | Quelle: ${source === 'twelvedata' ? 'TwelveData' : 'Yahoo Finance'}`;
+
+            // Build header
+            let headerHtml = '<tr>';
+            headerHtml += '<th style="position: sticky; left: 0; background: #1a1a2e; z-index: 1;">Datum/Zeit</th>';
+            headerHtml += '<th>Open</th><th>High</th><th>Low</th><th style="background: rgba(100,200,255,0.1);">Close</th>';
+            headerHtml += '<th>Volume</th>';
+
+            if (indicators.includes('rsi')) headerHtml += '<th style="background: rgba(156,39,176,0.1);">RSI</th>';
+            if (indicators.includes('macd')) headerHtml += '<th>MACD</th><th>Signal</th><th>Hist</th>';
+            if (indicators.includes('bbands')) headerHtml += '<th>BB Upper</th><th>BB Mid</th><th>BB Lower</th>';
+            if (indicators.includes('stoch')) headerHtml += '<th>Stoch %K</th><th>Stoch %D</th>';
+            if (indicators.includes('adx')) headerHtml += '<th>ADX</th>';
+            if (indicators.includes('atr')) headerHtml += '<th>ATR</th>';
+            if (indicators.includes('ema')) headerHtml += '<th>EMA(20)</th>';
+            if (indicators.includes('sma')) headerHtml += '<th>SMA(20)</th>';
+            headerHtml += '</tr>';
+            thead.innerHTML = headerHtml;
+
+            // Build body
+            let bodyHtml = '';
+            explorerData.forEach(row => {
+                const changeColor = row.close >= row.open ? '#4caf50' : '#f44336';
+
+                bodyHtml += '<tr>';
+                bodyHtml += `<td style="position: sticky; left: 0; background: #1a1a2e; white-space: nowrap; font-family: monospace;">${formatDateTime(row.datetime)}</td>`;
+                bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.open)}</td>`;
+                bodyHtml += `<td style="font-family: monospace; color: #4caf50;">${formatPrice(row.high)}</td>`;
+                bodyHtml += `<td style="font-family: monospace; color: #f44336;">${formatPrice(row.low)}</td>`;
+                bodyHtml += `<td style="font-family: monospace; background: rgba(100,200,255,0.05); color: ${changeColor}; font-weight: bold;">${formatPrice(row.close)}</td>`;
+                bodyHtml += `<td style="font-family: monospace; color: #888;">${row.volume ? row.volume.toLocaleString() : '-'}</td>`;
+
+                if (indicators.includes('rsi')) {
+                    const rsiColor = row.rsi > 70 ? '#f44336' : (row.rsi < 30 ? '#4caf50' : '#ffc107');
+                    bodyHtml += `<td style="font-family: monospace; background: rgba(156,39,176,0.05); color: ${rsiColor};">${row.rsi?.toFixed(2) || '-'}</td>`;
+                }
+                if (indicators.includes('macd')) {
+                    const macdColor = row.macd_hist > 0 ? '#4caf50' : '#f44336';
+                    bodyHtml += `<td style="font-family: monospace;">${row.macd?.toFixed(5) || '-'}</td>`;
+                    bodyHtml += `<td style="font-family: monospace;">${row.macd_signal?.toFixed(5) || '-'}</td>`;
+                    bodyHtml += `<td style="font-family: monospace; color: ${macdColor};">${row.macd_hist?.toFixed(5) || '-'}</td>`;
+                }
+                if (indicators.includes('bbands')) {
+                    bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.bb_upper)}</td>`;
+                    bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.bb_middle)}</td>`;
+                    bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.bb_lower)}</td>`;
+                }
+                if (indicators.includes('stoch')) {
+                    bodyHtml += `<td style="font-family: monospace;">${row.stoch_k?.toFixed(2) || '-'}</td>`;
+                    bodyHtml += `<td style="font-family: monospace;">${row.stoch_d?.toFixed(2) || '-'}</td>`;
+                }
+                if (indicators.includes('adx')) {
+                    const adxColor = row.adx > 25 ? '#4caf50' : '#888';
+                    bodyHtml += `<td style="font-family: monospace; color: ${adxColor};">${row.adx?.toFixed(2) || '-'}</td>`;
+                }
+                if (indicators.includes('atr')) {
+                    bodyHtml += `<td style="font-family: monospace;">${row.atr?.toFixed(5) || '-'}</td>`;
+                }
+                if (indicators.includes('ema')) {
+                    bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.ema)}</td>`;
+                }
+                if (indicators.includes('sma')) {
+                    bodyHtml += `<td style="font-family: monospace;">${formatPrice(row.sma)}</td>`;
+                }
+                bodyHtml += '</tr>';
+            });
+            tbody.innerHTML = bodyHtml;
+        }
+
+        function formatDateTime(dt) {
+            if (!dt) return '-';
+            const d = new Date(dt);
+            return d.toLocaleString('de-DE', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        function formatPrice(val) {
+            if (val === null || val === undefined || isNaN(val)) return '-';
+            // Auto-detect decimal places based on magnitude
+            if (val < 0.01) return val.toFixed(6);
+            if (val < 1) return val.toFixed(5);
+            if (val < 100) return val.toFixed(4);
+            return val.toFixed(2);
+        }
+
+        function exportExplorerData() {
+            if (!explorerData || explorerData.length === 0) {
+                showToast('Keine Daten zum Exportieren', 'error');
+                return;
+            }
+
+            const symbol = document.getElementById('explorer-symbol').value;
+            const interval = document.getElementById('explorer-interval').value;
+
+            // Get all columns
+            const columns = Object.keys(explorerData[0]);
+
+            // Build CSV
+            let csv = columns.join(',') + '\n';
+            explorerData.forEach(row => {
+                csv += columns.map(col => {
+                    const val = row[col];
+                    if (val === null || val === undefined) return '';
+                    if (typeof val === 'string' && val.includes(',')) return `"${val}"`;
+                    return val;
+                }).join(',') + '\n';
+            });
+
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${symbol}_${interval}_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+
+            showToast('CSV Export erfolgreich', 'success');
+        }
+
         // Initialize
         loadSymbols();
         loadStrategies();
         loadExports();
+
+        // Populate explorer symbols after loading
+        setTimeout(populateExplorerSymbols, 1000);
     </script>
 </body>
 </html>
