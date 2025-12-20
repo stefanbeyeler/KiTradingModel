@@ -767,15 +767,24 @@ class CandlestickPatternService:
                 # Get timestamp
                 ts = row.get("snapshot_time") or row.get("timestamp") or row.get("datetime")
                 if isinstance(ts, str):
-                    # Parse various datetime formats
-                    for fmt in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"]:
-                        try:
-                            ts = datetime.strptime(ts, fmt).replace(tzinfo=timezone.utc)
-                            break
-                        except ValueError:
+                    # Try ISO 8601 format first (with timezone)
+                    try:
+                        from dateutil import parser as dateutil_parser
+                        ts = dateutil_parser.isoparse(ts)
+                        if ts.tzinfo is None:
+                            ts = ts.replace(tzinfo=timezone.utc)
+                    except (ImportError, ValueError):
+                        # Fallback: Parse various datetime formats
+                        parsed = False
+                        for fmt in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"]:
+                            try:
+                                ts = datetime.strptime(ts, fmt).replace(tzinfo=timezone.utc)
+                                parsed = True
+                                break
+                            except ValueError:
+                                continue
+                        if not parsed:
                             continue
-                    else:
-                        continue
 
                 # Get OHLC values
                 open_val = None

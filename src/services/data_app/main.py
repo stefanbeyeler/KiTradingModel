@@ -186,6 +186,14 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Failed to initialize Sync Service: {e}")
 
+    # Start Pattern History Auto-Scan
+    try:
+        from src.services.pattern_history_service import pattern_history_service
+        await pattern_history_service.start()
+        logger.info("Pattern History Auto-Scan started")
+    except Exception as e:
+        logger.error(f"Failed to start Pattern History Auto-Scan: {e}")
+
     logger.info("Data Service started successfully")
 
 
@@ -198,6 +206,15 @@ async def shutdown_event():
     if sync_service and getattr(sync_service, '_running', False):
         await sync_service.stop()
         logger.info("TimescaleDB Sync Service stopped")
+
+    # Stop Pattern History Auto-Scan
+    try:
+        from src.services.pattern_history_service import pattern_history_service
+        if pattern_history_service._running:
+            await pattern_history_service.stop()
+            logger.info("Pattern History Auto-Scan stopped")
+    except Exception as e:
+        logger.error(f"Failed to stop Pattern History Auto-Scan: {e}")
 
     logger.info("Data Service stopped")
 

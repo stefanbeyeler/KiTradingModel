@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candlestick Patterns - KI Trading Model</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-value.bullish { color: #81c784; }
+        .stat-value.bearish { color: #e57373; }
+        .stat-value.neutral { color: #ffb74d; }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.6rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.9rem;
+        }
+
+        .search-box::placeholder {
+            color: #888;
+        }
+
+        .filter-select {
+            padding: 0.6rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .filter-select option {
+            background: #1a1a2e;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.2);
+            position: sticky;
+            top: 0;
+            font-weight: 500;
+            color: #a0a0a0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .badge-bullish { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-bearish { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+        .badge-neutral { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
+        .badge-reversal { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
+        .badge-continuation { background: rgba(33, 150, 243, 0.2); color: #64b5f6; }
+        .badge-indecision { background: rgba(158, 158, 158, 0.2); color: #bdbdbd; }
+        .badge-strong { background: rgba(76, 175, 80, 0.3); color: #a5d6a7; }
+        .badge-moderate { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .badge-weak { background: rgba(158, 158, 158, 0.2); color: #9e9e9e; }
+        .badge-m15 { background: rgba(0, 188, 212, 0.2); color: #4dd0e1; }
+        .badge-h1 { background: rgba(33, 150, 243, 0.2); color: #64b5f6; }
+        .badge-h4 { background: rgba(103, 58, 183, 0.2); color: #b39ddb; }
+        .badge-d1 { background: rgba(255, 87, 34, 0.2); color: #ff8a65; }
+
+        /* Scan Status */
+        .scan-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .scan-status.running {
+            color: #81c784;
+        }
+
+        .scan-status.stopped {
+            color: #e57373;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.running {
+            background: #81c784;
+        }
+
+        .status-dot.stopped {
+            background: #e57373;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            z-index: 2000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success { background: #2e7d32; }
+        .toast-error { background: #c62828; }
+        .toast-info { background: #1565c0; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(100, 200, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #64c8ff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Confidence bar */
+        .confidence-bar {
+            width: 60px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 0.5rem;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .confidence-fill.high { background: #81c784; }
+        .confidence-fill.medium { background: #ffc107; }
+        .confidence-fill.low { background: #e57373; }
+
+        /* Pattern name styling */
+        .pattern-name {
+            font-weight: 500;
+            color: #fff;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+            }
+
+            .search-box, .filter-select {
+                width: 100%;
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="index.html" class="back-link">← Zurück zum Dashboard</a>
+            <h1 class="header-title">Candlestick Patterns</h1>
+            <div class="scan-status" id="scanStatus">
+                <span class="status-dot stopped"></span>
+                <span>Auto-Scan: Stopped</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Statistics -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-card">
+                <div class="stat-value" id="totalPatterns">-</div>
+                <div class="stat-label">Patterns Total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value bullish" id="bullishCount">-</div>
+                <div class="stat-label">Bullish</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value bearish" id="bearishCount">-</div>
+                <div class="stat-label">Bearish</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value neutral" id="neutralCount">-</div>
+                <div class="stat-label">Neutral</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="symbolCount">-</div>
+                <div class="stat-label">Symbole</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="lastScan">-</div>
+                <div class="stat-label">Letzter Scan</div>
+            </div>
+        </div>
+
+        <!-- Control Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Pattern Scanner</h2>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" id="btnScanNow" onclick="triggerScan()">
+                        Jetzt scannen
+                    </button>
+                    <button class="btn btn-success" id="btnStartAuto" onclick="startAutoScan()">
+                        Auto-Scan starten
+                    </button>
+                    <button class="btn btn-warning" id="btnStopAuto" onclick="stopAutoScan()" style="display: none;">
+                        Auto-Scan stoppen
+                    </button>
+                    <button class="btn btn-danger" onclick="clearHistory()">
+                        History löschen
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pattern History -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Erkannte Patterns</h2>
+            </div>
+
+            <div class="toolbar">
+                <input type="text" class="search-box" id="searchInput" placeholder="Symbol suchen..." oninput="filterPatterns()">
+                <select class="filter-select" id="filterDirection" onchange="filterPatterns()">
+                    <option value="">Alle Richtungen</option>
+                    <option value="bullish">Bullish</option>
+                    <option value="bearish">Bearish</option>
+                    <option value="neutral">Neutral</option>
+                </select>
+                <select class="filter-select" id="filterCategory" onchange="filterPatterns()">
+                    <option value="">Alle Kategorien</option>
+                    <option value="reversal">Reversal</option>
+                    <option value="continuation">Continuation</option>
+                    <option value="indecision">Indecision</option>
+                </select>
+                <select class="filter-select" id="filterTimeframe" onchange="filterPatterns()">
+                    <option value="">Alle Timeframes</option>
+                    <option value="M15">M15</option>
+                    <option value="H1">H1</option>
+                    <option value="H4">H4</option>
+                    <option value="D1">D1</option>
+                </select>
+                <button class="btn btn-primary" onclick="loadPatterns()">
+                    Aktualisieren
+                </button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Zeitpunkt</th>
+                            <th>Symbol</th>
+                            <th>Pattern</th>
+                            <th>Kategorie</th>
+                            <th>Richtung</th>
+                            <th>Stärke</th>
+                            <th>Konfidenz</th>
+                            <th>Timeframe</th>
+                            <th>Preis</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patternsTable">
+                        <tr>
+                            <td colspan="9" class="loading">
+                                <div class="spinner"></div>
+                                <p>Lade Patterns...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '/data/api/v1';
+        let allPatterns = [];
+        let isAutoScanRunning = false;
+
+        // Format timestamp for display
+        function formatTimestamp(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            return date.toLocaleString('de-CH', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Format pattern type for display
+        function formatPatternType(type) {
+            return type
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        // Get confidence class
+        function getConfidenceClass(confidence) {
+            if (confidence >= 0.75) return 'high';
+            if (confidence >= 0.5) return 'medium';
+            return 'low';
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Load statistics
+        async function loadStatistics() {
+            try {
+                const res = await fetch(`${API_BASE}/patterns/history/statistics`);
+                const stats = await res.json();
+
+                document.getElementById('totalPatterns').textContent = stats.total_patterns || 0;
+                document.getElementById('bullishCount').textContent = stats.by_direction?.bullish || 0;
+                document.getElementById('bearishCount').textContent = stats.by_direction?.bearish || 0;
+                document.getElementById('neutralCount').textContent = stats.by_direction?.neutral || 0;
+                document.getElementById('symbolCount').textContent = stats.symbols_with_patterns || 0;
+                document.getElementById('lastScan').textContent = stats.last_scan ?
+                    new Date(stats.last_scan).toLocaleTimeString('de-CH') : '-';
+
+                // Update scan status
+                isAutoScanRunning = stats.scan_running || false;
+                updateScanStatus();
+
+            } catch (error) {
+                console.error('Failed to load statistics:', error);
+            }
+        }
+
+        // Update scan status display
+        function updateScanStatus() {
+            const statusEl = document.getElementById('scanStatus');
+            const dotEl = statusEl.querySelector('.status-dot');
+            const textEl = statusEl.querySelector('span:last-child');
+            const btnStart = document.getElementById('btnStartAuto');
+            const btnStop = document.getElementById('btnStopAuto');
+
+            if (isAutoScanRunning) {
+                statusEl.classList.remove('stopped');
+                statusEl.classList.add('running');
+                dotEl.classList.remove('stopped');
+                dotEl.classList.add('running');
+                textEl.textContent = 'Auto-Scan: Running';
+                btnStart.style.display = 'none';
+                btnStop.style.display = 'inline-flex';
+            } else {
+                statusEl.classList.remove('running');
+                statusEl.classList.add('stopped');
+                dotEl.classList.remove('running');
+                dotEl.classList.add('stopped');
+                textEl.textContent = 'Auto-Scan: Stopped';
+                btnStart.style.display = 'inline-flex';
+                btnStop.style.display = 'none';
+            }
+        }
+
+        // Load patterns
+        async function loadPatterns() {
+            try {
+                const res = await fetch(`${API_BASE}/patterns/history?limit=200`);
+                allPatterns = await res.json();
+                renderPatterns(allPatterns);
+            } catch (error) {
+                console.error('Failed to load patterns:', error);
+                document.getElementById('patternsTable').innerHTML = `
+                    <tr>
+                        <td colspan="9" class="empty-state">
+                            <div class="empty-state-icon">⚠️</div>
+                            <p>Fehler beim Laden der Patterns</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Render patterns table
+        function renderPatterns(patterns) {
+            const tbody = document.getElementById('patternsTable');
+
+            if (!patterns || patterns.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="empty-state">
+                            <div class="empty-state-icon">📊</div>
+                            <p>Keine Patterns gefunden</p>
+                            <p style="font-size: 0.85rem; margin-top: 0.5rem;">Klicken Sie auf "Jetzt scannen" um Patterns zu erkennen</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = patterns.map(p => `
+                <tr>
+                    <td>${formatTimestamp(p.timestamp)}</td>
+                    <td><strong>${p.symbol}</strong></td>
+                    <td class="pattern-name">${formatPatternType(p.pattern_type)}</td>
+                    <td><span class="badge badge-${p.category}">${p.category}</span></td>
+                    <td><span class="badge badge-${p.direction}">${p.direction}</span></td>
+                    <td><span class="badge badge-${p.strength}">${p.strength}</span></td>
+                    <td>
+                        <span class="confidence-bar">
+                            <span class="confidence-fill ${getConfidenceClass(p.confidence)}"
+                                  style="width: ${p.confidence * 100}%"></span>
+                        </span>
+                        ${Math.round(p.confidence * 100)}%
+                    </td>
+                    <td><span class="badge badge-${p.timeframe.toLowerCase()}">${p.timeframe}</span></td>
+                    <td>${p.price_at_detection?.toFixed(p.price_at_detection > 100 ? 2 : 5) || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Filter patterns
+        function filterPatterns() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const direction = document.getElementById('filterDirection').value;
+            const category = document.getElementById('filterCategory').value;
+            const timeframe = document.getElementById('filterTimeframe').value;
+
+            const filtered = allPatterns.filter(p => {
+                if (search && !p.symbol.toLowerCase().includes(search)) return false;
+                if (direction && p.direction !== direction) return false;
+                if (category && p.category !== category) return false;
+                if (timeframe && p.timeframe !== timeframe) return false;
+                return true;
+            });
+
+            renderPatterns(filtered);
+        }
+
+        // Trigger manual scan
+        async function triggerScan() {
+            const btn = document.getElementById('btnScanNow');
+            btn.disabled = true;
+            btn.textContent = 'Scanne...';
+
+            try {
+                const res = await fetch(`${API_BASE}/patterns/history/scan`, { method: 'POST' });
+                const result = await res.json();
+                showToast(`Scan abgeschlossen: ${result.new_patterns_found} neue Patterns`, 'success');
+                await loadStatistics();
+                await loadPatterns();
+            } catch (error) {
+                showToast('Scan fehlgeschlagen', 'error');
+                console.error('Scan failed:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Jetzt scannen';
+            }
+        }
+
+        // Start auto scan
+        async function startAutoScan() {
+            try {
+                await fetch(`${API_BASE}/patterns/history/start-auto-scan`, { method: 'POST' });
+                isAutoScanRunning = true;
+                updateScanStatus();
+                showToast('Auto-Scan gestartet', 'success');
+            } catch (error) {
+                showToast('Fehler beim Starten', 'error');
+                console.error('Start auto scan failed:', error);
+            }
+        }
+
+        // Stop auto scan
+        async function stopAutoScan() {
+            try {
+                await fetch(`${API_BASE}/patterns/history/stop-auto-scan`, { method: 'POST' });
+                isAutoScanRunning = false;
+                updateScanStatus();
+                showToast('Auto-Scan gestoppt', 'info');
+            } catch (error) {
+                showToast('Fehler beim Stoppen', 'error');
+                console.error('Stop auto scan failed:', error);
+            }
+        }
+
+        // Clear history
+        async function clearHistory() {
+            if (!confirm('Möchten Sie wirklich die gesamte Pattern-History löschen?')) {
+                return;
+            }
+
+            try {
+                await fetch(`${API_BASE}/patterns/history`, { method: 'DELETE' });
+                showToast('History gelöscht', 'info');
+                allPatterns = [];
+                renderPatterns([]);
+                await loadStatistics();
+            } catch (error) {
+                showToast('Fehler beim Löschen', 'error');
+                console.error('Clear history failed:', error);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadStatistics();
+            await loadPatterns();
+
+            // Auto-refresh every 30 seconds
+            setInterval(async () => {
+                await loadStatistics();
+                await loadPatterns();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>

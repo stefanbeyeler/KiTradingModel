@@ -3953,6 +3953,134 @@ async def scan_all_symbols(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== Pattern History Endpoints ====================
+
+from ..services.pattern_history_service import pattern_history_service
+
+
+@patterns_router.get("/patterns/history")
+async def get_pattern_history(
+    symbol: Optional[str] = None,
+    direction: Optional[str] = None,
+    category: Optional[str] = None,
+    timeframe: Optional[str] = None,
+    min_confidence: float = 0.0,
+    limit: int = 100,
+):
+    """
+    Get pattern detection history with optional filters.
+
+    Args:
+        symbol: Filter by trading symbol (e.g., BTCUSD)
+        direction: Filter by direction (bullish, bearish, neutral)
+        category: Filter by category (reversal, continuation, indecision)
+        timeframe: Filter by timeframe (M15, H1, H4, D1)
+        min_confidence: Minimum confidence threshold (0.0-1.0)
+        limit: Maximum number of results (default: 100)
+
+    Returns list of detected patterns sorted by detection time (newest first).
+    """
+    return pattern_history_service.get_history(
+        symbol=symbol,
+        direction=direction,
+        category=category,
+        timeframe=timeframe,
+        min_confidence=min_confidence,
+        limit=limit,
+    )
+
+
+@patterns_router.get("/patterns/history/by-symbol")
+async def get_patterns_by_symbol():
+    """
+    Get latest patterns grouped by symbol.
+
+    Returns dictionary with symbol as key and list of recent patterns as value.
+    Useful for dashboard overview.
+    """
+    return pattern_history_service.get_latest_by_symbol()
+
+
+@patterns_router.get("/patterns/history/statistics")
+async def get_pattern_statistics():
+    """
+    Get pattern detection statistics.
+
+    Returns:
+        - total_patterns: Total number of patterns in history
+        - symbols_with_patterns: Number of symbols with detected patterns
+        - by_direction: Count by direction (bullish/bearish/neutral)
+        - by_category: Count by category (reversal/continuation/indecision)
+        - by_timeframe: Count by timeframe (M15/H1/H4/D1)
+        - last_scan: Timestamp of last scan
+        - scan_running: Whether automatic scanning is active
+    """
+    return pattern_history_service.get_statistics()
+
+
+@patterns_router.post("/patterns/history/scan")
+async def trigger_pattern_scan():
+    """
+    Manually trigger a pattern scan for all symbols.
+
+    Scans all available symbols across configured timeframes
+    and stores detected patterns in history.
+
+    Returns number of new patterns found.
+    """
+    try:
+        new_patterns = await pattern_history_service.scan_all_symbols()
+        return {
+            "status": "completed",
+            "new_patterns_found": new_patterns,
+            "message": f"Scan complete. Found {new_patterns} new patterns.",
+        }
+    except Exception as e:
+        logger.error(f"Manual pattern scan failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@patterns_router.post("/patterns/history/start-auto-scan")
+async def start_auto_scan():
+    """
+    Start automatic periodic pattern scanning.
+
+    Scans run every 5 minutes in the background.
+    """
+    await pattern_history_service.start()
+    return {
+        "status": "started",
+        "message": "Automatic pattern scanning started",
+        "interval_seconds": pattern_history_service._scan_interval,
+    }
+
+
+@patterns_router.post("/patterns/history/stop-auto-scan")
+async def stop_auto_scan():
+    """
+    Stop automatic periodic pattern scanning.
+    """
+    await pattern_history_service.stop()
+    return {
+        "status": "stopped",
+        "message": "Automatic pattern scanning stopped",
+    }
+
+
+@patterns_router.delete("/patterns/history")
+async def clear_pattern_history():
+    """
+    Clear all pattern history.
+
+    Warning: This action cannot be undone.
+    """
+    pattern_history_service.clear_history()
+    return {
+        "status": "cleared",
+        "message": "Pattern history has been cleared",
+    }
+
+
 # ==================== Router Export ====================
 
 def get_all_routers():
