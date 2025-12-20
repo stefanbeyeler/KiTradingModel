@@ -353,6 +353,11 @@
             text-align: right;
         }
 
+        .favorites-table .col-price {
+            text-align: right;
+            color: #aaa;
+        }
+
         .favorites-table .no-pattern-text {
             color: #555;
             font-style: italic;
@@ -818,18 +823,18 @@
             </div>
 
             <div class="table-container">
-                <table>
+                <table class="favorites-table">
                     <thead>
                         <tr>
-                            <th>Zeitpunkt</th>
+                            <th>Zeit</th>
                             <th>Symbol</th>
                             <th>Pattern</th>
                             <th>Kategorie</th>
                             <th>Richtung</th>
                             <th>Stärke</th>
-                            <th>Konfidenz</th>
+                            <th style="text-align: right;">Konfidenz</th>
                             <th>Timeframe</th>
-                            <th>Preis</th>
+                            <th style="text-align: right;">Preis</th>
                         </tr>
                     </thead>
                     <tbody id="patternsTable">
@@ -1106,33 +1111,18 @@
 
             tbody.innerHTML = patterns.map(p => {
                 const info = getPatternInfo(p.pattern_type);
-                const implicationClass = p.direction === 'bearish' ? 'bearish' : (p.direction === 'neutral' ? 'neutral' : '');
+                const timeAgo = getTimeAgo(p.timestamp);
                 return `
                 <tr>
-                    <td>${formatTimestamp(p.timestamp)}</td>
-                    <td><strong>${p.symbol}</strong></td>
-                    <td>
-                        <span class="pattern-tooltip">
-                            <span class="pattern-name">${info.name}</span>
-                            <span class="tooltip-content">
-                                <span class="tooltip-title">${info.name}</span>
-                                <span class="tooltip-description">${info.description}</span>
-                                <span class="tooltip-implication ${implicationClass}">${info.implication}</span>
-                            </span>
-                        </span>
-                    </td>
+                    <td class="col-time">${timeAgo}</td>
+                    <td class="col-symbol">${p.symbol}</td>
+                    <td><a class="pattern-link" onclick="showPatternModal('${p.pattern_type}', '${p.direction}')">${info.name}</a></td>
                     <td><span class="badge badge-${p.category}">${p.category}</span></td>
                     <td><span class="badge badge-${p.direction}">${p.direction}</span></td>
                     <td><span class="badge badge-${p.strength}">${p.strength}</span></td>
-                    <td>
-                        <span class="confidence-bar">
-                            <span class="confidence-fill ${getConfidenceClass(p.confidence)}"
-                                  style="width: ${p.confidence * 100}%"></span>
-                        </span>
-                        ${Math.round(p.confidence * 100)}%
-                    </td>
+                    <td class="col-confidence">${Math.round(p.confidence * 100)}%</td>
                     <td><span class="badge badge-${p.timeframe.toLowerCase()}">${p.timeframe}</span></td>
-                    <td>${p.price_at_detection?.toFixed(p.price_at_detection > 100 ? 2 : 5) || '-'}</td>
+                    <td class="col-price">${p.price_at_detection?.toFixed(p.price_at_detection > 100 ? 2 : 5) || '-'}</td>
                 </tr>
             `}).join('');
         }
