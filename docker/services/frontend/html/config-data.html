@@ -1065,6 +1065,21 @@
         </div>
     </div>
 
+    <!-- Data Stats Modal -->
+    <div class="modal-overlay" id="data-stats-modal">
+        <div class="modal" style="max-width: 1000px; max-height: 90vh;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="data-stats-modal-title">Datenpunkte</h3>
+                <button class="modal-close" onclick="closeDataStatsModal()">&times;</button>
+            </div>
+            <div style="padding: 1rem; overflow-y: auto; max-height: calc(90vh - 80px);">
+                <div id="data-stats-content">
+                    <div class="loading"><div class="spinner"></div><br>Lade Datenstatistiken...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
@@ -1310,8 +1325,15 @@
                     <td>${s.subcategory ? `<span class="badge" style="background: rgba(100, 200, 255, 0.15); color: #64c8ff;">${getSubcategoryLabel(s.category, s.subcategory)}</span>` : '-'}</td>
                     <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${s.description || '-'}</td>
                     <td><span class="badge badge-${s.status}">${s.status === 'active' ? 'Aktiv' : 'Inaktiv'}</span></td>
-                    <td>${s.total_records ? s.total_records.toLocaleString() : '-'}</td>
+                    <td>
+                        <span class="data-stats-link" onclick="showDataStats('${s.symbol.replace(/'/g, "\\'")}')"
+                              style="cursor: pointer; color: ${s.total_records > 0 ? '#64c8ff' : '#888'}; text-decoration: underline;"
+                              title="Klicken für Details">
+                            ${s.total_records ? s.total_records.toLocaleString() : '-'}
+                        </span>
+                    </td>
                     <td style="white-space: nowrap;">
+                        <button class="btn btn-warning btn-sm" onclick="showDataStats('${s.symbol.replace(/'/g, "\\'")}')" style="background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3);" title="Datenpunkte anzeigen">&#128202;</button>
                         <button class="btn btn-info btn-sm" onclick="showLiveData('${s.symbol.replace(/'/g, "\\'")}')" style="background: #17a2b8;" title="Live-Daten anzeigen">&#128200;</button>
                         <button class="btn btn-primary btn-sm" onclick="editSymbol('${s.symbol.replace(/'/g, "\\'")}')">Bearbeiten</button>
                         <button class="btn btn-danger btn-sm" onclick="deleteSymbol('${s.symbol.replace(/'/g, "\\'")}')">Löschen</button>
@@ -2161,6 +2183,311 @@
                 console.error('Import error:', error);
                 showToast('Fehler beim Import', 'error');
             }
+        }
+
+        // ==================== Data Stats Modal ====================
+
+        function closeDataStatsModal() {
+            document.getElementById('data-stats-modal').classList.remove('active');
+        }
+
+        async function showDataStats(symbol) {
+            document.getElementById('data-stats-modal-title').textContent = `Datenpunkte: ${symbol}`;
+            document.getElementById('data-stats-content').innerHTML = `
+                <div class="loading"><div class="spinner"></div><br>Lade Datenstatistiken...</div>
+            `;
+            document.getElementById('data-stats-modal').classList.add('active');
+
+            try {
+                const response = await fetch(`${API_BASE}/managed-symbols/data-stats/${encodeURIComponent(symbol)}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                renderDataStats(data);
+            } catch (error) {
+                console.error('Error loading data stats:', error);
+                document.getElementById('data-stats-content').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#9888;</div>
+                        Fehler beim Laden der Datenstatistiken: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function renderDataStats(data) {
+            const content = document.getElementById('data-stats-content');
+            const errors = data.errors && data.errors.length > 0
+                ? `<div style="background: rgba(220,53,69,0.1); border: 1px solid rgba(220,53,69,0.3); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; color: #dc3545;">
+                    <strong>Hinweise:</strong> ${data.errors.join(', ')}
+                   </div>`
+                : '';
+
+            // Format timestamps
+            const firstDate = data.first_timestamp ? new Date(data.first_timestamp).toLocaleString('de-DE') : '-';
+            const lastDate = data.last_timestamp ? new Date(data.last_timestamp).toLocaleString('de-DE') : '-';
+
+            // Calculate data range in days
+            let dataRangeDays = 0;
+            if (data.first_timestamp && data.last_timestamp) {
+                const first = new Date(data.first_timestamp);
+                const last = new Date(data.last_timestamp);
+                dataRangeDays = Math.round((last - first) / (1000 * 60 * 60 * 24));
+            }
+
+            // Create progress bar helper
+            function progressBar(pct, color = '#64c8ff') {
+                return `
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 4px; height: 8px; overflow: hidden; margin-top: 4px;">
+                        <div style="background: ${color}; width: ${Math.min(100, pct)}%; height: 100%; transition: width 0.3s;"></div>
+                    </div>
+                `;
+            }
+
+            // Quality color
+            function qualityColor(pct) {
+                if (pct >= 90) return '#4caf50';
+                if (pct >= 70) return '#ffc107';
+                return '#f44336';
+            }
+
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <span style="color: #888;">Abgerufen: ${new Date(data.timestamp).toLocaleString('de-DE')}</span>
+                    <button class="btn btn-secondary btn-sm" onclick="showDataStats('${data.symbol}')">&#8635; Aktualisieren</button>
+                </div>
+                ${errors}
+
+                <!-- Overview Cards -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="background: rgba(100, 200, 255, 0.1); border-radius: 8px; padding: 1rem; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: bold; color: #64c8ff;">${data.total_records.toLocaleString()}</div>
+                        <div style="color: #888; font-size: 0.85rem;">Gesamt Datenpunkte</div>
+                    </div>
+                    <div style="background: rgba(76, 175, 80, 0.1); border-radius: 8px; padding: 1rem; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: bold; color: #4caf50;">${dataRangeDays}</div>
+                        <div style="color: #888; font-size: 0.85rem;">Tage Datenbereich</div>
+                    </div>
+                    <div style="background: rgba(156, 39, 176, 0.1); border-radius: 8px; padding: 1rem; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: bold; color: ${qualityColor(data.data_quality.completeness_pct)};">${data.data_quality.completeness_pct}%</div>
+                        <div style="color: #888; font-size: 0.85rem;">Vollständigkeit</div>
+                    </div>
+                    <div style="background: rgba(255, 152, 0, 0.1); border-radius: 8px; padding: 1rem; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: bold; color: ${data.data_quality.gaps_detected > 5 ? '#f44336' : '#ffc107'};">${data.data_quality.gaps_detected}</div>
+                        <div style="color: #888; font-size: 0.85rem;">Datenlücken</div>
+                    </div>
+                </div>
+
+                <!-- Date Range -->
+                <div style="background: rgba(30,30,30,0.5); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
+                    <h4 style="color: #64c8ff; margin-bottom: 1rem; font-size: 1rem;">&#128197; Datenbereich</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <div style="color: #888; font-size: 0.85rem;">Erster Datenpunkt</div>
+                            <div style="font-size: 1.1rem; color: #fff;">${firstDate}</div>
+                        </div>
+                        <div>
+                            <div style="color: #888; font-size: 0.85rem;">Letzter Datenpunkt</div>
+                            <div style="font-size: 1.1rem; color: #fff;">${lastDate}</div>
+                        </div>
+                    </div>
+                    <!-- Timeline Visualization -->
+                    <div style="margin-top: 1rem; position: relative;">
+                        <div style="background: rgba(100, 200, 255, 0.2); height: 24px; border-radius: 12px; position: relative; overflow: hidden;">
+                            <div style="background: linear-gradient(90deg, #64c8ff 0%, #4caf50 100%); height: 100%; width: 100%; opacity: 0.8;"></div>
+                            <div style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #fff;">Start</div>
+                            <div style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #fff;">Aktuell</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeframe Breakdown -->
+                <div style="background: rgba(30,30,30,0.5); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
+                    <h4 style="color: #64c8ff; margin-bottom: 1rem; font-size: 1rem;">&#128202; Datenpunkte pro Zeitrahmen</h4>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                        <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 500;">M15 (15 Min)</span>
+                                <span style="color: #64c8ff; font-weight: bold;">${data.timeframes.M15.count.toLocaleString()}</span>
+                            </div>
+                            ${progressBar(data.timeframes.M15.coverage_pct)}
+                            <div style="font-size: 0.75rem; color: #888; margin-top: 4px;">Abdeckung: ${data.timeframes.M15.coverage_pct}%</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 500;">H1 (Stündlich)</span>
+                                <span style="color: #4caf50; font-weight: bold;">${data.timeframes.H1.count.toLocaleString()}</span>
+                            </div>
+                            ${progressBar(data.timeframes.H1.coverage_pct, '#4caf50')}
+                            <div style="font-size: 0.75rem; color: #888; margin-top: 4px;">Abdeckung: ${data.timeframes.H1.coverage_pct}%</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 500;">D1 (Täglich)</span>
+                                <span style="color: #9c27b0; font-weight: bold;">${data.timeframes.D1.count.toLocaleString()}</span>
+                            </div>
+                            ${progressBar(data.timeframes.D1.coverage_pct, '#9c27b0')}
+                            <div style="font-size: 0.75rem; color: #888; margin-top: 4px;">Abdeckung: ${data.timeframes.D1.coverage_pct}%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Quality -->
+                <div style="background: rgba(30,30,30,0.5); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
+                    <h4 style="color: #64c8ff; margin-bottom: 1rem; font-size: 1rem;">&#128270; Datenqualität</h4>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                        <div>
+                            <div style="color: #888; font-size: 0.85rem;">Erkannte Lücken (&gt;2h)</div>
+                            <div style="font-size: 1.2rem; font-weight: bold; color: ${data.data_quality.gaps_detected > 5 ? '#f44336' : data.data_quality.gaps_detected > 0 ? '#ffc107' : '#4caf50'};">
+                                ${data.data_quality.gaps_detected}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="color: #888; font-size: 0.85rem;">Durchschn. Lücke</div>
+                            <div style="font-size: 1.2rem; font-weight: 500;">${data.data_quality.avg_gap_hours}h</div>
+                        </div>
+                        <div>
+                            <div style="color: #888; font-size: 0.85rem;">Max. Lücke</div>
+                            <div style="font-size: 1.2rem; font-weight: 500; color: ${data.data_quality.max_gap_hours > 24 ? '#f44336' : '#fff'};">${data.data_quality.max_gap_hours}h</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mini Chart (if sample data available) -->
+                ${data.sample_data && (data.sample_data.M15?.length > 0 || data.sample_data.H1?.length > 0 || data.sample_data.D1?.length > 0) ? `
+                <div style="background: rgba(30,30,30,0.5); border-radius: 12px; padding: 1rem; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="color: #64c8ff; font-size: 1rem; margin: 0;">&#128200; Letzte Datenpunkte (Vorschau)</h4>
+                        <div class="chart-timeframe-tabs" style="display: flex; gap: 0.25rem;">
+                            <button class="chart-tf-btn active" data-tf="M15" onclick="switchChartTimeframe('M15')"
+                                    style="padding: 0.3rem 0.75rem; border: 1px solid rgba(100, 200, 255, 0.3); background: rgba(100, 200, 255, 0.2); color: #64c8ff; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                M15
+                            </button>
+                            <button class="chart-tf-btn" data-tf="H1" onclick="switchChartTimeframe('H1')"
+                                    style="padding: 0.3rem 0.75rem; border: 1px solid rgba(255, 255, 255, 0.1); background: transparent; color: #888; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                H1
+                            </button>
+                            <button class="chart-tf-btn" data-tf="D1" onclick="switchChartTimeframe('D1')"
+                                    style="padding: 0.3rem 0.75rem; border: 1px solid rgba(255, 255, 255, 0.1); background: transparent; color: #888; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                D1
+                            </button>
+                        </div>
+                    </div>
+                    <div id="mini-chart-container" style="height: 120px; position: relative; overflow: hidden;">
+                        ${renderMiniChart(data.sample_data.M15, 'M15')}
+                    </div>
+                    <div id="chart-info" style="font-size: 0.75rem; color: #888; margin-top: 0.5rem; text-align: center;">
+                        Zeigt die letzten ${data.sample_data.M15?.length || 0} M15-Schlusskurse
+                    </div>
+                </div>
+                ` : ''}
+            `;
+
+            content.innerHTML = html;
+
+            // Store sample data globally for timeframe switching
+            window.currentChartData = data.sample_data;
+        }
+
+        let currentChartTimeframe = 'M15';
+
+        function switchChartTimeframe(tf) {
+            currentChartTimeframe = tf;
+
+            // Update button styles
+            document.querySelectorAll('.chart-tf-btn').forEach(btn => {
+                if (btn.dataset.tf === tf) {
+                    btn.style.background = 'rgba(100, 200, 255, 0.2)';
+                    btn.style.borderColor = 'rgba(100, 200, 255, 0.3)';
+                    btn.style.color = '#64c8ff';
+                    btn.classList.add('active');
+                } else {
+                    btn.style.background = 'transparent';
+                    btn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    btn.style.color = '#888';
+                    btn.classList.remove('active');
+                }
+            });
+
+            // Update chart
+            const container = document.getElementById('mini-chart-container');
+            const info = document.getElementById('chart-info');
+
+            if (window.currentChartData && window.currentChartData[tf]) {
+                container.innerHTML = renderMiniChart(window.currentChartData[tf], tf);
+                const count = window.currentChartData[tf].length;
+                const tfLabels = { 'M15': '15-Minuten', 'H1': 'Stunden', 'D1': 'Tages' };
+                info.textContent = `Zeigt die letzten ${count} ${tfLabels[tf]}-Schlusskurse`;
+            } else {
+                container.innerHTML = '<div style="text-align: center; color: #888; padding: 2rem;">Keine Daten für diesen Zeitrahmen verfügbar</div>';
+                info.textContent = '';
+            }
+        }
+
+        function renderMiniChart(sampleData, timeframe = 'M15') {
+            if (!sampleData || sampleData.length === 0) return '<div style="text-align: center; color: #888; padding: 2rem;">Keine Daten verfügbar</div>';
+
+            // Get close prices
+            const prices = sampleData
+                .filter(d => d.close !== null && d.close !== undefined)
+                .map(d => parseFloat(d.close))
+                .reverse(); // Oldest first
+
+            if (prices.length < 2) return '<div style="text-align: center; color: #888; padding: 2rem;">Zu wenige Datenpunkte</div>';
+
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const range = maxPrice - minPrice || 1;
+            const width = 100 / (prices.length - 1);
+
+            // Create SVG path
+            let path = '';
+            let areaPath = `M 0,100 `;
+            prices.forEach((price, i) => {
+                const x = (i * width);
+                const y = 100 - ((price - minPrice) / range * 80 + 10); // Leave margins
+                if (i === 0) {
+                    path = `M ${x},${y}`;
+                    areaPath += `L ${x},${y} `;
+                } else {
+                    path += ` L ${x},${y}`;
+                    areaPath += `L ${x},${y} `;
+                }
+            });
+            areaPath += `L 100,100 Z`;
+
+            // Determine color based on trend
+            const trendColor = prices[prices.length - 1] >= prices[0] ? '#4caf50' : '#f44336';
+
+            // Timeframe-specific colors
+            const tfColors = { 'M15': '#64c8ff', 'H1': '#4caf50', 'D1': '#9c27b0' };
+            const lineColor = tfColors[timeframe] || trendColor;
+
+            // Generate unique gradient ID to avoid conflicts
+            const gradientId = `chartGradient_${timeframe}_${Date.now()}`;
+
+            return `
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width: 100%; height: 100%;">
+                    <defs>
+                        <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:${lineColor};stop-opacity:0.3" />
+                            <stop offset="100%" style="stop-color:${lineColor};stop-opacity:0" />
+                        </linearGradient>
+                    </defs>
+                    <path d="${areaPath}" fill="url(#${gradientId})" />
+                    <path d="${path}" fill="none" stroke="${lineColor}" stroke-width="0.5" />
+                </svg>
+                <div style="position: absolute; top: 5px; left: 10px; font-size: 0.75rem; color: #888;">
+                    High: ${maxPrice.toFixed(maxPrice < 10 ? 5 : 2)}
+                </div>
+                <div style="position: absolute; bottom: 5px; left: 10px; font-size: 0.75rem; color: #888;">
+                    Low: ${minPrice.toFixed(minPrice < 10 ? 5 : 2)}
+                </div>
+                <div style="position: absolute; top: 5px; right: 10px; font-size: 0.75rem; color: ${trendColor};">
+                    ${prices[prices.length - 1] >= prices[0] ? '▲' : '▼'} ${((prices[prices.length - 1] - prices[0]) / prices[0] * 100).toFixed(2)}%
+                </div>
+            `;
         }
 
         // ==================== Live Data Modal ====================

@@ -2036,6 +2036,172 @@ async def import_selected_symbols(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== Data Statistics ====================
+# NOTE: This route MUST be defined BEFORE the generic {symbol_id:path} routes
+
+@symbol_router.get("/managed-symbols/data-stats/{symbol:path}")
+async def get_symbol_data_stats(symbol: str):
+    """
+    Get detailed data statistics for a symbol including data range and counts per timeframe.
+
+    Returns:
+        - First and last data timestamp
+        - Total record count
+        - Data points per timeframe (M15, H1, D1)
+        - Data gaps analysis
+        - Data coverage percentage
+    """
+    import httpx
+
+    result = {
+        "symbol": symbol,
+        "timestamp": datetime.utcnow().isoformat(),
+        "has_data": False,
+        "first_timestamp": None,
+        "last_timestamp": None,
+        "total_records": 0,
+        "timeframes": {
+            "M15": {"count": 0, "first": None, "last": None, "coverage_pct": 0},
+            "H1": {"count": 0, "first": None, "last": None, "coverage_pct": 0},
+            "D1": {"count": 0, "first": None, "last": None, "coverage_pct": 0},
+        },
+        "data_quality": {
+            "gaps_detected": 0,
+            "avg_gap_hours": 0,
+            "max_gap_hours": 0,
+            "completeness_pct": 0,
+        },
+        "sample_data": [],
+        "errors": []
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Get symbol info with count
+            response = await client.get(f"{settings.easyinsight_api_url}/symbols")
+            if response.status_code == 200:
+                symbols_data = response.json()
+                symbol_info = next((s for s in symbols_data if s.get("symbol") == symbol.upper()), None)
+                if symbol_info:
+                    result["total_records"] = symbol_info.get("count", 0)
+                    result["first_timestamp"] = symbol_info.get("earliest")
+                    result["last_timestamp"] = symbol_info.get("latest")
+                    result["has_data"] = result["total_records"] > 0
+
+            # Get sample data with timestamps to analyze gaps
+            response = await client.get(
+                f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
+                params={"limit": 1000}  # Get last 1000 records for analysis
+            )
+
+            if response.status_code == 200:
+                response_data = response.json()
+                data_list = []
+                if isinstance(response_data, dict) and "data" in response_data:
+                    data_list = response_data.get("data", [])
+                elif isinstance(response_data, list):
+                    data_list = response_data
+
+                if data_list:
+                    result["has_data"] = True
+
+                    # Analyze timestamps
+                    timestamps = []
+                    for row in data_list:
+                        ts = row.get("snapshot_time")
+                        if ts:
+                            try:
+                                if isinstance(ts, str):
+                                    # Parse ISO format
+                                    ts_dt = datetime.fromisoformat(ts.replace("Z", "+00:00").replace("+01:00", "+00:00").replace("+00:00", ""))
+                                else:
+                                    ts_dt = ts
+                                timestamps.append(ts_dt)
+                            except:
+                                pass
+
+                    if timestamps:
+                        timestamps.sort()
+                        result["first_timestamp"] = timestamps[0].isoformat() if not result["first_timestamp"] else result["first_timestamp"]
+                        result["last_timestamp"] = timestamps[-1].isoformat() if not result["last_timestamp"] else result["last_timestamp"]
+
+                        # Analyze gaps (looking for gaps > 2 hours)
+                        gaps = []
+                        for i in range(1, len(timestamps)):
+                            gap = (timestamps[i] - timestamps[i-1]).total_seconds() / 3600
+                            if gap > 2:  # More than 2 hours gap
+                                gaps.append(gap)
+
+                        if gaps:
+                            result["data_quality"]["gaps_detected"] = len(gaps)
+                            result["data_quality"]["avg_gap_hours"] = round(sum(gaps) / len(gaps), 2)
+                            result["data_quality"]["max_gap_hours"] = round(max(gaps), 2)
+
+                        # Calculate completeness (expected vs actual hourly data points)
+                        if len(timestamps) >= 2:
+                            total_hours = (timestamps[-1] - timestamps[0]).total_seconds() / 3600
+                            expected_points = max(1, int(total_hours))
+                            result["data_quality"]["completeness_pct"] = round(
+                                min(100, (len(timestamps) / expected_points) * 100), 1
+                            )
+
+                    # Count data by timeframe (check which OHLC fields are populated)
+                    m15_count = sum(1 for row in data_list if row.get("m15_close") is not None)
+                    h1_count = sum(1 for row in data_list if row.get("h1_close") is not None)
+                    d1_count = sum(1 for row in data_list if row.get("d1_close") is not None)
+
+                    result["timeframes"]["M15"]["count"] = m15_count
+                    result["timeframes"]["H1"]["count"] = h1_count
+                    result["timeframes"]["D1"]["count"] = d1_count
+
+                    # Calculate coverage percentages based on data range
+                    if timestamps and len(timestamps) >= 2:
+                        range_hours = max(1, (timestamps[-1] - timestamps[0]).total_seconds() / 3600)
+                        result["timeframes"]["M15"]["coverage_pct"] = round(min(100, (m15_count / (range_hours * 4)) * 100), 1)
+                        result["timeframes"]["H1"]["coverage_pct"] = round(min(100, (h1_count / range_hours) * 100), 1)
+                        result["timeframes"]["D1"]["coverage_pct"] = round(min(100, (d1_count / (range_hours / 24)) * 100), 1)
+
+                    # Get sample of recent data points for visualization (all timeframes)
+                    result["sample_data"] = {
+                        "M15": [
+                            {
+                                "timestamp": row.get("snapshot_time"),
+                                "close": row.get("m15_close"),
+                                "high": row.get("m15_high"),
+                                "low": row.get("m15_low"),
+                            }
+                            for row in data_list[:200]  # More points for M15
+                            if row.get("m15_close") is not None
+                        ],
+                        "H1": [
+                            {
+                                "timestamp": row.get("snapshot_time"),
+                                "close": row.get("h1_close"),
+                                "high": row.get("h1_high"),
+                                "low": row.get("h1_low"),
+                            }
+                            for row in data_list[:100]
+                            if row.get("h1_close") is not None
+                        ],
+                        "D1": [
+                            {
+                                "timestamp": row.get("snapshot_time"),
+                                "close": row.get("d1_close"),
+                                "high": row.get("d1_high"),
+                                "low": row.get("d1_low"),
+                            }
+                            for row in data_list[:100]
+                            if row.get("d1_close") is not None
+                        ],
+                    }
+
+    except Exception as e:
+        logger.error(f"Failed to get data stats for {symbol}: {e}")
+        result["errors"].append(str(e))
+
+    return result
+
+
 # ==================== Live Data ====================
 # NOTE: This route MUST be defined BEFORE the generic {symbol_id:path} routes
 # to prevent "live-data" being interpreted as a symbol_id
