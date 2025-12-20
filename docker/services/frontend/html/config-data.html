@@ -2590,8 +2590,8 @@
                         <div style="color: #888; font-size: 0.8rem;">${ei?.snapshot_time ? new Date(ei.snapshot_time).toLocaleString('de-DE') : 'Keine Daten'}</div>
                     </div>
                     <div style="background: rgba(156, 39, 176, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
-                        <div style="color: #9c27b0; font-weight: bold; margin-bottom: 0.25rem;">&#128200; TwelveData</div>
-                        <div style="color: #888; font-size: 0.8rem;">${td?.datetime || 'Keine Daten'}${td?.symbol_used ? ` (${td.symbol_used})` : ''}</div>
+                        <div style="color: #9c27b0; font-weight: bold; margin-bottom: 0.25rem;">&#128200; TwelveData${td?.symbol_used ? ` (${td.symbol_used})` : ''}</div>
+                        <div style="color: #888; font-size: 0.8rem;">${td?.indicator_datetime ? new Date(td.indicator_datetime).toLocaleString('de-DE') : (td?.datetime || 'Keine Daten')}</div>
                     </div>
                 </div>
 
@@ -2608,6 +2608,11 @@
                         </thead>
                         <tbody>
                             ${sectionHeader('&#128181; Bid/Ask & Spread')}
+                            <tr>
+                                <td colspan="4" style="padding: 6px 12px; background: rgba(156,39,176,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <span style="color: #9c27b0; font-size: 0.75rem;">&#9432; TwelveData liefert keine Bid/Ask-Daten (nur Exchange OHLCV)</span>
+                                </td>
+                            </tr>
                             ${compareRow('Bid', ei?.price?.bid, td?.bid_ask?.bid)}
                             ${compareRow('Ask', ei?.price?.ask, td?.bid_ask?.ask)}
                             ${compareRow('Spread', ei?.price?.spread, td?.bid_ask?.spread)}
@@ -2625,7 +2630,7 @@
                             ${compareRow('Änderung %', null, td?.percent_change, {decimals: 2, tdStyle: `color: ${changeColor};`})}
 
                             ${sectionHeader('&#128202; Technische Indikatoren')}
-                            ${compareRow('RSI (14)', ei?.indicators?.rsi, null, {
+                            ${compareRow('RSI (14)', ei?.indicators?.rsi, td?.indicators?.rsi, {
                                 formatter: (v) => {
                                     if (v === null || v === undefined) return '-';
                                     const num = parseFloat(v);
@@ -2635,20 +2640,28 @@
                                     return `<span style="color: ${color};">${num.toFixed(2)}</span>`;
                                 }
                             })}
-                            ${compareRow('MACD Main', ei?.indicators?.macd?.main, null, {decimals: 5})}
-                            ${compareRow('MACD Signal', ei?.indicators?.macd?.signal, null, {decimals: 5})}
-                            ${compareRow('Stochastic %K', ei?.indicators?.stochastic?.main, null, {decimals: 2})}
-                            ${compareRow('Stochastic %D', ei?.indicators?.stochastic?.signal, null, {decimals: 2})}
+                            ${compareRow('MACD Main', ei?.indicators?.macd?.main, td?.indicators?.macd?.main, {decimals: 5})}
+                            ${compareRow('MACD Signal', ei?.indicators?.macd?.signal, td?.indicators?.macd?.signal, {decimals: 5})}
+                            ${compareRow('MACD Histogram', null, td?.indicators?.macd?.histogram, {decimals: 5})}
+                            ${compareRow('Stochastic %K', ei?.indicators?.stochastic?.main, td?.indicators?.stochastic?.k, {decimals: 2})}
+                            ${compareRow('Stochastic %D', ei?.indicators?.stochastic?.signal, td?.indicators?.stochastic?.d, {decimals: 2})}
                             ${compareRow('CCI', ei?.indicators?.cci, null, {decimals: 2})}
-                            ${compareRow('ADX', ei?.indicators?.adx?.main, null, {decimals: 2})}
-                            ${compareRow('MA (10)', ei?.indicators?.ma_10, null)}
-                            ${compareRow('ATR (D1)', ei?.indicators?.atr?.d1, null)}
+                            ${compareRow('ADX', ei?.indicators?.adx?.main, td?.indicators?.adx, {decimals: 2})}
+                            ${compareRow('MA/EMA (10)', ei?.indicators?.ma_10, td?.indicators?.ema_10)}
+                            ${compareRow('ATR (D1)', ei?.indicators?.atr?.d1, td?.indicators?.atr)}
                             ${compareRow('ATR % (D1)', ei?.indicators?.atr?.d1_pct, null, {decimals: 2})}
 
                             ${sectionHeader('&#128200; Bollinger Bands')}
-                            ${compareRow('Upper Band', ei?.indicators?.bollinger?.upper, null)}
-                            ${compareRow('Middle Band', ei?.indicators?.bollinger?.base, null)}
-                            ${compareRow('Lower Band', ei?.indicators?.bollinger?.lower, null)}
+                            ${compareRow('Upper Band', ei?.indicators?.bollinger?.upper, td?.indicators?.bollinger?.upper)}
+                            ${compareRow('Middle Band', ei?.indicators?.bollinger?.base, td?.indicators?.bollinger?.middle)}
+                            ${compareRow('Lower Band', ei?.indicators?.bollinger?.lower, td?.indicators?.bollinger?.lower)}
+
+                            ${sectionHeader('&#9729; Ichimoku Cloud')}
+                            ${compareRow('Tenkan-sen', ei?.indicators?.ichimoku?.tenkan, td?.indicators?.ichimoku?.tenkan)}
+                            ${compareRow('Kijun-sen', ei?.indicators?.ichimoku?.kijun, td?.indicators?.ichimoku?.kijun)}
+                            ${compareRow('Senkou Span A', ei?.indicators?.ichimoku?.senkou_a, td?.indicators?.ichimoku?.senkou_a)}
+                            ${compareRow('Senkou Span B', ei?.indicators?.ichimoku?.senkou_b, td?.indicators?.ichimoku?.senkou_b)}
+                            ${compareRow('Chikou Span', ei?.indicators?.ichimoku?.chikou, td?.indicators?.ichimoku?.chikou)}
 
                             ${sectionHeader('&#128200; Trend-Stärke')}
                             ${compareRow('4H Trend', ei?.indicators?.strength?.h4, null, {

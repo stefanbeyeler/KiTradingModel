@@ -394,6 +394,26 @@ class TwelveDataService:
             logger.error(f"Failed to search symbols for '{query}': {e}")
             return []
 
+    # Supported technical indicators
+    SUPPORTED_INDICATORS = [
+        # Overlap Studies (Moving Averages)
+        "sma", "ema", "wma", "dema", "tema", "kama", "mama", "t3", "trima",
+        # Momentum Indicators
+        "rsi", "macd", "stoch", "stochrsi", "willr", "cci", "cmo", "roc", "mom",
+        "ppo", "apo", "aroon", "aroonosc", "bop", "mfi", "dx", "adx", "adxr",
+        "plus_di", "minus_di", "plus_dm", "minus_dm",
+        # Volatility Indicators
+        "bbands", "atr", "natr", "trange",
+        # Volume Indicators
+        "obv", "ad", "adosc",
+        # Trend Indicators
+        "supertrend", "ichimoku", "sar",
+        # Price Transform
+        "avgprice", "medprice", "typprice", "wclprice",
+        # Pattern Recognition
+        "pivot_points_hl",
+    ]
+
     async def get_technical_indicators(
         self,
         symbol: str,
@@ -405,6 +425,8 @@ class TwelveDataService:
         """
         Get technical indicator data for a symbol with rate limiting.
 
+        Uses TwelveData REST API directly for indicator data.
+
         Args:
             symbol: The symbol to analyze
             interval: Time interval
@@ -415,9 +437,12 @@ class TwelveDataService:
         Returns:
             Dictionary with indicator values.
         """
-        client = self._get_client()
-        if not client:
-            return {"error": "Twelve Data client not available"}
+        if not self._api_key:
+            return {"error": "Twelve Data API key not configured"}
+
+        indicator_lower = indicator.lower()
+        if indicator_lower not in self.SUPPORTED_INDICATORS:
+            return {"error": f"Unknown indicator: {indicator}. Supported: {self.SUPPORTED_INDICATORS}"}
 
         try:
             # Apply rate limiting before making the API call
@@ -428,81 +453,42 @@ class TwelveDataService:
             if wait_time > 0:
                 logger.debug(f"Rate limiter: waited {wait_time:.1f}s before calling {indicator} API for {symbol}")
 
-            # Map indicator names to client methods
-            indicator_methods = {
-                # Overlap Studies (Moving Averages)
-                "sma": client.sma,
-                "ema": client.ema,
-                "wma": client.wma,
-                "dema": client.dema,
-                "tema": client.tema,
-                "kama": client.kama,
-                "mama": client.mama,
-                "t3": client.t3,
-                "trima": client.trima,
-                # Momentum Indicators
-                "rsi": client.rsi,
-                "macd": client.macd,
-                "stoch": client.stoch,
-                "stochrsi": client.stochrsi,
-                "willr": client.willr,
-                "cci": client.cci,
-                "cmo": client.cmo,
-                "roc": client.roc,
-                "mom": client.mom,
-                "ppo": client.ppo,
-                "apo": client.apo,
-                "aroon": client.aroon,
-                "aroonosc": client.aroonosc,
-                "bop": client.bop,
-                "mfi": client.mfi,
-                "dx": client.dx,
-                "adx": client.adx,
-                "adxr": client.adxr,
-                "plus_di": client.plus_di,
-                "minus_di": client.minus_di,
-                "plus_dm": client.plus_dm,
-                "minus_dm": client.minus_dm,
-                # Volatility Indicators
-                "bbands": client.bbands,
-                "atr": client.atr,
-                "natr": client.natr,
-                "trange": client.trange,
-                # Volume Indicators
-                "obv": client.obv,
-                "ad": client.ad,
-                "adosc": client.adosc,
-                # Trend Indicators
-                "supertrend": client.supertrend,
-                "ichimoku": client.ichimoku,
-                "sar": client.sar,
-                # Price Transform
-                "avgprice": client.avgprice,
-                "medprice": client.medprice,
-                "typprice": client.typprice,
-                "wclprice": client.wclprice,
-                # Pattern Recognition
-                "pivot_points_hl": client.pivot_points_hl,
-            }
-
-            method = indicator_methods.get(indicator.lower())
-            if not method:
-                return {"error": f"Unknown indicator: {indicator}. Supported: {list(indicator_methods.keys())}"}
-
+            # Build API request
             params = {
                 "symbol": symbol,
                 "interval": interval,
                 "outputsize": outputsize,
+                "apikey": self._api_key,
                 **kwargs,
             }
 
-            data = method(**params).as_json()
-            logger.info(f"Retrieved {indicator.upper()} for {symbol}")
+            # Call TwelveData REST API directly
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"https://api.twelvedata.com/{indicator_lower}",
+                    params=params
+                )
+                data = response.json()
+
+            # Check for API errors
+            if "status" in data and data["status"] == "error":
+                error_msg = data.get("message", "Unknown API error")
+                logger.error(f"TwelveData API error for {indicator}/{symbol}: {error_msg}")
+                return {"indicator": indicator, "symbol": symbol, "error": error_msg}
+
+            # Extract values from response
+            values = data.get("values", data)
+            if isinstance(values, dict) and "values" not in values:
+                # Some endpoints return data directly
+                values = [values] if not isinstance(values, list) else values
+
+            logger.info(f"Retrieved {indicator.upper()} for {symbol} ({len(values) if isinstance(values, list) else 1} values)")
             return {
                 "indicator": indicator.upper(),
                 "symbol": symbol,
                 "interval": interval,
-                "values": data,
+                "values": values,
+                "meta": data.get("meta", {}),
             }
         except Exception as e:
             logger.error(f"Failed to get {indicator} for {symbol}: {e}")

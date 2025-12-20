@@ -2387,7 +2387,76 @@ async def get_symbol_live_data(symbol: str):
                     "low": quote.get("fifty_two_week", {}).get("low") if isinstance(quote.get("fifty_two_week"), dict) else None,
                     "high": quote.get("fifty_two_week", {}).get("high") if isinstance(quote.get("fifty_two_week"), dict) else None,
                 },
+                "indicators": {},
             }
+
+            # Fetch TwelveData technical indicators (parallel requests) - use 1min interval for real-time data
+            import asyncio
+            td_interval = "1min"  # Minute data for real-time comparison
+            indicator_tasks = {
+                "rsi": twelvedata_service.get_rsi(td_symbol, interval=td_interval, outputsize=1),
+                "macd": twelvedata_service.get_macd(td_symbol, interval=td_interval, outputsize=1),
+                "bbands": twelvedata_service.get_bollinger_bands(td_symbol, interval=td_interval, outputsize=1),
+                "stoch": twelvedata_service.get_stochastic(td_symbol, interval=td_interval, outputsize=1),
+                "adx": twelvedata_service.get_adx(td_symbol, interval=td_interval, outputsize=1),
+                "atr": twelvedata_service.get_atr(td_symbol, interval=td_interval, outputsize=1),
+                "ema_10": twelvedata_service.get_ema(td_symbol, interval=td_interval, time_period=10, outputsize=1),
+                "ichimoku": twelvedata_service.get_ichimoku(td_symbol, interval=td_interval, outputsize=1),
+            }
+
+            # Execute all indicator requests in parallel
+            indicator_results = await asyncio.gather(
+                *indicator_tasks.values(),
+                return_exceptions=True
+            )
+
+            # Process results and extract timestamp from first successful result
+            indicator_datetime = None
+            for name, res in zip(indicator_tasks.keys(), indicator_results):
+                if isinstance(res, Exception):
+                    continue
+                if res and "error" not in res and res.get("values"):
+                    values = res["values"]
+                    latest = values[0] if isinstance(values, list) and values else values
+                    # Extract datetime from first successful indicator
+                    if indicator_datetime is None and latest.get("datetime"):
+                        indicator_datetime = latest.get("datetime")
+                        result["twelvedata"]["indicator_datetime"] = indicator_datetime
+
+                    if name == "rsi":
+                        result["twelvedata"]["indicators"]["rsi"] = float(latest.get("rsi", 0)) if latest.get("rsi") else None
+                    elif name == "macd":
+                        result["twelvedata"]["indicators"]["macd"] = {
+                            "main": float(latest.get("macd", 0)) if latest.get("macd") else None,
+                            "signal": float(latest.get("macd_signal", 0)) if latest.get("macd_signal") else None,
+                            "histogram": float(latest.get("macd_hist", 0)) if latest.get("macd_hist") else None,
+                        }
+                    elif name == "bbands":
+                        result["twelvedata"]["indicators"]["bollinger"] = {
+                            "upper": float(latest.get("upper_band", 0)) if latest.get("upper_band") else None,
+                            "middle": float(latest.get("middle_band", 0)) if latest.get("middle_band") else None,
+                            "lower": float(latest.get("lower_band", 0)) if latest.get("lower_band") else None,
+                        }
+                    elif name == "stoch":
+                        result["twelvedata"]["indicators"]["stochastic"] = {
+                            "k": float(latest.get("slow_k", 0)) if latest.get("slow_k") else None,
+                            "d": float(latest.get("slow_d", 0)) if latest.get("slow_d") else None,
+                        }
+                    elif name == "adx":
+                        result["twelvedata"]["indicators"]["adx"] = float(latest.get("adx", 0)) if latest.get("adx") else None
+                    elif name == "atr":
+                        result["twelvedata"]["indicators"]["atr"] = float(latest.get("atr", 0)) if latest.get("atr") else None
+                    elif name == "ema_10":
+                        result["twelvedata"]["indicators"]["ema_10"] = float(latest.get("ema", 0)) if latest.get("ema") else None
+                    elif name == "ichimoku":
+                        result["twelvedata"]["indicators"]["ichimoku"] = {
+                            "tenkan": float(latest.get("tenkan_sen", 0)) if latest.get("tenkan_sen") else None,
+                            "kijun": float(latest.get("kijun_sen", 0)) if latest.get("kijun_sen") else None,
+                            "senkou_a": float(latest.get("senkou_span_a", 0)) if latest.get("senkou_span_a") else None,
+                            "senkou_b": float(latest.get("senkou_span_b", 0)) if latest.get("senkou_span_b") else None,
+                            "chikou": float(latest.get("chikou_span", 0)) if latest.get("chikou_span") else None,
+                        }
+
         elif quote and "error" in quote:
             result["errors"].append(f"TwelveData: {quote.get('error')}")
     except Exception as e:
@@ -2724,7 +2793,7 @@ async def search_symbols(query: str, limit: int = 20):
     return {"count": len(results), "results": results}
 
 
-@twelvedata_router.get("/twelvedata/quote/{symbol}")
+@twelvedata_router.get("/twelvedata/quote/{symbol:path}")
 async def get_quote(symbol: str, exchange: Optional[str] = None):
     """
     Get real-time quote for a symbol.
@@ -2737,7 +2806,7 @@ async def get_quote(symbol: str, exchange: Optional[str] = None):
     return quote
 
 
-@twelvedata_router.get("/twelvedata/price/{symbol}")
+@twelvedata_router.get("/twelvedata/price/{symbol:path}")
 async def get_price(symbol: str, exchange: Optional[str] = None):
     """
     Get current price for a symbol (lightweight endpoint).
@@ -2750,7 +2819,7 @@ async def get_price(symbol: str, exchange: Optional[str] = None):
     return price
 
 
-@twelvedata_router.get("/twelvedata/time_series/{symbol}")
+@twelvedata_router.get("/twelvedata/time_series/{symbol:path}")
 async def get_time_series(
     symbol: str,
     interval: str = "1day",
@@ -2781,7 +2850,7 @@ async def get_time_series(
     return data
 
 
-@twelvedata_router.get("/twelvedata/indicator/{symbol}/{indicator}")
+@twelvedata_router.get("/twelvedata/indicator/{symbol:path}/{indicator}")
 async def get_technical_indicator(
     symbol: str,
     indicator: str,
@@ -2818,7 +2887,7 @@ async def get_technical_indicator(
     return data
 
 
-@twelvedata_router.get("/twelvedata/indicators/{symbol}")
+@twelvedata_router.get("/twelvedata/indicators/{symbol:path}")
 async def get_multiple_indicators(
     symbol: str,
     indicators: str = "rsi,macd,bbands",
@@ -2846,7 +2915,7 @@ async def get_multiple_indicators(
     return data
 
 
-@twelvedata_router.get("/twelvedata/analysis/{symbol}")
+@twelvedata_router.get("/twelvedata/analysis/{symbol:path}")
 async def get_complete_analysis(
     symbol: str,
     interval: str = "1day",
@@ -2872,7 +2941,7 @@ async def get_complete_analysis(
     return data
 
 
-@twelvedata_router.get("/twelvedata/rsi/{symbol}")
+@twelvedata_router.get("/twelvedata/rsi/{symbol:path}")
 async def get_rsi(
     symbol: str,
     interval: str = "1day",
@@ -2888,7 +2957,7 @@ async def get_rsi(
     )
 
 
-@twelvedata_router.get("/twelvedata/macd/{symbol}")
+@twelvedata_router.get("/twelvedata/macd/{symbol:path}")
 async def get_macd(
     symbol: str,
     interval: str = "1day",
@@ -2908,7 +2977,7 @@ async def get_macd(
     )
 
 
-@twelvedata_router.get("/twelvedata/bbands/{symbol}")
+@twelvedata_router.get("/twelvedata/bbands/{symbol:path}")
 async def get_bollinger_bands(
     symbol: str,
     interval: str = "1day",
@@ -2926,7 +2995,7 @@ async def get_bollinger_bands(
     )
 
 
-@twelvedata_router.get("/twelvedata/stoch/{symbol}")
+@twelvedata_router.get("/twelvedata/stoch/{symbol:path}")
 async def get_stochastic(
     symbol: str,
     interval: str = "1day",
@@ -2946,7 +3015,7 @@ async def get_stochastic(
     )
 
 
-@twelvedata_router.get("/twelvedata/adx/{symbol}")
+@twelvedata_router.get("/twelvedata/adx/{symbol:path}")
 async def get_adx(
     symbol: str,
     interval: str = "1day",
@@ -2962,7 +3031,7 @@ async def get_adx(
     )
 
 
-@twelvedata_router.get("/twelvedata/atr/{symbol}")
+@twelvedata_router.get("/twelvedata/atr/{symbol:path}")
 async def get_atr(
     symbol: str,
     interval: str = "1day",
@@ -2978,7 +3047,7 @@ async def get_atr(
     )
 
 
-@twelvedata_router.get("/twelvedata/ichimoku/{symbol}")
+@twelvedata_router.get("/twelvedata/ichimoku/{symbol:path}")
 async def get_ichimoku(
     symbol: str,
     interval: str = "1day",
@@ -2992,7 +3061,7 @@ async def get_ichimoku(
     )
 
 
-@twelvedata_router.get("/twelvedata/supertrend/{symbol}")
+@twelvedata_router.get("/twelvedata/supertrend/{symbol:path}")
 async def get_supertrend(
     symbol: str,
     interval: str = "1day",
@@ -3010,7 +3079,7 @@ async def get_supertrend(
     )
 
 
-@twelvedata_router.get("/twelvedata/willr/{symbol}")
+@twelvedata_router.get("/twelvedata/willr/{symbol:path}")
 async def get_williams_r(
     symbol: str,
     interval: str = "1day",
@@ -3026,7 +3095,7 @@ async def get_williams_r(
     )
 
 
-@twelvedata_router.get("/twelvedata/mfi/{symbol}")
+@twelvedata_router.get("/twelvedata/mfi/{symbol:path}")
 async def get_mfi(
     symbol: str,
     interval: str = "1day",
@@ -3042,7 +3111,7 @@ async def get_mfi(
     )
 
 
-@twelvedata_router.get("/twelvedata/obv/{symbol}")
+@twelvedata_router.get("/twelvedata/obv/{symbol:path}")
 async def get_obv(
     symbol: str,
     interval: str = "1day",
@@ -3056,7 +3125,7 @@ async def get_obv(
     )
 
 
-@twelvedata_router.get("/twelvedata/aroon/{symbol}")
+@twelvedata_router.get("/twelvedata/aroon/{symbol:path}")
 async def get_aroon(
     symbol: str,
     interval: str = "1day",
@@ -3072,7 +3141,7 @@ async def get_aroon(
     )
 
 
-@twelvedata_router.get("/twelvedata/ema/{symbol}")
+@twelvedata_router.get("/twelvedata/ema/{symbol:path}")
 async def get_ema(
     symbol: str,
     interval: str = "1day",
@@ -3088,7 +3157,7 @@ async def get_ema(
     )
 
 
-@twelvedata_router.get("/twelvedata/sma/{symbol}")
+@twelvedata_router.get("/twelvedata/sma/{symbol:path}")
 async def get_sma(
     symbol: str,
     interval: str = "1day",
