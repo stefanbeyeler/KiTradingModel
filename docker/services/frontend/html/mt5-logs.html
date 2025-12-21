@@ -220,7 +220,7 @@
         /* Table */
         .table-container {
             overflow-x: auto;
-            max-height: 400px;
+            max-height: 350px;
             overflow-y: auto;
         }
 
@@ -383,7 +383,7 @@
         }
 
         .symbol-table-container {
-            max-height: 400px;
+            max-height: 350px;
             overflow-y: auto;
         }
 
@@ -1032,10 +1032,35 @@
             }).join('');
         }
 
+        // Save filters to localStorage
+        function saveFilters() {
+            const filters = {
+                search: document.getElementById('searchInput').value,
+                indicator: document.getElementById('filterIndicator').value,
+                limit: document.getElementById('filterLimit').value
+            };
+            localStorage.setItem('mt5LogsFilters', JSON.stringify(filters));
+        }
+
+        // Load filters from localStorage
+        function loadFiltersFromStorage() {
+            const saved = localStorage.getItem('mt5LogsFilters');
+            if (saved) {
+                const filters = JSON.parse(saved);
+                document.getElementById('searchInput').value = filters.search || '';
+                document.getElementById('filterIndicator').value = filters.indicator || '';
+                document.getElementById('filterLimit').value = filters.limit || '100';
+                selectedSymbol = filters.search || null;
+            }
+        }
+
         // Filter logs
         function filterLogs() {
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
             const indicator = document.getElementById('filterIndicator').value;
+
+            // Save filters
+            saveFilters();
 
             const filtered = allLogs.filter(log => {
                 const logSymbol = (log.symbol || '').toLowerCase();
@@ -1056,6 +1081,7 @@
             selectedSymbol = null;
             document.getElementById('searchInput').value = '';
             document.getElementById('filterIndicator').value = '';
+            saveFilters();
             renderSymbolSummary();
             renderLogs(allLogs);
         }
@@ -1160,6 +1186,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             console.log('MT5 Logs: DOMContentLoaded fired');
             setupModal();
+            loadFiltersFromStorage();
             loadLogs();
         });
     </script>

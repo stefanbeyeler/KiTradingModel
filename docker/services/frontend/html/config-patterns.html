@@ -229,7 +229,7 @@
         /* Table */
         .table-container {
             overflow-x: auto;
-            max-height: 600px;
+            max-height: 350px;
             overflow-y: auto;
         }
 
@@ -1106,6 +1106,33 @@
             `}).join('');
         }
 
+        // Save filters to localStorage
+        function saveFilters() {
+            const filters = {
+                search: document.getElementById('searchInput').value,
+                direction: document.getElementById('filterDirection').value,
+                category: document.getElementById('filterCategory').value,
+                timeframe: document.getElementById('filterTimeframe').value,
+                strength: document.getElementById('filterStrength').value,
+                confidence: document.getElementById('filterConfidence').value
+            };
+            localStorage.setItem('patternsFilters', JSON.stringify(filters));
+        }
+
+        // Load filters from localStorage
+        function loadFilters() {
+            const saved = localStorage.getItem('patternsFilters');
+            if (saved) {
+                const filters = JSON.parse(saved);
+                document.getElementById('searchInput').value = filters.search || '';
+                document.getElementById('filterDirection').value = filters.direction || '';
+                document.getElementById('filterCategory').value = filters.category || '';
+                document.getElementById('filterTimeframe').value = filters.timeframe || '';
+                document.getElementById('filterStrength').value = filters.strength || '';
+                document.getElementById('filterConfidence').value = filters.confidence || '';
+            }
+        }
+
         // Filter patterns
         function filterPatterns() {
             const search = document.getElementById('searchInput').value.toLowerCase();
@@ -1114,6 +1141,9 @@
             const timeframe = document.getElementById('filterTimeframe').value;
             const strength = document.getElementById('filterStrength').value;
             const minConfidence = parseFloat(document.getElementById('filterConfidence').value) || 0;
+
+            // Save filters
+            saveFilters();
 
             const filtered = allPatterns.filter(p => {
                 if (search && !p.symbol.toLowerCase().includes(search)) return false;
@@ -1136,6 +1166,7 @@
             document.getElementById('filterTimeframe').value = '';
             document.getElementById('filterStrength').value = '';
             document.getElementById('filterConfidence').value = '';
+            saveFilters();
             renderPatterns(allPatterns);
         }
 
@@ -1471,6 +1502,7 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             setupModal();
+            loadFilters();
             await loadStatistics();
             await loadPatterns();
             await renderFavoritesGrid();
