@@ -146,7 +146,8 @@
       "Bash(# Check available external-sources endpoints curl -s \"\"http://10.1.19.101:3001/docs\"\")",
       "Bash(# List all API endpoints curl -s \"\"http://10.1.19.101:3001/openapi.json\"\" | python3 -c \"\"import sys,json; d=json.load\\(sys.stdin\\); print\\(''\\\\n''.join\\(sorted\\(d.get\\(''paths'',{}\\).keys\\(\\)\\)\\)\\)\"\")",
       "Bash(sudo docker inspect:*)",
-      "Bash(docker image prune:*)"
+      "Bash(docker image prune:*)",
+      "Bash(docker volume prune:*)"
     ],
     "deny": [],
     "ask": []

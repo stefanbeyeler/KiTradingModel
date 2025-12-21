@@ -769,7 +769,7 @@ async def fetch_now(background_tasks: BackgroundTasks):
 async def list_documents(
     symbol: Optional[str] = Query(None, description="Filter by symbol"),
     document_type: Optional[str] = Query(None, description="Filter by document type"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of documents to return"),
+    limit: int = Query(100, ge=1, le=10000, description="Maximum number of documents to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     sort_order: str = Query("desc", description="Sort order by date: 'asc' or 'desc'")
 ):
