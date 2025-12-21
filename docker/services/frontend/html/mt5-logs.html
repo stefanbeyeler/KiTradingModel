@@ -943,7 +943,8 @@
                     </td>
                     <td class="col-time" onclick="filterBySymbol('${symbol}')" style="cursor: pointer;">${getTimeAgo(data.lastTime)}</td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
         }
 
         // Populate indicator filter dropdown dynamically
@@ -1037,14 +1038,14 @@
                 const content = log.content || log.message || log.comment || '-';
                 // Use log_time (actual MT5 event time) over timestamp/created_at (import time)
                 const logTime = log.log_time || log.event_time || log.timestamp || log.time;
-                const timeAgo = getTimeAgo(logTime);
+                const formattedTime = formatTimestamp(logTime);
 
                 return `
                     <tr>
                         <td class="col-symbol clickable" onclick="filterBySymbol('${symbol}')" title="Nach Symbol filtern">${symbol}</td>
                         <td><span class="badge ${getIndicatorBadgeClass(indicator)} clickable" onclick="filterBySymbolAndIndicator('${symbol}', '${indicator}')" title="Nach Symbol und Indikator filtern">${indicator}</span></td>
                         <td class="col-content" onclick="showLogDetail(${index})" style="cursor: pointer;" title="${content}">${content}</td>
-                        <td class="col-time" onclick="showLogDetail(${index})" style="cursor: pointer;">${timeAgo}</td>
+                        <td class="col-time" onclick="showLogDetail(${index})" style="cursor: pointer;">${formattedTime}</td>
                     </tr>
                 `;
             }).join('');
