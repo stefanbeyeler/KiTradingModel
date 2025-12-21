@@ -151,7 +151,9 @@
       "Bash(__NEW_LINE__ echo \"=== Testing /history ===\")",
       "Bash(__NEW_LINE__ echo \"=== Testing /BTCUSD ===\")",
       "Bash(__NEW_LINE__ echo \"=== Testing /summary/BTCUSD ===\")",
-      "Bash(time curl:*)"
+      "Bash(time curl:*)",
+      "Bash(tegrastats:*)",
+      "Bash(ollama ps:*)"
     ],
     "deny": [],
     "ask": []

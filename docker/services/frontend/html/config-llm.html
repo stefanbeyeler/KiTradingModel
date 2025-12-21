@@ -1001,16 +1001,30 @@
             input.value = '';
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-            // Add loading indicator
+            // Add loading indicator with timer
             const loadingId = 'loading-' + Date.now();
+            const timerId = 'timer-' + Date.now();
+            const startTime = Date.now();
             messagesDiv.innerHTML += `
                 <div class="chat-message assistant" id="${loadingId}">
                     <div class="role">Assistent</div>
-                    <div class="content"><span class="loading-spinner"></span> Denke nach...</div>
+                    <div class="content">
+                        <span class="loading-spinner"></span> Denke nach...
+                        <span id="${timerId}" style="color: #ffb74d; font-size: 0.85rem;">(0s)</span>
+                    </div>
                 </div>
             `;
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
             btnSend.disabled = true;
+
+            // Start timer to show elapsed time
+            const timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const timerEl = document.getElementById(timerId);
+                if (timerEl) {
+                    timerEl.textContent = `(${elapsed}s)`;
+                }
+            }, 1000);
 
             try {
                 // Use the new /llm/chat endpoint which doesn't require a symbol
@@ -1024,7 +1038,9 @@
                 });
                 const data = await res.json();
 
-                // Remove loading indicator
+                // Stop timer and remove loading indicator
+                clearInterval(timerInterval);
+                const totalTime = Math.floor((Date.now() - startTime) / 1000);
                 document.getElementById(loadingId)?.remove();
 
                 // Handle error responses
@@ -1032,21 +1048,23 @@
                     throw new Error(data.detail);
                 }
 
-                // Add response
+                // Add response with timing info
                 const response = data.response || data.analysis || data.answer || 'Keine Antwort erhalten.';
                 messagesDiv.innerHTML += `
                     <div class="chat-message assistant">
-                        <div class="role">Assistent</div>
+                        <div class="role">Assistent <span style="opacity: 0.5; font-size: 0.75rem;">(${totalTime}s)</span></div>
                         <div class="content">${escapeHtml(response)}</div>
                     </div>
                 `;
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
             } catch (err) {
+                clearInterval(timerInterval);
+                const totalTime = Math.floor((Date.now() - startTime) / 1000);
                 document.getElementById(loadingId)?.remove();
                 messagesDiv.innerHTML += `
                     <div class="chat-message assistant">
-                        <div class="role">Assistent</div>
+                        <div class="role">Assistent <span style="opacity: 0.5; font-size: 0.75rem;">(${totalTime}s)</span></div>
                         <div class="content" style="color: #e57373;">Fehler bei der Verarbeitung: ${err.message}</div>
                     </div>
                 `;
