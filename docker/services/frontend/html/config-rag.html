@@ -1355,21 +1355,24 @@
                 });
                 const data = await res.json();
 
-                if (!data.results || data.results.length === 0) {
+                // API returns document_details in details object
+                const results = data.details?.document_details || [];
+
+                if (results.length === 0) {
                     resultsDiv.innerHTML = '<p style="opacity: 0.5; text-align: center;">Keine Ergebnisse gefunden</p>';
                     return;
                 }
 
-                resultsDiv.innerHTML = data.results.map((r, i) => {
-                    const score = r.score ? (r.score * 100).toFixed(1) + '%' : '-';
+                resultsDiv.innerHTML = results.map((r, i) => {
+                    const score = r.similarity_score ? (r.similarity_score * 100).toFixed(1) + '%' : '-';
                     return `
                         <div class="query-result">
                             <span class="score">Relevanz: ${score}</span>
                             <div class="type">
-                                <span class="badge badge-type">${formatTypeName(r.document_type || '-')}</span>
+                                <span class="badge badge-type">${formatTypeName(r.type || '-')}</span>
                                 ${r.symbol ? `<span class="badge badge-symbol">${r.symbol}</span>` : ''}
                             </div>
-                            <div class="content">${r.content || '-'}</div>
+                            <div class="content">${r.content_preview || '-'}</div>
                         </div>
                     `;
                 }).join('');
