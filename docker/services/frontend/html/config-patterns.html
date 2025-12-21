@@ -13,9 +13,9 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            min-height: 100vh;
+            background: transparent;
             color: #e8e8e8;
+            overflow: hidden;
         }
 
         .container {
@@ -686,17 +686,7 @@
     </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1 class="header-title">Candlestick Patterns</h1>
-            <div class="scan-status" id="scanStatus">
-                <span class="status-dot stopped"></span>
-                <span>Auto-Scan: Stopped</span>
-            </div>
-        </div>
-    </header>
-
-    <main class="container">
+    <main class="container" style="padding-top: 0.5rem;">
         <!-- Statistics -->
         <div class="stats-bar" id="statsBar">
             <div class="stat-card">
@@ -1051,26 +1041,13 @@
 
         // Update scan status display
         function updateScanStatus() {
-            const statusEl = document.getElementById('scanStatus');
-            const dotEl = statusEl.querySelector('.status-dot');
-            const textEl = statusEl.querySelector('span:last-child');
             const btnStart = document.getElementById('btnStartAuto');
             const btnStop = document.getElementById('btnStopAuto');
 
             if (isAutoScanRunning) {
-                statusEl.classList.remove('stopped');
-                statusEl.classList.add('running');
-                dotEl.classList.remove('stopped');
-                dotEl.classList.add('running');
-                textEl.textContent = 'Auto-Scan: Running';
                 btnStart.style.display = 'none';
                 btnStop.style.display = 'inline-flex';
             } else {
-                statusEl.classList.remove('running');
-                statusEl.classList.add('stopped');
-                dotEl.classList.remove('running');
-                dotEl.classList.add('stopped');
-                textEl.textContent = 'Auto-Scan: Stopped';
                 btnStart.style.display = 'inline-flex';
                 btnStop.style.display = 'none';
             }

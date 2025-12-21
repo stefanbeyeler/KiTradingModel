@@ -13,9 +13,9 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            min-height: 100vh;
+            background: transparent;
             color: #e8e8e8;
+            overflow: hidden;
         }
 
         .container {
@@ -220,7 +220,7 @@
         /* Table */
         .table-container {
             overflow-x: auto;
-            max-height: 600px;
+            max-height: 400px;
             overflow-y: auto;
         }
 
@@ -383,7 +383,7 @@
         }
 
         .symbol-table-container {
-            max-height: 350px;
+            max-height: 400px;
             overflow-y: auto;
         }
 
@@ -578,14 +578,7 @@
     </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1 class="header-title">MT5 Logs</h1>
-            <span class="service-badge" id="connectionStatus">Verbinde...</span>
-        </div>
-    </header>
-
-    <main class="container">
+    <main class="container" style="padding-top: 0.5rem;">
         <!-- Statistics -->
         <div class="stats-bar" id="statsBar">
             <div class="stat-card">
@@ -786,8 +779,6 @@
 
         // Load logs from EasyInsight API
         async function loadLogs() {
-            const statusEl = document.getElementById('connectionStatus');
-            statusEl.textContent = 'Lade...';
 
             const limit = document.getElementById('filterLimit').value;
             const btnRefresh = document.getElementById('btnRefresh');
@@ -836,16 +827,7 @@
 
         // Update connection status badge
         function updateConnectionStatus(connected) {
-            const statusEl = document.getElementById('connectionStatus');
-            if (connected) {
-                statusEl.textContent = 'Verbunden';
-                statusEl.style.background = 'rgba(76, 175, 80, 0.2)';
-                statusEl.style.color = '#81c784';
-            } else {
-                statusEl.textContent = 'Offline';
-                statusEl.style.background = 'rgba(244, 67, 54, 0.2)';
-                statusEl.style.color = '#e57373';
-            }
+            // Status display removed - embedded in tab
         }
 
         // Update statistics
