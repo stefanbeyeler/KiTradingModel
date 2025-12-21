@@ -48,6 +48,8 @@ services:
       - "${NHITS_SERVICE_PORT:-3002}:${NHITS_SERVICE_PORT:-3002}"
     volumes:
       - models-data:/app/data/models
+      - feedback-data:/app/data/model_feedback
+      - metrics-data:/app/data/model_metrics
       - ./src:/app/src:ro
       - ./logs:/app/logs
     environment:
@@ -208,6 +210,10 @@ services:
 
 volumes:
   models-data:
+    driver: local
+  feedback-data:
+    driver: local
+  metrics-data:
     driver: local
   rag-data:
     driver: local

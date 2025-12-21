@@ -922,19 +922,19 @@ class ForecastService:
                 f"[confidence: {result.model_confidence:.1%}]"
             )
 
-            # Record prediction for feedback learning (only for H1 timeframe for now)
-            if timeframe.upper() == "H1":
-                try:
-                    from .model_improvement_service import model_improvement_service
-                    model_improvement_service.record_prediction(
-                        symbol=symbol,
-                        current_price=current_price,
-                        predicted_price_1h=result.predicted_price_1h,
-                        predicted_price_4h=result.predicted_price_4h,
-                        predicted_price_24h=result.predicted_price_24h,
-                    )
-                except Exception as e:
-                    logger.debug(f"Failed to record prediction for feedback: {e}")
+            # Record prediction for feedback learning (all timeframes)
+            try:
+                from .model_improvement_service import model_improvement_service
+                model_improvement_service.record_prediction(
+                    symbol=symbol,
+                    current_price=current_price,
+                    predicted_price_1h=result.predicted_price_1h,
+                    predicted_price_4h=result.predicted_price_4h,
+                    predicted_price_24h=result.predicted_price_24h,
+                    timeframe=timeframe,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to record prediction for feedback: {e}")
 
             return result
 

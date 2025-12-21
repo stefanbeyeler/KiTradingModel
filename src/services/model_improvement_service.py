@@ -267,19 +267,39 @@ class ModelImprovementService:
         predicted_price_1h: Optional[float] = None,
         predicted_price_4h: Optional[float] = None,
         predicted_price_24h: Optional[float] = None,
+        timeframe: str = "H1",
     ):
         """
         Record a new prediction for later evaluation.
 
         Called automatically when NHITS makes a prediction.
+
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSD")
+            current_price: Current price at prediction time
+            predicted_price_1h: Short-term prediction (1h for H1, 30min for M15, 1d for D1)
+            predicted_price_4h: Medium-term prediction (4h for H1, 1h for M15, 3d for D1)
+            predicted_price_24h: Long-term prediction (24h for H1, 2h for M15, 7d for D1)
+            timeframe: M15, H1, or D1
         """
         now = datetime.utcnow()
 
         if symbol not in self.pending_feedback:
             self.pending_feedback[symbol] = []
 
-        # Record each horizon prediction separately
-        for horizon, pred_price in [("1h", predicted_price_1h), ("4h", predicted_price_4h), ("24h", predicted_price_24h)]:
+        # Map timeframe to actual horizons
+        if timeframe.upper() == "M15":
+            # M15: short=30min, mid=1h, long=2h
+            horizons = [("30m", predicted_price_1h), ("1h", predicted_price_4h), ("2h", predicted_price_24h)]
+        elif timeframe.upper() == "D1":
+            # D1: short=1d, mid=3d, long=7d
+            horizons = [("1d", predicted_price_1h), ("3d", predicted_price_4h), ("7d", predicted_price_24h)]
+        else:
+            # H1 (default): short=1h, mid=4h, long=24h
+            horizons = [("1h", predicted_price_1h), ("4h", predicted_price_4h), ("24h", predicted_price_24h)]
+
+        recorded_count = 0
+        for horizon, pred_price in horizons:
             if pred_price is not None:
                 feedback = PredictionFeedback(
                     symbol=symbol,
@@ -289,17 +309,52 @@ class ModelImprovementService:
                     predicted_price=pred_price,
                 )
                 self.pending_feedback[symbol].append(feedback)
+                recorded_count += 1
 
         # Update metrics count
         if symbol not in self.performance_metrics:
             self.performance_metrics[symbol] = ModelPerformanceMetrics(symbol=symbol)
         self.performance_metrics[symbol].total_predictions += 1
 
-        # Save periodically
-        if self.performance_metrics[symbol].total_predictions % 5 == 0:
-            self._save_data()
+        # Always save immediately to ensure persistence
+        self._save_data()
 
-        logger.debug(f"Recorded predictions for {symbol}: 1h={predicted_price_1h}, 4h={predicted_price_4h}, 24h={predicted_price_24h}")
+        logger.info(
+            f"Recorded {recorded_count} predictions for {symbol}/{timeframe}: "
+            f"short={predicted_price_1h}, mid={predicted_price_4h}, long={predicted_price_24h}"
+        )
+
+    def _parse_horizon_to_target_time(self, timestamp: datetime, horizon: str) -> datetime:
+        """
+        Parse horizon string to target time.
+
+        Supports formats:
+        - Minutes: 30m, 15m
+        - Hours: 1h, 2h, 4h, 24h
+        - Days: 1d, 3d, 7d
+        """
+        horizon = horizon.lower().strip()
+
+        if horizon.endswith('m'):
+            # Minutes (e.g., 30m, 15m)
+            minutes = int(horizon[:-1])
+            return timestamp + timedelta(minutes=minutes)
+        elif horizon.endswith('d'):
+            # Days (e.g., 1d, 3d, 7d)
+            days = int(horizon[:-1])
+            return timestamp + timedelta(days=days)
+        elif horizon.endswith('h'):
+            # Hours (e.g., 1h, 4h, 24h)
+            hours = int(horizon[:-1])
+            return timestamp + timedelta(hours=hours)
+        else:
+            # Fallback: assume hours
+            try:
+                hours = int(horizon)
+                return timestamp + timedelta(hours=hours)
+            except ValueError:
+                logger.warning(f"Unknown horizon format: {horizon}, defaulting to 1h")
+                return timestamp + timedelta(hours=1)
 
     async def evaluate_pending_predictions(self, db_pool) -> Dict[str, int]:
         """
@@ -320,8 +375,7 @@ class ModelImprovementService:
 
             for fb in feedbacks:
                 # Check if enough time has passed
-                hours = int(fb.horizon.replace("h", ""))
-                target_time = fb.timestamp + timedelta(hours=hours)
+                target_time = self._parse_horizon_to_target_time(fb.timestamp, fb.horizon)
 
                 if now < target_time + timedelta(minutes=30):
                     # Not yet time to evaluate
@@ -431,6 +485,149 @@ class ModelImprovementService:
                 return float(row["close"])
 
         return None
+
+    async def _get_actual_price_via_api(
+        self,
+        symbol: str,
+        target_time: datetime
+    ) -> Optional[float]:
+        """Get actual price via EasyInsight/Data Service API.
+
+        Uses the Data Service as gateway to fetch historical price data.
+        """
+        import httpx
+        from src.config import settings
+
+        data_service_url = getattr(settings, 'data_service_url', 'http://localhost:3001')
+
+        # Format times for API request
+        start_time = target_time - timedelta(hours=1)
+        end_time = target_time + timedelta(hours=1)
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # Try EasyInsight historical data endpoint
+                response = await client.get(
+                    f"{data_service_url}/api/v1/symbols/{symbol}/ohlcv",
+                    params={
+                        "start_date": start_time.isoformat(),
+                        "end_date": end_time.isoformat(),
+                        "interval": "h1"
+                    }
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    if data and len(data) > 0:
+                        # Find the closest price to target_time
+                        closest_price = None
+                        min_diff = float('inf')
+
+                        for candle in data:
+                            candle_time = datetime.fromisoformat(candle.get('timestamp', '').replace('Z', '+00:00'))
+                            # Make target_time timezone-aware if needed
+                            target_aware = target_time
+                            if target_time.tzinfo is None:
+                                from datetime import timezone
+                                target_aware = target_time.replace(tzinfo=timezone.utc)
+
+                            diff = abs((candle_time - target_aware).total_seconds())
+                            if diff < min_diff:
+                                min_diff = diff
+                                closest_price = float(candle.get('close', 0))
+
+                        if closest_price and min_diff < 7200:  # Within 2 hours
+                            return closest_price
+
+                # Fallback: Try TwelveData current price if target is recent
+                if (datetime.utcnow() - target_time).total_seconds() < 300:  # Within 5 minutes
+                    response = await client.get(
+                        f"{data_service_url}/api/v1/symbols/{symbol}/price"
+                    )
+                    if response.status_code == 200:
+                        data = response.json()
+                        return float(data.get('price', 0)) if data.get('price') else None
+
+        except Exception as e:
+            logger.warning(f"Failed to get price via API for {symbol}: {e}")
+
+        return None
+
+    async def evaluate_pending_predictions_via_api(self) -> Dict[str, int]:
+        """
+        Evaluate pending predictions using EasyInsight/Data Service API.
+
+        This method does not require database access and uses the Data Service
+        as a gateway to fetch historical prices.
+
+        Returns:
+            Dict mapping symbol to number of evaluated predictions
+        """
+        evaluated = {}
+        now = datetime.utcnow()
+
+        for symbol, feedbacks in list(self.pending_feedback.items()):
+            symbol_evaluated = 0
+            remaining = []
+
+            for fb in feedbacks:
+                # Check if enough time has passed
+                target_time = self._parse_horizon_to_target_time(fb.timestamp, fb.horizon)
+
+                if now < target_time + timedelta(minutes=30):
+                    # Not yet time to evaluate
+                    remaining.append(fb)
+                    continue
+
+                # Try to get actual price via API
+                try:
+                    actual_price = await self._get_actual_price_via_api(symbol, target_time)
+
+                    if actual_price is not None:
+                        # Calculate error
+                        fb.actual_price = actual_price
+                        fb.prediction_error_pct = abs(fb.predicted_price - actual_price) / actual_price * 100
+                        fb.direction_correct = (
+                            (fb.predicted_price > fb.current_price) ==
+                            (actual_price > fb.current_price)
+                        )
+                        fb.evaluated_at = now
+
+                        # Store evaluated feedback for display
+                        if symbol not in self.evaluated_feedback:
+                            self.evaluated_feedback[symbol] = []
+                        self.evaluated_feedback[symbol].append(fb)
+
+                        # Keep only last 100 evaluated feedbacks per symbol
+                        if len(self.evaluated_feedback[symbol]) > 100:
+                            self.evaluated_feedback[symbol] = self.evaluated_feedback[symbol][-100:]
+
+                        # Update metrics
+                        self._update_metrics(symbol, fb)
+                        symbol_evaluated += 1
+
+                        logger.info(
+                            f"Evaluated {symbol} {fb.horizon}: "
+                            f"error={fb.prediction_error_pct:.3f}%, "
+                            f"direction={'correct' if fb.direction_correct else 'wrong'}"
+                        )
+                    else:
+                        # No data yet, keep for later
+                        remaining.append(fb)
+
+                except Exception as e:
+                    logger.warning(f"Failed to evaluate {symbol} prediction: {e}")
+                    remaining.append(fb)
+
+            self.pending_feedback[symbol] = remaining
+            if symbol_evaluated > 0:
+                evaluated[symbol] = symbol_evaluated
+
+        if evaluated:
+            self._save_data()
+            logger.info(f"Evaluated predictions via API: {evaluated}")
+
+        return evaluated
 
     def _update_metrics(self, symbol: str, feedback: PredictionFeedback):
         """Update performance metrics with new feedback."""

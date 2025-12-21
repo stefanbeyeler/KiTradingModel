@@ -1604,17 +1604,32 @@ async def evaluate_predictions():
     This compares past predictions with actual prices and updates
     model performance metrics.
 
-    NOTE: This endpoint requires direct database access which is currently
-    disabled. Evaluation is done via the EasyInsight API instead.
+    Uses the Data Service API to fetch historical prices from EasyInsight.
     """
-    # This endpoint requires direct database access for historical price lookups
-    # Since we're using API-only mode, this functionality is not available
-    raise HTTPException(
-        status_code=501,
-        detail="Prediction evaluation requires direct database access. "
-               "This feature is not available in API-only mode. "
-               "Use the EasyInsight API for historical data queries."
-    )
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+
+        # Get pending count before evaluation
+        pending_before = sum(len(v) for v in model_improvement_service.pending_feedback.values())
+
+        # Run evaluation using API-based method
+        evaluated = await model_improvement_service.evaluate_pending_predictions_via_api()
+
+        # Get counts after evaluation
+        pending_after = sum(len(v) for v in model_improvement_service.pending_feedback.values())
+        total_evaluated = sum(evaluated.values())
+
+        return {
+            "success": True,
+            "evaluated_count": total_evaluated,
+            "pending_before": pending_before,
+            "pending_after": pending_after,
+            "by_symbol": evaluated,
+            "message": f"Evaluated {total_evaluated} predictions" if total_evaluated > 0 else "No predictions ready for evaluation"
+        }
+    except Exception as e:
+        logger.error(f"Failed to evaluate predictions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @training_router.post("/forecast/retrain-poor-performers")

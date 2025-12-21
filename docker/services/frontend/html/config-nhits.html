@@ -825,12 +825,21 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Modell Performance</h2>
-                    <button class="btn btn-sm btn-primary" onclick="loadPerformance()">Aktualisieren</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-sm btn-success" id="btn-evaluate" onclick="runManualEvaluation()">
+                            <span id="evaluate-icon">📊</span> Evaluierung starten
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="loadPerformance()">Aktualisieren</button>
+                    </div>
                 </div>
                 <p style="opacity: 0.7; margin-bottom: 1rem;">
                     Übersicht der Prognosegenauigkeit basierend auf historischen Evaluierungen.
                     Performance-Daten werden gesammelt, wenn Prognosen mit tatsächlichen Preisen verglichen werden.
                 </p>
+                <!-- Evaluation Status -->
+                <div id="evaluation-status" style="display: none; margin-bottom: 1rem; padding: 0.75rem; background: rgba(100, 200, 255, 0.1); border-radius: 8px; border: 1px solid rgba(100, 200, 255, 0.2);">
+                    <span id="evaluation-message">Evaluierung läuft...</span>
+                </div>
                 <div class="table-container">
                     <table id="performance-table">
                         <thead>
@@ -1278,6 +1287,85 @@
                 console.error('Failed to load performance:', err);
                 document.getElementById('performance-tbody').innerHTML =
                     '<tr><td colspan="6" style="text-align: center; opacity: 0.5;">Fehler beim Laden</td></tr>';
+            }
+        }
+
+        // Manual evaluation
+        async function runManualEvaluation() {
+            const btn = document.getElementById('btn-evaluate');
+            const icon = document.getElementById('evaluate-icon');
+            const statusDiv = document.getElementById('evaluation-status');
+            const statusMsg = document.getElementById('evaluation-message');
+
+            // Disable button and show loading state
+            btn.disabled = true;
+            icon.textContent = '⏳';
+            statusDiv.style.display = 'block';
+            statusMsg.textContent = 'Evaluierung läuft... Prognosen werden mit tatsächlichen Preisen verglichen.';
+            statusDiv.style.background = 'rgba(100, 200, 255, 0.1)';
+            statusDiv.style.borderColor = 'rgba(100, 200, 255, 0.2)';
+
+            try {
+                const res = await fetch(`${API_BASE}/forecast/evaluate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    // Success
+                    icon.textContent = '✓';
+                    statusDiv.style.background = 'rgba(76, 175, 80, 0.1)';
+                    statusDiv.style.borderColor = 'rgba(76, 175, 80, 0.2)';
+
+                    if (data.evaluated_count > 0) {
+                        statusMsg.innerHTML = `<strong>${data.evaluated_count} Prognosen evaluiert!</strong><br>
+                            <span style="font-size: 0.85rem; opacity: 0.8;">
+                                Ausstehend vorher: ${data.pending_before} → nachher: ${data.pending_after}
+                            </span>`;
+
+                        // Show per-symbol breakdown if available
+                        if (data.by_symbol && Object.keys(data.by_symbol).length > 0) {
+                            const symbolList = Object.entries(data.by_symbol)
+                                .map(([sym, count]) => `${sym}: ${count}`)
+                                .join(', ');
+                            statusMsg.innerHTML += `<br><span style="font-size: 0.8rem; opacity: 0.7;">${symbolList}</span>`;
+                        }
+                    } else {
+                        statusMsg.innerHTML = `<strong>Keine Prognosen bereit zur Evaluierung.</strong><br>
+                            <span style="font-size: 0.85rem; opacity: 0.8;">
+                                ${data.pending_before} Prognosen warten noch auf Ablauf ihres Zeithorizonts.
+                            </span>`;
+                    }
+
+                    // Reload performance data
+                    await loadPerformance();
+                    showToast(data.message);
+                } else {
+                    // Error response
+                    icon.textContent = '✗';
+                    statusDiv.style.background = 'rgba(244, 67, 54, 0.1)';
+                    statusDiv.style.borderColor = 'rgba(244, 67, 54, 0.2)';
+                    statusMsg.textContent = `Fehler: ${data.detail || 'Unbekannter Fehler'}`;
+                }
+            } catch (err) {
+                console.error('Evaluation failed:', err);
+                icon.textContent = '✗';
+                statusDiv.style.background = 'rgba(244, 67, 54, 0.1)';
+                statusDiv.style.borderColor = 'rgba(244, 67, 54, 0.2)';
+                statusMsg.textContent = `Fehler: ${err.message}`;
+            } finally {
+                // Re-enable button after short delay
+                setTimeout(() => {
+                    btn.disabled = false;
+                    icon.textContent = '📊';
+                }, 2000);
+
+                // Hide status after 10 seconds
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 10000);
             }
         }
 
