@@ -5034,6 +5034,69 @@ async def clear_pattern_history():
     }
 
 
+@patterns_router.get("/patterns/chart/{symbol}")
+async def get_pattern_chart_data(
+    symbol: str,
+    timeframe: str = "H1",
+    timestamp: str = None,
+    candles_before: int = 15,
+    candles_after: int = 5,
+):
+    """
+    Get OHLCV candle data for visualizing a detected pattern.
+
+    This endpoint returns candle data centered around a pattern detection,
+    suitable for rendering a candlestick chart with the pattern highlighted.
+
+    Args:
+        symbol: Trading symbol (e.g., BTCUSD, EURUSD)
+        timeframe: Pattern timeframe (M5, M15, H1, H4, D1)
+        timestamp: ISO 8601 timestamp of the pattern (optional, defaults to latest)
+        candles_before: Number of candles to show before pattern (default: 15)
+        candles_after: Number of candles to show after pattern (default: 5)
+
+    Returns:
+        - symbol: The trading symbol
+        - timeframe: The timeframe
+        - candles: Array of OHLCV data with is_pattern flag
+        - pattern_candle_index: Index of the pattern candle in the array
+
+    Example: GET /api/v1/patterns/chart/BTCUSD?timeframe=H1&candles_before=20
+    """
+    from datetime import datetime, timezone
+
+    try:
+        # Parse timestamp or use current time
+        if timestamp:
+            try:
+                from dateutil import parser as dateutil_parser
+                pattern_ts = dateutil_parser.isoparse(timestamp)
+                if pattern_ts.tzinfo is None:
+                    pattern_ts = pattern_ts.replace(tzinfo=timezone.utc)
+            except (ValueError, ImportError):
+                pattern_ts = datetime.now(timezone.utc)
+        else:
+            pattern_ts = datetime.now(timezone.utc)
+
+        # Validate parameters
+        candles_before = min(max(candles_before, 5), 50)
+        candles_after = min(max(candles_after, 0), 20)
+
+        result = await candlestick_pattern_service.get_pattern_chart_data(
+            symbol=symbol.upper(),
+            timeframe=timeframe.upper(),
+            pattern_timestamp=pattern_ts,
+            candles_before=candles_before,
+            candles_after=candles_after,
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Pattern chart data failed for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== External Data Sources ====================
 
 # NOTE: Imports are done lazily inside functions to avoid loading

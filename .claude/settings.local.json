@@ -153,7 +153,8 @@
       "Bash(__NEW_LINE__ echo \"=== Testing /summary/BTCUSD ===\")",
       "Bash(time curl:*)",
       "Bash(tegrastats:*)",
-      "Bash(ollama ps:*)"
+      "Bash(ollama ps:*)",
+      "Bash(TZ=Europe/Zurich date:*)"
     ],
     "deny": [],
     "ask": []

@@ -1088,6 +1088,156 @@ class CandlestickPatternService:
             data_source=data_source,
         )
 
+    async def get_pattern_chart_data(
+        self,
+        symbol: str,
+        timeframe: str,
+        pattern_timestamp: datetime,
+        candles_before: int = 15,
+        candles_after: int = 5,
+    ) -> dict:
+        """
+        Get OHLCV data for visualizing a pattern in a chart.
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe of the pattern
+            pattern_timestamp: Timestamp when the pattern was detected
+            candles_before: Number of candles to show before the pattern
+            candles_after: Number of candles to show after the pattern
+
+        Returns:
+            Dictionary with candle data and pattern highlight info
+        """
+        # Ensure pattern_timestamp is timezone-aware
+        if pattern_timestamp.tzinfo is None:
+            pattern_timestamp = pattern_timestamp.replace(tzinfo=timezone.utc)
+
+        # Calculate how many candles we need based on how old the pattern is
+        tf_minutes = self._get_timeframe_minutes(timeframe)
+        now = datetime.now(timezone.utc)
+        time_diff = now - pattern_timestamp
+        candles_since_pattern = int(time_diff.total_seconds() / 60 / tf_minutes) + 1
+
+        # Handle case where pattern timestamp is in the future (timezone issues)
+        # or pattern is very recent - ensure minimum request
+        candles_since_pattern = max(1, candles_since_pattern)
+
+        # We need enough data to cover: pattern + candles_before + some buffer
+        total_candles_needed = candles_since_pattern + candles_before + 10  # Extra buffer
+
+        # Limit to reasonable range (minimum 50, maximum 500)
+        total_candles_needed = max(50, min(total_candles_needed, 500))
+
+        # Calculate raw data requirement based on timeframe
+        use_twelvedata_directly = timeframe.upper() in ("M5", "H4")
+
+        if use_twelvedata_directly:
+            raw_limit = total_candles_needed
+        else:
+            raw_limit = total_candles_needed * tf_minutes
+
+        logger.debug(
+            f"Pattern chart: {symbol} {timeframe}, pattern age: {time_diff}, "
+            f"candles_since: {candles_since_pattern}, requesting: {total_candles_needed} candles"
+        )
+
+        # Fetch data
+        data, source = await data_gateway.get_historical_data_with_fallback(
+            symbol=symbol,
+            limit=raw_limit,
+            timeframe=timeframe,
+        )
+
+        if not data:
+            logger.warning(f"No data available for {symbol} {timeframe}")
+            return {
+                "error": f"Keine Daten für {symbol} verfügbar. Möglicherweise ist das Pattern zu alt.",
+                "candles": [],
+            }
+
+        # Aggregate if needed
+        if source == "twelvedata":
+            aggregated_data = data
+        else:
+            aggregated_data = self._aggregate_to_candles(data, timeframe)
+
+        # Convert to CandleData
+        candles = self._convert_ohlc_to_candles(aggregated_data, timeframe)
+
+        if not candles:
+            logger.warning(f"No candles after conversion for {symbol} {timeframe}")
+            return {
+                "error": f"Keine Kerzen-Daten für {symbol} {timeframe} verfügbar.",
+                "candles": [],
+            }
+
+        logger.debug(f"Converted {len(candles)} candles for {symbol} {timeframe}")
+
+        # Find the pattern candle index by matching timeframe boundary
+        pattern_idx = None
+        p_boundary = self._get_candle_boundary(pattern_timestamp, timeframe)
+
+        for i, c in enumerate(candles):
+            c_boundary = self._get_candle_boundary(c.timestamp, timeframe)
+            if c_boundary == p_boundary:
+                pattern_idx = i
+                break
+
+        # If not found by exact boundary, find closest candle
+        if pattern_idx is None:
+            min_diff = float('inf')
+            for i, c in enumerate(candles):
+                diff = abs((c.timestamp - pattern_timestamp).total_seconds())
+                if diff < min_diff:
+                    min_diff = diff
+                    pattern_idx = i
+            logger.debug(f"Pattern candle not found by boundary, using closest at index {pattern_idx}")
+
+        if pattern_idx is None:
+            # Fallback: use the last available candle
+            pattern_idx = len(candles) - 1
+            logger.warning(f"Could not find pattern candle, using last candle at index {pattern_idx}")
+
+        # Select candles around the pattern
+        start_idx = max(0, pattern_idx - candles_before)
+        end_idx = min(len(candles), pattern_idx + candles_after + 1)
+
+        selected_candles = candles[start_idx:end_idx]
+        highlight_idx = pattern_idx - start_idx
+
+        # Ensure highlight_idx is within bounds
+        if highlight_idx < 0 or highlight_idx >= len(selected_candles):
+            highlight_idx = len(selected_candles) - 1 if selected_candles else 0
+
+        # Convert to serializable format
+        candle_list = []
+        for i, c in enumerate(selected_candles):
+            candle_list.append({
+                "timestamp": c.timestamp.isoformat(),
+                "open": c.open,
+                "high": c.high,
+                "low": c.low,
+                "close": c.close,
+                "volume": c.volume,
+                "is_pattern": i == highlight_idx,
+            })
+
+        logger.info(
+            f"Pattern chart for {symbol} {timeframe}: "
+            f"{len(candle_list)} candles, pattern at index {highlight_idx}"
+        )
+
+        return {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "pattern_timestamp": pattern_timestamp.isoformat(),
+            "data_source": source,
+            "candles": candle_list,
+            "pattern_candle_index": highlight_idx,
+            "total_candles": len(candle_list),
+        }
+
     async def scan_all_symbols(
         self,
         timeframes: Optional[list[Timeframe]] = None,

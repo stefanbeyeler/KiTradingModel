@@ -798,6 +798,9 @@
                         <button class="btn btn-primary" onclick="startTraining(['D1'])" id="btn-train-d1">
                             Nur D1 Training
                         </button>
+                        <button class="btn btn-warning" onclick="startTraining(['M15', 'H1', 'D1'], true)" id="btn-force-train" title="Trainiert alle Modelle neu, auch wenn bereits aktuell">
+                            Force Train All
+                        </button>
                         <button class="btn btn-danger" onclick="cancelTraining()" id="btn-cancel" disabled>
                             Training abbrechen
                         </button>
@@ -1283,9 +1286,8 @@
             const title = document.getElementById('forecast-modal-title');
             const body = document.getElementById('forecast-modal-body');
 
-            // Format date
-            const fcDate = new Date(forecast.timestamp);
-            const dateStr = fcDate.toLocaleDateString('de-DE') + ' ' + fcDate.toLocaleTimeString('de-DE');
+            // Format date (UTC -> local time)
+            const dateStr = formatUTCTimestamp(forecast.timestamp);
 
             // Trend info
             const trendIcon = forecast.trend === 'up' ? '↑' : (forecast.trend === 'down' ? '↓' : '-');
@@ -1499,16 +1501,17 @@
         }
 
         // Start training
-        async function startTraining(timeframes) {
+        async function startTraining(timeframes, force = false) {
             try {
-                let url = `${API_BASE}/forecast/train-all?force=false&background=true`;
+                let url = `${API_BASE}/forecast/train-all?force=${force}&background=true`;
                 timeframes.forEach(tf => url += `&timeframes=${tf}`);
 
-                showToast(`Training wird gestartet (${timeframes.join(', ')})...`);
+                const modeText = force ? 'Force-Training' : 'Training';
+                showToast(`${modeText} wird gestartet (${timeframes.join(', ')})...`);
                 const res = await fetch(url, { method: 'POST' });
                 const data = await res.json();
 
-                showToast(data.message || 'Training gestartet');
+                showToast(data.message || `${modeText} gestartet`);
                 setTimeout(updateTrainingStatus, 1000);
             } catch (err) {
                 showToast('Fehler beim Starten des Trainings');
@@ -1600,6 +1603,17 @@
             }
         }
 
+        // Load latest forecasts (separate function to refresh after single forecast)
+        async function loadLatestForecasts() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/latest-per-model`);
+                const data = await res.json();
+                latestForecasts = data.forecasts || {};
+            } catch (err) {
+                console.error('Failed to load latest forecasts:', err);
+            }
+        }
+
         // Filter models
         function filterModels() {
             const search = document.getElementById('model-search').value.toLowerCase();
@@ -1636,12 +1650,8 @@
                 const tfClass = model.timeframeKey === 'M15' ? 'badge-m15' :
                                model.timeframeKey === 'D1' ? 'badge-d1' : 'badge-h1';
 
-                // Format trained date
-                let trainedDate = '-';
-                if (model.lastTrained) {
-                    const d = new Date(model.lastTrained);
-                    trainedDate = d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
-                }
+                // Format trained date (UTC -> local time)
+                let trainedDate = model.lastTrained ? formatUTCTimestamp(model.lastTrained) : '-';
 
                 // Get latest forecast for this model
                 // Try full symbol first (e.g., "BTCUSD_H1"), then base symbol (e.g., "BTCUSD")
@@ -1650,8 +1660,7 @@
                 let forecast = latestForecasts[model.fullSymbol] || latestForecasts[model.symbol];
                 if (forecast) {
                     forecastClickable = true;
-                    const fcDate = new Date(forecast.timestamp);
-                    const dateStr = fcDate.toLocaleDateString('de-DE') + ' ' + fcDate.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                    const dateStr = formatUTCTimestamp(forecast.timestamp);
                     const trendIcon = forecast.trend === 'up' ? '↑' : (forecast.trend === 'down' ? '↓' : '-');
                     const trendColor = forecast.trend === 'up' ? '#4ade80' : (forecast.trend === 'down' ? '#f87171' : 'inherit');
                     const evalIcon = forecast.evaluated ? (forecast.direction_correct ? '✓' : '✗') : '⏳';
@@ -1680,13 +1689,42 @@
                         <td>${trainedDate}</td>
                         <td>${model.samples || '-'}</td>
                         <td>${lossStr}</td>
-                        <td>
-                            <button class="btn btn-sm btn-primary" onclick="trainSingle('${model.symbol}', '${model.timeframeKey}')">Train</button>
+                        <td style="white-space: nowrap;">
+                            <button class="btn btn-sm btn-success" onclick="runSingleForecast('${model.symbol}', '${model.timeframeKey}')" title="Prognose erstellen">📊</button>
+                            <button class="btn btn-sm btn-primary" onclick="trainSingle('${model.symbol}', '${model.timeframeKey}')" title="Modell trainieren">🔧</button>
                         </td>
                     </tr>
                 `;
             }
             tbody.innerHTML = html;
+        }
+
+        // Run single forecast for a model
+        async function runSingleForecast(symbol, timeframe) {
+            const tf = timeframe === 'default' ? 'H1' : timeframe;
+            showToast(`Prognose für ${symbol}/${tf} wird erstellt...`);
+
+            try {
+                const res = await fetch(`${API_BASE}/forecast/${symbol}?timeframe=${tf}`);
+                const data = await res.json();
+
+                if (res.ok && data.predicted_prices && data.predicted_prices.length > 0) {
+                    const trend = data.predicted_prices[data.predicted_prices.length - 1] > data.predicted_prices[0] ? '↑' : '↓';
+                    const trendColor = trend === '↑' ? '#4ade80' : '#f87171';
+                    const currentPrice = data.predicted_prices[0].toFixed(5);
+                    const targetPrice = data.predicted_prices[data.predicted_prices.length - 1].toFixed(5);
+                    showToast(`✓ ${symbol}/${tf}: ${currentPrice} → ${targetPrice} <span style="color: ${trendColor};">${trend}</span>`, 'success');
+
+                    // Refresh latest forecasts
+                    await loadLatestForecasts();
+                    // Refresh models table to show new forecast
+                    filterModels();
+                } else {
+                    showToast(`✗ Prognose fehlgeschlagen: ${data.detail || 'Unbekannter Fehler'}`, 'error');
+                }
+            } catch (err) {
+                showToast(`Fehler: ${err.message}`, 'error');
+            }
         }
 
         // Train single model
@@ -1759,12 +1797,11 @@
                     const statusClass = avgError < 0.5 && dirAccuracy > 50 ? 'badge-success' : 'badge-failed';
                     const statusText = metrics.needs_retraining ? 'Retraining nötig' : 'OK';
 
-                    // Format evaluated date from most recent prediction
+                    // Format evaluated date from most recent prediction (UTC -> local time)
                     let evaluatedAt = '-';
                     const symbolPreds = (evalData.predictions || []).filter(p => p.symbol === symbol);
                     if (symbolPreds.length > 0 && symbolPreds[0].evaluated_at) {
-                        const d = new Date(symbolPreds[0].evaluated_at);
-                        evaluatedAt = d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                        evaluatedAt = formatUTCTimestamp(symbolPreds[0].evaluated_at);
                     }
 
                     html += `
@@ -1786,11 +1823,7 @@
                         const statusClass = pred.direction_correct ? 'badge-success' : 'badge-failed';
                         const statusText = pred.direction_correct ? 'Richtig' : 'Falsch';
 
-                        let evaluatedAt = '-';
-                        if (pred.evaluated_at) {
-                            const d = new Date(pred.evaluated_at);
-                            evaluatedAt = d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
-                        }
+                        let evaluatedAt = pred.evaluated_at ? formatUTCTimestamp(pred.evaluated_at) : '-';
 
                         html += `
                             <tr>
@@ -1838,8 +1871,7 @@
 
                 let lastRunText = 'Noch nie';
                 if (evalStatus.last_run) {
-                    const d = new Date(evalStatus.last_run);
-                    lastRunText = d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                    lastRunText = formatUTCTimestamp(evalStatus.last_run);
                 }
 
                 autoEvalDiv.innerHTML = `
@@ -1876,8 +1908,7 @@
 
                 let lastRetrainText = 'Noch nie';
                 if (retrainStatus.last_run) {
-                    const d = new Date(retrainStatus.last_run);
-                    lastRetrainText = d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                    lastRetrainText = formatUTCTimestamp(retrainStatus.last_run);
                 }
 
                 autoRetrainDiv.innerHTML = `
@@ -2327,10 +2358,9 @@
             // Show results card
             document.getElementById('forecast-results-card').style.display = 'block';
 
-            // Update info
-            const timestamp = new Date(data.forecast_timestamp);
+            // Update info (UTC -> local time)
             document.getElementById('forecast-info').textContent =
-                `${data.symbol} | ${data.timeframe} | ${timestamp.toLocaleString('de-DE')}`;
+                `${data.symbol} | ${data.timeframe} | ${formatUTCTimestamp(data.forecast_timestamp)}`;
 
             // Get current price and predicted prices
             const currentPrice = data.current_price;
@@ -2377,7 +2407,7 @@
 
             // Generate time labels - start with "Jetzt" for current price
             const labels = [];
-            const baseTime = new Date(data.forecast_timestamp);
+            const baseTime = parseUTCDate(data.forecast_timestamp);
             const intervalMinutes = data.timeframe === 'M15' ? 15 : (data.timeframe === 'D1' ? 1440 : 60);
 
             // First label is "Jetzt" (current time)
@@ -2441,6 +2471,21 @@
                 `;
             }
             tbody.innerHTML = html;
+        }
+
+        // Parse UTC timestamp (API returns timestamps without Z suffix but they are UTC)
+        function parseUTCDate(timestamp) {
+            if (!timestamp) return null;
+            // If timestamp doesn't end with Z, append it to ensure UTC interpretation
+            const ts = timestamp.endsWith('Z') ? timestamp : timestamp + 'Z';
+            return new Date(ts);
+        }
+
+        // Format a UTC timestamp for display in local timezone
+        function formatUTCTimestamp(timestamp) {
+            const d = parseUTCDate(timestamp);
+            if (!d || isNaN(d.getTime())) return '-';
+            return d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
         }
 
         // Format price based on symbol
@@ -2594,7 +2639,7 @@
                     <div style="opacity: 0.7; font-size: 0.85rem;">
                         <p><strong>Modell-Pfad:</strong> ${data.models.path}</p>
                         <p><strong>Symbole mit Metriken:</strong> ${data.predictions.symbols_with_metrics}</p>
-                        <p><strong>Letzte Aktualisierung:</strong> ${new Date(data.timestamp).toLocaleString('de-DE')}</p>
+                        <p><strong>Letzte Aktualisierung:</strong> ${formatUTCTimestamp(data.timestamp)}</p>
                     </div>
                 `;
             } catch (err) {
@@ -2875,12 +2920,12 @@
                 let statusHtml = `<span class="badge badge-success">Aktiv</span> `;
                 statusHtml += `<span style="opacity: 0.8;">Timeframes: ${activeTimeframes}</span>`;
 
-                // Show last run times
+                // Show last run times (UTC -> local time)
                 if (favorites.timeframes) {
                     const lastRuns = [];
                     for (const [tf, info] of Object.entries(favorites.timeframes)) {
                         if (info.last_run) {
-                            const d = new Date(info.last_run);
+                            const d = parseUTCDate(info.last_run);
                             lastRuns.push(`${tf}: ${d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})}`);
                         }
                     }
@@ -2914,14 +2959,13 @@
                 statusHtml += `<span style="opacity: 0.8;">${daily.scheduled_time} ${daily.timezone}</span>`;
 
                 if (daily.next_run) {
-                    const nextRun = new Date(daily.next_run);
+                    const nextRun = parseUTCDate(daily.next_run);
                     const hoursUntil = Math.round((nextRun - new Date()) / 3600000 * 10) / 10;
                     statusHtml += `<div style="font-size: 0.8rem; opacity: 0.7; margin-top: 0.3rem;">Nächste Ausführung in ${hoursUntil}h</div>`;
                 }
 
                 if (daily.last_run) {
-                    const d = new Date(daily.last_run);
-                    statusHtml += `<div style="font-size: 0.8rem; opacity: 0.7;">Letzte: ${d.toLocaleString('de-DE')}</div>`;
+                    statusHtml += `<div style="font-size: 0.8rem; opacity: 0.7;">Letzte: ${formatUTCTimestamp(daily.last_run)}</div>`;
                 }
 
                 statusDiv.innerHTML = statusHtml;

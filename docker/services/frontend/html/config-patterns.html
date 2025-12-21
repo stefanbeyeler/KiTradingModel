@@ -652,6 +652,95 @@
             min-height: 3px;
         }
 
+        /* Real Chart Visualization */
+        .chart-container {
+            width: 100%;
+            height: 280px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: #888;
+        }
+
+        .chart-error {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: #e57373;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .chart-canvas-container {
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+        }
+
+        .chart-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .chart-info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-info-label {
+            color: #888;
+        }
+
+        .chart-info-value {
+            color: #64c8ff;
+            font-weight: 500;
+        }
+
+        /* Chart Modal - Larger */
+        .chart-modal .modal {
+            max-width: 900px;
+            width: 95%;
+        }
+
+        /* Pattern highlight marker */
+        .pattern-marker {
+            position: absolute;
+            top: 5px;
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px dashed #ffc107;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        /* View Chart Button */
+        .btn-chart {
+            background: rgba(156, 39, 176, 0.2);
+            color: #ce93d8;
+            border: 1px solid rgba(156, 39, 176, 0.3);
+            padding: 0.2rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-chart:hover {
+            background: rgba(156, 39, 176, 0.3);
+        }
+
         .modal-badges {
             display: flex;
             gap: 0.5rem;
@@ -753,11 +842,12 @@
                             <th>Timeframe</th>
                             <th style="text-align: right;">Konfidenz</th>
                             <th style="text-align: right;">Pattern-Zeit</th>
+                            <th style="text-align: center;">Chart</th>
                         </tr>
                     </thead>
                     <tbody id="favoritesBody">
                         <tr>
-                            <td colspan="8" class="loading">
+                            <td colspan="9" class="loading">
                                 <div class="spinner"></div>
                                 <p>Lade Favoriten...</p>
                             </td>
@@ -828,11 +918,12 @@
                             <th>Timeframe</th>
                             <th style="text-align: right;">Konfidenz</th>
                             <th style="text-align: right;">Pattern-Zeit</th>
+                            <th style="text-align: center;">Chart</th>
                         </tr>
                     </thead>
                     <tbody id="patternsTable">
                         <tr>
-                            <td colspan="8" class="loading">
+                            <td colspan="9" class="loading">
                                 <div class="spinner"></div>
                                 <p>Lade Patterns...</p>
                             </td>
@@ -1053,11 +1144,22 @@
             }
         }
 
+        // Filter patterns to only show recent ones (max 4 hours old) - used for favorites
+        function filterRecentPatterns(patterns) {
+            return patterns.filter(p => {
+                const patternTime = new Date(p.timestamp);
+                // Handle future timestamps (timezone issues) - include them
+                const timeDiff = Date.now() - patternTime.getTime();
+                return Math.abs(timeDiff) < 4 * 60 * 60 * 1000;
+            });
+        }
+
         // Load patterns
         async function loadPatterns() {
             try {
                 const res = await fetch(`${API_BASE}/patterns/history?limit=200`);
                 allPatterns = await res.json();
+                // No filter - show all patterns, sorted by timestamp
                 renderPatterns(allPatterns);
             } catch (error) {
                 console.error('Failed to load patterns:', error);
@@ -1079,7 +1181,7 @@
             if (!patterns || patterns.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="empty-state">
+                        <td colspan="9" class="empty-state">
                             <div class="empty-state-icon">📊</div>
                             <p>Keine Patterns gefunden</p>
                             <p style="font-size: 0.85rem; margin-top: 0.5rem;">Klicken Sie auf "Jetzt scannen" um Patterns zu erkennen</p>
@@ -1089,7 +1191,12 @@
                 return;
             }
 
-            tbody.innerHTML = patterns.map(p => {
+            // Sort by timestamp (newest first) and limit to 100 records
+            const sortedPatterns = [...patterns].sort((a, b) => {
+                return new Date(b.timestamp) - new Date(a.timestamp);
+            }).slice(0, 100);
+
+            tbody.innerHTML = sortedPatterns.map(p => {
                 const info = getPatternInfo(p.pattern_type);
                 const timeAgo = getTimeAgo(p.timestamp);
                 return `
@@ -1102,6 +1209,11 @@
                     <td><span class="badge badge-${p.timeframe.toLowerCase()}">${p.timeframe}</span></td>
                     <td class="col-confidence">${Math.round(p.confidence * 100)}%</td>
                     <td class="col-time">${timeAgo}</td>
+                    <td style="text-align: center;">
+                        <button class="btn btn-chart" onclick="showPatternChart('${p.symbol}', '${p.timeframe}', '${p.timestamp}', '${p.pattern_type}', '${p.direction}')" title="Chart anzeigen">
+                            📈
+                        </button>
+                    </td>
                 </tr>
             `}).join('');
         }
@@ -1428,58 +1540,62 @@
             other: 'Andere'
         };
 
-        // Render favorites as table
+        // Render favorites as table (only symbols with patterns)
         async function renderFavoritesGrid() {
             const tbody = document.getElementById('favoritesBody');
             const favorites = await loadFavoriteSymbols();
 
             if (favorites.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><p>Keine Favoriten-Symbole konfiguriert</p></td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><p>Keine Favoriten-Symbole konfiguriert</p></td></tr>`;
                 return;
             }
 
-            // Build rows with pattern data
-            const rows = favorites.map(({ symbol, category }) => {
-                const pattern = getLatestPatternForSymbol(symbol, allPatterns);
-                return { symbol, category, pattern };
-            });
+            // Build rows with pattern data - only include symbols WITH patterns
+            const rows = favorites
+                .map(({ symbol, category }) => {
+                    const pattern = getLatestPatternForSymbol(symbol, allPatterns);
+                    return { symbol, category, pattern };
+                })
+                .filter(row => row.pattern !== null);  // Filter out symbols without patterns
 
-            // Sort by category, then symbol
-            const categoryOrder = ['forex', 'crypto', 'index', 'commodity', 'other'];
+            // Check if any patterns found
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><p>Keine Patterns bei Favoriten in den letzten 4h erkannt</p></td></tr>`;
+                return;
+            }
+
+            // Sort by pattern timestamp (newest first), then by category
             rows.sort((a, b) => {
-                const catA = categoryOrder.indexOf(a.category) >= 0 ? categoryOrder.indexOf(a.category) : 99;
-                const catB = categoryOrder.indexOf(b.category) >= 0 ? categoryOrder.indexOf(b.category) : 99;
-                if (catA !== catB) return catA - catB;
+                // First by timestamp (newest first)
+                const timeA = new Date(a.pattern.timestamp);
+                const timeB = new Date(b.pattern.timestamp);
+                if (timeB - timeA !== 0) return timeB - timeA;
+                // Then by symbol
                 return a.symbol.localeCompare(b.symbol);
             });
 
             // Render table rows
             let html = '';
             for (const { symbol, category, pattern } of rows) {
-                if (pattern) {
-                    const info = getPatternInfo(pattern.pattern_type);
-                    const timeAgo = getTimeAgo(pattern.timestamp);
-                    html += `
-                        <tr>
-                            <td class="col-symbol">${symbol}</td>
-                            <td class="col-category ${category}">${categoryLabels[category] || category}</td>
-                            <td><a class="pattern-link" onclick="showPatternModal('${pattern.pattern_type}', '${pattern.direction}')">${info.name}</a></td>
-                            <td><span class="badge badge-${pattern.direction}">${pattern.direction}</span></td>
-                            <td><span class="badge badge-${pattern.strength}">${pattern.strength}</span></td>
-                            <td><span class="badge badge-${pattern.timeframe.toLowerCase()}">${pattern.timeframe}</span></td>
-                            <td class="col-confidence">${Math.round(pattern.confidence * 100)}%</td>
-                            <td class="col-time">${timeAgo}</td>
-                        </tr>
-                    `;
-                } else {
-                    html += `
-                        <tr class="no-pattern">
-                            <td class="col-symbol">${symbol}</td>
-                            <td class="col-category ${category}">${categoryLabels[category] || category}</td>
-                            <td colspan="6" class="no-pattern-text">— Kein Pattern in den letzten 4h</td>
-                        </tr>
-                    `;
-                }
+                const info = getPatternInfo(pattern.pattern_type);
+                const timeAgo = getTimeAgo(pattern.timestamp);
+                html += `
+                    <tr>
+                        <td class="col-symbol">${symbol}</td>
+                        <td class="col-category ${category}">${categoryLabels[category] || category}</td>
+                        <td><a class="pattern-link" onclick="showPatternModal('${pattern.pattern_type}', '${pattern.direction}')">${info.name}</a></td>
+                        <td><span class="badge badge-${pattern.direction}">${pattern.direction}</span></td>
+                        <td><span class="badge badge-${pattern.strength}">${pattern.strength}</span></td>
+                        <td><span class="badge badge-${pattern.timeframe.toLowerCase()}">${pattern.timeframe}</span></td>
+                        <td class="col-confidence">${Math.round(pattern.confidence * 100)}%</td>
+                        <td class="col-time">${timeAgo}</td>
+                        <td style="text-align: center;">
+                            <button class="btn btn-chart" onclick="showPatternChart('${symbol}', '${pattern.timeframe}', '${pattern.timestamp}', '${pattern.pattern_type}', '${pattern.direction}')" title="Chart anzeigen">
+                                📈
+                            </button>
+                        </td>
+                    </tr>
+                `;
             }
 
             tbody.innerHTML = html;
@@ -1489,7 +1605,13 @@
         function getTimeAgo(timestamp) {
             const now = new Date();
             const then = new Date(timestamp);
-            const diffMs = now - then;
+            let diffMs = now - then;
+
+            // Handle future timestamps (timezone issues) - treat as recent
+            if (diffMs < 0) {
+                diffMs = Math.abs(diffMs);
+            }
+
             const diffMins = Math.floor(diffMs / 60000);
             const diffHours = Math.floor(diffMins / 60);
 
@@ -1539,5 +1661,313 @@
             </div>
         </div>
     </div>
+
+    <!-- Chart Modal for Real Data Visualization -->
+    <div class="modal-overlay chart-modal" id="chartModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <span id="chartModalTitle">Pattern Chart</span>
+                    <span id="chartModalBadges" style="margin-left: 0.5rem;"></span>
+                </h3>
+                <button class="modal-close" onclick="closeChartModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <div class="chart-container" id="chartContainer">
+                        <div class="chart-loading" id="chartLoading">
+                            <div class="spinner"></div>
+                            <span style="margin-left: 0.5rem;">Lade Chart-Daten...</span>
+                        </div>
+                        <div class="chart-error" id="chartError" style="display: none;">
+                            <span>Fehler beim Laden</span>
+                            <span id="chartErrorMessage" style="font-size: 0.8rem;"></span>
+                        </div>
+                        <div class="chart-canvas-container" id="chartCanvasContainer" style="display: none;">
+                            <canvas id="patternChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-info" id="chartInfo" style="display: none;">
+                        <div class="chart-info-item">
+                            <span class="chart-info-label">Symbol:</span>
+                            <span class="chart-info-value" id="chartSymbol">-</span>
+                        </div>
+                        <div class="chart-info-item">
+                            <span class="chart-info-label">Timeframe:</span>
+                            <span class="chart-info-value" id="chartTimeframe">-</span>
+                        </div>
+                        <div class="chart-info-item">
+                            <span class="chart-info-label">Pattern-Zeit:</span>
+                            <span class="chart-info-value" id="chartPatternTime">-</span>
+                        </div>
+                        <div class="chart-info-item">
+                            <span class="chart-info-label">Datenquelle:</span>
+                            <span class="chart-info-value" id="chartDataSource">-</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">Pattern-Details</div>
+                    <div class="modal-description" id="chartPatternDescription"></div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">Trading-Implikation</div>
+                    <div class="modal-implication" id="chartPatternImplication"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart.js for Candlestick Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
+    <script>
+        // Candlestick Chart Rendering
+        let patternChartInstance = null;
+
+        // Draw candlestick chart using pure Canvas (fallback if chartjs-chart-financial fails)
+        function drawCandlestickChart(canvasId, candles, patternIndex) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const container = canvas.parentElement;
+
+            // Set canvas size
+            canvas.width = container.clientWidth - 20;
+            canvas.height = container.clientHeight - 20;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = { top: 20, right: 60, bottom: 30, left: 10 };
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            if (!candles || candles.length === 0) {
+                ctx.fillStyle = '#888';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Keine Daten verfügbar', width / 2, height / 2);
+                return;
+            }
+
+            // Calculate price range
+            const prices = candles.flatMap(c => [c.high, c.low]);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const priceRange = maxPrice - minPrice || 1;
+            const pricePadding = priceRange * 0.1;
+
+            const scaledMinPrice = minPrice - pricePadding;
+            const scaledMaxPrice = maxPrice + pricePadding;
+            const scaledRange = scaledMaxPrice - scaledMinPrice;
+
+            // Calculate candle dimensions
+            const candleWidth = Math.max(4, Math.min(20, (chartWidth / candles.length) * 0.7));
+            const candleSpacing = chartWidth / candles.length;
+
+            // Helper to convert price to Y coordinate
+            const priceToY = (price) => {
+                return padding.top + chartHeight - ((price - scaledMinPrice) / scaledRange * chartHeight);
+            };
+
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            const gridLines = 5;
+            for (let i = 0; i <= gridLines; i++) {
+                const y = padding.top + (chartHeight / gridLines) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(width - padding.right, y);
+                ctx.stroke();
+
+                // Price labels
+                const price = scaledMaxPrice - (scaledRange / gridLines) * i;
+                ctx.fillStyle = '#888';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(formatPrice(price), width - padding.right + 5, y + 3);
+            }
+
+            // Draw candles
+            candles.forEach((candle, i) => {
+                const x = padding.left + (i + 0.5) * candleSpacing;
+                const isPattern = i === patternIndex;
+
+                const openY = priceToY(candle.open);
+                const closeY = priceToY(candle.close);
+                const highY = priceToY(candle.high);
+                const lowY = priceToY(candle.low);
+
+                const isBullish = candle.close >= candle.open;
+                const bodyTop = Math.min(openY, closeY);
+                const bodyHeight = Math.max(1, Math.abs(closeY - openY));
+
+                // Highlight pattern candle background
+                if (isPattern) {
+                    ctx.fillStyle = 'rgba(255, 193, 7, 0.15)';
+                    ctx.fillRect(x - candleSpacing / 2, padding.top, candleSpacing, chartHeight);
+                }
+
+                // Draw wick
+                ctx.strokeStyle = isBullish ? '#81c784' : '#e57373';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x, highY);
+                ctx.lineTo(x, lowY);
+                ctx.stroke();
+
+                // Draw body
+                ctx.fillStyle = isBullish ? '#81c784' : '#e57373';
+                ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+
+                // Draw body outline
+                ctx.strokeStyle = isBullish ? '#4caf50' : '#f44336';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+
+                // Pattern marker
+                if (isPattern) {
+                    ctx.strokeStyle = '#ffc107';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4, 2]);
+                    ctx.strokeRect(x - candleWidth / 2 - 3, highY - 5, candleWidth + 6, lowY - highY + 10);
+                    ctx.setLineDash([]);
+
+                    // Arrow pointing to pattern
+                    ctx.fillStyle = '#ffc107';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('▼', x, padding.top - 5);
+                }
+
+                // Time labels (show every few candles)
+                if (i === 0 || i === candles.length - 1 || i === patternIndex) {
+                    const time = new Date(candle.timestamp);
+                    const timeStr = time.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+                    ctx.fillStyle = i === patternIndex ? '#ffc107' : '#666';
+                    ctx.font = '9px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(timeStr, x, height - 5);
+                }
+            });
+
+            // Draw legend
+            ctx.fillStyle = '#888';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Pattern-Kerze markiert (gelb)', padding.left, height - 5);
+        }
+
+        // Format price for display
+        function formatPrice(price) {
+            if (price >= 1000) return price.toFixed(0);
+            if (price >= 1) return price.toFixed(2);
+            return price.toFixed(5);
+        }
+
+        // Load and display chart for a pattern
+        async function showPatternChart(symbol, timeframe, timestamp, patternType, direction) {
+            const modal = document.getElementById('chartModal');
+            const loading = document.getElementById('chartLoading');
+            const error = document.getElementById('chartError');
+            const canvasContainer = document.getElementById('chartCanvasContainer');
+            const chartInfo = document.getElementById('chartInfo');
+
+            // Reset state
+            loading.style.display = 'flex';
+            error.style.display = 'none';
+            canvasContainer.style.display = 'none';
+            chartInfo.style.display = 'none';
+
+            // Set title and badges
+            const info = getPatternInfo(patternType);
+            document.getElementById('chartModalTitle').textContent = `${symbol} - ${info.name}`;
+            document.getElementById('chartModalBadges').innerHTML = `
+                <span class="badge badge-${direction}">${direction}</span>
+                <span class="badge badge-${timeframe.toLowerCase()}">${timeframe}</span>
+            `;
+
+            // Set description
+            document.getElementById('chartPatternDescription').textContent = info.description;
+            const implEl = document.getElementById('chartPatternImplication');
+            implEl.textContent = info.implication;
+            implEl.className = 'modal-implication ' + (direction === 'bullish' ? 'bullish' : direction === 'bearish' ? 'bearish' : 'neutral');
+
+            // Show modal
+            modal.classList.add('show');
+
+            try {
+                // Fetch chart data
+                const params = new URLSearchParams({
+                    timeframe: timeframe,
+                    timestamp: timestamp,
+                    candles_before: 15,
+                    candles_after: 5
+                });
+
+                const res = await fetch(`${API_BASE}/patterns/chart/${symbol}?${params}`);
+                const data = await res.json();
+
+                if (data.error || !data.candles || data.candles.length === 0) {
+                    throw new Error(data.error || 'Keine Kerzen-Daten verfügbar');
+                }
+
+                // Update chart info
+                document.getElementById('chartSymbol').textContent = data.symbol;
+                document.getElementById('chartTimeframe').textContent = data.timeframe;
+                document.getElementById('chartPatternTime').textContent = formatTimestamp(data.pattern_timestamp);
+                document.getElementById('chartDataSource').textContent = data.data_source || 'unknown';
+
+                // Hide loading, show chart
+                loading.style.display = 'none';
+                canvasContainer.style.display = 'block';
+                chartInfo.style.display = 'flex';
+
+                // Draw the chart
+                setTimeout(() => {
+                    drawCandlestickChart('patternChart', data.candles, data.pattern_candle_index);
+                }, 50);
+
+            } catch (err) {
+                console.error('Chart load error:', err);
+                loading.style.display = 'none';
+                error.style.display = 'flex';
+                document.getElementById('chartErrorMessage').textContent = err.message;
+            }
+        }
+
+        // Close chart modal
+        function closeChartModal() {
+            document.getElementById('chartModal').classList.remove('show');
+        }
+
+        // Setup chart modal events
+        function setupChartModal() {
+            const modal = document.getElementById('chartModal');
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeChartModal();
+                }
+            });
+
+            // Handle window resize for chart
+            window.addEventListener('resize', () => {
+                const canvasContainer = document.getElementById('chartCanvasContainer');
+                if (canvasContainer.style.display !== 'none') {
+                    // Redraw chart on resize (would need to store candle data)
+                }
+            });
+        }
+
+        // Initialize chart modal on load
+        document.addEventListener('DOMContentLoaded', () => {
+            setupChartModal();
+        });
+    </script>
 </body>
 </html>

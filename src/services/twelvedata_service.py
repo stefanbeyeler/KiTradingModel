@@ -292,6 +292,7 @@ class TwelveDataService:
                 "symbol": symbol,
                 "interval": interval,
                 "outputsize": outputsize,
+                "timezone": "UTC",  # Always use UTC to avoid timezone confusion
             }
             if start_date:
                 params["start_date"] = start_date
