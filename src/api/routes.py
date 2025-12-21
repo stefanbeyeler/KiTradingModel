@@ -2321,6 +2321,221 @@ async def stop_auto_forecast_service():
     }
 
 
+# ==================== Auto-Forecast: Favorites (Timeframe-based) ====================
+
+@training_router.post("/forecast/auto/favorites/start")
+async def start_favorites_auto_forecast(
+    timeframes: Optional[str] = None
+):
+    """
+    Start automatic forecasting for favorite symbols (timeframe-based).
+
+    Parameters:
+    - timeframes: Comma-separated list of timeframes (M15, H1, D1).
+                  If not provided, all timeframes are enabled.
+
+    **Intervals:**
+    - M15: Every 15 minutes
+    - H1: Every hour
+    - D1: Once daily
+
+    The service automatically generates forecasts for all favorite symbols
+    that have trained models for the specified timeframes.
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+
+    tf_list = None
+    if timeframes:
+        tf_list = [tf.strip().upper() for tf in timeframes.split(",")]
+        invalid = [tf for tf in tf_list if tf not in ["M15", "H1", "D1"]]
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid timeframes: {invalid}. Use M15, H1, or D1."
+            )
+
+    await auto_forecast_service.start_favorites_auto_forecast(tf_list)
+
+    return {
+        "status": "started",
+        "mode": "favorites",
+        "timeframes": tf_list or ["M15", "H1", "D1"],
+        "message": f"Favorites auto-forecast started for: {tf_list or ['M15', 'H1', 'D1']}",
+    }
+
+
+@training_router.post("/forecast/auto/favorites/stop")
+async def stop_favorites_auto_forecast(
+    timeframes: Optional[str] = None
+):
+    """
+    Stop automatic forecasting for favorite symbols.
+
+    Parameters:
+    - timeframes: Comma-separated list of timeframes to stop.
+                  If not provided, all timeframes are stopped.
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+
+    tf_list = None
+    if timeframes:
+        tf_list = [tf.strip().upper() for tf in timeframes.split(",")]
+
+    await auto_forecast_service.stop_favorites_auto_forecast(tf_list)
+
+    return {
+        "status": "stopped",
+        "timeframes": tf_list or "all",
+        "message": f"Favorites auto-forecast stopped for: {tf_list or 'all timeframes'}",
+    }
+
+
+# ==================== Auto-Forecast: Daily (Non-Favorites) ====================
+
+@training_router.post("/forecast/auto/daily/start")
+async def start_daily_auto_forecast(
+    scheduled_time: str = "05:00",
+    timezone: str = "Europe/Zurich"
+):
+    """
+    Start daily automatic forecasting for non-favorite symbols.
+
+    Parameters:
+    - scheduled_time: Time in HH:MM format (default: 05:00)
+    - timezone: Timezone string (default: Europe/Zurich)
+
+    The service runs once daily at the specified time and generates
+    H1 forecasts for all non-favorite symbols that have trained models.
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+
+    # Validate time format
+    try:
+        parts = scheduled_time.split(":")
+        hour = int(parts[0])
+        minute = int(parts[1])
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise ValueError("Invalid time range")
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid time format. Use HH:MM (e.g., 05:00, 14:30)"
+        )
+
+    # Validate timezone
+    try:
+        import pytz
+        pytz.timezone(timezone)
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid timezone: {timezone}. Use IANA timezone format (e.g., Europe/Zurich)"
+        )
+
+    await auto_forecast_service.start_daily_auto_forecast(scheduled_time, timezone)
+
+    return {
+        "status": "started",
+        "mode": "daily",
+        "scheduled_time": scheduled_time,
+        "timezone": timezone,
+        "message": f"Daily auto-forecast started (scheduled at {scheduled_time} {timezone})",
+    }
+
+
+@training_router.post("/forecast/auto/daily/stop")
+async def stop_daily_auto_forecast():
+    """
+    Stop daily automatic forecasting for non-favorite symbols.
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+    await auto_forecast_service.stop_daily_auto_forecast()
+    return {
+        "status": "stopped",
+        "mode": "daily",
+        "message": "Daily auto-forecast stopped",
+    }
+
+
+@training_router.post("/forecast/auto/daily/schedule")
+async def update_daily_schedule(
+    scheduled_time: str,
+    timezone: Optional[str] = None
+):
+    """
+    Update the daily forecast schedule without restarting.
+
+    Parameters:
+    - scheduled_time: Time in HH:MM format
+    - timezone: Optional timezone string
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+
+    # Validate time format
+    try:
+        parts = scheduled_time.split(":")
+        hour = int(parts[0])
+        minute = int(parts[1])
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise ValueError("Invalid time range")
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid time format. Use HH:MM (e.g., 05:00, 14:30)"
+        )
+
+    if timezone:
+        try:
+            import pytz
+            pytz.timezone(timezone)
+        except Exception:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid timezone: {timezone}"
+            )
+
+    auto_forecast_service.set_daily_schedule(scheduled_time, timezone)
+
+    return {
+        "status": "updated",
+        "scheduled_time": scheduled_time,
+        "timezone": timezone or auto_forecast_service._daily_timezone,
+        "message": f"Schedule updated to {scheduled_time}",
+    }
+
+
+@training_router.post("/forecast/auto/daily/run-now")
+async def run_daily_forecast_now():
+    """
+    Manually trigger the daily forecast for non-favorite symbols.
+
+    Runs immediately instead of waiting for the scheduled time.
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+
+    result = await auto_forecast_service.run_forecasts_for_non_favorites()
+
+    return {
+        "status": "completed",
+        "result": result,
+    }
+
+
+# ==================== Auto-Forecast: Combined Status ====================
+
+@training_router.get("/forecast/auto/status")
+async def get_auto_forecast_full_status():
+    """
+    Get comprehensive status of all auto-forecast services.
+
+    Returns status for both:
+    - Favorites auto-forecast (timeframe-based)
+    - Daily auto-forecast (non-favorites)
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+    return auto_forecast_service.get_status()
+
+
 # ==================== Symbol Management Endpoints ====================
 
 @symbol_router.get("/managed-symbols", response_model=list[ManagedSymbol])

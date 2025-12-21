@@ -909,6 +909,105 @@
                 </div>
             </div>
 
+            <!-- Auto-Prognose Card -->
+            <div class="card" style="margin-bottom: 1rem;">
+                <div class="card-header">
+                    <h2 class="card-title">🔄 Auto-Prognose</h2>
+                    <button class="btn btn-sm btn-primary" onclick="loadAutoForecastStatus()">Status aktualisieren</button>
+                </div>
+
+                <div class="grid-2" style="margin-bottom: 1rem;">
+                    <!-- Favoriten Auto-Prognose -->
+                    <div style="padding: 1rem; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px;">
+                        <h4 style="margin: 0 0 0.75rem 0; color: #fbbf24;">⭐ Favoriten (Timeframe-basiert)</h4>
+                        <p style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.75rem;">
+                            Automatische Prognosen für Favoriten:<br>
+                            • M15: alle 15 Minuten<br>
+                            • H1: jede Stunde<br>
+                            • D1: täglich
+                        </p>
+                        <div id="favorites-auto-status" style="margin-bottom: 0.75rem; font-size: 0.9rem;">
+                            <span style="opacity: 0.5;">Status wird geladen...</span>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                            <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
+                                <input type="checkbox" id="auto-tf-m15" checked> M15
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
+                                <input type="checkbox" id="auto-tf-h1" checked> H1
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
+                                <input type="checkbox" id="auto-tf-d1" checked> D1
+                            </label>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-success btn-sm" id="btn-start-favorites-auto" onclick="startFavoritesAutoForecast()">
+                                ▶️ Starten
+                            </button>
+                            <button class="btn btn-danger btn-sm" id="btn-stop-favorites-auto" onclick="stopFavoritesAutoForecast()" style="display: none;">
+                                ⏹️ Stoppen
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tägliche Auto-Prognose (Nicht-Favoriten) -->
+                    <div style="padding: 1rem; background: rgba(100, 200, 255, 0.1); border: 1px solid rgba(100, 200, 255, 0.3); border-radius: 8px;">
+                        <h4 style="margin: 0 0 0.75rem 0; color: #64c8ff;">📅 Täglich (Restliche Symbole)</h4>
+                        <p style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.75rem;">
+                            Einmalige tägliche Prognose für alle Nicht-Favoriten<br>
+                            mit trainierten Modellen (H1 Timeframe).
+                        </p>
+                        <div id="daily-auto-status" style="margin-bottom: 0.75rem; font-size: 0.9rem;">
+                            <span style="opacity: 0.5;">Status wird geladen...</span>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem;">
+                            <label style="font-size: 0.85rem; opacity: 0.8;">Zeit:</label>
+                            <input type="time" id="daily-scheduled-time" value="05:00"
+                                   style="padding: 0.4rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: #e8e8e8;">
+                            <select id="daily-timezone" style="padding: 0.4rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: #e8e8e8; font-size: 0.85rem;">
+                                <option value="Europe/Zurich">Europe/Zurich</option>
+                                <option value="Europe/Berlin">Europe/Berlin</option>
+                                <option value="Europe/London">Europe/London</option>
+                                <option value="America/New_York">America/New_York</option>
+                                <option value="Asia/Tokyo">Asia/Tokyo</option>
+                                <option value="UTC">UTC</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-success btn-sm" id="btn-start-daily-auto" onclick="startDailyAutoForecast()">
+                                ▶️ Starten
+                            </button>
+                            <button class="btn btn-danger btn-sm" id="btn-stop-daily-auto" onclick="stopDailyAutoForecast()" style="display: none;">
+                                ⏹️ Stoppen
+                            </button>
+                            <button class="btn btn-sm btn-primary" onclick="runDailyForecastNow()" title="Sofort ausführen">
+                                ⚡ Jetzt ausführen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Prognose Statistiken -->
+                <div id="auto-forecast-stats" style="padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                    <div style="display: flex; gap: 2rem; flex-wrap: wrap; font-size: 0.9rem;">
+                        <div>
+                            <span style="opacity: 0.7;">Favoriten Prognosen:</span>
+                            <span id="stat-favorites-total" style="color: #fbbf24; margin-left: 0.3rem;">0</span>
+                            <span style="opacity: 0.5; margin-left: 0.3rem;">(Fehler: <span id="stat-favorites-failed" style="color: #f87171;">0</span>)</span>
+                        </div>
+                        <div>
+                            <span style="opacity: 0.7;">Tägliche Prognosen:</span>
+                            <span id="stat-daily-total" style="color: #64c8ff; margin-left: 0.3rem;">0</span>
+                            <span style="opacity: 0.5; margin-left: 0.3rem;">(Fehler: <span id="stat-daily-failed" style="color: #f87171;">0</span>)</span>
+                        </div>
+                        <div>
+                            <span style="opacity: 0.7;">Gesamt Prognosen:</span>
+                            <span id="stat-forecast-count" style="color: #4ade80; margin-left: 0.3rem;">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid-2">
                 <!-- Forecast Form -->
                 <div class="card">
@@ -2743,6 +2842,262 @@
                 btn.textContent = '🗑️ Prognose-Daten löschen';
             }
         }
+
+        // ========== AUTO-FORECAST FUNCTIONS ==========
+
+        // Load auto-forecast status (favorites + daily)
+        async function loadAutoForecastStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/auto/status`);
+                const data = await res.json();
+
+                updateFavoritesAutoStatus(data.favorites);
+                updateDailyAutoStatus(data.daily);
+                updateAutoForecastStats(data);
+
+            } catch (err) {
+                console.error('Failed to load auto-forecast status:', err);
+                document.getElementById('favorites-auto-status').innerHTML =
+                    '<span style="color: #f87171;">Fehler beim Laden</span>';
+                document.getElementById('daily-auto-status').innerHTML =
+                    '<span style="color: #f87171;">Fehler beim Laden</span>';
+            }
+        }
+
+        function updateFavoritesAutoStatus(favorites) {
+            const statusDiv = document.getElementById('favorites-auto-status');
+            const startBtn = document.getElementById('btn-start-favorites-auto');
+            const stopBtn = document.getElementById('btn-stop-favorites-auto');
+
+            if (favorites.running) {
+                // Show running status
+                const activeTimeframes = favorites.enabled_timeframes.join(', ') || 'Keine';
+                let statusHtml = `<span class="badge badge-success">Aktiv</span> `;
+                statusHtml += `<span style="opacity: 0.8;">Timeframes: ${activeTimeframes}</span>`;
+
+                // Show last run times
+                if (favorites.timeframes) {
+                    const lastRuns = [];
+                    for (const [tf, info] of Object.entries(favorites.timeframes)) {
+                        if (info.last_run) {
+                            const d = new Date(info.last_run);
+                            lastRuns.push(`${tf}: ${d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})}`);
+                        }
+                    }
+                    if (lastRuns.length > 0) {
+                        statusHtml += `<div style="font-size: 0.8rem; opacity: 0.7; margin-top: 0.3rem;">Letzte: ${lastRuns.join(', ')}</div>`;
+                    }
+                }
+
+                statusDiv.innerHTML = statusHtml;
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-flex';
+
+                // Update checkboxes to reflect active timeframes
+                document.getElementById('auto-tf-m15').checked = favorites.enabled_timeframes.includes('M15');
+                document.getElementById('auto-tf-h1').checked = favorites.enabled_timeframes.includes('H1');
+                document.getElementById('auto-tf-d1').checked = favorites.enabled_timeframes.includes('D1');
+            } else {
+                statusDiv.innerHTML = '<span class="badge badge-failed">Inaktiv</span>';
+                startBtn.style.display = 'inline-flex';
+                stopBtn.style.display = 'none';
+            }
+        }
+
+        function updateDailyAutoStatus(daily) {
+            const statusDiv = document.getElementById('daily-auto-status');
+            const startBtn = document.getElementById('btn-start-daily-auto');
+            const stopBtn = document.getElementById('btn-stop-daily-auto');
+
+            if (daily.running) {
+                let statusHtml = `<span class="badge badge-success">Aktiv</span> `;
+                statusHtml += `<span style="opacity: 0.8;">${daily.scheduled_time} ${daily.timezone}</span>`;
+
+                if (daily.next_run) {
+                    const nextRun = new Date(daily.next_run);
+                    const hoursUntil = Math.round((nextRun - new Date()) / 3600000 * 10) / 10;
+                    statusHtml += `<div style="font-size: 0.8rem; opacity: 0.7; margin-top: 0.3rem;">Nächste Ausführung in ${hoursUntil}h</div>`;
+                }
+
+                if (daily.last_run) {
+                    const d = new Date(daily.last_run);
+                    statusHtml += `<div style="font-size: 0.8rem; opacity: 0.7;">Letzte: ${d.toLocaleString('de-DE')}</div>`;
+                }
+
+                statusDiv.innerHTML = statusHtml;
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-flex';
+
+                // Update form values
+                document.getElementById('daily-scheduled-time').value = daily.scheduled_time;
+                const tzSelect = document.getElementById('daily-timezone');
+                for (let opt of tzSelect.options) {
+                    if (opt.value === daily.timezone) {
+                        opt.selected = true;
+                        break;
+                    }
+                }
+            } else {
+                statusDiv.innerHTML = '<span class="badge badge-failed">Inaktiv</span>';
+                startBtn.style.display = 'inline-flex';
+                stopBtn.style.display = 'none';
+            }
+        }
+
+        function updateAutoForecastStats(data) {
+            document.getElementById('stat-favorites-total').textContent = data.favorites?.total_forecasts || 0;
+            document.getElementById('stat-favorites-failed').textContent = data.favorites?.failed_forecasts || 0;
+            document.getElementById('stat-daily-total').textContent = data.daily?.total_forecasts || 0;
+            document.getElementById('stat-daily-failed').textContent = data.daily?.failed_forecasts || 0;
+            document.getElementById('stat-forecast-count').textContent = data.forecast_count || 0;
+        }
+
+        // Start favorites auto-forecast
+        async function startFavoritesAutoForecast() {
+            const timeframes = [];
+            if (document.getElementById('auto-tf-m15').checked) timeframes.push('M15');
+            if (document.getElementById('auto-tf-h1').checked) timeframes.push('H1');
+            if (document.getElementById('auto-tf-d1').checked) timeframes.push('D1');
+
+            if (timeframes.length === 0) {
+                showToast('Mindestens ein Timeframe muss ausgewählt sein', 'warning');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/forecast/auto/favorites/start?timeframes=${timeframes.join(',')}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(`Favoriten Auto-Prognose gestartet: ${timeframes.join(', ')}`, 'success');
+                    await loadAutoForecastStatus();
+                } else {
+                    showToast(data.detail || 'Fehler beim Starten', 'error');
+                }
+            } catch (err) {
+                console.error('Failed to start favorites auto-forecast:', err);
+                showToast('Fehler beim Starten: ' + err.message, 'error');
+            }
+        }
+
+        // Stop favorites auto-forecast
+        async function stopFavoritesAutoForecast() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/auto/favorites/stop`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast('Favoriten Auto-Prognose gestoppt', 'info');
+                    await loadAutoForecastStatus();
+                } else {
+                    showToast(data.detail || 'Fehler beim Stoppen', 'error');
+                }
+            } catch (err) {
+                console.error('Failed to stop favorites auto-forecast:', err);
+                showToast('Fehler beim Stoppen: ' + err.message, 'error');
+            }
+        }
+
+        // Start daily auto-forecast
+        async function startDailyAutoForecast() {
+            const scheduledTime = document.getElementById('daily-scheduled-time').value;
+            const timezone = document.getElementById('daily-timezone').value;
+
+            if (!scheduledTime) {
+                showToast('Bitte eine Zeit eingeben', 'warning');
+                return;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    scheduled_time: scheduledTime,
+                    timezone: timezone
+                });
+                const res = await fetch(`${API_BASE}/forecast/auto/daily/start?${params}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(`Tägliche Auto-Prognose gestartet: ${scheduledTime} ${timezone}`, 'success');
+                    await loadAutoForecastStatus();
+                } else {
+                    showToast(data.detail || 'Fehler beim Starten', 'error');
+                }
+            } catch (err) {
+                console.error('Failed to start daily auto-forecast:', err);
+                showToast('Fehler beim Starten: ' + err.message, 'error');
+            }
+        }
+
+        // Stop daily auto-forecast
+        async function stopDailyAutoForecast() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/auto/daily/stop`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast('Tägliche Auto-Prognose gestoppt', 'info');
+                    await loadAutoForecastStatus();
+                } else {
+                    showToast(data.detail || 'Fehler beim Stoppen', 'error');
+                }
+            } catch (err) {
+                console.error('Failed to stop daily auto-forecast:', err);
+                showToast('Fehler beim Stoppen: ' + err.message, 'error');
+            }
+        }
+
+        // Run daily forecast immediately
+        async function runDailyForecastNow() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Läuft...';
+
+            try {
+                const res = await fetch(`${API_BASE}/forecast/auto/daily/run-now`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    const result = data.result || {};
+                    showToast(
+                        `Tägliche Prognose abgeschlossen: ${result.forecasts_generated || 0} erstellt, ` +
+                        `${result.forecasts_failed || 0} fehlgeschlagen, ` +
+                        `${result.skipped_no_model || 0} übersprungen`,
+                        'success'
+                    );
+                    await loadAutoForecastStatus();
+                } else {
+                    showToast(data.detail || 'Fehler bei der Ausführung', 'error');
+                }
+            } catch (err) {
+                console.error('Failed to run daily forecast:', err);
+                showToast('Fehler bei der Ausführung: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '⚡ Jetzt ausführen';
+            }
+        }
+
+        // Load auto-forecast status when switching to forecast tab
+        const origSwitchTab = switchTab;
+        switchTab = function(tabName) {
+            origSwitchTab(tabName);
+            if (tabName === 'forecast') {
+                loadAutoForecastStatus();
+            }
+        };
+
+        // Initial load of auto-forecast status after page load
+        setTimeout(loadAutoForecastStatus, 1500);
     </script>
 </body>
 </html>
