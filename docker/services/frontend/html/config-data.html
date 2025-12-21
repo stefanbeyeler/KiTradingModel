@@ -733,6 +733,9 @@
                                 <option value="technical-levels">Technical Levels</option>
                                 <option value="regulatory">Regulatory</option>
                                 <option value="easyinsight">EasyInsight</option>
+                                <option value="correlations">Correlations</option>
+                                <option value="volatility-regime">Volatility Regime</option>
+                                <option value="institutional-flow">Institutional Flow</option>
                             </select>
                         </div>
                     </div>
@@ -877,6 +880,57 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Correlations Options -->
+                        <div id="options-correlations" class="source-options" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Zeitfenster</label>
+                                    <select class="form-select" id="corr-timeframe">
+                                        <option value="7d">7 Tage</option>
+                                        <option value="30d" selected>30 Tage</option>
+                                        <option value="90d">90 Tage</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="corr-matrix" checked><span>Matrix</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="corr-regime" checked><span>Regime</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Volatility Regime Options -->
+                        <div id="options-volatility-regime" class="source-options" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="vol-vix" checked><span>VIX Analyse</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="vol-atr" checked><span>ATR Trend</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="vol-bbands" checked><span>Bollinger</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="vol-regime" checked><span>Regime</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Institutional Flow Options -->
+                        <div id="options-institutional-flow" class="source-options" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Optionen</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                        <label class="form-checkbox"><input type="checkbox" id="inst-cot" checked><span>COT Report</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="inst-etf" checked><span>ETF Flows</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="inst-whale" checked><span>Whale Tracking</span></label>
+                                        <label class="form-checkbox"><input type="checkbox" id="inst-13f"><span>13F Filings</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div style="margin-top: 1rem;">
@@ -988,6 +1042,30 @@
                         </div>
                         <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Managed Symbols, MT5 Logs</p>
                         <button class="btn btn-sm btn-primary" onclick="quickFetchSource('easyinsight')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #7e57c2;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #7e57c2;">Correlations</strong>
+                            <span class="badge badge-active" id="status-correlations">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Cross-Asset, Divergenzen, Hedge</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('correlations')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ff7043;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #ff7043;">Volatility Regime</strong>
+                            <span class="badge badge-active" id="status-volatility-regime">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">VIX, ATR, Position Sizing</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('volatility-regime')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #26a69a;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #26a69a;">Institutional Flow</strong>
+                            <span class="badge badge-active" id="status-institutional-flow">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">COT, ETF Flows, Whale</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('institutional-flow')">Abrufen</button>
                     </div>
                 </div>
             </div>
@@ -4068,7 +4146,10 @@
             'historical-patterns': 'Historical Patterns',
             'technical-levels': 'Technical Levels',
             'regulatory': 'Regulatory',
-            'easyinsight': 'EasyInsight'
+            'easyinsight': 'EasyInsight',
+            'correlations': 'Correlations',
+            'volatility-regime': 'Volatility Regime',
+            'institutional-flow': 'Institutional Flow'
         };
 
         // Update source options visibility
@@ -4164,6 +4245,23 @@
                 case 'easyinsight':
                     params.append('include_symbols', document.getElementById('ei-symbols').checked);
                     params.append('include_logs', document.getElementById('ei-logs').checked);
+                    break;
+                case 'correlations':
+                    params.append('timeframe', document.getElementById('corr-timeframe').value);
+                    params.append('include_matrix', document.getElementById('corr-matrix').checked);
+                    params.append('include_regime', document.getElementById('corr-regime').checked);
+                    break;
+                case 'volatility-regime':
+                    params.append('include_vix', document.getElementById('vol-vix').checked);
+                    params.append('include_atr', document.getElementById('vol-atr').checked);
+                    params.append('include_bollinger', document.getElementById('vol-bbands').checked);
+                    params.append('include_regime', document.getElementById('vol-regime').checked);
+                    break;
+                case 'institutional-flow':
+                    params.append('include_cot', document.getElementById('inst-cot').checked);
+                    params.append('include_etf', document.getElementById('inst-etf').checked);
+                    params.append('include_whale', document.getElementById('inst-whale').checked);
+                    params.append('include_13f', document.getElementById('inst-13f').checked);
                     break;
             }
             return params;

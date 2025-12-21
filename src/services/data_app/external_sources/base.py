@@ -18,6 +18,9 @@ class DataSourceType(str, Enum):
     TECHNICAL_LEVEL = "technical_level"
     REGULATORY = "regulatory"
     EASYINSIGHT = "easyinsight"
+    CORRELATIONS = "correlations"
+    VOLATILITY_REGIME = "volatility_regime"
+    INSTITUTIONAL_FLOW = "institutional_flow"
 
 
 class DataPriority(str, Enum):

@@ -14,6 +14,9 @@ from .historical_patterns import HistoricalPatternsSource
 from .technical_levels import TechnicalLevelsSource
 from .regulatory_updates import RegulatoryUpdatesSource
 from .easyinsight_data import EasyInsightDataSource
+from .correlations_data import CorrelationsDataSource
+from .volatility_regime_data import VolatilityRegimeDataSource
+from .institutional_flow_data import InstitutionalFlowDataSource
 from .data_fetcher_service import DataFetcherService, get_data_fetcher_service
 
 __all__ = [
@@ -30,6 +33,9 @@ __all__ = [
     "TechnicalLevelsSource",
     "RegulatoryUpdatesSource",
     "EasyInsightDataSource",
+    "CorrelationsDataSource",
+    "VolatilityRegimeDataSource",
+    "InstitutionalFlowDataSource",
     "DataFetcherService",
     "get_data_fetcher_service",
 ]

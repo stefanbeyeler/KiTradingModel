@@ -15,6 +15,9 @@ from .historical_patterns import HistoricalPatternsSource
 from .technical_levels import TechnicalLevelsSource
 from .regulatory_updates import RegulatoryUpdatesSource
 from .easyinsight_data import EasyInsightDataSource
+from .correlations_data import CorrelationsDataSource
+from .volatility_regime_data import VolatilityRegimeDataSource
+from .institutional_flow_data import InstitutionalFlowDataSource
 
 
 class DataFetcherService:
@@ -41,6 +44,9 @@ class DataFetcherService:
             DataSourceType.TECHNICAL_LEVEL: TechnicalLevelsSource(),
             DataSourceType.REGULATORY: RegulatoryUpdatesSource(),
             DataSourceType.EASYINSIGHT: EasyInsightDataSource(),
+            DataSourceType.CORRELATIONS: CorrelationsDataSource(),
+            DataSourceType.VOLATILITY_REGIME: VolatilityRegimeDataSource(),
+            DataSourceType.INSTITUTIONAL_FLOW: InstitutionalFlowDataSource(),
         }
         logger.info(f"DataFetcherService initialized with {len(self._sources)} data sources")
 
@@ -276,6 +282,55 @@ class DataFetcherService:
             include_mt5_logs=include_mt5_logs
         )
 
+    async def fetch_correlations(
+        self,
+        symbol: Optional[str] = None,
+        timeframe: str = "30d",
+        include_matrix: bool = True,
+        include_regime: bool = True
+    ) -> list[DataSourceResult]:
+        """Fetch asset correlation data."""
+        return await self._sources[DataSourceType.CORRELATIONS].fetch(
+            symbol,
+            timeframe=timeframe,
+            include_matrix=include_matrix,
+            include_regime=include_regime
+        )
+
+    async def fetch_volatility_regime(
+        self,
+        symbol: Optional[str] = None,
+        include_vix: bool = True,
+        include_atr: bool = True,
+        include_bollinger: bool = True,
+        include_regime: bool = True
+    ) -> list[DataSourceResult]:
+        """Fetch volatility regime data."""
+        return await self._sources[DataSourceType.VOLATILITY_REGIME].fetch(
+            symbol,
+            include_vix=include_vix,
+            include_atr=include_atr,
+            include_bollinger=include_bollinger,
+            include_regime=include_regime
+        )
+
+    async def fetch_institutional_flow(
+        self,
+        symbol: Optional[str] = None,
+        include_cot: bool = True,
+        include_etf: bool = True,
+        include_whale: bool = True,
+        include_13f: bool = False
+    ) -> list[DataSourceResult]:
+        """Fetch institutional flow data (COT, ETF flows, whale tracking)."""
+        return await self._sources[DataSourceType.INSTITUTIONAL_FLOW].fetch(
+            symbol,
+            include_cot=include_cot,
+            include_etf=include_etf,
+            include_whale=include_whale,
+            include_13f=include_13f
+        )
+
     async def fetch_trading_context(
         self,
         symbol: str,
@@ -300,6 +355,9 @@ class DataFetcherService:
                 - 'levels': Technical levels
                 - 'regulatory': Regulatory updates
                 - 'easyinsight': Managed symbols and MT5 logs
+                - 'correlations': Asset correlations and divergences
+                - 'volatility': Volatility regime (VIX, ATR, Bollinger)
+                - 'institutional': Institutional flows (COT, ETF, whale)
                 Default: All types
 
         Returns:
@@ -307,7 +365,8 @@ class DataFetcherService:
         """
         all_types = [
             'economic', 'onchain', 'sentiment', 'orderbook',
-            'macro', 'patterns', 'levels', 'regulatory', 'easyinsight'
+            'macro', 'patterns', 'levels', 'regulatory', 'easyinsight',
+            'correlations', 'volatility', 'institutional'
         ]
         types_to_fetch = include_types or all_types
 
@@ -334,6 +393,9 @@ class DataFetcherService:
             'levels': (DataSourceType.TECHNICAL_LEVEL, self.fetch_technical_levels),
             'regulatory': (DataSourceType.REGULATORY, self.fetch_regulatory),
             'easyinsight': (DataSourceType.EASYINSIGHT, self.fetch_easyinsight),
+            'correlations': (DataSourceType.CORRELATIONS, self.fetch_correlations),
+            'volatility': (DataSourceType.VOLATILITY_REGIME, self.fetch_volatility_regime),
+            'institutional': (DataSourceType.INSTITUTIONAL_FLOW, self.fetch_institutional_flow),
         }
 
         # Fetch in parallel
@@ -426,6 +488,9 @@ class DataFetcherService:
             DataSourceType.TECHNICAL_LEVEL: "Technical levels (S/R, Fibonacci, pivots, VWAP, MAs)",
             DataSourceType.REGULATORY: "Regulatory updates (SEC, ETFs, global regulation)",
             DataSourceType.EASYINSIGHT: "EasyInsight data (managed symbols, MT5 logs, model status)",
+            DataSourceType.CORRELATIONS: "Asset correlations (cross-asset, divergences, hedge recommendations)",
+            DataSourceType.VOLATILITY_REGIME: "Volatility regime (VIX, ATR, Bollinger, position sizing)",
+            DataSourceType.INSTITUTIONAL_FLOW: "Institutional flows (COT reports, ETF flows, whale tracking)",
         }
         return descriptions.get(source_type, "Unknown data source")
 

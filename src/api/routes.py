@@ -4684,6 +4684,116 @@ async def get_easyinsight_data(
     }
 
 
+@external_sources_router.get("/external-sources/correlations")
+async def get_correlations_data(
+    symbol: Optional[str] = None,
+    timeframe: str = "30d",
+    include_matrix: bool = True,
+    include_regime: bool = True
+):
+    """
+    Get asset correlation analysis data.
+
+    Returns correlation data including:
+    - Cross-asset correlations (rolling 7d, 30d, 90d windows)
+    - Correlation matrix for asset class
+    - Correlation regime classification
+    - Divergence detection for trading signals
+    - Hedge recommendations based on negative correlations
+
+    Args:
+        symbol: Optional symbol to analyze correlations for
+        timeframe: Correlation window (7d, 30d, 90d)
+        include_matrix: Include full correlation matrix
+        include_regime: Include correlation regime analysis
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_correlations(
+        symbol, timeframe, include_matrix, include_regime
+    )
+    return {
+        "source": "correlations",
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
+@external_sources_router.get("/external-sources/volatility-regime")
+async def get_volatility_regime_data(
+    symbol: Optional[str] = None,
+    include_vix: bool = True,
+    include_atr: bool = True,
+    include_bollinger: bool = True,
+    include_regime: bool = True
+):
+    """
+    Get volatility regime analysis for position sizing and risk management.
+
+    Returns volatility data including:
+    - VIX and volatility indices analysis
+    - ATR (Average True Range) trends with stop-loss recommendations
+    - Bollinger Band width and squeeze detection
+    - Volatility regime classification (low, normal, high, extreme)
+    - Position sizing recommendations based on volatility
+
+    Args:
+        symbol: Optional symbol to analyze
+        include_vix: Include VIX analysis
+        include_atr: Include ATR trend analysis
+        include_bollinger: Include Bollinger width analysis
+        include_regime: Include regime classification
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_volatility_regime(
+        symbol, include_vix, include_atr, include_bollinger, include_regime
+    )
+    return {
+        "source": "volatility_regime",
+        "symbol": symbol,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
+@external_sources_router.get("/external-sources/institutional-flow")
+async def get_institutional_flow_data(
+    symbol: Optional[str] = None,
+    include_cot: bool = True,
+    include_etf: bool = True,
+    include_whale: bool = True,
+    include_13f: bool = False
+):
+    """
+    Get institutional flow data (Smart Money tracking).
+
+    Returns institutional data including:
+    - CFTC Commitment of Traders (COT) Reports
+    - ETF Inflows/Outflows (Bitcoin, Gold, major ETFs)
+    - Whale wallet activity (crypto)
+    - 13F Filings analysis (quarterly, optional)
+    - Aggregated Smart Money signal
+
+    Args:
+        symbol: Optional symbol to analyze
+        include_cot: Include COT report analysis
+        include_etf: Include ETF flow data
+        include_whale: Include whale tracking (crypto only)
+        include_13f: Include 13F filing analysis (quarterly data)
+    """
+    fetcher = get_external_data_fetcher()
+    results = await fetcher.fetch_institutional_flow(
+        symbol, include_cot, include_etf, include_whale, include_13f
+    )
+    return {
+        "source": "institutional_flow",
+        "symbol": symbol,
+        "data": [r.to_rag_document() for r in results],
+        "total_items": len(results),
+    }
+
+
 @external_sources_router.post("/external-sources/fetch-all")
 async def fetch_all_sources(
     symbol: Optional[str] = None,
@@ -4697,7 +4807,8 @@ async def fetch_all_sources(
         symbol: Optional symbol filter
         source_types: List of source types to fetch (None = all)
             Valid types: economic_calendar, onchain, sentiment, orderbook,
-            macro_correlation, historical_pattern, technical_level, regulatory, easyinsight
+            macro_correlation, historical_pattern, technical_level, regulatory,
+            easyinsight, correlations, volatility_regime, institutional_flow
         min_priority: Minimum priority level (critical, high, medium, low)
 
     Returns:
@@ -4718,6 +4829,9 @@ async def fetch_all_sources(
             "technical_level": DataSourceType.TECHNICAL_LEVEL,
             "regulatory": DataSourceType.REGULATORY,
             "easyinsight": DataSourceType.EASYINSIGHT,
+            "correlations": DataSourceType.CORRELATIONS,
+            "volatility_regime": DataSourceType.VOLATILITY_REGIME,
+            "institutional_flow": DataSourceType.INSTITUTIONAL_FLOW,
         }
         types_enum = [type_mapping[t] for t in source_types if t in type_mapping]
 
@@ -4753,7 +4867,8 @@ async def fetch_trading_context(
     Args:
         symbol: Trading symbol
         include_types: Optional list of data types to include:
-            economic, onchain, sentiment, orderbook, macro, patterns, levels, regulatory, easyinsight
+            economic, onchain, sentiment, orderbook, macro, patterns, levels,
+            regulatory, easyinsight, correlations, volatility, institutional
 
     Returns:
         Structured trading context with summary of critical events

@@ -125,7 +125,10 @@ openapi_tags = [
 - **Macro**: DXY, Bond Yields, Cross-Asset Korrelationen
 - **Historical Patterns**: Saisonalität, Drawdowns, Events
 - **Technical Levels**: S/R Zonen, Fibonacci, Pivots, VWAP
-- **Regulatory**: SEC/CFTC, ETF News, Global Regulation"""
+- **Regulatory**: SEC/CFTC, ETF News, Global Regulation
+- **Correlations**: Cross-Asset Korrelationen, Divergenzen, Hedge-Empfehlungen
+- **Volatility Regime**: VIX, ATR, Bollinger, Position Sizing
+- **Institutional Flow**: COT Reports, ETF Flows, Whale Tracking"""
     },
 ]
 

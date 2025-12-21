@@ -32,6 +32,9 @@ class DataFetcherProxy:
             {"type": "regulatory", "name": "REGULATORY", "description": "Regulatory updates (SEC, ETFs, global regulation)"},
             {"type": "easyinsight", "name": "EASYINSIGHT", "description": "EasyInsight data (managed symbols, MT5 logs, model status)"},
             {"type": "candlestick_patterns", "name": "CANDLESTICK_PATTERNS", "description": "Candlestick pattern analysis (24 patterns, multi-timeframe)"},
+            {"type": "correlations", "name": "CORRELATIONS", "description": "Asset correlations (cross-asset, divergences, hedge recommendations)"},
+            {"type": "volatility_regime", "name": "VOLATILITY_REGIME", "description": "Volatility regime (VIX, ATR, Bollinger, position sizing)"},
+            {"type": "institutional_flow", "name": "INSTITUTIONAL_FLOW", "description": "Institutional flows (COT reports, ETF flows, whale tracking)"},
         ]
 
     async def fetch_all(
@@ -130,6 +133,30 @@ class DataFetcherProxy:
     async def fetch_easyinsight(self, symbol: Optional[str] = None, **kwargs) -> list:
         """Fetch EasyInsight data via Data Service."""
         result = await self._client.get_easyinsight(symbol, **kwargs)
+        if "error" in result:
+            logger.error(f"Error: {result['error']}")
+            return []
+        return [ProxyResult(item) for item in result.get("data", [])]
+
+    async def fetch_correlations(self, symbol: Optional[str] = None, **kwargs) -> list:
+        """Fetch asset correlation data via Data Service."""
+        result = await self._client.get_correlations(symbol, **kwargs)
+        if "error" in result:
+            logger.error(f"Error: {result['error']}")
+            return []
+        return [ProxyResult(item) for item in result.get("data", [])]
+
+    async def fetch_volatility_regime(self, symbol: Optional[str] = None, **kwargs) -> list:
+        """Fetch volatility regime data via Data Service."""
+        result = await self._client.get_volatility_regime(symbol, **kwargs)
+        if "error" in result:
+            logger.error(f"Error: {result['error']}")
+            return []
+        return [ProxyResult(item) for item in result.get("data", [])]
+
+    async def fetch_institutional_flow(self, symbol: Optional[str] = None, **kwargs) -> list:
+        """Fetch institutional flow data (COT, ETF, whale) via Data Service."""
+        result = await self._client.get_institutional_flow(symbol, **kwargs)
         if "error" in result:
             logger.error(f"Error: {result['error']}")
             return []

@@ -215,6 +215,61 @@ class DataServiceClient:
             params["symbol"] = symbol
         return await self._get("/external-sources/easyinsight", params)
 
+    async def get_correlations(
+        self,
+        symbol: Optional[str] = None,
+        timeframe: str = "30d",
+        include_matrix: bool = True,
+        include_regime: bool = True
+    ) -> dict:
+        """Get asset correlation data."""
+        params = {
+            "timeframe": timeframe,
+            "include_matrix": include_matrix,
+            "include_regime": include_regime,
+        }
+        if symbol:
+            params["symbol"] = symbol
+        return await self._get("/external-sources/correlations", params)
+
+    async def get_volatility_regime(
+        self,
+        symbol: Optional[str] = None,
+        include_vix: bool = True,
+        include_atr: bool = True,
+        include_bollinger: bool = True,
+        include_regime: bool = True
+    ) -> dict:
+        """Get volatility regime data."""
+        params = {
+            "include_vix": include_vix,
+            "include_atr": include_atr,
+            "include_bollinger": include_bollinger,
+            "include_regime": include_regime,
+        }
+        if symbol:
+            params["symbol"] = symbol
+        return await self._get("/external-sources/volatility-regime", params)
+
+    async def get_institutional_flow(
+        self,
+        symbol: Optional[str] = None,
+        include_cot: bool = True,
+        include_etf: bool = True,
+        include_whale: bool = True,
+        include_13f: bool = False
+    ) -> dict:
+        """Get institutional flow data (COT, ETF flows, whale tracking)."""
+        params = {
+            "include_cot": include_cot,
+            "include_etf": include_etf,
+            "include_whale": include_whale,
+            "include_13f": include_13f,
+        }
+        if symbol:
+            params["symbol"] = symbol
+        return await self._get("/external-sources/institutional-flow", params)
+
     async def fetch_all(
         self,
         symbol: Optional[str] = None,
