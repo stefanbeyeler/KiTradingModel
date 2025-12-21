@@ -58,6 +58,7 @@ services:
       - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
       - NHITS_AUTO_RETRAIN_DAYS=${NHITS_AUTO_RETRAIN_DAYS:-7}
       - OLLAMA_HOST=http://host.docker.internal:11434
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
     networks:
       - trading-net
     extra_hosts:

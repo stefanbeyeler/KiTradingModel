@@ -713,6 +713,11 @@
                 </div>
                 <div class="toolbar">
                     <input type="text" class="search-box" id="model-search" placeholder="Symbol suchen..." oninput="filterModels()">
+                    <select class="filter-select" id="favorite-filter" onchange="filterModels()">
+                        <option value="">Alle Symbole</option>
+                        <option value="favorites">&#9733; Nur Favoriten</option>
+                        <option value="non-favorites">Ohne Favoriten</option>
+                    </select>
                     <select class="filter-select" id="timeframe-filter" onchange="filterModels()">
                         <option value="">Alle Timeframes</option>
                         <option value="M15">M15</option>
@@ -725,6 +730,7 @@
                     <table id="models-table">
                         <thead>
                             <tr>
+                                <th style="width: 40px; text-align: center;" title="Favorit">&#9733;</th>
                                 <th>Symbol</th>
                                 <th>Timeframe</th>
                                 <th>Trainiert am</th>
@@ -734,7 +740,7 @@
                             </tr>
                         </thead>
                         <tbody id="models-tbody">
-                            <tr><td colspan="6" style="text-align: center; opacity: 0.5;">Lade Modelle...</td></tr>
+                            <tr><td colspan="7" style="text-align: center; opacity: 0.5;">Lade Modelle...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1038,7 +1044,9 @@
                 const res = await fetch(`${API_BASE}/forecast/models`);
                 const data = await res.json();
 
-                document.getElementById('models-total').textContent = `${data.length} Modelle`;
+                // Count favorites
+                const favoriteCount = data.filter(m => m.is_favorite && m.model_exists).length;
+                document.getElementById('models-total').textContent = `${data.length} Modelle (${favoriteCount} Favoriten)`;
 
                 allModels = [];
                 for (const model of data) {
@@ -1070,7 +1078,9 @@
                         timeframeKey: timeframeKey,
                         lastTrained: model.last_trained,
                         samples: model.training_samples,
-                        loss: model.metrics?.final_loss
+                        loss: model.metrics?.final_loss,
+                        isFavorite: model.is_favorite || false,
+                        category: model.category || ''
                     });
                 }
 
@@ -1084,17 +1094,21 @@
         function filterModels() {
             const search = document.getElementById('model-search').value.toLowerCase();
             const tfFilter = document.getElementById('timeframe-filter').value;
+            const favFilter = document.getElementById('favorite-filter')?.value || '';
 
             const filtered = allModels.filter(m => {
                 const matchSearch = m.symbol.toLowerCase().includes(search);
                 const matchTf = !tfFilter || m.timeframeKey === tfFilter;
-                return matchSearch && matchTf;
+                const matchFav = !favFilter || (favFilter === 'favorites' && m.isFavorite) || (favFilter === 'non-favorites' && !m.isFavorite);
+                return matchSearch && matchTf && matchFav;
             });
 
-            // Sort by 1. Symbol, 2. Timeframe (M15, H1, D1)
+            // Sort by 1. Favorites first, 2. Symbol, 3. Timeframe (M15, H1, D1)
             const timeframeOrder = { 'M15': 1, 'H1': 2, 'D1': 3, 'default': 2 };
             filtered.sort((a, b) => {
-                // First sort by symbol alphabetically
+                // Favorites first
+                if (a.isFavorite !== b.isFavorite) return b.isFavorite - a.isFavorite;
+                // Then sort by symbol alphabetically
                 const symbolCompare = a.symbol.localeCompare(b.symbol);
                 if (symbolCompare !== 0) return symbolCompare;
                 // Then sort by timeframe order
@@ -1103,7 +1117,7 @@
 
             const tbody = document.getElementById('models-tbody');
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; opacity: 0.5;">Keine Modelle gefunden</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; opacity: 0.5;">Keine Modelle gefunden</td></tr>';
                 return;
             }
 
@@ -1122,8 +1136,13 @@
                 // Format loss
                 const lossStr = model.loss ? model.loss.toFixed(4) : '-';
 
+                // Favorite indicator
+                const favIcon = model.isFavorite ? '<span title="Favorit" style="color: #fbbf24;">&#9733;</span>' : '<span style="opacity: 0.3;">&#9734;</span>';
+                const rowStyle = model.isFavorite ? 'background: rgba(251, 191, 36, 0.05);' : '';
+
                 html += `
-                    <tr>
+                    <tr style="${rowStyle}">
+                        <td>${favIcon}</td>
                         <td><strong>${model.symbol}</strong></td>
                         <td><span class="badge ${tfClass}">${model.timeframe}</span></td>
                         <td>${trainedDate}</td>
@@ -1366,23 +1385,28 @@
             document.getElementById('forecast-info').textContent =
                 `${data.symbol} | ${data.timeframe} | ${timestamp.toLocaleString('de-DE')}`;
 
-            // Calculate summary
-            const prices = data.predicted_prices;
-            const firstPrice = prices[0];
-            const lastPrice = prices[prices.length - 1];
-            const minPrice = Math.min(...prices);
-            const maxPrice = Math.max(...prices);
-            const change = lastPrice - firstPrice;
-            const changePercent = (change / firstPrice) * 100;
+            // Get current price and predicted prices
+            const currentPrice = data.current_price;
+            const predictedPrices = data.predicted_prices;
+            const lastPrice = predictedPrices[predictedPrices.length - 1];
+
+            // Calculate change from current price to final prediction
+            const change = lastPrice - currentPrice;
+            const changePercent = (change / currentPrice) * 100;
             const isBullish = change >= 0;
+
+            // Min/Max including current price
+            const allPrices = [currentPrice, ...predictedPrices];
+            const minPrice = Math.min(...allPrices);
+            const maxPrice = Math.max(...allPrices);
 
             // Update summary
             const summaryEl = document.getElementById('forecast-summary');
             summaryEl.innerHTML = `
                 <div class="forecast-summary-grid">
                     <div class="summary-item">
-                        <div class="value">${formatPrice(firstPrice, data.symbol)}</div>
-                        <div class="label">Startpreis</div>
+                        <div class="value">${formatPrice(currentPrice, data.symbol)}</div>
+                        <div class="label">Aktueller Preis</div>
                     </div>
                     <div class="summary-item">
                         <div class="value ${isBullish ? 'up' : 'down'}">${formatPrice(lastPrice, data.symbol)}</div>
@@ -1404,12 +1428,20 @@
             `;
             summaryEl.style.opacity = '1';
 
-            // Generate time labels
+            // Generate time labels - start with "Jetzt" for current price
             const labels = [];
             const baseTime = new Date(data.forecast_timestamp);
             const intervalMinutes = data.timeframe === 'M15' ? 15 : (data.timeframe === 'D1' ? 1440 : 60);
 
-            for (let i = 0; i < prices.length; i++) {
+            // First label is "Jetzt" (current time)
+            if (data.timeframe === 'D1') {
+                labels.push(baseTime.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }));
+            } else {
+                labels.push('Jetzt');
+            }
+
+            // Then add forecast time labels
+            for (let i = 0; i < predictedPrices.length; i++) {
                 const time = new Date(baseTime.getTime() + (i + 1) * intervalMinutes * 60000);
                 if (data.timeframe === 'D1') {
                     labels.push(time.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }));
@@ -1418,21 +1450,43 @@
                 }
             }
 
-            // Update chart
-            updateForecastChart(labels, data);
+            // Build chart data with current price as first point
+            const chartData = {
+                ...data,
+                // Include current price at the start
+                chartPrices: [currentPrice, ...predictedPrices],
+                chartConfidenceLow: [currentPrice, ...data.confidence_low],
+                chartConfidenceHigh: [currentPrice, ...data.confidence_high]
+            };
 
-            // Update table
+            // Update chart
+            updateForecastChart(labels, chartData);
+
+            // Update table - show current price first, then predictions
             const tbody = document.getElementById('forecast-tbody');
             let html = '';
-            for (let i = 0; i < prices.length; i++) {
+
+            // Current price row
+            html += `
+                <tr style="background: rgba(59, 130, 246, 0.1);">
+                    <td><strong>${labels[0]}</strong></td>
+                    <td><strong>${formatPrice(currentPrice, data.symbol)}</strong></td>
+                    <td style="opacity: 0.5;">-</td>
+                    <td style="opacity: 0.5;">-</td>
+                    <td style="opacity: 0.5;">Aktuell</td>
+                </tr>
+            `;
+
+            // Predicted prices
+            for (let i = 0; i < predictedPrices.length; i++) {
                 const low = data.confidence_low[i];
                 const high = data.confidence_high[i];
                 const spread = high - low;
 
                 html += `
                     <tr>
-                        <td>${labels[i]}</td>
-                        <td><strong>${formatPrice(prices[i], data.symbol)}</strong></td>
+                        <td>${labels[i + 1]}</td>
+                        <td><strong>${formatPrice(predictedPrices[i], data.symbol)}</strong></td>
                         <td style="color: #f87171;">${formatPrice(low, data.symbol)}</td>
                         <td style="color: #4ade80;">${formatPrice(high, data.symbol)}</td>
                         <td style="opacity: 0.7;">${formatPrice(spread, data.symbol)}</td>
@@ -1463,6 +1517,15 @@
                 forecastChart.destroy();
             }
 
+            // Use chart-specific arrays that include current price at start
+            const chartPrices = data.chartPrices || data.predicted_prices;
+            const chartConfidenceHigh = data.chartConfidenceHigh || data.confidence_high;
+            const chartConfidenceLow = data.chartConfidenceLow || data.confidence_low;
+
+            // Create point styling - first point (current price) gets different color
+            const pointBackgroundColors = chartPrices.map((_, i) => i === 0 ? '#3b82f6' : '#64c8ff');
+            const pointRadii = chartPrices.map((_, i) => i === 0 ? 6 : 2);
+
             forecastChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -1470,7 +1533,7 @@
                     datasets: [
                         {
                             label: 'Konfidenz (Hoch)',
-                            data: data.confidence_high,
+                            data: chartConfidenceHigh,
                             borderColor: 'rgba(74, 222, 128, 0.3)',
                             backgroundColor: 'rgba(74, 222, 128, 0.1)',
                             borderWidth: 1,
@@ -1480,18 +1543,20 @@
                         },
                         {
                             label: 'Prognose',
-                            data: data.predicted_prices,
+                            data: chartPrices,
                             borderColor: '#64c8ff',
                             backgroundColor: 'rgba(100, 200, 255, 0.1)',
                             borderWidth: 2,
                             fill: false,
-                            pointRadius: 2,
+                            pointRadius: pointRadii,
+                            pointBackgroundColor: pointBackgroundColors,
+                            pointBorderColor: pointBackgroundColors,
                             pointHoverRadius: 5,
                             tension: 0.3
                         },
                         {
                             label: 'Konfidenz (Tief)',
-                            data: data.confidence_low,
+                            data: chartConfidenceLow,
                             borderColor: 'rgba(248, 113, 113, 0.3)',
                             backgroundColor: 'rgba(248, 113, 113, 0.1)',
                             borderWidth: 1,

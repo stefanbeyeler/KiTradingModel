@@ -88,6 +88,34 @@ def get_sync_service():
     return service
 
 
+async def get_favorites_from_data_service() -> dict:
+    """
+    Fetch favorite symbols and their metadata from Data Service.
+
+    Returns:
+        Dict mapping symbol names to their metadata (category, is_favorite, etc.)
+    """
+    import httpx
+
+    data_service_url = getattr(settings, 'data_service_url', 'http://localhost:3001')
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{data_service_url}/api/v1/managed-symbols")
+            if response.status_code == 200:
+                symbols = response.json()
+                return {
+                    s["symbol"]: {
+                        "is_favorite": s.get("is_favorite", False),
+                        "category": s.get("category"),
+                        "display_name": s.get("display_name"),
+                    }
+                    for s in symbols
+                }
+    except Exception as e:
+        logger.warning(f"Failed to fetch favorites from Data Service: {e}")
+    return {}
+
+
 # ==================== System & Health ====================
 
 @system_router.get("/version")
@@ -1041,12 +1069,45 @@ async def list_forecast_models():
     """
     List all trained NHITS models.
 
-    Returns information about all models that have been trained.
+    Returns information about all models that have been trained,
+    including favorite status from Data Service.
     """
     try:
         forecast_service = get_forecast_service()
         models = forecast_service.list_models()
-        return models
+
+        # Fetch favorites from Data Service
+        favorites_data = await get_favorites_from_data_service()
+
+        # Enrich models with favorite and category info
+        enriched_models = []
+        for model in models:
+            # Extract base symbol (remove timeframe suffix like _M15, _H1, _D1)
+            base_symbol = model.symbol
+            for suffix in ["_M15", "_H1", "_D1"]:
+                if base_symbol.endswith(suffix):
+                    base_symbol = base_symbol[:-len(suffix)]
+                    break
+
+            # Get favorite info from Data Service
+            symbol_info = favorites_data.get(base_symbol, {})
+
+            # Create enriched model
+            enriched = ForecastModelInfo(
+                symbol=model.symbol,
+                model_exists=model.model_exists,
+                model_path=model.model_path,
+                last_trained=model.last_trained,
+                training_samples=model.training_samples,
+                horizon=model.horizon,
+                input_size=model.input_size,
+                metrics=model.metrics,
+                is_favorite=symbol_info.get("is_favorite", False),
+                category=symbol_info.get("category"),
+            )
+            enriched_models.append(enriched)
+
+        return enriched_models
     except Exception as e:
         logger.error(f"Failed to list models: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1837,6 +1898,157 @@ async def cleanup_expired_cache():
     except Exception as e:
         logger.error(f"Failed to cleanup expired cache via Data-Service: {e}")
         return {"error": str(e), "removed": 0}
+
+
+# ==================== Auto-Forecast for Favorites ====================
+# IMPORTANT: These routes use training_router because they must be registered
+# BEFORE the catch-all /forecast/{symbol} route in forecast_router
+
+@training_router.get("/forecast/favorites")
+async def get_favorite_models():
+    """
+    Get all NHITS models for favorite symbols.
+
+    Returns models filtered to only include those for symbols
+    marked as favorites in the Data Service.
+    """
+    try:
+        forecast_service = get_forecast_service()
+        models = forecast_service.list_models()
+
+        # Fetch favorites from Data Service
+        favorites_data = await get_favorites_from_data_service()
+        favorite_symbols = {s for s, info in favorites_data.items() if info.get("is_favorite")}
+
+        # Filter to favorite models only
+        favorite_models = []
+        for model in models:
+            if not model.model_exists:
+                continue
+
+            # Extract base symbol
+            base_symbol = model.symbol
+            for suffix in ["_M15", "_H1", "_D1"]:
+                if base_symbol.endswith(suffix):
+                    base_symbol = base_symbol[:-len(suffix)]
+                    break
+
+            if base_symbol in favorite_symbols:
+                symbol_info = favorites_data.get(base_symbol, {})
+                favorite_models.append({
+                    "symbol": model.symbol,
+                    "base_symbol": base_symbol,
+                    "timeframe": model.symbol.split("_")[-1] if "_" in model.symbol else "H1",
+                    "last_trained": model.last_trained.isoformat() if model.last_trained else None,
+                    "category": symbol_info.get("category"),
+                    "display_name": symbol_info.get("display_name"),
+                })
+
+        return {
+            "count": len(favorite_models),
+            "models": favorite_models,
+        }
+    except Exception as e:
+        logger.error(f"Failed to get favorite models: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@training_router.post("/forecast/favorites/run")
+async def run_forecasts_for_favorites(
+    timeframe: Optional[str] = None,
+    background: bool = False,
+    background_tasks: BackgroundTasks = None,
+):
+    """
+    Generate forecasts for all favorite symbols.
+
+    Parameters:
+    - timeframe: Specific timeframe (M15, H1, D1) or None for all
+    - background: Run in background (returns immediately)
+
+    This generates fresh forecasts for all symbols marked as
+    favorites that have trained NHITS models.
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+
+    if background and background_tasks:
+        background_tasks.add_task(
+            auto_forecast_service.run_forecasts_for_favorites,
+            timeframe
+        )
+        return {
+            "status": "started",
+            "message": f"Forecast generation started in background for timeframe: {timeframe or 'all'}",
+        }
+
+    results = await auto_forecast_service.run_forecasts_for_favorites(timeframe)
+    return results
+
+
+@training_router.get("/forecast/favorites/status")
+async def get_auto_forecast_status():
+    """
+    Get status of the auto-forecast service.
+
+    Returns information about the background forecast service
+    including last run time and latest forecast results.
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+    return auto_forecast_service.get_status()
+
+
+@training_router.get("/forecast/favorites/latest")
+async def get_latest_favorite_forecasts():
+    """
+    Get the latest forecast results for favorite symbols.
+
+    Returns the most recent forecast data for each favorite symbol
+    that has been generated by the auto-forecast service.
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+    forecasts = auto_forecast_service.get_latest_forecasts()
+    return {
+        "count": len(forecasts),
+        "forecasts": forecasts,
+    }
+
+
+@training_router.post("/forecast/favorites/start")
+async def start_auto_forecast_service(timeframe: str = "H1"):
+    """
+    Start the background auto-forecast service.
+
+    Parameters:
+    - timeframe: Timeframe for automatic forecasts (M15, H1, D1)
+
+    This starts a background loop that automatically generates
+    forecasts for favorite symbols at regular intervals based
+    on the timeframe (15min for M15, 1h for H1, 24h for D1).
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+
+    if timeframe.upper() not in ["M15", "H1", "D1"]:
+        raise HTTPException(status_code=400, detail="Invalid timeframe. Use M15, H1, or D1.")
+
+    await auto_forecast_service.start(timeframe.upper())
+    return {
+        "status": "started",
+        "timeframe": timeframe.upper(),
+        "message": f"Auto-forecast service started for {timeframe.upper()}",
+    }
+
+
+@training_router.post("/forecast/favorites/stop")
+async def stop_auto_forecast_service():
+    """
+    Stop the background auto-forecast service.
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+    await auto_forecast_service.stop()
+    return {
+        "status": "stopped",
+        "message": "Auto-forecast service stopped",
+    }
 
 
 # ==================== Symbol Management Endpoints ====================

@@ -2,7 +2,7 @@
 
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Tuple
 import ollama
 from loguru import logger
@@ -267,7 +267,7 @@ Antworte IMMER nur mit dem JSON-Objekt, ohne zusätzlichen Text davor oder danac
 
         forecast = market_data.nhits_forecast
         return NHITSForecastLog(
-            forecast_timestamp=datetime.utcnow(),
+            forecast_timestamp=datetime.now(timezone.utc),
             symbol=market_data.symbol,
             horizon_hours=24,  # Default horizon
             current_price=market_data.current_price,  # Get from market_data, not forecast

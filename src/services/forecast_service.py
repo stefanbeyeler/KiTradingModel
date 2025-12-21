@@ -10,7 +10,7 @@ import os
 import json
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
@@ -887,7 +887,7 @@ class ForecastService:
 
             result = ForecastResult(
                 symbol=symbol,
-                forecast_timestamp=datetime.utcnow(),
+                forecast_timestamp=datetime.now(timezone.utc),
                 horizon_hours=int(horizon_hours),
                 timeframe=timeframe.upper(),
 
@@ -1070,7 +1070,7 @@ class ForecastService:
 
         return ForecastResult(
             symbol=symbol,
-            forecast_timestamp=datetime.utcnow(),
+            forecast_timestamp=datetime.now(timezone.utc),
             horizon_hours=int(horizon_hours),
             timeframe=timeframe.upper(),
             predicted_prices=[],

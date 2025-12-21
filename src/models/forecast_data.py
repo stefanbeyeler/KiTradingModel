@@ -1,15 +1,20 @@
 """Pydantic models for NHITS forecasting data."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
+
+
+def _utc_now() -> datetime:
+    """Return current UTC time with timezone info."""
+    return datetime.now(timezone.utc)
 
 
 class ForecastResult(BaseModel):
     """NHITS forecast result with predictions and confidence intervals."""
 
     symbol: str
-    forecast_timestamp: datetime = Field(default_factory=datetime.utcnow)
+    forecast_timestamp: datetime = Field(default_factory=_utc_now)
     horizon_hours: int = Field(default=24, description="Forecast horizon in hours")
     timeframe: str = Field(
         default="H1",
@@ -181,6 +186,8 @@ class ForecastModelInfo(BaseModel):
     horizon: int = 24
     input_size: int = 168
     metrics: Dict[str, Any] = Field(default_factory=dict)
+    is_favorite: bool = Field(default=False, description="Whether this symbol is marked as favorite in Data Service")
+    category: Optional[str] = Field(default=None, description="Symbol category (forex, crypto, index, commodity)")
 
 
 class TrainingProgressTiming(BaseModel):
