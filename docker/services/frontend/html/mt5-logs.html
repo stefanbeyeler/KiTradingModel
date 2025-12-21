@@ -787,18 +787,18 @@
 
         // Load logs from EasyInsight API
         async function loadLogs() {
-            console.log('loadLogs() called');
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = 'Lade...';
+
             const limit = document.getElementById('filterLimit').value;
             const btnRefresh = document.getElementById('btnRefresh');
             btnRefresh.disabled = true;
             btnRefresh.textContent = 'Laden...';
 
             const url = `${EASYINSIGHT_API}/logs?limit=${limit}`;
-            console.log('Fetching:', url);
 
             try {
                 const response = await fetch(url);
-                console.log('Response status:', response.status);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -1180,15 +1180,6 @@
             setupModal();
             loadLogs();
         });
-
-        // Fallback if DOMContentLoaded already fired
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            console.log('MT5 Logs: Document already ready, calling loadLogs');
-            setTimeout(() => {
-                setupModal();
-                loadLogs();
-            }, 100);
-        }
     </script>
 </body>
 </html>
