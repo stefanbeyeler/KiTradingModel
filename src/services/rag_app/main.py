@@ -765,6 +765,69 @@ async def fetch_now(background_tasks: BackgroundTasks):
 # Document Management Endpoints
 # =====================================================
 
+@app.get("/api/v1/rag/documents", tags=["Documents"])
+async def list_documents(
+    symbol: Optional[str] = Query(None, description="Filter by symbol"),
+    document_type: Optional[str] = Query(None, description="Filter by document type"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of documents to return"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    sort_order: str = Query("desc", description="Sort order by date: 'asc' or 'desc'")
+):
+    """
+    List documents in the RAG database.
+
+    Returns documents with their metadata for browsing and filtering.
+    Sorted by creation date (newest first by default).
+    """
+    if not rag_service:
+        raise HTTPException(status_code=503, detail="RAG service not initialized")
+
+    try:
+        documents = []
+        for i, (doc, meta, doc_id) in enumerate(zip(
+            rag_service._documents,
+            rag_service._metadatas,
+            rag_service._ids
+        )):
+            # Apply filters
+            if symbol and meta.get("symbol") != symbol:
+                continue
+            if document_type and meta.get("document_type") != document_type:
+                continue
+
+            documents.append({
+                "id": doc_id,
+                "content": doc[:500] + "..." if len(doc) > 500 else doc,
+                "document_type": meta.get("document_type", "unknown"),
+                "symbol": meta.get("symbol"),
+                "created_at": meta.get("timestamp"),
+                "metadata": {k: v for k, v in meta.items() if k not in ["document_type", "symbol", "timestamp"]}
+            })
+
+        # Sort by created_at (timestamp)
+        def get_sort_key(d):
+            ts = d.get("created_at")
+            if ts is None:
+                return ""
+            return str(ts)
+
+        documents.sort(key=get_sort_key, reverse=(sort_order.lower() == "desc"))
+
+        # Apply pagination
+        total = len(documents)
+        documents = documents[offset:offset + limit]
+
+        return {
+            "documents": documents,
+            "total": total,
+            "limit": limit,
+            "offset": offset
+        }
+    except Exception as e:
+        logger.error(f"Error listing documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/v1/rag/documents", response_model=DocumentResponse, tags=["Documents"])
 async def add_document(request: DocumentRequest):
     """
