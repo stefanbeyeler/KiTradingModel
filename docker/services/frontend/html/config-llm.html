@@ -1048,11 +1048,23 @@
                     throw new Error(data.detail);
                 }
 
-                // Add response with timing info
+                // Add response with timing info and detected symbol
                 const response = data.response || data.analysis || data.answer || 'Keine Antwort erhalten.';
+                const symbolDetected = data.symbol_detected;
+                const ragUsed = data.rag_context_used;
+
+                // Build info badges
+                let infoBadges = '';
+                if (symbolDetected) {
+                    infoBadges += `<span style="background: rgba(100,200,255,0.2); color: #64c8ff; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">${symbolDetected}</span>`;
+                }
+                if (ragUsed) {
+                    infoBadges += `<span style="background: rgba(156,39,176,0.2); color: #ce93d8; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.3rem;">RAG</span>`;
+                }
+
                 messagesDiv.innerHTML += `
                     <div class="chat-message assistant">
-                        <div class="role">Assistent <span style="opacity: 0.5; font-size: 0.75rem;">(${totalTime}s)</span></div>
+                        <div class="role">Assistent <span style="opacity: 0.5; font-size: 0.75rem;">(${totalTime}s)</span>${infoBadges}</div>
                         <div class="content">${escapeHtml(response)}</div>
                     </div>
                 `;
