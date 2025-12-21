@@ -504,6 +504,99 @@
             to { transform: translateX(0); opacity: 1; }
         }
 
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-overlay.show {
+            display: flex;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            min-width: 400px;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .modal-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+        .modal-close:hover {
+            color: #fff;
+        }
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .modal-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .modal-row:last-child {
+            border-bottom: none;
+        }
+        .modal-label {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+        .modal-value {
+            font-weight: 500;
+            text-align: right;
+        }
+        .modal-value.up { color: #4ade80; }
+        .modal-value.down { color: #f87171; }
+        .modal-value.pending { color: #fbbf24; }
+
+        /* Clickable forecast cell */
+        .forecast-cell {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .forecast-cell:hover {
+            background: rgba(100, 200, 255, 0.1);
+        }
+
         /* Failed Models List */
         .failed-list {
             max-height: 300px;
@@ -1042,6 +1135,19 @@
 
     <div class="toast" id="toast"></div>
 
+    <!-- Forecast Details Modal -->
+    <div class="modal-overlay" id="forecast-modal" onclick="closeForecastModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="forecast-modal-title">Prognose Details</h3>
+                <button class="modal-close" onclick="closeForecastModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="forecast-modal-body">
+                <!-- Content will be filled dynamically -->
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = '/nhits/api/v1';
         let allModels = [];
@@ -1065,6 +1171,109 @@
             if (tabName === 'forecast') loadForecastSymbols();
             if (tabName === 'backup') loadBackupStatus();
         }
+
+        // Show forecast details modal
+        function showForecastModal(symbol, fullSymbol) {
+            const forecast = latestForecasts[fullSymbol] || latestForecasts[symbol];
+            if (!forecast) {
+                showToast('Keine Prognose-Details verfügbar');
+                return;
+            }
+
+            const modal = document.getElementById('forecast-modal');
+            const title = document.getElementById('forecast-modal-title');
+            const body = document.getElementById('forecast-modal-body');
+
+            // Format date
+            const fcDate = new Date(forecast.timestamp);
+            const dateStr = fcDate.toLocaleDateString('de-DE') + ' ' + fcDate.toLocaleTimeString('de-DE');
+
+            // Trend info
+            const trendIcon = forecast.trend === 'up' ? '↑' : (forecast.trend === 'down' ? '↓' : '-');
+            const trendText = forecast.trend === 'up' ? 'Steigend' : (forecast.trend === 'down' ? 'Fallend' : 'Neutral');
+            const trendClass = forecast.trend === 'up' ? 'up' : (forecast.trend === 'down' ? 'down' : '');
+
+            // Evaluation status
+            let evalStatus = '<span class="modal-value pending">⏳ Ausstehend</span>';
+            if (forecast.evaluated) {
+                if (forecast.direction_correct) {
+                    evalStatus = '<span class="modal-value up">✓ Korrekt</span>';
+                } else {
+                    evalStatus = '<span class="modal-value down">✗ Falsch</span>';
+                }
+            }
+
+            // Price formatting
+            const formatPrice = (price) => {
+                if (!price) return '-';
+                if (price < 1) return price.toFixed(5);
+                if (price < 100) return price.toFixed(4);
+                return price.toFixed(2);
+            };
+
+            // Calculate change
+            let changeStr = '-';
+            let changeClass = '';
+            if (forecast.current_price && forecast.predicted_price) {
+                const change = ((forecast.predicted_price - forecast.current_price) / forecast.current_price) * 100;
+                changeStr = (change >= 0 ? '+' : '') + change.toFixed(3) + '%';
+                changeClass = change >= 0 ? 'up' : 'down';
+            }
+
+            title.innerHTML = `<span style="color: ${trendClass === 'up' ? '#4ade80' : '#f87171'};">${trendIcon}</span> ${symbol}`;
+
+            body.innerHTML = `
+                <div class="modal-row">
+                    <span class="modal-label">Zeitpunkt</span>
+                    <span class="modal-value">${dateStr}</span>
+                </div>
+                <div class="modal-row">
+                    <span class="modal-label">Horizont</span>
+                    <span class="modal-value">${forecast.horizon || '-'}</span>
+                </div>
+                <div class="modal-row">
+                    <span class="modal-label">Aktueller Preis</span>
+                    <span class="modal-value">${formatPrice(forecast.current_price)}</span>
+                </div>
+                <div class="modal-row">
+                    <span class="modal-label">Prognostizierter Preis</span>
+                    <span class="modal-value ${trendClass}">${formatPrice(forecast.predicted_price)}</span>
+                </div>
+                <div class="modal-row">
+                    <span class="modal-label">Erwartete Änderung</span>
+                    <span class="modal-value ${changeClass}">${changeStr}</span>
+                </div>
+                <div class="modal-row">
+                    <span class="modal-label">Trend</span>
+                    <span class="modal-value ${trendClass}">${trendIcon} ${trendText}</span>
+                </div>
+                <div class="modal-row">
+                    <span class="modal-label">Evaluierung</span>
+                    ${evalStatus}
+                </div>
+                ${forecast.evaluated && forecast.error_pct !== null ? `
+                <div class="modal-row">
+                    <span class="modal-label">Fehler</span>
+                    <span class="modal-value ${Math.abs(forecast.error_pct) < 0.5 ? 'up' : 'down'}">${forecast.error_pct.toFixed(3)}%</span>
+                </div>
+                ` : ''}
+            `;
+
+            modal.classList.add('show');
+        }
+
+        // Close forecast modal
+        function closeForecastModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('forecast-modal').classList.remove('show');
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeForecastModal();
+            }
+        });
 
         // Check service health
         async function checkHealth() {
@@ -1338,8 +1547,10 @@
                 // Get latest forecast for this model
                 // Try full symbol first (e.g., "BTCUSD_H1"), then base symbol (e.g., "BTCUSD")
                 let forecastInfo = '-';
+                let forecastClickable = false;
                 let forecast = latestForecasts[model.fullSymbol] || latestForecasts[model.symbol];
                 if (forecast) {
+                    forecastClickable = true;
                     const fcDate = new Date(forecast.timestamp);
                     const dateStr = fcDate.toLocaleDateString('de-DE') + ' ' + fcDate.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
                     const trendIcon = forecast.trend === 'up' ? '↑' : (forecast.trend === 'down' ? '↓' : '-');
@@ -1356,12 +1567,17 @@
                 const favIcon = model.isFavorite ? '<span title="Favorit" style="color: #fbbf24;">&#9733;</span>' : '<span style="opacity: 0.3;">&#9734;</span>';
                 const rowStyle = model.isFavorite ? 'background: rgba(251, 191, 36, 0.05);' : '';
 
+                // Make forecast cell clickable if there's a forecast
+                const forecastCell = forecastClickable
+                    ? `<td class="forecast-cell" onclick="showForecastModal('${model.symbol}', '${model.fullSymbol}')" title="Klicken für Details">${forecastInfo}</td>`
+                    : `<td>${forecastInfo}</td>`;
+
                 html += `
                     <tr style="${rowStyle}">
                         <td>${favIcon}</td>
                         <td><strong>${model.symbol}</strong></td>
                         <td><span class="badge ${tfClass}">${model.timeframe}</span></td>
-                        <td>${forecastInfo}</td>
+                        ${forecastCell}
                         <td>${trainedDate}</td>
                         <td>${model.samples || '-'}</td>
                         <td>${lossStr}</td>
