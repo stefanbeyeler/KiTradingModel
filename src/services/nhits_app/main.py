@@ -79,6 +79,11 @@ async def startup_event():
     if settings.nhits_auto_retrain_days > 0:
         logger.info(f"Auto-retraining enabled: every {settings.nhits_auto_retrain_days} days")
 
+    # Start automatic model improvement service (evaluation + auto-retrain)
+    auto_eval_interval = int(os.getenv("AUTO_EVAL_INTERVAL_SECONDS", "300"))
+    await model_improvement_service.start(interval_seconds=auto_eval_interval)
+    logger.info(f"Auto-evaluation started (interval: {auto_eval_interval}s)")
+
     logger.info("NHITS Service started successfully")
 
 
@@ -90,6 +95,10 @@ async def shutdown_event():
     # Stop event-based training monitor if running
     if event_based_training_service._running:
         await event_based_training_service.stop()
+
+    # Stop model improvement service
+    if model_improvement_service._running:
+        await model_improvement_service.stop()
 
     logger.info("NHITS Service stopped")
 

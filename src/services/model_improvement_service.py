@@ -135,6 +135,8 @@ class ModelImprovementService:
     - Tracks model performance metrics
     - Triggers retraining when performance degrades
     - Implements adaptive learning rate and hyperparameters
+    - Automatic background evaluation of pending predictions
+    - Auto-retrain when performance thresholds are exceeded
     """
 
     def __init__(self):
@@ -156,10 +158,28 @@ class ModelImprovementService:
         self._running = False
         self._evaluation_task: Optional[asyncio.Task] = None
 
+        # Auto-evaluation settings
+        self._auto_evaluation_enabled = True
+        self._auto_evaluation_interval_seconds = 300  # 5 minutes
+        self._last_evaluation_time: Optional[datetime] = None
+        self._evaluation_in_progress = False
+
+        # Auto-retrain settings
+        self._auto_retrain_enabled = True
+        self._retrain_in_progress = False
+        self._last_retrain_time: Optional[datetime] = None
+        self._retrain_cooldown_hours = 4  # Minimum hours between retrains per symbol
+        self._retrain_history: Dict[str, datetime] = {}  # symbol -> last retrain time
+
+        # Statistics
+        self._total_auto_evaluations = 0
+        self._total_auto_retrains = 0
+        self._last_auto_retrain_symbols: List[str] = []
+
         # Load existing data
         self._load_data()
 
-        logger.info("ModelImprovementService initialized")
+        logger.info("ModelImprovementService initialized with auto-evaluation and auto-retrain")
 
     def _load_data(self):
         """Load existing feedback and metrics from disk."""
@@ -773,24 +793,302 @@ class ModelImprovementService:
         result.sort(key=lambda x: x.get("evaluated_at") or "", reverse=True)
         return result[:limit]
 
-    async def start_evaluation_loop(self, db_pool, interval_seconds: int = 300):
+    async def start_evaluation_loop(self, db_pool=None, interval_seconds: int = 300):
         """Start background evaluation loop."""
         if self._running:
             return
 
         self._running = True
+        self._auto_evaluation_interval_seconds = interval_seconds
         logger.info(f"Starting model evaluation loop (interval: {interval_seconds}s)")
 
         async def evaluation_loop():
             while self._running:
                 try:
-                    await self.evaluate_pending_predictions(db_pool)
+                    await self._run_auto_evaluation_cycle()
                 except Exception as e:
                     logger.error(f"Error in evaluation loop: {e}")
 
                 await asyncio.sleep(interval_seconds)
 
         self._evaluation_task = asyncio.create_task(evaluation_loop())
+
+    async def _run_auto_evaluation_cycle(self):
+        """
+        Run a single auto-evaluation cycle.
+
+        This evaluates pending predictions and triggers auto-retrain if needed.
+        """
+        if self._evaluation_in_progress:
+            logger.debug("Evaluation already in progress, skipping cycle")
+            return
+
+        self._evaluation_in_progress = True
+        try:
+            # Evaluate pending predictions via API (no DB required)
+            evaluated = await self.evaluate_pending_predictions_via_api()
+
+            if evaluated:
+                self._total_auto_evaluations += sum(evaluated.values())
+                self._last_evaluation_time = datetime.utcnow()
+                logger.info(f"Auto-evaluation completed: {evaluated}")
+
+                # Check if any symbols need retraining and trigger auto-retrain
+                if self._auto_retrain_enabled:
+                    await self._trigger_auto_retrain_if_needed()
+
+        except Exception as e:
+            logger.error(f"Error in auto-evaluation cycle: {e}")
+        finally:
+            self._evaluation_in_progress = False
+
+    async def _trigger_auto_retrain_if_needed(self):
+        """
+        Check if any symbols need retraining and trigger auto-retrain.
+        """
+        if self._retrain_in_progress:
+            logger.debug("Retrain already in progress, skipping")
+            return
+
+        symbols_to_retrain = self._get_symbols_eligible_for_retrain()
+
+        if not symbols_to_retrain:
+            return
+
+        self._retrain_in_progress = True
+        try:
+            logger.info(f"Auto-retrain triggered for symbols: {symbols_to_retrain}")
+            self._last_auto_retrain_symbols = symbols_to_retrain
+
+            # Import training service here to avoid circular imports
+            from .nhits_training_service import nhits_training_service
+
+            # Check if training is already in progress
+            status = nhits_training_service.get_status()
+            if status.get("training_in_progress"):
+                logger.info("Training already in progress, deferring auto-retrain")
+                return
+
+            # Retrain each symbol
+            retrained_count = 0
+            for symbol in symbols_to_retrain:
+                try:
+                    # Train all timeframes for the symbol
+                    for timeframe in ["M15", "H1", "D1"]:
+                        result = await nhits_training_service.train_symbol(
+                            symbol=symbol,
+                            force=True,
+                            timeframe=timeframe
+                        )
+
+                        if result.success:
+                            logger.info(
+                                f"Auto-retrain successful: {symbol}/{timeframe} "
+                                f"(samples={result.training_samples}, duration={result.training_duration_seconds:.1f}s)"
+                            )
+                        else:
+                            logger.warning(f"Auto-retrain failed: {symbol}/{timeframe} - {result.error_message}")
+
+                    # Update retrain history
+                    self._retrain_history[symbol] = datetime.utcnow()
+                    retrained_count += 1
+
+                    # Reset metrics after successful retrain
+                    if symbol in self.performance_metrics:
+                        self.performance_metrics[symbol].needs_retraining = False
+                        self.performance_metrics[symbol].retraining_reason = None
+
+                except Exception as e:
+                    logger.error(f"Error during auto-retrain for {symbol}: {e}")
+
+            if retrained_count > 0:
+                self._total_auto_retrains += retrained_count
+                self._last_retrain_time = datetime.utcnow()
+                self._save_data()
+                logger.info(f"Auto-retrain completed: {retrained_count} symbols retrained")
+
+        except Exception as e:
+            logger.error(f"Error in auto-retrain: {e}")
+        finally:
+            self._retrain_in_progress = False
+
+    def _get_symbols_eligible_for_retrain(self) -> List[str]:
+        """
+        Get list of symbols that need retraining and are not on cooldown.
+        """
+        now = datetime.utcnow()
+        eligible = []
+
+        for symbol, metrics in self.performance_metrics.items():
+            if not metrics.needs_retraining:
+                continue
+
+            # Check cooldown
+            last_retrain = self._retrain_history.get(symbol)
+            if last_retrain:
+                hours_since_retrain = (now - last_retrain).total_seconds() / 3600
+                if hours_since_retrain < self._retrain_cooldown_hours:
+                    logger.debug(
+                        f"Skipping {symbol} - retrained {hours_since_retrain:.1f}h ago "
+                        f"(cooldown: {self._retrain_cooldown_hours}h)"
+                    )
+                    continue
+
+            eligible.append(symbol)
+
+        return eligible
+
+    def set_auto_evaluation_enabled(self, enabled: bool):
+        """Enable or disable auto-evaluation."""
+        self._auto_evaluation_enabled = enabled
+        logger.info(f"Auto-evaluation {'enabled' if enabled else 'disabled'}")
+
+    def set_auto_retrain_enabled(self, enabled: bool):
+        """Enable or disable auto-retrain."""
+        self._auto_retrain_enabled = enabled
+        logger.info(f"Auto-retrain {'enabled' if enabled else 'disabled'}")
+
+    def set_retrain_cooldown_hours(self, hours: int):
+        """Set the cooldown period between retrains for the same symbol."""
+        self._retrain_cooldown_hours = max(1, hours)
+        logger.info(f"Retrain cooldown set to {self._retrain_cooldown_hours} hours")
+
+    def get_auto_status(self) -> Dict:
+        """Get status of automatic evaluation and retraining."""
+        pending_count = sum(len(v) for v in self.pending_feedback.values())
+        evaluated_count = sum(len(v) for v in self.evaluated_feedback.values())
+
+        # Count predictions ready for evaluation
+        now = datetime.utcnow()
+        ready_for_eval = 0
+        waiting_for_horizon = 0
+
+        for symbol, feedbacks in self.pending_feedback.items():
+            for fb in feedbacks:
+                target_time = self._parse_horizon_to_target_time(fb.timestamp, fb.horizon)
+                if now >= target_time + timedelta(minutes=30):
+                    ready_for_eval += 1
+                else:
+                    waiting_for_horizon += 1
+
+        return {
+            "auto_evaluation": {
+                "enabled": self._auto_evaluation_enabled,
+                "running": self._running,
+                "interval_seconds": self._auto_evaluation_interval_seconds,
+                "in_progress": self._evaluation_in_progress,
+                "last_run": self._last_evaluation_time.isoformat() if self._last_evaluation_time else None,
+                "total_evaluations": self._total_auto_evaluations,
+            },
+            "auto_retrain": {
+                "enabled": self._auto_retrain_enabled,
+                "in_progress": self._retrain_in_progress,
+                "last_run": self._last_retrain_time.isoformat() if self._last_retrain_time else None,
+                "total_retrains": self._total_auto_retrains,
+                "cooldown_hours": self._retrain_cooldown_hours,
+                "last_retrained_symbols": self._last_auto_retrain_symbols,
+            },
+            "predictions": {
+                "pending_count": pending_count,
+                "evaluated_count": evaluated_count,
+                "ready_for_evaluation": ready_for_eval,
+                "waiting_for_horizon": waiting_for_horizon,
+            },
+            "symbols_needing_retrain": self.get_symbols_needing_retraining(),
+            "symbols_eligible_for_retrain": self._get_symbols_eligible_for_retrain(),
+        }
+
+    async def trigger_manual_evaluation(self) -> Dict:
+        """
+        Manually trigger an evaluation cycle.
+
+        Returns evaluation results.
+        """
+        logger.info("Manual evaluation triggered")
+        evaluated = await self.evaluate_pending_predictions_via_api()
+
+        result = {
+            "success": True,
+            "evaluated": evaluated,
+            "total_evaluated": sum(evaluated.values()) if evaluated else 0,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        # Check for symbols needing retrain
+        symbols_need_retrain = self.get_symbols_needing_retraining()
+        if symbols_need_retrain:
+            result["symbols_needing_retrain"] = symbols_need_retrain
+
+        return result
+
+    async def trigger_manual_retrain(self, symbols: Optional[List[str]] = None) -> Dict:
+        """
+        Manually trigger retraining for specified symbols or all symbols needing it.
+
+        Args:
+            symbols: List of symbols to retrain. If None, retrain all symbols needing it.
+
+        Returns:
+            Retrain results.
+        """
+        if symbols is None:
+            symbols = self.get_symbols_needing_retraining()
+
+        if not symbols:
+            return {
+                "success": True,
+                "message": "No symbols need retraining",
+                "retrained": [],
+            }
+
+        logger.info(f"Manual retrain triggered for: {symbols}")
+
+        # Import training service
+        from .nhits_training_service import nhits_training_service
+
+        status = nhits_training_service.get_status()
+        if status.get("training_in_progress"):
+            return {
+                "success": False,
+                "message": "Training already in progress",
+                "retrained": [],
+            }
+
+        retrained = []
+        failed = []
+
+        for symbol in symbols:
+            try:
+                for timeframe in ["M15", "H1", "D1"]:
+                    result = await nhits_training_service.train_symbol(
+                        symbol=symbol,
+                        force=True,
+                        timeframe=timeframe
+                    )
+
+                    if result.success:
+                        retrained.append(f"{symbol}/{timeframe}")
+                    else:
+                        failed.append(f"{symbol}/{timeframe}: {result.error_message}")
+
+                # Reset metrics
+                if symbol in self.performance_metrics:
+                    self.performance_metrics[symbol].needs_retraining = False
+                    self.performance_metrics[symbol].retraining_reason = None
+
+                self._retrain_history[symbol] = datetime.utcnow()
+
+            except Exception as e:
+                failed.append(f"{symbol}: {str(e)}")
+
+        self._save_data()
+
+        return {
+            "success": len(retrained) > 0,
+            "retrained": retrained,
+            "failed": failed,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
 
     async def stop(self):
         """Stop the evaluation loop."""
@@ -803,6 +1101,23 @@ class ModelImprovementService:
                 pass
         self._save_data()
         logger.info("ModelImprovementService stopped")
+
+    async def start(self, interval_seconds: int = 300):
+        """
+        Start the automatic evaluation and retrain service.
+
+        This is the main entry point for the auto-improvement loop.
+        """
+        if self._running:
+            logger.warning("ModelImprovementService already running")
+            return
+
+        await self.start_evaluation_loop(interval_seconds=interval_seconds)
+        logger.info(
+            f"ModelImprovementService started "
+            f"(eval_interval={interval_seconds}s, "
+            f"auto_retrain={'enabled' if self._auto_retrain_enabled else 'disabled'})"
+        )
 
 
 # Singleton instance

@@ -382,6 +382,12 @@
             overflow-y: auto;
         }
 
+        /* Dynamic height for models table - uses available viewport height */
+        #tab-models .table-container {
+            max-height: calc(100vh - 280px);
+            min-height: 300px;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -823,15 +829,71 @@
 
         <!-- Performance Tab -->
         <div id="tab-performance" class="tab-content">
+            <!-- Auto-Evaluation Status Card -->
+            <div class="card" style="margin-bottom: 1rem;">
+                <div class="card-header">
+                    <h2 class="card-title">Auto-Evaluierung & Retrain</h2>
+                    <button class="btn btn-sm btn-primary" onclick="loadAutoStatus()">Aktualisieren</button>
+                </div>
+                <div id="auto-status-content">
+                    <div class="grid-2" style="margin-bottom: 1rem;">
+                        <!-- Auto-Evaluation Status -->
+                        <div style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                            <h4 style="margin: 0 0 0.5rem 0; opacity: 0.8;">Auto-Evaluierung</h4>
+                            <div id="auto-eval-status">
+                                <div style="opacity: 0.5;">Lade Status...</div>
+                            </div>
+                        </div>
+                        <!-- Auto-Retrain Status -->
+                        <div style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                            <h4 style="margin: 0 0 0.5rem 0; opacity: 0.8;">Auto-Retrain</h4>
+                            <div id="auto-retrain-status">
+                                <div style="opacity: 0.5;">Lade Status...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Prediction Stats -->
+                    <div class="stats-bar" id="prediction-stats" style="margin-bottom: 1rem;">
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-pending">-</div>
+                            <div class="stat-label">Ausstehend</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-ready">-</div>
+                            <div class="stat-label">Bereit zur Eval.</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-waiting">-</div>
+                            <div class="stat-label">Warten auf Horizont</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-evaluated">-</div>
+                            <div class="stat-label">Evaluiert</div>
+                        </div>
+                    </div>
+                    <!-- Control Buttons -->
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-sm" id="btn-toggle-auto-eval" onclick="toggleAutoEvaluation()">
+                            ⏸️ Auto-Eval pausieren
+                        </button>
+                        <button class="btn btn-sm" id="btn-toggle-auto-retrain" onclick="toggleAutoRetrain()">
+                            ⏸️ Auto-Retrain pausieren
+                        </button>
+                        <button class="btn btn-sm btn-success" id="btn-manual-eval" onclick="runManualEvaluation()">
+                            📊 Jetzt evaluieren
+                        </button>
+                        <button class="btn btn-sm btn-warning" id="btn-manual-retrain" onclick="runManualRetrain()">
+                            🔄 Schlechte Modelle retrainieren
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Table Card -->
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Modell Performance</h2>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn btn-sm btn-success" id="btn-evaluate" onclick="runManualEvaluation()">
-                            <span id="evaluate-icon">📊</span> Evaluierung starten
-                        </button>
-                        <button class="btn btn-sm btn-primary" onclick="loadPerformance()">Aktualisieren</button>
-                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="loadPerformance()">Aktualisieren</button>
                 </div>
                 <p style="opacity: 0.7; margin-bottom: 1rem;">
                     Übersicht der Prognosegenauigkeit basierend auf historischen Evaluierungen.
@@ -935,7 +997,10 @@
 
             // Load data for the selected tab
             if (tabName === 'models') loadModels();
-            if (tabName === 'performance') loadPerformance();
+            if (tabName === 'performance') {
+                loadPerformance();
+                loadAutoStatus();
+            }
             if (tabName === 'forecast') loadForecastSymbols();
             if (tabName === 'backup') loadBackupStatus();
         }
@@ -1348,16 +1413,193 @@
             }
         }
 
-        // Manual evaluation
+        // ========== AUTO-EVALUATION FUNCTIONS ==========
+
+        let autoEvalEnabled = true;
+        let autoRetrainEnabled = true;
+
+        // Load auto-evaluation status
+        async function loadAutoStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/auto-status`);
+                const data = await res.json();
+
+                // Update auto-eval status
+                const autoEvalDiv = document.getElementById('auto-eval-status');
+                const evalStatus = data.auto_evaluation;
+                autoEvalEnabled = evalStatus.enabled;
+
+                const runningBadge = evalStatus.running ?
+                    '<span class="badge badge-success">Aktiv</span>' :
+                    '<span class="badge badge-failed">Inaktiv</span>';
+                const enabledBadge = evalStatus.enabled ?
+                    '<span style="color: #4ade80;">Aktiviert</span>' :
+                    '<span style="color: #f87171;">Pausiert</span>';
+
+                let lastRunText = 'Noch nie';
+                if (evalStatus.last_run) {
+                    const d = new Date(evalStatus.last_run);
+                    lastRunText = d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                }
+
+                autoEvalDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        ${runningBadge} ${enabledBadge}
+                    </div>
+                    <div style="font-size: 0.85rem; opacity: 0.8;">
+                        <div>Intervall: ${evalStatus.interval_seconds}s</div>
+                        <div>Letzte Ausführung: ${lastRunText}</div>
+                        <div>Gesamt evaluiert: ${evalStatus.total_evaluations}</div>
+                    </div>
+                `;
+
+                // Update toggle button
+                const toggleEvalBtn = document.getElementById('btn-toggle-auto-eval');
+                if (autoEvalEnabled) {
+                    toggleEvalBtn.innerHTML = '⏸️ Auto-Eval pausieren';
+                    toggleEvalBtn.classList.remove('btn-success');
+                } else {
+                    toggleEvalBtn.innerHTML = '▶️ Auto-Eval starten';
+                    toggleEvalBtn.classList.add('btn-success');
+                }
+
+                // Update auto-retrain status
+                const autoRetrainDiv = document.getElementById('auto-retrain-status');
+                const retrainStatus = data.auto_retrain;
+                autoRetrainEnabled = retrainStatus.enabled;
+
+                const retrainEnabledBadge = retrainStatus.enabled ?
+                    '<span style="color: #4ade80;">Aktiviert</span>' :
+                    '<span style="color: #f87171;">Pausiert</span>';
+                const retrainInProgress = retrainStatus.in_progress ?
+                    '<span class="badge badge-warning">Training läuft...</span>' : '';
+
+                let lastRetrainText = 'Noch nie';
+                if (retrainStatus.last_run) {
+                    const d = new Date(retrainStatus.last_run);
+                    lastRetrainText = d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                }
+
+                autoRetrainDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        ${retrainEnabledBadge} ${retrainInProgress}
+                    </div>
+                    <div style="font-size: 0.85rem; opacity: 0.8;">
+                        <div>Cooldown: ${retrainStatus.cooldown_hours}h</div>
+                        <div>Letztes Retrain: ${lastRetrainText}</div>
+                        <div>Gesamt retrained: ${retrainStatus.total_retrains}</div>
+                    </div>
+                `;
+
+                // Show symbols needing retrain
+                if (data.symbols_needing_retrain && data.symbols_needing_retrain.length > 0) {
+                    autoRetrainDiv.innerHTML += `
+                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(255,193,7,0.1); border-radius: 4px; font-size: 0.8rem;">
+                            <strong>Retrain benötigt:</strong> ${data.symbols_needing_retrain.join(', ')}
+                        </div>
+                    `;
+                }
+
+                // Update toggle button
+                const toggleRetrainBtn = document.getElementById('btn-toggle-auto-retrain');
+                if (autoRetrainEnabled) {
+                    toggleRetrainBtn.innerHTML = '⏸️ Auto-Retrain pausieren';
+                    toggleRetrainBtn.classList.remove('btn-success');
+                } else {
+                    toggleRetrainBtn.innerHTML = '▶️ Auto-Retrain starten';
+                    toggleRetrainBtn.classList.add('btn-success');
+                }
+
+                // Update prediction stats
+                const predictions = data.predictions;
+                document.getElementById('stat-pending').textContent = predictions.pending_count;
+                document.getElementById('stat-ready').textContent = predictions.ready_for_evaluation;
+                document.getElementById('stat-waiting').textContent = predictions.waiting_for_horizon;
+                document.getElementById('stat-evaluated').textContent = predictions.evaluated_count;
+
+            } catch (err) {
+                console.error('Failed to load auto status:', err);
+                document.getElementById('auto-eval-status').innerHTML = '<div style="color: #f87171;">Fehler beim Laden</div>';
+                document.getElementById('auto-retrain-status').innerHTML = '<div style="color: #f87171;">Fehler beim Laden</div>';
+            }
+        }
+
+        // Toggle auto-evaluation
+        async function toggleAutoEvaluation() {
+            const newState = !autoEvalEnabled;
+            try {
+                const res = await fetch(`${API_BASE}/forecast/auto-evaluation/toggle?enabled=${newState}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message);
+                    await loadAutoStatus();
+                }
+            } catch (err) {
+                console.error('Failed to toggle auto-evaluation:', err);
+                showToast('Fehler: ' + err.message);
+            }
+        }
+
+        // Toggle auto-retrain
+        async function toggleAutoRetrain() {
+            const newState = !autoRetrainEnabled;
+            try {
+                const res = await fetch(`${API_BASE}/forecast/auto-retrain/toggle?enabled=${newState}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message);
+                    await loadAutoStatus();
+                }
+            } catch (err) {
+                console.error('Failed to toggle auto-retrain:', err);
+                showToast('Fehler: ' + err.message);
+            }
+        }
+
+        // Manual retrain for poor performers
+        async function runManualRetrain() {
+            const btn = document.getElementById('btn-manual-retrain');
+            btn.disabled = true;
+            btn.textContent = '⏳ Retrain läuft...';
+
+            try {
+                const res = await fetch(`${API_BASE}/forecast/retrain-poor-performers`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    if (data.symbols && data.symbols.length > 0) {
+                        showToast(`Retrain gestartet für: ${data.symbols.join(', ')}`);
+                    } else {
+                        showToast(data.message || 'Keine Modelle benötigen Retraining');
+                    }
+                } else {
+                    showToast('Fehler: ' + (data.detail || 'Unbekannter Fehler'));
+                }
+            } catch (err) {
+                console.error('Manual retrain failed:', err);
+                showToast('Fehler: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Schlechte Modelle retrainieren';
+                await loadAutoStatus();
+            }
+        }
+
+        // Manual evaluation (updated)
         async function runManualEvaluation() {
-            const btn = document.getElementById('btn-evaluate');
-            const icon = document.getElementById('evaluate-icon');
+            const btn = document.getElementById('btn-manual-eval');
             const statusDiv = document.getElementById('evaluation-status');
             const statusMsg = document.getElementById('evaluation-message');
 
             // Disable button and show loading state
             btn.disabled = true;
-            icon.textContent = '⏳';
+            btn.textContent = '⏳ Evaluierung...';
             statusDiv.style.display = 'block';
             statusMsg.textContent = 'Evaluierung läuft... Prognosen werden mit tatsächlichen Preisen verglichen.';
             statusDiv.style.background = 'rgba(100, 200, 255, 0.1)';
@@ -1373,7 +1615,7 @@
 
                 if (res.ok && data.success) {
                     // Success
-                    icon.textContent = '✓';
+                    btn.textContent = '✓ Fertig';
                     statusDiv.style.background = 'rgba(76, 175, 80, 0.1)';
                     statusDiv.style.borderColor = 'rgba(76, 175, 80, 0.2)';
 
@@ -1397,19 +1639,20 @@
                             </span>`;
                     }
 
-                    // Reload performance data
+                    // Reload performance data and auto status
                     await loadPerformance();
+                    await loadAutoStatus();
                     showToast(data.message);
                 } else {
                     // Error response
-                    icon.textContent = '✗';
+                    btn.textContent = '✗ Fehler';
                     statusDiv.style.background = 'rgba(244, 67, 54, 0.1)';
                     statusDiv.style.borderColor = 'rgba(244, 67, 54, 0.2)';
                     statusMsg.textContent = `Fehler: ${data.detail || 'Unbekannter Fehler'}`;
                 }
             } catch (err) {
                 console.error('Evaluation failed:', err);
-                icon.textContent = '✗';
+                btn.textContent = '✗ Fehler';
                 statusDiv.style.background = 'rgba(244, 67, 54, 0.1)';
                 statusDiv.style.borderColor = 'rgba(244, 67, 54, 0.2)';
                 statusMsg.textContent = `Fehler: ${err.message}`;
@@ -1417,7 +1660,7 @@
                 // Re-enable button after short delay
                 setTimeout(() => {
                     btn.disabled = false;
-                    icon.textContent = '📊';
+                    btn.textContent = '📊 Jetzt evaluieren';
                 }, 2000);
 
                 // Hide status after 10 seconds

@@ -3,7 +3,7 @@
 
 import json
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 import torch
 from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.responses import PlainTextResponse
@@ -1686,6 +1686,169 @@ async def retrain_poor_performers():
         }
     except Exception as e:
         logger.error(f"Failed to retrain poor performers: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Auto-Evaluation & Auto-Retrain ====================
+
+@training_router.get("/forecast/auto-status")
+async def get_auto_evaluation_status():
+    """
+    Get status of automatic evaluation and retraining system.
+
+    Returns:
+    - Auto-evaluation status (enabled, running, last run, total evaluations)
+    - Auto-retrain status (enabled, in progress, last run, total retrains)
+    - Pending and evaluated prediction counts
+    - Symbols needing retraining
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+        return model_improvement_service.get_auto_status()
+    except Exception as e:
+        logger.error(f"Failed to get auto-evaluation status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@training_router.post("/forecast/auto-evaluation/toggle")
+async def toggle_auto_evaluation(enabled: bool = True):
+    """
+    Enable or disable automatic evaluation.
+
+    When enabled, predictions are automatically evaluated against actual prices
+    when their horizon expires.
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+        model_improvement_service.set_auto_evaluation_enabled(enabled)
+        return {
+            "success": True,
+            "auto_evaluation_enabled": enabled,
+            "message": f"Auto-evaluation {'enabled' if enabled else 'disabled'}"
+        }
+    except Exception as e:
+        logger.error(f"Failed to toggle auto-evaluation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@training_router.post("/forecast/auto-retrain/toggle")
+async def toggle_auto_retrain(enabled: bool = True):
+    """
+    Enable or disable automatic retraining.
+
+    When enabled, models are automatically retrained when their performance
+    falls below configured thresholds.
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+        model_improvement_service.set_auto_retrain_enabled(enabled)
+        return {
+            "success": True,
+            "auto_retrain_enabled": enabled,
+            "message": f"Auto-retrain {'enabled' if enabled else 'disabled'}"
+        }
+    except Exception as e:
+        logger.error(f"Failed to toggle auto-retrain: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@training_router.post("/forecast/auto-retrain/cooldown")
+async def set_retrain_cooldown(hours: int = 4):
+    """
+    Set the cooldown period between automatic retrains for the same symbol.
+
+    This prevents excessive retraining of the same model.
+
+    Args:
+        hours: Minimum hours between retrains (default: 4, minimum: 1)
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+        model_improvement_service.set_retrain_cooldown_hours(hours)
+        return {
+            "success": True,
+            "cooldown_hours": model_improvement_service._retrain_cooldown_hours,
+            "message": f"Retrain cooldown set to {hours} hours"
+        }
+    except Exception as e:
+        logger.error(f"Failed to set retrain cooldown: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@training_router.post("/forecast/auto-evaluation/start")
+async def start_auto_evaluation(interval_seconds: int = 300):
+    """
+    Start the automatic evaluation service.
+
+    This starts a background task that periodically evaluates pending predictions
+    and triggers auto-retrain when performance thresholds are exceeded.
+
+    Args:
+        interval_seconds: Interval between evaluation cycles (default: 300 = 5 minutes)
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+
+        if model_improvement_service._running:
+            return {
+                "success": True,
+                "message": "Auto-evaluation already running",
+                "already_running": True
+            }
+
+        await model_improvement_service.start(interval_seconds=interval_seconds)
+        return {
+            "success": True,
+            "message": f"Auto-evaluation started with {interval_seconds}s interval",
+            "interval_seconds": interval_seconds
+        }
+    except Exception as e:
+        logger.error(f"Failed to start auto-evaluation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@training_router.post("/forecast/auto-evaluation/stop")
+async def stop_auto_evaluation():
+    """
+    Stop the automatic evaluation service.
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+
+        if not model_improvement_service._running:
+            return {
+                "success": True,
+                "message": "Auto-evaluation not running",
+                "already_stopped": True
+            }
+
+        await model_improvement_service.stop()
+        return {
+            "success": True,
+            "message": "Auto-evaluation stopped"
+        }
+    except Exception as e:
+        logger.error(f"Failed to stop auto-evaluation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@training_router.post("/forecast/manual-retrain")
+async def trigger_manual_retrain(symbols: Optional[List[str]] = None):
+    """
+    Manually trigger retraining for specified symbols.
+
+    If no symbols are specified, retrains all symbols that need it based on
+    performance metrics.
+
+    Args:
+        symbols: Optional list of symbols to retrain. If None, uses performance-based selection.
+    """
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+        result = await model_improvement_service.trigger_manual_retrain(symbols=symbols)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to trigger manual retrain: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
