@@ -4234,15 +4234,18 @@
 
         // Fetch all sources
         async function fetchAllExternalSources() {
-            const symbol = document.getElementById('external-symbol')?.value || null;
+            const symbol = document.getElementById('external-symbol')?.value || '';
+            const url = symbol
+                ? `${API_BASE}/external-sources/fetch-all?symbol=${encodeURIComponent(symbol)}`
+                : `${API_BASE}/external-sources/fetch-all`;
 
             showExternalLoading(true);
 
             try {
-                const response = await fetch(`${API_BASE}/external-sources/fetch-all`, {
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ symbol: symbol })
+                    body: JSON.stringify(null)
                 });
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -4269,10 +4272,10 @@
             showExternalLoading(true);
 
             try {
-                const response = await fetch(`${API_BASE}/external-sources/trading-context/${symbol}`, {
+                const response = await fetch(`${API_BASE}/external-sources/trading-context/${encodeURIComponent(symbol)}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
+                    body: JSON.stringify(null)
                 });
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);

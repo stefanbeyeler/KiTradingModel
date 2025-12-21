@@ -142,7 +142,9 @@
       "Bash(# Prüfe ob M1 close Werte existieren \\(für echte OHLC-Berechnung\\) curl -s \"\"http://localhost:3001/api/v1/symbols\"\")",
       "Bash(git checkout:*)",
       "Bash(# Check if easyinsight proxy is configured docker exec trading-frontend cat /etc/nginx/nginx.conf)",
-      "Bash(# Verzeichnisse prüfen find /home/sbeyeler/KiTradingModel -type d ! -perm -755)"
+      "Bash(# Verzeichnisse prüfen find /home/sbeyeler/KiTradingModel -type d ! -perm -755)",
+      "Bash(# Check available external-sources endpoints curl -s \"\"http://10.1.19.101:3001/docs\"\")",
+      "Bash(# List all API endpoints curl -s \"\"http://10.1.19.101:3001/openapi.json\"\" | python3 -c \"\"import sys,json; d=json.load\\(sys.stdin\\); print\\(''\\\\n''.join\\(sorted\\(d.get\\(''paths'',{}\\).keys\\(\\)\\)\\)\\)\"\")"
     ],
     "deny": [],
     "ask": []
