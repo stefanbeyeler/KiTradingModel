@@ -506,7 +506,87 @@
             opacity: 0.8;
             margin-top: 0.3rem;
         }
+
+        /* Forecast Form */
+        .forecast-form .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .forecast-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .forecast-form .filter-select {
+            width: 100%;
+            padding: 0.8rem 1rem;
+        }
+
+        /* Forecast Summary */
+        .forecast-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .summary-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .summary-item .value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .summary-item .value.up {
+            color: #4ade80;
+        }
+
+        .summary-item .value.down {
+            color: #f87171;
+        }
+
+        .summary-item .label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-top: 0.3rem;
+        }
+
+        .trend-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .trend-indicator.bullish {
+            border-left: 4px solid #4ade80;
+        }
+
+        .trend-indicator.bearish {
+            border-left: 4px solid #f87171;
+        }
+
+        .trend-indicator .arrow {
+            font-size: 1.5rem;
+        }
+
+        .trend-indicator .text {
+            font-size: 1rem;
+            font-weight: 500;
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header>
@@ -523,6 +603,7 @@
             <button class="tab-btn active" onclick="switchTab('training')">Training</button>
             <button class="tab-btn" onclick="switchTab('models')">Modelle</button>
             <button class="tab-btn" onclick="switchTab('performance')">Performance</button>
+            <button class="tab-btn" onclick="switchTab('forecast')">Prognose</button>
         </div>
 
         <!-- Training Tab -->
@@ -689,6 +770,79 @@
                 </div>
             </div>
         </div>
+
+        <!-- Forecast Tab -->
+        <div id="tab-forecast" class="tab-content">
+            <div class="grid-2">
+                <!-- Forecast Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Prognose abfragen</h2>
+                    </div>
+                    <div class="forecast-form">
+                        <div class="form-group">
+                            <label for="forecast-symbol">Symbol</label>
+                            <select class="filter-select" id="forecast-symbol" style="width: 100%;">
+                                <option value="">Symbol wählen...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="forecast-timeframe">Timeframe</label>
+                            <select class="filter-select" id="forecast-timeframe" style="width: 100%;">
+                                <option value="M15">M15 (15 Min) - 2h Horizont</option>
+                                <option value="H1" selected>H1 (1 Stunde) - 24h Horizont</option>
+                                <option value="D1">D1 (Täglich) - 7 Tage Horizont</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <button class="btn btn-success" onclick="runForecast()" id="btn-forecast" style="width: 100%; padding: 1rem;">
+                                Prognose erstellen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Forecast Summary -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Zusammenfassung</h2>
+                    </div>
+                    <div id="forecast-summary" style="opacity: 0.5; text-align: center; padding: 2rem;">
+                        Wähle ein Symbol und starte die Prognose
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forecast Results -->
+            <div class="card" id="forecast-results-card" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">Prognoseergebnisse</h2>
+                    <span id="forecast-info" style="opacity: 0.7;"></span>
+                </div>
+
+                <!-- Chart Container -->
+                <div id="forecast-chart" style="height: 300px; margin-bottom: 1.5rem; position: relative;">
+                    <canvas id="forecastCanvas"></canvas>
+                </div>
+
+                <!-- Forecast Table -->
+                <div class="table-container" style="max-height: 300px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Zeitpunkt</th>
+                                <th>Prognose</th>
+                                <th>Konfidenz (Tief)</th>
+                                <th>Konfidenz (Hoch)</th>
+                                <th>Spanne</th>
+                            </tr>
+                        </thead>
+                        <tbody id="forecast-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -709,6 +863,7 @@
             // Load data for the selected tab
             if (tabName === 'models') loadModels();
             if (tabName === 'performance') loadPerformance();
+            if (tabName === 'forecast') loadForecastSymbols();
         }
 
         // Check service health
@@ -1074,6 +1229,267 @@
 
         // Auto-refresh every 10 seconds
         setInterval(refreshStatus, 10000);
+
+        // ========== FORECAST TAB ==========
+        let forecastChart = null;
+
+        // Load available symbols for forecast
+        async function loadForecastSymbols() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/models`);
+                const data = await res.json();
+
+                const select = document.getElementById('forecast-symbol');
+                const symbols = new Set();
+
+                // Extract unique base symbols
+                for (const model of data) {
+                    if (!model.model_exists) continue;
+                    let baseSymbol = model.symbol;
+                    if (baseSymbol.endsWith('_M15')) baseSymbol = baseSymbol.replace('_M15', '');
+                    else if (baseSymbol.endsWith('_H1')) baseSymbol = baseSymbol.replace('_H1', '');
+                    else if (baseSymbol.endsWith('_D1')) baseSymbol = baseSymbol.replace('_D1', '');
+                    symbols.add(baseSymbol);
+                }
+
+                // Sort and populate dropdown
+                const sortedSymbols = Array.from(symbols).sort();
+                select.innerHTML = '<option value="">Symbol wählen...</option>';
+                for (const sym of sortedSymbols) {
+                    select.innerHTML += `<option value="${sym}">${sym}</option>`;
+                }
+            } catch (err) {
+                console.error('Failed to load forecast symbols:', err);
+            }
+        }
+
+        // Run forecast
+        async function runForecast() {
+            const symbol = document.getElementById('forecast-symbol').value;
+            const timeframe = document.getElementById('forecast-timeframe').value;
+
+            if (!symbol) {
+                showToast('Bitte wähle ein Symbol');
+                return;
+            }
+
+            const btn = document.getElementById('btn-forecast');
+            btn.disabled = true;
+            btn.textContent = 'Prognose wird erstellt...';
+            showToast(`Erstelle Prognose für ${symbol}/${timeframe}...`);
+
+            try {
+                const res = await fetch(`${API_BASE}/forecast/${symbol}?timeframe=${timeframe}`);
+                const data = await res.json();
+
+                if (data.error) {
+                    showToast(`Fehler: ${data.error}`);
+                    return;
+                }
+
+                displayForecastResults(data);
+                showToast(`Prognose für ${symbol} erstellt`);
+
+            } catch (err) {
+                console.error('Forecast error:', err);
+                showToast('Fehler bei der Prognose');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Prognose erstellen';
+            }
+        }
+
+        // Display forecast results
+        function displayForecastResults(data) {
+            // Show results card
+            document.getElementById('forecast-results-card').style.display = 'block';
+
+            // Update info
+            const timestamp = new Date(data.forecast_timestamp);
+            document.getElementById('forecast-info').textContent =
+                `${data.symbol} | ${data.timeframe} | ${timestamp.toLocaleString('de-DE')}`;
+
+            // Calculate summary
+            const prices = data.predicted_prices;
+            const firstPrice = prices[0];
+            const lastPrice = prices[prices.length - 1];
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const change = lastPrice - firstPrice;
+            const changePercent = (change / firstPrice) * 100;
+            const isBullish = change >= 0;
+
+            // Update summary
+            const summaryEl = document.getElementById('forecast-summary');
+            summaryEl.innerHTML = `
+                <div class="forecast-summary-grid">
+                    <div class="summary-item">
+                        <div class="value">${formatPrice(firstPrice, data.symbol)}</div>
+                        <div class="label">Startpreis</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="value ${isBullish ? 'up' : 'down'}">${formatPrice(lastPrice, data.symbol)}</div>
+                        <div class="label">Endpreis (${data.horizon_hours}h)</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="value">${formatPrice(minPrice, data.symbol)}</div>
+                        <div class="label">Minimum</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="value">${formatPrice(maxPrice, data.symbol)}</div>
+                        <div class="label">Maximum</div>
+                    </div>
+                </div>
+                <div class="trend-indicator ${isBullish ? 'bullish' : 'bearish'}">
+                    <span class="arrow">${isBullish ? '↑' : '↓'}</span>
+                    <span class="text">${isBullish ? 'Bullish' : 'Bearish'}: ${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(3)}%</span>
+                </div>
+            `;
+            summaryEl.style.opacity = '1';
+
+            // Generate time labels
+            const labels = [];
+            const baseTime = new Date(data.forecast_timestamp);
+            const intervalMinutes = data.timeframe === 'M15' ? 15 : (data.timeframe === 'D1' ? 1440 : 60);
+
+            for (let i = 0; i < prices.length; i++) {
+                const time = new Date(baseTime.getTime() + (i + 1) * intervalMinutes * 60000);
+                if (data.timeframe === 'D1') {
+                    labels.push(time.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }));
+                } else {
+                    labels.push(time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+                }
+            }
+
+            // Update chart
+            updateForecastChart(labels, data);
+
+            // Update table
+            const tbody = document.getElementById('forecast-tbody');
+            let html = '';
+            for (let i = 0; i < prices.length; i++) {
+                const low = data.confidence_low[i];
+                const high = data.confidence_high[i];
+                const spread = high - low;
+
+                html += `
+                    <tr>
+                        <td>${labels[i]}</td>
+                        <td><strong>${formatPrice(prices[i], data.symbol)}</strong></td>
+                        <td style="color: #f87171;">${formatPrice(low, data.symbol)}</td>
+                        <td style="color: #4ade80;">${formatPrice(high, data.symbol)}</td>
+                        <td style="opacity: 0.7;">${formatPrice(spread, data.symbol)}</td>
+                    </tr>
+                `;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // Format price based on symbol
+        function formatPrice(price, symbol) {
+            if (symbol.includes('JPY')) {
+                return price.toFixed(3);
+            } else if (symbol.includes('BTC') || symbol.includes('ETH')) {
+                return price.toFixed(2);
+            } else if (symbol.includes('XAU')) {
+                return price.toFixed(2);
+            } else {
+                return price.toFixed(5);
+            }
+        }
+
+        // Update forecast chart
+        function updateForecastChart(labels, data) {
+            const ctx = document.getElementById('forecastCanvas').getContext('2d');
+
+            if (forecastChart) {
+                forecastChart.destroy();
+            }
+
+            forecastChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Konfidenz (Hoch)',
+                            data: data.confidence_high,
+                            borderColor: 'rgba(74, 222, 128, 0.3)',
+                            backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                            borderWidth: 1,
+                            fill: false,
+                            pointRadius: 0,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Prognose',
+                            data: data.predicted_prices,
+                            borderColor: '#64c8ff',
+                            backgroundColor: 'rgba(100, 200, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 2,
+                            pointHoverRadius: 5,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Konfidenz (Tief)',
+                            data: data.confidence_low,
+                            borderColor: 'rgba(248, 113, 113, 0.3)',
+                            backgroundColor: 'rgba(248, 113, 113, 0.1)',
+                            borderWidth: 1,
+                            fill: '-1',
+                            pointRadius: 0,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#a0a0a0',
+                                font: { size: 11 }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#e8e8e8',
+                            borderColor: 'rgba(100, 200, 255, 0.3)',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#a0a0a0', font: { size: 10 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: {
+                                color: '#a0a0a0',
+                                font: { size: 10 },
+                                callback: function(value) {
+                                    return formatPrice(value, data.symbol);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load forecast symbols on page load
+        loadForecastSymbols();
     </script>
 </body>
 </html>
