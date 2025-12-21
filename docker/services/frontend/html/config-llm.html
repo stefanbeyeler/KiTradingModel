@@ -698,6 +698,7 @@
                 </div>
                 <p style="opacity: 0.7; margin-bottom: 1rem;">
                     Stellen Sie Fragen zu Marktanalysen, Trading-Strategien oder Symbol-Informationen.
+                    <br><span style="color: #ffb74d; font-size: 0.85rem;">Hinweis: Das 70B-Modell kann 30-60 Sekunden fur eine Antwort benotigen.</span>
                 </p>
                 <div class="chat-container">
                     <div class="chat-messages" id="chat-messages">
@@ -1012,18 +1013,24 @@
             btnSend.disabled = true;
 
             try {
-                const res = await fetch(`${API_BASE}/analyze`, {
+                // Use the new /llm/chat endpoint which doesn't require a symbol
+                const params = new URLSearchParams({
+                    query: message,
+                    use_rag: 'true'
+                });
+                const res = await fetch(`${API_BASE}/llm/chat?${params}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        query: message,
-                        use_rag: true
-                    })
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 const data = await res.json();
 
                 // Remove loading indicator
                 document.getElementById(loadingId)?.remove();
+
+                // Handle error responses
+                if (data.detail) {
+                    throw new Error(data.detail);
+                }
 
                 // Add response
                 const response = data.response || data.analysis || data.answer || 'Keine Antwort erhalten.';

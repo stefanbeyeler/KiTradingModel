@@ -364,6 +364,89 @@ async def pull_llm_model():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@llm_router.post("/llm/chat")
+async def chat_with_llm(query: str, symbol: Optional[str] = None, use_rag: bool = True):
+    """
+    Simple chat endpoint for general trading questions.
+
+    This endpoint allows free-form conversations without requiring a symbol.
+    If a symbol is mentioned in the query, it will be extracted automatically.
+
+    Args:
+        query: The user's question or message
+        symbol: Optional trading symbol for context
+        use_rag: Whether to use RAG for enhanced context (default: True)
+
+    Returns:
+        LLM response with optional RAG context
+    """
+    try:
+        # Try to extract symbol from query if not provided
+        detected_symbol = symbol
+        if not detected_symbol:
+            # Known trading symbols - more specific patterns to avoid false positives
+            known_crypto = ['BTCUSD', 'ETHUSD', 'SOLUSD', 'ADAUSD', 'XRPUSD', 'BNBUSD', 'DOTUSD', 'LTCUSD',
+                           'BTC', 'ETH', 'SOL', 'ADA', 'XRP', 'BNB', 'DOT', 'LTC', 'DOGE', 'SHIB']
+            known_forex = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD',
+                          'EURGBP', 'EURJPY', 'GBPJPY']
+            known_commodities = ['XAUUSD', 'XAGUSD', 'GOLD', 'SILVER']
+            known_indices = ['US30', 'US500', 'NAS100', 'GER40', 'UK100']
+
+            all_known = known_crypto + known_forex + known_commodities + known_indices
+
+            # Find known symbols in the query (case insensitive)
+            query_upper = query.upper()
+            for sym in all_known:
+                if sym in query_upper:
+                    detected_symbol = sym
+                    # Normalize crypto symbols
+                    if detected_symbol in ['BTC', 'ETH', 'SOL', 'ADA', 'XRP', 'BNB', 'DOT', 'LTC', 'DOGE', 'SHIB']:
+                        detected_symbol = detected_symbol + 'USD'
+                    break
+
+        # Get RAG context if enabled
+        rag_context = []
+        if use_rag:
+            try:
+                rag_svc = get_rag_service()
+                # Query RAG with the user's question
+                rag_results = await rag_svc.query(query, n_results=3, symbol=detected_symbol)
+                rag_context = [doc.get("content", "") for doc in rag_results.get("results", [])]
+            except Exception as e:
+                logger.warning(f"RAG query failed: {e}")
+
+        # Build prompt with context
+        context_text = ""
+        if rag_context:
+            context_text = "\n\nRelevanter Kontext:\n" + "\n---\n".join(rag_context)
+
+        symbol_text = f" für {detected_symbol}" if detected_symbol else ""
+
+        system_prompt = f"""Du bist ein erfahrener Trading-Assistent. Beantworte Fragen zu Märkten,
+Trading-Strategien und Finanzanalysen auf Deutsch. Sei präzise und hilfreich.
+{context_text}"""
+
+        user_prompt = query
+
+        # Call LLM
+        response = await llm_service.generate(
+            prompt=user_prompt,
+            system=system_prompt,
+            max_tokens=1000
+        )
+
+        return {
+            "response": response,
+            "symbol_detected": detected_symbol,
+            "rag_context_used": len(rag_context) > 0,
+            "model": llm_service.model
+        }
+
+    except Exception as e:
+        logger.error(f"Chat failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== TimescaleDB Sync Endpoints ====================
 
 @sync_router.get("/sync/status")

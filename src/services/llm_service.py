@@ -91,6 +91,46 @@ class LLMService:
             logger.error(f"Error pulling model: {e}")
             return False
 
+    async def generate(
+        self,
+        prompt: str,
+        system: Optional[str] = None,
+        max_tokens: int = 1000
+    ) -> str:
+        """
+        Generate a response from the LLM.
+
+        Args:
+            prompt: The user prompt
+            system: Optional system prompt
+            max_tokens: Maximum tokens in response
+
+        Returns:
+            The generated text response
+        """
+        try:
+            client = self._get_client()
+
+            messages = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+
+            # Add max_tokens to options
+            options = {**self._options, "num_predict": max_tokens}
+
+            response = client.chat(
+                model=self.model,
+                messages=messages,
+                options=options
+            )
+
+            return response["message"]["content"]
+
+        except Exception as e:
+            logger.error(f"LLM generate error: {e}")
+            raise
+
     async def generate_analysis(
         self,
         market_data: MarketAnalysis,
