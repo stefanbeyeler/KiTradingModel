@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 
 from src.config import settings
 from src.version import VERSION
-from src.api.routes import forecast_router, training_router, system_router
+from src.api.routes import forecast_router, training_router, system_router, backup_router
 from src.services.nhits_training_service import nhits_training_service
 from src.services.event_based_training_service import event_based_training_service
 from src.services.model_improvement_service import model_improvement_service
@@ -65,6 +65,7 @@ app.add_middleware(
 app.include_router(training_router, prefix="/api/v1", tags=["NHITS Training"])
 app.include_router(forecast_router, prefix="/api/v1", tags=["NHITS Forecast"])
 app.include_router(system_router, prefix="/api/v1", tags=["System & Monitoring"])
+app.include_router(backup_router, prefix="/api/v1", tags=["Backup & Restore"])
 
 
 @app.on_event("startup")

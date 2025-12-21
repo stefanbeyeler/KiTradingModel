@@ -63,6 +63,7 @@ config_router = APIRouter()  # Configuration & Settings
 patterns_router = APIRouter()  # Candlestick Pattern Detection
 yfinance_router = APIRouter()  # Yahoo Finance API
 external_sources_router = APIRouter()  # External Data Sources (Economic, Sentiment, etc.)
+backup_router = APIRouter()  # Backup & Restore
 
 # Service instances
 analysis_service = AnalysisService()
@@ -5117,6 +5118,393 @@ async def fetch_trading_context(
     return context
 
 
+# ==================== Backup & Restore ====================
+
+@backup_router.get("/backup/status")
+async def get_backup_status():
+    """Get current status of backupable data (models and predictions)."""
+    from pathlib import Path
+    import os
+
+    try:
+        # Model info
+        from ..services.forecast_service import forecast_service
+        model_path = forecast_service.model_path
+        models = list(model_path.glob("*_model.pt"))
+        metadata_files = list(model_path.glob("*_metadata.json"))
+
+        model_size_bytes = sum(f.stat().st_size for f in models if f.exists())
+        metadata_size_bytes = sum(f.stat().st_size for f in metadata_files if f.exists())
+
+        # Prediction info
+        from ..services.model_improvement_service import model_improvement_service
+        pending_count = sum(len(v) for v in model_improvement_service.pending_feedback.values())
+        evaluated_count = sum(len(v) for v in model_improvement_service.evaluated_feedback.values())
+        metrics_count = len(model_improvement_service.performance_metrics)
+
+        return {
+            "models": {
+                "count": len(models),
+                "metadata_count": len(metadata_files),
+                "size_mb": round((model_size_bytes + metadata_size_bytes) / (1024 * 1024), 2),
+                "path": str(model_path),
+            },
+            "predictions": {
+                "pending_count": pending_count,
+                "evaluated_count": evaluated_count,
+                "symbols_with_metrics": metrics_count,
+            },
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    except Exception as e:
+        logger.error(f"Backup status failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@backup_router.get("/backup/models/download")
+async def download_models_backup():
+    """Download a backup of all NHITS models and metadata as ZIP file."""
+    from pathlib import Path
+    import tempfile
+    import zipfile
+    from fastapi.responses import FileResponse
+
+    try:
+        from ..services.forecast_service import forecast_service
+        model_path = forecast_service.model_path
+
+        models = list(model_path.glob("*_model.pt"))
+        metadata_files = list(model_path.glob("*_metadata.json"))
+
+        if not models:
+            raise HTTPException(status_code=404, detail="Keine Modelle zum Backup vorhanden")
+
+        # Create temporary zip file
+        filename = f"nhits_models_backup_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
+        tmp_path = Path(tempfile.gettempdir()) / filename
+
+        with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for model_file in models:
+                zf.write(model_file, model_file.name)
+            for meta_file in metadata_files:
+                zf.write(meta_file, meta_file.name)
+
+            # Add manifest
+            manifest = {
+                "created_at": datetime.utcnow().isoformat(),
+                "models": [m.name for m in models],
+                "metadata": [m.name for m in metadata_files],
+            }
+            zf.writestr("manifest.json", json.dumps(manifest, indent=2))
+
+        return FileResponse(
+            path=str(tmp_path),
+            filename=filename,
+            media_type="application/zip",
+            background=None  # File will be cleaned up after response
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Models backup download failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@backup_router.post("/backup/models")
+async def create_models_backup_info():
+    """Get information about available models for backup (use /backup/models/download for actual download)."""
+    from pathlib import Path
+
+    try:
+        from ..services.forecast_service import forecast_service
+        model_path = forecast_service.model_path
+
+        models = list(model_path.glob("*_model.pt"))
+        metadata_files = list(model_path.glob("*_metadata.json"))
+
+        if not models:
+            return {
+                "success": False,
+                "message": "Keine Modelle zum Backup vorhanden",
+                "model_count": 0,
+            }
+
+        model_size_bytes = sum(f.stat().st_size for f in models if f.exists())
+        metadata_size_bytes = sum(f.stat().st_size for f in metadata_files if f.exists())
+
+        return {
+            "success": True,
+            "message": f"{len(models)} Modelle bereit zum Download",
+            "model_count": len(models),
+            "metadata_count": len(metadata_files),
+            "size_mb": round((model_size_bytes + metadata_size_bytes) / (1024 * 1024), 2),
+            "download_url": "/api/v1/backup/models/download",
+        }
+    except Exception as e:
+        logger.error(f"Models backup info failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@backup_router.post("/backup/predictions")
+async def create_predictions_backup():
+    """Create a backup of all prediction data (pending and evaluated)."""
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+
+        # Convert dataclass objects to dicts
+        pending_data = {}
+        for symbol, feedbacks in model_improvement_service.pending_feedback.items():
+            pending_data[symbol] = [
+                {
+                    "symbol": fb.symbol,
+                    "timestamp": fb.timestamp.isoformat() if fb.timestamp else None,
+                    "horizon": fb.horizon,
+                    "current_price": fb.current_price,
+                    "predicted_price": fb.predicted_price,
+                    "actual_price": fb.actual_price,
+                    "prediction_error_pct": fb.prediction_error_pct,
+                    "direction_correct": fb.direction_correct,
+                    "evaluated_at": fb.evaluated_at.isoformat() if fb.evaluated_at else None,
+                }
+                for fb in feedbacks
+            ]
+
+        evaluated_data = {}
+        for symbol, feedbacks in model_improvement_service.evaluated_feedback.items():
+            evaluated_data[symbol] = [
+                {
+                    "symbol": fb.symbol,
+                    "timestamp": fb.timestamp.isoformat() if fb.timestamp else None,
+                    "horizon": fb.horizon,
+                    "current_price": fb.current_price,
+                    "predicted_price": fb.predicted_price,
+                    "actual_price": fb.actual_price,
+                    "prediction_error_pct": fb.prediction_error_pct,
+                    "direction_correct": fb.direction_correct,
+                    "evaluated_at": fb.evaluated_at.isoformat() if fb.evaluated_at else None,
+                }
+                for fb in feedbacks
+            ]
+
+        metrics_data = {}
+        for symbol, metrics in model_improvement_service.performance_metrics.items():
+            metrics_data[symbol] = {
+                "symbol": metrics.symbol,
+                "total_predictions": metrics.total_predictions,
+                "evaluated_predictions": metrics.evaluated_predictions,
+                "avg_error_pct": metrics.avg_error_pct,
+                "direction_accuracy": metrics.direction_accuracy,
+                "last_updated": metrics.last_updated.isoformat() if metrics.last_updated else None,
+                "metrics_1h": metrics.metrics_1h,
+                "metrics_4h": metrics.metrics_4h,
+                "metrics_24h": metrics.metrics_24h,
+                "needs_retraining": metrics.needs_retraining,
+                "retraining_reason": metrics.retraining_reason,
+            }
+
+        backup_data = {
+            "type": "predictions",
+            "created_at": datetime.utcnow().isoformat(),
+            "pending_feedback": pending_data,
+            "evaluated_feedback": evaluated_data,
+            "performance_metrics": metrics_data,
+        }
+
+        pending_count = sum(len(v) for v in pending_data.values())
+        evaluated_count = sum(len(v) for v in evaluated_data.values())
+
+        return {
+            "success": True,
+            "message": f"Prognose-Daten gesichert: {pending_count} ausstehend, {evaluated_count} evaluiert",
+            "pending_count": pending_count,
+            "evaluated_count": evaluated_count,
+            "metrics_count": len(metrics_data),
+            "backup_data": backup_data,
+            "filename": f"nhits_predictions_backup_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json",
+        }
+    except Exception as e:
+        logger.error(f"Predictions backup failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@backup_router.post("/restore/models")
+async def restore_models_backup(file: UploadFile = File(...)):
+    """Restore NHITS models from a backup zip file."""
+    from pathlib import Path
+    import tempfile
+    import zipfile
+
+    try:
+        from ..services.forecast_service import forecast_service
+        model_path = forecast_service.model_path
+
+        # Read uploaded file
+        content = await file.read()
+
+        # Save to temp file and extract
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        restored_models = 0
+        restored_metadata = 0
+
+        with zipfile.ZipFile(tmp_path, "r") as zf:
+            for name in zf.namelist():
+                if name == "manifest.json":
+                    continue
+
+                # Extract to model path
+                target_path = model_path / name
+                with zf.open(name) as src, open(target_path, "wb") as dst:
+                    dst.write(src.read())
+
+                if name.endswith("_model.pt"):
+                    restored_models += 1
+                elif name.endswith("_metadata.json"):
+                    restored_metadata += 1
+
+        Path(tmp_path).unlink()
+
+        return {
+            "success": True,
+            "message": f"Backup wiederhergestellt: {restored_models} Modelle, {restored_metadata} Metadaten",
+            "restored_models": restored_models,
+            "restored_metadata": restored_metadata,
+        }
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="Ungültige ZIP-Datei")
+    except Exception as e:
+        logger.error(f"Models restore failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@backup_router.post("/restore/predictions")
+async def restore_predictions_backup(file: UploadFile = File(...)):
+    """Restore prediction data from a backup JSON file."""
+    try:
+        from ..services.model_improvement_service import (
+            model_improvement_service,
+            PredictionFeedback,
+            ModelPerformanceMetrics,
+        )
+
+        # Read and parse JSON
+        content = await file.read()
+        backup_data = json.loads(content.decode("utf-8"))
+
+        if backup_data.get("type") != "predictions":
+            raise HTTPException(status_code=400, detail="Ungültiges Backup-Format (erwartet: predictions)")
+
+        # Restore pending feedback
+        restored_pending = 0
+        for symbol, feedbacks in backup_data.get("pending_feedback", {}).items():
+            if symbol not in model_improvement_service.pending_feedback:
+                model_improvement_service.pending_feedback[symbol] = []
+
+            for fb_data in feedbacks:
+                fb = PredictionFeedback(
+                    symbol=fb_data["symbol"],
+                    timestamp=datetime.fromisoformat(fb_data["timestamp"]) if fb_data.get("timestamp") else datetime.utcnow(),
+                    horizon=fb_data["horizon"],
+                    current_price=fb_data["current_price"],
+                    predicted_price=fb_data["predicted_price"],
+                    actual_price=fb_data.get("actual_price"),
+                    prediction_error_pct=fb_data.get("prediction_error_pct"),
+                    direction_correct=fb_data.get("direction_correct"),
+                    evaluated_at=datetime.fromisoformat(fb_data["evaluated_at"]) if fb_data.get("evaluated_at") else None,
+                )
+                model_improvement_service.pending_feedback[symbol].append(fb)
+                restored_pending += 1
+
+        # Restore evaluated feedback
+        restored_evaluated = 0
+        for symbol, feedbacks in backup_data.get("evaluated_feedback", {}).items():
+            if symbol not in model_improvement_service.evaluated_feedback:
+                model_improvement_service.evaluated_feedback[symbol] = []
+
+            for fb_data in feedbacks:
+                fb = PredictionFeedback(
+                    symbol=fb_data["symbol"],
+                    timestamp=datetime.fromisoformat(fb_data["timestamp"]) if fb_data.get("timestamp") else datetime.utcnow(),
+                    horizon=fb_data["horizon"],
+                    current_price=fb_data["current_price"],
+                    predicted_price=fb_data["predicted_price"],
+                    actual_price=fb_data.get("actual_price"),
+                    prediction_error_pct=fb_data.get("prediction_error_pct"),
+                    direction_correct=fb_data.get("direction_correct"),
+                    evaluated_at=datetime.fromisoformat(fb_data["evaluated_at"]) if fb_data.get("evaluated_at") else None,
+                )
+                model_improvement_service.evaluated_feedback[symbol].append(fb)
+                restored_evaluated += 1
+
+        # Restore performance metrics
+        restored_metrics = 0
+        for symbol, metrics_data in backup_data.get("performance_metrics", {}).items():
+            metrics = ModelPerformanceMetrics(
+                symbol=metrics_data["symbol"],
+                total_predictions=metrics_data.get("total_predictions", 0),
+                evaluated_predictions=metrics_data.get("evaluated_predictions", 0),
+                avg_error_pct=metrics_data.get("avg_error_pct", 0.0),
+                direction_accuracy=metrics_data.get("direction_accuracy", 0.0),
+                last_updated=datetime.fromisoformat(metrics_data["last_updated"]) if metrics_data.get("last_updated") else None,
+                needs_retraining=metrics_data.get("needs_retraining", False),
+                retraining_reason=metrics_data.get("retraining_reason"),
+            )
+            if metrics_data.get("metrics_1h"):
+                metrics.metrics_1h = metrics_data["metrics_1h"]
+            if metrics_data.get("metrics_4h"):
+                metrics.metrics_4h = metrics_data["metrics_4h"]
+            if metrics_data.get("metrics_24h"):
+                metrics.metrics_24h = metrics_data["metrics_24h"]
+
+            model_improvement_service.performance_metrics[symbol] = metrics
+            restored_metrics += 1
+
+        # Save to persistent storage
+        model_improvement_service._save_data()
+
+        return {
+            "success": True,
+            "message": f"Prognose-Backup wiederhergestellt",
+            "restored_pending": restored_pending,
+            "restored_evaluated": restored_evaluated,
+            "restored_metrics": restored_metrics,
+        }
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Ungültige JSON-Datei")
+    except Exception as e:
+        logger.error(f"Predictions restore failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@backup_router.delete("/backup/predictions/clear")
+async def clear_predictions():
+    """Clear all prediction data (pending, evaluated, and metrics)."""
+    try:
+        from ..services.model_improvement_service import model_improvement_service
+
+        pending_count = sum(len(v) for v in model_improvement_service.pending_feedback.values())
+        evaluated_count = sum(len(v) for v in model_improvement_service.evaluated_feedback.values())
+        metrics_count = len(model_improvement_service.performance_metrics)
+
+        model_improvement_service.pending_feedback.clear()
+        model_improvement_service.evaluated_feedback.clear()
+        model_improvement_service.performance_metrics.clear()
+        model_improvement_service._save_data()
+
+        return {
+            "success": True,
+            "message": "Alle Prognose-Daten gelöscht",
+            "cleared_pending": pending_count,
+            "cleared_evaluated": evaluated_count,
+            "cleared_metrics": metrics_count,
+        }
+    except Exception as e:
+        logger.error(f"Clear predictions failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== Router Export ====================
 
 def get_all_routers():
@@ -5182,5 +5570,9 @@ def get_all_routers():
         (external_sources_router, "/api/v1", ["🌐 External Data Sources"], {
             "name": "External Sources",
             "description": "External data sources - economic calendar, sentiment, on-chain, orderbook, macro, regulatory updates"
+        }),
+        (backup_router, "/api/v1", ["💾 Backup & Restore"], {
+            "name": "Backup",
+            "description": "Backup and restore NHITS models and prediction data"
         }),
     ]

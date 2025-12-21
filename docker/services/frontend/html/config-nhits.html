@@ -604,6 +604,7 @@
             <button class="tab-btn" onclick="switchTab('models')">Modelle</button>
             <button class="tab-btn" onclick="switchTab('forecast')">Prognose</button>
             <button class="tab-btn" onclick="switchTab('performance')">Performance</button>
+            <button class="tab-btn" onclick="switchTab('backup')">Backup / Restore</button>
         </div>
 
         <!-- Training Tab -->
@@ -859,6 +860,62 @@
                 </div>
             </div>
         </div>
+
+        <!-- Backup Tab -->
+        <div id="tab-backup" class="tab-content">
+            <div class="grid-2">
+                <!-- Status Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Backup Status</h2>
+                        <button class="btn btn-sm btn-primary" onclick="loadBackupStatus()">Aktualisieren</button>
+                    </div>
+                    <div id="backup-status-content">
+                        <div style="opacity: 0.5; text-align: center; padding: 2rem;">Lade Status...</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Schnellaktionen</h2>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="btn btn-success" onclick="backupModels()" id="btn-backup-models">
+                            💾 Modelle sichern (ZIP)
+                        </button>
+                        <button class="btn btn-success" onclick="backupPredictions()" id="btn-backup-predictions">
+                            💾 Prognosen sichern (JSON)
+                        </button>
+                        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 1rem 0;"></div>
+                        <button class="btn btn-primary" onclick="document.getElementById('restore-models-file').click()">
+                            📥 Modelle wiederherstellen
+                        </button>
+                        <input type="file" id="restore-models-file" accept=".zip" style="display: none;" onchange="restoreModels(this)">
+                        <button class="btn btn-primary" onclick="document.getElementById('restore-predictions-file').click()">
+                            📥 Prognosen wiederherstellen
+                        </button>
+                        <input type="file" id="restore-predictions-file" accept=".json" style="display: none;" onchange="restorePredictions(this)">
+                        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 1rem 0;"></div>
+                        <button class="btn btn-danger" onclick="clearPredictions()" id="btn-clear-predictions">
+                            🗑️ Prognose-Daten löschen
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup Result -->
+            <div class="card" id="backup-result-card" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title" id="backup-result-title">Backup Ergebnis</h2>
+                    <button class="btn btn-sm btn-success" id="backup-download-btn" onclick="downloadBackup()" style="display: none;">
+                        ⬇️ Herunterladen
+                    </button>
+                </div>
+                <div id="backup-result-content">
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -880,6 +937,7 @@
             if (tabName === 'models') loadModels();
             if (tabName === 'performance') loadPerformance();
             if (tabName === 'forecast') loadForecastSymbols();
+            if (tabName === 'backup') loadBackupStatus();
         }
 
         // Check service health
@@ -1700,6 +1758,289 @@
 
         // Load forecast symbols on page load
         loadForecastSymbols();
+
+        // ========== BACKUP TAB ==========
+        let currentBackupData = null;
+        let currentBackupFilename = null;
+        let currentBackupType = null;
+
+        // Load backup status
+        async function loadBackupStatus() {
+            const content = document.getElementById('backup-status-content');
+            try {
+                const res = await fetch(`${API_BASE}/backup/status`);
+                const data = await res.json();
+
+                content.innerHTML = `
+                    <div class="stats-bar" style="margin-bottom: 1rem;">
+                        <div class="stat-item">
+                            <div class="stat-value">${data.models.count}</div>
+                            <div class="stat-label">Modelle</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.models.size_mb} MB</div>
+                            <div class="stat-label">Modell-Größe</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.predictions.pending_count}</div>
+                            <div class="stat-label">Ausstehende Prognosen</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.predictions.evaluated_count}</div>
+                            <div class="stat-label">Evaluierte Prognosen</div>
+                        </div>
+                    </div>
+                    <div style="opacity: 0.7; font-size: 0.85rem;">
+                        <p><strong>Modell-Pfad:</strong> ${data.models.path}</p>
+                        <p><strong>Symbole mit Metriken:</strong> ${data.predictions.symbols_with_metrics}</p>
+                        <p><strong>Letzte Aktualisierung:</strong> ${new Date(data.timestamp).toLocaleString('de-DE')}</p>
+                    </div>
+                `;
+            } catch (err) {
+                console.error('Failed to load backup status:', err);
+                content.innerHTML = '<div style="color: #e57373;">Fehler beim Laden des Status</div>';
+            }
+        }
+
+        // Backup models - direct download
+        async function backupModels() {
+            const btn = document.getElementById('btn-backup-models');
+            btn.disabled = true;
+            btn.textContent = '⏳ Prüfe Modelle...';
+
+            try {
+                // First check if models are available
+                const res = await fetch(`${API_BASE}/backup/models`, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success) {
+                    showBackupResult(
+                        'Modell-Backup bereit',
+                        `<p>✅ <strong>${data.model_count} Modelle</strong> und <strong>${data.metadata_count} Metadaten</strong> bereit</p>
+                         <p>Geschätzte Größe: <strong>${data.size_mb} MB</strong></p>
+                         <p style="opacity: 0.7;">Der Download wird gestartet...</p>`,
+                        false
+                    );
+
+                    // Trigger direct download
+                    showToast('Download wird gestartet...');
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = `${API_BASE}/backup/models/download`;
+                    downloadLink.download = `nhits_models_backup.zip`;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+
+                    showToast(data.message);
+                } else {
+                    showBackupResult('Backup fehlgeschlagen', `<p style="color: #e57373;">${data.message}</p>`, false);
+                }
+            } catch (err) {
+                console.error('Backup failed:', err);
+                showToast('Backup fehlgeschlagen: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 Modelle sichern (ZIP)';
+            }
+        }
+
+        // Backup predictions
+        async function backupPredictions() {
+            const btn = document.getElementById('btn-backup-predictions');
+            btn.disabled = true;
+            btn.textContent = '⏳ Erstelle Backup...';
+            showToast('Erstelle Prognose-Backup...');
+
+            try {
+                const res = await fetch(`${API_BASE}/backup/predictions`, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success) {
+                    currentBackupData = JSON.stringify(data.backup_data, null, 2);
+                    currentBackupFilename = data.filename;
+                    currentBackupType = 'predictions';
+
+                    showBackupResult(
+                        'Prognose-Backup erstellt',
+                        `<p>✅ Prognose-Daten gesichert:</p>
+                         <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                            <li><strong>${data.pending_count}</strong> ausstehende Prognosen</li>
+                            <li><strong>${data.evaluated_count}</strong> evaluierte Prognosen</li>
+                            <li><strong>${data.metrics_count}</strong> Symbol-Metriken</li>
+                         </ul>
+                         <p style="opacity: 0.7;">Dateiname: ${data.filename}</p>`,
+                        true
+                    );
+                    showToast(data.message);
+                } else {
+                    showBackupResult('Backup fehlgeschlagen', `<p style="color: #e57373;">${data.message}</p>`, false);
+                }
+            } catch (err) {
+                console.error('Backup failed:', err);
+                showToast('Backup fehlgeschlagen: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 Prognosen sichern (JSON)';
+            }
+        }
+
+        // Show backup result
+        function showBackupResult(title, content, showDownload) {
+            document.getElementById('backup-result-card').style.display = 'block';
+            document.getElementById('backup-result-title').textContent = title;
+            document.getElementById('backup-result-content').innerHTML = content;
+            document.getElementById('backup-download-btn').style.display = showDownload ? 'inline-flex' : 'none';
+        }
+
+        // Download backup
+        function downloadBackup() {
+            if (!currentBackupData || !currentBackupFilename) return;
+
+            let blob;
+            if (currentBackupType === 'models') {
+                // Decode base64 and create blob
+                const byteCharacters = atob(currentBackupData);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                blob = new Blob([byteArray], { type: 'application/zip' });
+            } else {
+                blob = new Blob([currentBackupData], { type: 'application/json' });
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentBackupFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast('Download gestartet: ' + currentBackupFilename);
+        }
+
+        // Restore models
+        async function restoreModels(input) {
+            if (!input.files || input.files.length === 0) return;
+
+            const file = input.files[0];
+            showToast('Stelle Modelle wieder her...');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const res = await fetch(`${API_BASE}/restore/models`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showBackupResult(
+                        'Wiederherstellung erfolgreich',
+                        `<p>✅ Backup wiederhergestellt:</p>
+                         <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                            <li><strong>${data.restored_models}</strong> Modelle</li>
+                            <li><strong>${data.restored_metadata}</strong> Metadaten</li>
+                         </ul>`,
+                        false
+                    );
+                    showToast(data.message);
+                    loadBackupStatus();
+                } else {
+                    showToast('Wiederherstellung fehlgeschlagen: ' + (data.detail || 'Unbekannter Fehler'));
+                }
+            } catch (err) {
+                console.error('Restore failed:', err);
+                showToast('Wiederherstellung fehlgeschlagen: ' + err.message);
+            }
+
+            input.value = '';
+        }
+
+        // Restore predictions
+        async function restorePredictions(input) {
+            if (!input.files || input.files.length === 0) return;
+
+            const file = input.files[0];
+            showToast('Stelle Prognosen wieder her...');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const res = await fetch(`${API_BASE}/restore/predictions`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showBackupResult(
+                        'Wiederherstellung erfolgreich',
+                        `<p>✅ Prognose-Backup wiederhergestellt:</p>
+                         <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                            <li><strong>${data.restored_pending}</strong> ausstehende Prognosen</li>
+                            <li><strong>${data.restored_evaluated}</strong> evaluierte Prognosen</li>
+                            <li><strong>${data.restored_metrics}</strong> Metriken</li>
+                         </ul>`,
+                        false
+                    );
+                    showToast(data.message);
+                    loadBackupStatus();
+                } else {
+                    showToast('Wiederherstellung fehlgeschlagen: ' + (data.detail || 'Unbekannter Fehler'));
+                }
+            } catch (err) {
+                console.error('Restore failed:', err);
+                showToast('Wiederherstellung fehlgeschlagen: ' + err.message);
+            }
+
+            input.value = '';
+        }
+
+        // Clear predictions
+        async function clearPredictions() {
+            if (!confirm('Alle Prognose-Daten löschen? Diese Aktion kann nicht rückgängig gemacht werden!')) {
+                return;
+            }
+
+            const btn = document.getElementById('btn-clear-predictions');
+            btn.disabled = true;
+            btn.textContent = '⏳ Lösche...';
+
+            try {
+                const res = await fetch(`${API_BASE}/backup/predictions/clear`, { method: 'DELETE' });
+                const data = await res.json();
+
+                if (data.success) {
+                    showBackupResult(
+                        'Daten gelöscht',
+                        `<p>✅ Alle Prognose-Daten wurden gelöscht:</p>
+                         <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                            <li><strong>${data.cleared_pending}</strong> ausstehende Prognosen</li>
+                            <li><strong>${data.cleared_evaluated}</strong> evaluierte Prognosen</li>
+                            <li><strong>${data.cleared_metrics}</strong> Metriken</li>
+                         </ul>`,
+                        false
+                    );
+                    showToast(data.message);
+                    loadBackupStatus();
+                } else {
+                    showToast('Löschen fehlgeschlagen');
+                }
+            } catch (err) {
+                console.error('Clear failed:', err);
+                showToast('Löschen fehlgeschlagen: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🗑️ Prognose-Daten löschen';
+            }
+        }
     </script>
 </body>
 </html>
