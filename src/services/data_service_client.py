@@ -222,12 +222,18 @@ class DataServiceClient:
         min_priority: str = "low"
     ) -> dict:
         """Fetch data from all or selected external sources."""
-        json_data = {
-            "symbol": symbol,
-            "source_types": source_types,
-            "min_priority": min_priority,
-        }
-        return await self._post("/external-sources/fetch-all", json_data)
+        # Build URL with query parameters
+        endpoint = "/external-sources/fetch-all"
+        params = []
+        if symbol:
+            params.append(f"symbol={symbol}")
+        if min_priority:
+            params.append(f"min_priority={min_priority}")
+        if params:
+            endpoint += "?" + "&".join(params)
+
+        # Body is the source_types list (or null for all sources)
+        return await self._post(endpoint, source_types)
 
     async def fetch_trading_context(
         self,
@@ -235,8 +241,8 @@ class DataServiceClient:
         include_types: Optional[list[str]] = None
     ) -> dict:
         """Fetch comprehensive trading context for a symbol."""
-        json_data = {"include_types": include_types} if include_types else None
-        return await self._post(f"/external-sources/trading-context/{symbol}", json_data)
+        # Body is the include_types list (or null for all)
+        return await self._post(f"/external-sources/trading-context/{symbol}", include_types)
 
 
 # Singleton instance

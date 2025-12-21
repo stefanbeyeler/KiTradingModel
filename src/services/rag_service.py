@@ -1,5 +1,6 @@
 """RAG Service using FAISS for historical trading data."""
 
+import hashlib
 import json
 import os
 import pickle
@@ -32,6 +33,7 @@ class RAGService:
         self._documents = []
         self._metadatas = []
         self._ids = []
+        self._content_hashes: set[str] = set()  # For duplicate detection
         self._dimension = 384  # Default for all-MiniLM-L6-v2
         self._device = settings.device
         self._use_gpu_faiss = settings.faiss_use_gpu and self._check_faiss_gpu()
@@ -44,6 +46,17 @@ class RAGService:
             return hasattr(faiss, 'StandardGpuResources') and torch.cuda.is_available()
         except Exception:
             return False
+
+    def _compute_content_hash(self, content: str) -> str:
+        """Compute a hash for content to detect duplicates."""
+        # Normalize content: strip whitespace and convert to lowercase for comparison
+        normalized = content.strip().lower()
+        return hashlib.sha256(normalized.encode('utf-8')).hexdigest()[:32]
+
+    def is_duplicate(self, content: str) -> bool:
+        """Check if content already exists in the RAG database."""
+        content_hash = self._compute_content_hash(content)
+        return content_hash in self._content_hashes
 
     def _get_embedding_model(self):
         """Get or create the embedding model with GPU support."""
@@ -76,12 +89,22 @@ class RAGService:
                     self._documents = data["documents"]
                     self._metadatas = data["metadatas"]
                     self._ids = data["ids"]
+                    # Load content hashes if available, otherwise rebuild from documents
+                    if "content_hashes" in data:
+                        self._content_hashes = data["content_hashes"]
+                    else:
+                        # Rebuild hashes from existing documents
+                        self._content_hashes = {
+                            self._compute_content_hash(doc) for doc in self._documents
+                        }
+                        logger.info(f"Rebuilt {len(self._content_hashes)} content hashes")
                 logger.info(f"Loaded FAISS index with {len(self._documents)} documents")
             else:
                 self._index = faiss.IndexFlatL2(self._dimension)
                 self._documents = []
                 self._metadatas = []
                 self._ids = []
+                self._content_hashes = set()
                 logger.info("Created new FAISS index")
 
             # Move index to GPU if available and enabled
@@ -204,14 +227,33 @@ Ergebnis: {outcome}
         content: str,
         document_type: str,
         symbol: Optional[str] = None,
-        metadata: Optional[dict] = None
-    ) -> str:
-        """Add a custom document to the RAG system."""
+        metadata: Optional[dict] = None,
+        skip_duplicates: bool = True
+    ) -> Optional[str]:
+        """Add a custom document to the RAG system.
+
+        Args:
+            content: Document content
+            document_type: Type of document
+            symbol: Trading symbol (optional)
+            metadata: Additional metadata (optional)
+            skip_duplicates: If True, skip documents that already exist
+
+        Returns:
+            Document ID if stored, None if skipped as duplicate
+        """
+        # Check for duplicates
+        content_hash = self._compute_content_hash(content)
+        if skip_duplicates and content_hash in self._content_hashes:
+            logger.debug(f"Skipping duplicate document (type: {document_type}, symbol: {symbol})")
+            return None
+
         doc_id = f"{document_type}_{uuid.uuid4().hex}"
 
         doc_metadata = {
             "timestamp": datetime.utcnow().isoformat(),
-            "document_type": document_type
+            "document_type": document_type,
+            "content_hash": content_hash
         }
 
         if symbol:
@@ -227,6 +269,7 @@ Ergebnis: {outcome}
         self._documents.append(content)
         self._metadatas.append(doc_metadata)
         self._ids.append(doc_id)
+        self._content_hashes.add(content_hash)
 
         logger.info(f"Stored custom document: {doc_id}")
         return doc_id
@@ -468,10 +511,11 @@ Risiken: {', '.join(recommendation.risks)}
             pickle.dump({
                 "documents": self._documents,
                 "metadatas": self._metadatas,
-                "ids": self._ids
+                "ids": self._ids,
+                "content_hashes": self._content_hashes
             }, f)
 
-        logger.info("Persisted RAG database to disk")
+        logger.info(f"Persisted RAG database to disk ({len(self._documents)} docs, {len(self._content_hashes)} unique hashes)")
 
     async def get_collection_stats(self) -> dict:
         """Get statistics about the RAG collection."""

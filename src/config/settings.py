@@ -29,6 +29,24 @@ class Settings(BaseSettings):
         description="Number of records to sync per symbol per batch"
     )
 
+    # External Sources Auto-Fetch Configuration
+    external_sources_auto_fetch_enabled: bool = Field(
+        default=True,
+        description="Enable automatic fetching of external data sources for RAG"
+    )
+    external_sources_fetch_interval_minutes: int = Field(
+        default=5,
+        description="Interval between external sources fetches in minutes"
+    )
+    external_sources_symbols: str = Field(
+        default="BTCUSD,ETHUSD,XAUUSD,EURUSD",
+        description="Comma-separated list of symbols to fetch external data for"
+    )
+    external_sources_min_priority: str = Field(
+        default="medium",
+        description="Minimum priority level for external sources (critical, high, medium, low)"
+    )
+
     # Ollama Configuration
     ollama_host: str = Field(
         default="http://localhost:11434",

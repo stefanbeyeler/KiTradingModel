@@ -11,6 +11,7 @@ Handles:
 """
 
 import uvicorn
+import asyncio
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -18,7 +19,7 @@ from typing import Optional
 from loguru import logger
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 
 # Add parent directory to path for imports
@@ -56,6 +57,19 @@ DataPriority = DataPriorityEnum
 # Global service instances
 rag_service: Optional[RAGService] = None
 data_fetcher: Optional[DataFetcherProxy] = None
+
+# Scheduler state
+scheduler_task: Optional[asyncio.Task] = None
+scheduler_stats = {
+    "enabled": False,
+    "last_fetch": None,
+    "next_fetch": None,
+    "total_fetches": 0,
+    "total_documents_stored": 0,
+    "last_error": None,
+    "symbols": [],
+    "interval_minutes": 30
+}
 
 # Configure logging
 logger.remove()
@@ -299,11 +313,25 @@ async def startup_event():
 
     logger.info("RAG Service started successfully")
 
+    # Start external sources auto-fetch scheduler
+    if settings.external_sources_auto_fetch_enabled:
+        await start_external_sources_scheduler()
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown."""
+    global scheduler_task
+
     logger.info("Shutting down RAG Service...")
+
+    # Stop scheduler
+    if scheduler_task and not scheduler_task.done():
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            logger.info("External sources scheduler stopped")
 
     if rag_service:
         try:
@@ -313,6 +341,151 @@ async def shutdown_event():
             logger.error(f"Failed to persist RAG database: {e}")
 
     logger.info("RAG Service stopped")
+
+
+# =====================================================
+# External Sources Auto-Fetch Scheduler
+# =====================================================
+
+async def fetch_external_sources_task():
+    """Background task that periodically fetches external sources and stores in RAG."""
+    global scheduler_stats
+
+    symbols = [s.strip() for s in settings.external_sources_symbols.split(",") if s.strip()]
+    interval_minutes = settings.external_sources_fetch_interval_minutes
+    min_priority = settings.external_sources_min_priority
+
+    scheduler_stats["symbols"] = symbols
+    scheduler_stats["interval_minutes"] = interval_minutes
+    scheduler_stats["enabled"] = True
+
+    logger.info(f"External sources scheduler started - Interval: {interval_minutes}min, Symbols: {symbols}")
+
+    # Initial delay to let services start up
+    await asyncio.sleep(10)
+
+    while True:
+        try:
+
+            # Fetch and store for each symbol
+            total_stored = 0
+            for symbol in symbols:
+                try:
+                    stored = await fetch_and_store_for_symbol(symbol, min_priority)
+                    total_stored += stored
+                    logger.info(f"Fetched and stored {stored} documents for {symbol}")
+                except Exception as e:
+                    logger.error(f"Error fetching external sources for {symbol}: {e}")
+
+            # Also fetch market-wide data (no symbol)
+            try:
+                stored = await fetch_and_store_for_symbol(None, min_priority)
+                total_stored += stored
+                logger.info(f"Fetched and stored {stored} market-wide documents")
+            except Exception as e:
+                logger.error(f"Error fetching market-wide external sources: {e}")
+
+            scheduler_stats["last_fetch"] = datetime.now().isoformat()
+            scheduler_stats["total_fetches"] += 1
+            scheduler_stats["total_documents_stored"] += total_stored
+            scheduler_stats["last_error"] = None
+
+            # Persist RAG database
+            if rag_service and total_stored > 0:
+                await rag_service.persist()
+                logger.info(f"RAG database persisted after storing {total_stored} documents")
+
+            logger.info(f"External sources fetch completed: {total_stored} documents stored in total")
+
+        except Exception as e:
+            logger.error(f"Error in external sources scheduler: {e}")
+            scheduler_stats["last_error"] = str(e)
+
+        # Schedule next fetch
+        scheduler_stats["next_fetch"] = (datetime.now() + timedelta(minutes=interval_minutes)).isoformat()
+
+        # Wait for next interval
+        await asyncio.sleep(interval_minutes * 60)
+
+
+async def fetch_and_store_for_symbol(symbol: Optional[str], min_priority: str) -> int:
+    """Fetch external sources for a symbol and store in RAG."""
+    if not data_fetcher or not rag_service:
+        return 0
+
+    try:
+        # Fetch from Data Service
+        results = await data_fetcher.fetch_all(
+            symbol=symbol,
+            min_priority=min_priority
+        )
+
+        if not results:
+            return 0
+
+        # Store each result in RAG (duplicates are automatically skipped)
+        stored_count = 0
+        skipped_count = 0
+        for result in results:
+            try:
+                # Convert to RAG document format
+                if hasattr(result, 'to_rag_document'):
+                    doc = result.to_rag_document()
+                elif isinstance(result, dict):
+                    doc = result
+                else:
+                    continue
+
+                doc_id = await rag_service.add_custom_document(
+                    content=doc.get("content", str(result)),
+                    document_type=doc.get("document_type", "external_source"),
+                    symbol=doc.get("symbol", symbol),
+                    metadata=doc.get("metadata", {}),
+                    skip_duplicates=True
+                )
+                if doc_id:
+                    stored_count += 1
+                else:
+                    skipped_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to store document: {e}")
+
+        if skipped_count > 0:
+            logger.debug(f"Skipped {skipped_count} duplicate documents for {symbol or 'market'}")
+
+        return stored_count
+
+    except Exception as e:
+        logger.error(f"Error fetching from Data Service: {e}")
+        return 0
+
+
+async def start_external_sources_scheduler():
+    """Start the external sources auto-fetch scheduler."""
+    global scheduler_task
+
+    if scheduler_task and not scheduler_task.done():
+        logger.warning("External sources scheduler already running")
+        return
+
+    scheduler_task = asyncio.create_task(fetch_external_sources_task())
+    logger.info("External sources scheduler task created")
+
+
+async def stop_external_sources_scheduler():
+    """Stop the external sources auto-fetch scheduler."""
+    global scheduler_task, scheduler_stats
+
+    if scheduler_task and not scheduler_task.done():
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            pass
+
+    scheduler_stats["enabled"] = False
+    scheduler_stats["next_fetch"] = None
+    logger.info("External sources scheduler stopped")
 
 
 # =====================================================
@@ -357,6 +530,105 @@ async def root():
         "description": "Retrieval Augmented Generation - Vector Search & Knowledge Base",
         "docs": "/docs",
         "health": "/health"
+    }
+
+
+# =====================================================
+# External Sources Scheduler Endpoints
+# =====================================================
+
+@app.get("/api/v1/rag/scheduler/status", tags=["Data Ingestion"])
+async def get_scheduler_status():
+    """
+    Get the status of the external sources auto-fetch scheduler.
+
+    Returns current scheduler state including:
+    - Whether scheduler is enabled/running
+    - Last and next fetch times
+    - Total fetches and documents stored
+    - Configured symbols and interval
+    """
+    return {
+        "scheduler": scheduler_stats,
+        "config": {
+            "enabled_in_config": settings.external_sources_auto_fetch_enabled,
+            "interval_minutes": settings.external_sources_fetch_interval_minutes,
+            "symbols": settings.external_sources_symbols,
+            "min_priority": settings.external_sources_min_priority
+        }
+    }
+
+
+@app.post("/api/v1/rag/scheduler/start", tags=["Data Ingestion"])
+async def start_scheduler():
+    """
+    Start the external sources auto-fetch scheduler.
+
+    Begins periodic fetching of external data sources and storing in RAG.
+    """
+    if scheduler_stats["enabled"]:
+        return {"status": "already_running", "scheduler": scheduler_stats}
+
+    await start_external_sources_scheduler()
+    return {"status": "started", "scheduler": scheduler_stats}
+
+
+@app.post("/api/v1/rag/scheduler/stop", tags=["Data Ingestion"])
+async def stop_scheduler():
+    """
+    Stop the external sources auto-fetch scheduler.
+
+    Stops periodic fetching. Already stored documents remain in RAG.
+    """
+    if not scheduler_stats["enabled"]:
+        return {"status": "not_running", "scheduler": scheduler_stats}
+
+    await stop_external_sources_scheduler()
+    return {"status": "stopped", "scheduler": scheduler_stats}
+
+
+@app.post("/api/v1/rag/scheduler/fetch-now", tags=["Data Ingestion"])
+async def fetch_now(background_tasks: BackgroundTasks):
+    """
+    Trigger an immediate fetch of all external sources.
+
+    Fetches data from all configured symbols and stores in RAG.
+    Runs in background to avoid timeout.
+    """
+    async def do_fetch():
+        global scheduler_stats
+        symbols = [s.strip() for s in settings.external_sources_symbols.split(",") if s.strip()]
+        min_priority = settings.external_sources_min_priority
+
+        total_stored = 0
+        for symbol in symbols:
+            try:
+                stored = await fetch_and_store_for_symbol(symbol, min_priority)
+                total_stored += stored
+            except Exception as e:
+                logger.error(f"Error fetching for {symbol}: {e}")
+
+        # Market-wide data
+        try:
+            stored = await fetch_and_store_for_symbol(None, min_priority)
+            total_stored += stored
+        except Exception as e:
+            logger.error(f"Error fetching market-wide data: {e}")
+
+        scheduler_stats["last_fetch"] = datetime.now().isoformat()
+        scheduler_stats["total_fetches"] += 1
+        scheduler_stats["total_documents_stored"] += total_stored
+
+        if rag_service and total_stored > 0:
+            await rag_service.persist()
+
+        logger.info(f"Manual fetch completed: {total_stored} documents stored")
+
+    background_tasks.add_task(do_fetch)
+    return {
+        "status": "fetch_started",
+        "message": "Fetch started in background",
+        "symbols": settings.external_sources_symbols.split(",")
     }
 
 
