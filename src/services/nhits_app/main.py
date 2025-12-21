@@ -59,8 +59,11 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(forecast_router, prefix="/api/v1", tags=["NHITS Forecast"])
+# IMPORTANT: training_router must come before forecast_router because
+# forecast_router has a catch-all /forecast/{symbol} route that would
+# otherwise intercept routes like /forecast/performance and /forecast/evaluated
 app.include_router(training_router, prefix="/api/v1", tags=["NHITS Training"])
+app.include_router(forecast_router, prefix="/api/v1", tags=["NHITS Forecast"])
 app.include_router(system_router, prefix="/api/v1", tags=["System & Monitoring"])
 
 

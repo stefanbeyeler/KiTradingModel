@@ -823,16 +823,17 @@
                 </div>
                 <p style="opacity: 0.7; margin-bottom: 1rem;">
                     Übersicht der Prognosegenauigkeit basierend auf historischen Evaluierungen.
+                    Performance-Daten werden gesammelt, wenn Prognosen mit tatsächlichen Preisen verglichen werden.
                 </p>
                 <div class="table-container">
                     <table id="performance-table">
                         <thead>
                             <tr>
                                 <th>Symbol</th>
-                                <th>Timeframe</th>
-                                <th>MAE</th>
-                                <th>MAPE</th>
-                                <th>Evaluiert am</th>
+                                <th>Evaluiert</th>
+                                <th>Ø Fehler</th>
+                                <th>Richtung</th>
+                                <th>Letzte Eval.</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
@@ -1173,31 +1174,87 @@
         // Load performance
         async function loadPerformance() {
             try {
-                const res = await fetch(`${API_BASE}/forecast/evaluated`);
-                const data = await res.json();
+                // Fetch both performance summary and evaluated predictions
+                const [perfRes, evalRes] = await Promise.all([
+                    fetch(`${API_BASE}/forecast/performance`),
+                    fetch(`${API_BASE}/forecast/evaluated`)
+                ]);
+                const perfData = await perfRes.json();
+                const evalData = await evalRes.json();
 
                 const tbody = document.getElementById('performance-tbody');
-                if (!data.models || data.models.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; opacity: 0.5;">Keine Evaluierungen vorhanden</td></tr>';
+
+                // Check if there are any evaluated predictions
+                if ((!evalData.predictions || evalData.predictions.length === 0) &&
+                    Object.keys(perfData.by_symbol || {}).length === 0) {
+                    tbody.innerHTML = `
+                        <tr><td colspan="6" style="text-align: center; padding: 2rem;">
+                            <div style="opacity: 0.7; margin-bottom: 1rem;">Keine Evaluierungen vorhanden</div>
+                            <div style="font-size: 0.85rem; opacity: 0.5;">
+                                Performance-Daten werden automatisch gesammelt, wenn Prognosen erstellt<br>
+                                und später mit den tatsächlichen Preisen verglichen werden.
+                            </div>
+                        </td></tr>
+                    `;
                     return;
                 }
 
                 let html = '';
-                for (const model of data.models) {
-                    const statusClass = model.mape && model.mape < 5 ? 'badge-success' : 'badge-failed';
-                    const statusText = model.mape && model.mape < 5 ? 'Gut' : 'Verbesserungswürdig';
+
+                // Show symbol-level performance summary
+                for (const [symbol, metrics] of Object.entries(perfData.by_symbol || {})) {
+                    const avgError = metrics.avg_error_pct || 0;
+                    const dirAccuracy = (metrics.direction_accuracy || 0) * 100;
+                    const statusClass = avgError < 0.5 && dirAccuracy > 50 ? 'badge-success' : 'badge-failed';
+                    const statusText = metrics.needs_retraining ? 'Retraining nötig' : 'OK';
+
+                    // Format evaluated date from most recent prediction
+                    let evaluatedAt = '-';
+                    const symbolPreds = (evalData.predictions || []).filter(p => p.symbol === symbol);
+                    if (symbolPreds.length > 0 && symbolPreds[0].evaluated_at) {
+                        const d = new Date(symbolPreds[0].evaluated_at);
+                        evaluatedAt = d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                    }
+
                     html += `
                         <tr>
-                            <td><strong>${model.symbol}</strong></td>
-                            <td>${model.timeframe || 'H1'}</td>
-                            <td>${model.mae?.toFixed(4) || '-'}</td>
-                            <td>${model.mape?.toFixed(2) || '-'}%</td>
-                            <td>${model.evaluated_at || '-'}</td>
+                            <td><strong>${symbol}</strong></td>
+                            <td>${metrics.evaluated}/${metrics.total}</td>
+                            <td>${avgError.toFixed(4)}%</td>
+                            <td>${dirAccuracy.toFixed(1)}%</td>
+                            <td>${evaluatedAt}</td>
                             <td><span class="badge ${statusClass}">${statusText}</span></td>
                         </tr>
                     `;
                 }
-                tbody.innerHTML = html;
+
+                // If no symbol metrics but have individual predictions, show those
+                if (html === '' && evalData.predictions && evalData.predictions.length > 0) {
+                    for (const pred of evalData.predictions.slice(0, 50)) {
+                        const errorPct = pred.prediction_error_pct || 0;
+                        const statusClass = pred.direction_correct ? 'badge-success' : 'badge-failed';
+                        const statusText = pred.direction_correct ? 'Richtig' : 'Falsch';
+
+                        let evaluatedAt = '-';
+                        if (pred.evaluated_at) {
+                            const d = new Date(pred.evaluated_at);
+                            evaluatedAt = d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                        }
+
+                        html += `
+                            <tr>
+                                <td><strong>${pred.symbol}</strong></td>
+                                <td>${pred.horizon || 'H1'}</td>
+                                <td>${errorPct.toFixed(4)}%</td>
+                                <td>${pred.direction_correct ? '✓' : '✗'}</td>
+                                <td>${evaluatedAt}</td>
+                                <td><span class="badge ${statusClass}">${statusText}</span></td>
+                            </tr>
+                        `;
+                    }
+                }
+
+                tbody.innerHTML = html || '<tr><td colspan="6" style="text-align: center; opacity: 0.5;">Keine Daten</td></tr>';
             } catch (err) {
                 console.error('Failed to load performance:', err);
                 document.getElementById('performance-tbody').innerHTML =

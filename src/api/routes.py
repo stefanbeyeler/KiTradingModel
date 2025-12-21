@@ -4339,16 +4339,26 @@ async def clear_pattern_history():
 
 # ==================== External Data Sources ====================
 
-from ..services.data_app.external_sources import (
-    DataSourceType,
-    DataPriority,
-    get_data_fetcher_service,
-)
+# NOTE: Imports are done lazily inside functions to avoid loading
+# aiohttp and other dependencies in services that don't use them (e.g., NHITS)
 
 
 def get_external_data_fetcher():
     """Get the data fetcher service singleton."""
+    from ..services.data_app.external_sources import get_data_fetcher_service
     return get_data_fetcher_service()
+
+
+def _get_data_source_type():
+    """Get DataSourceType enum (lazy import)."""
+    from ..services.data_app.external_sources import DataSourceType
+    return DataSourceType
+
+
+def _get_data_priority():
+    """Get DataPriority enum (lazy import)."""
+    from ..services.data_app.external_sources import DataPriority
+    return DataPriority
 
 
 @external_sources_router.get("/external-sources")
@@ -4815,6 +4825,8 @@ async def fetch_all_sources(
         Aggregated data from all requested sources
     """
     fetcher = get_external_data_fetcher()
+    DataSourceType = _get_data_source_type()
+    DataPriority = _get_data_priority()
 
     # Map string source types to enum
     types_enum = None
