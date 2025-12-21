@@ -400,13 +400,29 @@
         }
 
         th {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(22, 33, 62, 0.98);
             position: sticky;
             top: 0;
+            z-index: 10;
             font-weight: 500;
             color: #a0a0a0;
             font-size: 0.85rem;
             text-transform: uppercase;
+        }
+
+        /* Legend styling */
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            white-space: nowrap;
         }
 
         tr:hover {
@@ -732,6 +748,11 @@
                         <option value="D1">D1</option>
                     </select>
                     <button class="btn btn-primary" onclick="loadModels()">Aktualisieren</button>
+                    <div class="legend" style="margin-left: auto;">
+                        <span title="Trend-Prognose"><span style="color: #4ade80;">↑</span> Steigend <span style="opacity: 0.5;">/</span> <span style="color: #f87171;">↓</span> Fallend</span>
+                        <span title="Evaluierungsstatus"><span style="color: #fbbf24;">⏳</span> Ausstehend <span style="opacity: 0.5;">/</span> <span style="color: #4ade80;">✓</span> Korrekt <span style="opacity: 0.5;">/</span> <span style="color: #f87171;">✗</span> Falsch</span>
+                        <span title="Favorit"><span style="color: #fbbf24;">★</span> Favorit</span>
+                    </div>
                 </div>
                 <div class="table-container">
                     <table id="models-table">
@@ -740,6 +761,7 @@
                                 <th style="width: 40px; text-align: center;" title="Favorit">&#9733;</th>
                                 <th>Symbol</th>
                                 <th>Timeframe</th>
+                                <th>Letzte Prognose</th>
                                 <th>Trainiert am</th>
                                 <th>Samples</th>
                                 <th>Loss</th>
@@ -747,7 +769,7 @@
                             </tr>
                         </thead>
                         <tbody id="models-tbody">
-                            <tr><td colspan="7" style="text-align: center; opacity: 0.5;">Lade Modelle...</td></tr>
+                            <tr><td colspan="8" style="text-align: center; opacity: 0.5;">Lade Modelle...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -756,11 +778,49 @@
 
         <!-- Forecast Tab -->
         <div id="tab-forecast" class="tab-content">
+            <!-- Batch Forecast Card -->
+            <div class="card" style="margin-bottom: 1rem;">
+                <div class="card-header">
+                    <h2 class="card-title">Batch-Prognosen</h2>
+                    <span id="batch-forecast-status" style="opacity: 0.7;"></span>
+                </div>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.85rem; opacity: 0.7;">Timeframe</label>
+                        <select class="filter-select" id="batch-timeframe" style="min-width: 180px;">
+                            <option value="M15">M15 (15 Min)</option>
+                            <option value="H1" selected>H1 (1 Stunde)</option>
+                            <option value="D1">D1 (Täglich)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success" onclick="runBatchForecast('favorites')" id="btn-forecast-favorites">
+                        ⭐ Prognose für Favoriten
+                    </button>
+                    <button class="btn btn-primary" onclick="runBatchForecast('all')" id="btn-forecast-all">
+                        📊 Prognose alle Symbole
+                    </button>
+                    <button class="btn btn-sm" onclick="cancelBatchForecast()" id="btn-cancel-batch" style="display: none;">
+                        ❌ Abbrechen
+                    </button>
+                </div>
+                <!-- Batch Progress -->
+                <div id="batch-progress-container" style="display: none; margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span id="batch-progress-text">0 / 0 Symbole</span>
+                        <span id="batch-progress-percent">0%</span>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 4px; height: 8px; overflow: hidden;">
+                        <div id="batch-progress-bar" style="background: linear-gradient(90deg, #4ade80, #22c55e); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <div id="batch-results-summary" style="margin-top: 0.5rem; font-size: 0.85rem; opacity: 0.8;"></div>
+                </div>
+            </div>
+
             <div class="grid-2">
                 <!-- Forecast Form -->
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">Prognose abfragen</h2>
+                        <h2 class="card-title">Einzelne Prognose</h2>
                     </div>
                     <div class="forecast-form">
                         <div class="form-group">
@@ -985,6 +1045,7 @@
     <script>
         const API_BASE = '/nhits/api/v1';
         let allModels = [];
+        let latestForecasts = {};  // Cache for latest forecasts per model
         let trainingInterval = null;
 
         // Tab switching
@@ -1173,8 +1234,17 @@
         // Load models with full details
         async function loadModels() {
             try {
-                const res = await fetch(`${API_BASE}/forecast/models`);
-                const data = await res.json();
+                // Fetch models and latest forecasts in parallel
+                const [modelsRes, forecastsRes] = await Promise.all([
+                    fetch(`${API_BASE}/forecast/models`),
+                    fetch(`${API_BASE}/forecast/latest-per-model`)
+                ]);
+
+                const data = await modelsRes.json();
+                const forecastsData = await forecastsRes.json();
+
+                // Store forecasts in cache
+                latestForecasts = forecastsData.forecasts || {};
 
                 // Count favorites
                 const favoriteCount = data.filter(m => m.is_favorite && m.model_exists).length;
@@ -1249,7 +1319,7 @@
 
             const tbody = document.getElementById('models-tbody');
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; opacity: 0.5;">Keine Modelle gefunden</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; opacity: 0.5;">Keine Modelle gefunden</td></tr>';
                 return;
             }
 
@@ -1258,11 +1328,25 @@
                 const tfClass = model.timeframeKey === 'M15' ? 'badge-m15' :
                                model.timeframeKey === 'D1' ? 'badge-d1' : 'badge-h1';
 
-                // Format date
+                // Format trained date
                 let trainedDate = '-';
                 if (model.lastTrained) {
                     const d = new Date(model.lastTrained);
                     trainedDate = d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                }
+
+                // Get latest forecast for this model
+                // Try full symbol first (e.g., "BTCUSD_H1"), then base symbol (e.g., "BTCUSD")
+                let forecastInfo = '-';
+                let forecast = latestForecasts[model.fullSymbol] || latestForecasts[model.symbol];
+                if (forecast) {
+                    const fcDate = new Date(forecast.timestamp);
+                    const dateStr = fcDate.toLocaleDateString('de-DE') + ' ' + fcDate.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                    const trendIcon = forecast.trend === 'up' ? '↑' : (forecast.trend === 'down' ? '↓' : '-');
+                    const trendColor = forecast.trend === 'up' ? '#4ade80' : (forecast.trend === 'down' ? '#f87171' : 'inherit');
+                    const evalIcon = forecast.evaluated ? (forecast.direction_correct ? '✓' : '✗') : '⏳';
+                    const evalColor = forecast.evaluated ? (forecast.direction_correct ? '#4ade80' : '#f87171') : '#fbbf24';
+                    forecastInfo = `<span style="color: ${trendColor}; font-weight: 600;">${trendIcon}</span> ${dateStr} <span style="color: ${evalColor}; font-size: 0.85em;" title="${forecast.evaluated ? (forecast.direction_correct ? 'Korrekt' : 'Falsch') : 'Ausstehend'}">${evalIcon}</span>`;
                 }
 
                 // Format loss
@@ -1277,6 +1361,7 @@
                         <td>${favIcon}</td>
                         <td><strong>${model.symbol}</strong></td>
                         <td><span class="badge ${tfClass}">${model.timeframe}</span></td>
+                        <td>${forecastInfo}</td>
                         <td>${trainedDate}</td>
                         <td>${model.samples || '-'}</td>
                         <td>${lossStr}</td>
@@ -1726,6 +1811,164 @@
             } catch (err) {
                 console.error('Failed to load forecast symbols:', err);
             }
+        }
+
+        // ========== BATCH FORECAST FUNCTIONS ==========
+
+        let batchForecastCancelled = false;
+        let batchForecastRunning = false;
+
+        // Run batch forecast for favorites or all symbols
+        async function runBatchForecast(mode) {
+            if (batchForecastRunning) {
+                showToast('Batch-Prognose läuft bereits');
+                return;
+            }
+
+            const timeframe = document.getElementById('batch-timeframe').value;
+            batchForecastCancelled = false;
+            batchForecastRunning = true;
+
+            // Update UI
+            const btnFavorites = document.getElementById('btn-forecast-favorites');
+            const btnAll = document.getElementById('btn-forecast-all');
+            const btnCancel = document.getElementById('btn-cancel-batch');
+            const progressContainer = document.getElementById('batch-progress-container');
+            const statusSpan = document.getElementById('batch-forecast-status');
+
+            btnFavorites.disabled = true;
+            btnAll.disabled = true;
+            btnCancel.style.display = 'inline-flex';
+            progressContainer.style.display = 'block';
+
+            try {
+                // Get symbols to process
+                let symbols = [];
+
+                if (mode === 'favorites') {
+                    statusSpan.textContent = 'Lade Favoriten...';
+                    // Get favorites from models endpoint
+                    const res = await fetch(`${API_BASE}/forecast/favorites`);
+                    const data = await res.json();
+
+                    // Extract unique base symbols from favorites models
+                    const symbolSet = new Set();
+                    if (data.models && data.models.length > 0) {
+                        for (const model of data.models) {
+                            let baseSymbol = model.base_symbol || model.symbol;
+                            // Remove timeframe suffix if present
+                            if (baseSymbol.endsWith('_M15')) baseSymbol = baseSymbol.replace('_M15', '');
+                            else if (baseSymbol.endsWith('_H1')) baseSymbol = baseSymbol.replace('_H1', '');
+                            else if (baseSymbol.endsWith('_D1')) baseSymbol = baseSymbol.replace('_D1', '');
+                            symbolSet.add(baseSymbol);
+                        }
+                    }
+                    symbols = Array.from(symbolSet).sort();
+
+                    if (symbols.length === 0) {
+                        showToast('Keine Favoriten gefunden');
+                        return;
+                    }
+                } else {
+                    statusSpan.textContent = 'Lade alle Symbole...';
+                    // Get all symbols with trained models
+                    const res = await fetch(`${API_BASE}/forecast/models`);
+                    const data = await res.json();
+
+                    const symbolSet = new Set();
+                    for (const model of data) {
+                        if (!model.model_exists) continue;
+                        let baseSymbol = model.symbol;
+                        if (baseSymbol.endsWith('_M15')) baseSymbol = baseSymbol.replace('_M15', '');
+                        else if (baseSymbol.endsWith('_H1')) baseSymbol = baseSymbol.replace('_H1', '');
+                        else if (baseSymbol.endsWith('_D1')) baseSymbol = baseSymbol.replace('_D1', '');
+                        symbolSet.add(baseSymbol);
+                    }
+                    symbols = Array.from(symbolSet).sort();
+                }
+
+                statusSpan.textContent = `${mode === 'favorites' ? 'Favoriten' : 'Alle'}: ${symbols.length} Symbole`;
+
+                // Process symbols
+                let completed = 0;
+                let successful = 0;
+                let failed = 0;
+                const total = symbols.length;
+                const results = [];
+
+                for (const symbol of symbols) {
+                    if (batchForecastCancelled) {
+                        showToast('Batch-Prognose abgebrochen');
+                        break;
+                    }
+
+                    // Update progress
+                    updateBatchProgress(completed, total, symbol);
+
+                    try {
+                        const res = await fetch(`${API_BASE}/forecast/${symbol}?timeframe=${timeframe}`);
+                        const data = await res.json();
+
+                        if (data.error) {
+                            failed++;
+                            results.push({ symbol, success: false, error: data.error });
+                        } else {
+                            successful++;
+                            const trend = data.predicted_prices && data.predicted_prices.length > 1 ?
+                                (data.predicted_prices[data.predicted_prices.length - 1] > data.current_price ? '↑' : '↓') : '-';
+                            results.push({
+                                symbol,
+                                success: true,
+                                trend,
+                                currentPrice: data.current_price,
+                                predictedPrice: data.predicted_prices ? data.predicted_prices[data.predicted_prices.length - 1] : null
+                            });
+                        }
+                    } catch (err) {
+                        failed++;
+                        results.push({ symbol, success: false, error: err.message });
+                    }
+
+                    completed++;
+                    updateBatchProgress(completed, total, completed < total ? symbols[completed] : null);
+                }
+
+                // Show final summary
+                const summaryDiv = document.getElementById('batch-results-summary');
+                summaryDiv.innerHTML = `
+                    <strong>Fertig!</strong> ✓ ${successful} erfolgreich, ✗ ${failed} fehlgeschlagen
+                    ${results.filter(r => r.success).map(r => `
+                        <span style="margin-left: 0.5rem; color: ${r.trend === '↑' ? '#4ade80' : '#f87171'};">${r.symbol} ${r.trend}</span>
+                    `).join('')}
+                `;
+
+                showToast(`Batch-Prognose abgeschlossen: ${successful}/${total} erfolgreich`);
+
+            } catch (err) {
+                console.error('Batch forecast error:', err);
+                showToast('Fehler bei Batch-Prognose: ' + err.message);
+            } finally {
+                batchForecastRunning = false;
+                btnFavorites.disabled = false;
+                btnAll.disabled = false;
+                btnCancel.style.display = 'none';
+            }
+        }
+
+        // Update batch progress UI
+        function updateBatchProgress(completed, total, currentSymbol) {
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            document.getElementById('batch-progress-text').textContent =
+                `${completed} / ${total} Symbole${currentSymbol ? ` (${currentSymbol})` : ''}`;
+            document.getElementById('batch-progress-percent').textContent = `${percent}%`;
+            document.getElementById('batch-progress-bar').style.width = `${percent}%`;
+        }
+
+        // Cancel batch forecast
+        function cancelBatchForecast() {
+            batchForecastCancelled = true;
+            showToast('Batch-Prognose wird abgebrochen...');
         }
 
         // Run forecast

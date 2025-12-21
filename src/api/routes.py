@@ -1689,6 +1689,97 @@ async def retrain_poor_performers():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== Latest Forecasts ====================
+
+@training_router.get("/forecast/latest-per-model")
+async def get_latest_forecasts_per_model():
+    """
+    Get the latest forecast for each model (symbol/timeframe combination).
+
+    Returns a dictionary with model keys (e.g., "BTCUSD_H1") and their
+    latest forecast timestamp and trend direction.
+    """
+    try:
+        import math
+        from ..services.model_improvement_service import model_improvement_service
+
+        latest_forecasts = {}  # model_key -> {data + _ts for comparison}
+
+        # Check pending feedback (not yet evaluated)
+        for symbol, feedbacks in model_improvement_service.pending_feedback.items():
+            for fb in feedbacks:
+                model_key = f"{fb.symbol}_{fb.timeframe}" if hasattr(fb, 'timeframe') and fb.timeframe else fb.symbol
+                timestamp = fb.timestamp
+
+                # Compare using datetime objects
+                existing_ts = latest_forecasts.get(model_key, {}).get("_ts")
+                if existing_ts is None or timestamp > existing_ts:
+                    # Determine trend direction
+                    trend = None
+                    if fb.predicted_price and fb.current_price:
+                        trend = "up" if fb.predicted_price > fb.current_price else "down"
+
+                    # Sanitize float values (handle inf/nan)
+                    current_price = fb.current_price if fb.current_price and math.isfinite(fb.current_price) else None
+                    predicted_price = fb.predicted_price if fb.predicted_price and math.isfinite(fb.predicted_price) else None
+
+                    latest_forecasts[model_key] = {
+                        "_ts": timestamp,  # Keep datetime for comparison
+                        "timestamp": timestamp.isoformat() if hasattr(timestamp, 'isoformat') else str(timestamp),
+                        "symbol": fb.symbol,
+                        "timeframe": fb.timeframe if hasattr(fb, 'timeframe') else None,
+                        "current_price": current_price,
+                        "predicted_price": predicted_price,
+                        "trend": trend,
+                        "horizon": fb.horizon,
+                        "evaluated": False
+                    }
+
+        # Also check evaluated feedback
+        for symbol, feedbacks in model_improvement_service.evaluated_feedback.items():
+            for fb in feedbacks:
+                model_key = f"{fb.symbol}_{fb.timeframe}" if hasattr(fb, 'timeframe') and fb.timeframe else fb.symbol
+                timestamp = fb.timestamp
+
+                existing_ts = latest_forecasts.get(model_key, {}).get("_ts")
+                if existing_ts is None or timestamp > existing_ts:
+                    trend = None
+                    if fb.predicted_price and fb.current_price:
+                        trend = "up" if fb.predicted_price > fb.current_price else "down"
+
+                    # Sanitize float values (handle inf/nan)
+                    current_price = fb.current_price if fb.current_price and math.isfinite(fb.current_price) else None
+                    predicted_price = fb.predicted_price if fb.predicted_price and math.isfinite(fb.predicted_price) else None
+                    error_pct = fb.error_pct if fb.error_pct and math.isfinite(fb.error_pct) else None
+
+                    latest_forecasts[model_key] = {
+                        "_ts": timestamp,
+                        "timestamp": timestamp.isoformat() if hasattr(timestamp, 'isoformat') else str(timestamp),
+                        "symbol": fb.symbol,
+                        "timeframe": fb.timeframe if hasattr(fb, 'timeframe') else None,
+                        "current_price": current_price,
+                        "predicted_price": predicted_price,
+                        "trend": trend,
+                        "horizon": fb.horizon,
+                        "evaluated": True,
+                        "direction_correct": fb.direction_correct,
+                        "error_pct": error_pct
+                    }
+
+        # Remove internal _ts field before returning
+        for key in latest_forecasts:
+            if "_ts" in latest_forecasts[key]:
+                del latest_forecasts[key]["_ts"]
+
+        return {
+            "count": len(latest_forecasts),
+            "forecasts": latest_forecasts
+        }
+    except Exception as e:
+        logger.error(f"Failed to get latest forecasts per model: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== Auto-Evaluation & Auto-Retrain ====================
 
 @training_router.get("/forecast/auto-status")
