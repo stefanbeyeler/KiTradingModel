@@ -923,11 +923,27 @@
         // Get recommendation
         async function getRecommendation(symbol) {
             const resultDiv = document.getElementById('recommendation-result');
-            resultDiv.innerHTML = '<p style="text-align: center;"><span class="loading-spinner"></span> Analyse lauft...</p>';
+            const timerId = 'rec-timer-' + Date.now();
+            const startTime = Date.now();
+
+            resultDiv.innerHTML = `<p style="text-align: center;"><span class="loading-spinner"></span> Analyse läuft... <span id="${timerId}" style="color: #ffb74d; font-size: 0.85rem;">(0s)</span></p>`;
+
+            // Start timer to show elapsed time
+            const timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const timerEl = document.getElementById(timerId);
+                if (timerEl) {
+                    timerEl.textContent = `(${elapsed}s)`;
+                }
+            }, 1000);
 
             try {
                 const res = await fetch(`${API_BASE}/recommendation/${symbol}`);
                 const data = await res.json();
+
+                // Stop timer
+                clearInterval(timerInterval);
+                const totalTime = Math.floor((Date.now() - startTime) / 1000);
 
                 if (data.error) {
                     resultDiv.innerHTML = `<p style="color: #e57373; text-align: center;">${data.error}</p>`;
@@ -955,7 +971,7 @@
 
                 resultDiv.innerHTML = `
                     <div class="recommendation-card">
-                        <div class="symbol">${data.symbol || symbol}</div>
+                        <div class="symbol">${data.symbol || symbol} <span style="opacity: 0.5; font-size: 0.75rem; font-weight: normal;">(${totalTime}s)</span></div>
                         <div class="recommendation ${recClass}">${directionText}</div>
                         <div class="analysis">${data.setup_recommendation || data.reasoning || '-'}</div>
                         ${factorsList}
@@ -970,6 +986,7 @@
                 `;
 
             } catch (err) {
+                clearInterval(timerInterval);
                 console.error('Recommendation error:', err);
                 resultDiv.innerHTML = '<p style="color: #e57373; text-align: center;">Fehler bei der Analyse</p>';
             }
