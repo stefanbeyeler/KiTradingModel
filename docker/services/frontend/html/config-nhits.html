@@ -602,8 +602,8 @@
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('training')">Training</button>
             <button class="tab-btn" onclick="switchTab('models')">Modelle</button>
-            <button class="tab-btn" onclick="switchTab('performance')">Performance</button>
             <button class="tab-btn" onclick="switchTab('forecast')">Prognose</button>
+            <button class="tab-btn" onclick="switchTab('performance')">Performance</button>
         </div>
 
         <!-- Training Tab -->
@@ -741,36 +741,6 @@
             </div>
         </div>
 
-        <!-- Performance Tab -->
-        <div id="tab-performance" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Modell Performance</h2>
-                    <button class="btn btn-sm btn-primary" onclick="loadPerformance()">Aktualisieren</button>
-                </div>
-                <p style="opacity: 0.7; margin-bottom: 1rem;">
-                    Übersicht der Prognosegenauigkeit basierend auf historischen Evaluierungen.
-                </p>
-                <div class="table-container">
-                    <table id="performance-table">
-                        <thead>
-                            <tr>
-                                <th>Symbol</th>
-                                <th>Timeframe</th>
-                                <th>MAE</th>
-                                <th>MAPE</th>
-                                <th>Evaluiert am</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="performance-tbody">
-                            <tr><td colspan="6" style="text-align: center; opacity: 0.5;">Lade Performance-Daten...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
         <!-- Forecast Tab -->
         <div id="tab-forecast" class="tab-content">
             <div class="grid-2">
@@ -838,6 +808,36 @@
                             </tr>
                         </thead>
                         <tbody id="forecast-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Tab -->
+        <div id="tab-performance" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Modell Performance</h2>
+                    <button class="btn btn-sm btn-primary" onclick="loadPerformance()">Aktualisieren</button>
+                </div>
+                <p style="opacity: 0.7; margin-bottom: 1rem;">
+                    Übersicht der Prognosegenauigkeit basierend auf historischen Evaluierungen.
+                </p>
+                <div class="table-container">
+                    <table id="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Timeframe</th>
+                                <th>MAE</th>
+                                <th>MAPE</th>
+                                <th>Evaluiert am</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="performance-tbody">
+                            <tr><td colspan="6" style="text-align: center; opacity: 0.5;">Lade Performance-Daten...</td></tr>
                         </tbody>
                     </table>
                 </div>
