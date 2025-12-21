@@ -39,8 +39,12 @@ class Settings(BaseSettings):
         description="Interval between external sources fetches in minutes"
     )
     external_sources_symbols: str = Field(
-        default="BTCUSD,ETHUSD,XAUUSD,EURUSD",
-        description="Comma-separated list of symbols to fetch external data for"
+        default="",
+        description="Comma-separated list of symbols to fetch. Empty = load from Data Service"
+    )
+    external_sources_use_managed_symbols: bool = Field(
+        default=True,
+        description="If True, load symbols dynamically from Data Service managed-symbols endpoint"
     )
     external_sources_min_priority: str = Field(
         default="medium",

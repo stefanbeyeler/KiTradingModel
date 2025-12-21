@@ -244,6 +244,26 @@ class DataServiceClient:
         # Body is the include_types list (or null for all)
         return await self._post(f"/external-sources/trading-context/{symbol}", include_types)
 
+    async def get_managed_symbols(self, active_only: bool = True) -> list[str]:
+        """Get list of managed symbols from Data Service.
+
+        Args:
+            active_only: If True, only return active symbols
+
+        Returns:
+            List of symbol names (e.g., ["BTCUSD", "ETHUSD", ...])
+        """
+        try:
+            data = await self._get("/managed-symbols")
+            if isinstance(data, list):
+                if active_only:
+                    return [s["symbol"] for s in data if s.get("status") == "active"]
+                return [s["symbol"] for s in data]
+            return []
+        except Exception as e:
+            logger.error(f"Error fetching managed symbols: {e}")
+            return []
+
 
 # Singleton instance
 _data_service_client: Optional[DataServiceClient] = None

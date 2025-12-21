@@ -68,8 +68,52 @@ scheduler_stats = {
     "total_documents_stored": 0,
     "last_error": None,
     "symbols": [],
-    "interval_minutes": 30
+    "interval_minutes": 5
 }
+
+# Runtime configuration (can be changed via API and persisted)
+import json
+SCHEDULER_CONFIG_FILE = "/app/data/scheduler_config.json"
+scheduler_runtime_config = {
+    "interval_minutes": None,  # None = use settings default
+    "min_priority": None,      # None = use settings default
+}
+
+def load_scheduler_config():
+    """Load scheduler config from file."""
+    global scheduler_runtime_config
+    try:
+        with open(SCHEDULER_CONFIG_FILE, 'r') as f:
+            saved = json.load(f)
+            scheduler_runtime_config.update(saved)
+            logger.info(f"Loaded scheduler config: {scheduler_runtime_config}")
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        logger.warning(f"Could not load scheduler config: {e}")
+
+def save_scheduler_config():
+    """Save scheduler config to file."""
+    try:
+        import os
+        os.makedirs(os.path.dirname(SCHEDULER_CONFIG_FILE), exist_ok=True)
+        with open(SCHEDULER_CONFIG_FILE, 'w') as f:
+            json.dump(scheduler_runtime_config, f)
+        logger.info(f"Saved scheduler config: {scheduler_runtime_config}")
+    except Exception as e:
+        logger.error(f"Could not save scheduler config: {e}")
+
+def get_scheduler_interval() -> int:
+    """Get effective scheduler interval."""
+    if scheduler_runtime_config.get("interval_minutes"):
+        return scheduler_runtime_config["interval_minutes"]
+    return settings.external_sources_fetch_interval_minutes
+
+def get_scheduler_priority() -> str:
+    """Get effective scheduler priority."""
+    if scheduler_runtime_config.get("min_priority"):
+        return scheduler_runtime_config["min_priority"]
+    return settings.external_sources_min_priority
 
 # Configure logging
 logger.remove()
@@ -294,6 +338,9 @@ async def startup_event():
     logger.info(f"Device: {settings.device}")
     logger.info(f"Data Service URL: {settings.data_service_url}")
 
+    # Load persistent scheduler configuration
+    load_scheduler_config()
+
     # Initialize RAG Service
     try:
         rag_service = RAGService()
@@ -351,21 +398,36 @@ async def fetch_external_sources_task():
     """Background task that periodically fetches external sources and stores in RAG."""
     global scheduler_stats
 
-    symbols = [s.strip() for s in settings.external_sources_symbols.split(",") if s.strip()]
-    interval_minutes = settings.external_sources_fetch_interval_minutes
-    min_priority = settings.external_sources_min_priority
-
-    scheduler_stats["symbols"] = symbols
-    scheduler_stats["interval_minutes"] = interval_minutes
+    use_managed_symbols = getattr(settings, 'external_sources_use_managed_symbols', True)
     scheduler_stats["enabled"] = True
 
-    logger.info(f"External sources scheduler started - Interval: {interval_minutes}min, Symbols: {symbols}")
+    logger.info(f"External sources scheduler started - Dynamic symbols: {use_managed_symbols}")
 
     # Initial delay to let services start up
     await asyncio.sleep(10)
 
     while True:
+        # Get current config values (may have been changed via API)
+        interval_minutes = get_scheduler_interval()
+        min_priority = get_scheduler_priority()
+        scheduler_stats["interval_minutes"] = interval_minutes
+
         try:
+            # Get symbols - either from config or dynamically from Data Service
+            if use_managed_symbols and data_fetcher:
+                from src.services.data_service_client import get_data_service_client
+                client = get_data_service_client()
+                symbols = await client.get_managed_symbols(active_only=True)
+                if not symbols:
+                    # Fallback to configured symbols if Data Service is unavailable
+                    symbols = [s.strip() for s in settings.external_sources_symbols.split(",") if s.strip()]
+                    logger.warning(f"Could not load symbols from Data Service, using config: {symbols}")
+                else:
+                    logger.info(f"Loaded {len(symbols)} symbols from Data Service")
+            else:
+                symbols = [s.strip() for s in settings.external_sources_symbols.split(",") if s.strip()]
+
+            scheduler_stats["symbols"] = symbols
 
             # Fetch and store for each symbol
             total_stored = 0
@@ -373,7 +435,8 @@ async def fetch_external_sources_task():
                 try:
                     stored = await fetch_and_store_for_symbol(symbol, min_priority)
                     total_stored += stored
-                    logger.info(f"Fetched and stored {stored} documents for {symbol}")
+                    if stored > 0:
+                        logger.info(f"Fetched and stored {stored} documents for {symbol}")
                 except Exception as e:
                     logger.error(f"Error fetching external sources for {symbol}: {e}")
 
@@ -401,7 +464,8 @@ async def fetch_external_sources_task():
             logger.error(f"Error in external sources scheduler: {e}")
             scheduler_stats["last_error"] = str(e)
 
-        # Schedule next fetch
+        # Schedule next fetch (re-read interval in case it changed)
+        interval_minutes = get_scheduler_interval()
         scheduler_stats["next_fetch"] = (datetime.now() + timedelta(minutes=interval_minutes)).isoformat()
 
         # Wait for next interval
@@ -548,12 +612,14 @@ async def get_scheduler_status():
     - Total fetches and documents stored
     - Configured symbols and interval
     """
+    use_managed_symbols = getattr(settings, 'external_sources_use_managed_symbols', True)
     return {
         "scheduler": scheduler_stats,
         "config": {
             "enabled_in_config": settings.external_sources_auto_fetch_enabled,
             "interval_minutes": settings.external_sources_fetch_interval_minutes,
-            "symbols": settings.external_sources_symbols,
+            "symbols": settings.external_sources_symbols or "(dynamic from Data Service)",
+            "use_managed_symbols": use_managed_symbols,
             "min_priority": settings.external_sources_min_priority
         }
     }
@@ -585,6 +651,69 @@ async def stop_scheduler():
 
     await stop_external_sources_scheduler()
     return {"status": "stopped", "scheduler": scheduler_stats}
+
+
+class SchedulerConfigRequest(BaseModel):
+    """Request model for updating scheduler configuration."""
+    interval_minutes: Optional[int] = Field(None, ge=1, le=1440, description="Fetch interval in minutes (1-1440)")
+    min_priority: Optional[str] = Field(None, description="Minimum priority: critical, high, medium, low")
+
+
+@app.get("/api/v1/rag/scheduler/config", tags=["Data Ingestion"])
+async def get_scheduler_config():
+    """
+    Get current scheduler runtime configuration.
+
+    Returns the currently active configuration values (runtime or defaults).
+    """
+    return {
+        "interval_minutes": get_scheduler_interval(),
+        "min_priority": get_scheduler_priority(),
+        "runtime_config": scheduler_runtime_config,
+        "defaults": {
+            "interval_minutes": settings.external_sources_fetch_interval_minutes,
+            "min_priority": settings.external_sources_min_priority
+        }
+    }
+
+
+@app.post("/api/v1/rag/scheduler/config", tags=["Data Ingestion"])
+async def update_scheduler_config(request: SchedulerConfigRequest):
+    """
+    Update scheduler runtime configuration.
+
+    Changes take effect immediately and are persisted to disk.
+    The scheduler will use the new values on the next fetch cycle.
+    """
+    global scheduler_runtime_config
+
+    updated = {}
+
+    if request.interval_minutes is not None:
+        scheduler_runtime_config["interval_minutes"] = request.interval_minutes
+        updated["interval_minutes"] = request.interval_minutes
+
+    if request.min_priority is not None:
+        valid_priorities = ["critical", "high", "medium", "low"]
+        if request.min_priority.lower() not in valid_priorities:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid priority. Must be one of: {valid_priorities}"
+            )
+        scheduler_runtime_config["min_priority"] = request.min_priority.lower()
+        updated["min_priority"] = request.min_priority.lower()
+
+    # Persist to file
+    save_scheduler_config()
+
+    return {
+        "message": "Configuration updated",
+        "updated": updated,
+        "current_config": {
+            "interval_minutes": get_scheduler_interval(),
+            "min_priority": get_scheduler_priority()
+        }
+    }
 
 
 @app.post("/api/v1/rag/scheduler/fetch-now", tags=["Data Ingestion"])

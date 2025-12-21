@@ -385,27 +385,41 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
 
         th, td {
-            padding: 0.75rem;
+            padding: 0.6rem 0.75rem;
             text-align: left;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         th {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.3);
             position: sticky;
             top: 0;
             font-weight: 500;
             color: #a0a0a0;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
+            z-index: 1;
         }
 
         tr:hover {
             background: rgba(255, 255, 255, 0.03);
         }
+
+        /* Symbol table specific widths */
+        #symbol-table th:nth-child(1),
+        #symbol-table td:nth-child(1) { width: 25%; }
+        #symbol-table th:nth-child(2),
+        #symbol-table td:nth-child(2) { width: 15%; text-align: right; }
+        #symbol-table th:nth-child(3),
+        #symbol-table td:nth-child(3) { width: 15%; text-align: right; }
+        #symbol-table th:nth-child(4),
+        #symbol-table td:nth-child(4) { width: 45%; }
 
         /* Badges */
         .badge {
@@ -451,40 +465,6 @@
             font-size: 1.5rem;
             font-weight: 600;
             color: #a78bfa;
-        }
-
-        /* Symbol Distribution */
-        .symbol-dist-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .symbol-card {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .symbol-card .symbol {
-            font-weight: 600;
-            color: #ce93d8;
-            font-size: 1.1rem;
-        }
-
-        .symbol-card .count {
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: #64c8ff;
-            margin: 0.5rem 0;
-        }
-
-        .symbol-card .label {
-            font-size: 0.75rem;
-            opacity: 0.6;
         }
 
         /* Progress Bar */
@@ -703,9 +683,22 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Dokumente nach Symbol</h2>
+                    <span id="symbol-count" style="opacity: 0.7;">- Symbole</span>
                 </div>
-                <div class="symbol-dist-grid" id="symbol-dist-grid">
-                    <div style="opacity: 0.5; text-align: center;">Lade...</div>
+                <div class="table-container" style="max-height: 350px;">
+                    <table id="symbol-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 25%;">Symbol</th>
+                                <th style="width: 15%; text-align: right;">Dokumente</th>
+                                <th style="width: 15%; text-align: right;">Anteil</th>
+                                <th style="width: 45%;">Verteilung</th>
+                            </tr>
+                        </thead>
+                        <tbody id="symbol-tbody">
+                            <tr><td colspan="4" style="text-align: center; opacity: 0.5;">Lade...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -765,6 +758,7 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Scheduler Konfiguration</h2>
+                    <button class="btn btn-sm btn-success" onclick="saveSchedulerConfig()">Speichern</button>
                 </div>
                 <div class="config-grid">
                     <div class="config-item">
@@ -773,7 +767,18 @@
                     </div>
                     <div class="config-item">
                         <span class="label">Intervall</span>
-                        <span class="value" id="sched-cfg-interval">-</span>
+                        <select class="filter-select" id="sched-interval-select" style="width: 140px;">
+                            <option value="1">1 Minute</option>
+                            <option value="5">5 Minuten</option>
+                            <option value="10">10 Minuten</option>
+                            <option value="15">15 Minuten</option>
+                            <option value="30">30 Minuten</option>
+                            <option value="60">1 Stunde</option>
+                            <option value="120">2 Stunden</option>
+                            <option value="360">6 Stunden</option>
+                            <option value="720">12 Stunden</option>
+                            <option value="1440">24 Stunden</option>
+                        </select>
                     </div>
                     <div class="config-item">
                         <span class="label">Symbole</span>
@@ -781,7 +786,12 @@
                     </div>
                     <div class="config-item">
                         <span class="label">Min. Prioritat</span>
-                        <span class="value" id="sched-cfg-priority">-</span>
+                        <select class="filter-select" id="sched-priority-select" style="width: 120px;">
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
                     </div>
                 </div>
                 <div style="margin-top: 1rem;">
@@ -947,25 +957,35 @@
                     typesGrid.innerHTML = '<div style="opacity: 0.5;">Keine Dokumente</div>';
                 }
 
-                // Update symbol distribution
-                const symbolGrid = document.getElementById('symbol-dist-grid');
+                // Update symbol distribution table
+                const symbolTbody = document.getElementById('symbol-tbody');
                 const docsBySymbol = data.documents_by_symbol || {};
-                if (Object.keys(docsBySymbol).length > 0) {
+                const symbolCount = Object.keys(docsBySymbol).length;
+                document.getElementById('symbol-count').textContent = `${symbolCount} Symbole`;
+
+                if (symbolCount > 0) {
                     const total = data.document_count || 1;
-                    symbolGrid.innerHTML = Object.entries(docsBySymbol)
+                    const maxCount = Math.max(...Object.values(docsBySymbol));
+                    symbolTbody.innerHTML = Object.entries(docsBySymbol)
                         .sort((a, b) => b[1] - a[1])
                         .map(([symbol, count]) => {
-                            const percent = Math.round((count / total) * 100);
+                            const percent = ((count / total) * 100).toFixed(1);
+                            const barWidth = Math.round((count / maxCount) * 100);
                             return `
-                                <div class="symbol-card">
-                                    <div class="symbol">${symbol}</div>
-                                    <div class="count">${count}</div>
-                                    <div class="label">${percent}% der Dokumente</div>
-                                </div>
+                                <tr>
+                                    <td><span class="badge badge-symbol">${symbol}</span></td>
+                                    <td style="text-align: right; font-weight: 600; color: #64c8ff;">${count}</td>
+                                    <td style="text-align: right; opacity: 0.7;">${percent}%</td>
+                                    <td style="width: 40%;">
+                                        <div class="progress-bar" style="margin: 0;">
+                                            <div class="progress-fill" style="width: ${barWidth}%"></div>
+                                        </div>
+                                    </td>
+                                </tr>
                             `;
                         }).join('');
                 } else {
-                    symbolGrid.innerHTML = '<div style="opacity: 0.5;">Keine Dokumente</div>';
+                    symbolTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; opacity: 0.5;">Keine Dokumente</td></tr>';
                 }
 
             } catch (err) {
@@ -1021,15 +1041,63 @@
                 document.getElementById('sched-next-fetch').textContent =
                     data.scheduler.next_fetch ? formatDateTime(data.scheduler.next_fetch) : '-';
 
-                // Update config
+                // Update config display
                 document.getElementById('sched-cfg-enabled').textContent = data.config.enabled_in_config ? 'Ja' : 'Nein';
-                document.getElementById('sched-cfg-interval').textContent = `${data.config.interval_minutes} Minuten`;
                 document.getElementById('sched-cfg-symbols').textContent = data.config.symbols || '-';
-                document.getElementById('sched-cfg-priority').textContent = data.config.min_priority || '-';
                 document.getElementById('sched-last-error').textContent = data.scheduler.last_error || 'Keine';
+
+                // Load runtime config for dropdowns
+                await loadSchedulerConfig();
 
             } catch (err) {
                 console.error('Scheduler status error:', err);
+            }
+        }
+
+        // Load scheduler runtime config
+        async function loadSchedulerConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/rag/scheduler/config`);
+                const data = await res.json();
+
+                // Set interval dropdown
+                const intervalSelect = document.getElementById('sched-interval-select');
+                intervalSelect.value = data.interval_minutes || 5;
+
+                // Set priority dropdown
+                const prioritySelect = document.getElementById('sched-priority-select');
+                prioritySelect.value = data.min_priority || 'medium';
+
+            } catch (err) {
+                console.error('Config load error:', err);
+            }
+        }
+
+        // Save scheduler config
+        async function saveSchedulerConfig() {
+            const interval = parseInt(document.getElementById('sched-interval-select').value);
+            const priority = document.getElementById('sched-priority-select').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/rag/scheduler/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        interval_minutes: interval,
+                        min_priority: priority
+                    })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(`Konfiguration gespeichert: Intervall ${interval} Min, Prioritat ${priority}`);
+                    refreshSchedulerStatus();
+                } else {
+                    showToast(data.detail || 'Fehler beim Speichern', 'error');
+                }
+            } catch (err) {
+                console.error('Config save error:', err);
+                showToast('Fehler beim Speichern der Konfiguration', 'error');
             }
         }
 
