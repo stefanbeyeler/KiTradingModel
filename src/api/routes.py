@@ -356,7 +356,8 @@ async def pull_llm_model():
         success = await llm_service.pull_model()
         return {
             "model": llm_service.model,
-            "pulled": success
+            "pulled": success,
+            "success": success
         }
     except Exception as e:
         logger.error(f"Failed to pull model: {e}")

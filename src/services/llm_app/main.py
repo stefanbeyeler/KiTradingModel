@@ -91,6 +91,15 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Failed to initialize LLM Service: {e}")
 
+    # Pre-cache symbols for faster first request
+    try:
+        from src.services.analysis_service import AnalysisService
+        analysis_svc = AnalysisService()
+        symbols = await analysis_svc.get_available_symbols()
+        logger.info(f"Pre-cached {len(symbols)} symbols for faster access")
+    except Exception as e:
+        logger.warning(f"Could not pre-cache symbols (will be loaded on first request): {e}")
+
     logger.info("LLM Service started successfully")
 
 

@@ -378,13 +378,53 @@
         }
 
         /* Symbol Selection */
+        .symbol-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .symbol-category {
+            margin-bottom: 1rem;
+        }
+
+        .symbol-category-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+        }
+
+        .symbol-category-header:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .symbol-category-icon {
+            font-size: 1rem;
+        }
+
+        .symbol-category-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .symbol-category-name.crypto { color: #f7931a; }
+        .symbol-category-name.forex { color: #4caf50; }
+        .symbol-category-name.indices { color: #2196f3; }
+        .symbol-category-name.commodities { color: #ffc107; }
+
+        .symbol-category-count {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-left: auto;
+        }
+
         .symbol-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
             gap: 0.5rem;
-            margin-top: 1rem;
-            max-height: 200px;
-            overflow-y: auto;
         }
 
         .symbol-chip {
@@ -408,6 +448,11 @@
             border-color: #64c8ff;
             color: #64c8ff;
         }
+
+        .symbol-chip.crypto { border-left: 3px solid #f7931a; }
+        .symbol-chip.forex { border-left: 3px solid #4caf50; }
+        .symbol-chip.indices { border-left: 3px solid #2196f3; }
+        .symbol-chip.commodities { border-left: 3px solid #ffc107; }
 
         /* Recommendation Card */
         .recommendation-card {
@@ -683,8 +728,8 @@
                     <p style="opacity: 0.7; margin-bottom: 0.5rem;">
                         Wahlen Sie ein Symbol fur eine KI-gestutzte Handelsempfehlung.
                     </p>
-                    <div class="symbol-grid" id="symbol-grid">
-                        <div style="opacity: 0.5; text-align: center; grid-column: span 4;">Lade Symbole...</div>
+                    <div class="symbol-container" id="symbol-container">
+                        <div style="opacity: 0.5; text-align: center;">Lade Symbole...</div>
                     </div>
                 </div>
 
@@ -774,6 +819,41 @@
             }
         }
 
+        // Categorize symbol
+        function categorizeSymbol(symbol) {
+            // Crypto patterns
+            const cryptoPatterns = ['BTC', 'ETH', 'SOL', 'ADA', 'BNB', 'LTC', 'DOG', 'DOT', 'UNI', 'LNK', 'AVX', 'BCH', 'KSM', 'MTC', 'XRP', 'DOGE', 'SHIB', 'MATIC', 'LINK', 'AVAX'];
+            if (cryptoPatterns.some(p => symbol.startsWith(p)) || symbol.endsWith('USD') && cryptoPatterns.some(p => symbol.includes(p))) {
+                return 'crypto';
+            }
+
+            // Indices patterns
+            const indexPatterns = ['US30', 'US500', 'NAS100', 'GER40', 'UK100', 'FRA40', 'JP225', 'AUS200', 'EURO50', 'SPX', 'NDX', 'DJI'];
+            if (indexPatterns.some(p => symbol.includes(p))) {
+                return 'indices';
+            }
+
+            // Commodities patterns
+            const commodityPatterns = ['XAU', 'XAG', 'GOLD', 'SILVER', 'OIL', 'WTI', 'BRENT', 'NATGAS', 'COPPER'];
+            if (commodityPatterns.some(p => symbol.includes(p))) {
+                return 'commodities';
+            }
+
+            // Default to Forex (currency pairs)
+            return 'forex';
+        }
+
+        // Get category display info
+        function getCategoryInfo(category) {
+            const info = {
+                crypto: { name: 'Krypto', icon: '₿', order: 1 },
+                forex: { name: 'Forex', icon: '💱', order: 2 },
+                indices: { name: 'Indizes', icon: '📊', order: 3 },
+                commodities: { name: 'Rohstoffe', icon: '🥇', order: 4 }
+            };
+            return info[category] || { name: category, icon: '📈', order: 5 };
+        }
+
         // Load symbols
         async function loadSymbols() {
             try {
@@ -783,22 +863,50 @@
                 const symbols = data.symbols || [];
                 document.getElementById('stat-symbols').textContent = symbols.length;
 
-                const grid = document.getElementById('symbol-grid');
+                const container = document.getElementById('symbol-container');
                 if (symbols.length === 0) {
-                    grid.innerHTML = '<div style="opacity: 0.5; text-align: center; grid-column: span 4;">Keine Symbole verfugbar</div>';
+                    container.innerHTML = '<div style="opacity: 0.5; text-align: center;">Keine Symbole verfugbar</div>';
                     return;
                 }
 
-                grid.innerHTML = symbols.map(s => `
-                    <div class="symbol-chip ${selectedSymbol === s ? 'selected' : ''}" onclick="selectSymbol('${s}')">
-                        ${s}
-                    </div>
-                `).join('');
+                // Group symbols by category
+                const grouped = {};
+                symbols.forEach(s => {
+                    const category = categorizeSymbol(s);
+                    if (!grouped[category]) grouped[category] = [];
+                    grouped[category].push(s);
+                });
+
+                // Sort categories and render
+                const sortedCategories = Object.keys(grouped).sort((a, b) =>
+                    getCategoryInfo(a).order - getCategoryInfo(b).order
+                );
+
+                container.innerHTML = sortedCategories.map(category => {
+                    const info = getCategoryInfo(category);
+                    const categorySymbols = grouped[category].sort();
+                    return `
+                        <div class="symbol-category">
+                            <div class="symbol-category-header">
+                                <span class="symbol-category-icon">${info.icon}</span>
+                                <span class="symbol-category-name ${category}">${info.name}</span>
+                                <span class="symbol-category-count">${categorySymbols.length} Symbole</span>
+                            </div>
+                            <div class="symbol-grid">
+                                ${categorySymbols.map(s => `
+                                    <div class="symbol-chip ${category} ${selectedSymbol === s ? 'selected' : ''}" onclick="selectSymbol('${s}')">
+                                        ${s}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
 
             } catch (err) {
                 console.error('Symbols error:', err);
-                document.getElementById('symbol-grid').innerHTML =
-                    '<div style="opacity: 0.5; text-align: center; grid-column: span 4;">Fehler beim Laden</div>';
+                document.getElementById('symbol-container').innerHTML =
+                    '<div style="opacity: 0.5; text-align: center;">Fehler beim Laden</div>';
             }
         }
 
@@ -825,15 +933,38 @@
                     return;
                 }
 
-                const recClass = (data.recommendation || '').toLowerCase().includes('kauf') ? 'buy' :
-                                 (data.recommendation || '').toLowerCase().includes('verkauf') ? 'sell' : 'hold';
+                // Map direction to recommendation class
+                const direction = (data.direction || data.signal || '').toUpperCase();
+                const recClass = direction === 'LONG' || direction === 'BUY' ? 'buy' :
+                                 direction === 'SHORT' || direction === 'SELL' ? 'sell' : 'hold';
+
+                // Map direction to German
+                const directionText = direction === 'LONG' || direction === 'BUY' ? 'KAUFEN (Long)' :
+                                      direction === 'SHORT' || direction === 'SELL' ? 'VERKAUFEN (Short)' : 'HALTEN';
+
+                // Format confidence
+                const confidence = data.confidence_score || data.confidence || '-';
+                const confidenceText = typeof confidence === 'number' ? `${confidence}%` : confidence;
+
+                // Build key factors list
+                const keyFactors = data.key_factors || [];
+                const factorsList = keyFactors.length > 0
+                    ? `<ul style="margin: 0.5rem 0; padding-left: 1.2rem; font-size: 0.85rem;">${keyFactors.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>`
+                    : '';
 
                 resultDiv.innerHTML = `
                     <div class="recommendation-card">
                         <div class="symbol">${data.symbol || symbol}</div>
-                        <div class="recommendation ${recClass}">${data.recommendation || '-'}</div>
-                        <div class="analysis">${data.analysis || '-'}</div>
-                        ${data.confidence ? `<div class="confidence">Konfidenz: ${data.confidence}</div>` : ''}
+                        <div class="recommendation ${recClass}">${directionText}</div>
+                        <div class="analysis">${data.setup_recommendation || data.reasoning || '-'}</div>
+                        ${factorsList}
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem; font-size: 0.85rem;">
+                            <div><strong>Entry:</strong> ${data.entry_price ? data.entry_price.toFixed(2) : '-'}</div>
+                            <div><strong>Stop Loss:</strong> ${data.stop_loss ? data.stop_loss.toFixed(2) : '-'}</div>
+                            <div><strong>Take Profit:</strong> ${data.take_profit_1 ? data.take_profit_1.toFixed(2) : '-'}</div>
+                            <div><strong>R/R Ratio:</strong> ${data.risk_reward_ratio ? data.risk_reward_ratio.toFixed(2) : '-'}</div>
+                        </div>
+                        <div class="confidence" style="margin-top: 0.75rem;">Konfidenz: ${confidenceText}</div>
                     </div>
                 `;
 

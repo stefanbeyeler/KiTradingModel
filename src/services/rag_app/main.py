@@ -184,6 +184,10 @@ tags_metadata = [
         "description": "**EasyInsight Daten** - Managed symbols, symbol statistics, MT5 trading logs, NHITS model status.",
     },
     {
+        "name": "Candlestick Patterns",
+        "description": "**Candlestick Patterns** - 24 pattern types, multi-timeframe detection, confidence scoring, trading implications.",
+    },
+    {
         "name": "Data Ingestion",
         "description": "Fetch and ingest data from all external sources into the RAG database.",
     },
@@ -195,7 +199,7 @@ app = FastAPI(
     description="""
 # RAG Service für Trading Intelligence
 
-Retrieval Augmented Generation Service mit **9 integrierten Datenquellen** für umfassende Marktanalyse.
+Retrieval Augmented Generation Service mit **10 integrierten Datenquellen** für umfassende Marktanalyse.
 
 ## Features
 
@@ -204,7 +208,7 @@ Retrieval Augmented Generation Service mit **9 integrierten Datenquellen** für 
 - GPU-beschleunigte Embeddings
 - Persistente Speicherung
 
-### 📊 9 Externe Datenquellen
+### 📊 10 Externe Datenquellen
 
 | Quelle | Beschreibung |
 |--------|--------------|
@@ -217,6 +221,7 @@ Retrieval Augmented Generation Service mit **9 integrierten Datenquellen** für 
 | **Technische Levels** | S/R, Fibonacci, Pivots, VWAP, MAs |
 | **Regulatorische Updates** | SEC, ETFs, Global Regulation |
 | **EasyInsight** | Managed Symbols, MT5 Logs, Model Status |
+| **Candlestick Patterns** | 24 Pattern-Typen, Multi-Timeframe, Confidence |
 
 ## Nutzung
 
@@ -437,6 +442,12 @@ async def fetch_external_sources_task():
                     total_stored += stored
                     if stored > 0:
                         logger.info(f"Fetched and stored {stored} documents for {symbol}")
+
+                    # Also fetch candlestick patterns for the symbol
+                    pattern_stored = await fetch_and_store_candlestick_patterns(symbol)
+                    total_stored += pattern_stored
+                    if pattern_stored > 0:
+                        logger.info(f"Fetched and stored {pattern_stored} candlestick patterns for {symbol}")
                 except Exception as e:
                     logger.error(f"Error fetching external sources for {symbol}: {e}")
 
@@ -521,6 +532,60 @@ async def fetch_and_store_for_symbol(symbol: Optional[str], min_priority: str) -
 
     except Exception as e:
         logger.error(f"Error fetching from Data Service: {e}")
+        return 0
+
+
+async def fetch_and_store_candlestick_patterns(symbol: str) -> int:
+    """Fetch candlestick patterns for a symbol and store in RAG."""
+    if not data_fetcher or not rag_service:
+        return 0
+
+    try:
+        # Fetch candlestick patterns from Data Service
+        # Use H1, H4, D1 timeframes for the scheduler (most relevant for trading)
+        results = await data_fetcher.fetch_candlestick_patterns(
+            symbol=symbol,
+            timeframes=["H1", "H4", "D1"],
+            lookback_candles=20,
+            min_confidence=0.5
+        )
+
+        if not results:
+            return 0
+
+        # Store each pattern in RAG (duplicates are automatically skipped)
+        stored_count = 0
+        skipped_count = 0
+        for result in results:
+            try:
+                if hasattr(result, 'to_rag_document'):
+                    doc = result.to_rag_document()
+                elif isinstance(result, dict):
+                    doc = result
+                else:
+                    continue
+
+                doc_id = await rag_service.add_custom_document(
+                    content=doc.get("content", str(result)),
+                    document_type=doc.get("document_type", "candlestick_patterns"),
+                    symbol=doc.get("symbol", symbol),
+                    metadata=doc.get("metadata", {}),
+                    skip_duplicates=True
+                )
+                if doc_id:
+                    stored_count += 1
+                else:
+                    skipped_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to store candlestick pattern: {e}")
+
+        if skipped_count > 0:
+            logger.debug(f"Skipped {skipped_count} duplicate candlestick patterns for {symbol}")
+
+        return stored_count
+
+    except Exception as e:
+        logger.error(f"Error fetching candlestick patterns from Data Service: {e}")
         return 0
 
 
@@ -1660,6 +1725,265 @@ async def get_easyinsight_data(
         }
     except Exception as e:
         logger.error(f"Error fetching EasyInsight data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/rag/candlestick-patterns/types", tags=["Candlestick Patterns"])
+async def get_candlestick_pattern_types():
+    """
+    Get all available candlestick pattern types and their descriptions.
+
+    Returns a list of 24 pattern types with:
+    - Pattern name and category (reversal, continuation, indecision)
+    - Direction (bullish, bearish, neutral)
+    - Description and trading implications
+    """
+    if not data_fetcher:
+        raise HTTPException(status_code=503, detail="Data fetcher not initialized")
+
+    try:
+        return await data_fetcher.fetch_candlestick_pattern_types()
+    except Exception as e:
+        logger.error(f"Error fetching pattern types: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/rag/candlestick-patterns/summary/{symbol}", tags=["Candlestick Patterns"])
+async def get_candlestick_pattern_summary(symbol: str):
+    """
+    Get a simplified candlestick pattern summary for a symbol.
+
+    Returns aggregated pattern counts and most significant patterns
+    across all timeframes for quick overview.
+    """
+    if not data_fetcher:
+        raise HTTPException(status_code=503, detail="Data fetcher not initialized")
+
+    try:
+        return await data_fetcher.fetch_candlestick_pattern_summary(symbol)
+    except Exception as e:
+        logger.error(f"Error fetching pattern summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/rag/candlestick-patterns/history", tags=["Candlestick Patterns"])
+async def get_candlestick_pattern_history(
+    symbol: Optional[str] = Query(None, description="Filter by symbol"),
+    pattern_type: Optional[str] = Query(None, description="Filter by pattern type"),
+    direction: Optional[str] = Query(None, description="Filter by direction: bullish, bearish"),
+    min_confidence: float = Query(0.0, ge=0.0, le=1.0, description="Minimum confidence"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum results"),
+    store_in_rag: bool = Query(False, description="Store patterns in RAG database")
+):
+    """
+    Query historical candlestick pattern detections.
+
+    Returns patterns detected by the Data Service's auto-scan feature.
+    Optionally store the results in the RAG database for semantic search.
+
+    **Filters:**
+    - Symbol: Specific trading pair
+    - Pattern type: e.g., "hammer", "engulfing", "doji"
+    - Direction: bullish or bearish
+    - Confidence: 0.0 to 1.0
+    """
+    if not data_fetcher:
+        raise HTTPException(status_code=503, detail="Data fetcher not initialized")
+
+    try:
+        results = await data_fetcher.fetch_candlestick_pattern_history(
+            symbol=symbol,
+            pattern_type=pattern_type,
+            direction=direction,
+            min_confidence=min_confidence,
+            limit=limit
+        )
+
+        # Optionally store in RAG
+        stored_count = 0
+        if store_in_rag and rag_service and results:
+            for result in results:
+                doc = result.to_rag_document()
+                doc_id = await rag_service.add_custom_document(
+                    content=doc["content"],
+                    document_type=doc["document_type"],
+                    symbol=doc.get("symbol"),
+                    metadata=doc.get("metadata"),
+                    skip_duplicates=True
+                )
+                if doc_id:
+                    stored_count += 1
+
+            if stored_count > 0:
+                await rag_service.persist()
+
+        return {
+            "filters": {
+                "symbol": symbol,
+                "pattern_type": pattern_type,
+                "direction": direction,
+                "min_confidence": min_confidence
+            },
+            "patterns_count": len(results),
+            "stored_in_rag": stored_count,
+            "patterns": [r.to_rag_document() for r in results]
+        }
+    except Exception as e:
+        logger.error(f"Error fetching pattern history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/rag/candlestick-patterns/ingest", tags=["Candlestick Patterns"])
+async def ingest_candlestick_patterns(
+    symbol: Optional[str] = Query(None, description="Symbol to fetch patterns for (None = all managed symbols)"),
+    timeframes: Optional[str] = Query("H1,H4,D1", description="Comma-separated timeframes"),
+    min_confidence: float = Query(0.5, ge=0.0, le=1.0, description="Minimum confidence"),
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Fetch candlestick patterns for symbol(s) and ingest into RAG database.
+
+    If no symbol is specified, fetches patterns for all managed symbols
+    from the Data Service.
+
+    **Process:**
+    1. Fetches candlestick patterns from Data Service
+    2. Converts to RAG document format
+    3. Stores with embeddings (duplicates skipped)
+    4. Persists database
+    """
+    if not data_fetcher or not rag_service:
+        raise HTTPException(status_code=503, detail="Services not initialized")
+
+    async def do_ingest():
+        try:
+            tf_list = timeframes.split(",") if timeframes else ["H1", "H4", "D1"]
+
+            # Get symbols to process
+            if symbol:
+                symbols = [symbol]
+            else:
+                from src.services.data_service_client import get_data_service_client
+                client = get_data_service_client()
+                symbols = await client.get_managed_symbols(active_only=True)
+                if not symbols:
+                    symbols = ["BTCUSD", "ETHUSD"]  # Fallback
+
+            total_stored = 0
+            for sym in symbols:
+                try:
+                    results = await data_fetcher.fetch_candlestick_patterns(
+                        symbol=sym,
+                        timeframes=tf_list,
+                        min_confidence=min_confidence
+                    )
+
+                    for result in results:
+                        doc = result.to_rag_document()
+                        doc_id = await rag_service.add_custom_document(
+                            content=doc["content"],
+                            document_type=doc["document_type"],
+                            symbol=doc.get("symbol"),
+                            metadata=doc.get("metadata"),
+                            skip_duplicates=True
+                        )
+                        if doc_id:
+                            total_stored += 1
+
+                except Exception as e:
+                    logger.error(f"Error ingesting patterns for {sym}: {e}")
+
+            if total_stored > 0:
+                await rag_service.persist()
+
+            logger.info(f"Ingested {total_stored} candlestick patterns for {len(symbols)} symbols")
+        except Exception as e:
+            logger.error(f"Error in candlestick pattern ingestion: {e}")
+
+    if background_tasks:
+        background_tasks.add_task(do_ingest)
+        return {
+            "message": "Candlestick pattern ingestion started in background",
+            "symbol": symbol or "all managed symbols",
+            "timeframes": timeframes
+        }
+    else:
+        await do_ingest()
+        return {
+            "message": "Candlestick pattern ingestion completed",
+            "symbol": symbol or "all managed symbols",
+            "timeframes": timeframes
+        }
+
+
+@app.get("/api/v1/rag/candlestick-patterns/{symbol}", tags=["Candlestick Patterns"])
+async def get_candlestick_patterns(
+    symbol: str,
+    timeframes: Optional[str] = Query(None, description="Comma-separated timeframes: M5,M15,H1,H4,D1"),
+    lookback_candles: int = Query(20, ge=5, le=100, description="Number of candles to analyze"),
+    min_confidence: float = Query(0.5, ge=0.0, le=1.0, description="Minimum confidence threshold"),
+    store_in_rag: bool = Query(False, description="Store detected patterns in RAG database")
+):
+    """
+    Detect candlestick patterns for a symbol across multiple timeframes.
+
+    **Supported Pattern Types (24 total):**
+
+    **Reversal Patterns:**
+    - Hammer, Inverted Hammer, Shooting Star, Hanging Man
+    - Doji (Standard, Dragonfly, Gravestone)
+    - Bullish/Bearish Engulfing
+    - Morning Star, Evening Star
+    - Piercing Line, Dark Cloud Cover
+
+    **Continuation Patterns:**
+    - Three White Soldiers, Three Black Crows
+    - Rising/Falling Three Methods
+
+    **Indecision Patterns:**
+    - Spinning Top, Bullish/Bearish Harami, Harami Cross
+
+    **Timeframes:** M5, M15, H1, H4, D1
+    """
+    if not data_fetcher:
+        raise HTTPException(status_code=503, detail="Data fetcher not initialized")
+
+    try:
+        tf_list = timeframes.split(",") if timeframes else None
+        results = await data_fetcher.fetch_candlestick_patterns(
+            symbol=symbol,
+            timeframes=tf_list,
+            lookback_candles=lookback_candles,
+            min_confidence=min_confidence
+        )
+
+        # Optionally store in RAG
+        stored_count = 0
+        if store_in_rag and rag_service and results:
+            for result in results:
+                doc = result.to_rag_document()
+                doc_id = await rag_service.add_custom_document(
+                    content=doc["content"],
+                    document_type=doc["document_type"],
+                    symbol=doc.get("symbol"),
+                    metadata=doc.get("metadata"),
+                    skip_duplicates=True
+                )
+                if doc_id:
+                    stored_count += 1
+
+            if stored_count > 0:
+                await rag_service.persist()
+
+        return {
+            "symbol": symbol,
+            "timeframes": tf_list or ["M5", "M15", "H1", "H4", "D1"],
+            "patterns_count": len(results),
+            "stored_in_rag": stored_count,
+            "patterns": [r.to_rag_document() for r in results]
+        }
+    except Exception as e:
+        logger.error(f"Error fetching candlestick patterns: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

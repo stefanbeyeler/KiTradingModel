@@ -34,7 +34,8 @@ class DataGatewayService:
         self._http_client: Optional[httpx.AsyncClient] = None
         self._easyinsight_url = settings.easyinsight_api_url
         self._cache: dict[str, tuple[datetime, Any]] = {}
-        self._cache_ttl_seconds = 60  # 1 Minute Cache
+        self._cache_ttl_seconds = 60  # 1 Minute Cache für Marktdaten
+        self._symbols_cache_ttl_seconds = 300  # 5 Minuten Cache für Symbole
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client."""
@@ -48,11 +49,12 @@ class DataGatewayService:
             await self._http_client.aclose()
             self._http_client = None
 
-    def _get_cached(self, key: str) -> Optional[Any]:
+    def _get_cached(self, key: str, ttl_seconds: Optional[int] = None) -> Optional[Any]:
         """Get cached value if not expired."""
         if key in self._cache:
             cached_time, value = self._cache[key]
-            if datetime.now() - cached_time < timedelta(seconds=self._cache_ttl_seconds):
+            ttl = ttl_seconds if ttl_seconds is not None else self._cache_ttl_seconds
+            if datetime.now() - cached_time < timedelta(seconds=ttl):
                 return value
             del self._cache[key]
         return None
@@ -60,6 +62,10 @@ class DataGatewayService:
     def _set_cached(self, key: str, value: Any):
         """Set cached value."""
         self._cache[key] = (datetime.now(), value)
+
+    def _is_symbols_key(self, key: str) -> bool:
+        """Check if cache key is for symbols (longer TTL)."""
+        return key.startswith("symbols")
 
     # ==================== Symbol Management ====================
 
@@ -71,8 +77,9 @@ class DataGatewayService:
             List of symbol dictionaries with 'symbol', 'category', 'count', etc.
         """
         cache_key = "symbols_list"
-        cached = self._get_cached(cache_key)
+        cached = self._get_cached(cache_key, ttl_seconds=self._symbols_cache_ttl_seconds)
         if cached:
+            logger.debug(f"Returning {len(cached)} symbols from cache")
             return cached
 
         try:
@@ -82,7 +89,7 @@ class DataGatewayService:
 
             data = response.json()
             self._set_cached(cache_key, data)
-            logger.debug(f"Fetched {len(data)} symbols from EasyInsight API")
+            logger.info(f"Fetched and cached {len(data)} symbols from EasyInsight API (TTL: {self._symbols_cache_ttl_seconds}s)")
             return data
 
         except Exception as e:

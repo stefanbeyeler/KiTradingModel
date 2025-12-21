@@ -264,6 +264,72 @@ class DataServiceClient:
             logger.error(f"Error fetching managed symbols: {e}")
             return []
 
+    async def get_candlestick_patterns(
+        self,
+        symbol: str,
+        timeframes: Optional[list[str]] = None,
+        lookback_candles: int = 20,
+        min_confidence: float = 0.5
+    ) -> dict:
+        """Get detected candlestick patterns for a symbol.
+
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSD")
+            timeframes: List of timeframes to scan (e.g., ["M5", "H1", "D1"])
+            lookback_candles: Number of candles to analyze
+            min_confidence: Minimum confidence threshold (0.0-1.0)
+
+        Returns:
+            Dict with detected patterns per timeframe
+        """
+        params = {
+            "lookback_candles": lookback_candles,
+            "min_confidence": min_confidence,
+        }
+        if timeframes:
+            params["timeframes"] = ",".join(timeframes)
+        return await self._get(f"/patterns/scan/{symbol}", params)
+
+    async def get_candlestick_pattern_types(self) -> dict:
+        """Get all available candlestick pattern types and their descriptions."""
+        return await self._get("/patterns/types")
+
+    async def get_candlestick_pattern_summary(self, symbol: str) -> dict:
+        """Get a simplified candlestick pattern summary for a symbol."""
+        return await self._get(f"/patterns/summary/{symbol}")
+
+    async def get_candlestick_pattern_history(
+        self,
+        symbol: Optional[str] = None,
+        pattern_type: Optional[str] = None,
+        direction: Optional[str] = None,
+        min_confidence: float = 0.0,
+        limit: int = 100
+    ) -> dict:
+        """Query historical candlestick pattern detections.
+
+        Args:
+            symbol: Filter by symbol
+            pattern_type: Filter by pattern type
+            direction: Filter by direction (bullish/bearish)
+            min_confidence: Minimum confidence threshold
+            limit: Maximum number of results
+
+        Returns:
+            Dict with pattern history
+        """
+        params = {
+            "min_confidence": min_confidence,
+            "limit": limit,
+        }
+        if symbol:
+            params["symbol"] = symbol
+        if pattern_type:
+            params["pattern_type"] = pattern_type
+        if direction:
+            params["direction"] = direction
+        return await self._get("/patterns/history", params)
+
 
 # Singleton instance
 _data_service_client: Optional[DataServiceClient] = None
