@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Service - Konfiguration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .service-badge.offline {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        .service-badge.warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+        }
+
+        .tab-btn.active {
+            background: rgba(100, 200, 255, 0.15);
+            color: #64c8ff;
+            border-bottom: 2px solid #64c8ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-value.warning {
+            color: #ffb74d;
+        }
+
+        .stat-value.success {
+            color: #81c784;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1100px) {
+            .grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Config Section */
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .config-item .label {
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+
+        .config-item .value {
+            font-weight: 500;
+            color: #64c8ff;
+        }
+
+        .config-item .value.warning {
+            color: #ffb74d;
+        }
+
+        .config-item .value.success {
+            color: #81c784;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .quick-actions .btn {
+            width: 100%;
+            justify-content: center;
+            padding: 0.9rem;
+        }
+
+        /* Chat Section */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .chat-message {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            max-width: 85%;
+        }
+
+        .chat-message.user {
+            background: rgba(100, 200, 255, 0.2);
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.assistant {
+            background: rgba(156, 39, 176, 0.2);
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-message .role {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-bottom: 0.3rem;
+        }
+
+        .chat-message .content {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.9rem;
+            resize: none;
+        }
+
+        .chat-input::placeholder {
+            color: #888;
+        }
+
+        /* Symbol Selection */
+        .symbol-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.5rem;
+            margin-top: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .symbol-chip {
+            padding: 0.5rem 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .symbol-chip:hover {
+            background: rgba(100, 200, 255, 0.15);
+            border-color: rgba(100, 200, 255, 0.3);
+        }
+
+        .symbol-chip.selected {
+            background: rgba(100, 200, 255, 0.2);
+            border-color: #64c8ff;
+            color: #64c8ff;
+        }
+
+        /* Recommendation Card */
+        .recommendation-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 3px solid #64c8ff;
+        }
+
+        .recommendation-card .symbol {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #64c8ff;
+            margin-bottom: 0.5rem;
+        }
+
+        .recommendation-card .recommendation {
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .recommendation-card .recommendation.buy {
+            color: #81c784;
+        }
+
+        .recommendation-card .recommendation.sell {
+            color: #e57373;
+        }
+
+        .recommendation-card .recommendation.hold {
+            color: #ffb74d;
+        }
+
+        .recommendation-card .analysis {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        .recommendation-card .confidence {
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-warning { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
+        .badge-danger { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            border-left: 4px solid #64c8ff;
+            display: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.error {
+            border-left-color: #e57373;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(100, 200, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #64c8ff;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Model Info */
+        .model-info {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .model-info .model-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #a78bfa;
+            margin-bottom: 0.5rem;
+        }
+
+        .model-info .model-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .model-info .detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .model-info .detail .label {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Dashboard</a>
+            <span class="header-title">LLM Service - Konfiguration</span>
+            <span class="service-badge" id="service-status">Laden...</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('overview')">Ubersicht</button>
+            <button class="tab-btn" onclick="switchTab('chat')">Chat</button>
+            <button class="tab-btn" onclick="switchTab('recommendations')">Empfehlungen</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="tab-overview" class="tab-content active">
+            <!-- Stats Bar -->
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-model">-</div>
+                    <div class="stat-label">Modell</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-ollama-status">-</div>
+                    <div class="stat-label">Ollama Status</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-rag-status">-</div>
+                    <div class="stat-label">RAG Status</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-symbols">-</div>
+                    <div class="stat-label">Verfugbare Symbole</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <!-- Model Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Modell Status</h2>
+                        <button class="btn btn-sm btn-primary" onclick="refreshStatus()">Aktualisieren</button>
+                    </div>
+                    <div class="model-info" id="model-info">
+                        <div class="model-name" id="model-name">-</div>
+                        <div class="model-details">
+                            <div class="detail">
+                                <span class="label">Host</span>
+                                <span id="model-host">-</span>
+                            </div>
+                            <div class="detail">
+                                <span class="label">Verfugbar</span>
+                                <span id="model-available">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="config-grid" style="margin-top: 1.5rem;">
+                        <div class="config-item">
+                            <span class="label">LLM Status</span>
+                            <span class="value" id="cfg-llm-status">-</span>
+                        </div>
+                        <div class="config-item">
+                            <span class="label">RAG Aktiviert</span>
+                            <span class="value" id="cfg-rag-enabled">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Aktionen</h2>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="btn btn-success" onclick="pullModel()" id="btn-pull-model">
+                            Modell aktualisieren (Pull)
+                        </button>
+                        <button class="btn btn-primary" onclick="testConnection()">
+                            Verbindung testen
+                        </button>
+                        <button class="btn btn-warning" onclick="switchTab('chat'); event.target.classList.remove('active');">
+                            Chat offnen
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <h3 style="font-size: 1rem; color: #a78bfa; margin-bottom: 0.75rem;">RAG Integration</h3>
+                        <p style="font-size: 0.85rem; opacity: 0.7; line-height: 1.5;">
+                            Der LLM Service nutzt den RAG Service fur kontextbasierte Antworten.
+                            Die Wissensbasis enthalt Trading-relevante Daten wie Sentiment, On-Chain Metriken,
+                            technische Levels und mehr.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Tab -->
+        <div id="tab-chat" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">LLM Chat</h2>
+                    <button class="btn btn-sm btn-danger" onclick="clearChat()">Chat leeren</button>
+                </div>
+                <p style="opacity: 0.7; margin-bottom: 1rem;">
+                    Stellen Sie Fragen zu Marktanalysen, Trading-Strategien oder Symbol-Informationen.
+                </p>
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="chat-message assistant">
+                            <div class="role">Assistent</div>
+                            <div class="content">Hallo! Ich bin Ihr Trading-Assistent. Wie kann ich Ihnen helfen? Sie konnen mich nach Marktanalysen, Symbol-Informationen oder Trading-Empfehlungen fragen.</div>
+                        </div>
+                    </div>
+                    <div class="chat-input-container">
+                        <textarea class="chat-input" id="chat-input" rows="2" placeholder="Ihre Nachricht eingeben..." onkeydown="handleChatKeydown(event)"></textarea>
+                        <button class="btn btn-success" onclick="sendChat()" id="btn-send-chat">
+                            Senden
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendations Tab -->
+        <div id="tab-recommendations" class="tab-content">
+            <div class="grid-2">
+                <!-- Symbol Selection -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Symbol auswahlen</h2>
+                        <button class="btn btn-sm btn-primary" onclick="loadSymbols()">Aktualisieren</button>
+                    </div>
+                    <p style="opacity: 0.7; margin-bottom: 0.5rem;">
+                        Wahlen Sie ein Symbol fur eine KI-gestutzte Handelsempfehlung.
+                    </p>
+                    <div class="symbol-grid" id="symbol-grid">
+                        <div style="opacity: 0.5; text-align: center; grid-column: span 4;">Lade Symbole...</div>
+                    </div>
+                </div>
+
+                <!-- Recommendation Result -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Empfehlung</h2>
+                    </div>
+                    <div id="recommendation-result">
+                        <p style="opacity: 0.5; text-align: center; margin-top: 2rem;">
+                            Wahlen Sie ein Symbol aus, um eine Empfehlung zu erhalten.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '/llm/api/v1';
+        let selectedSymbol = null;
+        let chatHistory = [];
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // Load data for the selected tab
+            if (tabName === 'recommendations') loadSymbols();
+        }
+
+        // Check service health
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${API_BASE.replace('/api/v1', '')}/health`);
+                const data = await res.json();
+                const badge = document.getElementById('service-status');
+
+                if (data.status === 'healthy') {
+                    badge.textContent = 'Online';
+                    badge.classList.remove('offline', 'warning');
+                } else {
+                    badge.textContent = 'Degraded';
+                    badge.classList.remove('offline');
+                    badge.classList.add('warning');
+                }
+
+                // Update overview stats
+                document.getElementById('stat-model').textContent = data.llm_model || '-';
+                document.getElementById('stat-rag-status').textContent = data.rag_enabled ? 'Aktiv' : 'Inaktiv';
+                document.getElementById('stat-rag-status').className = 'stat-value ' + (data.rag_enabled ? 'success' : 'warning');
+                document.getElementById('cfg-rag-enabled').textContent = data.rag_enabled ? 'Ja' : 'Nein';
+                document.getElementById('cfg-rag-enabled').className = 'value ' + (data.rag_enabled ? 'success' : 'warning');
+
+            } catch (err) {
+                const badge = document.getElementById('service-status');
+                badge.textContent = 'Offline';
+                badge.classList.add('offline');
+            }
+        }
+
+        // Load LLM status
+        async function refreshStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/llm/status`);
+                const data = await res.json();
+
+                // Update model info
+                document.getElementById('model-name').textContent = data.model || '-';
+                document.getElementById('model-host').textContent = data.host || '-';
+                document.getElementById('model-available').textContent = data.available ? 'Ja' : 'Nein';
+
+                document.getElementById('stat-ollama-status').textContent = data.available ? 'Verbunden' : 'Nicht verfugbar';
+                document.getElementById('stat-ollama-status').className = 'stat-value ' + (data.available ? 'success' : 'warning');
+                document.getElementById('cfg-llm-status').textContent = data.available ? 'Verbunden' : 'Nicht verbunden';
+                document.getElementById('cfg-llm-status').className = 'value ' + (data.available ? 'success' : 'warning');
+
+            } catch (err) {
+                console.error('Status error:', err);
+                showToast('Fehler beim Laden des Status', 'error');
+            }
+        }
+
+        // Load symbols
+        async function loadSymbols() {
+            try {
+                const res = await fetch(`${API_BASE}/symbols`);
+                const data = await res.json();
+
+                const symbols = data.symbols || [];
+                document.getElementById('stat-symbols').textContent = symbols.length;
+
+                const grid = document.getElementById('symbol-grid');
+                if (symbols.length === 0) {
+                    grid.innerHTML = '<div style="opacity: 0.5; text-align: center; grid-column: span 4;">Keine Symbole verfugbar</div>';
+                    return;
+                }
+
+                grid.innerHTML = symbols.map(s => `
+                    <div class="symbol-chip ${selectedSymbol === s ? 'selected' : ''}" onclick="selectSymbol('${s}')">
+                        ${s}
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                console.error('Symbols error:', err);
+                document.getElementById('symbol-grid').innerHTML =
+                    '<div style="opacity: 0.5; text-align: center; grid-column: span 4;">Fehler beim Laden</div>';
+            }
+        }
+
+        // Select symbol
+        function selectSymbol(symbol) {
+            selectedSymbol = symbol;
+            document.querySelectorAll('.symbol-chip').forEach(chip => {
+                chip.classList.toggle('selected', chip.textContent.trim() === symbol);
+            });
+            getRecommendation(symbol);
+        }
+
+        // Get recommendation
+        async function getRecommendation(symbol) {
+            const resultDiv = document.getElementById('recommendation-result');
+            resultDiv.innerHTML = '<p style="text-align: center;"><span class="loading-spinner"></span> Analyse lauft...</p>';
+
+            try {
+                const res = await fetch(`${API_BASE}/recommendation/${symbol}`);
+                const data = await res.json();
+
+                if (data.error) {
+                    resultDiv.innerHTML = `<p style="color: #e57373; text-align: center;">${data.error}</p>`;
+                    return;
+                }
+
+                const recClass = (data.recommendation || '').toLowerCase().includes('kauf') ? 'buy' :
+                                 (data.recommendation || '').toLowerCase().includes('verkauf') ? 'sell' : 'hold';
+
+                resultDiv.innerHTML = `
+                    <div class="recommendation-card">
+                        <div class="symbol">${data.symbol || symbol}</div>
+                        <div class="recommendation ${recClass}">${data.recommendation || '-'}</div>
+                        <div class="analysis">${data.analysis || '-'}</div>
+                        ${data.confidence ? `<div class="confidence">Konfidenz: ${data.confidence}</div>` : ''}
+                    </div>
+                `;
+
+            } catch (err) {
+                console.error('Recommendation error:', err);
+                resultDiv.innerHTML = '<p style="color: #e57373; text-align: center;">Fehler bei der Analyse</p>';
+            }
+        }
+
+        // Chat functions
+        function handleChatKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendChat();
+            }
+        }
+
+        async function sendChat() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const messagesDiv = document.getElementById('chat-messages');
+            const btnSend = document.getElementById('btn-send-chat');
+
+            // Add user message
+            messagesDiv.innerHTML += `
+                <div class="chat-message user">
+                    <div class="role">Sie</div>
+                    <div class="content">${escapeHtml(message)}</div>
+                </div>
+            `;
+            input.value = '';
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // Add loading indicator
+            const loadingId = 'loading-' + Date.now();
+            messagesDiv.innerHTML += `
+                <div class="chat-message assistant" id="${loadingId}">
+                    <div class="role">Assistent</div>
+                    <div class="content"><span class="loading-spinner"></span> Denke nach...</div>
+                </div>
+            `;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            btnSend.disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: message,
+                        use_rag: true
+                    })
+                });
+                const data = await res.json();
+
+                // Remove loading indicator
+                document.getElementById(loadingId)?.remove();
+
+                // Add response
+                const response = data.response || data.analysis || data.answer || 'Keine Antwort erhalten.';
+                messagesDiv.innerHTML += `
+                    <div class="chat-message assistant">
+                        <div class="role">Assistent</div>
+                        <div class="content">${escapeHtml(response)}</div>
+                    </div>
+                `;
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            } catch (err) {
+                document.getElementById(loadingId)?.remove();
+                messagesDiv.innerHTML += `
+                    <div class="chat-message assistant">
+                        <div class="role">Assistent</div>
+                        <div class="content" style="color: #e57373;">Fehler bei der Verarbeitung: ${err.message}</div>
+                    </div>
+                `;
+            } finally {
+                btnSend.disabled = false;
+            }
+        }
+
+        function clearChat() {
+            document.getElementById('chat-messages').innerHTML = `
+                <div class="chat-message assistant">
+                    <div class="role">Assistent</div>
+                    <div class="content">Hallo! Ich bin Ihr Trading-Assistent. Wie kann ich Ihnen helfen?</div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Pull model
+        async function pullModel() {
+            const btn = document.getElementById('btn-pull-model');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Wird heruntergeladen...';
+
+            try {
+                showToast('Modell wird aktualisiert...');
+                const res = await fetch(`${API_BASE}/llm/pull`, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success || data.status === 'success') {
+                    showToast('Modell erfolgreich aktualisiert');
+                } else {
+                    showToast(data.message || 'Fehler beim Aktualisieren', 'error');
+                }
+            } catch (err) {
+                showToast('Fehler beim Aktualisieren: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Modell aktualisieren (Pull)';
+            }
+        }
+
+        // Test connection
+        async function testConnection() {
+            try {
+                showToast('Teste Verbindung...');
+                const res = await fetch(`${API_BASE}/llm/status`);
+                const data = await res.json();
+
+                if (data.available) {
+                    showToast('Verbindung zu Ollama erfolgreich!');
+                } else {
+                    showToast('Ollama nicht erreichbar', 'error');
+                }
+            } catch (err) {
+                showToast('Verbindungstest fehlgeschlagen', 'error');
+            }
+        }
+
+        // Toast notification
+        let toastTimeout = null;
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show' + (type === 'error' ? ' error' : '');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Initial load
+        async function init() {
+            await Promise.all([
+                checkHealth(),
+                refreshStatus()
+            ]);
+        }
+
+        init();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            checkHealth();
+            refreshStatus();
+        }, 30000);
+    </script>
+</body>
+</html>

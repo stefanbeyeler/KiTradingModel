@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Service - Konfiguration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .service-badge.offline {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+        }
+
+        .tab-btn.active {
+            background: rgba(100, 200, 255, 0.15);
+            color: #64c8ff;
+            border-bottom: 2px solid #64c8ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1100px) {
+            .grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Scheduler Status */
+        .scheduler-status {
+            font-size: 0.9rem;
+        }
+
+        .scheduler-status .scheduler-active {
+            color: #4ade80;
+            font-weight: 600;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .scheduler-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .scheduler-stat {
+            text-align: center;
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .scheduler-stat .value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .scheduler-stat .label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-top: 0.3rem;
+        }
+
+        /* Document Stats */
+        .doc-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 800px) {
+            .doc-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .doc-stat {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .doc-stat .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .doc-stat .label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-top: 0.3rem;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .quick-actions .btn {
+            width: 100%;
+            justify-content: center;
+            padding: 0.9rem;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.6rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.9rem;
+        }
+
+        .search-box::placeholder {
+            color: #888;
+        }
+
+        .filter-select {
+            padding: 0.6rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .filter-select option {
+            background: #1a1a2e;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.2);
+            position: sticky;
+            top: 0;
+            font-weight: 500;
+            color: #a0a0a0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-type { background: rgba(100, 200, 255, 0.2); color: #64c8ff; }
+        .badge-symbol { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
+        .badge-success { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-warning { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
+
+        /* Source Types Grid */
+        .source-types-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .source-type-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .source-type-card .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .source-type-card .name {
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .source-type-card .count {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #a78bfa;
+        }
+
+        /* Symbol Distribution */
+        .symbol-dist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .symbol-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .symbol-card .symbol {
+            font-weight: 600;
+            color: #ce93d8;
+            font-size: 1.1rem;
+        }
+
+        .symbol-card .count {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #64c8ff;
+            margin: 0.5rem 0;
+        }
+
+        .symbol-card .label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #64c8ff, #a78bfa);
+            border-radius: 4px;
+        }
+
+        /* Query Section */
+        .query-section {
+            margin-top: 1rem;
+        }
+
+        .query-input {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .query-input::placeholder {
+            color: #888;
+        }
+
+        .query-results {
+            margin-top: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .query-result {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-left: 3px solid #64c8ff;
+        }
+
+        .query-result .score {
+            float: right;
+            font-size: 0.8rem;
+            color: #a78bfa;
+        }
+
+        .query-result .type {
+            font-size: 0.75rem;
+            color: #64c8ff;
+            margin-bottom: 0.5rem;
+        }
+
+        .query-result .content {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            border-left: 4px solid #64c8ff;
+            display: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.error {
+            border-left-color: #e57373;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Config Section */
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .config-item .label {
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+
+        .config-item .value {
+            font-weight: 500;
+            color: #64c8ff;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Dashboard</a>
+            <span class="header-title">RAG Service - Konfiguration</span>
+            <span class="service-badge" id="service-status">Laden...</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('overview')">Ubersicht</button>
+            <button class="tab-btn" onclick="switchTab('scheduler')">Auto-Fetch</button>
+            <button class="tab-btn" onclick="switchTab('documents')">Dokumente</button>
+            <button class="tab-btn" onclick="switchTab('query')">Suche</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="tab-overview" class="tab-content active">
+            <!-- Stats Bar -->
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-value" id="total-docs">-</div>
+                    <div class="stat-label">Dokumente</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="total-types">-</div>
+                    <div class="stat-label">Dokumenttypen</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="total-symbols">-</div>
+                    <div class="stat-label">Symbole</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="embedding-dim">-</div>
+                    <div class="stat-label">Embedding Dimension</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <!-- Document Types -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Dokumente nach Typ</h2>
+                        <button class="btn btn-sm btn-primary" onclick="refreshStats()">Aktualisieren</button>
+                    </div>
+                    <div class="source-types-grid" id="doc-types-grid">
+                        <div style="opacity: 0.5; text-align: center;">Lade...</div>
+                    </div>
+                </div>
+
+                <!-- Configuration -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Konfiguration</h2>
+                    </div>
+                    <div class="config-grid" id="config-grid">
+                        <div class="config-item">
+                            <span class="label">Embedding Modell</span>
+                            <span class="value" id="cfg-embedding-model">-</span>
+                        </div>
+                        <div class="config-item">
+                            <span class="label">Device</span>
+                            <span class="value" id="cfg-device">-</span>
+                        </div>
+                        <div class="config-item">
+                            <span class="label">FAISS GPU</span>
+                            <span class="value" id="cfg-faiss-gpu">-</span>
+                        </div>
+                        <div class="config-item">
+                            <span class="label">Persist Directory</span>
+                            <span class="value" id="cfg-persist-dir">-</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem;">
+                        <h3 style="font-size: 1rem; color: #a78bfa; margin-bottom: 0.75rem;">Aktionen</h3>
+                        <div class="quick-actions">
+                            <button class="btn btn-success" onclick="persistDatabase()">
+                                Datenbank speichern
+                            </button>
+                            <button class="btn btn-warning" onclick="rebuildIndex()">
+                                Index neu aufbauen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Symbol Distribution -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Dokumente nach Symbol</h2>
+                </div>
+                <div class="symbol-dist-grid" id="symbol-dist-grid">
+                    <div style="opacity: 0.5; text-align: center;">Lade...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scheduler Tab -->
+        <div id="tab-scheduler" class="tab-content">
+            <div class="grid-2">
+                <!-- Scheduler Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Auto-Fetch Status</h2>
+                        <button class="btn btn-sm btn-primary" onclick="refreshSchedulerStatus()">Aktualisieren</button>
+                    </div>
+                    <div class="scheduler-status">
+                        <div id="scheduler-message" style="font-size: 1.1rem; margin-bottom: 0.5rem;">Lade...</div>
+                        <div class="scheduler-info">
+                            <div class="scheduler-stat">
+                                <div class="value" id="sched-total-fetches">-</div>
+                                <div class="label">Abrufe gesamt</div>
+                            </div>
+                            <div class="scheduler-stat">
+                                <div class="value" id="sched-docs-stored">-</div>
+                                <div class="label">Dokumente gespeichert</div>
+                            </div>
+                            <div class="scheduler-stat">
+                                <div class="value" id="sched-last-fetch">-</div>
+                                <div class="label">Letzter Abruf</div>
+                            </div>
+                            <div class="scheduler-stat">
+                                <div class="value" id="sched-next-fetch">-</div>
+                                <div class="label">Nachster Abruf</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scheduler Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Scheduler Aktionen</h2>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="btn btn-success" onclick="startScheduler()" id="btn-start-scheduler">
+                            Scheduler starten
+                        </button>
+                        <button class="btn btn-danger" onclick="stopScheduler()" id="btn-stop-scheduler">
+                            Scheduler stoppen
+                        </button>
+                        <button class="btn btn-primary" onclick="fetchNow()">
+                            Jetzt abrufen
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scheduler Configuration -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Scheduler Konfiguration</h2>
+                </div>
+                <div class="config-grid">
+                    <div class="config-item">
+                        <span class="label">Aktiviert (Config)</span>
+                        <span class="value" id="sched-cfg-enabled">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">Intervall</span>
+                        <span class="value" id="sched-cfg-interval">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">Symbole</span>
+                        <span class="value" id="sched-cfg-symbols">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">Min. Prioritat</span>
+                        <span class="value" id="sched-cfg-priority">-</span>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <div class="config-item" style="grid-column: span 2;">
+                        <span class="label">Letzter Fehler</span>
+                        <span class="value" id="sched-last-error" style="color: #e57373;">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents Tab -->
+        <div id="tab-documents" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">RAG Dokumente</h2>
+                    <span id="docs-total" style="opacity: 0.7;">- Dokumente</span>
+                </div>
+                <div class="toolbar">
+                    <input type="text" class="search-box" id="doc-search" placeholder="Inhalt suchen..." oninput="filterDocuments()">
+                    <select class="filter-select" id="type-filter" onchange="filterDocuments()">
+                        <option value="">Alle Typen</option>
+                    </select>
+                    <select class="filter-select" id="symbol-filter" onchange="filterDocuments()">
+                        <option value="">Alle Symbole</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="loadDocuments()">Aktualisieren</button>
+                </div>
+                <div class="table-container">
+                    <table id="docs-table">
+                        <thead>
+                            <tr>
+                                <th>Typ</th>
+                                <th>Symbol</th>
+                                <th>Inhalt</th>
+                                <th>Erstellt</th>
+                            </tr>
+                        </thead>
+                        <tbody id="docs-tbody">
+                            <tr><td colspan="4" style="text-align: center; opacity: 0.5;">Lade Dokumente...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Query Tab -->
+        <div id="tab-query" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">RAG Suche</h2>
+                </div>
+                <p style="opacity: 0.7; margin-bottom: 1rem;">
+                    Durchsuchen Sie die Wissensbasis mit semantischer Suche.
+                </p>
+                <div class="query-section">
+                    <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                        <textarea class="query-input" id="query-input" placeholder="Geben Sie Ihre Suchanfrage ein, z.B.: 'Bitcoin Preisprognose' oder 'Goldpreis Einflussfaktoren'"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem; margin-top: 1rem; align-items: center;">
+                        <select class="filter-select" id="query-symbol">
+                            <option value="">Alle Symbole</option>
+                        </select>
+                        <select class="filter-select" id="query-limit">
+                            <option value="5">5 Ergebnisse</option>
+                            <option value="10" selected>10 Ergebnisse</option>
+                            <option value="20">20 Ergebnisse</option>
+                        </select>
+                        <button class="btn btn-success" onclick="executeQuery()">
+                            Suchen
+                        </button>
+                    </div>
+                </div>
+                <div class="query-results" id="query-results">
+                    <p style="opacity: 0.5; text-align: center; margin-top: 2rem;">Geben Sie eine Suchanfrage ein...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '/rag/api/v1';
+        let allDocuments = [];
+        let schedulerInterval = null;
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // Load data for the selected tab
+            if (tabName === 'scheduler') refreshSchedulerStatus();
+            if (tabName === 'documents') loadDocuments();
+            if (tabName === 'query') populateQuerySymbols();
+        }
+
+        // Check service health
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${API_BASE.replace('/api/v1', '')}/health`);
+                const data = await res.json();
+                const badge = document.getElementById('service-status');
+                if (data.status === 'healthy') {
+                    badge.textContent = 'Online';
+                    badge.classList.remove('offline');
+                } else {
+                    badge.textContent = 'Degraded';
+                    badge.classList.add('offline');
+                }
+            } catch (err) {
+                const badge = document.getElementById('service-status');
+                badge.textContent = 'Offline';
+                badge.classList.add('offline');
+            }
+        }
+
+        // Load stats
+        async function refreshStats() {
+            try {
+                const res = await fetch(`${API_BASE}/rag/stats`);
+                const data = await res.json();
+
+                // Update stats bar
+                document.getElementById('total-docs').textContent = data.document_count || 0;
+                document.getElementById('total-types').textContent = Object.keys(data.documents_by_type || {}).length;
+                document.getElementById('total-symbols').textContent = Object.keys(data.documents_by_symbol || {}).length;
+                document.getElementById('embedding-dim').textContent = data.embedding_dimension || '-';
+
+                // Update config
+                const modelParts = (data.embedding_model || '').split('/');
+                document.getElementById('cfg-embedding-model').textContent = modelParts[modelParts.length - 1] || '-';
+                document.getElementById('cfg-device').textContent = data.device || '-';
+                document.getElementById('cfg-faiss-gpu').textContent = data.faiss_gpu ? 'Ja' : 'Nein';
+                document.getElementById('cfg-persist-dir').textContent = data.persist_directory || '-';
+
+                // Update document types grid
+                const typesGrid = document.getElementById('doc-types-grid');
+                const docsByType = data.documents_by_type || {};
+                if (Object.keys(docsByType).length > 0) {
+                    const total = data.document_count || 1;
+                    typesGrid.innerHTML = Object.entries(docsByType)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([type, count]) => {
+                            const percent = Math.round((count / total) * 100);
+                            return `
+                                <div class="source-type-card">
+                                    <div class="header">
+                                        <span class="name">${formatTypeName(type)}</span>
+                                        <span class="count">${count}</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: ${percent}%"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                } else {
+                    typesGrid.innerHTML = '<div style="opacity: 0.5;">Keine Dokumente</div>';
+                }
+
+                // Update symbol distribution
+                const symbolGrid = document.getElementById('symbol-dist-grid');
+                const docsBySymbol = data.documents_by_symbol || {};
+                if (Object.keys(docsBySymbol).length > 0) {
+                    const total = data.document_count || 1;
+                    symbolGrid.innerHTML = Object.entries(docsBySymbol)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([symbol, count]) => {
+                            const percent = Math.round((count / total) * 100);
+                            return `
+                                <div class="symbol-card">
+                                    <div class="symbol">${symbol}</div>
+                                    <div class="count">${count}</div>
+                                    <div class="label">${percent}% der Dokumente</div>
+                                </div>
+                            `;
+                        }).join('');
+                } else {
+                    symbolGrid.innerHTML = '<div style="opacity: 0.5;">Keine Dokumente</div>';
+                }
+
+            } catch (err) {
+                console.error('Stats error:', err);
+                showToast('Fehler beim Laden der Statistiken', 'error');
+            }
+        }
+
+        // Format type name
+        function formatTypeName(type) {
+            const names = {
+                'economic_calendar': 'Wirtschaftskalender',
+                'sentiment': 'Sentiment',
+                'onchain': 'On-Chain',
+                'orderbook': 'Orderbuch',
+                'macro_correlation': 'Makro',
+                'historical_pattern': 'Historische Muster',
+                'technical_level': 'Technische Level',
+                'regulatory': 'Regulierung'
+            };
+            return names[type] || type;
+        }
+
+        // Scheduler status
+        async function refreshSchedulerStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/rag/scheduler/status`);
+                const data = await res.json();
+
+                const msgEl = document.getElementById('scheduler-message');
+                const btnStart = document.getElementById('btn-start-scheduler');
+                const btnStop = document.getElementById('btn-stop-scheduler');
+
+                if (data.scheduler.enabled) {
+                    msgEl.innerHTML = '<span class="scheduler-active">Scheduler aktiv</span>';
+                    msgEl.classList.add('scheduler-active');
+                    btnStart.disabled = true;
+                    btnStop.disabled = false;
+                } else {
+                    msgEl.textContent = 'Scheduler inaktiv';
+                    msgEl.classList.remove('scheduler-active');
+                    btnStart.disabled = false;
+                    btnStop.disabled = true;
+                }
+
+                // Update stats
+                document.getElementById('sched-total-fetches').textContent = data.scheduler.total_fetches || 0;
+                document.getElementById('sched-docs-stored').textContent = data.scheduler.total_documents_stored || 0;
+
+                // Format timestamps
+                document.getElementById('sched-last-fetch').textContent =
+                    data.scheduler.last_fetch ? formatDateTime(data.scheduler.last_fetch) : '-';
+                document.getElementById('sched-next-fetch').textContent =
+                    data.scheduler.next_fetch ? formatDateTime(data.scheduler.next_fetch) : '-';
+
+                // Update config
+                document.getElementById('sched-cfg-enabled').textContent = data.config.enabled_in_config ? 'Ja' : 'Nein';
+                document.getElementById('sched-cfg-interval').textContent = `${data.config.interval_minutes} Minuten`;
+                document.getElementById('sched-cfg-symbols').textContent = data.config.symbols || '-';
+                document.getElementById('sched-cfg-priority').textContent = data.config.min_priority || '-';
+                document.getElementById('sched-last-error').textContent = data.scheduler.last_error || 'Keine';
+
+            } catch (err) {
+                console.error('Scheduler status error:', err);
+            }
+        }
+
+        // Format datetime
+        function formatDateTime(isoString) {
+            if (!isoString) return '-';
+            const d = new Date(isoString);
+            return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Scheduler actions
+        async function startScheduler() {
+            try {
+                const res = await fetch(`${API_BASE}/rag/scheduler/start`, { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message || 'Scheduler gestartet');
+                setTimeout(refreshSchedulerStatus, 500);
+            } catch (err) {
+                showToast('Fehler beim Starten', 'error');
+            }
+        }
+
+        async function stopScheduler() {
+            try {
+                const res = await fetch(`${API_BASE}/rag/scheduler/stop`, { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message || 'Scheduler gestoppt');
+                setTimeout(refreshSchedulerStatus, 500);
+            } catch (err) {
+                showToast('Fehler beim Stoppen', 'error');
+            }
+        }
+
+        async function fetchNow() {
+            try {
+                showToast('Abruf gestartet...');
+                const res = await fetch(`${API_BASE}/rag/scheduler/fetch-now`, { method: 'POST' });
+                const data = await res.json();
+                showToast(`${data.documents_stored || 0} Dokumente gespeichert`);
+                setTimeout(() => {
+                    refreshSchedulerStatus();
+                    refreshStats();
+                }, 500);
+            } catch (err) {
+                showToast('Fehler beim Abrufen', 'error');
+            }
+        }
+
+        // Database actions
+        async function persistDatabase() {
+            try {
+                showToast('Speichere Datenbank...');
+                const res = await fetch(`${API_BASE}/rag/persist`, { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message || 'Datenbank gespeichert');
+            } catch (err) {
+                showToast('Fehler beim Speichern', 'error');
+            }
+        }
+
+        async function rebuildIndex() {
+            if (!confirm('Index neu aufbauen? Dies kann einige Zeit dauern.')) return;
+            try {
+                showToast('Baue Index neu auf...');
+                const res = await fetch(`${API_BASE}/rag/rebuild`, { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message || 'Index neu aufgebaut');
+                refreshStats();
+            } catch (err) {
+                showToast('Fehler beim Neuaufbau', 'error');
+            }
+        }
+
+        // Load documents
+        async function loadDocuments() {
+            try {
+                const res = await fetch(`${API_BASE}/rag/documents`);
+                const data = await res.json();
+
+                allDocuments = data.documents || [];
+                document.getElementById('docs-total').textContent = `${allDocuments.length} Dokumente`;
+
+                // Populate filters
+                const types = [...new Set(allDocuments.map(d => d.document_type).filter(Boolean))].sort();
+                const symbols = [...new Set(allDocuments.map(d => d.symbol).filter(Boolean))].sort();
+
+                const typeFilter = document.getElementById('type-filter');
+                typeFilter.innerHTML = '<option value="">Alle Typen</option>' +
+                    types.map(t => `<option value="${t}">${formatTypeName(t)}</option>`).join('');
+
+                const symbolFilter = document.getElementById('symbol-filter');
+                symbolFilter.innerHTML = '<option value="">Alle Symbole</option>' +
+                    symbols.map(s => `<option value="${s}">${s}</option>`).join('');
+
+                filterDocuments();
+            } catch (err) {
+                console.error('Documents load error:', err);
+                document.getElementById('docs-tbody').innerHTML =
+                    '<tr><td colspan="4" style="text-align: center; color: #e57373;">Fehler beim Laden</td></tr>';
+            }
+        }
+
+        // Filter documents
+        function filterDocuments() {
+            const search = document.getElementById('doc-search').value.toLowerCase();
+            const typeFilter = document.getElementById('type-filter').value;
+            const symbolFilter = document.getElementById('symbol-filter').value;
+
+            const filtered = allDocuments.filter(d => {
+                const matchSearch = !search || (d.content || '').toLowerCase().includes(search);
+                const matchType = !typeFilter || d.document_type === typeFilter;
+                const matchSymbol = !symbolFilter || d.symbol === symbolFilter;
+                return matchSearch && matchType && matchSymbol;
+            });
+
+            const tbody = document.getElementById('docs-tbody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; opacity: 0.5;">Keine Dokumente gefunden</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.slice(0, 100).map(doc => {
+                const content = (doc.content || '').substring(0, 150) + ((doc.content || '').length > 150 ? '...' : '');
+                const created = doc.created_at ? new Date(doc.created_at).toLocaleDateString('de-DE') : '-';
+                return `
+                    <tr>
+                        <td><span class="badge badge-type">${formatTypeName(doc.document_type || '-')}</span></td>
+                        <td><span class="badge badge-symbol">${doc.symbol || '-'}</span></td>
+                        <td title="${(doc.content || '').replace(/"/g, '&quot;')}">${content}</td>
+                        <td>${created}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (filtered.length > 100) {
+                tbody.innerHTML += `<tr><td colspan="4" style="text-align: center; opacity: 0.5;">... und ${filtered.length - 100} weitere</td></tr>`;
+            }
+        }
+
+        // Query section
+        function populateQuerySymbols() {
+            const symbols = [...new Set(allDocuments.map(d => d.symbol).filter(Boolean))].sort();
+            const select = document.getElementById('query-symbol');
+            select.innerHTML = '<option value="">Alle Symbole</option>' +
+                symbols.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        async function executeQuery() {
+            const query = document.getElementById('query-input').value.trim();
+            if (!query) {
+                showToast('Bitte geben Sie eine Suchanfrage ein', 'error');
+                return;
+            }
+
+            const symbol = document.getElementById('query-symbol').value;
+            const limit = document.getElementById('query-limit').value;
+
+            const resultsDiv = document.getElementById('query-results');
+            resultsDiv.innerHTML = '<p style="opacity: 0.5; text-align: center;">Suche...</p>';
+
+            try {
+                const body = {
+                    query: query,
+                    k: parseInt(limit)
+                };
+                if (symbol) body.symbol = symbol;
+
+                const res = await fetch(`${API_BASE}/rag/query/detailed`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+
+                if (!data.results || data.results.length === 0) {
+                    resultsDiv.innerHTML = '<p style="opacity: 0.5; text-align: center;">Keine Ergebnisse gefunden</p>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = data.results.map((r, i) => {
+                    const score = r.score ? (r.score * 100).toFixed(1) + '%' : '-';
+                    return `
+                        <div class="query-result">
+                            <span class="score">Relevanz: ${score}</span>
+                            <div class="type">
+                                <span class="badge badge-type">${formatTypeName(r.document_type || '-')}</span>
+                                ${r.symbol ? `<span class="badge badge-symbol">${r.symbol}</span>` : ''}
+                            </div>
+                            <div class="content">${r.content || '-'}</div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Query error:', err);
+                resultsDiv.innerHTML = '<p style="color: #e57373; text-align: center;">Fehler bei der Suche</p>';
+            }
+        }
+
+        // Toast notification
+        let toastTimeout = null;
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show' + (type === 'error' ? ' error' : '');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Initial load
+        async function init() {
+            await Promise.all([
+                checkHealth(),
+                refreshStats()
+            ]);
+        }
+
+        init();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            checkHealth();
+            refreshStats();
+        }, 30000);
+    </script>
+</body>
+</html>
