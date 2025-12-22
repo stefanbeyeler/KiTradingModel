@@ -1656,23 +1656,32 @@ async def retrain_poor_performers():
 
         # Retraining function to run in background
         async def retrain_symbols():
-            logger.info(f"Starting retraining for poor performers: {symbols}")
-            for symbol in symbols:
-                try:
-                    logger.info(f"Retraining model for {symbol}...")
-                    result = await nhits_training_service.train_symbol(symbol, force=True)
-                    if result.success:
-                        logger.info(f"Successfully retrained {symbol}")
-                        # Reset metrics after successful retraining
-                        if symbol in model_improvement_service.performance_metrics:
-                            model_improvement_service.performance_metrics[symbol].needs_retraining = False
-                            model_improvement_service.performance_metrics[symbol].retraining_reason = None
-                            model_improvement_service._save_data()
-                    else:
-                        logger.error(f"Retraining failed for {symbol}: {result.error_message}")
-                except Exception as e:
-                    logger.error(f"Failed to retrain {symbol}: {e}", exc_info=True)
-            logger.info("Retraining for poor performers completed")
+            # Set in_progress flag
+            model_improvement_service._retrain_in_progress = True
+            model_improvement_service._last_auto_retrain_symbols = symbols
+            try:
+                logger.info(f"Starting retraining for poor performers: {symbols}")
+                for symbol in symbols:
+                    try:
+                        logger.info(f"Retraining model for {symbol}...")
+                        result = await nhits_training_service.train_symbol(symbol, force=True)
+                        if result.success:
+                            logger.info(f"Successfully retrained {symbol}")
+                            model_improvement_service._total_auto_retrains += 1
+                            # Reset metrics after successful retraining
+                            if symbol in model_improvement_service.performance_metrics:
+                                model_improvement_service.performance_metrics[symbol].needs_retraining = False
+                                model_improvement_service.performance_metrics[symbol].retraining_reason = None
+                                model_improvement_service._save_data()
+                        else:
+                            logger.error(f"Retraining failed for {symbol}: {result.error_message}")
+                    except Exception as e:
+                        logger.error(f"Failed to retrain {symbol}: {e}", exc_info=True)
+                logger.info("Retraining for poor performers completed")
+            finally:
+                # Always reset in_progress flag
+                model_improvement_service._retrain_in_progress = False
+                model_improvement_service._last_retrain_time = datetime.utcnow()
 
         # Use asyncio.create_task to properly run async function in background
         import asyncio

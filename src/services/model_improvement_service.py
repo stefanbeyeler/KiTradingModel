@@ -666,8 +666,21 @@ class ModelImprovementService:
         metrics.evaluated_predictions += 1
         metrics.last_updated = datetime.utcnow()
 
+        # Map horizon to available metrics buckets (1h, 4h, 24h)
+        horizon = feedback.horizon
+        horizon_map = {
+            "15m": "1h", "30m": "1h", "1h": "1h", "2h": "1h",  # Short-term → 1h bucket
+            "4h": "4h", "6h": "4h", "8h": "4h", "12h": "4h",   # Medium-term → 4h bucket
+            "24h": "24h", "1d": "24h", "48h": "24h", "1w": "24h"  # Long-term → 24h bucket
+        }
+        metrics_key = f"metrics_{horizon_map.get(horizon, '1h')}"
+
         # Update horizon-specific metrics
-        horizon_metrics = getattr(metrics, f"metrics_{feedback.horizon}")
+        horizon_metrics = getattr(metrics, metrics_key, None)
+        if horizon_metrics is None:
+            # Fallback to 1h if unknown horizon
+            horizon_metrics = metrics.metrics_1h
+
         old_count = horizon_metrics["count"]
         horizon_metrics["count"] += 1
 
