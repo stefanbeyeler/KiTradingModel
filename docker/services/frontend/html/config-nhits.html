@@ -231,8 +231,14 @@
             gap: 1.5rem;
         }
 
+        .grid-2-equal {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
         @media (max-width: 900px) {
-            .grid-2 {
+            .grid-2, .grid-2-equal {
                 grid-template-columns: 1fr;
             }
         }
@@ -1091,12 +1097,20 @@
                     <button class="btn btn-sm btn-primary" onclick="loadAutoStatus()">Aktualisieren</button>
                 </div>
                 <div id="auto-status-content">
-                    <div class="grid-2" style="margin-bottom: 1rem;">
+                    <div class="grid-2-equal" style="margin-bottom: 1rem;">
                         <!-- Auto-Evaluation Status -->
                         <div style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
                             <h4 style="margin: 0 0 0.5rem 0; opacity: 0.8;">Auto-Evaluierung</h4>
                             <div id="auto-eval-status">
                                 <div style="opacity: 0.5;">Lade Status...</div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
+                                <button class="btn btn-sm" id="btn-toggle-auto-eval" onclick="toggleAutoEvaluation()">
+                                    ⏸️ Auto-Eval pausieren
+                                </button>
+                                <button class="btn btn-sm btn-success" id="btn-manual-eval" onclick="runManualEvaluation()">
+                                    📊 Jetzt evaluieren
+                                </button>
                             </div>
                         </div>
                         <!-- Auto-Retrain Status -->
@@ -1105,10 +1119,18 @@
                             <div id="auto-retrain-status">
                                 <div style="opacity: 0.5;">Lade Status...</div>
                             </div>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
+                                <button class="btn btn-sm" id="btn-toggle-auto-retrain" onclick="toggleAutoRetrain()">
+                                    ⏸️ Auto-Retrain pausieren
+                                </button>
+                                <button class="btn btn-sm btn-warning" id="btn-manual-retrain" onclick="runManualRetrain()">
+                                    🔄 Schlechte Modelle retrainieren
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <!-- Prediction Stats -->
-                    <div class="stats-bar" id="prediction-stats" style="margin-bottom: 1rem;">
+                    <div class="stats-bar" id="prediction-stats">
                         <div class="stat-item">
                             <div class="stat-value" id="stat-pending">-</div>
                             <div class="stat-label">Ausstehend</div>
@@ -1125,21 +1147,6 @@
                             <div class="stat-value" id="stat-evaluated">-</div>
                             <div class="stat-label">Evaluiert</div>
                         </div>
-                    </div>
-                    <!-- Control Buttons -->
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <button class="btn btn-sm" id="btn-toggle-auto-eval" onclick="toggleAutoEvaluation()">
-                            ⏸️ Auto-Eval pausieren
-                        </button>
-                        <button class="btn btn-sm" id="btn-toggle-auto-retrain" onclick="toggleAutoRetrain()">
-                            ⏸️ Auto-Retrain pausieren
-                        </button>
-                        <button class="btn btn-sm btn-success" id="btn-manual-eval" onclick="runManualEvaluation()">
-                            📊 Jetzt evaluieren
-                        </button>
-                        <button class="btn btn-sm btn-warning" id="btn-manual-retrain" onclick="runManualRetrain()">
-                            🔄 Schlechte Modelle retrainieren
-                        </button>
                     </div>
                 </div>
             </div>
