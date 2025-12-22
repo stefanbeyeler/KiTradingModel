@@ -1,8 +1,8 @@
 # TCN-Pattern Service Dockerfile
-# Port: 3005
+# Port: 3003
 
 FROM python:3.11-slim
-ARG SERVICE_PORT=3005
+ARG SERVICE_PORT=3003
 
 WORKDIR /app
 
@@ -20,6 +20,7 @@ COPY src/services/tcn_app/ ./src/services/tcn_app/
 COPY src/services/data_gateway_service.py ./src/services/
 COPY src/config/ ./src/config/
 COPY src/utils/ ./src/utils/
+COPY src/shared/ ./src/shared/
 
 # Create empty __init__.py files to avoid import issues
 RUN touch ./src/__init__.py ./src/services/__init__.py
@@ -38,4 +39,5 @@ EXPOSE ${SERVICE_PORT}
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:${SERVICE_PORT}/health || exit 1
 
-CMD ["python", "-m", "uvicorn", "src.services.tcn_app.main:app", "--host", "0.0.0.0", "--port", "3005"]
+# Dynamischer Port via Umgebungsvariable
+CMD ["sh", "-c", "python -m uvicorn src.services.tcn_app.main:app --host 0.0.0.0 --port ${PORT:-3003}"]

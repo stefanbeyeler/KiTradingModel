@@ -822,7 +822,7 @@
                 </div>
                 <p>Temporal Convolutional Network - Erkennung von 16 Chart-Pattern Typen mit Deep Learning.</p>
                 <div class="service-info" id="tcn-info">
-                    <div><span class="label">Port</span><span>3005</span></div>
+                    <div><span class="label">Port</span><span>3003</span></div>
                     <div><span class="label">GPU</span><span id="tcn-gpu">-</span></div>
                     <div><span class="label">Pattern</span><span id="tcn-patterns">16 Typen</span></div>
                 </div>
@@ -840,7 +840,7 @@
                 </div>
                 <p>Hidden Markov Model + LightGBM - Regime-Erkennung und Signal-Scoring für Trading.</p>
                 <div class="service-info" id="hmm-info">
-                    <div><span class="label">Port</span><span>3006</span></div>
+                    <div><span class="label">Port</span><span>3004</span></div>
                     <div><span class="label">Regimes</span><span id="hmm-regimes">4 States</span></div>
                     <div><span class="label">Scorer</span><span id="hmm-scorer">-</span></div>
                 </div>
@@ -858,7 +858,7 @@
                 </div>
                 <p>Zentraler Embedding-Service - Text, FinBERT, TimeSeries und Feature Embeddings.</p>
                 <div class="service-info" id="embedder-info">
-                    <div><span class="label">Port</span><span>3007</span></div>
+                    <div><span class="label">Port</span><span>3005</span></div>
                     <div><span class="label">GPU</span><span id="embedder-gpu">-</span></div>
                     <div><span class="label">Modelle</span><span id="embedder-models">4 Types</span></div>
                 </div>
@@ -876,7 +876,7 @@
                 </div>
                 <p>Vector Search & Knowledge Base - FAISS-basierte Dokumentensuche und Retrieval.</p>
                 <div class="service-info" id="rag-info">
-                    <div><span class="label">Port</span><span>3003</span></div>
+                    <div><span class="label">Port</span><span>3008</span></div>
                     <div><span class="label">Dokumente</span><span id="rag-docs">-</span></div>
                     <div><span class="label">GPU</span><span id="rag-gpu">-</span></div>
                 </div>
@@ -895,7 +895,7 @@
                 </div>
                 <p>Large Language Model Analyse mit RAG - Trading-Insights powered by Llama 3.1 70B.</p>
                 <div class="service-info" id="llm-info">
-                    <div><span class="label">Port</span><span>3004</span></div>
+                    <div><span class="label">Port</span><span>3009</span></div>
                     <div><span class="label">Modell</span><span id="llm-model">-</span></div>
                     <div><span class="label">RAG</span><span id="llm-rag">-</span></div>
                 </div>
@@ -1125,7 +1125,7 @@
         }
 
         async function updateLlmInfo() {
-            const data = await checkHealth('llm', 3004, 'llm-status');
+            const data = await checkHealth('llm', 3009, 'llm-status');
             if (data) {
                 document.getElementById('llm-model').textContent = data.llm_model || '-';
                 document.getElementById('llm-rag').textContent = data.rag_enabled ? 'Aktiviert' : 'Deaktiviert';
@@ -1141,7 +1141,7 @@
         }
 
         async function updateRagInfo() {
-            const data = await checkHealth('rag', 3003, 'rag-status');
+            const data = await checkHealth('rag', 3008, 'rag-status');
             if (data) {
                 document.getElementById('rag-docs').textContent = data.document_count || 0;
                 document.getElementById('rag-gpu').textContent = data.faiss_gpu ? 'Aktiviert' : 'CPU';
@@ -1149,21 +1149,21 @@
         }
 
         async function updateTcnInfo() {
-            const data = await checkHealth('tcn', 3005, 'tcn-status');
+            const data = await checkHealth('tcn', 3003, 'tcn-status');
             if (data) {
                 document.getElementById('tcn-gpu').textContent = data.gpu_available ? 'Aktiviert' : 'CPU';
             }
         }
 
         async function updateHmmInfo() {
-            const data = await checkHealth('hmm', 3006, 'hmm-status');
+            const data = await checkHealth('hmm', 3004, 'hmm-status');
             if (data) {
                 document.getElementById('hmm-scorer').textContent = data.lightgbm_available ? 'Bereit' : '-';
             }
         }
 
         async function updateEmbedderInfo() {
-            const data = await checkHealth('embedder', 3007, 'embedder-status');
+            const data = await checkHealth('embedder', 3005, 'embedder-status');
             if (data) {
                 document.getElementById('embedder-gpu').textContent = data.gpu_available ? 'Aktiviert' : 'CPU';
             }

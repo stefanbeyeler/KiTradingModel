@@ -7,11 +7,11 @@ services:
       args:
         - DATA_SERVICE_PORT=${DATA_SERVICE_PORT:-3001}
         - NHITS_SERVICE_PORT=${NHITS_SERVICE_PORT:-3002}
-        - RAG_SERVICE_PORT=${RAG_SERVICE_PORT:-3003}
-        - LLM_SERVICE_PORT=${LLM_SERVICE_PORT:-3004}
-        - TCN_SERVICE_PORT=${TCN_SERVICE_PORT:-3005}
-        - HMM_SERVICE_PORT=${HMM_SERVICE_PORT:-3006}
-        - EMBEDDER_SERVICE_PORT=${EMBEDDER_SERVICE_PORT:-3007}
+        - TCN_SERVICE_PORT=${TCN_SERVICE_PORT:-3003}
+        - HMM_SERVICE_PORT=${HMM_SERVICE_PORT:-3004}
+        - EMBEDDER_SERVICE_PORT=${EMBEDDER_SERVICE_PORT:-3005}
+        - RAG_SERVICE_PORT=${RAG_SERVICE_PORT:-3008}
+        - LLM_SERVICE_PORT=${LLM_SERVICE_PORT:-3009}
     container_name: trading-frontend
     ports:
       - "3000:80"
@@ -20,16 +20,14 @@ services:
     environment:
       - DATA_SERVICE_PORT=${DATA_SERVICE_PORT:-3001}
       - NHITS_SERVICE_PORT=${NHITS_SERVICE_PORT:-3002}
-      - RAG_SERVICE_PORT=${RAG_SERVICE_PORT:-3003}
-      - LLM_SERVICE_PORT=${LLM_SERVICE_PORT:-3004}
-      - TCN_SERVICE_PORT=${TCN_SERVICE_PORT:-3005}
-      - HMM_SERVICE_PORT=${HMM_SERVICE_PORT:-3006}
-      - EMBEDDER_SERVICE_PORT=${EMBEDDER_SERVICE_PORT:-3007}
+      - TCN_SERVICE_PORT=${TCN_SERVICE_PORT:-3003}
+      - HMM_SERVICE_PORT=${HMM_SERVICE_PORT:-3004}
+      - EMBEDDER_SERVICE_PORT=${EMBEDDER_SERVICE_PORT:-3005}
+      - RAG_SERVICE_PORT=${RAG_SERVICE_PORT:-3008}
+      - LLM_SERVICE_PORT=${LLM_SERVICE_PORT:-3009}
     depends_on:
       - nhits-service
-      - llm-service
       - data-service
-      - rag-service
     networks:
       - trading-net
     extra_hosts:
@@ -88,95 +86,6 @@ services:
       retries: 3
       start_period: 40s
 
-  # LLM Service - Analysis & RAG
-  llm-service:
-    build:
-      context: .
-      dockerfile: docker/services/llm/Dockerfile
-      args:
-        - SERVICE_PORT=${LLM_SERVICE_PORT:-3004}
-    container_name: trading-llm
-    runtime: nvidia
-    ports:
-      - "${LLM_SERVICE_PORT:-3004}:${LLM_SERVICE_PORT:-3004}"
-    volumes:
-      - rag-data:/app/data/rag
-      - ./src:/app/src:ro
-      - ./logs:/app/logs
-    environment:
-      - SERVICE_NAME=llm
-      - PORT=${LLM_SERVICE_PORT:-3004}
-      - ROOT_PATH=/llm
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1:70b}
-      - OLLAMA_HOST=http://host.docker.internal:11434
-      - FAISS_USE_GPU=1
-      - EMBEDDING_DEVICE=cuda
-      - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
-    networks:
-      - trading-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 32G
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${LLM_SERVICE_PORT:-3004}/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-  # RAG Service - Vector Search & Knowledge Base
-  rag-service:
-    build:
-      context: .
-      dockerfile: docker/services/rag/Dockerfile
-      args:
-        - SERVICE_PORT=${RAG_SERVICE_PORT:-3003}
-    container_name: trading-rag
-    runtime: nvidia
-    ports:
-      - "${RAG_SERVICE_PORT:-3003}:${RAG_SERVICE_PORT:-3003}"
-    volumes:
-      - rag-data:/app/data/faiss
-      - ./src:/app/src:ro
-      - ./logs:/app/logs
-    environment:
-      - SERVICE_NAME=rag
-      - PORT=${RAG_SERVICE_PORT:-3003}
-      - ROOT_PATH=/rag
-      - FAISS_USE_GPU=1
-      - EMBEDDING_DEVICE=cuda
-      - FAISS_PERSIST_DIRECTORY=/app/data/faiss
-      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
-    networks:
-      - trading-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 8G
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${RAG_SERVICE_PORT:-3003}/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
   # Data Service - Symbols, Strategies, Sync
   data-service:
     build:
@@ -214,28 +123,30 @@ services:
       retries: 3
       start_period: 20s
 
-  # TCN-Pattern Service - Chart Pattern Detection (Port 3005)
+  # TCN-Pattern Service - Chart Pattern Detection (Port 3003)
   tcn-service:
     build:
       context: .
       dockerfile: docker/services/tcn/Dockerfile
       args:
-        - SERVICE_PORT=${TCN_SERVICE_PORT:-3005}
+        - SERVICE_PORT=${TCN_SERVICE_PORT:-3003}
     container_name: trading-tcn
     runtime: nvidia
     ports:
-      - "${TCN_SERVICE_PORT:-3005}:${TCN_SERVICE_PORT:-3005}"
+      - "${TCN_SERVICE_PORT:-3003}:${TCN_SERVICE_PORT:-3003}"
     volumes:
       - tcn-models:/app/data/models/tcn
       - ./src/services/tcn_app:/app/src/services/tcn_app:ro
       - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
+      - ./src/shared:/app/src/shared:ro
+      - ./src/config:/app/src/config:ro
       - ./logs:/app/logs
     environment:
       - SERVICE_NAME=tcn
-      - PORT=${TCN_SERVICE_PORT:-3005}
+      - PORT=${TCN_SERVICE_PORT:-3003}
       - ROOT_PATH=/tcn
       - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
-      - EMBEDDER_SERVICE_URL=http://trading-embedder:${EMBEDDER_SERVICE_PORT:-3007}
+      - EMBEDDER_SERVICE_URL=http://trading-embedder:${EMBEDDER_SERVICE_PORT:-3005}
     networks:
       - trading-net
     extra_hosts:
@@ -253,30 +164,32 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${TCN_SERVICE_PORT:-3005}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${TCN_SERVICE_PORT:-3003}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
-  # HMM-Regime Service - Market Regime Detection & Signal Scoring (Port 3006)
+  # HMM-Regime Service - Market Regime Detection & Signal Scoring (Port 3004)
   hmm-service:
     build:
       context: .
       dockerfile: docker/services/hmm/Dockerfile
       args:
-        - SERVICE_PORT=${HMM_SERVICE_PORT:-3006}
+        - SERVICE_PORT=${HMM_SERVICE_PORT:-3004}
     container_name: trading-hmm
     ports:
-      - "${HMM_SERVICE_PORT:-3006}:${HMM_SERVICE_PORT:-3006}"
+      - "${HMM_SERVICE_PORT:-3004}:${HMM_SERVICE_PORT:-3004}"
     volumes:
       - hmm-models:/app/data/models/hmm
       - ./src/services/hmm_app:/app/src/services/hmm_app:ro
       - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
+      - ./src/shared:/app/src/shared:ro
+      - ./src/config:/app/src/config:ro
       - ./logs:/app/logs
     environment:
       - SERVICE_NAME=hmm
-      - PORT=${HMM_SERVICE_PORT:-3006}
+      - PORT=${HMM_SERVICE_PORT:-3004}
       - ROOT_PATH=/hmm
       - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
     networks:
@@ -291,32 +204,34 @@ services:
         limits:
           memory: 4G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${HMM_SERVICE_PORT:-3006}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${HMM_SERVICE_PORT:-3004}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
 
-  # Embedder Service - Central Embedding Service (Port 3007)
+  # Embedder Service - Central Embedding Service (Port 3005)
   embedder-service:
     build:
       context: .
       dockerfile: docker/services/embedder/Dockerfile
       args:
-        - SERVICE_PORT=${EMBEDDER_SERVICE_PORT:-3007}
+        - SERVICE_PORT=${EMBEDDER_SERVICE_PORT:-3005}
     container_name: trading-embedder
     runtime: nvidia
     ports:
-      - "${EMBEDDER_SERVICE_PORT:-3007}:${EMBEDDER_SERVICE_PORT:-3007}"
+      - "${EMBEDDER_SERVICE_PORT:-3005}:${EMBEDDER_SERVICE_PORT:-3005}"
     volumes:
       - embedder-models:/app/data/models/embedder
       - embedder-cache:/app/cache
       - ./src/services/embedder_app:/app/src/services/embedder_app:ro
       - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
+      - ./src/shared:/app/src/shared:ro
+      - ./src/config:/app/src/config:ro
       - ./logs:/app/logs
     environment:
       - SERVICE_NAME=embedder
-      - PORT=${EMBEDDER_SERVICE_PORT:-3007}
+      - PORT=${EMBEDDER_SERVICE_PORT:-3005}
       - ROOT_PATH=/embedder
       - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
       - EMBEDDING_CACHE_SIZE=10000
@@ -337,11 +252,104 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${EMBEDDER_SERVICE_PORT:-3007}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${EMBEDDER_SERVICE_PORT:-3005}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 120s
+
+  # RAG Service - Vector Search & Knowledge Base (Port 3008)
+  rag-service:
+    build:
+      context: .
+      dockerfile: docker/services/rag/Dockerfile
+      args:
+        - SERVICE_PORT=${RAG_SERVICE_PORT:-3008}
+    container_name: trading-rag
+    runtime: nvidia
+    ports:
+      - "${RAG_SERVICE_PORT:-3008}:${RAG_SERVICE_PORT:-3008}"
+    volumes:
+      - rag-data:/app/data/faiss
+      - ./src:/app/src:ro
+      - ./logs:/app/logs
+    environment:
+      - SERVICE_NAME=rag
+      - PORT=${RAG_SERVICE_PORT:-3008}
+      - ROOT_PATH=/rag
+      - FAISS_USE_GPU=1
+      - EMBEDDING_DEVICE=cuda
+      - FAISS_PERSIST_DIRECTORY=/app/data/faiss
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${RAG_SERVICE_PORT:-3008}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # LLM Service - Analysis & RAG (Port 3009)
+  llm-service:
+    build:
+      context: .
+      dockerfile: docker/services/llm/Dockerfile
+      args:
+        - SERVICE_PORT=${LLM_SERVICE_PORT:-3009}
+    container_name: trading-llm
+    runtime: nvidia
+    ports:
+      - "${LLM_SERVICE_PORT:-3009}:${LLM_SERVICE_PORT:-3009}"
+    volumes:
+      - rag-data:/app/data/rag
+      - ./src:/app/src:ro
+      - ./logs:/app/logs
+    environment:
+      - SERVICE_NAME=llm
+      - PORT=${LLM_SERVICE_PORT:-3009}
+      - ROOT_PATH=/llm
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1:70b}
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - FAISS_USE_GPU=1
+      - EMBEDDING_DEVICE=cuda
+      - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - rag-service
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${LLM_SERVICE_PORT:-3009}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 volumes:
   models-data:
