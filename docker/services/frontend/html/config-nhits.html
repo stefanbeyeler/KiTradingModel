@@ -214,6 +214,30 @@
             background: rgba(255, 152, 0, 0.3);
         }
 
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            top: 50%;
+            right: 8px;
+            margin-top: -6px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         .btn:disabled {
             opacity: 0.4;
             cursor: not-allowed;
@@ -1406,14 +1430,23 @@
         // Training status
         async function updateTrainingStatus() {
             try {
-                const res = await fetch(`${API_BASE}/forecast/training/progress`);
-                const data = await res.json();
+                // Fetch both training progress and auto-status (for retrain info)
+                const [progressRes, autoStatusRes] = await Promise.all([
+                    fetch(`${API_BASE}/forecast/training/progress`),
+                    fetch(`${API_BASE}/forecast/auto-status`)
+                ]);
+                const data = await progressRes.json();
+                const autoStatus = await autoStatusRes.json();
 
                 const msgEl = document.getElementById('training-message');
                 const progressEl = document.getElementById('training-progress');
                 const timingEl = document.getElementById('training-timing');
                 const btnCancel = document.getElementById('btn-cancel');
                 const trainButtons = ['btn-train-all', 'btn-train-h1', 'btn-train-m15', 'btn-train-d1'];
+
+                // Check if retrain is in progress (from auto-status)
+                const retrainInProgress = autoStatus?.auto_retrain?.in_progress || false;
+                const retrainSymbols = autoStatus?.auto_retrain?.last_symbols || [];
 
                 if (data.training_in_progress) {
                     msgEl.textContent = `Training: ${data.current_symbol || '-'} (${data.completed_symbols}/${data.total_symbols})`;
@@ -1436,6 +1469,21 @@
                     // Start polling if not already
                     if (!trainingInterval) {
                         trainingInterval = setInterval(updateTrainingStatus, 2000);
+                    }
+                } else if (retrainInProgress) {
+                    // Show retrain status when no batch training but retrain is active
+                    const symbolCount = retrainSymbols.length;
+                    msgEl.innerHTML = `<span style="color: #fbbf24;">🔄 Auto-Retrain läuft</span> <span style="opacity: 0.7;">(${symbolCount} Modelle)</span>`;
+                    msgEl.classList.add('training-active');
+                    progressEl.style.width = '50%'; // Indeterminate progress
+                    progressEl.classList.add('active');
+                    btnCancel.disabled = true; // Can't cancel retrain from here
+                    trainButtons.forEach(id => document.getElementById(id).disabled = true);
+                    timingEl.style.display = 'none';
+
+                    // Start polling if not already
+                    if (!trainingInterval) {
+                        trainingInterval = setInterval(updateTrainingStatus, 3000);
                     }
                 } else {
                     msgEl.textContent = data.message || 'Kein Training aktiv';
@@ -1948,6 +1996,18 @@
                     toggleRetrainBtn.classList.add('btn-success');
                 }
 
+                // Update manual retrain button based on in_progress status
+                const manualRetrainBtn = document.getElementById('btn-manual-retrain');
+                if (retrainStatus.in_progress) {
+                    manualRetrainBtn.disabled = true;
+                    manualRetrainBtn.innerHTML = '⏳ Retrain läuft...';
+                    manualRetrainBtn.classList.add('btn-loading');
+                } else {
+                    manualRetrainBtn.disabled = false;
+                    manualRetrainBtn.innerHTML = '🔄 Schlechte Modelle retrainieren';
+                    manualRetrainBtn.classList.remove('btn-loading');
+                }
+
                 // Update prediction stats
                 const predictions = data.predictions;
                 document.getElementById('stat-pending').textContent = predictions.pending_count;
@@ -2002,7 +2062,8 @@
         async function runManualRetrain() {
             const btn = document.getElementById('btn-manual-retrain');
             btn.disabled = true;
-            btn.textContent = '⏳ Retrain läuft...';
+            btn.innerHTML = '⏳ Retrain läuft...';
+            btn.classList.add('btn-loading');
 
             try {
                 const res = await fetch(`${API_BASE}/forecast/retrain-poor-performers`, {
@@ -2013,20 +2074,48 @@
                 if (data.success) {
                     if (data.symbols && data.symbols.length > 0) {
                         showToast(`Retrain gestartet für: ${data.symbols.join(', ')}`);
+                        // Start polling for status updates while training runs
+                        startRetrainPolling();
                     } else {
                         showToast(data.message || 'Keine Modelle benötigen Retraining');
+                        // No training started, reset button immediately
+                        btn.disabled = false;
+                        btn.innerHTML = '🔄 Schlechte Modelle retrainieren';
+                        btn.classList.remove('btn-loading');
                     }
                 } else {
                     showToast('Fehler: ' + (data.detail || 'Unbekannter Fehler'));
+                    btn.disabled = false;
+                    btn.innerHTML = '🔄 Schlechte Modelle retrainieren';
+                    btn.classList.remove('btn-loading');
                 }
             } catch (err) {
                 console.error('Manual retrain failed:', err);
                 showToast('Fehler: ' + err.message);
-            } finally {
                 btn.disabled = false;
-                btn.textContent = '🔄 Schlechte Modelle retrainieren';
-                await loadAutoStatus();
+                btn.innerHTML = '🔄 Schlechte Modelle retrainieren';
+                btn.classList.remove('btn-loading');
             }
+            // Note: Button state is now managed by loadAutoStatus() based on in_progress flag
+        }
+
+        // Poll for retrain status updates
+        let retrainPollingInterval = null;
+        function startRetrainPolling() {
+            if (retrainPollingInterval) return; // Already polling
+
+            retrainPollingInterval = setInterval(async () => {
+                await loadAutoStatus();
+
+                // Check if training is still in progress
+                const btn = document.getElementById('btn-manual-retrain');
+                if (!btn.classList.contains('btn-loading')) {
+                    // Training finished, stop polling
+                    clearInterval(retrainPollingInterval);
+                    retrainPollingInterval = null;
+                    showToast('Retrain abgeschlossen');
+                }
+            }, 3000); // Poll every 3 seconds
         }
 
         // Manual evaluation (updated)

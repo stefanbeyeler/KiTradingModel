@@ -429,6 +429,10 @@ class ModelImprovementService:
                     )
 
                     if actual_price is not None:
+                        # Sanity check: skip implausible predictions
+                        if not self._is_prediction_plausible(fb, symbol):
+                            continue  # Discard broken prediction
+
                         # Calculate error
                         fb.actual_price = actual_price
                         fb.prediction_error_pct = abs(fb.predicted_price - actual_price) / actual_price * 100
@@ -636,6 +640,10 @@ class ModelImprovementService:
                     actual_price = await self._get_actual_price_via_api(symbol, target_time)
 
                     if actual_price is not None:
+                        # Sanity check: skip implausible predictions
+                        if not self._is_prediction_plausible(fb, symbol):
+                            continue  # Discard broken prediction
+
                         # Calculate error
                         fb.actual_price = actual_price
                         fb.prediction_error_pct = abs(fb.predicted_price - actual_price) / actual_price * 100
@@ -680,6 +688,34 @@ class ModelImprovementService:
             logger.info(f"Evaluated predictions via API: {evaluated}")
 
         return evaluated
+
+    def _is_prediction_plausible(self, fb: PredictionFeedback, symbol: str) -> bool:
+        """
+        Check if a prediction is plausible.
+
+        Returns False for clearly broken predictions (negative prices,
+        extreme deviations from current price, etc.)
+        """
+        # Check for invalid prices
+        if fb.predicted_price <= 0 or fb.current_price <= 0:
+            logger.warning(
+                f"Discarding {symbol} {fb.horizon}: invalid price "
+                f"(predicted={fb.predicted_price:.2f}, current={fb.current_price:.2f})"
+            )
+            return False
+
+        # Check for extreme deviation (>50% from current price)
+        # Normal price movements in crypto/forex are typically <10% per day
+        deviation_pct = abs(fb.predicted_price - fb.current_price) / fb.current_price * 100
+        if deviation_pct > 50:
+            logger.warning(
+                f"Discarding {symbol} {fb.horizon}: implausible prediction "
+                f"(predicted={fb.predicted_price:.2f}, current={fb.current_price:.2f}, "
+                f"deviation={deviation_pct:.1f}%)"
+            )
+            return False
+
+        return True
 
     def _update_metrics(self, symbol: str, feedback: PredictionFeedback):
         """Update performance metrics with new feedback."""
