@@ -57,24 +57,30 @@
 
         .services-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 1.5rem;
             margin-bottom: 1.5rem;
         }
 
         @media (max-width: 1400px) {
             .services-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .services-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
         }
 
-        @media (max-width: 1000px) {
+        @media (max-width: 900px) {
             .services-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
         }
 
-        @media (max-width: 700px) {
+        @media (max-width: 600px) {
             .services-grid {
                 grid-template-columns: 1fr;
             }
@@ -743,7 +749,7 @@
         <div class="container">
             <h1>KI Trading Model</h1>
             <div class="header-status">
-                <span id="services-count">Services: -/5</span>
+                <span id="services-count">Services: -/8</span>
                 <span id="last-update">Update: -</span>
             </div>
         </div>
@@ -760,7 +766,7 @@
                 <p>Externe Datenquelle - OHLCV-Marktdaten und Symbol-Informationen via TimescaleDB.</p>
                 <div class="service-info" id="easyinsight-info">
                     <div><span class="label">Host</span><span>10.1.19.102:3000</span></div>
-                    <div><span class="label">Symbole</span><span id="easyinsight-symbols" class="clickable-symbol-count" onclick="openSymbolsModal()" title="Klicken f\u00fcr Details">-</span></div>
+                    <div><span class="label">Symbole</span><span id="easyinsight-symbols" class="clickable-symbol-count" onclick="openSymbolsModal()" title="Klicken für Details">-</span></div>
                     <div><span class="label">Latenz</span><span id="easyinsight-latency">-</span></div>
                 </div>
                 <div class="service-links">
@@ -805,6 +811,57 @@
                     <a href="/service-nhits.html" target="_blank">Info</a>
                     <a href="/nhits/docs" target="_blank">API Docs</a>
                     <a href="/config-nhits.html" target="_blank">Config</a>
+                </div>
+            </div>
+
+            <!-- TCN-Pattern Service -->
+            <div class="service-card" id="tcn-card">
+                <div class="service-header">
+                    <h2>TCN-Pattern</h2>
+                    <span class="status-badge status-loading" id="tcn-status">Laden...</span>
+                </div>
+                <p>Temporal Convolutional Network - Erkennung von 16 Chart-Pattern Typen mit Deep Learning.</p>
+                <div class="service-info" id="tcn-info">
+                    <div><span class="label">Port</span><span>3005</span></div>
+                    <div><span class="label">GPU</span><span id="tcn-gpu">-</span></div>
+                    <div><span class="label">Pattern</span><span id="tcn-patterns">16 Typen</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/tcn/docs" target="_blank">API Docs</a>
+                </div>
+            </div>
+
+            <!-- HMM-Regime Service -->
+            <div class="service-card" id="hmm-card">
+                <div class="service-header">
+                    <h2>HMM-Regime</h2>
+                    <span class="status-badge status-loading" id="hmm-status">Laden...</span>
+                </div>
+                <p>Hidden Markov Model + LightGBM - Regime-Erkennung und Signal-Scoring für Trading.</p>
+                <div class="service-info" id="hmm-info">
+                    <div><span class="label">Port</span><span>3006</span></div>
+                    <div><span class="label">Regimes</span><span id="hmm-regimes">4 States</span></div>
+                    <div><span class="label">Scorer</span><span id="hmm-scorer">-</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/hmm/docs" target="_blank">API Docs</a>
+                </div>
+            </div>
+
+            <!-- Embedder Service -->
+            <div class="service-card" id="embedder-card">
+                <div class="service-header">
+                    <h2>Embedder</h2>
+                    <span class="status-badge status-loading" id="embedder-status">Laden...</span>
+                </div>
+                <p>Zentraler Embedding-Service - Text, FinBERT, TimeSeries und Feature Embeddings.</p>
+                <div class="service-info" id="embedder-info">
+                    <div><span class="label">Port</span><span>3007</span></div>
+                    <div><span class="label">GPU</span><span id="embedder-gpu">-</span></div>
+                    <div><span class="label">Modelle</span><span id="embedder-models">4 Types</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/embedder/docs" target="_blank">API Docs</a>
                 </div>
             </div>
 
@@ -1088,6 +1145,27 @@
             }
         }
 
+        async function updateTcnInfo() {
+            const data = await checkHealth('tcn', 3005, 'tcn-status');
+            if (data) {
+                document.getElementById('tcn-gpu').textContent = data.gpu_available ? 'Aktiviert' : 'CPU';
+            }
+        }
+
+        async function updateHmmInfo() {
+            const data = await checkHealth('hmm', 3006, 'hmm-status');
+            if (data) {
+                document.getElementById('hmm-scorer').textContent = data.lightgbm_available ? 'Bereit' : '-';
+            }
+        }
+
+        async function updateEmbedderInfo() {
+            const data = await checkHealth('embedder', 3007, 'embedder-status');
+            if (data) {
+                document.getElementById('embedder-gpu').textContent = data.gpu_available ? 'Aktiviert' : 'CPU';
+            }
+        }
+
         async function updateEasyInsightInfo() {
             const statusEl = document.getElementById('easyinsight-status');
             const symbolsEl = document.getElementById('easyinsight-symbols');
@@ -1293,12 +1371,15 @@
                 updateLlmInfo(),
                 updateDataInfo(),
                 updateRagInfo(),
+                updateTcnInfo(),
+                updateHmmInfo(),
+                updateEmbedderInfo(),
                 updateEasyInsightInfo(),
                 updateSystemMetrics(),
                 updateStorageMetrics()
             ]);
 
-            document.getElementById('services-count').textContent = `Services: ${healthyServices}/5`;
+            document.getElementById('services-count').textContent = `Services: ${healthyServices}/8`;
             document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
         }
 
