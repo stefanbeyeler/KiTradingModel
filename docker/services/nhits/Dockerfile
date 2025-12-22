@@ -30,8 +30,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ /app/src/
 COPY .env /app/.env
 
-# Create directories for models and logs
-RUN mkdir -p /app/data/models /app/logs
+# Create directories for data (will be mounted as volumes)
+RUN mkdir -p /app/data/models /app/data/model_feedback /app/data/model_metrics /app/data/symbols /app/logs
 
 # Set environment variables
 ENV PYTHONPATH=/app

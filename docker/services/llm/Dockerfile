@@ -22,8 +22,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ /app/src/
 COPY .env /app/.env
 
-# Create directories for RAG and logs
-RUN mkdir -p /app/data/rag /app/logs
+# Create directories for data (will be mounted as volumes)
+RUN mkdir -p /app/data/rag /app/data/symbols /app/logs
 
 # Set environment variables
 ENV PYTHONPATH=/app

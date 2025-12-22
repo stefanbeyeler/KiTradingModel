@@ -158,7 +158,11 @@
       "Bash(symbols=\"JP225,NAS100,NZDUSD,UK100,US30,US500,USDCHF,USDJPY,XAGUSD,XTIUSD,ETHUSD,EURUSD\")",
       "Bash(for symbol in FRA40 GER40 UK100 BTCUSD EURUSD XAUUSD DOGUSD AUDCAD)",
       "Bash(docker start:*)",
-      "Bash(sudo rm:*)"
+      "Bash(sudo rm:*)",
+      "Bash(./scripts/migrate_data_to_volumes.sh:*)",
+      "Bash(docker rmi:*)",
+      "Bash(for:*)",
+      "Bash(do echo -n \"Port $port: \")"
     ],
     "deny": [],
     "ask": []

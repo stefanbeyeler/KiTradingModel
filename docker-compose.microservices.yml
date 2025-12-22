@@ -51,11 +51,12 @@ services:
     ports:
       - "${NHITS_SERVICE_PORT:-3002}:${NHITS_SERVICE_PORT:-3002}"
     volumes:
-      - models-data:/app/data/models
-      - feedback-data:/app/data/model_feedback
-      - metrics-data:/app/data/model_metrics
+      - nhits-models:/app/data/models/nhits
+      - nhits-feedback:/app/data/model_feedback
+      - nhits-metrics:/app/data/model_metrics
+      - symbols-data:/app/data/symbols
       - ./src:/app/src:ro
-      - ./logs:/app/logs
+      - logs-data:/app/logs
     environment:
       - SERVICE_NAME=nhits
       - PORT=${NHITS_SERVICE_PORT:-3002}
@@ -97,9 +98,11 @@ services:
     ports:
       - "${DATA_SERVICE_PORT:-3001}:${DATA_SERVICE_PORT:-3001}"
     volumes:
-      - ./src:/app/src:ro
-      - ./logs:/app/logs
       - data-storage:/app/data
+      - symbols-data:/app/data/symbols
+      - faiss-data:/app/data/faiss
+      - ./src:/app/src:ro
+      - logs-data:/app/logs
     environment:
       - SERVICE_NAME=data
       - PORT=${DATA_SERVICE_PORT:-3001}
@@ -136,11 +139,12 @@ services:
       - "${TCN_SERVICE_PORT:-3003}:${TCN_SERVICE_PORT:-3003}"
     volumes:
       - tcn-models:/app/data/models/tcn
+      - symbols-data:/app/data/symbols
       - ./src/services/tcn_app:/app/src/services/tcn_app:ro
       - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
       - ./src/shared:/app/src/shared:ro
       - ./src/config:/app/src/config:ro
-      - ./logs:/app/logs
+      - logs-data:/app/logs
     environment:
       - SERVICE_NAME=tcn
       - PORT=${TCN_SERVICE_PORT:-3003}
@@ -182,11 +186,12 @@ services:
       - "${HMM_SERVICE_PORT:-3004}:${HMM_SERVICE_PORT:-3004}"
     volumes:
       - hmm-models:/app/data/models/hmm
+      - symbols-data:/app/data/symbols
       - ./src/services/hmm_app:/app/src/services/hmm_app:ro
       - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
       - ./src/shared:/app/src/shared:ro
       - ./src/config:/app/src/config:ro
-      - ./logs:/app/logs
+      - logs-data:/app/logs
     environment:
       - SERVICE_NAME=hmm
       - PORT=${HMM_SERVICE_PORT:-3004}
@@ -228,7 +233,7 @@ services:
       - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
       - ./src/shared:/app/src/shared:ro
       - ./src/config:/app/src/config:ro
-      - ./logs:/app/logs
+      - logs-data:/app/logs
     environment:
       - SERVICE_NAME=embedder
       - PORT=${EMBEDDER_SERVICE_PORT:-3005}
@@ -270,9 +275,10 @@ services:
     ports:
       - "${RAG_SERVICE_PORT:-3008}:${RAG_SERVICE_PORT:-3008}"
     volumes:
-      - rag-data:/app/data/faiss
+      - rag-faiss:/app/data/faiss
+      - symbols-data:/app/data/symbols
       - ./src:/app/src:ro
-      - ./logs:/app/logs
+      - logs-data:/app/logs
     environment:
       - SERVICE_NAME=rag
       - PORT=${RAG_SERVICE_PORT:-3008}
@@ -316,9 +322,10 @@ services:
     ports:
       - "${LLM_SERVICE_PORT:-3009}:${LLM_SERVICE_PORT:-3009}"
     volumes:
-      - rag-data:/app/data/rag
+      - rag-faiss:/app/data/rag
+      - symbols-data:/app/data/symbols
       - ./src:/app/src:ro
-      - ./logs:/app/logs
+      - logs-data:/app/logs
     environment:
       - SERVICE_NAME=llm
       - PORT=${LLM_SERVICE_PORT:-3009}
@@ -352,23 +359,42 @@ services:
       start_period: 60s
 
 volumes:
-  models-data:
+  # NHITS Service Volumes
+  nhits-models:
     driver: local
-  feedback-data:
+  nhits-feedback:
     driver: local
-  metrics-data:
+  nhits-metrics:
     driver: local
-  rag-data:
-    driver: local
+
+  # Data Service Volumes
   data-storage:
     driver: local
+  symbols-data:
+    driver: local
+  faiss-data:
+    driver: local
+
+  # TCN Service Volumes
   tcn-models:
     driver: local
+
+  # HMM Service Volumes
   hmm-models:
     driver: local
+
+  # Embedder Service Volumes
   embedder-models:
     driver: local
   embedder-cache:
+    driver: local
+
+  # RAG Service Volumes
+  rag-faiss:
+    driver: local
+
+  # Shared Logs Volume
+  logs-data:
     driver: local
 
 networks:

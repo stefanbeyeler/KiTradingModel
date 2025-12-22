@@ -25,7 +25,7 @@ COPY src/shared/ ./src/shared/
 # Create empty __init__.py files to avoid import issues
 RUN touch ./src/__init__.py ./src/services/__init__.py
 
-# Create directories
+# Create directories for data (will be mounted as volumes)
 RUN mkdir -p /app/data/models/embedder /app/logs /app/cache
 
 ENV PYTHONPATH=/app

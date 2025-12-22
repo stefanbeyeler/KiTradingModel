@@ -5,7 +5,7 @@ LABEL maintainer="KI Trading Model"
 LABEL service="rag"
 
 # Build argument for port
-ARG SERVICE_PORT=3003
+ARG SERVICE_PORT=3008
 
 WORKDIR /app
 
@@ -26,8 +26,8 @@ RUN pip install --no-cache-dir faiss-cpu
 COPY src/ /app/src/
 COPY .env /app/.env
 
-# Create directories for data and logs
-RUN mkdir -p /app/data/faiss /app/logs
+# Create directories for data (will be mounted as volumes)
+RUN mkdir -p /app/data/faiss /app/data/symbols /app/logs
 
 # Set environment variables
 ENV PYTHONPATH=/app
