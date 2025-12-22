@@ -24,6 +24,7 @@ from src.api.routes import forecast_router, training_router, system_router, back
 from src.services.nhits_training_service import nhits_training_service
 from src.services.event_based_training_service import event_based_training_service
 from src.services.model_improvement_service import model_improvement_service
+from src.services.auto_forecast_service import auto_forecast_service
 
 # Configure logging
 logger.remove()
@@ -84,6 +85,26 @@ async def startup_event():
     await model_improvement_service.start(interval_seconds=auto_eval_interval)
     logger.info(f"Auto-evaluation started (interval: {auto_eval_interval}s)")
 
+    # Start auto-forecast services (enabled by default)
+    auto_forecast_favorites = os.getenv("AUTO_FORECAST_FAVORITES_ENABLED", "true").lower() == "true"
+    auto_forecast_daily = os.getenv("AUTO_FORECAST_DAILY_ENABLED", "true").lower() == "true"
+
+    if auto_forecast_favorites:
+        # Start favorites auto-forecast with all timeframes (M15, H1, D1)
+        favorites_timeframes = os.getenv("AUTO_FORECAST_FAVORITES_TIMEFRAMES", "M15,H1,D1").split(",")
+        await auto_forecast_service.start_favorites_auto_forecast(timeframes=favorites_timeframes)
+        logger.info(f"Auto-forecast for favorites started (timeframes: {favorites_timeframes})")
+
+    if auto_forecast_daily:
+        # Start daily auto-forecast for non-favorites
+        daily_time = os.getenv("AUTO_FORECAST_DAILY_TIME", "05:00")
+        daily_timezone = os.getenv("AUTO_FORECAST_DAILY_TIMEZONE", "Europe/Zurich")
+        await auto_forecast_service.start_daily_auto_forecast(
+            scheduled_time=daily_time,
+            timezone_str=daily_timezone
+        )
+        logger.info(f"Daily auto-forecast started (time: {daily_time} {daily_timezone})")
+
     logger.info("NHITS Service started successfully")
 
 
@@ -99,6 +120,10 @@ async def shutdown_event():
     # Stop model improvement service
     if model_improvement_service._running:
         await model_improvement_service.stop()
+
+    # Stop auto-forecast services
+    await auto_forecast_service.stop()
+    logger.info("Auto-forecast services stopped")
 
     logger.info("NHITS Service stopped")
 
