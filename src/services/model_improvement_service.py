@@ -12,15 +12,35 @@ This service implements:
 import asyncio
 import json
 import logging
+import math
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, asdict
 import numpy as np
 import torch
 import torch.nn as nn
 
 from src.config.settings import settings
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    """Convert value to JSON-safe float (handles NaN, Infinity)."""
+    if value is None:
+        return default
+    try:
+        f = float(value)
+        if math.isnan(f) or math.isinf(f):
+            return default
+        return f
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_round(value: Any, decimals: int = 4, default: float = 0.0) -> float:
+    """Round value safely, returning default for NaN/Infinity."""
+    safe_val = _safe_float(value, default)
+    return round(safe_val, decimals)
 
 logger = logging.getLogger(__name__)
 
@@ -758,16 +778,22 @@ class ModelImprovementService:
         }
 
         for symbol, metrics in self.performance_metrics.items():
+            # Sanitize metrics_1h, metrics_4h, metrics_24h dicts
+            def sanitize_metrics_dict(d: Dict) -> Dict:
+                if not d:
+                    return {}
+                return {k: _safe_round(v) if isinstance(v, (int, float)) else v for k, v in d.items()}
+
             summary["by_symbol"][symbol] = {
                 "total": metrics.total_predictions,
                 "evaluated": metrics.evaluated_predictions,
-                "avg_error_pct": round(metrics.avg_error_pct, 4),
-                "direction_accuracy": round(metrics.direction_accuracy, 4),
+                "avg_error_pct": _safe_round(metrics.avg_error_pct, 4),
+                "direction_accuracy": _safe_round(metrics.direction_accuracy, 4),
                 "needs_retraining": metrics.needs_retraining,
                 "reason": metrics.retraining_reason,
-                "1h": metrics.metrics_1h,
-                "4h": metrics.metrics_4h,
-                "24h": metrics.metrics_24h,
+                "1h": sanitize_metrics_dict(metrics.metrics_1h),
+                "4h": sanitize_metrics_dict(metrics.metrics_4h),
+                "24h": sanitize_metrics_dict(metrics.metrics_24h),
             }
 
         return summary
