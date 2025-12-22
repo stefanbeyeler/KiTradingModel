@@ -16,8 +16,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY docker/services/hmm/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code
-COPY src/ ./src/
+# Copy only the HMM app source code (avoid importing other services)
+COPY src/services/hmm_app/ ./src/services/hmm_app/
+COPY src/services/data_gateway_service.py ./src/services/
+COPY src/config/ ./src/config/
+COPY src/utils/ ./src/utils/
+
+# Create empty __init__.py files to avoid import issues
+RUN touch ./src/__init__.py ./src/services/__init__.py
 
 # Create directories
 RUN mkdir -p /app/data/models/hmm /app/logs

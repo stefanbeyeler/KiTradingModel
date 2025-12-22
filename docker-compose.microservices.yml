@@ -9,6 +9,9 @@ services:
         - NHITS_SERVICE_PORT=${NHITS_SERVICE_PORT:-3002}
         - RAG_SERVICE_PORT=${RAG_SERVICE_PORT:-3003}
         - LLM_SERVICE_PORT=${LLM_SERVICE_PORT:-3004}
+        - TCN_SERVICE_PORT=${TCN_SERVICE_PORT:-3005}
+        - HMM_SERVICE_PORT=${HMM_SERVICE_PORT:-3006}
+        - EMBEDDER_SERVICE_PORT=${EMBEDDER_SERVICE_PORT:-3007}
     container_name: trading-frontend
     ports:
       - "3000:80"
@@ -19,6 +22,9 @@ services:
       - NHITS_SERVICE_PORT=${NHITS_SERVICE_PORT:-3002}
       - RAG_SERVICE_PORT=${RAG_SERVICE_PORT:-3003}
       - LLM_SERVICE_PORT=${LLM_SERVICE_PORT:-3004}
+      - TCN_SERVICE_PORT=${TCN_SERVICE_PORT:-3005}
+      - HMM_SERVICE_PORT=${HMM_SERVICE_PORT:-3006}
+      - EMBEDDER_SERVICE_PORT=${EMBEDDER_SERVICE_PORT:-3007}
     depends_on:
       - nhits-service
       - llm-service
@@ -221,7 +227,8 @@ services:
       - "${TCN_SERVICE_PORT:-3005}:${TCN_SERVICE_PORT:-3005}"
     volumes:
       - tcn-models:/app/data/models/tcn
-      - ./src:/app/src:ro
+      - ./src/services/tcn_app:/app/src/services/tcn_app:ro
+      - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
       - ./logs:/app/logs
     environment:
       - SERVICE_NAME=tcn
@@ -264,7 +271,8 @@ services:
       - "${HMM_SERVICE_PORT:-3006}:${HMM_SERVICE_PORT:-3006}"
     volumes:
       - hmm-models:/app/data/models/hmm
-      - ./src:/app/src:ro
+      - ./src/services/hmm_app:/app/src/services/hmm_app:ro
+      - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
       - ./logs:/app/logs
     environment:
       - SERVICE_NAME=hmm
@@ -303,7 +311,8 @@ services:
     volumes:
       - embedder-models:/app/data/models/embedder
       - embedder-cache:/app/cache
-      - ./src:/app/src:ro
+      - ./src/services/embedder_app:/app/src/services/embedder_app:ro
+      - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
       - ./logs:/app/logs
     environment:
       - SERVICE_NAME=embedder
