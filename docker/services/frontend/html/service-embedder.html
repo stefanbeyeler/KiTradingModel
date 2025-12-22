@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedder Service - Service Dokumentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .subtitle {
+            opacity: 0.7;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .content-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-card p {
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .content-card ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .content-card li {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tech-tag {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(167, 139, 250, 0.3);
+        }
+
+        .endpoint-list {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .endpoint {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .endpoint:last-child {
+            border-bottom: none;
+        }
+
+        .method {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .method.post {
+            background: rgba(33, 150, 243, 0.2);
+            color: #64b5f6;
+        }
+
+        .endpoint-path {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #ffd54f;
+        }
+
+        .endpoint-desc {
+            opacity: 0.7;
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .info-box {
+            background: rgba(100, 200, 255, 0.1);
+            border-left: 3px solid #64c8ff;
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+
+        .info-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+        }
+
+        .info-box.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-left-color: #4caf50;
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .quick-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        .quick-links a:hover {
+            background: rgba(100, 200, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid #a78bfa;
+        }
+
+        .feature-item h4 {
+            color: #a78bfa;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .feature-item p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 0;
+        }
+
+        .embedding-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .embedding-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .embedding-type {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.25rem;
+            border-radius: 10px;
+            border-top: 3px solid #64c8ff;
+        }
+
+        .embedding-type h4 {
+            color: #64c8ff;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .embedding-type .model-name {
+            font-family: 'Consolas', monospace;
+            font-size: 0.8rem;
+            background: rgba(100, 200, 255, 0.15);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            color: #ffd54f;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        .embedding-type p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .embedding-type .dim {
+            font-size: 0.75rem;
+            opacity: 0.6;
+        }
+
+        .cache-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .cache-stat {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .cache-stat .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .cache-stat .label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 0.3rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <span class="service-badge">Port 3007</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Embedder Service</h1>
+        <p class="subtitle">Zentraler Embedding-Service - Text, FinBERT, TimeSeries und Feature Embeddings</p>
+
+        <div class="content-card">
+            <h2>&#129504; Beschreibung</h2>
+            <p>
+                Der Embedder Service ist der zentrale Hub fur alle Embedding-Operationen im KI Trading Model.
+                Er stellt verschiedene vortrainierte Modelle bereit, um Texte, Finanznachrichten, Zeitreihen
+                und Features in hochdimensionale Vektoren zu transformieren.
+            </p>
+            <p>
+                Diese Embeddings werden von anderen Services wie RAG (fur Dokumentensuche), TCN (fur
+                Pattern-Erkennung) und LLM (fur kontextbasierte Analyse) verwendet. Durch die Zentralisierung
+                werden Ressourcen gespart und konsistente Embeddings gewahrleistet.
+            </p>
+        </div>
+
+        <div class="content-card">
+            <h2>&#127919; Embedding-Typen (4 Modelle)</h2>
+            <p>Der Service bietet vier spezialisierte Embedding-Modelle:</p>
+
+            <div class="embedding-grid">
+                <div class="embedding-type">
+                    <h4>&#128221; Text Embeddings</h4>
+                    <span class="model-name">all-MiniLM-L6-v2</span>
+                    <p>Universelle Textembeddings fur allgemeine Dokumente und Suchanfragen.</p>
+                    <span class="dim">Dimension: 384</span>
+                </div>
+                <div class="embedding-type">
+                    <h4>&#128200; FinBERT Embeddings</h4>
+                    <span class="model-name">ProsusAI/finbert</span>
+                    <p>Spezialisiert auf Finanztexte, Nachrichten und Earnings Reports.</p>
+                    <span class="dim">Dimension: 768</span>
+                </div>
+                <div class="embedding-type">
+                    <h4>&#128201; TimeSeries Embeddings</h4>
+                    <span class="model-name">Custom TCN Encoder</span>
+                    <p>Embeddings fur OHLCV-Zeitreihen und technische Indikatoren.</p>
+                    <span class="dim">Dimension: 256</span>
+                </div>
+                <div class="embedding-type">
+                    <h4>&#128202; Feature Embeddings</h4>
+                    <span class="model-name">AutoEncoder</span>
+                    <p>Komprimiert Trading-Features fur ML-Modelle.</p>
+                    <span class="dim">Dimension: 64</span>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Modell-Auswahl:</strong> Der Service wahlt automatisch das passende Modell
+                basierend auf dem Eingabetyp. Sie konnen das Modell auch explizit angeben.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128190; Intelligentes Caching</h2>
+            <p>
+                Der Service implementiert ein mehrstufiges Caching-System, um redundante Berechnungen
+                zu vermeiden und die Latenz zu minimieren.
+            </p>
+
+            <div class="cache-stats">
+                <div class="cache-stat">
+                    <div class="value">10K</div>
+                    <div class="label">Max Cache-Eintrage</div>
+                </div>
+                <div class="cache-stat">
+                    <div class="value">LRU</div>
+                    <div class="label">Eviction-Strategie</div>
+                </div>
+                <div class="cache-stat">
+                    <div class="value">&lt;1ms</div>
+                    <div class="label">Cache-Hit Latenz</div>
+                </div>
+            </div>
+
+            <div class="info-box success">
+                <strong>Persistenter Cache:</strong> Embeddings werden auf Disk gespeichert und uberleben
+                Container-Neustarts. Dies reduziert die Aufwarmzeit erheblich.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#9881;&#65039; Funktionsweise</h2>
+            <p>Der Embedding-Prozess:</p>
+            <ul>
+                <li><strong>Preprocessing:</strong> Text-Tokenisierung, Zeitreihen-Normalisierung</li>
+                <li><strong>Cache-Lookup:</strong> Prufung ob Embedding bereits existiert</li>
+                <li><strong>Model Inference:</strong> GPU-beschleunigte Berechnung falls kein Cache-Hit</li>
+                <li><strong>Pooling:</strong> Mean/CLS Pooling fur Sentence-Level Embeddings</li>
+                <li><strong>Cache-Update:</strong> Speicherung fur zukunftige Anfragen</li>
+            </ul>
+
+            <div class="info-box warning">
+                <strong>GPU-Memory:</strong> Der Service ladt mehrere Modelle gleichzeitig. Auf der
+                Jetson Orin werden ca. 4GB GPU-Speicher belegt.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128202; Features</h2>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>&#128640; Batch Processing</h4>
+                    <p>Effiziente Verarbeitung von bis zu 100 Texten gleichzeitig.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128269; Similarity Search</h4>
+                    <p>Eingebaute Cosine-Similarity fur Ahnlichkeitssuche.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#127760; Multi-Language</h4>
+                    <p>Unterstutzung fur Deutsch und Englisch.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128190; Persistence</h4>
+                    <p>Embeddings werden persistent gespeichert.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128279; Wichtige API-Endpunkte</h2>
+
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Text Embeddings</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/embeddings/text</span>
+                    <span class="endpoint-desc">Text zu Embedding</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/embeddings/batch</span>
+                    <span class="endpoint-desc">Batch Text Embeddings</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/embeddings/finbert</span>
+                    <span class="endpoint-desc">FinBERT Embeddings</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">TimeSeries Embeddings</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/embeddings/timeseries</span>
+                    <span class="endpoint-desc">OHLCV zu Embedding</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/embeddings/features</span>
+                    <span class="endpoint-desc">Features komprimieren</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Utilities</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/embeddings/similarity</span>
+                    <span class="endpoint-desc">Ahnlichkeit berechnen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/embeddings/models</span>
+                    <span class="endpoint-desc">Verfugbare Modelle</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/embeddings/cache/stats</span>
+                    <span class="endpoint-desc">Cache-Statistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/embeddings/cache/clear</span>
+                    <span class="endpoint-desc">Cache leeren</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128295; Technologie-Stack</h2>
+            <div class="tech-stack">
+                <span class="tech-tag">Python 3.11</span>
+                <span class="tech-tag">PyTorch</span>
+                <span class="tech-tag">Transformers</span>
+                <span class="tech-tag">Sentence-Transformers</span>
+                <span class="tech-tag">FastAPI</span>
+                <span class="tech-tag">CUDA</span>
+                <span class="tech-tag">NumPy</span>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128230; Verwendung durch andere Services</h2>
+            <p>Der Embedder Service wird von folgenden Services genutzt:</p>
+            <ul>
+                <li><strong>RAG Service:</strong> Dokument- und Query-Embeddings fur FAISS-Suche</li>
+                <li><strong>TCN-Pattern:</strong> TimeSeries-Embeddings als zusatzliche Features</li>
+                <li><strong>LLM Service:</strong> FinBERT-Embeddings fur Sentiment-Analyse</li>
+                <li><strong>Data Service:</strong> Feature-Embeddings fur Symbol-Clustering</li>
+            </ul>
+
+            <div class="info-box">
+                <strong>Service Discovery:</strong> Andere Services finden den Embedder uber die
+                Umgebungsvariable <code>EMBEDDER_SERVICE_URL</code> oder uber das Docker-Netzwerk.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128640; Schnellzugriff</h2>
+            <div class="quick-links">
+                <a href="/embedder/docs" target="_blank">&#128196; API Dokumentation</a>
+                <a href="/embedder/health" target="_blank">&#128154; Health Check</a>
+                <a href="/" class="back-link">&#127968; Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        KI Trading Model - Service Dokumentation | Embedder Service
+    </footer>
+</body>
+</html>

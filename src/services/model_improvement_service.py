@@ -847,6 +847,14 @@ class ModelImprovementService:
         """
         result = []
 
+        def _to_native(val):
+            """Convert numpy types to native Python types for JSON serialization."""
+            if val is None:
+                return None
+            if hasattr(val, 'item'):  # numpy scalar
+                return val.item()
+            return val
+
         if symbol:
             feedbacks = self.evaluated_feedback.get(symbol, [])
             for fb in feedbacks[-limit:]:
@@ -854,11 +862,11 @@ class ModelImprovementService:
                     "symbol": fb.symbol,
                     "timestamp": fb.timestamp.isoformat() if fb.timestamp else None,
                     "horizon": fb.horizon,
-                    "current_price": fb.current_price,
-                    "predicted_price": fb.predicted_price,
-                    "actual_price": fb.actual_price,
-                    "prediction_error_pct": round(fb.prediction_error_pct, 4) if fb.prediction_error_pct else None,
-                    "direction_correct": fb.direction_correct,
+                    "current_price": _to_native(fb.current_price),
+                    "predicted_price": _to_native(fb.predicted_price),
+                    "actual_price": _to_native(fb.actual_price),
+                    "prediction_error_pct": round(float(fb.prediction_error_pct), 4) if fb.prediction_error_pct is not None else None,
+                    "direction_correct": bool(fb.direction_correct) if fb.direction_correct is not None else None,
                     "evaluated_at": fb.evaluated_at.isoformat() if fb.evaluated_at else None,
                 })
         else:
@@ -868,11 +876,11 @@ class ModelImprovementService:
                         "symbol": fb.symbol,
                         "timestamp": fb.timestamp.isoformat() if fb.timestamp else None,
                         "horizon": fb.horizon,
-                        "current_price": fb.current_price,
-                        "predicted_price": fb.predicted_price,
-                        "actual_price": fb.actual_price,
-                        "prediction_error_pct": round(fb.prediction_error_pct, 4) if fb.prediction_error_pct else None,
-                        "direction_correct": fb.direction_correct,
+                        "current_price": _to_native(fb.current_price),
+                        "predicted_price": _to_native(fb.predicted_price),
+                        "actual_price": _to_native(fb.actual_price),
+                        "prediction_error_pct": round(float(fb.prediction_error_pct), 4) if fb.prediction_error_pct is not None else None,
+                        "direction_correct": bool(fb.direction_correct) if fb.direction_correct is not None else None,
                         "evaluated_at": fb.evaluated_at.isoformat() if fb.evaluated_at else None,
                     })
 

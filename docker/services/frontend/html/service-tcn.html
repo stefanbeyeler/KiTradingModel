@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCN-Pattern Service - Service Dokumentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .subtitle {
+            opacity: 0.7;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .content-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-card p {
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .content-card ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .content-card li {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tech-tag {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(167, 139, 250, 0.3);
+        }
+
+        .endpoint-list {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .endpoint {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .endpoint:last-child {
+            border-bottom: none;
+        }
+
+        .method {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .method.post {
+            background: rgba(33, 150, 243, 0.2);
+            color: #64b5f6;
+        }
+
+        .endpoint-path {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #ffd54f;
+        }
+
+        .endpoint-desc {
+            opacity: 0.7;
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .info-box {
+            background: rgba(100, 200, 255, 0.1);
+            border-left: 3px solid #64c8ff;
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+
+        .info-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+        }
+
+        .info-box.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-left-color: #4caf50;
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .quick-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        .quick-links a:hover {
+            background: rgba(100, 200, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid #a78bfa;
+        }
+
+        .feature-item h4 {
+            color: #a78bfa;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .feature-item p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 0;
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 700px) {
+            .pattern-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .pattern-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .pattern-item .pattern-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .pattern-item .pattern-type {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-top: 0.2rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <span class="service-badge">Port 3005</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>TCN-Pattern Service</h1>
+        <p class="subtitle">Temporal Convolutional Network - Chart Pattern Erkennung mit Deep Learning</p>
+
+        <div class="content-card">
+            <h2>&#129504; Beschreibung</h2>
+            <p>
+                Der TCN-Pattern Service nutzt <strong>Temporal Convolutional Networks (TCN)</strong> zur
+                automatischen Erkennung von Chart-Patterns in Finanzzeitreihen. TCNs sind speziell fur
+                sequentielle Daten optimiert und bieten gegenuber RNNs den Vorteil paralleler Verarbeitung
+                und stabilerem Training.
+            </p>
+            <p>
+                Der Service erkennt 16 verschiedene Chart-Pattern-Typen, die von Tradern weltweit zur
+                technischen Analyse verwendet werden. Die Erkennung erfolgt in Echtzeit und kann fur
+                verschiedene Zeitrahmen konfiguriert werden.
+            </p>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128200; Erkannte Pattern (16 Typen)</h2>
+            <p>Der Service erkennt folgende klassische Chart-Patterns:</p>
+
+            <div class="pattern-grid">
+                <div class="pattern-item">
+                    <div class="pattern-name">Head & Shoulders</div>
+                    <div class="pattern-type">Reversal</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Inv. Head & Shoulders</div>
+                    <div class="pattern-type">Reversal</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Double Top</div>
+                    <div class="pattern-type">Reversal</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Double Bottom</div>
+                    <div class="pattern-type">Reversal</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Triple Top</div>
+                    <div class="pattern-type">Reversal</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Triple Bottom</div>
+                    <div class="pattern-type">Reversal</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Asc. Triangle</div>
+                    <div class="pattern-type">Continuation</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Desc. Triangle</div>
+                    <div class="pattern-type">Continuation</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Sym. Triangle</div>
+                    <div class="pattern-type">Continuation</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Rising Wedge</div>
+                    <div class="pattern-type">Reversal</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Falling Wedge</div>
+                    <div class="pattern-type">Reversal</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Bull Flag</div>
+                    <div class="pattern-type">Continuation</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Bear Flag</div>
+                    <div class="pattern-type">Continuation</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Cup & Handle</div>
+                    <div class="pattern-type">Continuation</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Rounding Bottom</div>
+                    <div class="pattern-type">Reversal</div>
+                </div>
+                <div class="pattern-item">
+                    <div class="pattern-name">Rectangle</div>
+                    <div class="pattern-type">Continuation</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Pattern-Klassifikation:</strong> Jedes erkannte Pattern enthalt einen Confidence-Score (0-1),
+                der die Sicherheit der Erkennung angibt. Zusatzlich werden Start/End-Punkte und erwartete
+                Preisziele berechnet.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#9881;&#65039; Funktionsweise</h2>
+            <p>Der TCN-Algorithmus funktioniert durch:</p>
+            <ul>
+                <li><strong>Dilated Causal Convolutions:</strong> Erweiterte Konvolutionen erfassen lange Abhangigkeiten</li>
+                <li><strong>Residual Connections:</strong> Stabile Gradienten fur tiefe Netzwerke</li>
+                <li><strong>Multi-Scale Features:</strong> Pattern werden auf verschiedenen Zeitskalen erkannt</li>
+                <li><strong>Attention Mechanismus:</strong> Fokus auf relevante Zeitpunkte im Chart</li>
+            </ul>
+
+            <div class="info-box success">
+                <strong>GPU-Beschleunigung:</strong> Der Service nutzt NVIDIA CUDA fur Echtzeit-Inferenz.
+                Die Pattern-Erkennung dauert typischerweise unter 100ms pro Symbol.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128202; Features</h2>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>&#127919; Echtzeit-Erkennung</h4>
+                    <p>Pattern werden in Echtzeit auf aktuellen Marktdaten erkannt.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128176; Preisziel-Berechnung</h4>
+                    <p>Automatische Berechnung von Target-Preisen basierend auf Pattern-Hohe.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128200; Multi-Timeframe</h4>
+                    <p>Analyse auf verschiedenen Zeitrahmen (M5, M15, H1, H4, D1).</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128269; Batch-Scanning</h4>
+                    <p>Effizientes Scannen mehrerer Symbole gleichzeitig.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128279; Wichtige API-Endpunkte</h2>
+
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Pattern-Erkennung</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/patterns/detect</span>
+                    <span class="endpoint-desc">Pattern fur ein Symbol erkennen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/patterns/scan</span>
+                    <span class="endpoint-desc">Mehrere Symbole scannen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns/types</span>
+                    <span class="endpoint-desc">Liste aller Pattern-Typen</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Training</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/patterns/train</span>
+                    <span class="endpoint-desc">Modell trainieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns/model/info</span>
+                    <span class="endpoint-desc">Modell-Informationen</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/health</span>
+                    <span class="endpoint-desc">Service Health Check</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128295; Technologie-Stack</h2>
+            <div class="tech-stack">
+                <span class="tech-tag">Python 3.11</span>
+                <span class="tech-tag">PyTorch</span>
+                <span class="tech-tag">TCN</span>
+                <span class="tech-tag">FastAPI</span>
+                <span class="tech-tag">CUDA</span>
+                <span class="tech-tag">NumPy</span>
+                <span class="tech-tag">Pandas</span>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128230; Modell-Architektur</h2>
+            <p>Die TCN-Architektur des Pattern-Erkennungsmodells:</p>
+            <ul>
+                <li><strong>Input Layer:</strong> OHLCV-Daten normalisiert auf [0,1]</li>
+                <li><strong>TCN Blocks:</strong> 4 Schichten mit Dilation [1, 2, 4, 8]</li>
+                <li><strong>Hidden Channels:</strong> 64 pro Schicht</li>
+                <li><strong>Kernel Size:</strong> 7 fur breite rezeptive Felder</li>
+                <li><strong>Output Layer:</strong> Multi-Label Klassifikation (16 Pattern + Confidence)</li>
+            </ul>
+
+            <div class="info-box warning">
+                <strong>Mindestdaten:</strong> Fur eine zuverlassige Pattern-Erkennung werden mindestens
+                100 Kerzen historischer Daten benotigt. Langere Zeitreihen verbessern die Genauigkeit.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128640; Schnellzugriff</h2>
+            <div class="quick-links">
+                <a href="/tcn/docs" target="_blank">&#128196; API Dokumentation</a>
+                <a href="/tcn/health" target="_blank">&#128154; Health Check</a>
+                <a href="/" class="back-link">&#127968; Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        KI Trading Model - Service Dokumentation | TCN-Pattern Service
+    </footer>
+</body>
+</html>
