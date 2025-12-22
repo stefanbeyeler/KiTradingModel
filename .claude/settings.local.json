@@ -155,7 +155,9 @@
       "Bash(tegrastats:*)",
       "Bash(ollama ps:*)",
       "Bash(TZ=Europe/Zurich date:*)",
-      "Bash(symbols=\"JP225,NAS100,NZDUSD,UK100,US30,US500,USDCHF,USDJPY,XAGUSD,XTIUSD,ETHUSD,EURUSD\")"
+      "Bash(symbols=\"JP225,NAS100,NZDUSD,UK100,US30,US500,USDCHF,USDJPY,XAGUSD,XTIUSD,ETHUSD,EURUSD\")",
+      "Bash(for symbol in FRA40 GER40 UK100 BTCUSD EURUSD XAUUSD DOGUSD AUDCAD)",
+      "Bash(docker start:*)"
     ],
     "deny": [],
     "ask": []

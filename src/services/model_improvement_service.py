@@ -517,16 +517,23 @@ class ModelImprovementService:
         """
         import httpx
         from src.config import settings
+        from datetime import timezone as tz
 
         data_service_url = getattr(settings, 'data_service_url', 'http://localhost:3001')
+
+        # Make target_time timezone-aware (UTC) if needed
+        target_aware = target_time
+        if target_time.tzinfo is None:
+            target_aware = target_time.replace(tzinfo=tz.utc)
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 # Use training-data endpoint which returns EasyInsight data
+                # Use 3 days to ensure we have historical data for older predictions
                 response = await client.get(
                     f"{data_service_url}/api/v1/training-data/{symbol}",
                     params={
-                        "days_back": 1,
+                        "days_back": 3,
                         "interval": "H1"
                     }
                 )
@@ -539,12 +546,6 @@ class ModelImprovementService:
                         # Find the closest price to target_time
                         closest_price = None
                         min_diff = float('inf')
-
-                        # Make target_time timezone-aware if needed
-                        target_aware = target_time
-                        if target_time.tzinfo is None:
-                            from datetime import timezone as tz
-                            target_aware = target_time.replace(tzinfo=tz.utc)
 
                         for candle in data:
                             # Parse snapshot_time from EasyInsight data
@@ -563,11 +564,14 @@ class ModelImprovementService:
                                 # Use h1_close for H1 timeframe
                                 closest_price = float(candle.get('h1_close', 0))
 
-                        if closest_price and closest_price > 0 and min_diff < 7200:  # Within 2 hours
+                        if closest_price and closest_price > 0 and min_diff < 14400:  # Within 4 hours
                             return closest_price
+                        elif min_diff >= 14400:
+                            logger.debug(f"No close price for {symbol} at {target_aware}: min_diff={min_diff/3600:.1f}h")
 
                 # Fallback: Try live-data endpoint for recent targets
-                if (datetime.utcnow() - target_time).total_seconds() < 300:  # Within 5 minutes
+                now_utc = datetime.now(tz.utc)
+                if (now_utc - target_aware).total_seconds() < 300:  # Within 5 minutes
                     response = await client.get(
                         f"{data_service_url}/api/v1/managed-symbols/live-data/{symbol}"
                     )

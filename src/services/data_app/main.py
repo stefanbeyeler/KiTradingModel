@@ -38,11 +38,14 @@ from src.api.routes import (
 )
 from src.services.timescaledb_sync_service import TimescaleDBSyncService
 from src.services.rag_service import RAGService
+from src.services.training_data_cache_service import training_data_cache
 from src.service_registry import register_service
+import asyncio
 
 # Global service instances
 sync_service = None
 rag_service = None
+_cache_cleanup_task = None
 
 # Configure logging
 logger.remove()
@@ -188,14 +191,44 @@ app.include_router(query_log_router, prefix="/api/v1", tags=["10. Query Logs & A
 app.include_router(external_sources_router, prefix="/api/v1", tags=["11. External Data Sources"])
 
 
+async def _periodic_cache_cleanup():
+    """Background task to periodically cleanup expired cache entries."""
+    cleanup_interval = int(os.getenv("CACHE_CLEANUP_INTERVAL_SECONDS", "3600"))  # Default: 1 hour
+    logger.info(f"Cache cleanup task started (interval: {cleanup_interval}s)")
+
+    while True:
+        try:
+            await asyncio.sleep(cleanup_interval)
+            removed = training_data_cache.cleanup_expired()
+            if removed > 0:
+                logger.info(f"Periodic cache cleanup: removed {removed} expired entries")
+        except asyncio.CancelledError:
+            logger.info("Cache cleanup task cancelled")
+            break
+        except Exception as e:
+            logger.error(f"Error in cache cleanup task: {e}")
+            await asyncio.sleep(60)  # Wait before retry
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup."""
-    global sync_service, rag_service
+    global sync_service, rag_service, _cache_cleanup_task
 
     logger.info("Starting Data Service...")
     logger.info(f"Version: {VERSION}")
     logger.info(f"EasyInsight API: {settings.easyinsight_api_url}")
+
+    # Cleanup expired training data cache on startup
+    try:
+        removed = training_data_cache.cleanup_expired()
+        stats = training_data_cache.get_stats()
+        logger.info(f"Training data cache: {stats['total_entries']} entries, {removed} expired removed")
+
+        # Start periodic cache cleanup task
+        _cache_cleanup_task = asyncio.create_task(_periodic_cache_cleanup())
+    except Exception as e:
+        logger.error(f"Failed to cleanup training data cache: {e}")
 
     # Initialize RAG Service (for sync service)
     try:
@@ -234,7 +267,18 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown."""
+    global _cache_cleanup_task
+
     logger.info("Shutting down Data Service...")
+
+    # Stop cache cleanup task
+    if _cache_cleanup_task and not _cache_cleanup_task.done():
+        _cache_cleanup_task.cancel()
+        try:
+            await _cache_cleanup_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Cache cleanup task stopped")
 
     # Stop sync service if running
     if sync_service and getattr(sync_service, '_running', False):
