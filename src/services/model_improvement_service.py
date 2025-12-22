@@ -520,53 +520,61 @@ class ModelImprovementService:
 
         data_service_url = getattr(settings, 'data_service_url', 'http://localhost:3001')
 
-        # Format times for API request
-        start_time = target_time - timedelta(hours=1)
-        end_time = target_time + timedelta(hours=1)
-
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                # Try EasyInsight historical data endpoint
+                # Use training-data endpoint which returns EasyInsight data
                 response = await client.get(
-                    f"{data_service_url}/api/v1/symbols/{symbol}/ohlcv",
+                    f"{data_service_url}/api/v1/training-data/{symbol}",
                     params={
-                        "start_date": start_time.isoformat(),
-                        "end_date": end_time.isoformat(),
-                        "interval": "h1"
+                        "days_back": 1,
+                        "interval": "H1"
                     }
                 )
 
                 if response.status_code == 200:
-                    data = response.json()
+                    result = response.json()
+                    data = result.get('data', [])
+
                     if data and len(data) > 0:
                         # Find the closest price to target_time
                         closest_price = None
                         min_diff = float('inf')
 
+                        # Make target_time timezone-aware if needed
+                        target_aware = target_time
+                        if target_time.tzinfo is None:
+                            from datetime import timezone as tz
+                            target_aware = target_time.replace(tzinfo=tz.utc)
+
                         for candle in data:
-                            candle_time = datetime.fromisoformat(candle.get('timestamp', '').replace('Z', '+00:00'))
-                            # Make target_time timezone-aware if needed
-                            target_aware = target_time
-                            if target_time.tzinfo is None:
-                                from datetime import timezone
-                                target_aware = target_time.replace(tzinfo=timezone.utc)
+                            # Parse snapshot_time from EasyInsight data
+                            snapshot_time_str = candle.get('snapshot_time', '')
+                            if not snapshot_time_str:
+                                continue
+
+                            try:
+                                candle_time = datetime.fromisoformat(snapshot_time_str.replace('Z', '+00:00'))
+                            except ValueError:
+                                continue
 
                             diff = abs((candle_time - target_aware).total_seconds())
                             if diff < min_diff:
                                 min_diff = diff
-                                closest_price = float(candle.get('close', 0))
+                                # Use h1_close for H1 timeframe
+                                closest_price = float(candle.get('h1_close', 0))
 
-                        if closest_price and min_diff < 7200:  # Within 2 hours
+                        if closest_price and closest_price > 0 and min_diff < 7200:  # Within 2 hours
                             return closest_price
 
-                # Fallback: Try TwelveData current price if target is recent
+                # Fallback: Try live-data endpoint for recent targets
                 if (datetime.utcnow() - target_time).total_seconds() < 300:  # Within 5 minutes
                     response = await client.get(
-                        f"{data_service_url}/api/v1/symbols/{symbol}/price"
+                        f"{data_service_url}/api/v1/managed-symbols/live-data/{symbol}"
                     )
                     if response.status_code == 200:
                         data = response.json()
-                        return float(data.get('price', 0)) if data.get('price') else None
+                        price = data.get('h1_close') or data.get('bid')
+                        return float(price) if price else None
 
         except Exception as e:
             logger.warning(f"Failed to get price via API for {symbol}: {e}")
