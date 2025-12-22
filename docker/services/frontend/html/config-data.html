@@ -259,6 +259,12 @@
             overflow-y: auto;
         }
 
+        /* Symbol-Verwaltung Tabelle - dynamische Höhe */
+        #symbols-table-container {
+            max-height: calc(100vh - 380px);
+            min-height: 300px;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -650,7 +656,7 @@
                     <button class="btn btn-secondary btn-sm" onclick="clearFilters()" title="Filter zurücksetzen">✕ Filter</button>
                 </div>
 
-                <div class="table-container">
+                <div class="table-container" id="symbols-table-container">
                     <table id="symbols-table">
                         <thead>
                             <tr>
