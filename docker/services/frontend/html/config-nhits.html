@@ -1104,6 +1104,25 @@
                             <div id="auto-eval-status">
                                 <div style="opacity: 0.5;">Lade Status...</div>
                             </div>
+                            <!-- Prediction Stats (KPIs) -->
+                            <div class="stats-bar" id="prediction-stats" style="margin-top: 0.75rem; padding: 0.5rem 0;">
+                                <div class="stat-item">
+                                    <div class="stat-value" id="stat-pending">-</div>
+                                    <div class="stat-label">Ausstehend total</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value" id="stat-waiting">-</div>
+                                    <div class="stat-label">Warten auf Horizont</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value" id="stat-ready">-</div>
+                                    <div class="stat-label">Bereit zur Eval.</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value" id="stat-evaluated">-</div>
+                                    <div class="stat-label">Evaluiert</div>
+                                </div>
+                            </div>
                             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
                                 <button class="btn btn-sm" id="btn-toggle-auto-eval" onclick="toggleAutoEvaluation()">
                                     ⏸️ Auto-Eval pausieren
@@ -1127,25 +1146,6 @@
                                     🔄 Schlechte Modelle retrainieren
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                    <!-- Prediction Stats -->
-                    <div class="stats-bar" id="prediction-stats">
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-pending">-</div>
-                            <div class="stat-label">Ausstehend</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-ready">-</div>
-                            <div class="stat-label">Bereit zur Eval.</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-waiting">-</div>
-                            <div class="stat-label">Warten auf Horizont</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-evaluated">-</div>
-                            <div class="stat-label">Evaluiert</div>
                         </div>
                     </div>
                 </div>
@@ -1869,12 +1869,9 @@
                 const evalStatus = data.auto_evaluation;
                 autoEvalEnabled = evalStatus.enabled;
 
-                const runningBadge = evalStatus.running ?
+                const evalStatusBadge = evalStatus.running && evalStatus.enabled ?
                     '<span class="badge badge-success">Aktiv</span>' :
                     '<span class="badge badge-failed">Inaktiv</span>';
-                const enabledBadge = evalStatus.enabled ?
-                    '<span style="color: #4ade80;">Aktiviert</span>' :
-                    '<span style="color: #f87171;">Pausiert</span>';
 
                 let lastRunText = 'Noch nie';
                 if (evalStatus.last_run) {
@@ -1882,8 +1879,8 @@
                 }
 
                 autoEvalDiv.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        ${runningBadge} ${enabledBadge}
+                    <div style="margin-bottom: 0.5rem;">
+                        ${evalStatusBadge}
                     </div>
                     <div style="font-size: 0.85rem; opacity: 0.8;">
                         <div>Intervall: ${evalStatus.interval_seconds}s</div>
@@ -1907,11 +1904,14 @@
                 const retrainStatus = data.auto_retrain;
                 autoRetrainEnabled = retrainStatus.enabled;
 
-                const retrainEnabledBadge = retrainStatus.enabled ?
-                    '<span style="color: #4ade80;">Aktiviert</span>' :
-                    '<span style="color: #f87171;">Pausiert</span>';
-                const retrainInProgress = retrainStatus.in_progress ?
-                    '<span class="badge badge-warning">Training läuft...</span>' : '';
+                let retrainStatusBadge;
+                if (retrainStatus.in_progress) {
+                    retrainStatusBadge = '<span class="badge badge-warning">Training läuft...</span>';
+                } else if (retrainStatus.enabled) {
+                    retrainStatusBadge = '<span class="badge badge-success">Aktiv</span>';
+                } else {
+                    retrainStatusBadge = '<span class="badge badge-failed">Inaktiv</span>';
+                }
 
                 let lastRetrainText = 'Noch nie';
                 if (retrainStatus.last_run) {
@@ -1919,8 +1919,8 @@
                 }
 
                 autoRetrainDiv.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        ${retrainEnabledBadge} ${retrainInProgress}
+                    <div style="margin-bottom: 0.5rem;">
+                        ${retrainStatusBadge}
                     </div>
                     <div style="font-size: 0.85rem; opacity: 0.8;">
                         <div>Cooldown: ${retrainStatus.cooldown_hours}h</div>
