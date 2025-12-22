@@ -70,6 +70,9 @@ class NHITSTrainingService:
 | NHITS Service | 3002 | /docs |
 | RAG Service | 3003 | /docs |
 | LLM Service | 3004 | /docs |
+| TCN-Pattern Service | 3005 | /docs |
+| HMM-Regime Service | 3006 | /docs |
+| Embedder Service | 3007 | /docs |
 
 ## API-Dokumentation (Swagger UI)
 

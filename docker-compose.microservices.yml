@@ -208,6 +208,132 @@ services:
       retries: 3
       start_period: 20s
 
+  # TCN-Pattern Service - Chart Pattern Detection (Port 3005)
+  tcn-service:
+    build:
+      context: .
+      dockerfile: docker/services/tcn/Dockerfile
+      args:
+        - SERVICE_PORT=${TCN_SERVICE_PORT:-3005}
+    container_name: trading-tcn
+    runtime: nvidia
+    ports:
+      - "${TCN_SERVICE_PORT:-3005}:${TCN_SERVICE_PORT:-3005}"
+    volumes:
+      - tcn-models:/app/data/models/tcn
+      - ./src:/app/src:ro
+      - ./logs:/app/logs
+    environment:
+      - SERVICE_NAME=tcn
+      - PORT=${TCN_SERVICE_PORT:-3005}
+      - ROOT_PATH=/tcn
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - EMBEDDER_SERVICE_URL=http://trading-embedder:${EMBEDDER_SERVICE_PORT:-3007}
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${TCN_SERVICE_PORT:-3005}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # HMM-Regime Service - Market Regime Detection & Signal Scoring (Port 3006)
+  hmm-service:
+    build:
+      context: .
+      dockerfile: docker/services/hmm/Dockerfile
+      args:
+        - SERVICE_PORT=${HMM_SERVICE_PORT:-3006}
+    container_name: trading-hmm
+    ports:
+      - "${HMM_SERVICE_PORT:-3006}:${HMM_SERVICE_PORT:-3006}"
+    volumes:
+      - hmm-models:/app/data/models/hmm
+      - ./src:/app/src:ro
+      - ./logs:/app/logs
+    environment:
+      - SERVICE_NAME=hmm
+      - PORT=${HMM_SERVICE_PORT:-3006}
+      - ROOT_PATH=/hmm
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${HMM_SERVICE_PORT:-3006}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Embedder Service - Central Embedding Service (Port 3007)
+  embedder-service:
+    build:
+      context: .
+      dockerfile: docker/services/embedder/Dockerfile
+      args:
+        - SERVICE_PORT=${EMBEDDER_SERVICE_PORT:-3007}
+    container_name: trading-embedder
+    runtime: nvidia
+    ports:
+      - "${EMBEDDER_SERVICE_PORT:-3007}:${EMBEDDER_SERVICE_PORT:-3007}"
+    volumes:
+      - embedder-models:/app/data/models/embedder
+      - embedder-cache:/app/cache
+      - ./src:/app/src:ro
+      - ./logs:/app/logs
+    environment:
+      - SERVICE_NAME=embedder
+      - PORT=${EMBEDDER_SERVICE_PORT:-3007}
+      - ROOT_PATH=/embedder
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - EMBEDDING_CACHE_SIZE=10000
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+    deploy:
+      resources:
+        limits:
+          memory: 12G
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${EMBEDDER_SERVICE_PORT:-3007}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
 volumes:
   models-data:
     driver: local
@@ -218,6 +344,14 @@ volumes:
   rag-data:
     driver: local
   data-storage:
+    driver: local
+  tcn-models:
+    driver: local
+  hmm-models:
+    driver: local
+  embedder-models:
+    driver: local
+  embedder-cache:
     driver: local
 
 networks:
