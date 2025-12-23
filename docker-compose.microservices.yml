@@ -103,10 +103,13 @@ services:
       - symbols-data:/app/data/symbols
       - faiss-data:/app/data/faiss
       - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./pytest.ini:/app/pytest.ini:ro
       - logs-data:/app/logs
       - /tmp:/host_tmp:ro
     environment:
       - SERVICE_NAME=data
+      - PROJECT_ROOT=/app
       - PORT=${DATA_SERVICE_PORT:-3001}
       - ROOT_PATH=/data
       - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
