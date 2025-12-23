@@ -78,6 +78,13 @@ http {
             try_files $uri $uri/ /index.html;
         }
 
+        # Disable caching for HTML files to ensure latest version
+        location ~* \.html$ {
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+            add_header Pragma "no-cache";
+            add_header Expires "0";
+        }
+
         # =====================================================
         # Direct Service Access (for Dashboard)
         # =====================================================
