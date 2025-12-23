@@ -541,6 +541,287 @@
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
+
+        /* Modal for Test Details */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2rem;
+            z-index: 2000;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #1e2746 0%, #1a1f35 100%);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header h2 {
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: #9ca3af;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            max-height: calc(90vh - 140px);
+            overflow-y: auto;
+        }
+
+        .modal-description {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        .modal-stats {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .modal-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .modal-stat-icon { font-size: 1.1rem; }
+        .modal-stat.tests { color: #64c8ff; }
+        .modal-stat.files { color: #a78bfa; }
+
+        .test-group {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .test-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .test-group-header:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .test-group-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .test-group-title .file-icon {
+            color: #a78bfa;
+        }
+
+        .test-group-count {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+        }
+
+        .test-group-toggle {
+            color: #9ca3af;
+            transition: transform 0.2s;
+        }
+
+        .test-group.expanded .test-group-toggle {
+            transform: rotate(180deg);
+        }
+
+        .test-group-body {
+            display: none;
+            padding: 0.5rem;
+        }
+
+        .test-group.expanded .test-group-body {
+            display: block;
+        }
+
+        .test-case {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            transition: background 0.2s;
+        }
+
+        .test-case:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .test-case-marker {
+            width: 4px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .test-case-marker.function { background: #10b981; }
+        .test-case-marker.class { background: #3b82f6; }
+
+        .test-case-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .test-case-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #e8e8e8;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .test-case-desc {
+            font-size: 0.82rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+            line-height: 1.4;
+        }
+
+        .test-case-tags {
+            display: flex;
+            gap: 0.4rem;
+            margin-top: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .test-case-tag {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            background: rgba(100, 200, 255, 0.15);
+            color: #64c8ff;
+        }
+
+        .test-case-tag.param { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+        .test-case-tag.slow { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-run-btn {
+            padding: 0.6rem 1.2rem;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .modal-run-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .modal-info {
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+
+        /* Clickable category cards */
+        .category-card {
+            cursor: pointer;
+        }
+
+        .category-card:hover {
+            border-color: rgba(100, 200, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .category-card .view-tests-hint {
+            font-size: 0.75rem;
+            color: #64c8ff;
+            opacity: 0;
+            transition: opacity 0.2s;
+            margin-top: 0.5rem;
+        }
+
+        .category-card:hover .view-tests-hint {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -607,7 +888,7 @@
         <!-- Test Categories - Reihenfolge: Unit -> Smoke -> API -> Integration -> Contract -->
         <div class="test-categories">
             <!-- 1. Unit Tests - Schnell, isoliert, keine Abhängigkeiten -->
-            <div class="category-card" id="cat-unit">
+            <div class="category-card" id="cat-unit" onclick="showTestDetails('unit')">
                 <div class="category-header">
                     <h3>&#128300; 1. Unit Tests</h3>
                     <span class="category-status pending" id="status-unit">Bereit</span>
@@ -623,10 +904,11 @@
                 <div class="category-progress">
                     <div class="category-progress-bar" id="progress-unit" style="width: 0%"></div>
                 </div>
+                <div class="view-tests-hint">Klicken für Testfälle</div>
             </div>
 
             <!-- 2. Smoke Tests - Prüft ob Services laufen -->
-            <div class="category-card" id="cat-smoke">
+            <div class="category-card" id="cat-smoke" onclick="showTestDetails('smoke')">
                 <div class="category-header">
                     <h3>&#128168; 2. Smoke Tests</h3>
                     <span class="category-status pending" id="status-smoke">Bereit</span>
@@ -642,10 +924,11 @@
                 <div class="category-progress">
                     <div class="category-progress-bar" id="progress-smoke" style="width: 0%"></div>
                 </div>
+                <div class="view-tests-hint">Klicken für Testfälle</div>
             </div>
 
             <!-- 3. API Tests - Endpoint-Tests -->
-            <div class="category-card" id="cat-api">
+            <div class="category-card" id="cat-api" onclick="showTestDetails('api')">
                 <div class="category-header">
                     <h3>&#128279; 3. API Tests</h3>
                     <span class="category-status pending" id="status-api">Bereit</span>
@@ -661,10 +944,11 @@
                 <div class="category-progress">
                     <div class="category-progress-bar" id="progress-api" style="width: 0%"></div>
                 </div>
+                <div class="view-tests-hint">Klicken für Testfälle</div>
             </div>
 
             <!-- 4. Integration Tests - Service-übergreifend -->
-            <div class="category-card" id="cat-integration">
+            <div class="category-card" id="cat-integration" onclick="showTestDetails('integration')">
                 <div class="category-header">
                     <h3>&#128200; 4. Integration Tests</h3>
                     <span class="category-status pending" id="status-integration">Bereit</span>
@@ -680,10 +964,11 @@
                 <div class="category-progress">
                     <div class="category-progress-bar" id="progress-integration" style="width: 0%"></div>
                 </div>
+                <div class="view-tests-hint">Klicken für Testfälle</div>
             </div>
 
             <!-- 5. Contract Tests - Schema-Validierung -->
-            <div class="category-card" id="cat-contract">
+            <div class="category-card" id="cat-contract" onclick="showTestDetails('contract')">
                 <div class="category-header">
                     <h3>&#128221; 5. Contract Tests</h3>
                     <span class="category-status pending" id="status-contract">Bereit</span>
@@ -699,6 +984,7 @@
                 <div class="category-progress">
                     <div class="category-progress-bar" id="progress-contract" style="width: 0%"></div>
                 </div>
+                <div class="view-tests-hint">Klicken für Testfälle</div>
             </div>
         </div>
 
@@ -734,6 +1020,25 @@
     </footer>
 
     <div class="toast" id="toast"></div>
+
+    <!-- Test Details Modal -->
+    <div class="modal-overlay" id="test-modal" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modal-title">Test Details</h2>
+                <button class="modal-close" onclick="closeTestModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Content wird dynamisch generiert -->
+            </div>
+            <div class="modal-footer">
+                <div class="modal-info" id="modal-info">Tests werden ausgeführt mit pytest</div>
+                <button class="modal-run-btn" id="modal-run-btn" onclick="runModalTests()">
+                    <span>&#9654;</span> Tests starten
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // State
@@ -1082,6 +1387,385 @@
             }
             setRunningState(false);
         }
+
+        // ==========================================
+        // TEST CASE DEFINITIONS
+        // ==========================================
+
+        let currentModalCategory = null;
+
+        const TEST_DEFINITIONS = {
+            unit: {
+                title: 'Unit Tests',
+                icon: '&#128300;',
+                description: 'Isolierte Tests ohne Service-Abhängigkeiten. Prüft Geschäftslogik mit Mocks - schnellste Tests, keine laufenden Services erforderlich.',
+                files: [
+                    {
+                        name: 'test_forecast_service.py',
+                        path: 'tests/unit/nhits_service/',
+                        description: 'NHITS Forecast Service Geschäftslogik',
+                        tests: [
+                            { name: 'test_prepare_close_prices', desc: 'Extraktion von Close-Preisen aus OHLCV-Daten' },
+                            { name: 'test_convert_to_numpy_array', desc: 'Konvertierung von Preislisten zu NumPy Arrays' },
+                            { name: 'test_normalize_prices', desc: 'Min-Max Normalisierung von Preisdaten' },
+                            { name: 'test_valid_horizons', desc: 'Validierung gültiger Forecast-Horizonte (1h bis 1 Woche)' },
+                            { name: 'test_invalid_horizon_zero', desc: 'Horizon=0 muss abgelehnt werden' },
+                            { name: 'test_invalid_horizon_negative', desc: 'Negative Horizonte müssen abgelehnt werden' },
+                            { name: 'test_horizon_too_large', desc: 'Horizonte >30 Tage müssen abgelehnt werden' },
+                            { name: 'test_default_config', desc: 'Standard-Modellkonfiguration (input_size, hidden_size, etc.)' },
+                            { name: 'test_config_validation', desc: 'Validierung von Konfigurationswerten' },
+                            { name: 'test_create_sliding_windows', desc: 'Erstellung von Sliding Windows für Zeitreihen' },
+                            { name: 'test_insufficient_data_for_window', desc: 'Handling bei unzureichenden Daten' },
+                            { name: 'test_window_with_multiple_features', desc: 'Windowing mit mehreren Features (OHLCV)' },
+                            { name: 'test_mae_calculation', desc: 'Mean Absolute Error Berechnung' },
+                            { name: 'test_mse_calculation', desc: 'Mean Squared Error Berechnung' },
+                            { name: 'test_rmse_calculation', desc: 'Root Mean Squared Error Berechnung' },
+                            { name: 'test_mape_calculation', desc: 'Mean Absolute Percentage Error Berechnung' },
+                            { name: 'test_forecast_result_structure', desc: 'Forecast-Ergebnis hat alle Pflichtfelder' },
+                            { name: 'test_predictions_are_numeric', desc: 'Predictions sind numerisch (kein NaN/Inf)' }
+                        ]
+                    },
+                    {
+                        name: 'test_symbol_service.py',
+                        path: 'tests/unit/data_service/',
+                        description: 'Symbol Management Geschäftslogik',
+                        tests: [
+                            { name: 'test_detect_forex_pair', desc: 'Erkennung von Forex-Paaren (EURUSD, GBPJPY, etc.)' },
+                            { name: 'test_detect_crypto', desc: 'Erkennung von Kryptowährungen (BTCUSD, ETHUSD, etc.)' },
+                            { name: 'test_detect_indices', desc: 'Erkennung von Indizes (US500, GER40, US30)' },
+                            { name: 'test_detect_commodities', desc: 'Erkennung von Rohstoffen (XAUUSD, XAGUSD)' },
+                            { name: 'test_parse_valid_forex_pair', desc: 'Parsing gültiger Forex-Paare' },
+                            { name: 'test_parse_invalid_forex_pair', desc: 'Handling ungültiger Forex-Paare' },
+                            { name: 'test_generate_forex_symbol', desc: 'TwelveData Symbol-Generierung für Forex' },
+                            { name: 'test_generate_crypto_symbol', desc: 'TwelveData Symbol-Generierung für Crypto' },
+                            { name: 'test_generate_special_symbol', desc: 'Spezielle Mappings (GER40→GDAXI, US500→SPX)' },
+                            { name: 'test_valid_symbol_formats', desc: 'Validierung gültiger Symbol-Formate' },
+                            { name: 'test_invalid_symbol_formats', desc: 'Ablehnung ungültiger Formate (leer, zu kurz, Sonderzeichen)' },
+                            { name: 'test_search_exact_match', desc: 'Exakte Suchtreffer' },
+                            { name: 'test_search_partial_match', desc: 'Partielle Suchtreffer (Prefix/Substring)' },
+                            { name: 'test_search_with_limit', desc: 'Suche mit Ergebnis-Limit' },
+                            { name: 'test_symbol_status_values', desc: 'Symbol-Status Enum (active, inactive, suspended)' },
+                            { name: 'test_symbol_category_values', desc: 'Symbol-Kategorie Enum (forex, crypto, index, etc.)' }
+                        ]
+                    }
+                ]
+            },
+            smoke: {
+                title: 'Smoke Tests',
+                icon: '&#128168;',
+                description: 'Health Checks für alle 8 Microservices. Schnelle Überprüfung ob Services erreichbar und funktional sind - sollte vor allen anderen Tests laufen.',
+                files: [
+                    {
+                        name: 'test_health_checks.py',
+                        path: 'tests/smoke/',
+                        description: 'Service Health Endpoint Tests',
+                        tests: [
+                            { name: 'test_service_health[data]', desc: 'Data Service (Port 3001) Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[nhits]', desc: 'NHITS Service (Port 3002) Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[rag]', desc: 'RAG Service (Port 3003) Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[llm]', desc: 'LLM Service (Port 3004) Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[tcn]', desc: 'TCN Service (Port 3005) Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[hmm]', desc: 'HMM Service (Port 3006) Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[embedder]', desc: 'Embedder Service (Port 3007) Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[frontend]', desc: 'Frontend Service (Port 3000) Health Check', tags: ['parametrized'] },
+                            { name: 'test_all_services_up', desc: 'Aggregierte Prüfung: Alle Services gleichzeitig' },
+                            { name: 'test_data_service_health_details', desc: 'Data Service Response-Struktur validieren' },
+                            { name: 'test_nhits_service_health_details', desc: 'NHITS Service Response-Struktur validieren' },
+                            { name: 'test_rag_service_health_details', desc: 'RAG Service Response-Struktur validieren' },
+                            { name: 'test_llm_service_health_details', desc: 'LLM Service Response-Struktur validieren' },
+                            { name: 'test_tcn_service_health_details', desc: 'TCN Service Response-Struktur validieren' },
+                            { name: 'test_hmm_service_health_details', desc: 'HMM Service Response-Struktur validieren' },
+                            { name: 'test_embedder_service_health_details', desc: 'Embedder Service Response-Struktur validieren' },
+                            { name: 'test_frontend_health', desc: 'Frontend nginx Health Check' }
+                        ]
+                    }
+                ]
+            },
+            api: {
+                title: 'API Tests',
+                icon: '&#128279;',
+                description: 'Endpoint-Tests für alle Service-APIs. Testet HTTP-Methoden, Parameter-Validierung, Response-Formate und Fehlerfälle.',
+                files: [
+                    {
+                        name: 'test_data_api.py',
+                        path: 'tests/api/',
+                        description: 'Data Service API Endpoints',
+                        tests: [
+                            { name: 'test_get_symbols_list', desc: 'GET /symbols - Liste aller Symbole abrufen' },
+                            { name: 'test_get_symbol_detail', desc: 'GET /symbols/{symbol} - Symbol-Details abrufen' },
+                            { name: 'test_get_managed_symbols', desc: 'GET /managed-symbols - Verwaltete Symbole' },
+                            { name: 'test_get_ohlcv_data', desc: 'GET /ohlcv/{symbol} - Historische OHLCV-Daten' },
+                            { name: 'test_get_ohlcv_different_intervals', desc: 'OHLCV mit verschiedenen Intervallen (1m-1d)', tags: ['parametrized'] },
+                            { name: 'test_get_ohlcv_invalid_interval', desc: 'Ungültiges Intervall → 400/422' },
+                            { name: 'test_get_ohlcv_with_date_range', desc: 'OHLCV mit Datumsbereich-Parametern' },
+                            { name: 'test_technical_indicators', desc: 'GET /twelvedata/{indicator}/{symbol}', tags: ['parametrized'] },
+                            { name: 'test_rsi_indicator', desc: 'RSI Indikator mit time_period Parameter' },
+                            { name: 'test_macd_indicator', desc: 'MACD Indikator' },
+                            { name: 'test_get_economic_calendar', desc: 'GET /external-sources/economic-calendar' },
+                            { name: 'test_get_sentiment_data', desc: 'GET /external-sources/sentiment' },
+                            { name: 'test_get_onchain_data', desc: 'GET /external-sources/onchain/{symbol}' },
+                            { name: 'test_get_technical_levels', desc: 'GET /external-sources/technical-levels/{symbol}' },
+                            { name: 'test_fetch_all_sources', desc: 'POST /external-sources/fetch-all' },
+                            { name: 'test_get_trading_context', desc: 'POST /external-sources/trading-context/{symbol}' }
+                        ]
+                    },
+                    {
+                        name: 'test_nhits_api.py',
+                        path: 'tests/api/',
+                        description: 'NHITS Service API Endpoints',
+                        tests: [
+                            { name: 'test_get_forecast', desc: 'POST /forecast - Preis-Forecast abrufen' },
+                            { name: 'test_list_trained_models', desc: 'GET /models - Trainierte Modelle auflisten' },
+                            { name: 'test_get_model_metrics', desc: 'GET /models/{symbol}/metrics - Modell-Metriken' },
+                            { name: 'test_get_model_info', desc: 'GET /models/{symbol} - Modell-Info' },
+                            { name: 'test_forecast_invalid_symbol', desc: 'Forecast mit ungültigem Symbol' },
+                            { name: 'test_forecast_invalid_horizon', desc: 'Forecast mit ungültigem Horizon' },
+                            { name: 'test_trigger_training', desc: 'POST /train - Training starten', tags: ['slow'] },
+                            { name: 'test_get_training_status', desc: 'GET /training-status/{symbol}' },
+                            { name: 'test_batch_forecast', desc: 'POST /forecast/batch - Batch-Forecast' }
+                        ]
+                    },
+                    {
+                        name: 'test_rag_api.py',
+                        path: 'tests/api/',
+                        description: 'RAG Service API Endpoints',
+                        tests: [
+                            { name: 'test_semantic_search', desc: 'POST /query - Semantische Suche' },
+                            { name: 'test_add_document', desc: 'POST /documents - Dokument hinzufügen' },
+                            { name: 'test_get_stats', desc: 'GET /stats - RAG Statistiken' },
+                            { name: 'test_get_trading_context', desc: 'GET /trading-context/{symbol}' },
+                            { name: 'test_search_with_filter', desc: 'POST /query mit Metadata-Filter' },
+                            { name: 'test_empty_query', desc: 'Leere Query → Fehler' },
+                            { name: 'test_get_documents', desc: 'GET /documents - Dokumente auflisten' },
+                            { name: 'test_delete_document', desc: 'DELETE /documents/{id}' }
+                        ]
+                    },
+                    {
+                        name: 'test_llm_api.py',
+                        path: 'tests/api/',
+                        description: 'LLM Service API Endpoints',
+                        tests: [
+                            { name: 'test_trading_analysis', desc: 'POST /analyze - Trading-Analyse' },
+                            { name: 'test_chat_completion', desc: 'POST /chat - Chat Completion' },
+                            { name: 'test_trading_signal', desc: 'POST /signal - Trading-Signal generieren' },
+                            { name: 'test_market_summary', desc: 'GET /market-summary' },
+                            { name: 'test_analyze_with_context', desc: 'POST /analyze mit vollem Kontext' },
+                            { name: 'test_empty_chat_message', desc: 'Leere Nachricht → Fehler' },
+                            { name: 'test_get_available_models', desc: 'GET /models - Verfügbare LLM-Modelle' }
+                        ]
+                    },
+                    {
+                        name: 'test_tcn_api.py',
+                        path: 'tests/api/',
+                        description: 'TCN Pattern Service API Endpoints',
+                        tests: [
+                            { name: 'test_detect_patterns', desc: 'POST /detect - Pattern-Erkennung' },
+                            { name: 'test_scan_patterns', desc: 'POST /patterns/scan - Multi-Timeframe Scan' },
+                            { name: 'test_list_patterns', desc: 'GET /patterns - Verfügbare Patterns' },
+                            { name: 'test_get_pattern_history', desc: 'GET /patterns/history/{symbol}' },
+                            { name: 'test_detect_with_invalid_symbol', desc: 'Detection mit ungültigem Symbol' }
+                        ]
+                    },
+                    {
+                        name: 'test_hmm_api.py',
+                        path: 'tests/api/',
+                        description: 'HMM Regime Service API Endpoints',
+                        tests: [
+                            { name: 'test_detect_regime', desc: 'POST /regime - Regime-Erkennung' },
+                            { name: 'test_get_regime_history', desc: 'GET /regime/history/{symbol}' },
+                            { name: 'test_score_signal', desc: 'POST /score - Signal bewerten' },
+                            { name: 'test_get_regime_probabilities', desc: 'GET /regime/probabilities/{symbol}' },
+                            { name: 'test_list_regimes', desc: 'GET /regimes - Verfügbare Regime-Typen' }
+                        ]
+                    },
+                    {
+                        name: 'test_embedder_api.py',
+                        path: 'tests/api/',
+                        description: 'Embedder Service API Endpoints',
+                        tests: [
+                            { name: 'test_text_embedding', desc: 'POST /embed/text - Text-Embedding' },
+                            { name: 'test_batch_text_embedding', desc: 'POST /embed/text/batch - Batch-Embeddings' },
+                            { name: 'test_timeseries_embedding', desc: 'POST /embed/timeseries - Zeitreihen-Embedding' },
+                            { name: 'test_feature_embedding', desc: 'POST /embed/features - Feature-Embedding' },
+                            { name: 'test_similarity_search', desc: 'POST /similarity - Ähnlichkeitssuche' },
+                            { name: 'test_empty_text_embedding', desc: 'Leerer Text → Fehler' },
+                            { name: 'test_get_embedding_info', desc: 'GET /info - Embedding-Modell Info' }
+                        ]
+                    }
+                ]
+            },
+            integration: {
+                title: 'Integration Tests',
+                icon: '&#128200;',
+                description: 'Service-übergreifende Tests. Prüft Data Gateway Pattern, Service-Kommunikation, Fallback-Logik und End-to-End Datenflüsse.',
+                files: [
+                    {
+                        name: 'test_service_communication.py',
+                        path: 'tests/integration/',
+                        description: 'Service-Kommunikation',
+                        tests: [
+                            { name: 'test_all_services_respond', desc: 'Alle Services antworten auf Health Checks' },
+                            { name: 'test_data_service_provides_ohlcv', desc: 'Data Service liefert OHLCV an andere Services' },
+                            { name: 'test_concurrent_service_requests', desc: 'Parallele Requests an mehrere Services' },
+                            { name: 'test_data_service_symbols_endpoint', desc: 'Data Service /symbols Endpoint' },
+                            { name: 'test_nhits_service_models_endpoint', desc: 'NHITS Service /models Endpoint' },
+                            { name: 'test_rag_service_stats_endpoint', desc: 'RAG Service /stats Endpoint' },
+                            { name: 'test_invalid_symbol_handling', desc: 'Services handeln ungültige Symbole korrekt' },
+                            { name: 'test_missing_required_parameters', desc: 'Fehlende Parameter werden korrekt behandelt' }
+                        ]
+                    },
+                    {
+                        name: 'test_data_gateway.py',
+                        path: 'tests/integration/',
+                        description: 'Data Gateway Pattern Validierung',
+                        tests: [
+                            { name: 'test_nhits_uses_data_service', desc: 'NHITS holt Daten über Data Service' },
+                            { name: 'test_rag_uses_data_service_for_context', desc: 'RAG nutzt Data Service für Trading-Kontext' },
+                            { name: 'test_llm_uses_data_service', desc: 'LLM nutzt Data Service für Marktdaten' },
+                            { name: 'test_data_to_nhits_chain', desc: 'Data → NHITS Kette funktioniert' },
+                            { name: 'test_full_analysis_chain', desc: 'Data → NHITS → RAG → LLM Kette (E2E)' },
+                            { name: 'test_data_source_fallback', desc: 'EasyInsight → TwelveData → Yahoo Fallback' },
+                            { name: 'test_multiple_symbols_data_fetch', desc: 'Mehrere Symbole parallel abrufen' },
+                            { name: 'test_fetch_all_external_sources', desc: 'Alle externen Quellen abrufen' },
+                            { name: 'test_trading_context_aggregation', desc: 'Trading-Kontext Aggregation' }
+                        ]
+                    }
+                ]
+            },
+            contract: {
+                title: 'Contract Tests',
+                icon: '&#128221;',
+                description: 'API-Schema-Validierung mit Pydantic. Prüft dass Response-Formate exakt den definierten Schemas entsprechen.',
+                files: [
+                    {
+                        name: 'test_api_contracts.py',
+                        path: 'tests/contracts/',
+                        description: 'API Response Schema Validierung',
+                        tests: [
+                            { name: 'test_data_service_health_contract', desc: 'Data Service Health Response Schema' },
+                            { name: 'test_nhits_service_health_contract', desc: 'NHITS Service Health Response Schema' },
+                            { name: 'test_rag_service_health_contract', desc: 'RAG Service Health Response Schema' },
+                            { name: 'test_symbols_list_contract', desc: 'Symbol-Liste Response Schema' },
+                            { name: 'test_ohlcv_response_contract', desc: 'OHLCV Response Schema' },
+                            { name: 'test_ohlcv_price_values_positive', desc: 'OHLCV Preise sind positiv' },
+                            { name: 'test_ohlcv_high_low_consistency', desc: 'OHLCV High >= Low' },
+                            { name: 'test_forecast_response_contract', desc: 'Forecast Response Schema' },
+                            { name: 'test_validation_error_contract', desc: 'Validation Error Format (422)' },
+                            { name: 'test_not_found_error_contract', desc: 'Not Found Error Format (404)' }
+                        ]
+                    }
+                ]
+            }
+        };
+
+        // ==========================================
+        // MODAL FUNCTIONS
+        // ==========================================
+
+        function showTestDetails(category) {
+            currentModalCategory = category;
+            const def = TEST_DEFINITIONS[category];
+            if (!def) return;
+
+            const modal = document.getElementById('test-modal');
+            const title = document.getElementById('modal-title');
+            const body = document.getElementById('modal-body');
+            const info = document.getElementById('modal-info');
+
+            // Count total tests
+            let totalTests = 0;
+            def.files.forEach(f => totalTests += f.tests.length);
+
+            title.innerHTML = `${def.icon} ${def.title}`;
+
+            let html = `
+                <div class="modal-description">${def.description}</div>
+                <div class="modal-stats">
+                    <div class="modal-stat tests">
+                        <span class="modal-stat-icon">&#128203;</span>
+                        <span>${totalTests} Testfälle</span>
+                    </div>
+                    <div class="modal-stat files">
+                        <span class="modal-stat-icon">&#128196;</span>
+                        <span>${def.files.length} Testdateien</span>
+                    </div>
+                </div>
+            `;
+
+            // Render test files
+            def.files.forEach((file, idx) => {
+                html += `
+                    <div class="test-group ${idx === 0 ? 'expanded' : ''}" onclick="toggleTestGroup(this)">
+                        <div class="test-group-header">
+                            <div class="test-group-title">
+                                <span class="file-icon">&#128196;</span>
+                                <span>${file.name}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <span class="test-group-count">${file.tests.length} Tests</span>
+                                <span class="test-group-toggle">&#9660;</span>
+                            </div>
+                        </div>
+                        <div class="test-group-body">
+                            <div style="padding: 0.5rem 1rem 0.75rem; font-size: 0.8rem; color: #9ca3af; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 0.5rem;">
+                                <code style="color: #a78bfa;">${file.path}${file.name}</code>
+                                <div style="margin-top: 0.25rem;">${file.description}</div>
+                            </div>
+                            ${file.tests.map(test => `
+                                <div class="test-case">
+                                    <div class="test-case-marker function"></div>
+                                    <div class="test-case-content">
+                                        <div class="test-case-name">${test.name}</div>
+                                        <div class="test-case-desc">${test.desc}</div>
+                                        ${test.tags ? `
+                                            <div class="test-case-tags">
+                                                ${test.tags.map(tag => `<span class="test-case-tag ${tag}">${tag}</span>`).join('')}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            body.innerHTML = html;
+            info.textContent = `pytest -m ${category} | ${totalTests} Tests`;
+
+            modal.classList.add('show');
+        }
+
+        function toggleTestGroup(element) {
+            // Don't toggle if clicking inside the body
+            if (event.target.closest('.test-group-body')) return;
+            element.classList.toggle('expanded');
+        }
+
+        function closeTestModal() {
+            document.getElementById('test-modal').classList.remove('show');
+            currentModalCategory = null;
+        }
+
+        function closeModal(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                closeTestModal();
+            }
+        }
+
+        function runModalTests() {
+            if (currentModalCategory) {
+                closeTestModal();
+                runTestCategory(currentModalCategory);
+            }
+        }
+
+        // Keyboard handler for ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeTestModal();
+            }
+        });
 
         // Initial page load - check if test API is available
         async function checkTestAPI() {
