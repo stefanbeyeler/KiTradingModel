@@ -162,7 +162,10 @@
       "Bash(./scripts/migrate_data_to_volumes.sh:*)",
       "Bash(docker rmi:*)",
       "Bash(for:*)",
-      "Bash(do echo -n \"Port $port: \")"
+      "Bash(do echo -n \"Port $port: \")",
+      "Bash(ssh:*)",
+      "Bash(ssh-keyscan:*)",
+      "Bash(~/.ssh/known_hosts)"
     ],
     "deny": [],
     "ask": []
