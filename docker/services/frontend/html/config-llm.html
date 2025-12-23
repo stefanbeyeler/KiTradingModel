@@ -586,6 +586,126 @@
         .model-info .detail .label {
             opacity: 0.6;
         }
+
+        /* Models Grid */
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .model-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+
+        .model-card:hover {
+            border-color: rgba(100, 200, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .model-card.primary {
+            border-left: 3px solid #a78bfa;
+        }
+
+        .model-card.fast {
+            border-left: 3px solid #4ade80;
+        }
+
+        .model-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .model-card-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .model-card-tier {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .model-card-tier.complex {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+        }
+
+        .model-card-tier.fast {
+            background: rgba(74, 222, 128, 0.2);
+            color: #4ade80;
+        }
+
+        .model-card-size {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-bottom: 0.75rem;
+        }
+
+        .model-card-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .model-card-stat {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.5rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .model-card-stat-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .model-card-stat-value.fast {
+            color: #4ade80;
+        }
+
+        .model-card-stat-label {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-top: 0.2rem;
+        }
+
+        .model-card-usecases {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .model-card-usecases-title {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-bottom: 0.4rem;
+        }
+
+        .model-card-usecases-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+
+        .usecase-tag {
+            padding: 0.15rem 0.4rem;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
     </style>
 </head>
 <body>
@@ -682,6 +802,20 @@
                             technische Levels und mehr.
                         </p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Available Models Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Verfugbare Modelle</h2>
+                    <button class="btn btn-sm btn-primary" onclick="loadOllamaModels()">Aktualisieren</button>
+                </div>
+                <p style="opacity: 0.7; margin-bottom: 0.5rem;">
+                    Multi-Model Architektur fur optimierte Latenz und Ressourcennutzung.
+                </p>
+                <div class="models-grid" id="models-grid">
+                    <!-- Model cards will be loaded dynamically -->
                 </div>
             </div>
         </div>
@@ -1165,11 +1299,176 @@
             toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
+        // Model metadata for display
+        const MODEL_METADATA = {
+            'llama3.1:70b': {
+                tier: 'complex',
+                tierLabel: 'Komplex',
+                latency: '2-3s',
+                useCases: ['Trading-Strategien', 'Komplexe Analysen', 'Multi-Step Reasoning', 'Code-Generierung'],
+                description: 'Haupt-Modell fur komplexe Trading-Analysen und Empfehlungen',
+                primary: true
+            },
+            'llama3.1:8b': {
+                tier: 'fast',
+                tierLabel: 'Schnell',
+                latency: '~200ms',
+                useCases: ['Sentiment-Analyse', 'Klassifikation', 'Entity-Extraction', 'Kurze Zusammenfassungen'],
+                description: 'Schnelles Modell fur einfache Aufgaben mit niedriger Latenz',
+                primary: false
+            },
+            'qwen2.5:7b': {
+                tier: 'fast',
+                tierLabel: 'Schnell',
+                latency: '~180ms',
+                useCases: ['Multilingual', 'Sentiment', 'Klassifikation'],
+                description: 'Alternatives schnelles Modell mit Multilingual-Support',
+                primary: false
+            }
+        };
+
+        // Format file size
+        function formatSize(bytes) {
+            if (bytes >= 1e12) return (bytes / 1e12).toFixed(1) + ' TB';
+            if (bytes >= 1e9) return (bytes / 1e9).toFixed(1) + ' GB';
+            if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB';
+            return bytes + ' B';
+        }
+
+        // Load Ollama models
+        async function loadOllamaModels() {
+            const grid = document.getElementById('models-grid');
+            grid.innerHTML = '<div style="opacity: 0.5; text-align: center; padding: 2rem;">Lade Modelle...</div>';
+
+            try {
+                // Fetch models directly from Ollama API via proxy
+                const res = await fetch('/ollama/api/tags');
+                if (!res.ok) throw new Error('Ollama nicht erreichbar');
+
+                const data = await res.json();
+                const models = data.models || [];
+
+                if (models.length === 0) {
+                    grid.innerHTML = '<div style="opacity: 0.5; text-align: center; padding: 2rem;">Keine Modelle installiert</div>';
+                    return;
+                }
+
+                // Sort models: primary first, then by size descending
+                models.sort((a, b) => {
+                    const metaA = MODEL_METADATA[a.name] || {};
+                    const metaB = MODEL_METADATA[b.name] || {};
+                    if (metaA.primary && !metaB.primary) return -1;
+                    if (!metaA.primary && metaB.primary) return 1;
+                    return (b.size || 0) - (a.size || 0);
+                });
+
+                grid.innerHTML = models.map(model => {
+                    const meta = MODEL_METADATA[model.name] || {
+                        tier: 'unknown',
+                        tierLabel: 'Unbekannt',
+                        latency: '-',
+                        useCases: [],
+                        description: 'Benutzerdefiniertes Modell',
+                        primary: false
+                    };
+
+                    const sizeFormatted = formatSize(model.size || 0);
+                    const modifiedDate = model.modified_at ? new Date(model.modified_at).toLocaleDateString('de-DE') : '-';
+
+                    return `
+                        <div class="model-card ${meta.primary ? 'primary' : meta.tier === 'fast' ? 'fast' : ''}">
+                            <div class="model-card-header">
+                                <span class="model-card-name">${model.name}</span>
+                                <span class="model-card-tier ${meta.tier}">${meta.tierLabel}</span>
+                            </div>
+                            <div class="model-card-size">${sizeFormatted} - Aktualisiert: ${modifiedDate}</div>
+                            <div class="model-card-stats">
+                                <div class="model-card-stat">
+                                    <div class="model-card-stat-value ${meta.tier === 'fast' ? 'fast' : ''}">${meta.latency}</div>
+                                    <div class="model-card-stat-label">Latenz</div>
+                                </div>
+                                <div class="model-card-stat">
+                                    <div class="model-card-stat-value">${meta.useCases.length}</div>
+                                    <div class="model-card-stat-label">Use Cases</div>
+                                </div>
+                            </div>
+                            <div class="model-card-usecases">
+                                <div class="model-card-usecases-title">Einsatzgebiete:</div>
+                                <div class="model-card-usecases-list">
+                                    ${meta.useCases.map(uc => `<span class="usecase-tag">${uc}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Models error:', err);
+                // Fallback: Show known models with status
+                grid.innerHTML = `
+                    <div style="opacity: 0.7; text-align: center; padding: 1rem; color: #ffb74d;">
+                        Ollama-API nicht direkt erreichbar. Zeige bekannte Modelle.
+                    </div>
+                    <div class="model-card primary">
+                        <div class="model-card-header">
+                            <span class="model-card-name">llama3.1:70b</span>
+                            <span class="model-card-tier complex">Komplex</span>
+                        </div>
+                        <div class="model-card-size">~42 GB - Haupt-Modell</div>
+                        <div class="model-card-stats">
+                            <div class="model-card-stat">
+                                <div class="model-card-stat-value">2-3s</div>
+                                <div class="model-card-stat-label">Latenz</div>
+                            </div>
+                            <div class="model-card-stat">
+                                <div class="model-card-stat-value">4</div>
+                                <div class="model-card-stat-label">Use Cases</div>
+                            </div>
+                        </div>
+                        <div class="model-card-usecases">
+                            <div class="model-card-usecases-title">Einsatzgebiete:</div>
+                            <div class="model-card-usecases-list">
+                                <span class="usecase-tag">Trading-Strategien</span>
+                                <span class="usecase-tag">Komplexe Analysen</span>
+                                <span class="usecase-tag">Multi-Step Reasoning</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="model-card fast">
+                        <div class="model-card-header">
+                            <span class="model-card-name">llama3.1:8b</span>
+                            <span class="model-card-tier fast">Schnell</span>
+                        </div>
+                        <div class="model-card-size">~4.9 GB - Speed-optimiert</div>
+                        <div class="model-card-stats">
+                            <div class="model-card-stat">
+                                <div class="model-card-stat-value fast">~200ms</div>
+                                <div class="model-card-stat-label">Latenz</div>
+                            </div>
+                            <div class="model-card-stat">
+                                <div class="model-card-stat-value">4</div>
+                                <div class="model-card-stat-label">Use Cases</div>
+                            </div>
+                        </div>
+                        <div class="model-card-usecases">
+                            <div class="model-card-usecases-title">Einsatzgebiete:</div>
+                            <div class="model-card-usecases-list">
+                                <span class="usecase-tag">Sentiment-Analyse</span>
+                                <span class="usecase-tag">Klassifikation</span>
+                                <span class="usecase-tag">Entity-Extraction</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
         // Initial load
         async function init() {
             await Promise.all([
                 checkHealth(),
-                refreshStatus()
+                refreshStatus(),
+                loadOllamaModels()
             ]);
         }
 

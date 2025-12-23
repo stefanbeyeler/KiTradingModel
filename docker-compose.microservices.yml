@@ -359,7 +359,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${LLM_SERVICE_PORT:-3009}/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 30s
       retries: 3
       start_period: 60s
 
