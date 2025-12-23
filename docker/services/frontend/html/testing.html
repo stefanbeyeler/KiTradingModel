@@ -562,17 +562,20 @@
                     <button class="btn btn-primary" id="run-all-btn" onclick="runAllTests()">
                         <span>&#9654;</span> Alle Tests starten
                     </button>
+                    <button class="btn btn-secondary" id="run-unit-btn" onclick="runTestCategory('unit')">
+                        <span>&#128300;</span> Unit
+                    </button>
                     <button class="btn btn-secondary" id="run-smoke-btn" onclick="runTestCategory('smoke')">
-                        <span>&#128168;</span> Smoke Tests
+                        <span>&#128168;</span> Smoke
                     </button>
                     <button class="btn btn-secondary" id="run-api-btn" onclick="runTestCategory('api')">
-                        <span>&#128279;</span> API Tests
+                        <span>&#128279;</span> API
                     </button>
                     <button class="btn btn-secondary" id="run-integration-btn" onclick="runTestCategory('integration')">
                         <span>&#128200;</span> Integration
                     </button>
-                    <button class="btn btn-secondary" id="run-unit-btn" onclick="runTestCategory('unit')">
-                        <span>&#128221;</span> Unit Tests
+                    <button class="btn btn-secondary" id="run-contract-btn" onclick="runTestCategory('contract')">
+                        <span>&#128221;</span> Contract
                     </button>
                     <button class="btn btn-danger" id="stop-btn" onclick="stopTests()" disabled>
                         <span>&#9632;</span> Abbrechen
@@ -601,11 +604,31 @@
             </div>
         </div>
 
-        <!-- Test Categories -->
+        <!-- Test Categories - Reihenfolge: Unit -> Smoke -> API -> Integration -> Contract -->
         <div class="test-categories">
+            <!-- 1. Unit Tests - Schnell, isoliert, keine Abhängigkeiten -->
+            <div class="category-card" id="cat-unit">
+                <div class="category-header">
+                    <h3>&#128300; 1. Unit Tests</h3>
+                    <span class="category-status pending" id="status-unit">Bereit</span>
+                </div>
+                <div class="category-description">
+                    Isolierte Tests ohne Service-Abhängigkeiten - prüft Geschäftslogik mit Mocks. Schnellste Tests.
+                </div>
+                <div class="category-stats">
+                    <span class="category-stat passed">&#10003; <span id="unit-passed">0</span></span>
+                    <span class="category-stat failed">&#10007; <span id="unit-failed">0</span></span>
+                    <span class="category-stat skipped">&#8680; <span id="unit-skipped">0</span></span>
+                </div>
+                <div class="category-progress">
+                    <div class="category-progress-bar" id="progress-unit" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- 2. Smoke Tests - Prüft ob Services laufen -->
             <div class="category-card" id="cat-smoke">
                 <div class="category-header">
-                    <h3>&#128168; Smoke Tests</h3>
+                    <h3>&#128168; 2. Smoke Tests</h3>
                     <span class="category-status pending" id="status-smoke">Bereit</span>
                 </div>
                 <div class="category-description">
@@ -621,9 +644,10 @@
                 </div>
             </div>
 
+            <!-- 3. API Tests - Endpoint-Tests -->
             <div class="category-card" id="cat-api">
                 <div class="category-header">
-                    <h3>&#128279; API Tests</h3>
+                    <h3>&#128279; 3. API Tests</h3>
                     <span class="category-status pending" id="status-api">Bereit</span>
                 </div>
                 <div class="category-description">
@@ -639,9 +663,10 @@
                 </div>
             </div>
 
+            <!-- 4. Integration Tests - Service-übergreifend -->
             <div class="category-card" id="cat-integration">
                 <div class="category-header">
-                    <h3>&#128200; Integration Tests</h3>
+                    <h3>&#128200; 4. Integration Tests</h3>
                     <span class="category-status pending" id="status-integration">Bereit</span>
                 </div>
                 <div class="category-description">
@@ -657,9 +682,10 @@
                 </div>
             </div>
 
+            <!-- 5. Contract Tests - Schema-Validierung -->
             <div class="category-card" id="cat-contract">
                 <div class="category-header">
-                    <h3>&#128221; Contract Tests</h3>
+                    <h3>&#128221; 5. Contract Tests</h3>
                     <span class="category-status pending" id="status-contract">Bereit</span>
                 </div>
                 <div class="category-description">
@@ -672,24 +698,6 @@
                 </div>
                 <div class="category-progress">
                     <div class="category-progress-bar" id="progress-contract" style="width: 0%"></div>
-                </div>
-            </div>
-
-            <div class="category-card" id="cat-unit">
-                <div class="category-header">
-                    <h3>&#128300; Unit Tests</h3>
-                    <span class="category-status pending" id="status-unit">Bereit</span>
-                </div>
-                <div class="category-description">
-                    Isolierte Tests ohne Service-Abhängigkeiten - prüft Geschäftslogik mit Mocks.
-                </div>
-                <div class="category-stats">
-                    <span class="category-stat passed">&#10003; <span id="unit-passed">0</span></span>
-                    <span class="category-stat failed">&#10007; <span id="unit-failed">0</span></span>
-                    <span class="category-stat skipped">&#8680; <span id="unit-skipped">0</span></span>
-                </div>
-                <div class="category-progress">
-                    <div class="category-progress-bar" id="progress-unit" style="width: 0%"></div>
                 </div>
             </div>
         </div>
@@ -757,10 +765,11 @@
         function setRunningState(running) {
             isRunning = running;
             document.getElementById('run-all-btn').disabled = running;
+            document.getElementById('run-unit-btn').disabled = running;
             document.getElementById('run-smoke-btn').disabled = running;
             document.getElementById('run-api-btn').disabled = running;
             document.getElementById('run-integration-btn').disabled = running;
-            document.getElementById('run-unit-btn').disabled = running;
+            document.getElementById('run-contract-btn').disabled = running;
             document.getElementById('stop-btn').disabled = !running;
 
             if (running) {
@@ -989,8 +998,9 @@
         }
 
         // API Functions
+        // Reihenfolge: unit -> smoke -> api -> integration -> contract
         async function runAllTests() {
-            await runTests(['smoke', 'api', 'integration', 'contract', 'unit']);
+            await runTests(['unit', 'smoke', 'api', 'integration', 'contract']);
         }
 
         async function runTestCategory(category) {
@@ -1002,8 +1012,8 @@
             testResults = [];
             renderTestResults();
 
-            // Reset all categories
-            ['smoke', 'api', 'integration', 'contract', 'unit'].forEach(cat => {
+            // Reset all categories (in correct order)
+            ['unit', 'smoke', 'api', 'integration', 'contract'].forEach(cat => {
                 if (categories.includes(cat)) {
                     updateCategoryStatus(cat, 'running');
                 } else {
