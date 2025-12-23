@@ -885,6 +885,10 @@
                     <div class="value" id="skipped-tests">0</div>
                     <div class="label">Übersprungen</div>
                 </div>
+                <div class="summary-card duration" id="duration-card" style="display: none;">
+                    <div class="value" id="test-duration" style="color: #a78bfa;">00:00</div>
+                    <div class="label" id="duration-label">Laufzeit</div>
+                </div>
             </div>
         </div>
 
@@ -1048,6 +1052,8 @@
         let testResults = [];
         let isRunning = false;
         let currentFilter = 'all';
+        let timerInterval = null;
+        let testStartTime = null;
 
         // API Base URL - use data service as test runner host
         const TEST_API = '/data/api/v1/testing';
@@ -1070,7 +1076,7 @@
             }
         }
 
-        function setRunningState(running) {
+        function setRunningState(running, startTime = null) {
             isRunning = running;
             document.getElementById('run-all-btn').disabled = running;
             document.getElementById('run-unit-btn').disabled = running;
@@ -1080,11 +1086,59 @@
             document.getElementById('run-contract-btn').disabled = running;
             document.getElementById('stop-btn').disabled = !running;
 
+            // Disable/enable category cards
+            const categoryCards = document.querySelectorAll('.category-card');
+            categoryCards.forEach(card => {
+                if (running) {
+                    card.classList.add('disabled');
+                    card.style.pointerEvents = 'none';
+                    card.style.opacity = '0.6';
+                } else {
+                    card.classList.remove('disabled');
+                    card.style.pointerEvents = 'auto';
+                    card.style.opacity = '1';
+                }
+            });
+
+            // Handle timer
+            const durationCard = document.getElementById('duration-card');
             if (running) {
                 document.getElementById('run-all-btn').innerHTML = '<span class="spinner"></span> Läuft...';
+                durationCard.style.display = 'block';
+                document.getElementById('duration-label').textContent = 'Laufzeit';
+                startTimer(startTime);
             } else {
                 document.getElementById('run-all-btn').innerHTML = '<span>&#9654;</span> Alle Tests starten';
+                stopTimer();
+                document.getElementById('duration-label').textContent = 'Dauer';
             }
+        }
+
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer(existingStartTime = null) {
+            testStartTime = existingStartTime ? new Date(existingStartTime) : new Date();
+            updateTimerDisplay();
+
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimerDisplay, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function updateTimerDisplay() {
+            if (!testStartTime) return;
+            const elapsed = (new Date() - testStartTime) / 1000;
+            document.getElementById('test-duration').textContent = formatDuration(elapsed);
         }
 
         function updateCategoryStatus(category, status) {
@@ -1882,17 +1936,81 @@
             }
         });
 
-        // Initial page load - check if test API is available
+        // Initial page load - check if test API is available and restore running state
         async function checkTestAPI() {
             try {
                 const response = await fetch(`${TEST_API}/status`);
                 if (!response.ok) {
                     showToast('Test-API nicht verfügbar. Starte Data Service.', 'error');
+                    return;
+                }
+
+                const status = await response.json();
+
+                // If tests are running, update UI to reflect that
+                if (status.running) {
+                    setRunningState(true, status.last_run);
+                    if (status.current_category) {
+                        updateCategoryStatus(status.current_category, 'running');
+                    }
+                    showToast(`Tests laufen bereits (${status.current_category || 'unbekannt'})`, 'info');
+
+                    // Start polling for results
+                    pollTestStatus();
+                } else {
+                    // Load last result if available
+                    await loadLastResult();
                 }
             } catch (error) {
                 console.error('Test API check failed:', error);
                 showToast('Verbindung zur Test-API fehlgeschlagen', 'error');
             }
+        }
+
+        // Load the last test result
+        async function loadLastResult() {
+            try {
+                const response = await fetch(`${TEST_API}/last-result`);
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result && result.total > 0) {
+                        processTestResults(result);
+                        // Show duration card with final time
+                        document.getElementById('duration-card').style.display = 'block';
+                        document.getElementById('test-duration').textContent = formatDuration(result.duration);
+                        document.getElementById('duration-label').textContent = 'Letzte Dauer';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load last result:', error);
+            }
+        }
+
+        // Poll for test completion when tests are already running
+        async function pollTestStatus() {
+            const pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${TEST_API}/status`);
+                    const status = await response.json();
+
+                    if (!status.running) {
+                        clearInterval(pollInterval);
+                        setRunningState(false);
+
+                        // Load last result
+                        const resultResponse = await fetch(`${TEST_API}/last-result`);
+                        if (resultResponse.ok) {
+                            const result = await resultResponse.json();
+                            if (result) {
+                                processTestResults(result);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    clearInterval(pollInterval);
+                    setRunningState(false);
+                }
+            }, 2000);
         }
 
         // Run check on load

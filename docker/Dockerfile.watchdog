@@ -1,0 +1,22 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python dependencies
+COPY requirements.watchdog.txt .
+RUN pip install --no-cache-dir -r requirements.watchdog.txt
+
+# Application code
+COPY src/ ./src/
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 3010
+
+CMD ["python", "-m", "uvicorn", "src.services.watchdog_app.main:app", "--host", "0.0.0.0", "--port", "3010"]

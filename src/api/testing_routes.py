@@ -190,12 +190,15 @@ async def run_pytest_async(categories: List[str], timeout: int = 300) -> TestRun
         for category in categories:
             _test_state["current_category"] = category
 
+            # Calculate timeout per category, with higher minimum for API tests
+            per_category_timeout = max(timeout // len(categories), 600)  # At least 10 min per category
+
             cat_cmd = [
                 "python", "-m", "pytest",
                 "-v",
                 "--tb=short",
                 "-m", category,
-                f"--timeout={min(timeout // len(categories), 120)}",
+                f"--timeout={per_category_timeout}",
                 "--no-header"
             ]
 
@@ -211,7 +214,7 @@ async def run_pytest_async(categories: List[str], timeout: int = 300) -> TestRun
             try:
                 stdout, stderr = await asyncio.wait_for(
                     process.communicate(),
-                    timeout=timeout // len(categories) + 30
+                    timeout=per_category_timeout + 60  # Extra buffer for process overhead
                 )
 
                 output = stdout.decode('utf-8', errors='replace')
@@ -230,12 +233,12 @@ async def run_pytest_async(categories: List[str], timeout: int = 300) -> TestRun
 
             except asyncio.TimeoutError:
                 process.kill()
-                logger.warning(f"Test category {category} timed out")
+                logger.warning(f"Test category {category} timed out after {per_category_timeout}s")
                 all_results.append(TestResult(
                     nodeid=f"tests/{category}",
                     name=f"{category}_timeout",
                     outcome="failed",
-                    message=f"Test category {category} timed out after {timeout // len(categories)}s",
+                    message=f"Test category {category} timed out after {per_category_timeout}s",
                     category=category
                 ))
 

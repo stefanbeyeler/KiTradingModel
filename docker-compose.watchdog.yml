@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  trading-watchdog:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.watchdog
+    container_name: trading-watchdog
+    ports:
+      - "3010:3010"
+    environment:
+      - WATCHDOG_PORT=3010
+      - WATCHDOG_CHECK_INTERVAL_SECONDS=30
+      - WATCHDOG_TIMEOUT_SECONDS=10
+      - WATCHDOG_TELEGRAM_ENABLED=${WATCHDOG_TELEGRAM_ENABLED:-true}
+      - WATCHDOG_TELEGRAM_BOT_TOKEN=${WATCHDOG_TELEGRAM_BOT_TOKEN:-}
+      - WATCHDOG_TELEGRAM_CHAT_IDS=${WATCHDOG_TELEGRAM_CHAT_IDS:-}
+      - WATCHDOG_ALERT_COOLDOWN_MINUTES=15
+      - WATCHDOG_ALERT_ON_RECOVERY=true
+      - WATCHDOG_ALERT_ON_CRITICAL=true
+      - WATCHDOG_ALERT_ON_HIGH=true
+      - WATCHDOG_ALERT_ON_MEDIUM=false
+    networks:
+      - trading-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  trading-net:
+    external: true
