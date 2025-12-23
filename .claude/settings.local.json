@@ -177,7 +177,9 @@
       "Bash(pytest:*)",
       "Bash(scp:*)",
       "Bash(git fetch:*)",
-      "Bash(ollama pull:*)"
+      "Bash(ollama pull:*)",
+      "Bash(API_BASE_URL=http://10.1.19.101 python -m pytest:*)",
+      "Bash(TEST_SERVICE_HOST=10.1.19.101 python -m pytest:*)"
     ],
     "deny": [],
     "ask": []

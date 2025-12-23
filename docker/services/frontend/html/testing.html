@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KI Trading Model - Test Suite</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>KI Trading Model - Test Suite v2</title>
     <style>
         * {
             margin: 0;
@@ -1313,9 +1316,18 @@
         }
 
         async function runTests(categories) {
+            // Validate input
+            if (!categories || !Array.isArray(categories) || categories.length === 0) {
+                showToast('Fehler: Keine Testkategorie ausgewählt', 'error');
+                return;
+            }
+
             setRunningState(true);
             testResults = [];
             renderTestResults();
+
+            // Hide recommendations section when starting new tests
+            document.getElementById('recommendations-section').style.display = 'none';
 
             // Reset all categories (in correct order)
             ['unit', 'smoke', 'api', 'integration', 'contract'].forEach(cat => {
@@ -1327,11 +1339,13 @@
                 updateCategoryStats(cat, 0, 0, 0);
             });
 
+            const requestBody = { categories: categories };
+
             try {
                 const response = await fetch(`${TEST_API}/run`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ categories })
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (!response.ok) {
@@ -1403,49 +1417,49 @@
                     {
                         name: 'test_forecast_service.py',
                         path: 'tests/unit/nhits_service/',
-                        description: 'NHITS Forecast Service Geschäftslogik',
+                        description: 'NHITS Forecast Service Geschäftslogik - Datenaufbereitung, Modellkonfiguration und Metriken',
                         tests: [
-                            { name: 'test_prepare_close_prices', desc: 'Extraktion von Close-Preisen aus OHLCV-Daten' },
-                            { name: 'test_convert_to_numpy_array', desc: 'Konvertierung von Preislisten zu NumPy Arrays' },
-                            { name: 'test_normalize_prices', desc: 'Min-Max Normalisierung von Preisdaten' },
-                            { name: 'test_valid_horizons', desc: 'Validierung gültiger Forecast-Horizonte (1h bis 1 Woche)' },
-                            { name: 'test_invalid_horizon_zero', desc: 'Horizon=0 muss abgelehnt werden' },
-                            { name: 'test_invalid_horizon_negative', desc: 'Negative Horizonte müssen abgelehnt werden' },
-                            { name: 'test_horizon_too_large', desc: 'Horizonte >30 Tage müssen abgelehnt werden' },
-                            { name: 'test_default_config', desc: 'Standard-Modellkonfiguration (input_size, hidden_size, etc.)' },
-                            { name: 'test_config_validation', desc: 'Validierung von Konfigurationswerten' },
-                            { name: 'test_create_sliding_windows', desc: 'Erstellung von Sliding Windows für Zeitreihen' },
-                            { name: 'test_insufficient_data_for_window', desc: 'Handling bei unzureichenden Daten' },
-                            { name: 'test_window_with_multiple_features', desc: 'Windowing mit mehreren Features (OHLCV)' },
-                            { name: 'test_mae_calculation', desc: 'Mean Absolute Error Berechnung' },
-                            { name: 'test_mse_calculation', desc: 'Mean Squared Error Berechnung' },
-                            { name: 'test_rmse_calculation', desc: 'Root Mean Squared Error Berechnung' },
-                            { name: 'test_mape_calculation', desc: 'Mean Absolute Percentage Error Berechnung' },
-                            { name: 'test_forecast_result_structure', desc: 'Forecast-Ergebnis hat alle Pflichtfelder' },
-                            { name: 'test_predictions_are_numeric', desc: 'Predictions sind numerisch (kein NaN/Inf)' }
+                            { name: 'test_prepare_close_prices', desc: 'Extrahiert Close-Preise aus OHLCV-Rohdaten und validiert die korrekte Anzahl und Werte' },
+                            { name: 'test_convert_to_numpy_array', desc: 'Konvertiert Python-Listen zu NumPy float32 Arrays für ML-Verarbeitung' },
+                            { name: 'test_normalize_prices', desc: 'Wendet Min-Max Normalisierung an: Werte zwischen 0 und 1 für stabiles Training' },
+                            { name: 'test_valid_horizons', desc: 'Akzeptiert gültige Forecast-Horizonte: 1h, 12h, 24h, 48h, 168h (1 Woche)' },
+                            { name: 'test_invalid_horizon_zero', desc: 'Lehnt Horizon=0 ab: Forecast-Horizont muss positiv sein' },
+                            { name: 'test_invalid_horizon_negative', desc: 'Lehnt negative Horizonte ab: Forecast in die Vergangenheit ist ungültig' },
+                            { name: 'test_horizon_too_large', desc: 'Lehnt Horizonte >720h (30 Tage) ab: Maximale Vorhersageweite begrenzt' },
+                            { name: 'test_default_config', desc: 'Validiert Standard-NHITS-Konfiguration: input_size=168, output_size=24, hidden_size=128, n_stacks=3' },
+                            { name: 'test_config_validation', desc: 'Prüft Constraint: input_size > output_size und hidden_size >= 32' },
+                            { name: 'test_create_sliding_windows', desc: 'Erstellt überlappende Fenster aus Zeitreihen: (86 Samples, 10 Window, 5 Horizon)' },
+                            { name: 'test_insufficient_data_for_window', desc: 'Erkennt wenn Datenmenge < window_size: Keine Fenster erstellbar' },
+                            { name: 'test_window_with_multiple_features', desc: 'Erstellt Fenster mit 5 OHLCV-Features: Shape (n_windows, window_size, 5)' },
+                            { name: 'test_mae_calculation', desc: 'Berechnet Mean Absolute Error: |actual - predicted| gemittelt' },
+                            { name: 'test_mse_calculation', desc: 'Berechnet Mean Squared Error: (actual - predicted)² gemittelt' },
+                            { name: 'test_rmse_calculation', desc: 'Berechnet Root Mean Squared Error: √MSE für interpretierbare Einheit' },
+                            { name: 'test_mape_calculation', desc: 'Berechnet Mean Absolute Percentage Error: Prozentuale Abweichung' },
+                            { name: 'test_forecast_result_structure', desc: 'Validiert Forecast-Output: symbol, predictions, timestamps, confidence (0-1), model_version' },
+                            { name: 'test_predictions_are_numeric', desc: 'Prüft dass alle Predictions numerisch sind: Kein NaN, kein Inf' }
                         ]
                     },
                     {
                         name: 'test_symbol_service.py',
                         path: 'tests/unit/data_service/',
-                        description: 'Symbol Management Geschäftslogik',
+                        description: 'Symbol Management - Kategorisierung, Parsing und TwelveData-Mapping',
                         tests: [
-                            { name: 'test_detect_forex_pair', desc: 'Erkennung von Forex-Paaren (EURUSD, GBPJPY, etc.)' },
-                            { name: 'test_detect_crypto', desc: 'Erkennung von Kryptowährungen (BTCUSD, ETHUSD, etc.)' },
-                            { name: 'test_detect_indices', desc: 'Erkennung von Indizes (US500, GER40, US30)' },
-                            { name: 'test_detect_commodities', desc: 'Erkennung von Rohstoffen (XAUUSD, XAGUSD)' },
-                            { name: 'test_parse_valid_forex_pair', desc: 'Parsing gültiger Forex-Paare' },
-                            { name: 'test_parse_invalid_forex_pair', desc: 'Handling ungültiger Forex-Paare' },
-                            { name: 'test_generate_forex_symbol', desc: 'TwelveData Symbol-Generierung für Forex' },
-                            { name: 'test_generate_crypto_symbol', desc: 'TwelveData Symbol-Generierung für Crypto' },
-                            { name: 'test_generate_special_symbol', desc: 'Spezielle Mappings (GER40→GDAXI, US500→SPX)' },
-                            { name: 'test_valid_symbol_formats', desc: 'Validierung gültiger Symbol-Formate' },
-                            { name: 'test_invalid_symbol_formats', desc: 'Ablehnung ungültiger Formate (leer, zu kurz, Sonderzeichen)' },
-                            { name: 'test_search_exact_match', desc: 'Exakte Suchtreffer' },
-                            { name: 'test_search_partial_match', desc: 'Partielle Suchtreffer (Prefix/Substring)' },
-                            { name: 'test_search_with_limit', desc: 'Suche mit Ergebnis-Limit' },
-                            { name: 'test_symbol_status_values', desc: 'Symbol-Status Enum (active, inactive, suspended)' },
-                            { name: 'test_symbol_category_values', desc: 'Symbol-Kategorie Enum (forex, crypto, index, etc.)' }
+                            { name: 'test_detect_forex_pair', desc: 'Erkennt Forex-Paare anhand 6-Zeichen-Format: EURUSD, GBPJPY, USDCHF → forex' },
+                            { name: 'test_detect_crypto', desc: 'Erkennt Crypto anhand Basis-Symbol: BTCUSD, ETHUSD, SOLUSD → crypto' },
+                            { name: 'test_detect_indices', desc: 'Erkennt Indizes anhand bekannter Namen: US500, GER40, US30 → index' },
+                            { name: 'test_detect_commodities', desc: 'Erkennt Rohstoffe: XAUUSD (Gold), XAGUSD (Silber) → commodity' },
+                            { name: 'test_parse_valid_forex_pair', desc: 'Zerlegt EURUSD in base=EUR, quote=USD (case-insensitive)' },
+                            { name: 'test_parse_invalid_forex_pair', desc: 'Gibt (None, None) für ungültige Längen: EUR (3), EURUSDD (7)' },
+                            { name: 'test_generate_forex_symbol', desc: 'Generiert TwelveData-Format: EURUSD → EUR/USD, GBPJPY → GBP/JPY' },
+                            { name: 'test_generate_crypto_symbol', desc: 'Generiert TwelveData-Format: BTCUSD → BTC/USD' },
+                            { name: 'test_generate_special_symbol', desc: 'Mappt Spezial-Symbole: GER40→GDAXI, US500→SPX, US30→DJI, DOGUSD→DOGE/USD' },
+                            { name: 'test_valid_symbol_formats', desc: 'Akzeptiert: BTCUSD (6 Zeichen), EURUSD, GER40 - alphanumerisch, min. 3 Zeichen' },
+                            { name: 'test_invalid_symbol_formats', desc: 'Lehnt ab: "" (leer), "AB" (zu kurz), "BTC/USD" (Sonderzeichen)' },
+                            { name: 'test_search_exact_match', desc: 'Exakter Treffer hat höchste Priorität (Score 100): "btcusd" findet BTCUSD zuerst' },
+                            { name: 'test_search_partial_match', desc: 'Prefix-Treffer vor Substring: "btc" findet BTCUSD und BTCEUR' },
+                            { name: 'test_search_with_limit', desc: 'Begrenzt Ergebnisse: limit=5 bei 10 Treffern gibt 5 zurück' },
+                            { name: 'test_symbol_status_values', desc: 'Enum-Werte: active, inactive, suspended für Symbol-Lebenszyklus' },
+                            { name: 'test_symbol_category_values', desc: 'Enum-Werte: forex, crypto, index, commodity, other' }
                         ]
                     }
                 ]
@@ -1458,25 +1472,25 @@
                     {
                         name: 'test_health_checks.py',
                         path: 'tests/smoke/',
-                        description: 'Service Health Endpoint Tests',
+                        description: 'Prüft /health Endpoint jedes Services auf HTTP 200 und korrekten Status',
                         tests: [
-                            { name: 'test_service_health[data]', desc: 'Data Service (Port 3001) Health Check', tags: ['parametrized'] },
-                            { name: 'test_service_health[nhits]', desc: 'NHITS Service (Port 3002) Health Check', tags: ['parametrized'] },
-                            { name: 'test_service_health[rag]', desc: 'RAG Service (Port 3003) Health Check', tags: ['parametrized'] },
-                            { name: 'test_service_health[llm]', desc: 'LLM Service (Port 3004) Health Check', tags: ['parametrized'] },
-                            { name: 'test_service_health[tcn]', desc: 'TCN Service (Port 3005) Health Check', tags: ['parametrized'] },
-                            { name: 'test_service_health[hmm]', desc: 'HMM Service (Port 3006) Health Check', tags: ['parametrized'] },
-                            { name: 'test_service_health[embedder]', desc: 'Embedder Service (Port 3007) Health Check', tags: ['parametrized'] },
-                            { name: 'test_service_health[frontend]', desc: 'Frontend Service (Port 3000) Health Check', tags: ['parametrized'] },
-                            { name: 'test_all_services_up', desc: 'Aggregierte Prüfung: Alle Services gleichzeitig' },
-                            { name: 'test_data_service_health_details', desc: 'Data Service Response-Struktur validieren' },
-                            { name: 'test_nhits_service_health_details', desc: 'NHITS Service Response-Struktur validieren' },
-                            { name: 'test_rag_service_health_details', desc: 'RAG Service Response-Struktur validieren' },
-                            { name: 'test_llm_service_health_details', desc: 'LLM Service Response-Struktur validieren' },
-                            { name: 'test_tcn_service_health_details', desc: 'TCN Service Response-Struktur validieren' },
-                            { name: 'test_hmm_service_health_details', desc: 'HMM Service Response-Struktur validieren' },
-                            { name: 'test_embedder_service_health_details', desc: 'Embedder Service Response-Struktur validieren' },
-                            { name: 'test_frontend_health', desc: 'Frontend nginx Health Check' }
+                            { name: 'test_service_health[frontend]', desc: 'Frontend (Port 3000): nginx Health Check, erwartet "healthy" im Response-Text', tags: ['parametrized'] },
+                            { name: 'test_service_health[data]', desc: 'Data Service (Port 3001): JSON Response mit status="healthy" oder "ok"', tags: ['parametrized'] },
+                            { name: 'test_service_health[nhits]', desc: 'NHITS Service (Port 3002): Preis-Forecast-Modell Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[tcn]', desc: 'TCN Service (Port 3003): Pattern-Erkennung Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[hmm]', desc: 'HMM Service (Port 3004): Regime-Erkennung Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[embedder]', desc: 'Embedder Service (Port 3005): Text/Zeitreihen-Embedding Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[rag]', desc: 'RAG Service (Port 3008): Retrieval-Augmented Generation Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[llm]', desc: 'LLM Service (Port 3009): Ollama LLM Gateway Health Check', tags: ['parametrized'] },
+                            { name: 'test_all_services_up', desc: 'Parallele Health-Checks aller 8 Services, zeigt Running/Failed Übersicht' },
+                            { name: 'test_data_service_health_details', desc: 'Data Service Response hat "status" und "service/name" Felder' },
+                            { name: 'test_nhits_service_health_details', desc: 'NHITS Service Response enthält "status" Feld' },
+                            { name: 'test_rag_service_health_details', desc: 'RAG Service Response enthält "status" Feld' },
+                            { name: 'test_llm_service_health_details', desc: 'LLM Service Response enthält "status" Feld' },
+                            { name: 'test_tcn_service_health_details', desc: 'TCN Service Response enthält "status" Feld' },
+                            { name: 'test_hmm_service_health_details', desc: 'HMM Service Response enthält "status" Feld' },
+                            { name: 'test_embedder_service_health_details', desc: 'Embedder Service Response enthält "status" Feld' },
+                            { name: 'test_frontend_health', desc: 'Frontend nginx antwortet mit HTTP 200 auf /health' }
                         ]
                     }
                 ]
@@ -1489,107 +1503,203 @@
                     {
                         name: 'test_data_api.py',
                         path: 'tests/api/',
-                        description: 'Data Service API Endpoints',
+                        description: 'Data Service: Symbol-Management, OHLCV-Daten, TwelveData-Indikatoren, Externe Quellen',
                         tests: [
-                            { name: 'test_get_symbols_list', desc: 'GET /symbols - Liste aller Symbole abrufen' },
-                            { name: 'test_get_symbol_detail', desc: 'GET /symbols/{symbol} - Symbol-Details abrufen' },
-                            { name: 'test_get_managed_symbols', desc: 'GET /managed-symbols - Verwaltete Symbole' },
-                            { name: 'test_get_ohlcv_data', desc: 'GET /ohlcv/{symbol} - Historische OHLCV-Daten' },
-                            { name: 'test_get_ohlcv_different_intervals', desc: 'OHLCV mit verschiedenen Intervallen (1m-1d)', tags: ['parametrized'] },
-                            { name: 'test_get_ohlcv_invalid_interval', desc: 'Ungültiges Intervall → 400/422' },
-                            { name: 'test_get_ohlcv_with_date_range', desc: 'OHLCV mit Datumsbereich-Parametern' },
-                            { name: 'test_technical_indicators', desc: 'GET /twelvedata/{indicator}/{symbol}', tags: ['parametrized'] },
-                            { name: 'test_rsi_indicator', desc: 'RSI Indikator mit time_period Parameter' },
-                            { name: 'test_macd_indicator', desc: 'MACD Indikator' },
-                            { name: 'test_get_economic_calendar', desc: 'GET /external-sources/economic-calendar' },
-                            { name: 'test_get_sentiment_data', desc: 'GET /external-sources/sentiment' },
-                            { name: 'test_get_onchain_data', desc: 'GET /external-sources/onchain/{symbol}' },
-                            { name: 'test_get_technical_levels', desc: 'GET /external-sources/technical-levels/{symbol}' },
-                            { name: 'test_fetch_all_sources', desc: 'POST /external-sources/fetch-all' },
-                            { name: 'test_get_trading_context', desc: 'POST /external-sources/trading-context/{symbol}' }
+                            { name: 'test_get_managed_symbols', desc: 'GET /managed-symbols: Liste aller verwalteten Trading-Symbole als Array' },
+                            { name: 'test_get_managed_symbols_stats', desc: 'GET /managed-symbols/stats: Statistiken (Anzahl aktiv, inaktiv, nach Kategorie)' },
+                            { name: 'test_search_symbols', desc: 'GET /managed-symbols/search?q=BTC: Fuzzy-Suche nach Symbolen' },
+                            { name: 'test_get_available_easyinsight_symbols', desc: 'GET /managed-symbols/available/easyinsight: Von EasyInsight verfügbare Symbole' },
+                            { name: 'test_get_yfinance_symbols', desc: 'GET /yfinance/symbols: Von Yahoo Finance verfügbare Symbole' },
+                            { name: 'test_get_time_series_data', desc: 'GET /twelvedata/time_series/{symbol}: Historische OHLCV-Daten mit interval und outputsize' },
+                            { name: 'test_get_yfinance_time_series', desc: 'GET /yfinance/time-series/AAPL: Yahoo Finance Zeitreihen mit period Parameter' },
+                            { name: 'test_get_training_data', desc: 'GET /training-data/{symbol}: Gecachte Trainingsdaten für ML-Modelle' },
+                            { name: 'test_get_live_data', desc: 'GET /managed-symbols/live-data/{symbol}: Echtzeit-Kursdaten' },
+                            { name: 'test_technical_indicators[rsi]', desc: 'GET /twelvedata/rsi/{symbol}: Relative Strength Index (0-100)', tags: ['parametrized'] },
+                            { name: 'test_technical_indicators[macd]', desc: 'GET /twelvedata/macd/{symbol}: Moving Average Convergence Divergence', tags: ['parametrized'] },
+                            { name: 'test_technical_indicators[sma]', desc: 'GET /twelvedata/sma/{symbol}: Simple Moving Average', tags: ['parametrized'] },
+                            { name: 'test_technical_indicators[ema]', desc: 'GET /twelvedata/ema/{symbol}: Exponential Moving Average', tags: ['parametrized'] },
+                            { name: 'test_technical_indicators[bbands]', desc: 'GET /twelvedata/bbands/{symbol}: Bollinger Bands (upper, middle, lower)', tags: ['parametrized'] },
+                            { name: 'test_rsi_indicator', desc: 'GET /twelvedata/rsi/EURUSD?time_period=14: RSI mit konfigurierbarer Periode' },
+                            { name: 'test_macd_indicator', desc: 'GET /twelvedata/macd/EURUSD: MACD mit Standard-Parametern (12, 26, 9)' },
+                            { name: 'test_indicator_generic_endpoint', desc: 'GET /twelvedata/indicator/{symbol}/{indicator}: Generischer Indikator-Endpoint' },
+                            { name: 'test_list_external_sources', desc: 'GET /external-sources: Liste verfügbarer externer Datenquellen' },
+                            { name: 'test_get_economic_calendar', desc: 'GET /external-sources/economic-calendar: Fed, ECB, CPI, NFP, GDP Events' },
+                            { name: 'test_get_sentiment_data', desc: 'GET /external-sources/sentiment: Fear & Greed Index, Social Media Sentiment' },
+                            { name: 'test_get_onchain_data', desc: 'GET /external-sources/onchain/{symbol}: Whale Alerts, Exchange Flows (Crypto)' },
+                            { name: 'test_get_technical_levels', desc: 'GET /external-sources/technical-levels/{symbol}: Support/Resistance, Fibonacci, Pivots' },
+                            { name: 'test_get_macro_data', desc: 'GET /external-sources/macro: DXY, Bond Yields, Korrelationen' },
+                            { name: 'test_get_regulatory_data', desc: 'GET /external-sources/regulatory: SEC News, ETF Updates, Regulierung' },
+                            { name: 'test_get_correlations', desc: 'GET /external-sources/correlations: Asset-Korrelationsmatrix' },
+                            { name: 'test_fetch_all_sources', desc: 'POST /external-sources/fetch-all: Paralleler Abruf mehrerer Quellen' },
+                            { name: 'test_get_trading_context', desc: 'POST /external-sources/trading-context/{symbol}: Aggregierter Trading-Kontext' },
+                            { name: 'test_scan_patterns', desc: 'GET /patterns/scan/{symbol}: Candlestick-Pattern-Erkennung' },
+                            { name: 'test_get_pattern_summary', desc: 'GET /patterns/summary/{symbol}: Pattern-Übersicht mit Statistiken' },
+                            { name: 'test_get_timezone', desc: 'GET /config/timezone: Aktuell konfigurierte Anzeige-Zeitzone' },
+                            { name: 'test_list_timezones', desc: 'GET /config/timezones: Liste verfügbarer Zeitzonen' },
+                            { name: 'test_list_exports', desc: 'GET /config/exports: Verfügbare Konfigurationsexporte' }
                         ]
                     },
                     {
                         name: 'test_nhits_api.py',
                         path: 'tests/api/',
-                        description: 'NHITS Service API Endpoints',
+                        description: 'NHITS Service: Preis-Forecasts, Modell-Training, Favorites, Performance-Metriken',
                         tests: [
-                            { name: 'test_get_forecast', desc: 'POST /forecast - Preis-Forecast abrufen' },
-                            { name: 'test_list_trained_models', desc: 'GET /models - Trainierte Modelle auflisten' },
-                            { name: 'test_get_model_metrics', desc: 'GET /models/{symbol}/metrics - Modell-Metriken' },
-                            { name: 'test_get_model_info', desc: 'GET /models/{symbol} - Modell-Info' },
-                            { name: 'test_forecast_invalid_symbol', desc: 'Forecast mit ungültigem Symbol' },
-                            { name: 'test_forecast_invalid_horizon', desc: 'Forecast mit ungültigem Horizon' },
-                            { name: 'test_trigger_training', desc: 'POST /train - Training starten', tags: ['slow'] },
-                            { name: 'test_get_training_status', desc: 'GET /training-status/{symbol}' },
-                            { name: 'test_batch_forecast', desc: 'POST /forecast/batch - Batch-Forecast' }
+                            { name: 'test_get_forecast', desc: 'GET /forecast/{symbol}?horizon=24: 24h Preis-Forecast mit Konfidenz' },
+                            { name: 'test_list_trained_models', desc: 'GET /forecast/models: Liste aller trainierten NHITS-Modelle' },
+                            { name: 'test_get_model_info', desc: 'GET /forecast/{symbol}/model: Modell-Metadaten (Training-Datum, Epochs, Metriken)' },
+                            { name: 'test_get_training_status', desc: 'GET /forecast/training/status: Aktueller Training-Status (idle/running)' },
+                            { name: 'test_get_training_symbols', desc: 'GET /forecast/training/symbols: Für Training verfügbare Symbole' },
+                            { name: 'test_get_auto_status', desc: 'GET /forecast/auto/status: Auto-Forecast Scheduler Status' },
+                            { name: 'test_get_favorites', desc: 'GET /forecast/favorites: Favorisierte Symbole für Dashboard' },
+                            { name: 'test_get_performance', desc: 'GET /forecast/performance: Aggregierte Modell-Performance (MAE, RMSE)' },
+                            { name: 'test_get_evaluated_forecasts', desc: 'GET /forecast/evaluated: Vergangene Forecasts mit Evaluation' },
+                            { name: 'test_trigger_training', desc: 'POST /forecast/{symbol}/train: Startet Modell-Training (epochs=1 für Test)', tags: ['slow'] },
+                            { name: 'test_get_backup_status', desc: 'GET /backup/status: Modell-Backup Status' },
+                            { name: 'test_get_training_cache_stats', desc: 'GET /forecast/training/cache/stats: Trainingsdata-Cache Statistiken' }
                         ]
                     },
                     {
                         name: 'test_rag_api.py',
                         path: 'tests/api/',
-                        description: 'RAG Service API Endpoints',
+                        description: 'RAG Service: Semantische Suche, Dokumente, Trading-Kontext, Scheduler',
                         tests: [
-                            { name: 'test_semantic_search', desc: 'POST /query - Semantische Suche' },
-                            { name: 'test_add_document', desc: 'POST /documents - Dokument hinzufügen' },
-                            { name: 'test_get_stats', desc: 'GET /stats - RAG Statistiken' },
-                            { name: 'test_get_trading_context', desc: 'GET /trading-context/{symbol}' },
-                            { name: 'test_search_with_filter', desc: 'POST /query mit Metadata-Filter' },
-                            { name: 'test_empty_query', desc: 'Leere Query → Fehler' },
-                            { name: 'test_get_documents', desc: 'GET /documents - Dokumente auflisten' },
-                            { name: 'test_delete_document', desc: 'DELETE /documents/{id}' }
+                            { name: 'test_semantic_search', desc: 'POST /rag/query: Semantische Suche in Trading-Dokumenten (top_k=5)' },
+                            { name: 'test_detailed_query', desc: 'POST /rag/query/detailed: Erweiterte Suche mit Kontext und Metadaten' },
+                            { name: 'test_get_stats', desc: 'GET /rag/stats: RAG-Statistiken (Dokumente, Chunks, Embedding-Modell)' },
+                            { name: 'test_list_sources', desc: 'GET /rag/sources: Liste verfügbarer Datenquellen für RAG' },
+                            { name: 'test_get_documents', desc: 'GET /rag/documents: Index aller gespeicherten Dokumente' },
+                            { name: 'test_get_sentiment', desc: 'GET /rag/sentiment: Aggregierte Markt-Sentiment Daten' },
+                            { name: 'test_get_economic_calendar', desc: 'GET /rag/economic-calendar: Wirtschaftskalender für Trading' },
+                            { name: 'test_get_macro', desc: 'GET /rag/macro: Makroökonomische Indikatoren' },
+                            { name: 'test_get_regulatory', desc: 'GET /rag/regulatory: Regulatorische Updates' },
+                            { name: 'test_get_historical_patterns', desc: 'GET /rag/historical-patterns: Historische Muster und Saisonalität' },
+                            { name: 'test_get_scheduler_status', desc: 'GET /rag/scheduler/status: Daten-Refresh Scheduler Status' },
+                            { name: 'test_get_candlestick_types', desc: 'GET /rag/candlestick-patterns/types: Verfügbare Candlestick-Pattern-Typen' },
+                            { name: 'test_get_onchain_data', desc: 'GET /rag/onchain/{symbol}: On-Chain Metriken für Crypto' },
+                            { name: 'test_get_easyinsight', desc: 'GET /rag/easyinsight: EasyInsight-Daten via RAG Gateway' }
                         ]
                     },
                     {
                         name: 'test_llm_api.py',
                         path: 'tests/api/',
-                        description: 'LLM Service API Endpoints',
+                        description: 'LLM Service: Trading-Analyse, Chat, Signale, Markt-Zusammenfassung',
                         tests: [
-                            { name: 'test_trading_analysis', desc: 'POST /analyze - Trading-Analyse' },
-                            { name: 'test_chat_completion', desc: 'POST /chat - Chat Completion' },
-                            { name: 'test_trading_signal', desc: 'POST /signal - Trading-Signal generieren' },
-                            { name: 'test_market_summary', desc: 'GET /market-summary' },
-                            { name: 'test_analyze_with_context', desc: 'POST /analyze mit vollem Kontext' },
-                            { name: 'test_empty_chat_message', desc: 'Leere Nachricht → Fehler' },
-                            { name: 'test_get_available_models', desc: 'GET /models - Verfügbare LLM-Modelle' }
+                            { name: 'test_trading_analysis', desc: 'POST /analyze: KI-Trading-Analyse mit RAG-Kontext und Forecast' },
+                            { name: 'test_chat_completion', desc: 'POST /chat: Chat-Completion mit Trading-Wissen' },
+                            { name: 'test_trading_signal', desc: 'POST /signal: Generiert Buy/Sell/Hold Signal mit Confidence' },
+                            { name: 'test_market_summary', desc: 'GET /market-summary: KI-generierte Marktübersicht' },
+                            { name: 'test_analyze_with_context', desc: 'POST /analyze: Volle Analyse mit use_rag, include_forecast, include_patterns, include_regime' },
+                            { name: 'test_empty_chat_message', desc: 'POST /chat mit leeren messages[]: Erwartet 400/422 Fehler' },
+                            { name: 'test_get_available_models', desc: 'GET /models: Liste verfügbarer Ollama-Modelle (8b, 70b, etc.)' }
                         ]
                     },
                     {
                         name: 'test_tcn_api.py',
                         path: 'tests/api/',
-                        description: 'TCN Pattern Service API Endpoints',
+                        description: 'TCN Pattern Service: Chart-Pattern-Erkennung mit Temporal Convolutional Networks',
                         tests: [
-                            { name: 'test_detect_patterns', desc: 'POST /detect - Pattern-Erkennung' },
-                            { name: 'test_scan_patterns', desc: 'POST /patterns/scan - Multi-Timeframe Scan' },
-                            { name: 'test_list_patterns', desc: 'GET /patterns - Verfügbare Patterns' },
-                            { name: 'test_get_pattern_history', desc: 'GET /patterns/history/{symbol}' },
-                            { name: 'test_detect_with_invalid_symbol', desc: 'Detection mit ungültigem Symbol' }
+                            { name: 'test_detect_patterns', desc: 'POST /detect: Erkennt Head&Shoulders, Double Top/Bottom, Triangles, etc.' },
+                            { name: 'test_scan_patterns', desc: 'POST /patterns/scan: Multi-Timeframe Scan (1h, 4h) mit min_confidence Filter' },
+                            { name: 'test_list_patterns', desc: 'GET /patterns: Liste aller erkennbaren Pattern-Typen' },
+                            { name: 'test_get_pattern_history', desc: 'GET /patterns/history/{symbol}: Historische Pattern-Erkennungen' },
+                            { name: 'test_detect_with_empty_symbol', desc: 'POST /detect mit leerem Symbol: Fehlerbehandlung testen' }
                         ]
                     },
                     {
                         name: 'test_hmm_api.py',
                         path: 'tests/api/',
-                        description: 'HMM Regime Service API Endpoints',
+                        description: 'HMM Regime Service: Markt-Regime-Erkennung mit Hidden Markov Models',
                         tests: [
-                            { name: 'test_detect_regime', desc: 'POST /regime - Regime-Erkennung' },
-                            { name: 'test_get_regime_history', desc: 'GET /regime/history/{symbol}' },
-                            { name: 'test_score_signal', desc: 'POST /score - Signal bewerten' },
-                            { name: 'test_get_regime_probabilities', desc: 'GET /regime/probabilities/{symbol}' },
-                            { name: 'test_list_regimes', desc: 'GET /regimes - Verfügbare Regime-Typen' }
+                            { name: 'test_detect_regime', desc: 'POST /regime: Erkennt Bull/Bear/Sideways Regime' },
+                            { name: 'test_get_regime_history', desc: 'GET /regime/history/{symbol}: Historische Regime-Wechsel' },
+                            { name: 'test_score_signal', desc: 'POST /score: Bewertet Trading-Signal basierend auf aktuellem Regime' },
+                            { name: 'test_get_regime_probabilities', desc: 'GET /regime/probabilities/{symbol}: Regime-Wahrscheinlichkeiten (Bull: 60%, etc.)' },
+                            { name: 'test_list_regimes', desc: 'GET /regimes: Definierte Regime-Typen und Beschreibungen' }
                         ]
                     },
                     {
                         name: 'test_embedder_api.py',
                         path: 'tests/api/',
-                        description: 'Embedder Service API Endpoints',
+                        description: 'Embedder Service: Text- und Zeitreihen-Embeddings für RAG und Similarity Search',
                         tests: [
-                            { name: 'test_text_embedding', desc: 'POST /embed/text - Text-Embedding' },
-                            { name: 'test_batch_text_embedding', desc: 'POST /embed/text/batch - Batch-Embeddings' },
-                            { name: 'test_timeseries_embedding', desc: 'POST /embed/timeseries - Zeitreihen-Embedding' },
-                            { name: 'test_feature_embedding', desc: 'POST /embed/features - Feature-Embedding' },
-                            { name: 'test_similarity_search', desc: 'POST /similarity - Ähnlichkeitssuche' },
-                            { name: 'test_empty_text_embedding', desc: 'Leerer Text → Fehler' },
-                            { name: 'test_get_embedding_info', desc: 'GET /info - Embedding-Modell Info' }
+                            { name: 'test_text_embedding', desc: 'POST /embed/text: Generiert 768-dim Vektor für Trading-Text' },
+                            { name: 'test_batch_text_embedding', desc: 'POST /embed/text/batch: Batch-Verarbeitung mehrerer Texte' },
+                            { name: 'test_timeseries_embedding', desc: 'POST /embed/timeseries: Embedding für OHLCV-Zeitreihe' },
+                            { name: 'test_feature_embedding', desc: 'POST /embed/features: Embedding für technische Indikatoren (RSI, MACD, etc.)' },
+                            { name: 'test_similarity_search', desc: 'POST /similarity: Findet ähnliche Embeddings (top_k=5)' },
+                            { name: 'test_empty_text_embedding', desc: 'POST /embed/text mit leerem Text: Fehlerbehandlung' },
+                            { name: 'test_get_embedding_info', desc: 'GET /info: Embedding-Modell Info (Dimensionen, Modellname)' }
+                        ]
+                    },
+                    {
+                        name: 'test_easyinsight_api.py',
+                        path: 'tests/api/',
+                        description: 'EasyInsight Integration: MT5-Daten via EasyInsight Gateway',
+                        tests: [
+                            { name: 'test_get_available_easyinsight_symbols', desc: 'GET /managed-symbols/available/easyinsight: Verfügbare MT5-Symbole' },
+                            { name: 'test_get_managed_symbols_stats', desc: 'GET /managed-symbols/stats: Symbol-Statistiken' },
+                            { name: 'test_search_easyinsight_symbols', desc: 'GET /managed-symbols/search?query=BTC: Symbol-Suche' },
+                            { name: 'test_get_easyinsight_ohlcv', desc: 'GET /easyinsight/ohlcv/{symbol}: OHLCV-Daten von EasyInsight' },
+                            { name: 'test_get_easyinsight_latest', desc: 'GET /easyinsight/latest/{symbol}: Aktueller Preis von MT5' },
+                            { name: 'test_easyinsight_intervals[M1]', desc: 'OHLCV mit M1 Intervall (1 Minute)', tags: ['parametrized'] },
+                            { name: 'test_easyinsight_intervals[M5]', desc: 'OHLCV mit M5 Intervall (5 Minuten)', tags: ['parametrized'] },
+                            { name: 'test_easyinsight_intervals[M15]', desc: 'OHLCV mit M15 Intervall (15 Minuten)', tags: ['parametrized'] },
+                            { name: 'test_easyinsight_intervals[M30]', desc: 'OHLCV mit M30 Intervall (30 Minuten)', tags: ['parametrized'] },
+                            { name: 'test_easyinsight_intervals[H1]', desc: 'OHLCV mit H1 Intervall (1 Stunde)', tags: ['parametrized'] },
+                            { name: 'test_easyinsight_intervals[H4]', desc: 'OHLCV mit H4 Intervall (4 Stunden)', tags: ['parametrized'] },
+                            { name: 'test_easyinsight_intervals[D1]', desc: 'OHLCV mit D1 Intervall (1 Tag)', tags: ['parametrized'] },
+                            { name: 'test_get_easyinsight_status', desc: 'GET /easyinsight/status: Verbindungsstatus zu EasyInsight' },
+                            { name: 'test_get_rag_easyinsight_data', desc: 'GET /rag/easyinsight: EasyInsight-Daten via RAG Service' },
+                            { name: 'test_easyinsight_health', desc: 'Direkter Health Check auf EasyInsight Server (10.1.19.102:3000)' },
+                            { name: 'test_easyinsight_symbols_direct', desc: 'Direkter /api/symbols Aufruf auf EasyInsight' },
+                            { name: 'test_easyinsight_mt5_status', desc: 'MT5-Verbindungsstatus auf EasyInsight prüfen' }
+                        ]
+                    },
+                    {
+                        name: 'test_twelvedata_api.py',
+                        path: 'tests/api/',
+                        description: 'TwelveData Integration: Umfassende technische Indikatoren',
+                        tests: [
+                            { name: 'test_get_time_series', desc: 'GET /twelvedata/time_series/EURUSD: OHLCV von TwelveData' },
+                            { name: 'test_time_series_various_symbols[EUR/USD]', desc: 'Zeitreihe für EUR/USD (Forex Format)', tags: ['parametrized'] },
+                            { name: 'test_time_series_various_symbols[BTC/USD]', desc: 'Zeitreihe für BTC/USD (Crypto Format)', tags: ['parametrized'] },
+                            { name: 'test_time_series_various_symbols[AAPL]', desc: 'Zeitreihe für AAPL (Aktie)', tags: ['parametrized'] },
+                            { name: 'test_time_series_various_symbols[GDAXI]', desc: 'Zeitreihe für GDAXI (DAX Index)', tags: ['parametrized'] },
+                            { name: 'test_time_series_intervals[1min]', desc: 'Zeitreihe mit 1-Minuten Intervall', tags: ['parametrized'] },
+                            { name: 'test_time_series_intervals[5min]', desc: 'Zeitreihe mit 5-Minuten Intervall', tags: ['parametrized'] },
+                            { name: 'test_time_series_intervals[15min]', desc: 'Zeitreihe mit 15-Minuten Intervall', tags: ['parametrized'] },
+                            { name: 'test_time_series_intervals[30min]', desc: 'Zeitreihe mit 30-Minuten Intervall', tags: ['parametrized'] },
+                            { name: 'test_time_series_intervals[1h]', desc: 'Zeitreihe mit 1-Stunden Intervall', tags: ['parametrized'] },
+                            { name: 'test_time_series_intervals[4h]', desc: 'Zeitreihe mit 4-Stunden Intervall', tags: ['parametrized'] },
+                            { name: 'test_time_series_intervals[1day]', desc: 'Zeitreihe mit Tages-Intervall', tags: ['parametrized'] },
+                            { name: 'test_rsi_indicator', desc: 'RSI Indikator (Relative Strength Index) mit time_period' },
+                            { name: 'test_macd_indicator', desc: 'MACD Indikator (Moving Average Convergence Divergence)' },
+                            { name: 'test_stoch_indicator', desc: 'Stochastic Oscillator (%K, %D)' },
+                            { name: 'test_cci_indicator', desc: 'Commodity Channel Index mit time_period' },
+                            { name: 'test_adx_indicator', desc: 'Average Directional Index (Trendstärke)' },
+                            { name: 'test_willr_indicator', desc: 'Williams %R (Momentum-Oszillator)' },
+                            { name: 'test_moving_averages[sma]', desc: 'Simple Moving Average', tags: ['parametrized'] },
+                            { name: 'test_moving_averages[ema]', desc: 'Exponential Moving Average', tags: ['parametrized'] },
+                            { name: 'test_moving_averages[wma]', desc: 'Weighted Moving Average', tags: ['parametrized'] },
+                            { name: 'test_moving_averages[dema]', desc: 'Double Exponential Moving Average', tags: ['parametrized'] },
+                            { name: 'test_moving_averages[tema]', desc: 'Triple Exponential Moving Average', tags: ['parametrized'] },
+                            { name: 'test_supertrend_indicator', desc: 'Supertrend Indikator (Trend-Following)' },
+                            { name: 'test_ichimoku_indicator', desc: 'Ichimoku Cloud (Tenkan, Kijun, Senkou, Chikou)' },
+                            { name: 'test_sar_indicator', desc: 'Parabolic SAR (Stop and Reverse)' },
+                            { name: 'test_bbands_indicator', desc: 'Bollinger Bands (upper, middle, lower)' },
+                            { name: 'test_atr_indicator', desc: 'Average True Range (Volatilität)' },
+                            { name: 'test_percent_b_indicator', desc: 'Percent B (%B) - Position innerhalb Bollinger Bands' },
+                            { name: 'test_obv_indicator', desc: 'On Balance Volume (Volumen-Indikator)' },
+                            { name: 'test_vwap_indicator', desc: 'Volume Weighted Average Price' },
+                            { name: 'test_ad_indicator', desc: 'Accumulation/Distribution Line' },
+                            { name: 'test_crsi_indicator', desc: 'Connors RSI (3-Komponenten RSI für Mean-Reversion)' },
+                            { name: 'test_linearregslope_indicator', desc: 'Linear Regression Slope (Trendstärke als Zahl)' },
+                            { name: 'test_ht_trendmode_indicator', desc: 'Hilbert Transform Trend Mode (Trend=1, Range=0)' },
+                            { name: 'test_generic_indicator_endpoint', desc: 'Generischer Indikator-Endpoint /indicator/{symbol}/{indicator}' },
+                            { name: 'test_multiple_indicators', desc: 'POST /twelvedata/multiple: Mehrere Indikatoren auf einmal' },
+                            { name: 'test_invalid_symbol', desc: 'Ungültiges Symbol INVALID_SYMBOL_XYZ → Fehlerbehandlung' },
+                            { name: 'test_invalid_interval', desc: 'Ungültiges Intervall "invalid" → Fehlerbehandlung' },
+                            { name: 'test_rate_limit_handling', desc: 'Rate Limit (429) wird korrekt behandelt' }
                         ]
                     }
                 ]
@@ -1602,32 +1712,32 @@
                     {
                         name: 'test_service_communication.py',
                         path: 'tests/integration/',
-                        description: 'Service-Kommunikation',
+                        description: 'Inter-Service-Kommunikation und Error Propagation',
                         tests: [
-                            { name: 'test_all_services_respond', desc: 'Alle Services antworten auf Health Checks' },
-                            { name: 'test_data_service_provides_ohlcv', desc: 'Data Service liefert OHLCV an andere Services' },
-                            { name: 'test_concurrent_service_requests', desc: 'Parallele Requests an mehrere Services' },
-                            { name: 'test_data_service_symbols_endpoint', desc: 'Data Service /symbols Endpoint' },
-                            { name: 'test_nhits_service_models_endpoint', desc: 'NHITS Service /models Endpoint' },
-                            { name: 'test_rag_service_stats_endpoint', desc: 'RAG Service /stats Endpoint' },
-                            { name: 'test_invalid_symbol_handling', desc: 'Services handeln ungültige Symbole korrekt' },
-                            { name: 'test_missing_required_parameters', desc: 'Fehlende Parameter werden korrekt behandelt' }
+                            { name: 'test_all_services_respond', desc: 'Parallele Health-Checks: Alle 8 Services antworten auf /health' },
+                            { name: 'test_data_service_provides_ohlcv', desc: 'Data Service liefert OHLCV-Daten: Response-Struktur validiert' },
+                            { name: 'test_concurrent_service_requests', desc: 'Concurrent Requests: Alle Services gleichzeitig ansprechen' },
+                            { name: 'test_data_service_symbols_endpoint', desc: 'Data Service /managed-symbols Endpoint funktioniert' },
+                            { name: 'test_nhits_service_models_endpoint', desc: 'NHITS Service /models Endpoint funktioniert' },
+                            { name: 'test_rag_service_stats_endpoint', desc: 'RAG Service /stats Endpoint funktioniert' },
+                            { name: 'test_invalid_symbol_handling', desc: 'Ungültiges Symbol INVALID_SYMBOL_12345 → 400/404/422 bei allen Services' },
+                            { name: 'test_missing_required_parameters', desc: 'Fehlende Parameter → 422 Validation Error' }
                         ]
                     },
                     {
                         name: 'test_data_gateway.py',
                         path: 'tests/integration/',
-                        description: 'Data Gateway Pattern Validierung',
+                        description: 'Data Gateway Pattern: Alle Services nutzen Data Service als einziges Gateway für externe Daten',
                         tests: [
-                            { name: 'test_nhits_uses_data_service', desc: 'NHITS holt Daten über Data Service' },
-                            { name: 'test_rag_uses_data_service_for_context', desc: 'RAG nutzt Data Service für Trading-Kontext' },
-                            { name: 'test_llm_uses_data_service', desc: 'LLM nutzt Data Service für Marktdaten' },
-                            { name: 'test_data_to_nhits_chain', desc: 'Data → NHITS Kette funktioniert' },
-                            { name: 'test_full_analysis_chain', desc: 'Data → NHITS → RAG → LLM Kette (E2E)' },
-                            { name: 'test_data_source_fallback', desc: 'EasyInsight → TwelveData → Yahoo Fallback' },
-                            { name: 'test_multiple_symbols_data_fetch', desc: 'Mehrere Symbole parallel abrufen' },
-                            { name: 'test_fetch_all_external_sources', desc: 'Alle externen Quellen abrufen' },
-                            { name: 'test_trading_context_aggregation', desc: 'Trading-Kontext Aggregation' }
+                            { name: 'test_nhits_uses_data_service', desc: 'NHITS Service ruft Trainingsdaten über Data Service ab (nicht direkt)' },
+                            { name: 'test_rag_uses_data_service_for_context', desc: 'RAG Service holt Trading-Kontext via Data Service Gateway' },
+                            { name: 'test_llm_uses_data_service', desc: 'LLM Service nutzt Data Service für Marktdaten in Analysen' },
+                            { name: 'test_data_to_nhits_chain', desc: 'Kette funktioniert: Data OHLCV → NHITS Forecast' },
+                            { name: 'test_full_analysis_chain', desc: 'E2E Kette: Data → NHITS → RAG → LLM für vollständige Analyse' },
+                            { name: 'test_data_source_fallback', desc: 'Fallback-Logik: EasyInsight → TwelveData → Yahoo Finance' },
+                            { name: 'test_multiple_symbols_data_fetch', desc: 'Paralleler Abruf: BTCUSD, ETHUSD, EURUSD gleichzeitig' },
+                            { name: 'test_fetch_all_external_sources', desc: 'POST /fetch-all: Sentiment, Macro, OnChain parallel' },
+                            { name: 'test_trading_context_aggregation', desc: 'Trading-Kontext aggregiert Daten aus allen Quellen' }
                         ]
                     }
                 ]
@@ -1635,23 +1745,27 @@
             contract: {
                 title: 'Contract Tests',
                 icon: '&#128221;',
-                description: 'API-Schema-Validierung mit Pydantic. Prüft dass Response-Formate exakt den definierten Schemas entsprechen.',
+                description: 'API-Schema-Validierung. Prüft dass Response-Formate exakt den definierten Schemas entsprechen.',
                 files: [
                     {
                         name: 'test_api_contracts.py',
-                        path: 'tests/contracts/',
-                        description: 'API Response Schema Validierung',
+                        path: 'tests/contract/',
+                        description: 'Response Schema Validierung für alle Services',
                         tests: [
-                            { name: 'test_data_service_health_contract', desc: 'Data Service Health Response Schema' },
-                            { name: 'test_nhits_service_health_contract', desc: 'NHITS Service Health Response Schema' },
-                            { name: 'test_rag_service_health_contract', desc: 'RAG Service Health Response Schema' },
-                            { name: 'test_symbols_list_contract', desc: 'Symbol-Liste Response Schema' },
-                            { name: 'test_ohlcv_response_contract', desc: 'OHLCV Response Schema' },
-                            { name: 'test_ohlcv_price_values_positive', desc: 'OHLCV Preise sind positiv' },
-                            { name: 'test_ohlcv_high_low_consistency', desc: 'OHLCV High >= Low' },
-                            { name: 'test_forecast_response_contract', desc: 'Forecast Response Schema' },
-                            { name: 'test_validation_error_contract', desc: 'Validation Error Format (422)' },
-                            { name: 'test_not_found_error_contract', desc: 'Not Found Error Format (404)' }
+                            { name: 'test_health_response_contract[data]', desc: 'Data Service: /health Response hat "status" Feld mit healthy/ok/running', tags: ['parametrized'] },
+                            { name: 'test_health_response_contract[nhits]', desc: 'NHITS Service: /health Response Schema konform', tags: ['parametrized'] },
+                            { name: 'test_health_response_contract[tcn]', desc: 'TCN Service: /health Response Schema konform', tags: ['parametrized'] },
+                            { name: 'test_health_response_contract[hmm]', desc: 'HMM Service: /health Response Schema konform', tags: ['parametrized'] },
+                            { name: 'test_health_response_contract[embedder]', desc: 'Embedder Service: /health Response Schema konform', tags: ['parametrized'] },
+                            { name: 'test_health_response_contract[rag]', desc: 'RAG Service: /health Response Schema konform', tags: ['parametrized'] },
+                            { name: 'test_health_response_contract[llm]', desc: 'LLM Service: /health Response Schema konform', tags: ['parametrized'] },
+                            { name: 'test_ohlcv_response_contract', desc: 'OHLCV Response: Array oder {data: [...]} mit OHLCV-Objekten' },
+                            { name: 'test_managed_symbols_response_contract', desc: 'Managed Symbols: Array oder Dict mit Symbol-Objekten' },
+                            { name: 'test_forecast_response_contract', desc: 'Forecast Response: predicted_prices/predictions/forecast Feld vorhanden' },
+                            { name: 'test_models_response_contract', desc: 'Models Response: Liste oder Dict mit Modell-Informationen' },
+                            { name: 'test_context_response_contract', desc: 'RAG Context: Dict mit aggregierten Kontextdaten' },
+                            { name: 'test_stats_response_contract', desc: 'RAG Stats: Dict mit Statistik-Feldern' },
+                            { name: 'test_analyze_response_contract', desc: 'LLM Analyze: Dict mit Analyse-Ergebnis' }
                         ]
                     }
                 ]
@@ -1755,8 +1869,9 @@
 
         function runModalTests() {
             if (currentModalCategory) {
+                const category = currentModalCategory;  // Save before closeTestModal() clears it
                 closeTestModal();
-                runTestCategory(currentModalCategory);
+                runTestCategory(category);
             }
         }
 
