@@ -11,8 +11,12 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.watchdog.txt .
 RUN pip install --no-cache-dir -r requirements.watchdog.txt
 
-# Application code
-COPY src/ ./src/
+# Application code - nur watchdog_app und shared
+COPY src/services/watchdog_app/ ./src/services/watchdog_app/
+COPY src/shared/ ./src/shared/
+
+# Leere __init__.py Dateien erstellen
+RUN touch ./src/__init__.py ./src/services/__init__.py
 
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1

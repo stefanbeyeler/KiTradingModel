@@ -179,7 +179,10 @@
       "Bash(git fetch:*)",
       "Bash(ollama pull:*)",
       "Bash(API_BASE_URL=http://10.1.19.101 python -m pytest:*)",
-      "Bash(TEST_SERVICE_HOST=10.1.19.101 python -m pytest:*)"
+      "Bash(TEST_SERVICE_HOST=10.1.19.101 python -m pytest:*)",
+      "Bash(rsync:*)",
+      "Bash(src/services/watchdog_app )",
+      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/src/services/)"
     ],
     "deny": [],
     "ask": []

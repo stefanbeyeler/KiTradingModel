@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   trading-watchdog:
     build:
@@ -8,18 +6,8 @@ services:
     container_name: trading-watchdog
     ports:
       - "3010:3010"
-    environment:
-      - WATCHDOG_PORT=3010
-      - WATCHDOG_CHECK_INTERVAL_SECONDS=30
-      - WATCHDOG_TIMEOUT_SECONDS=10
-      - WATCHDOG_TELEGRAM_ENABLED=${WATCHDOG_TELEGRAM_ENABLED:-true}
-      - WATCHDOG_TELEGRAM_BOT_TOKEN=${WATCHDOG_TELEGRAM_BOT_TOKEN:-}
-      - WATCHDOG_TELEGRAM_CHAT_IDS=${WATCHDOG_TELEGRAM_CHAT_IDS:-}
-      - WATCHDOG_ALERT_COOLDOWN_MINUTES=15
-      - WATCHDOG_ALERT_ON_RECOVERY=true
-      - WATCHDOG_ALERT_ON_CRITICAL=true
-      - WATCHDOG_ALERT_ON_HIGH=true
-      - WATCHDOG_ALERT_ON_MEDIUM=false
+    env_file:
+      - .env.watchdog
     networks:
       - trading-net
     restart: unless-stopped

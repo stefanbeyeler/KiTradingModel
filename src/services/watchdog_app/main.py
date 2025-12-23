@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI):
     global health_checker, telegram_notifier, alert_manager, monitoring_task
 
     setup_logging("watchdog")
-    log_startup_info("watchdog", VERSION, settings.watchdog_port, gpu_enabled=False)
+    log_startup_info("watchdog", VERSION, settings.watchdog_port, gpu_available=False)
 
     # Services initialisieren
     health_checker = HealthChecker(settings)
