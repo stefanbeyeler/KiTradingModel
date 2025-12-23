@@ -175,7 +175,8 @@
       "Bash(make test:*)",
       "Bash(make test-unit:*)",
       "Bash(pytest:*)",
-      "Bash(scp:*)"
+      "Bash(scp:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []
