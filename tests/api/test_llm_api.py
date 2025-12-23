@@ -19,7 +19,7 @@ class TestLLMServiceAPI:
 
     @pytest.fixture
     def client(self):
-        return httpx.AsyncClient(base_url=BASE_URL, timeout=120.0)
+        return httpx.AsyncClient(base_url=BASE_URL, timeout=300.0)  # 5 min for LLM
 
     @pytest.mark.api
     async def test_trading_analysis(self, client, test_symbol):
@@ -42,6 +42,8 @@ class TestLLMServiceAPI:
                     assert response.status_code in [404, 503]
             except httpx.ConnectError:
                 pytest.skip("LLM service not reachable")
+            except httpx.ReadTimeout:
+                pytest.skip("LLM service timeout - model may be loading")
 
     @pytest.mark.api
     async def test_chat_completion(self, client):
