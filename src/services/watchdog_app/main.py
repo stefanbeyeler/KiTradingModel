@@ -96,6 +96,7 @@ app = FastAPI(
     description="Überwacht alle Microservices und alarmiert per Telegram",
     version=VERSION,
     lifespan=lifespan,
+    root_path="/watchdog",
     docs_url="/docs",
     redoc_url="/redoc"
 )
