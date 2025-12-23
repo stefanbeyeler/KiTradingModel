@@ -572,6 +572,37 @@
             margin-top: 0.2rem;
         }
 
+        .dataflow-node .node-status {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 0, 0, 0.3);
+            background: #6b7280;
+        }
+
+        .dataflow-node .node-status.healthy {
+            background: #10b981;
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+        }
+
+        .dataflow-node .node-status.unhealthy {
+            background: #ef4444;
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+        }
+
+        .dataflow-node .node-status.loading {
+            background: #f59e0b;
+            animation: pulse-status 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-status {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
         .dataflow-arrow {
             color: rgba(255, 255, 255, 0.4);
             font-size: 1.2rem;
@@ -960,6 +991,7 @@
                     <!-- Data Gateway -->
                     <div class="dataflow-row">
                         <div class="dataflow-node gateway">
+                            <span class="node-status loading" id="df-data-status"></span>
                             <span class="node-icon">&#128279;</span>
                             <span class="node-name">Data Service</span>
                             <span class="node-port">:3001 - Gateway</span>
@@ -979,6 +1011,7 @@
                         <div class="dataflow-node-group">
                             <div class="branch-line"></div>
                             <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-nhits-status"></span>
                                 <span class="node-icon">&#128202;</span>
                                 <span class="node-name">NHITS</span>
                                 <span class="node-port">:3002 - Prognose</span>
@@ -987,6 +1020,7 @@
                         <div class="dataflow-node-group">
                             <div class="branch-line"></div>
                             <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-tcn-status"></span>
                                 <span class="node-icon">&#128200;</span>
                                 <span class="node-name">TCN</span>
                                 <span class="node-port">:3003 - Pattern</span>
@@ -995,6 +1029,7 @@
                         <div class="dataflow-node-group">
                             <div class="branch-line"></div>
                             <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-hmm-status"></span>
                                 <span class="node-icon">&#128201;</span>
                                 <span class="node-name">HMM</span>
                                 <span class="node-port">:3004 - Regime</span>
@@ -1003,6 +1038,7 @@
                         <div class="dataflow-node-group">
                             <div class="branch-line"></div>
                             <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-embedder-status"></span>
                                 <span class="node-icon">&#129302;</span>
                                 <span class="node-name">Embedder</span>
                                 <span class="node-port">:3005 - Vectors</span>
@@ -1021,12 +1057,14 @@
                     <!-- Analysis Layer -->
                     <div class="dataflow-row">
                         <div class="dataflow-node analysis">
+                            <span class="node-status loading" id="df-rag-status"></span>
                             <span class="node-icon">&#128269;</span>
                             <span class="node-name">RAG Service</span>
                             <span class="node-port">:3008 - Vector Search</span>
                         </div>
                         <div class="dataflow-arrow">&#8594;</div>
                         <div class="dataflow-node analysis">
+                            <span class="node-status loading" id="df-llm-status"></span>
                             <span class="node-icon">&#129504;</span>
                             <span class="node-name">LLM Service</span>
                             <span class="node-port">:3009 - Llama 3.1 70B</span>
@@ -1044,6 +1082,7 @@
                     <!-- Output -->
                     <div class="dataflow-row">
                         <div class="dataflow-node output">
+                            <span class="node-status healthy" id="df-frontend-status"></span>
                             <span class="node-icon">&#128187;</span>
                             <span class="node-name">Frontend</span>
                             <span class="node-port">:3000 - Dashboard</span>
@@ -1389,6 +1428,28 @@
 
         let healthyServices = 0;
 
+        // Mapping service name to dataflow status element id
+        const dataflowStatusMap = {
+            'data': 'df-data-status',
+            'nhits': 'df-nhits-status',
+            'tcn': 'df-tcn-status',
+            'hmm': 'df-hmm-status',
+            'embedder': 'df-embedder-status',
+            'rag': 'df-rag-status',
+            'llm': 'df-llm-status'
+        };
+
+        function updateDataflowStatus(service, isHealthy) {
+            const dfStatusId = dataflowStatusMap[service];
+            if (dfStatusId) {
+                const dfStatusEl = document.getElementById(dfStatusId);
+                if (dfStatusEl) {
+                    dfStatusEl.classList.remove('loading', 'healthy', 'unhealthy');
+                    dfStatusEl.classList.add(isHealthy ? 'healthy' : 'unhealthy');
+                }
+            }
+        }
+
         async function checkHealth(service, port, statusId) {
             try {
                 const res = await fetch(`/${service}/health`);
@@ -1400,11 +1461,18 @@
 
                 if (data.status === 'healthy') healthyServices++;
 
+                // Update dataflow status indicator
+                updateDataflowStatus(service, data.status === 'healthy');
+
                 return data;
             } catch (err) {
                 const statusEl = document.getElementById(statusId);
                 statusEl.textContent = 'Offline';
                 statusEl.className = 'status-badge status-unhealthy';
+
+                // Update dataflow status indicator
+                updateDataflowStatus(service, false);
+
                 return null;
             }
         }
