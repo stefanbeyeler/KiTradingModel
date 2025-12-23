@@ -474,6 +474,194 @@
         .service-resource.ram .value { color: #a78bfa; }
         .service-resource.net .value { color: #34d399; }
 
+        /* Data Flow Diagram Styles */
+        .dataflow-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .dataflow-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .dataflow-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dataflow-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .dataflow-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .dataflow-node {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            text-align: center;
+            min-width: 100px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .dataflow-node:hover {
+            transform: translateY(-2px);
+            border-color: rgba(100, 200, 255, 0.5);
+            box-shadow: 0 4px 12px rgba(100, 200, 255, 0.2);
+        }
+
+        .dataflow-node.external {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .dataflow-node.gateway {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+            min-width: 140px;
+        }
+
+        .dataflow-node.ml {
+            border-color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .dataflow-node.analysis {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .dataflow-node.output {
+            border-color: #06b6d4;
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        .dataflow-node .node-icon {
+            font-size: 1.2rem;
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        .dataflow-node .node-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: block;
+        }
+
+        .dataflow-node .node-port {
+            font-size: 0.6rem;
+            opacity: 0.6;
+            display: block;
+            margin-top: 0.2rem;
+        }
+
+        .dataflow-arrow {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .dataflow-arrow.down {
+            transform: rotate(90deg);
+        }
+
+        .dataflow-arrow-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .dataflow-arrow-group .arrow-label {
+            font-size: 0.6rem;
+            opacity: 0.5;
+            white-space: nowrap;
+        }
+
+        .dataflow-connector {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.3rem 0;
+        }
+
+        .dataflow-connector .connector-line {
+            width: 2px;
+            height: 20px;
+            background: linear-gradient(to bottom, rgba(16, 185, 129, 0.5), rgba(139, 92, 246, 0.5));
+        }
+
+        .dataflow-connector .connector-arrows {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .dataflow-branch {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 0.5rem;
+            position: relative;
+        }
+
+        .dataflow-branch::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4), rgba(139, 92, 246, 0.4), transparent);
+        }
+
+        .dataflow-node-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .dataflow-node-group .branch-line {
+            width: 2px;
+            height: 15px;
+            background: rgba(139, 92, 246, 0.4);
+        }
+
+        @media (max-width: 900px) {
+            .dataflow-row {
+                gap: 0.3rem;
+            }
+            .dataflow-node {
+                min-width: 80px;
+                padding: 0.5rem 0.7rem;
+            }
+            .dataflow-node .node-name {
+                font-size: 0.65rem;
+            }
+            .dataflow-branch {
+                flex-wrap: wrap;
+            }
+        }
+
         footer {
             text-align: center;
             padding: 1.5rem;
@@ -735,6 +923,261 @@
     </header>
 
     <div class="container">
+        <!-- Data Flow Diagram -->
+        <div class="dataflow-section">
+            <div class="dataflow-card">
+                <h3><span class="metric-icon">&#128260;</span> Datenfluss Architektur</h3>
+                <div class="dataflow-diagram">
+                    <!-- External Data Sources -->
+                    <div class="dataflow-row">
+                        <div class="dataflow-node external">
+                            <span class="node-icon">&#127760;</span>
+                            <span class="node-name">EasyInsight</span>
+                            <span class="node-port">TimescaleDB</span>
+                        </div>
+                        <div class="dataflow-arrow">&#8594;</div>
+                        <div class="dataflow-node external">
+                            <span class="node-icon">&#128200;</span>
+                            <span class="node-name">TwelveData</span>
+                            <span class="node-port">Fallback 1</span>
+                        </div>
+                        <div class="dataflow-arrow">&#8594;</div>
+                        <div class="dataflow-node external">
+                            <span class="node-icon">&#128176;</span>
+                            <span class="node-name">Yahoo Finance</span>
+                            <span class="node-port">Fallback 2</span>
+                        </div>
+                    </div>
+
+                    <!-- Arrow down to Gateway -->
+                    <div class="dataflow-connector">
+                        <div class="dataflow-arrow-group">
+                            <span class="arrow-label">OHLCV / Indicators</span>
+                            <span class="dataflow-arrow down">&#8595;</span>
+                        </div>
+                    </div>
+
+                    <!-- Data Gateway -->
+                    <div class="dataflow-row">
+                        <div class="dataflow-node gateway">
+                            <span class="node-icon">&#128279;</span>
+                            <span class="node-name">Data Service</span>
+                            <span class="node-port">:3001 - Gateway</span>
+                        </div>
+                    </div>
+
+                    <!-- Arrow down to ML Services -->
+                    <div class="dataflow-connector">
+                        <div class="dataflow-arrow-group">
+                            <span class="arrow-label">Marktdaten</span>
+                            <span class="dataflow-arrow down">&#8595;</span>
+                        </div>
+                    </div>
+
+                    <!-- ML Services Row -->
+                    <div class="dataflow-branch">
+                        <div class="dataflow-node-group">
+                            <div class="branch-line"></div>
+                            <div class="dataflow-node ml">
+                                <span class="node-icon">&#128202;</span>
+                                <span class="node-name">NHITS</span>
+                                <span class="node-port">:3002 - Prognose</span>
+                            </div>
+                        </div>
+                        <div class="dataflow-node-group">
+                            <div class="branch-line"></div>
+                            <div class="dataflow-node ml">
+                                <span class="node-icon">&#128200;</span>
+                                <span class="node-name">TCN</span>
+                                <span class="node-port">:3003 - Pattern</span>
+                            </div>
+                        </div>
+                        <div class="dataflow-node-group">
+                            <div class="branch-line"></div>
+                            <div class="dataflow-node ml">
+                                <span class="node-icon">&#128201;</span>
+                                <span class="node-name">HMM</span>
+                                <span class="node-port">:3004 - Regime</span>
+                            </div>
+                        </div>
+                        <div class="dataflow-node-group">
+                            <div class="branch-line"></div>
+                            <div class="dataflow-node ml">
+                                <span class="node-icon">&#129302;</span>
+                                <span class="node-name">Embedder</span>
+                                <span class="node-port">:3005 - Vectors</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Arrow down to Analysis -->
+                    <div class="dataflow-connector">
+                        <div class="dataflow-arrow-group">
+                            <span class="arrow-label">Predictions / Embeddings</span>
+                            <span class="dataflow-arrow down">&#8595;</span>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Layer -->
+                    <div class="dataflow-row">
+                        <div class="dataflow-node analysis">
+                            <span class="node-icon">&#128269;</span>
+                            <span class="node-name">RAG Service</span>
+                            <span class="node-port">:3008 - Vector Search</span>
+                        </div>
+                        <div class="dataflow-arrow">&#8594;</div>
+                        <div class="dataflow-node analysis">
+                            <span class="node-icon">&#129504;</span>
+                            <span class="node-name">LLM Service</span>
+                            <span class="node-port">:3009 - Llama 3.1 70B</span>
+                        </div>
+                    </div>
+
+                    <!-- Arrow down to Output -->
+                    <div class="dataflow-connector">
+                        <div class="dataflow-arrow-group">
+                            <span class="arrow-label">Trading Insights</span>
+                            <span class="dataflow-arrow down">&#8595;</span>
+                        </div>
+                    </div>
+
+                    <!-- Output -->
+                    <div class="dataflow-row">
+                        <div class="dataflow-node output">
+                            <span class="node-icon">&#128187;</span>
+                            <span class="node-name">Frontend</span>
+                            <span class="node-port">:3000 - Dashboard</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Resources Section (Combined CPU, GPU, Storage) -->
+        <div class="system-resources-section">
+            <div class="system-resources-card">
+                <h3><span class="metric-icon">&#9881;</span> System-Ressourcen (Jetson AGX Thor)</h3>
+
+                <!-- Main Resources Grid -->
+                <div class="resources-grid">
+                    <!-- CPU Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#128187;</span> CPU</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar cpu" id="cpu-bar" style="width: 0%">
+                                <span id="cpu-percent">-</span>
+                            </div>
+                        </div>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
+                                <span class="value" id="cpu-cores">-</span>
+                                <span class="label">Kerne</span>
+                            </div>
+                            <div class="resource-stat">
+                                <span class="value temp-indicator" id="cpu-temp">-</span>
+                                <span class="label">Temp</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GPU Panel -->
+                    <div class="resource-panel" id="gpu-panel">
+                        <h4><span class="metric-icon">&#127918;</span> GPU</h4>
+                        <div id="gpu-content">
+                            <div class="metric-bar-container">
+                                <div class="metric-bar gpu-memory" id="gpu-memory-bar" style="width: 0%">
+                                    <span id="gpu-memory-percent">-</span>
+                                </div>
+                            </div>
+                            <div class="resource-stats">
+                                <div class="resource-stat">
+                                    <span class="value temp-indicator" id="gpu-temp">-</span>
+                                    <span class="label">Temp</span>
+                                </div>
+                                <div class="resource-stat">
+                                    <span class="value" id="gpu-vram">-</span>
+                                    <span class="label">VRAM</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="gpu-unavailable" class="storage-loading" style="display: none;">
+                            Keine GPU
+                        </div>
+                    </div>
+
+                    <!-- Shared VRAM Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#128204;</span> Shared VRAM</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar memory" id="memory-bar" style="width: 0%">
+                                <span id="memory-percent">-</span>
+                            </div>
+                        </div>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
+                                <span class="value" id="memory-total">-</span>
+                                <span class="label">Gesamt</span>
+                            </div>
+                            <div class="resource-stat">
+                                <span class="value" id="memory-used">-</span>
+                                <span class="label">Belegt</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Storage Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#128190;</span> Storage</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar disk" id="disk-bar" style="width: 0%">
+                                <span id="disk-percent">-</span>
+                            </div>
+                        </div>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
+                                <span class="value" id="disk-total">-</span>
+                                <span class="label">Gesamt</span>
+                            </div>
+                            <div class="resource-stat">
+                                <span class="value" id="disk-free">-</span>
+                                <span class="label">Frei</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Power Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#9889;</span> Power</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar power" id="power-bar" style="width: 0%">
+                                <span id="power-percent">-</span>
+                            </div>
+                        </div>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
+                                <span class="value power-indicator" id="gpu-power">-</span>
+                                <span class="label">GPU</span>
+                            </div>
+                            <div class="resource-stat">
+                                <span class="value power-indicator" id="total-power">-</span>
+                                <span class="label">Gesamt</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Volumes Row -->
+                <div class="storage-details-row" style="grid-template-columns: 1fr;">
+                    <div class="storage-volumes">
+                        <h4>&#128451; Docker Volumes</h4>
+                        <div class="volume-list" id="volume-list">
+                            <div class="storage-loading">Lade Volumes...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="services-grid">
             <!-- EasyInsight API -->
             <div class="service-card" id="easyinsight-card">
@@ -913,131 +1356,6 @@
                     <a href="/service-llm.html" target="_blank">Info</a>
                     <a href="/llm/docs" target="_blank">API Docs</a>
                     <a href="/config-llm.html" target="_blank">Config</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- System Resources Section (Combined CPU, GPU, Storage) -->
-        <div class="system-resources-section">
-            <div class="system-resources-card">
-                <h3><span class="metric-icon">&#9881;</span> System-Ressourcen (Jetson AGX Thor)</h3>
-
-                <!-- Main Resources Grid -->
-                <div class="resources-grid">
-                    <!-- CPU Panel -->
-                    <div class="resource-panel">
-                        <h4><span class="metric-icon">&#128187;</span> CPU</h4>
-                        <div class="metric-bar-container">
-                            <div class="metric-bar cpu" id="cpu-bar" style="width: 0%">
-                                <span id="cpu-percent">-</span>
-                            </div>
-                        </div>
-                        <div class="resource-stats">
-                            <div class="resource-stat">
-                                <span class="value" id="cpu-cores">-</span>
-                                <span class="label">Kerne</span>
-                            </div>
-                            <div class="resource-stat">
-                                <span class="value temp-indicator" id="cpu-temp">-</span>
-                                <span class="label">Temp</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- GPU Panel -->
-                    <div class="resource-panel" id="gpu-panel">
-                        <h4><span class="metric-icon">&#127918;</span> GPU</h4>
-                        <div id="gpu-content">
-                            <div class="metric-bar-container">
-                                <div class="metric-bar gpu-memory" id="gpu-memory-bar" style="width: 0%">
-                                    <span id="gpu-memory-percent">-</span>
-                                </div>
-                            </div>
-                            <div class="resource-stats">
-                                <div class="resource-stat">
-                                    <span class="value temp-indicator" id="gpu-temp">-</span>
-                                    <span class="label">Temp</span>
-                                </div>
-                                <div class="resource-stat">
-                                    <span class="value" id="gpu-vram">-</span>
-                                    <span class="label">VRAM</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="gpu-unavailable" class="storage-loading" style="display: none;">
-                            Keine GPU
-                        </div>
-                    </div>
-
-                    <!-- Shared VRAM Panel -->
-                    <div class="resource-panel">
-                        <h4><span class="metric-icon">&#128204;</span> Shared VRAM</h4>
-                        <div class="metric-bar-container">
-                            <div class="metric-bar memory" id="memory-bar" style="width: 0%">
-                                <span id="memory-percent">-</span>
-                            </div>
-                        </div>
-                        <div class="resource-stats">
-                            <div class="resource-stat">
-                                <span class="value" id="memory-total">-</span>
-                                <span class="label">Gesamt</span>
-                            </div>
-                            <div class="resource-stat">
-                                <span class="value" id="memory-used">-</span>
-                                <span class="label">Belegt</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Storage Panel -->
-                    <div class="resource-panel">
-                        <h4><span class="metric-icon">&#128190;</span> Storage</h4>
-                        <div class="metric-bar-container">
-                            <div class="metric-bar disk" id="disk-bar" style="width: 0%">
-                                <span id="disk-percent">-</span>
-                            </div>
-                        </div>
-                        <div class="resource-stats">
-                            <div class="resource-stat">
-                                <span class="value" id="disk-total">-</span>
-                                <span class="label">Gesamt</span>
-                            </div>
-                            <div class="resource-stat">
-                                <span class="value" id="disk-free">-</span>
-                                <span class="label">Frei</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Power Panel -->
-                    <div class="resource-panel">
-                        <h4><span class="metric-icon">&#9889;</span> Power</h4>
-                        <div class="metric-bar-container">
-                            <div class="metric-bar power" id="power-bar" style="width: 0%">
-                                <span id="power-percent">-</span>
-                            </div>
-                        </div>
-                        <div class="resource-stats">
-                            <div class="resource-stat">
-                                <span class="value power-indicator" id="gpu-power">-</span>
-                                <span class="label">GPU</span>
-                            </div>
-                            <div class="resource-stat">
-                                <span class="value power-indicator" id="total-power">-</span>
-                                <span class="label">Gesamt</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Volumes Row -->
-                <div class="storage-details-row" style="grid-template-columns: 1fr;">
-                    <div class="storage-volumes">
-                        <h4>&#128451; Docker Volumes</h4>
-                        <div class="volume-list" id="volume-list">
-                            <div class="storage-loading">Lade Volumes...</div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
