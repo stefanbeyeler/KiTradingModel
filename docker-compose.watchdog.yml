@@ -10,6 +10,7 @@ services:
       - .env.watchdog
     networks:
       - trading-net
+      - kitradingmodel_trading-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
@@ -25,4 +26,6 @@ services:
 
 networks:
   trading-net:
+    external: true
+  kitradingmodel_trading-net:
     external: true

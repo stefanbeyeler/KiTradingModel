@@ -594,6 +594,11 @@
             background: rgba(6, 182, 212, 0.1);
         }
 
+        .dataflow-node.monitoring {
+            border-color: #ec4899;
+            background: rgba(236, 72, 153, 0.1);
+        }
+
         .dataflow-node .node-icon {
             font-size: 1rem;
         }
@@ -933,7 +938,7 @@
             <h1>KI Trading Model</h1>
             <div class="header-status">
                 <a href="/testing.html" class="header-btn">&#128203; Tests</a>
-                <span id="services-count">Services: -/8</span>
+                <span id="services-count">Services: -/9</span>
                 <span id="endpoints-count">Endpoints: -</span>
                 <span id="last-update">Update: -</span>
             </div>
@@ -1060,12 +1065,22 @@
                     <!-- Output Stage -->
                     <div class="dataflow-stage">
                         <span class="dataflow-stage-label">Output</span>
-                        <div class="dataflow-node output">
-                            <span class="node-status healthy" id="df-frontend-status"></span>
-                            <span class="node-icon">&#128187;</span>
-                            <div class="node-info">
-                                <span class="node-name">Frontend</span>
-                                <span class="node-port">:3000</span>
+                        <div class="dataflow-nodes-vertical">
+                            <div class="dataflow-node output">
+                                <span class="node-status healthy" id="df-frontend-status"></span>
+                                <span class="node-icon">&#128187;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Frontend</span>
+                                    <span class="node-port">:3000</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node monitoring">
+                                <span class="node-status loading" id="df-watchdog-status"></span>
+                                <span class="node-icon">&#128065;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Watchdog</span>
+                                    <span class="node-port">:3010</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1378,12 +1393,36 @@
                     <a href="/config-llm.html" target="_blank">Config</a>
                 </div>
             </div>
+
+            <!-- Watchdog Service -->
+            <div class="service-card" id="watchdog-card">
+                <div class="service-header">
+                    <h2>Watchdog</h2>
+                    <span class="status-badge status-loading" id="watchdog-status">Laden...</span>
+                </div>
+                <p>Service-Monitoring mit Telegram-Alerts - Überwacht alle Microservices und sendet Alarme.</p>
+                <div class="service-info" id="watchdog-info">
+                    <div><span class="label">Port</span><span>3010</span></div>
+                    <div><span class="label">Services</span><span id="watchdog-services">-</span></div>
+                    <div><span class="label">Telegram</span><span id="watchdog-telegram">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource ram"><span class="value">512 MB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource cpu"><span class="value">CPU</span><span class="label">Mode</span></div>
+                    <div class="service-resource net"><span class="value">trading-net</span><span class="label">Network</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/watchdog/health" target="_blank">Health</a>
+                    <a href="/watchdog/docs" target="_blank">API Docs</a>
+                    <a href="/watchdog/api/v1/status" target="_blank">Status</a>
+                </div>
+            </div>
         </div>
 
     </div>
 
     <footer>
-        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + TCN + HMM + Embedder + RAG + LLM (Llama 3.1 70B)
+        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + TCN + HMM + Embedder + RAG + LLM + Watchdog
     </footer>
 
     <!-- Symbols Modal -->
@@ -1418,7 +1457,8 @@
             'hmm': 'df-hmm-status',
             'embedder': 'df-embedder-status',
             'rag': 'df-rag-status',
-            'llm': 'df-llm-status'
+            'llm': 'df-llm-status',
+            'watchdog': 'df-watchdog-status'
         };
 
         function updateDataflowStatus(service, isHealthy) {
@@ -1502,6 +1542,23 @@
 
         async function updateEmbedderInfo() {
             await checkHealth('embedder', 3005, 'embedder-status');
+        }
+
+        async function updateWatchdogInfo() {
+            const data = await checkHealth('watchdog', 3010, 'watchdog-status');
+            if (data) {
+                // Count healthy/total services from watchdog status
+                const servicesEl = document.getElementById('watchdog-services');
+                const telegramEl = document.getElementById('watchdog-telegram');
+
+                if (data.services_monitored !== undefined) {
+                    servicesEl.textContent = `${data.healthy_count || 0}/${data.services_monitored}`;
+                } else {
+                    servicesEl.textContent = '-';
+                }
+
+                telegramEl.textContent = data.telegram_enabled ? 'Aktiv' : 'Inaktiv';
+            }
         }
 
         async function updateEasyInsightInfo() {
@@ -1704,7 +1761,7 @@
 
         async function countEndpoints() {
             // Count API endpoints from OpenAPI specs of all services
-            const services = ['data', 'nhits', 'tcn', 'hmm', 'embedder', 'rag', 'llm'];
+            const services = ['data', 'nhits', 'tcn', 'hmm', 'embedder', 'rag', 'llm', 'watchdog'];
             let count = 0;
 
             for (const service of services) {
@@ -1733,6 +1790,7 @@
                 updateTcnInfo(),
                 updateHmmInfo(),
                 updateEmbedderInfo(),
+                updateWatchdogInfo(),
                 updateEasyInsightInfo(),
                 updateSystemMetrics(),
                 updateStorageMetrics()
@@ -1744,7 +1802,7 @@
                 document.getElementById('endpoints-count').textContent = `Endpoints: ${totalEndpoints}`;
             });
 
-            document.getElementById('services-count').textContent = `Services: ${healthyServices}/8`;
+            document.getElementById('services-count').textContent = `Services: ${healthyServices}/9`;
             document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
         }
 

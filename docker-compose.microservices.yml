@@ -12,6 +12,7 @@ services:
         - EMBEDDER_SERVICE_PORT=${EMBEDDER_SERVICE_PORT:-3005}
         - RAG_SERVICE_PORT=${RAG_SERVICE_PORT:-3008}
         - LLM_SERVICE_PORT=${LLM_SERVICE_PORT:-3009}
+        - WATCHDOG_SERVICE_PORT=${WATCHDOG_SERVICE_PORT:-3010}
     container_name: trading-frontend
     ports:
       - "3000:80"
@@ -25,6 +26,7 @@ services:
       - EMBEDDER_SERVICE_PORT=${EMBEDDER_SERVICE_PORT:-3005}
       - RAG_SERVICE_PORT=${RAG_SERVICE_PORT:-3008}
       - LLM_SERVICE_PORT=${LLM_SERVICE_PORT:-3009}
+      - WATCHDOG_SERVICE_PORT=${WATCHDOG_SERVICE_PORT:-3010}
     depends_on:
       - nhits-service
       - data-service
