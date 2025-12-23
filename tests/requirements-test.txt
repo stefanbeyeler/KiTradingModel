@@ -1,0 +1,36 @@
+# tests/requirements-test.txt
+# Test dependencies for KI Trading Model
+
+# Testing Framework
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+pytest-xdist>=3.5.0  # Parallel test execution
+pytest-timeout>=2.2.0
+pytest-html>=4.1.0
+
+# HTTP Client
+httpx>=0.26.0
+aiohttp>=3.9.0
+
+# Mocking
+pytest-mock>=3.12.0
+respx>=0.20.0  # Mock httpx requests
+aioresponses>=0.7.6
+
+# Load Testing
+locust>=2.20.0
+
+# Validation
+pydantic>=2.5.0
+
+# Reporting
+allure-pytest>=2.13.0
+
+# Code Quality
+ruff>=0.1.0
+mypy>=1.7.0
+
+# Utilities
+python-dotenv>=1.0.0
+faker>=22.0.0
