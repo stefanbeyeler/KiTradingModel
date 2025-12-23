@@ -21,9 +21,14 @@ async def test_service_health(service_name: str, config: Dict[str, str]):
             assert response.status_code == 200, \
                 f"{service_name} health check failed with status {response.status_code}"
 
-            data = response.json()
-            assert data.get("status") in ["healthy", "ok", "running"], \
-                f"{service_name} is not healthy: {data.get('status')}"
+            # Frontend returns plain text "healthy\n", other services return JSON
+            if service_name == "frontend":
+                assert "healthy" in response.text.lower(), \
+                    f"Frontend health check returned unexpected content: {response.text}"
+            else:
+                data = response.json()
+                assert data.get("status") in ["healthy", "ok", "running"], \
+                    f"{service_name} is not healthy: {data.get('status')}"
 
         except httpx.ConnectError:
             pytest.skip(f"{service_name} service not reachable at {config['url']}")

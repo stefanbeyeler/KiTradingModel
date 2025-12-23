@@ -17,18 +17,37 @@ if PROJECT_ROOT not in sys.path:
 # ========== Service URLs ==========
 
 # Allow override via environment variables for different environments
+# When running inside Docker, use container hostnames; otherwise use localhost
 SERVICE_HOST = os.getenv("TEST_SERVICE_HOST", "localhost")
 
-SERVICE_URLS = {
-    "frontend": f"http://{SERVICE_HOST}:3000",
-    "data": f"http://{SERVICE_HOST}:3001",
-    "nhits": f"http://{SERVICE_HOST}:3002",
-    "tcn": f"http://{SERVICE_HOST}:3003",
-    "hmm": f"http://{SERVICE_HOST}:3004",
-    "embedder": f"http://{SERVICE_HOST}:3005",
-    "rag": f"http://{SERVICE_HOST}:3008",
-    "llm": f"http://{SERVICE_HOST}:3009",
-}
+# Check if running inside Docker container (tests run in trading-data container)
+IN_DOCKER = os.path.exists("/.dockerenv") or os.getenv("DOCKER_CONTAINER", False)
+
+# Use Docker hostnames when inside container, otherwise localhost with ports
+# Ports are based on actual container environment variables (docker exec $c printenv PORT)
+if IN_DOCKER:
+    SERVICE_URLS = {
+        "frontend": "http://trading-frontend:80",
+        "data": "http://localhost:3001",  # Same container, use localhost
+        "nhits": "http://trading-nhits:3002",
+        "tcn": "http://trading-tcn:3003",
+        "hmm": "http://trading-hmm:3004",
+        "embedder": "http://trading-embedder:3005",
+        "rag": "http://trading-rag:3008",
+        "llm": "http://trading-llm:3009",
+    }
+else:
+    # External access ports (from docker-compose port mappings)
+    SERVICE_URLS = {
+        "frontend": f"http://{SERVICE_HOST}:3000",
+        "data": f"http://{SERVICE_HOST}:3001",
+        "nhits": f"http://{SERVICE_HOST}:3002",
+        "tcn": f"http://{SERVICE_HOST}:3003",
+        "hmm": f"http://{SERVICE_HOST}:3004",
+        "embedder": f"http://{SERVICE_HOST}:3005",
+        "rag": f"http://{SERVICE_HOST}:3008",
+        "llm": f"http://{SERVICE_HOST}:3009",
+    }
 
 SERVICE_CONFIGS = {
     "frontend": {"url": SERVICE_URLS["frontend"], "health": "/health"},
