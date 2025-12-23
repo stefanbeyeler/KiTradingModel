@@ -474,7 +474,7 @@
         .service-resource.ram .value { color: #a78bfa; }
         .service-resource.net .value { color: #34d399; }
 
-        /* Data Flow Diagram Styles */
+        /* Data Flow Diagram Styles - Horizontal Layout */
         .dataflow-section {
             margin-bottom: 1.5rem;
         }
@@ -483,13 +483,13 @@
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border-radius: 12px;
-            padding: 1.5rem;
+            padding: 1rem 1.5rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .dataflow-card h3 {
-            font-size: 1.1rem;
-            margin-bottom: 1rem;
+            font-size: 1rem;
+            margin-bottom: 0.8rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
@@ -497,34 +497,53 @@
 
         .dataflow-diagram {
             display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            padding: 1rem;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem;
+            overflow-x: auto;
         }
 
-        .dataflow-row {
+        .dataflow-stage {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            gap: 0.5rem;
-            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+
+        .dataflow-stage-label {
+            font-size: 0.55rem;
+            opacity: 0.5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.2rem;
+        }
+
+        .dataflow-nodes-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
         }
 
         .dataflow-node {
             background: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            padding: 0.4rem 0.6rem;
             text-align: center;
-            min-width: 100px;
+            min-width: 70px;
             border: 2px solid rgba(255, 255, 255, 0.2);
             transition: all 0.3s ease;
             position: relative;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.4rem;
         }
 
         .dataflow-node:hover {
-            transform: translateY(-2px);
+            transform: scale(1.02);
             border-color: rgba(100, 200, 255, 0.5);
-            box-shadow: 0 4px 12px rgba(100, 200, 255, 0.2);
+            box-shadow: 0 2px 8px rgba(100, 200, 255, 0.2);
         }
 
         .dataflow-node.external {
@@ -535,7 +554,6 @@
         .dataflow-node.gateway {
             border-color: #10b981;
             background: rgba(16, 185, 129, 0.15);
-            min-width: 140px;
         }
 
         .dataflow-node.ml {
@@ -554,43 +572,46 @@
         }
 
         .dataflow-node .node-icon {
-            font-size: 1.2rem;
-            display: block;
-            margin-bottom: 0.3rem;
+            font-size: 1rem;
+        }
+
+        .dataflow-node .node-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
         }
 
         .dataflow-node .node-name {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             font-weight: 600;
-            display: block;
+            line-height: 1.2;
         }
 
         .dataflow-node .node-port {
-            font-size: 0.6rem;
+            font-size: 0.5rem;
             opacity: 0.6;
-            display: block;
-            margin-top: 0.2rem;
         }
 
         .dataflow-node .node-status {
             position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 14px;
-            height: 14px;
+            top: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            border: 2px solid rgba(0, 0, 0, 0.3);
+            border: 1.5px solid rgba(0, 0, 0, 0.3);
             background: #6b7280;
         }
 
         .dataflow-node .node-status.healthy {
             background: #10b981;
-            box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+            box-shadow: 0 0 4px rgba(16, 185, 129, 0.6);
         }
 
         .dataflow-node .node-status.unhealthy {
             background: #ef4444;
-            box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+            box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
         }
 
         .dataflow-node .node-status.loading {
@@ -604,92 +625,33 @@
         }
 
         .dataflow-arrow {
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 1rem;
             display: flex;
             align-items: center;
+            padding: 0 0.2rem;
         }
 
-        .dataflow-arrow.down {
-            transform: rotate(90deg);
-        }
-
-        .dataflow-arrow-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.3rem;
-        }
-
-        .dataflow-arrow-group .arrow-label {
-            font-size: 0.6rem;
-            opacity: 0.5;
-            white-space: nowrap;
-        }
-
-        .dataflow-connector {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 0.3rem 0;
-        }
-
-        .dataflow-connector .connector-line {
-            width: 2px;
-            height: 20px;
-            background: linear-gradient(to bottom, rgba(16, 185, 129, 0.5), rgba(139, 92, 246, 0.5));
-        }
-
-        .dataflow-connector .connector-arrows {
-            display: flex;
-            gap: 2rem;
-        }
-
-        .dataflow-branch {
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            gap: 0.5rem;
-            position: relative;
-        }
-
-        .dataflow-branch::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4), rgba(139, 92, 246, 0.4), transparent);
-        }
-
-        .dataflow-node-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.3rem;
-        }
-
-        .dataflow-node-group .branch-line {
-            width: 2px;
-            height: 15px;
-            background: rgba(139, 92, 246, 0.4);
-        }
-
-        @media (max-width: 900px) {
-            .dataflow-row {
-                gap: 0.3rem;
+        @media (max-width: 1200px) {
+            .dataflow-diagram {
+                flex-wrap: wrap;
+                justify-content: center;
             }
+            .dataflow-stage {
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
             .dataflow-node {
-                min-width: 80px;
-                padding: 0.5rem 0.7rem;
+                min-width: 60px;
+                padding: 0.3rem 0.5rem;
             }
             .dataflow-node .node-name {
-                font-size: 0.65rem;
+                font-size: 0.6rem;
             }
-            .dataflow-branch {
-                flex-wrap: wrap;
+            .dataflow-node .node-icon {
+                font-size: 0.85rem;
             }
         }
 
@@ -954,138 +916,132 @@
     </header>
 
     <div class="container">
-        <!-- Data Flow Diagram -->
+        <!-- Data Flow Diagram - Horizontal -->
         <div class="dataflow-section">
             <div class="dataflow-card">
                 <h3><span class="metric-icon">&#128260;</span> Datenfluss Architektur</h3>
                 <div class="dataflow-diagram">
-                    <!-- External Data Sources -->
-                    <div class="dataflow-row">
-                        <div class="dataflow-node external">
-                            <span class="node-icon">&#127760;</span>
-                            <span class="node-name">EasyInsight</span>
-                            <span class="node-port">TimescaleDB</span>
-                        </div>
-                        <div class="dataflow-arrow">&#8594;</div>
-                        <div class="dataflow-node external">
-                            <span class="node-icon">&#128200;</span>
-                            <span class="node-name">TwelveData</span>
-                            <span class="node-port">Fallback 1</span>
-                        </div>
-                        <div class="dataflow-arrow">&#8594;</div>
-                        <div class="dataflow-node external">
-                            <span class="node-icon">&#128176;</span>
-                            <span class="node-name">Yahoo Finance</span>
-                            <span class="node-port">Fallback 2</span>
+                    <!-- External Sources Stage -->
+                    <div class="dataflow-stage">
+                        <span class="dataflow-stage-label">Extern</span>
+                        <div class="dataflow-nodes-vertical">
+                            <div class="dataflow-node external">
+                                <span class="node-icon">&#127760;</span>
+                                <div class="node-info">
+                                    <span class="node-name">EasyInsight</span>
+                                    <span class="node-port">TimescaleDB</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node external">
+                                <span class="node-icon">&#128200;</span>
+                                <div class="node-info">
+                                    <span class="node-name">TwelveData</span>
+                                    <span class="node-port">Fallback 1</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node external">
+                                <span class="node-icon">&#128176;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Yahoo Finance</span>
+                                    <span class="node-port">Fallback 2</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Arrow down to Gateway -->
-                    <div class="dataflow-connector">
-                        <div class="dataflow-arrow-group">
-                            <span class="arrow-label">OHLCV / Indicators</span>
-                            <span class="dataflow-arrow down">&#8595;</span>
-                        </div>
-                    </div>
+                    <div class="dataflow-arrow">&#8594;</div>
 
-                    <!-- Data Gateway -->
-                    <div class="dataflow-row">
+                    <!-- Gateway Stage -->
+                    <div class="dataflow-stage">
+                        <span class="dataflow-stage-label">Gateway</span>
                         <div class="dataflow-node gateway">
                             <span class="node-status loading" id="df-data-status"></span>
                             <span class="node-icon">&#128279;</span>
-                            <span class="node-name">Data Service</span>
-                            <span class="node-port">:3001 - Gateway</span>
+                            <div class="node-info">
+                                <span class="node-name">Data Service</span>
+                                <span class="node-port">:3001</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Arrow down to ML Services -->
-                    <div class="dataflow-connector">
-                        <div class="dataflow-arrow-group">
-                            <span class="arrow-label">Marktdaten</span>
-                            <span class="dataflow-arrow down">&#8595;</span>
-                        </div>
-                    </div>
+                    <div class="dataflow-arrow">&#8594;</div>
 
-                    <!-- ML Services Row -->
-                    <div class="dataflow-branch">
-                        <div class="dataflow-node-group">
-                            <div class="branch-line"></div>
+                    <!-- ML Services Stage -->
+                    <div class="dataflow-stage">
+                        <span class="dataflow-stage-label">ML Models</span>
+                        <div class="dataflow-nodes-vertical">
                             <div class="dataflow-node ml">
                                 <span class="node-status loading" id="df-nhits-status"></span>
                                 <span class="node-icon">&#128202;</span>
-                                <span class="node-name">NHITS</span>
-                                <span class="node-port">:3002 - Prognose</span>
+                                <div class="node-info">
+                                    <span class="node-name">NHITS</span>
+                                    <span class="node-port">:3002</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="dataflow-node-group">
-                            <div class="branch-line"></div>
                             <div class="dataflow-node ml">
                                 <span class="node-status loading" id="df-tcn-status"></span>
                                 <span class="node-icon">&#128200;</span>
-                                <span class="node-name">TCN</span>
-                                <span class="node-port">:3003 - Pattern</span>
+                                <div class="node-info">
+                                    <span class="node-name">TCN</span>
+                                    <span class="node-port">:3003</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="dataflow-node-group">
-                            <div class="branch-line"></div>
                             <div class="dataflow-node ml">
                                 <span class="node-status loading" id="df-hmm-status"></span>
                                 <span class="node-icon">&#128201;</span>
-                                <span class="node-name">HMM</span>
-                                <span class="node-port">:3004 - Regime</span>
+                                <div class="node-info">
+                                    <span class="node-name">HMM</span>
+                                    <span class="node-port">:3004</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="dataflow-node-group">
-                            <div class="branch-line"></div>
                             <div class="dataflow-node ml">
                                 <span class="node-status loading" id="df-embedder-status"></span>
                                 <span class="node-icon">&#129302;</span>
-                                <span class="node-name">Embedder</span>
-                                <span class="node-port">:3005 - Vectors</span>
+                                <div class="node-info">
+                                    <span class="node-name">Embedder</span>
+                                    <span class="node-port">:3005</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Arrow down to Analysis -->
-                    <div class="dataflow-connector">
-                        <div class="dataflow-arrow-group">
-                            <span class="arrow-label">Predictions / Embeddings</span>
-                            <span class="dataflow-arrow down">&#8595;</span>
+                    <div class="dataflow-arrow">&#8594;</div>
+
+                    <!-- Analysis Stage -->
+                    <div class="dataflow-stage">
+                        <span class="dataflow-stage-label">Analyse</span>
+                        <div class="dataflow-nodes-vertical">
+                            <div class="dataflow-node analysis">
+                                <span class="node-status loading" id="df-rag-status"></span>
+                                <span class="node-icon">&#128269;</span>
+                                <div class="node-info">
+                                    <span class="node-name">RAG</span>
+                                    <span class="node-port">:3008</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node analysis">
+                                <span class="node-status loading" id="df-llm-status"></span>
+                                <span class="node-icon">&#129504;</span>
+                                <div class="node-info">
+                                    <span class="node-name">LLM</span>
+                                    <span class="node-port">:3009</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Analysis Layer -->
-                    <div class="dataflow-row">
-                        <div class="dataflow-node analysis">
-                            <span class="node-status loading" id="df-rag-status"></span>
-                            <span class="node-icon">&#128269;</span>
-                            <span class="node-name">RAG Service</span>
-                            <span class="node-port">:3008 - Vector Search</span>
-                        </div>
-                        <div class="dataflow-arrow">&#8594;</div>
-                        <div class="dataflow-node analysis">
-                            <span class="node-status loading" id="df-llm-status"></span>
-                            <span class="node-icon">&#129504;</span>
-                            <span class="node-name">LLM Service</span>
-                            <span class="node-port">:3009 - Llama 3.1 70B</span>
-                        </div>
-                    </div>
+                    <div class="dataflow-arrow">&#8594;</div>
 
-                    <!-- Arrow down to Output -->
-                    <div class="dataflow-connector">
-                        <div class="dataflow-arrow-group">
-                            <span class="arrow-label">Trading Insights</span>
-                            <span class="dataflow-arrow down">&#8595;</span>
-                        </div>
-                    </div>
-
-                    <!-- Output -->
-                    <div class="dataflow-row">
+                    <!-- Output Stage -->
+                    <div class="dataflow-stage">
+                        <span class="dataflow-stage-label">Output</span>
                         <div class="dataflow-node output">
                             <span class="node-status healthy" id="df-frontend-status"></span>
                             <span class="node-icon">&#128187;</span>
-                            <span class="node-name">Frontend</span>
-                            <span class="node-port">:3000 - Dashboard</span>
+                            <div class="node-info">
+                                <span class="node-name">Frontend</span>
+                                <span class="node-port">:3000</span>
+                            </div>
                         </div>
                     </div>
                 </div>
