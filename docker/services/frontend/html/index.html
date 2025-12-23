@@ -204,21 +204,12 @@
             transform: translateY(-1px);
         }
 
-        /* System Metrics Styles */
-        .metrics-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
+        /* System Resources Section Styles */
+        .system-resources-section {
             margin-bottom: 1.5rem;
         }
 
-        @media (max-width: 800px) {
-            .metrics-section {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .metric-card {
+        .system-resources-card {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border-radius: 12px;
@@ -226,24 +217,64 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .metric-card h3 {
-            font-size: 1rem;
+        .system-resources-card h3 {
+            font-size: 1.1rem;
             margin-bottom: 1rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
+        .resources-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 1400px) {
+            .resources-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 1000px) {
+            .resources-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .resources-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .resource-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .resource-panel h4 {
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
         .metric-icon {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
         }
 
         .metric-bar-container {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 8px;
-            height: 24px;
+            height: 20px;
             overflow: hidden;
-            margin-bottom: 0.8rem;
+            margin-bottom: 0.6rem;
             position: relative;
         }
 
@@ -255,9 +286,9 @@
             align-items: center;
             justify-content: flex-end;
             padding-right: 8px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
-            min-width: 40px;
+            min-width: 35px;
         }
 
         .metric-bar.cpu {
@@ -276,6 +307,14 @@
             background: linear-gradient(90deg, #f59e0b, #fbbf24);
         }
 
+        .metric-bar.disk {
+            background: linear-gradient(90deg, #06b6d4, #22d3ee);
+        }
+
+        .metric-bar.power {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
         .metric-bar.high {
             background: linear-gradient(90deg, #ef4444, #f87171) !important;
         }
@@ -284,148 +323,75 @@
             background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
         }
 
-        .metric-details {
+        .resource-stats {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.5rem;
-            font-size: 0.8rem;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+            font-size: 0.75rem;
         }
 
-        .metric-detail {
+        .resource-stat {
             display: flex;
-            justify-content: space-between;
-            padding: 0.4rem 0.6rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 6px;
-        }
-
-        .metric-detail .label {
-            opacity: 0.6;
-        }
-
-        .metric-detail .value {
-            font-weight: 500;
-        }
-
-        .gpu-unavailable {
+            flex-direction: column;
+            align-items: center;
             text-align: center;
-            padding: 2rem;
-            opacity: 0.5;
-            font-size: 0.9rem;
-        }
-
-        /* Storage Section Styles */
-        .storage-section {
-            margin-bottom: 1.5rem;
-        }
-
-        .storage-card {
+            padding: 0.4rem 0.3rem;
             background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
         }
 
-        .storage-card h3 {
-            font-size: 1rem;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+        .resource-stat .value {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.15rem;
         }
 
-        .storage-overview {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        @media (max-width: 800px) {
-            .storage-overview {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .storage-disk {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            padding: 1rem;
-        }
-
-        .storage-disk h4 {
-            font-size: 0.9rem;
-            margin-bottom: 0.75rem;
-            opacity: 0.9;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .metric-bar.disk {
-            background: linear-gradient(90deg, #06b6d4, #22d3ee);
-        }
-
-        .storage-docker-summary {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            padding: 1rem;
-        }
-
-        .storage-docker-summary h4 {
-            font-size: 0.9rem;
-            margin-bottom: 0.75rem;
-            opacity: 0.9;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .docker-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.5rem;
-        }
-
-        .docker-stat {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.4rem 0.6rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 6px;
-            font-size: 0.8rem;
-        }
-
-        .docker-stat .label {
+        .resource-stat .label {
             opacity: 0.6;
+            font-size: 0.65rem;
         }
 
-        .docker-stat .value {
-            font-weight: 500;
-            color: #64c8ff;
+        .resource-stat.full-width {
+            grid-column: span 2;
         }
 
-        .storage-details {
+        .temp-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .temp-indicator.cool { color: #34d399; }
+        .temp-indicator.warm { color: #fbbf24; }
+        .temp-indicator.hot { color: #f87171; }
+
+        .power-indicator {
+            color: #60a5fa;
+            font-weight: 600;
+        }
+
+        /* Storage Details Row */
+        .storage-details-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
+            gap: 1rem;
+            margin-top: 1rem;
         }
 
         @media (max-width: 900px) {
-            .storage-details {
+            .storage-details-row {
                 grid-template-columns: 1fr;
             }
         }
 
-        .storage-containers, .storage-volumes {
+        .storage-volumes {
             background: rgba(0, 0, 0, 0.2);
             border-radius: 10px;
             padding: 1rem;
         }
 
-        .storage-containers h4, .storage-volumes h4 {
-            font-size: 0.9rem;
+        .storage-volumes h4 {
+            font-size: 0.85rem;
             margin-bottom: 0.75rem;
             opacity: 0.9;
             display: flex;
@@ -433,67 +399,80 @@
             gap: 0.5rem;
         }
 
-        .container-list, .volume-list {
-            display: flex;
-            flex-direction: column;
+        .volume-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 0.5rem;
-            max-height: 300px;
+            max-height: 200px;
             overflow-y: auto;
         }
 
-        .container-item, .volume-item {
+        .volume-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.6rem 0.8rem;
+            padding: 0.5rem 0.7rem;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 6px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .container-item:hover, .volume-item:hover {
+        .volume-item:hover {
             background: rgba(255, 255, 255, 0.08);
             border-color: rgba(100, 200, 255, 0.2);
         }
 
-        .container-name, .volume-name {
+        .volume-name {
             font-weight: 500;
             color: #e8e8e8;
         }
 
-        .container-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
-        .status-dot.running {
-            background: #4caf50;
-            box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
-        }
-
-        .status-dot.stopped {
-            background: #f44336;
-        }
-
-        .container-size, .volume-driver {
-            font-size: 0.75rem;
+        .volume-size {
+            font-size: 0.7rem;
             opacity: 0.6;
         }
 
         .storage-loading {
             text-align: center;
-            padding: 2rem;
+            padding: 1.5rem;
             opacity: 0.5;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
+
+        /* Service Resource Info in Cards */
+        .service-resources {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.8rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .service-resource {
+            text-align: center;
+            padding: 0.3rem;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        .service-resource .value {
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: block;
+        }
+
+        .service-resource .label {
+            opacity: 0.6;
+            font-size: 0.65rem;
+        }
+
+        .service-resource.cpu .value { color: #60a5fa; }
+        .service-resource.ram .value { color: #a78bfa; }
+        .service-resource.net .value { color: #34d399; }
 
         footer {
             text-align: center;
@@ -788,6 +767,11 @@
                     <div><span class="label">EasyInsight</span><span id="data-easyinsight">-</span></div>
                     <div><span class="label">Sync</span><span id="data-sync">-</span></div>
                 </div>
+                <div class="service-resources">
+                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource cpu"><span class="value">CPU</span><span class="label">Mode</span></div>
+                    <div class="service-resource net"><span class="value">trading-net</span><span class="label">Network</span></div>
+                </div>
                 <div class="service-links">
                     <a href="/service-data.html" target="_blank">Info</a>
                     <a href="/data/docs" target="_blank">API Docs</a>
@@ -804,8 +788,12 @@
                 <p>Neural Hierarchical Interpolation for Time Series - Preisprognosen und Modell-Training.</p>
                 <div class="service-info" id="nhits-info">
                     <div><span class="label">Port</span><span>3002</span></div>
-                    <div><span class="label">GPU</span><span id="nhits-gpu">-</span></div>
                     <div><span class="label">Training</span><span id="nhits-training">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource ram"><span class="value">16 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource cpu"><span class="value">GPU</span><span class="label">Mode</span></div>
+                    <div class="service-resource net"><span class="value">trading-net</span><span class="label">Network</span></div>
                 </div>
                 <div class="service-links">
                     <a href="/service-nhits.html" target="_blank">Info</a>
@@ -823,8 +811,12 @@
                 <p>Temporal Convolutional Network - Erkennung von 16 Chart-Pattern Typen mit Deep Learning.</p>
                 <div class="service-info" id="tcn-info">
                     <div><span class="label">Port</span><span>3003</span></div>
-                    <div><span class="label">GPU</span><span id="tcn-gpu">-</span></div>
                     <div><span class="label">Pattern</span><span id="tcn-patterns">16 Typen</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource ram"><span class="value">8 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource cpu"><span class="value">GPU</span><span class="label">Mode</span></div>
+                    <div class="service-resource net"><span class="value">trading-net</span><span class="label">Network</span></div>
                 </div>
                 <div class="service-links">
                     <a href="/service-tcn.html" target="_blank">Info</a>
@@ -844,6 +836,11 @@
                     <div><span class="label">Regimes</span><span id="hmm-regimes">4 States</span></div>
                     <div><span class="label">Scorer</span><span id="hmm-scorer">-</span></div>
                 </div>
+                <div class="service-resources">
+                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource cpu"><span class="value">CPU</span><span class="label">Mode</span></div>
+                    <div class="service-resource net"><span class="value">trading-net</span><span class="label">Network</span></div>
+                </div>
                 <div class="service-links">
                     <a href="/service-hmm.html" target="_blank">Info</a>
                     <a href="/hmm/docs" target="_blank">API Docs</a>
@@ -859,8 +856,12 @@
                 <p>Zentraler Embedding-Service - Text, FinBERT, TimeSeries und Feature Embeddings.</p>
                 <div class="service-info" id="embedder-info">
                     <div><span class="label">Port</span><span>3005</span></div>
-                    <div><span class="label">GPU</span><span id="embedder-gpu">-</span></div>
                     <div><span class="label">Modelle</span><span id="embedder-models">4 Types</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource ram"><span class="value">12 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource cpu"><span class="value">GPU</span><span class="label">Mode</span></div>
+                    <div class="service-resource net"><span class="value">trading-net</span><span class="label">Network</span></div>
                 </div>
                 <div class="service-links">
                     <a href="/service-embedder.html" target="_blank">Info</a>
@@ -878,7 +879,11 @@
                 <div class="service-info" id="rag-info">
                     <div><span class="label">Port</span><span>3008</span></div>
                     <div><span class="label">Dokumente</span><span id="rag-docs">-</span></div>
-                    <div><span class="label">GPU</span><span id="rag-gpu">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource ram"><span class="value">8 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource cpu"><span class="value">GPU</span><span class="label">Mode</span></div>
+                    <div class="service-resource net"><span class="value">trading-net</span><span class="label">Network</span></div>
                 </div>
                 <div class="service-links">
                     <a href="/service-rag.html" target="_blank">Info</a>
@@ -899,6 +904,11 @@
                     <div><span class="label">Modell</span><span id="llm-model">-</span></div>
                     <div><span class="label">RAG</span><span id="llm-rag">-</span></div>
                 </div>
+                <div class="service-resources">
+                    <div class="service-resource ram"><span class="value">32 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource cpu"><span class="value">GPU</span><span class="label">Mode</span></div>
+                    <div class="service-resource net"><span class="value">trading-net</span><span class="label">Network</span></div>
+                </div>
                 <div class="service-links">
                     <a href="/service-llm.html" target="_blank">Info</a>
                     <a href="/llm/docs" target="_blank">API Docs</a>
@@ -907,157 +917,123 @@
             </div>
         </div>
 
-        <!-- System Metrics Section -->
-        <div class="metrics-section">
-            <!-- CPU & Memory Card -->
-            <div class="metric-card" id="cpu-card">
-                <h3><span class="metric-icon">&#128187;</span> CPU & Arbeitsspeicher</h3>
+        <!-- System Resources Section (Combined CPU, GPU, Storage) -->
+        <div class="system-resources-section">
+            <div class="system-resources-card">
+                <h3><span class="metric-icon">&#9881;</span> System-Ressourcen (Jetson AGX Thor)</h3>
 
-                <div style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.8;">CPU-Auslastung</div>
-                <div class="metric-bar-container">
-                    <div class="metric-bar cpu" id="cpu-bar" style="width: 0%">
-                        <span id="cpu-percent">-</span>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.8;">Arbeitsspeicher</div>
-                <div class="metric-bar-container">
-                    <div class="metric-bar memory" id="memory-bar" style="width: 0%">
-                        <span id="memory-percent">-</span>
-                    </div>
-                </div>
-
-                <div class="metric-details">
-                    <div class="metric-detail">
-                        <span class="label">CPU Kerne</span>
-                        <span class="value" id="cpu-cores">-</span>
-                    </div>
-                    <div class="metric-detail">
-                        <span class="label">Frequenz</span>
-                        <span class="value" id="cpu-freq">-</span>
-                    </div>
-                    <div class="metric-detail">
-                        <span class="label">RAM gesamt</span>
-                        <span class="value" id="memory-total">-</span>
-                    </div>
-                    <div class="metric-detail">
-                        <span class="label">RAM verwendet</span>
-                        <span class="value" id="memory-used">-</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- GPU Card -->
-            <div class="metric-card" id="gpu-card">
-                <h3><span class="metric-icon">&#127918;</span> GPU</h3>
-                <div id="gpu-content">
-                    <div style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.8;">GPU-Auslastung</div>
-                    <div class="metric-bar-container">
-                        <div class="metric-bar gpu" id="gpu-bar" style="width: 0%">
-                            <span id="gpu-percent">-</span>
+                <!-- Main Resources Grid -->
+                <div class="resources-grid">
+                    <!-- CPU Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#128187;</span> CPU</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar cpu" id="cpu-bar" style="width: 0%">
+                                <span id="cpu-percent">-</span>
+                            </div>
+                        </div>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
+                                <span class="value" id="cpu-cores">-</span>
+                                <span class="label">Kerne</span>
+                            </div>
+                            <div class="resource-stat">
+                                <span class="value temp-indicator" id="cpu-temp">-</span>
+                                <span class="label">Temp</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.8;">GPU-Speicher</div>
-                    <div class="metric-bar-container">
-                        <div class="metric-bar gpu-memory" id="gpu-memory-bar" style="width: 0%">
-                            <span id="gpu-memory-percent">-</span>
+                    <!-- GPU Panel -->
+                    <div class="resource-panel" id="gpu-panel">
+                        <h4><span class="metric-icon">&#127918;</span> GPU</h4>
+                        <div id="gpu-content">
+                            <div class="metric-bar-container">
+                                <div class="metric-bar gpu-memory" id="gpu-memory-bar" style="width: 0%">
+                                    <span id="gpu-memory-percent">-</span>
+                                </div>
+                            </div>
+                            <div class="resource-stats">
+                                <div class="resource-stat">
+                                    <span class="value temp-indicator" id="gpu-temp">-</span>
+                                    <span class="label">Temp</span>
+                                </div>
+                                <div class="resource-stat">
+                                    <span class="value" id="gpu-vram">-</span>
+                                    <span class="label">VRAM</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="gpu-unavailable" class="storage-loading" style="display: none;">
+                            Keine GPU
                         </div>
                     </div>
 
-                    <div class="metric-details">
-                        <div class="metric-detail" style="grid-column: span 2;">
-                            <span class="label">Modell</span>
-                            <span class="value" id="gpu-name">-</span>
+                    <!-- Shared VRAM Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#128204;</span> Shared VRAM</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar memory" id="memory-bar" style="width: 0%">
+                                <span id="memory-percent">-</span>
+                            </div>
                         </div>
-                        <div class="metric-detail">
-                            <span class="label">VRAM gesamt</span>
-                            <span class="value" id="gpu-memory-total">-</span>
-                        </div>
-                        <div class="metric-detail">
-                            <span class="label">VRAM verwendet</span>
-                            <span class="value" id="gpu-memory-allocated">-</span>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
+                                <span class="value" id="memory-total">-</span>
+                                <span class="label">Gesamt</span>
+                            </div>
+                            <div class="resource-stat">
+                                <span class="value" id="memory-used">-</span>
+                                <span class="label">Belegt</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div id="gpu-unavailable" class="gpu-unavailable" style="display: none;">
-                    Keine GPU verfügbar
-                </div>
-            </div>
-        </div>
 
-        <!-- Storage Section -->
-        <div class="storage-section">
-            <div class="storage-card">
-                <h3><span class="metric-icon">&#128190;</span> Storage</h3>
-
-                <!-- Overview: Disk + Docker Summary -->
-                <div class="storage-overview">
-                    <!-- Disk Usage -->
-                    <div class="storage-disk">
-                        <h4>&#128421; Festplattenspeicher</h4>
+                    <!-- Storage Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#128190;</span> Storage</h4>
                         <div class="metric-bar-container">
                             <div class="metric-bar disk" id="disk-bar" style="width: 0%">
                                 <span id="disk-percent">-</span>
                             </div>
                         </div>
-                        <div class="metric-details">
-                            <div class="metric-detail">
-                                <span class="label">Gesamt</span>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
                                 <span class="value" id="disk-total">-</span>
+                                <span class="label">Gesamt</span>
                             </div>
-                            <div class="metric-detail">
-                                <span class="label">Verwendet</span>
-                                <span class="value" id="disk-used">-</span>
-                            </div>
-                            <div class="metric-detail">
-                                <span class="label">Verfügbar</span>
+                            <div class="resource-stat">
                                 <span class="value" id="disk-free">-</span>
-                            </div>
-                            <div class="metric-detail">
-                                <span class="label">Auslastung</span>
-                                <span class="value" id="disk-percent-text">-</span>
+                                <span class="label">Frei</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- App Storage Summary -->
-                    <div class="storage-docker-summary">
-                        <h4>&#128451; Anwendungsdaten</h4>
-                        <div class="docker-stats-grid">
-                            <div class="docker-stat">
-                                <span class="label">Modelle</span>
-                                <span class="value" id="storage-models-size">-</span>
+                    <!-- Power Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#9889;</span> Power</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar power" id="power-bar" style="width: 0%">
+                                <span id="power-percent">-</span>
                             </div>
-                            <div class="docker-stat">
-                                <span class="label">Logs</span>
-                                <span class="value" id="storage-logs-size">-</span>
+                        </div>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
+                                <span class="value power-indicator" id="gpu-power">-</span>
+                                <span class="label">GPU</span>
                             </div>
-                            <div class="docker-stat">
-                                <span class="label">Daten</span>
-                                <span class="value" id="storage-data-size">-</span>
-                            </div>
-                            <div class="docker-stat">
+                            <div class="resource-stat">
+                                <span class="value power-indicator" id="total-power">-</span>
                                 <span class="label">Gesamt</span>
-                                <span class="value" id="storage-total-size">-</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Details: Containers + Volumes -->
-                <div class="storage-details">
-                    <!-- Containers -->
-                    <div class="storage-containers">
-                        <h4>&#128230; Container</h4>
-                        <div class="container-list" id="container-list">
-                            <div class="storage-loading">Lade Container...</div>
-                        </div>
-                    </div>
-
-                    <!-- Volumes -->
+                <!-- Volumes Row -->
+                <div class="storage-details-row" style="grid-template-columns: 1fr;">
                     <div class="storage-volumes">
-                        <h4>&#128451; Volumes</h4>
+                        <h4>&#128451; Docker Volumes</h4>
                         <div class="volume-list" id="volume-list">
                             <div class="storage-loading">Lade Volumes...</div>
                         </div>
@@ -1069,7 +1045,7 @@
     </div>
 
     <footer>
-        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + Llama 3.1 70B + RAG
+        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + TCN + HMM + Embedder + RAG + LLM (Llama 3.1 70B)
     </footer>
 
     <!-- Symbols Modal -->
@@ -1118,10 +1094,8 @@
         async function updateNhitsInfo() {
             const data = await checkHealth('nhits', 3002, 'nhits-status');
             if (data) {
-                document.getElementById('nhits-gpu').textContent = data.gpu_enabled ? 'Aktiviert' : 'CPU';
                 document.getElementById('nhits-training').textContent = data.training_in_progress ? 'Aktiv' : 'Inaktiv';
             }
-
         }
 
         async function updateLlmInfo() {
@@ -1144,15 +1118,11 @@
             const data = await checkHealth('rag', 3008, 'rag-status');
             if (data) {
                 document.getElementById('rag-docs').textContent = data.document_count || 0;
-                document.getElementById('rag-gpu').textContent = data.faiss_gpu ? 'Aktiviert' : 'CPU';
             }
         }
 
         async function updateTcnInfo() {
-            const data = await checkHealth('tcn', 3003, 'tcn-status');
-            if (data) {
-                document.getElementById('tcn-gpu').textContent = data.gpu_available ? 'Aktiviert' : 'CPU';
-            }
+            await checkHealth('tcn', 3003, 'tcn-status');
         }
 
         async function updateHmmInfo() {
@@ -1163,10 +1133,7 @@
         }
 
         async function updateEmbedderInfo() {
-            const data = await checkHealth('embedder', 3005, 'embedder-status');
-            if (data) {
-                document.getElementById('embedder-gpu').textContent = data.gpu_available ? 'Aktiviert' : 'CPU';
-            }
+            await checkHealth('embedder', 3005, 'embedder-status');
         }
 
         async function updateEasyInsightInfo() {
@@ -1210,6 +1177,13 @@
                     return '';
                 }
 
+                // Helper function for temperature color class
+                function getTempClass(temp) {
+                    if (temp >= 70) return 'hot';
+                    if (temp >= 50) return 'warm';
+                    return 'cool';
+                }
+
                 // CPU metrics
                 if (data.cpu) {
                     const cpuPercent = Math.round(data.cpu.percent || 0);
@@ -1217,10 +1191,17 @@
                     cpuBar.style.width = `${Math.max(cpuPercent, 5)}%`;
                     cpuBar.className = `metric-bar cpu ${getColorClass(cpuPercent)}`;
                     document.getElementById('cpu-percent').textContent = `${cpuPercent}%`;
-                    document.getElementById('cpu-cores').textContent =
-                        `${data.cpu.cores_physical || '-'} / ${data.cpu.cores_logical || '-'}`;
-                    document.getElementById('cpu-freq').textContent =
-                        data.cpu.frequency_mhz ? `${Math.round(data.cpu.frequency_mhz)} MHz` : '-';
+                    document.getElementById('cpu-cores').textContent = `${data.cpu.cores_logical || '-'}`;
+
+                    // CPU Temperature
+                    const cpuTempEl = document.getElementById('cpu-temp');
+                    if (data.cpu.temp_celsius) {
+                        const temp = Math.round(data.cpu.temp_celsius);
+                        cpuTempEl.textContent = `${temp}°C`;
+                        cpuTempEl.className = `value temp-indicator ${getTempClass(temp)}`;
+                    } else {
+                        cpuTempEl.textContent = '-';
+                    }
                 }
 
                 // Memory metrics
@@ -1242,33 +1223,64 @@
                     gpuContent.style.display = 'block';
                     gpuUnavailable.style.display = 'none';
 
-                    // GPU utilization
-                    const gpuPercent = data.gpu.utilization_percent !== null
-                        ? Math.round(data.gpu.utilization_percent)
-                        : null;
-                    const gpuBar = document.getElementById('gpu-bar');
-                    if (gpuPercent !== null) {
-                        gpuBar.style.width = `${Math.max(gpuPercent, 5)}%`;
-                        gpuBar.className = `metric-bar gpu ${getColorClass(gpuPercent)}`;
-                        document.getElementById('gpu-percent').textContent = `${gpuPercent}%`;
-                    } else {
-                        gpuBar.style.width = '0%';
-                        document.getElementById('gpu-percent').textContent = 'N/A';
-                    }
-
-                    // GPU memory
+                    // GPU memory bar
                     const gpuMemPercent = Math.round(data.gpu.memory_percent || 0);
                     const gpuMemBar = document.getElementById('gpu-memory-bar');
                     gpuMemBar.style.width = `${Math.max(gpuMemPercent, 5)}%`;
                     gpuMemBar.className = `metric-bar gpu-memory ${getColorClass(gpuMemPercent)}`;
                     document.getElementById('gpu-memory-percent').textContent = `${gpuMemPercent}%`;
 
-                    document.getElementById('gpu-name').textContent = data.gpu.name || '-';
-                    document.getElementById('gpu-memory-total').textContent = `${data.gpu.memory_total_gb} GB`;
-                    document.getElementById('gpu-memory-allocated').textContent = `${data.gpu.memory_allocated_gb} GB`;
+                    // GPU Temperature
+                    const gpuTempEl = document.getElementById('gpu-temp');
+                    if (data.gpu.temp_celsius) {
+                        const temp = Math.round(data.gpu.temp_celsius);
+                        gpuTempEl.textContent = `${temp}°C`;
+                        gpuTempEl.className = `value temp-indicator ${getTempClass(temp)}`;
+                    } else {
+                        gpuTempEl.textContent = '-';
+                    }
+
+                    // GPU VRAM (nur genutzt, Total ist bei Shared VRAM)
+                    document.getElementById('gpu-vram').textContent =
+                        `${data.gpu.memory_allocated_gb} GB`;
                 } else {
                     gpuContent.style.display = 'none';
                     gpuUnavailable.style.display = 'block';
+                }
+
+                // Total Power (from power object)
+                if (data.power && data.power.available) {
+                    const totalPowerEl = document.getElementById('total-power');
+                    const gpuPowerEl = document.getElementById('gpu-power');
+                    const powerBar = document.getElementById('power-bar');
+                    const powerPercentEl = document.getElementById('power-percent');
+
+                    if (data.power.total_watts) {
+                        totalPowerEl.textContent = `${data.power.total_watts} W`;
+                        // Assume max power of 100W for Jetson AGX Thor, calculate percentage
+                        const maxPower = 100;
+                        const powerPercent = Math.min(Math.round((data.power.total_watts / maxPower) * 100), 100);
+                        powerBar.style.width = `${Math.max(powerPercent, 5)}%`;
+                        powerPercentEl.textContent = `${powerPercent}%`;
+                        // Color based on power consumption
+                        if (powerPercent >= 80) {
+                            powerBar.className = 'metric-bar power high';
+                        } else if (powerPercent >= 60) {
+                            powerBar.className = 'metric-bar power medium';
+                        } else {
+                            powerBar.className = 'metric-bar power';
+                        }
+                    } else {
+                        totalPowerEl.textContent = '-';
+                        powerBar.style.width = '0%';
+                        powerPercentEl.textContent = '-';
+                    }
+
+                    if (data.power.gpu_watts) {
+                        gpuPowerEl.textContent = `${data.power.gpu_watts} W`;
+                    } else {
+                        gpuPowerEl.textContent = '-';
+                    }
                 }
 
             } catch (err) {
@@ -1297,51 +1309,7 @@
                     diskBar.className = `metric-bar disk ${getColorClass(diskPercent)}`;
                     document.getElementById('disk-percent').textContent = `${diskPercent}%`;
                     document.getElementById('disk-total').textContent = `${data.disk.total_gb} GB`;
-                    document.getElementById('disk-used').textContent = `${data.disk.used_gb} GB`;
                     document.getElementById('disk-free').textContent = `${data.disk.free_gb} GB`;
-                    document.getElementById('disk-percent-text').textContent = `${diskPercent}%`;
-                }
-
-                // App storage summary
-                if (data.app_storage && data.app_storage.usage) {
-                    document.getElementById('storage-models-size').textContent = data.app_storage.usage.models_size || '-';
-                    document.getElementById('storage-logs-size').textContent = data.app_storage.usage.logs_size || '-';
-                    document.getElementById('storage-data-size').textContent = data.app_storage.usage.total_data_size || '-';
-                    document.getElementById('storage-total-size').textContent = data.app_storage.usage.app_data_size || '-';
-                }
-
-                // Containers list - use data from API with health check status
-                const containerList = document.getElementById('container-list');
-                if (data.app_storage && data.app_storage.containers && data.app_storage.containers.length > 0) {
-                    // Map container names to health status elements
-                    const healthMap = {
-                        'trading-nhits': 'nhits-status',
-                        'trading-data': 'data-status',
-                        'trading-rag': 'rag-status',
-                        'trading-llm': 'llm-status',
-                        'trading-frontend': null  // Always healthy if we're seeing this
-                    };
-
-                    containerList.innerHTML = data.app_storage.containers.map(container => {
-                        const statusEl = healthMap[container.name];
-                        const isHealthy = statusEl
-                            ? document.getElementById(statusEl)?.textContent === 'Online'
-                            : true;
-                        return `
-                            <div class="container-item">
-                                <div>
-                                    <div class="container-name">${container.name}</div>
-                                    <div class="container-size">${container.service} (Port ${container.port})</div>
-                                </div>
-                                <div class="container-status">
-                                    <span class="status-dot ${isHealthy ? 'running' : 'stopped'}"></span>
-                                    <span>${isHealthy ? 'Running' : 'Stopped'}</span>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                } else {
-                    containerList.innerHTML = '<div class="storage-loading">Keine Container-Daten</div>';
                 }
 
                 // Volumes list
@@ -1362,7 +1330,6 @@
 
             } catch (err) {
                 console.error('Storage metrics error:', err);
-                document.getElementById('container-list').innerHTML = '<div class="storage-loading">Fehler beim Laden</div>';
                 document.getElementById('volume-list').innerHTML = '<div class="storage-loading">Fehler beim Laden</div>';
             }
         }

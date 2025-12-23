@@ -165,7 +165,13 @@
       "Bash(do echo -n \"Port $port: \")",
       "Bash(ssh:*)",
       "Bash(ssh-keyscan:*)",
-      "Bash(~/.ssh/known_hosts)"
+      "Bash(~/.ssh/known_hosts)",
+      "Bash(sudo docker stats:*)",
+      "Bash(sudo docker system:*)",
+      "Bash(docker stats:*)",
+      "Bash(docker system df:*)",
+      "Bash(sudo cp:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": [],
     "ask": []

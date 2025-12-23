@@ -1,0 +1,13 @@
+[Unit]
+Description=Tegrastats Data Service for Docker Containers
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/sbeyeler/KiTradingModel/scripts/tegrastats_service.py
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

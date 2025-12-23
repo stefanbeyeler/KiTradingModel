@@ -2,6 +2,7 @@
 # Health check now includes NHITS status
 
 import json
+import os
 from datetime import datetime, timezone
 from typing import Optional, List
 import torch
@@ -559,6 +560,88 @@ async def manual_sync(days_back: int = 7):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def parse_tegrastats() -> dict:
+    """
+    Read tegrastats data from JSON file written by host service.
+    Falls back to direct tegrastats call if file not available.
+    Returns dict with cpu_temp, gpu_temp, gpu_power_mw, total_power_mw.
+    """
+    import subprocess
+    import re
+
+    result = {
+        "cpu_temp": None,
+        "gpu_temp": None,
+        "gpu_power_mw": None,
+        "total_power_mw": None,
+        "available": False
+    }
+
+    # First try to read from JSON file (written by host service)
+    # Check both container-mounted path and local path
+    tegrastats_file = "/host_tmp/tegrastats.json"
+    if not os.path.exists(tegrastats_file):
+        tegrastats_file = "/tmp/tegrastats.json"
+    try:
+        if os.path.exists(tegrastats_file):
+            with open(tegrastats_file, 'r') as f:
+                data = json.load(f)
+            if data.get("available", False):
+                result["cpu_temp"] = data.get("cpu_temp")
+                result["gpu_temp"] = data.get("gpu_temp")
+                result["gpu_power_mw"] = data.get("gpu_power_mw")
+                result["total_power_mw"] = data.get("total_power_mw")
+                result["available"] = True
+                return result
+    except Exception as e:
+        logger.debug(f"Could not read tegrastats file: {e}")
+
+    # Fallback: Try running tegrastats directly (works on host, not in container)
+    try:
+        proc = subprocess.run(
+            ['tegrastats', '--interval', '100'],
+            capture_output=True,
+            text=True,
+            timeout=1
+        )
+
+        if proc.returncode != 0 or not proc.stdout:
+            return result
+
+        line = proc.stdout.strip().split('\n')[0]
+        result["available"] = True
+
+        # Parse CPU temperature: cpu@40.218C
+        cpu_temp_match = re.search(r'cpu@([\d.]+)C', line)
+        if cpu_temp_match:
+            result["cpu_temp"] = float(cpu_temp_match.group(1))
+
+        # Parse GPU temperature: gpu@42.156C
+        gpu_temp_match = re.search(r'gpu@([\d.]+)C', line)
+        if gpu_temp_match:
+            result["gpu_temp"] = float(gpu_temp_match.group(1))
+
+        # Parse GPU power: VDD_GPU 9880mW/9880mW (current/average)
+        gpu_power_match = re.search(r'VDD_GPU\s+([\d]+)mW', line)
+        if gpu_power_match:
+            result["gpu_power_mw"] = int(gpu_power_match.group(1))
+
+        # Parse total power: VIN 29942mW/14971mW
+        total_power_match = re.search(r'VIN\s+([\d]+)mW', line)
+        if total_power_match:
+            result["total_power_mw"] = int(total_power_match.group(1))
+
+    except subprocess.TimeoutExpired:
+        pass
+    except FileNotFoundError:
+        # tegrastats not available (not on Jetson)
+        pass
+    except Exception as e:
+        logger.warning(f"tegrastats parse error: {e}")
+
+    return result
+
+
 @system_router.get("/system/metrics")
 async def get_system_metrics():
     """
@@ -566,6 +649,7 @@ async def get_system_metrics():
 
     Returns current usage percentages for monitoring dashboards.
     Updates on each request - designed for polling (e.g., every 2-5 seconds).
+    Includes Jetson-specific metrics (temperatures, power) if running on Jetson Orin.
     """
     import psutil
 
@@ -579,12 +663,16 @@ async def get_system_metrics():
         # Memory metrics
         memory = psutil.virtual_memory()
 
+        # Try to get Jetson tegrastats data
+        tegra = parse_tegrastats()
+
         metrics = {
             "cpu": {
                 "percent": cpu_percent,
                 "cores_physical": cpu_count,
                 "cores_logical": cpu_count_logical,
                 "frequency_mhz": cpu_freq.current if cpu_freq else None,
+                "temp_celsius": tegra.get("cpu_temp"),
             },
             "memory": {
                 "percent": memory.percent,
@@ -593,6 +681,11 @@ async def get_system_metrics():
                 "used_gb": round(memory.used / (1024**3), 2),
             },
             "gpu": None,
+            "power": {
+                "gpu_watts": round(tegra["gpu_power_mw"] / 1000, 1) if tegra.get("gpu_power_mw") else None,
+                "total_watts": round(tegra["total_power_mw"] / 1000, 1) if tegra.get("total_power_mw") else None,
+                "available": tegra.get("available", False)
+            },
             "timestamp": datetime.utcnow().isoformat()
         }
 
@@ -626,6 +719,8 @@ async def get_system_metrics():
                     "memory_total_gb": round(gpu_memory_total / (1024**3), 2),
                     "memory_allocated_gb": round(gpu_memory_allocated / (1024**3), 2),
                     "memory_reserved_gb": round(gpu_memory_reserved / (1024**3), 2),
+                    "temp_celsius": tegra.get("gpu_temp"),
+                    "power_watts": round(tegra["gpu_power_mw"] / 1000, 1) if tegra.get("gpu_power_mw") else None,
                 }
             except Exception as e:
                 metrics["gpu"] = {"available": True, "error": str(e)}
