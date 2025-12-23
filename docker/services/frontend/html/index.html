@@ -934,6 +934,7 @@
             <div class="header-status">
                 <a href="/testing.html" class="header-btn">&#128203; Tests</a>
                 <span id="services-count">Services: -/8</span>
+                <span id="endpoints-count">Endpoints: -</span>
                 <span id="last-update">Update: -</span>
             </div>
         </div>
@@ -1407,6 +1408,7 @@
         const API_BASE = '';  // Relative URLs via nginx proxy
 
         let healthyServices = 0;
+        let totalEndpoints = 0;
 
         // Mapping service name to dataflow status element id
         const dataflowStatusMap = {
@@ -1700,6 +1702,27 @@
             }
         }
 
+        async function countEndpoints() {
+            // Count API endpoints from OpenAPI specs of all services
+            const services = ['data', 'nhits', 'tcn', 'hmm', 'embedder', 'rag', 'llm'];
+            let count = 0;
+
+            for (const service of services) {
+                try {
+                    const res = await fetch(`/${service}/openapi.json`);
+                    if (res.ok) {
+                        const spec = await res.json();
+                        if (spec.paths) {
+                            count += Object.keys(spec.paths).length;
+                        }
+                    }
+                } catch (e) {
+                    // Service not available, skip
+                }
+            }
+            return count;
+        }
+
         async function refreshStatus() {
             healthyServices = 0;
             await Promise.all([
@@ -1714,6 +1737,12 @@
                 updateSystemMetrics(),
                 updateStorageMetrics()
             ]);
+
+            // Count endpoints (run in background to not block UI)
+            countEndpoints().then(count => {
+                totalEndpoints = count;
+                document.getElementById('endpoints-count').textContent = `Endpoints: ${totalEndpoints}`;
+            });
 
             document.getElementById('services-count').textContent = `Services: ${healthyServices}/8`;
             document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
