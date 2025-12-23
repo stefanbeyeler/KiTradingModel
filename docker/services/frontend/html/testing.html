@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KI Trading Model - Test Suite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .back-link {
+            color: #64c8ff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(100, 200, 255, 0.1);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: rgba(100, 200, 255, 0.2);
+        }
+
+        /* Test Controls */
+        .test-controls {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .controls-header h2 {
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Test Summary */
+        .test-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .summary-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .summary-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .summary-card .label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        .summary-card.passed .value { color: #10b981; }
+        .summary-card.failed .value { color: #ef4444; }
+        .summary-card.skipped .value { color: #f59e0b; }
+        .summary-card.total .value { color: #64c8ff; }
+
+        /* Test Categories */
+        .test-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .category-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+        }
+
+        .category-card:hover {
+            border-color: rgba(100, 200, 255, 0.3);
+        }
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .category-header h3 {
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .category-status {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .category-status.pending {
+            background: rgba(107, 114, 128, 0.2);
+            color: #9ca3af;
+        }
+
+        .category-status.running {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .category-status.passed {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .category-status.failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .category-status.skipped {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        .category-description {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-bottom: 0.75rem;
+        }
+
+        .category-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+        }
+
+        .category-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .category-stat.passed { color: #34d399; }
+        .category-stat.failed { color: #f87171; }
+        .category-stat.skipped { color: #fbbf24; }
+
+        .category-progress {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 0.75rem;
+            overflow: hidden;
+        }
+
+        .category-progress-bar {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        .category-progress-bar.passed { background: #10b981; }
+        .category-progress-bar.failed { background: #ef4444; }
+        .category-progress-bar.running {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            animation: progress-pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes progress-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Test Results */
+        .test-results {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .results-header h2 {
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
+            color: #e8e8e8;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: rgba(100, 200, 255, 0.2);
+            border-color: rgba(100, 200, 255, 0.4);
+        }
+
+        .test-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .test-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid transparent;
+        }
+
+        .test-item.passed { border-left-color: #10b981; }
+        .test-item.failed { border-left-color: #ef4444; }
+        .test-item.skipped { border-left-color: #f59e0b; }
+
+        .test-icon {
+            font-size: 1.2rem;
+            width: 28px;
+            text-align: center;
+        }
+
+        .test-icon.passed { color: #10b981; }
+        .test-icon.failed { color: #ef4444; }
+        .test-icon.skipped { color: #f59e0b; }
+
+        .test-content {
+            flex: 1;
+        }
+
+        .test-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .test-path {
+            font-size: 0.75rem;
+            opacity: 0.5;
+            font-family: monospace;
+            margin-bottom: 0.5rem;
+        }
+
+        .test-message {
+            font-size: 0.85rem;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .test-message.error {
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .test-duration {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        /* Recommendations */
+        .recommendations {
+            margin-top: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .recommendations h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .recommendation-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            border-left: 3px solid;
+        }
+
+        .recommendation-item.critical {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .recommendation-item.warning {
+            border-left-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .recommendation-item.info {
+            border-left-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .recommendation-item.success {
+            border-left-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .recommendation-icon {
+            font-size: 1.5rem;
+        }
+
+        .recommendation-content {
+            flex: 1;
+        }
+
+        .recommendation-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .recommendation-description {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .recommendation-action {
+            font-size: 0.85rem;
+            color: #64c8ff;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            opacity: 0.6;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            border-left: 4px solid #64c8ff;
+            display: none;
+            z-index: 1000;
+            max-width: 400px;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.error {
+            border-left-color: #ef4444;
+        }
+
+        .toast.success {
+            border-left-color: #10b981;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>&#128203; Test Suite</h1>
+            <div class="header-actions">
+                <a href="/index.html" class="back-link">&#8592; Dashboard</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Test Controls -->
+        <div class="test-controls">
+            <div class="controls-header">
+                <h2>&#9881; Test-Steuerung</h2>
+                <div class="test-buttons">
+                    <button class="btn btn-primary" id="run-all-btn" onclick="runAllTests()">
+                        <span>&#9654;</span> Alle Tests starten
+                    </button>
+                    <button class="btn btn-secondary" id="run-smoke-btn" onclick="runTestCategory('smoke')">
+                        <span>&#128168;</span> Smoke Tests
+                    </button>
+                    <button class="btn btn-secondary" id="run-api-btn" onclick="runTestCategory('api')">
+                        <span>&#128279;</span> API Tests
+                    </button>
+                    <button class="btn btn-secondary" id="run-integration-btn" onclick="runTestCategory('integration')">
+                        <span>&#128200;</span> Integration
+                    </button>
+                    <button class="btn btn-secondary" id="run-unit-btn" onclick="runTestCategory('unit')">
+                        <span>&#128221;</span> Unit Tests
+                    </button>
+                    <button class="btn btn-danger" id="stop-btn" onclick="stopTests()" disabled>
+                        <span>&#9632;</span> Abbrechen
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="test-summary" id="test-summary">
+                <div class="summary-card total">
+                    <div class="value" id="total-tests">0</div>
+                    <div class="label">Tests gesamt</div>
+                </div>
+                <div class="summary-card passed">
+                    <div class="value" id="passed-tests">0</div>
+                    <div class="label">Bestanden</div>
+                </div>
+                <div class="summary-card failed">
+                    <div class="value" id="failed-tests">0</div>
+                    <div class="label">Fehlgeschlagen</div>
+                </div>
+                <div class="summary-card skipped">
+                    <div class="value" id="skipped-tests">0</div>
+                    <div class="label">Übersprungen</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Categories -->
+        <div class="test-categories">
+            <div class="category-card" id="cat-smoke">
+                <div class="category-header">
+                    <h3>&#128168; Smoke Tests</h3>
+                    <span class="category-status pending" id="status-smoke">Bereit</span>
+                </div>
+                <div class="category-description">
+                    Health Checks für alle 8 Microservices - prüft ob Services erreichbar und funktional sind.
+                </div>
+                <div class="category-stats">
+                    <span class="category-stat passed">&#10003; <span id="smoke-passed">0</span></span>
+                    <span class="category-stat failed">&#10007; <span id="smoke-failed">0</span></span>
+                    <span class="category-stat skipped">&#8680; <span id="smoke-skipped">0</span></span>
+                </div>
+                <div class="category-progress">
+                    <div class="category-progress-bar" id="progress-smoke" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="category-card" id="cat-api">
+                <div class="category-header">
+                    <h3>&#128279; API Tests</h3>
+                    <span class="category-status pending" id="status-api">Bereit</span>
+                </div>
+                <div class="category-description">
+                    Endpoint-Tests für alle Service-APIs - OHLCV, Forecasts, Patterns, Regime, Embeddings, RAG, LLM.
+                </div>
+                <div class="category-stats">
+                    <span class="category-stat passed">&#10003; <span id="api-passed">0</span></span>
+                    <span class="category-stat failed">&#10007; <span id="api-failed">0</span></span>
+                    <span class="category-stat skipped">&#8680; <span id="api-skipped">0</span></span>
+                </div>
+                <div class="category-progress">
+                    <div class="category-progress-bar" id="progress-api" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="category-card" id="cat-integration">
+                <div class="category-header">
+                    <h3>&#128200; Integration Tests</h3>
+                    <span class="category-status pending" id="status-integration">Bereit</span>
+                </div>
+                <div class="category-description">
+                    Service-übergreifende Tests - Data Gateway Pattern, Service-Chain, Fallback-Logik.
+                </div>
+                <div class="category-stats">
+                    <span class="category-stat passed">&#10003; <span id="integration-passed">0</span></span>
+                    <span class="category-stat failed">&#10007; <span id="integration-failed">0</span></span>
+                    <span class="category-stat skipped">&#8680; <span id="integration-skipped">0</span></span>
+                </div>
+                <div class="category-progress">
+                    <div class="category-progress-bar" id="progress-integration" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="category-card" id="cat-contract">
+                <div class="category-header">
+                    <h3>&#128221; Contract Tests</h3>
+                    <span class="category-status pending" id="status-contract">Bereit</span>
+                </div>
+                <div class="category-description">
+                    API-Schema-Validierung - prüft Response-Formate gegen definierte Pydantic-Schemas.
+                </div>
+                <div class="category-stats">
+                    <span class="category-stat passed">&#10003; <span id="contract-passed">0</span></span>
+                    <span class="category-stat failed">&#10007; <span id="contract-failed">0</span></span>
+                    <span class="category-stat skipped">&#8680; <span id="contract-skipped">0</span></span>
+                </div>
+                <div class="category-progress">
+                    <div class="category-progress-bar" id="progress-contract" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="category-card" id="cat-unit">
+                <div class="category-header">
+                    <h3>&#128300; Unit Tests</h3>
+                    <span class="category-status pending" id="status-unit">Bereit</span>
+                </div>
+                <div class="category-description">
+                    Isolierte Tests ohne Service-Abhängigkeiten - prüft Geschäftslogik mit Mocks.
+                </div>
+                <div class="category-stats">
+                    <span class="category-stat passed">&#10003; <span id="unit-passed">0</span></span>
+                    <span class="category-stat failed">&#10007; <span id="unit-failed">0</span></span>
+                    <span class="category-stat skipped">&#8680; <span id="unit-skipped">0</span></span>
+                </div>
+                <div class="category-progress">
+                    <div class="category-progress-bar" id="progress-unit" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="recommendations" id="recommendations-section" style="display: none;">
+            <h2>&#128161; Empfehlungen</h2>
+            <div id="recommendations-list"></div>
+        </div>
+
+        <!-- Test Results -->
+        <div class="test-results">
+            <div class="results-header">
+                <h2>&#128203; Test-Ergebnisse</h2>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="filterResults('all')">Alle</button>
+                    <button class="filter-btn" onclick="filterResults('passed')">Bestanden</button>
+                    <button class="filter-btn" onclick="filterResults('failed')">Fehlgeschlagen</button>
+                    <button class="filter-btn" onclick="filterResults('skipped')">Übersprungen</button>
+                </div>
+            </div>
+            <div class="test-list" id="test-list">
+                <div class="empty-state">
+                    <div class="empty-state-icon">&#128203;</div>
+                    <div>Noch keine Tests ausgeführt</div>
+                    <div style="font-size: 0.85rem; margin-top: 0.5rem;">Klicke auf "Alle Tests starten" um die Test-Suite zu starten</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        KI Trading Model Test Suite | pytest + httpx | Automatisierte Qualitätssicherung
+    </footer>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // State
+        let testResults = [];
+        let isRunning = false;
+        let currentFilter = 'all';
+
+        // API Base URL - use data service as test runner host
+        const TEST_API = '/data/api/v1/testing';
+
+        // Helper Functions
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast show ${type}`;
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        function updateButton(btnId, loading, text) {
+            const btn = document.getElementById(btnId);
+            if (loading) {
+                btn.innerHTML = `<span class="spinner"></span> ${text}`;
+                btn.disabled = true;
+            } else {
+                btn.disabled = false;
+            }
+        }
+
+        function setRunningState(running) {
+            isRunning = running;
+            document.getElementById('run-all-btn').disabled = running;
+            document.getElementById('run-smoke-btn').disabled = running;
+            document.getElementById('run-api-btn').disabled = running;
+            document.getElementById('run-integration-btn').disabled = running;
+            document.getElementById('run-unit-btn').disabled = running;
+            document.getElementById('stop-btn').disabled = !running;
+
+            if (running) {
+                document.getElementById('run-all-btn').innerHTML = '<span class="spinner"></span> Läuft...';
+            } else {
+                document.getElementById('run-all-btn').innerHTML = '<span>&#9654;</span> Alle Tests starten';
+            }
+        }
+
+        function updateCategoryStatus(category, status) {
+            const statusEl = document.getElementById(`status-${category}`);
+            statusEl.textContent = {
+                'pending': 'Bereit',
+                'running': 'Läuft...',
+                'passed': 'Bestanden',
+                'failed': 'Fehlgeschlagen',
+                'skipped': 'Übersprungen'
+            }[status];
+            statusEl.className = `category-status ${status}`;
+
+            const progressBar = document.getElementById(`progress-${category}`);
+            if (status === 'running') {
+                progressBar.className = 'category-progress-bar running';
+                progressBar.style.width = '100%';
+            } else if (status === 'passed') {
+                progressBar.className = 'category-progress-bar passed';
+            } else if (status === 'failed') {
+                progressBar.className = 'category-progress-bar failed';
+            }
+        }
+
+        function updateCategoryStats(category, passed, failed, skipped) {
+            document.getElementById(`${category}-passed`).textContent = passed;
+            document.getElementById(`${category}-failed`).textContent = failed;
+            document.getElementById(`${category}-skipped`).textContent = skipped;
+        }
+
+        function updateSummary() {
+            const passed = testResults.filter(t => t.outcome === 'passed').length;
+            const failed = testResults.filter(t => t.outcome === 'failed').length;
+            const skipped = testResults.filter(t => t.outcome === 'skipped').length;
+            const total = testResults.length;
+
+            document.getElementById('total-tests').textContent = total;
+            document.getElementById('passed-tests').textContent = passed;
+            document.getElementById('failed-tests').textContent = failed;
+            document.getElementById('skipped-tests').textContent = skipped;
+        }
+
+        function getTestIcon(outcome) {
+            switch (outcome) {
+                case 'passed': return '&#10003;';
+                case 'failed': return '&#10007;';
+                case 'skipped': return '&#8680;';
+                default: return '&#8226;';
+            }
+        }
+
+        function renderTestResults() {
+            const container = document.getElementById('test-list');
+
+            if (testResults.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#128203;</div>
+                        <div>Noch keine Tests ausgeführt</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let filteredResults = testResults;
+            if (currentFilter !== 'all') {
+                filteredResults = testResults.filter(t => t.outcome === currentFilter);
+            }
+
+            if (filteredResults.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#128269;</div>
+                        <div>Keine Tests mit diesem Filter</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredResults.map(test => `
+                <div class="test-item ${test.outcome}">
+                    <div class="test-icon ${test.outcome}">${getTestIcon(test.outcome)}</div>
+                    <div class="test-content">
+                        <div class="test-name">${test.name}</div>
+                        <div class="test-path">${test.nodeid || test.path || ''}</div>
+                        ${test.duration ? `<div class="test-duration">${test.duration.toFixed(2)}s</div>` : ''}
+                        ${test.message ? `<div class="test-message ${test.outcome === 'failed' ? 'error' : ''}">${escapeHtml(test.message)}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function filterResults(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.toLowerCase().includes(filter) ||
+                    (filter === 'all' && btn.textContent === 'Alle'));
+            });
+            renderTestResults();
+        }
+
+        function generateRecommendations() {
+            const recommendations = [];
+            const failedTests = testResults.filter(t => t.outcome === 'failed');
+            const skippedTests = testResults.filter(t => t.outcome === 'skipped');
+
+            // Analyze failed tests
+            const healthChecksFailed = failedTests.filter(t =>
+                t.name.includes('health') || t.nodeid?.includes('smoke'));
+
+            if (healthChecksFailed.length > 0) {
+                const services = healthChecksFailed.map(t => {
+                    const match = t.name.match(/(\w+)_service|(\w+)-config/);
+                    return match ? (match[1] || match[2]) : 'unknown';
+                });
+                recommendations.push({
+                    type: 'critical',
+                    icon: '&#9888;',
+                    title: 'Services nicht erreichbar',
+                    description: `Die folgenden Services antworten nicht auf Health Checks: ${[...new Set(services)].join(', ')}`,
+                    action: 'sudo docker compose -f docker-compose.microservices.yml up -d'
+                });
+            }
+
+            // Check for connection errors
+            const connectionErrors = failedTests.filter(t =>
+                t.message?.includes('ConnectError') || t.message?.includes('Connection refused'));
+
+            if (connectionErrors.length > 0 && healthChecksFailed.length === 0) {
+                recommendations.push({
+                    type: 'warning',
+                    icon: '&#128268;',
+                    title: 'Netzwerk-Probleme',
+                    description: 'Einige Tests konnten keine Verbindung zu den Services herstellen.',
+                    action: 'docker network inspect trading-net'
+                });
+            }
+
+            // Check for API validation errors
+            const validationErrors = failedTests.filter(t =>
+                t.message?.includes('422') || t.message?.includes('validation'));
+
+            if (validationErrors.length > 0) {
+                recommendations.push({
+                    type: 'warning',
+                    icon: '&#128221;',
+                    title: 'API-Validierungsfehler',
+                    description: 'Einige API-Requests haben ungültige Parameter. Prüfe die API-Dokumentation.',
+                    action: 'Öffne /data/docs für die Swagger-Dokumentation'
+                });
+            }
+
+            // Check for skipped tests
+            if (skippedTests.length > testResults.length * 0.5) {
+                recommendations.push({
+                    type: 'info',
+                    icon: '&#128161;',
+                    title: 'Viele Tests übersprungen',
+                    description: 'Mehr als 50% der Tests wurden übersprungen. Dies passiert wenn Services nicht laufen.',
+                    action: 'Starte alle Services und führe die Tests erneut aus'
+                });
+            }
+
+            // Check for model-related errors
+            const modelErrors = failedTests.filter(t =>
+                t.message?.includes('model') || t.message?.includes('404'));
+
+            if (modelErrors.length > 0) {
+                recommendations.push({
+                    type: 'info',
+                    icon: '&#129302;',
+                    title: 'Modelle nicht verfügbar',
+                    description: 'Einige ML-Modelle sind nicht trainiert. Das ist normal bei frischer Installation.',
+                    action: 'POST /nhits/api/v1/train mit {"symbol": "BTCUSD", "epochs": 10}'
+                });
+            }
+
+            // Success message if all tests passed
+            if (failedTests.length === 0 && testResults.length > 0) {
+                recommendations.push({
+                    type: 'success',
+                    icon: '&#127881;',
+                    title: 'Alle Tests bestanden!',
+                    description: 'Die Microservices-Architektur funktioniert einwandfrei.',
+                    action: ''
+                });
+            }
+
+            return recommendations;
+        }
+
+        function renderRecommendations() {
+            const recommendations = generateRecommendations();
+            const section = document.getElementById('recommendations-section');
+            const list = document.getElementById('recommendations-list');
+
+            if (recommendations.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            list.innerHTML = recommendations.map(rec => `
+                <div class="recommendation-item ${rec.type}">
+                    <div class="recommendation-icon">${rec.icon}</div>
+                    <div class="recommendation-content">
+                        <div class="recommendation-title">${rec.title}</div>
+                        <div class="recommendation-description">${rec.description}</div>
+                        ${rec.action ? `<div class="recommendation-action">${rec.action}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // API Functions
+        async function runAllTests() {
+            await runTests(['smoke', 'api', 'integration', 'contract', 'unit']);
+        }
+
+        async function runTestCategory(category) {
+            await runTests([category]);
+        }
+
+        async function runTests(categories) {
+            setRunningState(true);
+            testResults = [];
+            renderTestResults();
+
+            // Reset all categories
+            ['smoke', 'api', 'integration', 'contract', 'unit'].forEach(cat => {
+                if (categories.includes(cat)) {
+                    updateCategoryStatus(cat, 'running');
+                } else {
+                    updateCategoryStatus(cat, 'pending');
+                }
+                updateCategoryStats(cat, 0, 0, 0);
+            });
+
+            try {
+                const response = await fetch(`${TEST_API}/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ categories })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                testResults = data.tests || [];
+
+                // Update category stats
+                categories.forEach(cat => {
+                    const catTests = testResults.filter(t =>
+                        t.nodeid?.includes(cat) || t.category === cat);
+                    const passed = catTests.filter(t => t.outcome === 'passed').length;
+                    const failed = catTests.filter(t => t.outcome === 'failed').length;
+                    const skipped = catTests.filter(t => t.outcome === 'skipped').length;
+
+                    updateCategoryStats(cat, passed, failed, skipped);
+                    updateCategoryStatus(cat, failed > 0 ? 'failed' : (passed > 0 ? 'passed' : 'skipped'));
+                });
+
+                updateSummary();
+                renderTestResults();
+                renderRecommendations();
+
+                const passed = testResults.filter(t => t.outcome === 'passed').length;
+                const failed = testResults.filter(t => t.outcome === 'failed').length;
+
+                if (failed === 0) {
+                    showToast(`Alle ${passed} Tests bestanden!`, 'success');
+                } else {
+                    showToast(`${failed} von ${testResults.length} Tests fehlgeschlagen`, 'error');
+                }
+
+            } catch (error) {
+                console.error('Test error:', error);
+                showToast(`Fehler: ${error.message}`, 'error');
+
+                categories.forEach(cat => {
+                    updateCategoryStatus(cat, 'failed');
+                });
+            } finally {
+                setRunningState(false);
+            }
+        }
+
+        async function stopTests() {
+            try {
+                await fetch(`${TEST_API}/stop`, { method: 'POST' });
+                showToast('Tests werden abgebrochen...', 'info');
+            } catch (error) {
+                console.error('Stop error:', error);
+            }
+            setRunningState(false);
+        }
+
+        // Initial page load - check if test API is available
+        async function checkTestAPI() {
+            try {
+                const response = await fetch(`${TEST_API}/status`);
+                if (!response.ok) {
+                    showToast('Test-API nicht verfügbar. Starte Data Service.', 'error');
+                }
+            } catch (error) {
+                console.error('Test API check failed:', error);
+                showToast('Verbindung zur Test-API fehlgeschlagen', 'error');
+            }
+        }
+
+        // Run check on load
+        checkTestAPI();
+    </script>
+</body>
+</html>

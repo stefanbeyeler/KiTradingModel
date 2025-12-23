@@ -47,12 +47,35 @@
             display: flex;
             gap: 1rem;
             font-size: 0.85rem;
+            align-items: center;
         }
 
         .header-status span {
             padding: 0.4rem 0.8rem;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 20px;
+        }
+
+        .header-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.2));
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+        }
+
+        .header-btn:hover {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(16, 185, 129, 0.3));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
         }
 
         .services-grid {
@@ -909,6 +932,7 @@
         <div class="container">
             <h1>KI Trading Model</h1>
             <div class="header-status">
+                <a href="/testing.html" class="header-btn">&#128203; Tests</a>
                 <span id="services-count">Services: -/8</span>
                 <span id="last-update">Update: -</span>
             </div>

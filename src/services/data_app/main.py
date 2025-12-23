@@ -36,6 +36,7 @@ from src.api.routes import (
     external_sources_router,
     router as general_router
 )
+from src.api.testing_routes import testing_router
 from src.services.timescaledb_sync_service import TimescaleDBSyncService
 from src.services.rag_service import RAGService
 from src.services.training_data_cache_service import training_data_cache
@@ -133,6 +134,17 @@ openapi_tags = [
 - **Volatility Regime**: VIX, ATR, Bollinger, Position Sizing
 - **Institutional Flow**: COT Reports, ETF Flows, Whale Tracking"""
     },
+    {
+        "name": "12. Testing",
+        "description": """Test Suite Execution für automatisierte Qualitätssicherung.
+
+**Test-Kategorien:**
+- **Smoke Tests**: Health Checks für alle 8 Microservices
+- **API Tests**: Endpoint-Tests für alle Service-APIs
+- **Integration Tests**: Service-übergreifende Tests
+- **Contract Tests**: API-Schema-Validierung mit Pydantic
+- **Unit Tests**: Isolierte Tests ohne Service-Abhängigkeiten"""
+    },
 ]
 
 # Create FastAPI application
@@ -189,6 +201,7 @@ app.include_router(training_router, prefix="/api/v1", tags=["8. NHITS Training"]
 app.include_router(sync_router, prefix="/api/v1", tags=["9. RAG Sync"])
 app.include_router(query_log_router, prefix="/api/v1", tags=["10. Query Logs & Analytics"])
 app.include_router(external_sources_router, prefix="/api/v1", tags=["11. External Data Sources"])
+app.include_router(testing_router, prefix="/api/v1/testing", tags=["12. Testing"])
 
 
 async def _periodic_cache_cleanup():
