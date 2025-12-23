@@ -171,7 +171,11 @@
       "Bash(docker stats:*)",
       "Bash(docker system df:*)",
       "Bash(sudo cp:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(make test:*)",
+      "Bash(make test-unit:*)",
+      "Bash(pytest:*)",
+      "Bash(scp:*)"
     ],
     "deny": [],
     "ask": []

@@ -5,8 +5,14 @@ import pytest
 import httpx
 import asyncio
 import os
+import sys
 from typing import AsyncGenerator, Dict, Any
 from datetime import datetime, timezone
+
+# Add project root to path for imports
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 # ========== Service URLs ==========
 

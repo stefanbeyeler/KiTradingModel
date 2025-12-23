@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Ein zentraler Watchdog-Service zur Überwachung aller Microservices mit WhatsApp-Alarmierung über die Twilio API.
+Ein zentraler Watchdog-Service zur Überwachung aller Microservices mit **Telegram** und optional **WhatsApp** Alarmierung.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -15,19 +15,36 @@ Ein zentraler Watchdog-Service zur Überwachung aller Microservices mit WhatsApp
 │   └─────────────┘    └─────────────┘    └─────────────┘        │
 │          │                                      │                │
 │          ▼                                      ▼                │
-│   ┌─────────────┐                      ┌─────────────┐          │
-│   │  Service    │                      │  WhatsApp   │          │
-│   │  Registry   │                      │  Notifier   │          │
-│   └─────────────┘                      └─────────────┘          │
-│                                                │                 │
-└────────────────────────────────────────────────│─────────────────┘
-                                                 │
-                                                 ▼
-                                          ┌─────────────┐
-                                          │  Twilio API │
-                                          │  (WhatsApp) │
-                                          └─────────────┘
+│   ┌─────────────┐              ┌────────────────────────────┐   │
+│   │  Service    │              │     Notification Router    │   │
+│   │  Registry   │              ├──────────────┬─────────────┤   │
+│   └─────────────┘              │   Telegram   │  WhatsApp   │   │
+│                                │   Notifier   │  Notifier   │   │
+│                                └──────────────┴─────────────┘   │
+│                                       │              │          │
+└───────────────────────────────────────│──────────────│──────────┘
+                                        │              │
+                                        ▼              ▼
+                                 ┌───────────┐  ┌─────────────┐
+                                 │ Telegram  │  │  Twilio API │
+                                 │ Bot API   │  │  (WhatsApp) │
+                                 │ (GRATIS)  │  │  (Kostenpfl)│
+                                 └───────────┘  └─────────────┘
 ```
+
+## Vergleich: Telegram vs. WhatsApp
+
+| Feature                      | Telegram           | WhatsApp (Twilio)        |
+|------------------------------|--------------------| -------------------------|
+| **Kosten**                   | Kostenlos          | ~$0.005-0.05/Nachricht   |
+| **Setup**                    | 2 Minuten          | 10-15 Minuten            |
+| **Bot erstellen**            | @BotFather         | Twilio Console           |
+| **Empfänger-Registrierung**  | `/start` an Bot    | Join Sandbox             |
+| **Gruppenchats**             | Ja                 | Nein (Sandbox)           |
+| **Rich Formatting**          | Markdown, HTML     | Nur Basic                |
+| **Bilder/Dateien**           | Ja                 | Ja                       |
+| **API Rate Limits**          | 30 msg/sec         | Abhängig vom Plan        |
+| **Empfehlung**               | **Primär**         | Backup/Optional          |
 
 ## Zu überwachende Services
 
@@ -70,8 +87,8 @@ src/services/watchdog_app/
 
 ```python
 # src/services/watchdog_app/config.py
-from pydantic import BaseSettings
-from typing import List
+from pydantic_settings import BaseSettings
+from typing import Optional
 
 class WatchdogSettings(BaseSettings):
     # Service-Konfiguration
@@ -80,26 +97,41 @@ class WatchdogSettings(BaseSettings):
     timeout_seconds: int = 10
     max_retries: int = 3
 
-    # Twilio WhatsApp
-    twilio_account_sid: str
-    twilio_auth_token: str
+    # ============================================
+    # TELEGRAM (Empfohlen - Kostenlos)
+    # ============================================
+    telegram_enabled: bool = True
+    telegram_bot_token: str = ""           # Von @BotFather
+    telegram_chat_ids: str = ""            # Kommagetrennt: "123456789,-100987654321"
+
+    # ============================================
+    # WHATSAPP (Optional - Kostenpflichtig)
+    # ============================================
+    whatsapp_enabled: bool = False
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
     twilio_whatsapp_from: str = "whatsapp:+14155238886"  # Twilio Sandbox
+    whatsapp_recipients: str = ""          # Kommagetrennt: "+41791234567,+41799876543"
 
-    # Empfänger (kommagetrennt)
-    alert_recipients: str = ""  # z.B. "+41791234567,+41799876543"
-
+    # ============================================
     # Alert-Konfiguration
-    alert_cooldown_minutes: int = 15  # Keine Wiederholung innerhalb 15 Min
-    alert_on_recovery: bool = True    # Auch bei Wiederherstellung alarmieren
+    # ============================================
+    alert_cooldown_minutes: int = 15       # Keine Wiederholung innerhalb 15 Min
+    alert_on_recovery: bool = True         # Auch bei Wiederherstellung alarmieren
 
     # Kritikalitätsstufen für Alarmierung
     alert_on_critical: bool = True
     alert_on_high: bool = True
     alert_on_medium: bool = False
 
-    class Config:
-        env_file = ".env.watchdog"
-        env_prefix = "WATCHDOG_"
+    # Tägliche Zusammenfassung
+    daily_summary_enabled: bool = True
+    daily_summary_hour: int = 8            # 08:00 Uhr
+
+    model_config = {
+        "env_file": ".env.watchdog",
+        "env_prefix": "WATCHDOG_"
+    }
 ```
 
 ### 3. Health-Checker Service
@@ -259,7 +291,198 @@ class HealthChecker:
         logger.info("Watchdog monitoring loop stopped")
 ```
 
-### 4. WhatsApp-Notifier (Twilio)
+### 4. Telegram-Notifier (Empfohlen - Kostenlos)
+
+```python
+# src/services/watchdog_app/services/telegram_notifier.py
+import httpx
+from datetime import datetime, timezone
+from typing import List, Optional
+from loguru import logger
+
+class TelegramNotifier:
+    """Sendet Telegram-Nachrichten über die Bot API (kostenlos)."""
+
+    def __init__(self, settings):
+        self.settings = settings
+        self.bot_token = settings.telegram_bot_token
+        self.chat_ids = self._parse_chat_ids(settings.telegram_chat_ids)
+        self.api_url = f"https://api.telegram.org/bot{self.bot_token}"
+        self.enabled = settings.telegram_enabled and bool(self.bot_token)
+
+    def _parse_chat_ids(self, chat_ids_str: str) -> List[str]:
+        """Parst kommagetrennte Chat-IDs (User oder Gruppen)."""
+        if not chat_ids_str:
+            return []
+        return [cid.strip() for cid in chat_ids_str.split(",") if cid.strip()]
+
+    async def send_alert(
+        self,
+        service_name: str,
+        state: str,
+        error: Optional[str] = None,
+        recovery: bool = False
+    ) -> bool:
+        """
+        Sendet einen Alert an alle konfigurierten Chats.
+
+        Args:
+            service_name: Name des betroffenen Services
+            state: Aktueller Status (UNHEALTHY, DEGRADED, etc.)
+            error: Optionale Fehlermeldung
+            recovery: True wenn es eine Wiederherstellungsmeldung ist
+
+        Returns:
+            True wenn mindestens eine Nachricht erfolgreich gesendet wurde
+        """
+        if not self.enabled:
+            logger.debug("Telegram notifications disabled")
+            return False
+
+        if not self.chat_ids:
+            logger.warning("No Telegram chat IDs configured")
+            return False
+
+        # Nachricht formatieren (Telegram MarkdownV2)
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        if recovery:
+            message = f"""
+✅ *SERVICE RECOVERED*
+
+📦 Service: `{service_name}`
+🕐 Zeit: {timestamp}
+📊 Status: {state}
+
+Der Service ist wieder verfügbar\\.
+"""
+        else:
+            emoji = "🚨" if state == "UNHEALTHY" else "⚠️"
+            # Escape special chars for MarkdownV2
+            error_escaped = self._escape_markdown(error or "Keine Details")
+            message = f"""
+{emoji} *SERVICE ALERT*
+
+📦 Service: `{service_name}`
+🕐 Zeit: {timestamp}
+📊 Status: *{state}*
+❌ Fehler: {error_escaped}
+
+Bitte umgehend prüfen\\!
+"""
+
+        success_count = 0
+        async with httpx.AsyncClient(timeout=10) as client:
+            for chat_id in self.chat_ids:
+                try:
+                    response = await client.post(
+                        f"{self.api_url}/sendMessage",
+                        json={
+                            "chat_id": chat_id,
+                            "text": message.strip(),
+                            "parse_mode": "MarkdownV2"
+                        }
+                    )
+                    if response.status_code == 200:
+                        logger.info(f"Telegram alert sent to {chat_id}")
+                        success_count += 1
+                    else:
+                        logger.error(f"Telegram API error: {response.text}")
+                except Exception as e:
+                    logger.error(f"Failed to send Telegram to {chat_id}: {e}")
+
+        return success_count > 0
+
+    def _escape_markdown(self, text: str) -> str:
+        """Escaped Sonderzeichen für Telegram MarkdownV2."""
+        special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+        for char in special_chars:
+            text = text.replace(char, f'\\{char}')
+        return text
+
+    async def send_daily_summary(self, summary: dict) -> bool:
+        """Sendet eine tägliche Zusammenfassung."""
+        if not self.enabled or not self.chat_ids:
+            return False
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+        healthy = summary.get("healthy", 0)
+        degraded = summary.get("degraded", 0)
+        unhealthy = summary.get("unhealthy", 0)
+        total = healthy + degraded + unhealthy
+
+        status_emoji = "✅" if unhealthy == 0 else "⚠️"
+
+        message = f"""
+📊 *DAILY SYSTEM REPORT*
+
+🕐 Zeit: {timestamp}
+
+{status_emoji} Service Status:
+• Healthy: {healthy}/{total}
+• Degraded: {degraded}/{total}
+• Unhealthy: {unhealthy}/{total}
+
+📈 24h Statistiken:
+• Alerts: {summary.get('alerts_24h', 0)}
+• Avg Response: {summary.get('avg_response_ms', 0):.0f}ms
+• Uptime: {summary.get('uptime_percent', 0):.1f}%
+"""
+
+        async with httpx.AsyncClient(timeout=10) as client:
+            for chat_id in self.chat_ids:
+                try:
+                    await client.post(
+                        f"{self.api_url}/sendMessage",
+                        json={
+                            "chat_id": chat_id,
+                            "text": message.strip(),
+                            "parse_mode": "Markdown"
+                        }
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send daily summary to {chat_id}: {e}")
+
+        return True
+
+    async def send_test_message(self) -> dict:
+        """Sendet eine Test-Nachricht und gibt Ergebnis zurück."""
+        results = {"success": [], "failed": []}
+
+        message = """
+🧪 *WATCHDOG TEST*
+
+Dies ist eine Test\\-Nachricht vom KI Trading Watchdog\\.
+
+✅ Telegram\\-Integration funktioniert\\!
+"""
+
+        async with httpx.AsyncClient(timeout=10) as client:
+            for chat_id in self.chat_ids:
+                try:
+                    response = await client.post(
+                        f"{self.api_url}/sendMessage",
+                        json={
+                            "chat_id": chat_id,
+                            "text": message.strip(),
+                            "parse_mode": "MarkdownV2"
+                        }
+                    )
+                    if response.status_code == 200:
+                        results["success"].append(chat_id)
+                    else:
+                        results["failed"].append({
+                            "chat_id": chat_id,
+                            "error": response.json().get("description", "Unknown error")
+                        })
+                except Exception as e:
+                    results["failed"].append({"chat_id": chat_id, "error": str(e)})
+
+        return results
+```
+
+### 5. WhatsApp-Notifier (Optional - Twilio)
 
 ```python
 # src/services/watchdog_app/services/whatsapp_notifier.py
@@ -396,23 +619,30 @@ Bitte umgehend prüfen!
         return True
 ```
 
-### 5. Alert-Manager
+### 6. Alert-Manager (Multi-Channel)
 
 ```python
 # src/services/watchdog_app/services/alert_manager.py
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from loguru import logger
 
 from ..models.service_status import ServiceStatus, HealthState
+from .telegram_notifier import TelegramNotifier
 from .whatsapp_notifier import WhatsAppNotifier
 
 class AlertManager:
-    """Verwaltet Alerts mit Deduplizierung und Cooldown."""
+    """Verwaltet Alerts mit Deduplizierung, Cooldown und Multi-Channel Support."""
 
-    def __init__(self, settings, notifier: WhatsAppNotifier):
+    def __init__(
+        self,
+        settings,
+        telegram_notifier: Optional[TelegramNotifier] = None,
+        whatsapp_notifier: Optional[WhatsAppNotifier] = None
+    ):
         self.settings = settings
-        self.notifier = notifier
+        self.telegram = telegram_notifier
+        self.whatsapp = whatsapp_notifier
         self.last_alerts: Dict[str, datetime] = {}
         self.last_states: Dict[str, HealthState] = {}
         self.alert_history: list = []
@@ -467,7 +697,7 @@ class AlertManager:
         # Recovery-Alert?
         if new_state == HealthState.HEALTHY and old_state in [HealthState.UNHEALTHY, HealthState.DEGRADED]:
             if self.settings.alert_on_recovery:
-                await self.notifier.send_alert(
+                await self._send_to_all_channels(
                     service_name=service_name,
                     state=new_state.value,
                     recovery=True
@@ -487,13 +717,40 @@ class AlertManager:
                 logger.debug(f"Alert for {service_name} suppressed (cooldown)")
                 return
 
-            # Alert senden
-            await self.notifier.send_alert(
+            # Alert über alle Kanäle senden
+            await self._send_to_all_channels(
                 service_name=service_name,
                 state=new_state.value,
-                error=new_status.error
+                error=new_status.error,
+                recovery=False
             )
             self._record_alert(service_name, new_state.value)
+
+    async def _send_to_all_channels(
+        self,
+        service_name: str,
+        state: str,
+        error: Optional[str] = None,
+        recovery: bool = False
+    ):
+        """Sendet Alert an alle konfigurierten Kanäle."""
+        # Telegram (primär)
+        if self.telegram:
+            await self.telegram.send_alert(
+                service_name=service_name,
+                state=state,
+                error=error,
+                recovery=recovery
+            )
+
+        # WhatsApp (sekundär/backup)
+        if self.whatsapp:
+            await self.whatsapp.send_alert(
+                service_name=service_name,
+                state=state,
+                error=error,
+                recovery=recovery
+            )
 
     def _record_alert(self, service_name: str, alert_type: str):
         """Zeichnet einen Alert auf."""
@@ -852,20 +1109,103 @@ python-dotenv>=1.0.0
 ### .env.watchdog
 
 ```bash
-# Twilio Konfiguration
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# ============================================
+# TELEGRAM (Empfohlen - Kostenlos)
+# ============================================
+WATCHDOG_TELEGRAM_ENABLED=true
+WATCHDOG_TELEGRAM_BOT_TOKEN=7123456789:AAHxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+WATCHDOG_TELEGRAM_CHAT_IDS=123456789,-100987654321
 
-# WhatsApp Empfänger (kommagetrennt, mit Ländercode)
-WHATSAPP_RECIPIENTS=+41791234567,+41799876543
+# ============================================
+# WHATSAPP (Optional - Kostenpflichtig)
+# ============================================
+WATCHDOG_WHATSAPP_ENABLED=false
+WATCHDOG_TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+WATCHDOG_TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+WATCHDOG_WHATSAPP_RECIPIENTS=+41791234567,+41799876543
 
-# Optional: Überschreibungen
+# ============================================
+# Monitoring-Konfiguration
+# ============================================
 WATCHDOG_CHECK_INTERVAL_SECONDS=30
+WATCHDOG_TIMEOUT_SECONDS=10
 WATCHDOG_ALERT_COOLDOWN_MINUTES=15
+WATCHDOG_ALERT_ON_RECOVERY=true
+WATCHDOG_ALERT_ON_CRITICAL=true
+WATCHDOG_ALERT_ON_HIGH=true
 WATCHDOG_ALERT_ON_MEDIUM=false
+
+# Tägliche Zusammenfassung
+WATCHDOG_DAILY_SUMMARY_ENABLED=true
+WATCHDOG_DAILY_SUMMARY_HOUR=8
 ```
 
-## Twilio WhatsApp Setup
+## Telegram Bot Setup (Empfohlen)
+
+### Schritt 1: Bot erstellen (2 Minuten)
+
+1. **Öffne Telegram** und suche nach `@BotFather`
+2. **Starte den Bot** mit `/start`
+3. **Erstelle neuen Bot** mit `/newbot`
+4. **Wähle einen Namen**: z.B. `KI Trading Watchdog`
+5. **Wähle einen Username**: z.B. `ki_trading_watchdog_bot` (muss auf `_bot` enden)
+6. **Kopiere den Token**: Sieht aus wie `7123456789:AAHxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+```bash
+# Token in .env.watchdog eintragen
+WATCHDOG_TELEGRAM_BOT_TOKEN=7123456789:AAHxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+### Schritt 2: Chat-ID ermitteln
+
+#### Option A: Persönlicher Chat
+
+1. Starte deinen Bot in Telegram (suche nach dem Bot-Namen und drücke `/start`)
+2. Öffne im Browser: `https://api.telegram.org/bot<DEIN_TOKEN>/getUpdates`
+3. Finde deine `chat.id` in der JSON-Antwort (z.B. `123456789`)
+
+#### Option B: Gruppen-Chat
+
+1. Erstelle eine Telegram-Gruppe
+2. Füge den Bot zur Gruppe hinzu
+3. Sende eine Nachricht in der Gruppe
+4. Öffne: `https://api.telegram.org/bot<DEIN_TOKEN>/getUpdates`
+5. Die Gruppen-ID beginnt mit `-` (z.B. `-100987654321`)
+
+```bash
+# Chat-IDs in .env.watchdog eintragen (kommagetrennt)
+WATCHDOG_TELEGRAM_CHAT_IDS=123456789,-100987654321
+```
+
+### Schritt 3: Testen
+
+```bash
+# Test-Nachricht senden
+curl -X POST "https://api.telegram.org/bot<TOKEN>/sendMessage" \
+  -H "Content-Type: application/json" \
+  -d '{"chat_id": "<CHAT_ID>", "text": "🧪 Watchdog Test!", "parse_mode": "Markdown"}'
+```
+
+### Bot-Befehle (Optional)
+
+Für bessere UX kannst du Befehle beim BotFather registrieren:
+
+```text
+/setcommands
+```
+
+Dann die Befehle eingeben:
+
+```text
+status - Zeigt aktuellen System-Status
+alerts - Zeigt letzte Alerts
+test - Sendet Test-Alert
+help - Zeigt Hilfe
+```
+
+---
+
+## WhatsApp Setup (Optional - Twilio)
 
 ### 1. Twilio Sandbox (Entwicklung)
 
@@ -979,13 +1319,33 @@ async function loadWatchdogStatus() {
 
 ## Zusammenfassung
 
-| Feature | Beschreibung |
-|---------|--------------|
-| **Health Monitoring** | Alle 8 Services alle 30 Sekunden |
-| **WhatsApp Alerts** | Via Twilio API bei Ausfällen |
-| **Alert-Deduplizierung** | 15 Min Cooldown pro Service |
-| **Kritikalitätsstufen** | Critical, High, Medium |
-| **Recovery-Alerts** | Benachrichtigung bei Wiederherstellung |
-| **API-Endpoints** | Status, Historie, Test-Alert |
-| **Docker-Integration** | Im trading-net Netzwerk |
-| **Erweiterbar** | Telegram, Prometheus, Dashboard |
+| Feature                  | Beschreibung                              |
+|--------------------------|-------------------------------------------|
+| **Health Monitoring**    | Alle 8 Services alle 30 Sekunden          |
+| **Telegram Alerts**      | Kostenlos via Bot API (empfohlen)         |
+| **WhatsApp Alerts**      | Optional via Twilio (kostenpflichtig)     |
+| **Multi-Channel**        | Telegram + WhatsApp gleichzeitig möglich  |
+| **Alert-Deduplizierung** | 15 Min Cooldown pro Service               |
+| **Kritikalitätsstufen**  | Critical, High, Medium                    |
+| **Recovery-Alerts**      | Benachrichtigung bei Wiederherstellung    |
+| **Tägliche Summary**     | Automatischer Report um 08:00             |
+| **API-Endpoints**        | Status, Historie, Test-Alert              |
+| **Docker-Integration**   | Im trading-net Netzwerk                   |
+
+## Quick Start
+
+```bash
+# 1. Telegram Bot erstellen bei @BotFather
+# 2. .env.watchdog konfigurieren
+cp .env.watchdog.example .env.watchdog
+
+# 3. Token und Chat-ID eintragen
+WATCHDOG_TELEGRAM_BOT_TOKEN=dein_token
+WATCHDOG_TELEGRAM_CHAT_IDS=deine_chat_id
+
+# 4. Container starten
+docker-compose -f docker-compose.watchdog.yml up -d
+
+# 5. Test-Alert senden
+curl -X POST http://localhost:3010/api/v1/alerts/test/telegram
+```
