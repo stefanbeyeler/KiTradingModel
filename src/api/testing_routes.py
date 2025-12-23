@@ -110,39 +110,48 @@ def parse_pytest_verbose_output(output: str) -> List[TestResult]:
     lines = output.strip().split('\n')
 
     for line in lines:
-        # Parse lines like: tests/smoke/test_health.py::test_data_service_health PASSED
-        if '::' in line and any(status in line for status in ['PASSED', 'FAILED', 'SKIPPED', 'ERROR']):
-            parts = line.strip().split()
-            if len(parts) >= 2:
-                nodeid = parts[0]
-                outcome = parts[-1].lower()
+        # Parse lines like: tests/smoke/test_health.py::test_data_service_health PASSED [ 5%]
+        # or: tests/smoke/test_health.py::test_data_service_health PASSED
+        if '::' in line:
+            # Check for status keywords anywhere in line
+            outcome = None
+            if ' PASSED' in line:
+                outcome = 'passed'
+            elif ' FAILED' in line:
+                outcome = 'failed'
+            elif ' SKIPPED' in line:
+                outcome = 'skipped'
+            elif ' ERROR' in line:
+                outcome = 'failed'
 
-                # Map ERROR to failed
-                if outcome == 'error':
-                    outcome = 'failed'
+            if outcome:
+                # Extract nodeid (first part before PASSED/FAILED/etc)
+                parts = line.strip().split()
+                if parts:
+                    nodeid = parts[0]
 
-                # Determine category from path
-                category = None
-                if 'smoke' in nodeid:
-                    category = 'smoke'
-                elif 'api/' in nodeid or '/api/' in nodeid:
-                    category = 'api'
-                elif 'integration' in nodeid:
-                    category = 'integration'
-                elif 'contract' in nodeid:
-                    category = 'contract'
-                elif 'unit' in nodeid:
-                    category = 'unit'
+                    # Determine category from path
+                    category = None
+                    if 'smoke' in nodeid:
+                        category = 'smoke'
+                    elif 'api/' in nodeid or '/api/' in nodeid:
+                        category = 'api'
+                    elif 'integration' in nodeid:
+                        category = 'integration'
+                    elif 'contract' in nodeid:
+                        category = 'contract'
+                    elif 'unit' in nodeid:
+                        category = 'unit'
 
-                # Extract test name
-                name = nodeid.split('::')[-1] if '::' in nodeid else nodeid
+                    # Extract test name
+                    name = nodeid.split('::')[-1] if '::' in nodeid else nodeid
 
-                results.append(TestResult(
-                    nodeid=nodeid,
-                    name=name,
-                    outcome=outcome,
-                    category=category
-                ))
+                    results.append(TestResult(
+                        nodeid=nodeid,
+                        name=name,
+                        outcome=outcome,
+                        category=category
+                    ))
 
     return results
 
