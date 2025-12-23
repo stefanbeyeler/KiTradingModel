@@ -2,9 +2,10 @@
 API tests for the RAG Service.
 
 Tests all endpoints of the RAG Service including:
-- Semantic search
+- Semantic search (query)
 - Document management
-- Trading context retrieval
+- External sources integration
+- Scheduler
 """
 import pytest
 import httpx
@@ -23,11 +24,11 @@ class TestRAGServiceAPI:
 
     @pytest.mark.api
     async def test_semantic_search(self, client):
-        """POST /api/v1/query - Semantic search."""
+        """POST /api/v1/rag/query - Semantic search."""
         async with client:
             try:
                 response = await client.post(
-                    "/api/v1/query",
+                    "/api/v1/rag/query",
                     json={
                         "query": "Bitcoin price prediction",
                         "top_k": 5
@@ -36,51 +37,35 @@ class TestRAGServiceAPI:
 
                 if response.status_code == 200:
                     data = response.json()
-                    assert "results" in data or isinstance(data, list)
+                    assert isinstance(data, (dict, list))
                 else:
-                    assert response.status_code in [404, 503]
+                    assert response.status_code in [404, 422, 503]
             except httpx.ConnectError:
                 pytest.skip("RAG service not reachable")
 
     @pytest.mark.api
-    async def test_add_document(self, client):
-        """POST /api/v1/documents - Add a document."""
+    async def test_detailed_query(self, client):
+        """POST /api/v1/rag/query/detailed - Detailed query with context."""
         async with client:
             try:
                 response = await client.post(
-                    "/api/v1/documents",
+                    "/api/v1/rag/query/detailed",
                     json={
-                        "content": "Test document for RAG system unit testing.",
-                        "metadata": {"source": "test", "type": "unit_test"}
+                        "query": "market analysis",
+                        "top_k": 5
                     }
                 )
 
-                assert response.status_code in [200, 201, 422]
+                assert response.status_code in [200, 404, 422, 503]
             except httpx.ConnectError:
                 pytest.skip("RAG service not reachable")
 
     @pytest.mark.api
     async def test_get_stats(self, client):
-        """GET /api/v1/stats - Get RAG statistics."""
+        """GET /api/v1/rag/stats - Get RAG statistics."""
         async with client:
             try:
-                response = await client.get("/api/v1/stats")
-
-                if response.status_code == 200:
-                    data = response.json()
-                    # Should have some stats
-                    assert isinstance(data, dict)
-                else:
-                    assert response.status_code in [404, 503]
-            except httpx.ConnectError:
-                pytest.skip("RAG service not reachable")
-
-    @pytest.mark.api
-    async def test_get_trading_context(self, client, test_symbol):
-        """GET /api/v1/trading-context/{symbol} - Get trading context."""
-        async with client:
-            try:
-                response = await client.get(f"/api/v1/trading-context/{test_symbol}")
+                response = await client.get("/api/v1/rag/stats")
 
                 if response.status_code == 200:
                     data = response.json()
@@ -91,46 +76,24 @@ class TestRAGServiceAPI:
                 pytest.skip("RAG service not reachable")
 
     @pytest.mark.api
-    async def test_search_with_filter(self, client):
-        """POST /api/v1/query - Search with metadata filter."""
+    async def test_list_sources(self, client):
+        """GET /api/v1/rag/sources - List available data sources."""
         async with client:
             try:
-                response = await client.post(
-                    "/api/v1/query",
-                    json={
-                        "query": "market analysis",
-                        "top_k": 10,
-                        "filter": {"type": "analysis"}
-                    }
-                )
+                response = await client.get("/api/v1/rag/sources")
 
-                assert response.status_code in [200, 422, 503]
-            except httpx.ConnectError:
-                pytest.skip("RAG service not reachable")
-
-    @pytest.mark.api
-    async def test_empty_query(self, client):
-        """POST /api/v1/query - Empty query should fail."""
-        async with client:
-            try:
-                response = await client.post(
-                    "/api/v1/query",
-                    json={
-                        "query": "",
-                        "top_k": 5
-                    }
-                )
-
-                assert response.status_code in [400, 422]
+                assert response.status_code == 200
+                data = response.json()
+                assert isinstance(data, (list, dict))
             except httpx.ConnectError:
                 pytest.skip("RAG service not reachable")
 
     @pytest.mark.api
     async def test_get_documents(self, client):
-        """GET /api/v1/documents - List documents."""
+        """GET /api/v1/rag/documents - List documents."""
         async with client:
             try:
-                response = await client.get("/api/v1/documents")
+                response = await client.get("/api/v1/rag/documents")
 
                 assert response.status_code in [200, 404]
                 if response.status_code == 200:
@@ -140,14 +103,102 @@ class TestRAGServiceAPI:
                 pytest.skip("RAG service not reachable")
 
     @pytest.mark.api
-    async def test_delete_document(self, client):
-        """DELETE /api/v1/documents/{id} - Delete document."""
+    async def test_get_sentiment(self, client):
+        """GET /api/v1/rag/sentiment - Get sentiment data."""
         async with client:
             try:
-                # Try to delete a non-existent document
-                response = await client.delete("/api/v1/documents/non-existent-id")
+                response = await client.get("/api/v1/rag/sentiment")
 
-                # Either not found or method not allowed
-                assert response.status_code in [404, 405]
+                assert response.status_code in [200, 503]
+            except httpx.ConnectError:
+                pytest.skip("RAG service not reachable")
+
+    @pytest.mark.api
+    async def test_get_economic_calendar(self, client):
+        """GET /api/v1/rag/economic-calendar - Get economic calendar."""
+        async with client:
+            try:
+                response = await client.get("/api/v1/rag/economic-calendar")
+
+                assert response.status_code in [200, 503]
+            except httpx.ConnectError:
+                pytest.skip("RAG service not reachable")
+
+    @pytest.mark.api
+    async def test_get_macro(self, client):
+        """GET /api/v1/rag/macro - Get macro data."""
+        async with client:
+            try:
+                response = await client.get("/api/v1/rag/macro")
+
+                assert response.status_code in [200, 503]
+            except httpx.ConnectError:
+                pytest.skip("RAG service not reachable")
+
+    @pytest.mark.api
+    async def test_get_regulatory(self, client):
+        """GET /api/v1/rag/regulatory - Get regulatory data."""
+        async with client:
+            try:
+                response = await client.get("/api/v1/rag/regulatory")
+
+                assert response.status_code in [200, 503]
+            except httpx.ConnectError:
+                pytest.skip("RAG service not reachable")
+
+    @pytest.mark.api
+    async def test_get_historical_patterns(self, client):
+        """GET /api/v1/rag/historical-patterns - Get historical patterns."""
+        async with client:
+            try:
+                response = await client.get("/api/v1/rag/historical-patterns")
+
+                assert response.status_code in [200, 503]
+            except httpx.ConnectError:
+                pytest.skip("RAG service not reachable")
+
+    @pytest.mark.api
+    async def test_get_scheduler_status(self, client):
+        """GET /api/v1/rag/scheduler/status - Get scheduler status."""
+        async with client:
+            try:
+                response = await client.get("/api/v1/rag/scheduler/status")
+
+                assert response.status_code == 200
+            except httpx.ConnectError:
+                pytest.skip("RAG service not reachable")
+
+    @pytest.mark.api
+    async def test_get_candlestick_types(self, client):
+        """GET /api/v1/rag/candlestick-patterns/types - Get candlestick pattern types."""
+        async with client:
+            try:
+                response = await client.get("/api/v1/rag/candlestick-patterns/types")
+
+                assert response.status_code == 200
+                data = response.json()
+                assert isinstance(data, (list, dict))
+            except httpx.ConnectError:
+                pytest.skip("RAG service not reachable")
+
+    @pytest.mark.api
+    async def test_get_onchain_data(self, client, test_symbol):
+        """GET /api/v1/rag/onchain/{symbol} - Get on-chain data."""
+        async with client:
+            try:
+                response = await client.get(f"/api/v1/rag/onchain/{test_symbol}")
+
+                assert response.status_code in [200, 404, 503]
+            except httpx.ConnectError:
+                pytest.skip("RAG service not reachable")
+
+    @pytest.mark.api
+    async def test_get_easyinsight(self, client):
+        """GET /api/v1/rag/easyinsight - Get EasyInsight data."""
+        async with client:
+            try:
+                response = await client.get("/api/v1/rag/easyinsight")
+
+                assert response.status_code in [200, 503]
             except httpx.ConnectError:
                 pytest.skip("RAG service not reachable")

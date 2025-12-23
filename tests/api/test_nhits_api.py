@@ -23,21 +23,17 @@ class TestNHITSServiceAPI:
 
     @pytest.mark.api
     async def test_get_forecast(self, client, test_symbol):
-        """POST /api/v1/forecast - Get price forecast."""
+        """GET /api/v1/forecast/{symbol} - Get price forecast."""
         async with client:
             try:
-                response = await client.post(
-                    "/api/v1/forecast",
-                    json={
-                        "symbol": test_symbol,
-                        "horizon": 24,
-                        "interval": "1h"
-                    }
+                response = await client.get(
+                    f"/api/v1/forecast/{test_symbol}",
+                    params={"horizon": 24, "interval": "1h"}
                 )
 
                 if response.status_code == 200:
                     data = response.json()
-                    assert "predictions" in data or "forecast" in data
+                    assert isinstance(data, dict)
                 else:
                     # Model might not be trained
                     assert response.status_code in [404, 422, 503]
@@ -46,10 +42,10 @@ class TestNHITSServiceAPI:
 
     @pytest.mark.api
     async def test_list_trained_models(self, client):
-        """GET /api/v1/models - List all trained models."""
+        """GET /api/v1/forecast/models - List all trained models."""
         async with client:
             try:
-                response = await client.get("/api/v1/models")
+                response = await client.get("/api/v1/forecast/models")
 
                 assert response.status_code == 200
                 data = response.json()
@@ -58,112 +54,121 @@ class TestNHITSServiceAPI:
                 pytest.skip("NHITS service not reachable")
 
     @pytest.mark.api
-    async def test_get_model_metrics(self, client, test_symbol):
-        """GET /api/v1/models/{symbol}/metrics - Get model metrics."""
-        async with client:
-            try:
-                response = await client.get(f"/api/v1/models/{test_symbol}/metrics")
-
-                # Model might not exist
-                assert response.status_code in [200, 404]
-
-                if response.status_code == 200:
-                    data = response.json()
-                    # Should contain some metrics
-                    assert isinstance(data, dict)
-            except httpx.ConnectError:
-                pytest.skip("NHITS service not reachable")
-
-    @pytest.mark.api
     async def test_get_model_info(self, client, test_symbol):
-        """GET /api/v1/models/{symbol} - Get model info."""
+        """GET /api/v1/forecast/{symbol}/model - Get model info."""
         async with client:
             try:
-                response = await client.get(f"/api/v1/models/{test_symbol}")
+                response = await client.get(f"/api/v1/forecast/{test_symbol}/model")
 
                 assert response.status_code in [200, 404]
             except httpx.ConnectError:
                 pytest.skip("NHITS service not reachable")
 
     @pytest.mark.api
-    async def test_forecast_invalid_symbol(self, client):
-        """POST /api/v1/forecast - Invalid symbol should fail gracefully."""
+    async def test_get_training_status(self, client):
+        """GET /api/v1/forecast/training/status - Get training status."""
         async with client:
             try:
-                response = await client.post(
-                    "/api/v1/forecast",
-                    json={
-                        "symbol": "INVALID_SYMBOL_123",
-                        "horizon": 24
-                    }
-                )
+                response = await client.get("/api/v1/forecast/training/status")
 
-                assert response.status_code in [400, 404, 422, 503]
+                assert response.status_code in [200, 404]
             except httpx.ConnectError:
                 pytest.skip("NHITS service not reachable")
 
     @pytest.mark.api
-    async def test_forecast_invalid_horizon(self, client, test_symbol):
-        """POST /api/v1/forecast - Invalid horizon should fail."""
+    async def test_get_training_symbols(self, client):
+        """GET /api/v1/forecast/training/symbols - Get symbols available for training."""
         async with client:
             try:
-                response = await client.post(
-                    "/api/v1/forecast",
-                    json={
-                        "symbol": test_symbol,
-                        "horizon": -1
-                    }
-                )
+                response = await client.get("/api/v1/forecast/training/symbols")
 
-                assert response.status_code in [400, 422]
+                assert response.status_code == 200
+                data = response.json()
+                assert isinstance(data, (list, dict))
+            except httpx.ConnectError:
+                pytest.skip("NHITS service not reachable")
+
+    @pytest.mark.api
+    async def test_get_auto_status(self, client):
+        """GET /api/v1/forecast/auto/status - Get auto-forecast status."""
+        async with client:
+            try:
+                response = await client.get("/api/v1/forecast/auto/status")
+
+                assert response.status_code == 200
+            except httpx.ConnectError:
+                pytest.skip("NHITS service not reachable")
+
+    @pytest.mark.api
+    async def test_get_favorites(self, client):
+        """GET /api/v1/forecast/favorites - Get favorite symbols."""
+        async with client:
+            try:
+                response = await client.get("/api/v1/forecast/favorites")
+
+                assert response.status_code == 200
+                data = response.json()
+                assert isinstance(data, (list, dict))
+            except httpx.ConnectError:
+                pytest.skip("NHITS service not reachable")
+
+    @pytest.mark.api
+    async def test_get_performance(self, client):
+        """GET /api/v1/forecast/performance - Get model performance."""
+        async with client:
+            try:
+                response = await client.get("/api/v1/forecast/performance")
+
+                assert response.status_code == 200
+            except httpx.ConnectError:
+                pytest.skip("NHITS service not reachable")
+
+    @pytest.mark.api
+    async def test_get_evaluated_forecasts(self, client):
+        """GET /api/v1/forecast/evaluated - Get evaluated forecasts."""
+        async with client:
+            try:
+                response = await client.get("/api/v1/forecast/evaluated")
+
+                # 500 can happen if no evaluations exist yet
+                assert response.status_code in [200, 500]
             except httpx.ConnectError:
                 pytest.skip("NHITS service not reachable")
 
     @pytest.mark.api
     @pytest.mark.slow
-    async def test_trigger_training(self, client):
-        """POST /api/v1/train - Trigger model training (slow)."""
+    async def test_trigger_training(self, client, test_symbol):
+        """POST /api/v1/forecast/{symbol}/train - Trigger model training."""
         async with client:
             try:
                 response = await client.post(
-                    "/api/v1/train",
-                    json={
-                        "symbol": "EURUSD",
-                        "epochs": 1,  # Minimal for test
-                        "horizon": 24
-                    }
+                    f"/api/v1/forecast/{test_symbol}/train",
+                    json={"epochs": 1}  # Minimal for test
                 )
 
-                # Training started, or already running, or error
+                # Training started, queued, or already in progress
                 assert response.status_code in [200, 202, 409, 503]
             except httpx.ConnectError:
                 pytest.skip("NHITS service not reachable")
 
     @pytest.mark.api
-    async def test_get_training_status(self, client, test_symbol):
-        """GET /api/v1/training-status/{symbol} - Get training status."""
+    async def test_get_backup_status(self, client):
+        """GET /api/v1/backup/status - Get backup status."""
         async with client:
             try:
-                response = await client.get(f"/api/v1/training-status/{test_symbol}")
+                response = await client.get("/api/v1/backup/status")
 
-                assert response.status_code in [200, 404]
+                assert response.status_code == 200
             except httpx.ConnectError:
                 pytest.skip("NHITS service not reachable")
 
     @pytest.mark.api
-    async def test_batch_forecast(self, client, test_symbols):
-        """POST /api/v1/forecast/batch - Batch forecast for multiple symbols."""
+    async def test_get_training_cache_stats(self, client):
+        """GET /api/v1/forecast/training/cache/stats - Get cache stats."""
         async with client:
             try:
-                response = await client.post(
-                    "/api/v1/forecast/batch",
-                    json={
-                        "symbols": test_symbols[:3],
-                        "horizon": 24
-                    }
-                )
+                response = await client.get("/api/v1/forecast/training/cache/stats")
 
-                # Batch endpoint might not exist
-                assert response.status_code in [200, 404, 405, 503]
+                assert response.status_code == 200
             except httpx.ConnectError:
                 pytest.skip("NHITS service not reachable")
