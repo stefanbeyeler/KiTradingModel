@@ -297,3 +297,47 @@ async def disable_auto_training():
     auto_training_scheduler.update_config(enabled=False)
     auto_training_scheduler.stop()
     return {"status": "disabled"}
+
+
+@router.post("/models/cleanup")
+async def cleanup_models(keep_count: int = 3):
+    """
+    Manually cleanup old models.
+
+    - **keep_count**: Number of recent models to keep (default: 3)
+
+    Deletes older models and their history entries.
+    """
+    if keep_count < 1:
+        raise HTTPException(status_code=400, detail="keep_count must be at least 1")
+
+    result = tcn_training_service.cleanup_old_models(keep_count)
+    return result
+
+
+@router.delete("/models/{model_name}")
+async def delete_model(model_name: str):
+    """
+    Delete a specific model.
+
+    - **model_name**: Name of the model file to delete
+    """
+    import os
+
+    models = tcn_training_service.list_models()
+    model = next((m for m in models if m["name"] == model_name), None)
+
+    if not model:
+        raise HTTPException(status_code=404, detail=f"Model {model_name} not found")
+
+    try:
+        os.remove(model["path"])
+        logger.info(f"Deleted model: {model_name}")
+        return {
+            "status": "deleted",
+            "model": model_name,
+            "freed_mb": model["size_mb"]
+        }
+    except Exception as e:
+        logger.error(f"Failed to delete model {model_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

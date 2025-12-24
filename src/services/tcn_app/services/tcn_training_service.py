@@ -50,10 +50,12 @@ class TCNTrainingService:
     - Early stopping
     - Model checkpointing
     - Persistent training history
+    - Automatic cleanup of old models (keeps last N)
     """
 
     MODEL_DIR = "data/models/tcn"
     HISTORY_FILE = "data/models/tcn/training_history.json"
+    MAX_MODELS_TO_KEEP = 3  # Number of recent models to retain
 
     def __init__(self, device: str = "cuda"):
         """
@@ -343,6 +345,14 @@ class TCNTrainingService:
             # Persist training history
             self._save_history()
 
+            # Cleanup old models (keep only the last N)
+            cleanup_result = self.cleanup_old_models()
+            if cleanup_result["deleted"] > 0:
+                logger.info(
+                    f"Cleaned up {cleanup_result['deleted']} old models, "
+                    f"freed {cleanup_result['freed_mb']} MB"
+                )
+
             logger.info(f"Training completed: {result}")
 
             return {
@@ -489,6 +499,85 @@ class TCNTrainingService:
                     })
 
         return models
+
+    def cleanup_old_models(self, keep_count: Optional[int] = None) -> Dict:
+        """
+        Remove old model files, keeping only the most recent ones.
+
+        Args:
+            keep_count: Number of models to keep (default: MAX_MODELS_TO_KEEP)
+
+        Returns:
+            Summary of cleanup operation
+        """
+        keep_count = keep_count or self.MAX_MODELS_TO_KEEP
+
+        models = self.list_models()
+
+        if len(models) <= keep_count:
+            return {
+                "status": "no_cleanup_needed",
+                "models_count": len(models),
+                "kept": len(models),
+                "deleted": 0,
+                "deleted_models": []
+            }
+
+        # Sort by creation date (newest first)
+        models_sorted = sorted(
+            models,
+            key=lambda m: m["created"],
+            reverse=True
+        )
+
+        # Keep the newest models
+        models_to_keep = models_sorted[:keep_count]
+        models_to_delete = models_sorted[keep_count:]
+
+        deleted_models = []
+        deleted_size_mb = 0
+
+        for model in models_to_delete:
+            try:
+                os.remove(model["path"])
+                deleted_models.append(model["name"])
+                deleted_size_mb += model["size_mb"]
+                logger.info(f"Deleted old model: {model['name']}")
+            except Exception as e:
+                logger.error(f"Failed to delete model {model['name']}: {e}")
+
+        # Also clean up orphaned history entries
+        self._cleanup_history(models_to_keep)
+
+        return {
+            "status": "cleanup_completed",
+            "models_count": len(models),
+            "kept": keep_count,
+            "deleted": len(deleted_models),
+            "deleted_models": deleted_models,
+            "freed_mb": round(deleted_size_mb, 2)
+        }
+
+    def _cleanup_history(self, kept_models: List[Dict]) -> None:
+        """Remove history entries for deleted models."""
+        kept_job_ids = set()
+
+        for model in kept_models:
+            # Extract job_id from model name (e.g., "tcn_20241224_123456.pt" -> "tcn_20241224_123456")
+            job_id = model["name"].replace(".pt", "")
+            kept_job_ids.add(job_id)
+
+        # Filter history to only include entries for kept models
+        original_count = len(self._training_history)
+        self._training_history = [
+            entry for entry in self._training_history
+            if entry.get("job_id") in kept_job_ids
+        ]
+
+        if len(self._training_history) < original_count:
+            removed = original_count - len(self._training_history)
+            logger.info(f"Removed {removed} orphaned history entries")
+            self._save_history()
 
 
 # Singleton instance
