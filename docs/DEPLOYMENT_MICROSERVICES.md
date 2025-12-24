@@ -2,86 +2,74 @@
 
 ## Übersicht
 
-Dieses Deployment-Guide beschreibt, wie das KI Trading Model System als Microservices-Architektur deployed wird.
+Dieses Deployment-Guide beschreibt das Deployment des KI Trading Model Systems mit 9 Microservices auf NVIDIA Jetson AGX Thor.
 
 ## Architektur
 
-```
+```text
 Port 3000: Frontend (Nginx + Dashboard)
-    ├─> Port 3001: NHITS Service (Training & Forecasting)
-    ├─> Port 3002: LLM Service (Analysis & RAG)
-    └─> Port 3003: Data Service (Symbols, Strategies, Sync)
-         └─> Ollama (Port 11434)
+    ├─> Port 3001: Data Service (Symbols, Strategies, External Data)
+    ├─> Port 3002: NHITS Service (Training & Forecasting)
+    ├─> Port 3003: TCN-Pattern Service (Chart-Pattern-Erkennung)
+    ├─> Port 3004: HMM-Regime Service (Marktphasen, Signal-Scoring)
+    ├─> Port 3005: Embedder Service (Text/FinBERT/TimeSeries)
+    ├─> Port 3008: RAG Service (Vector Search, Knowledge Base)
+    ├─> Port 3009: LLM Service (Trading-Analyse mit Llama 3.1)
+    └─> Port 3010: Watchdog Service (Monitoring, Telegram-Alerts)
 ```
 
 ## Services
 
-### Frontend (Port 3000)
-- **Funktion**: API Gateway + Web Dashboard
-- **Technologie**: Nginx
-- **GPU**: Nein
-- **Memory**: 256 MB
+| Service | Port | GPU | Memory | Funktion |
+|---------|------|-----|--------|----------|
+| Frontend | 3000 | - | 256 MB | API Gateway + Dashboard |
+| Data Service | 3001 | - | 4 GB | Symbole, Strategien, Daten-Gateway |
+| NHITS Service | 3002 | CUDA | 16 GB | Preisprognosen, Training |
+| TCN-Pattern | 3003 | CUDA | 8 GB | Chart-Pattern-Erkennung |
+| HMM-Regime | 3004 | - | 4 GB | Marktphasen, Signal-Scoring |
+| Embedder | 3005 | CUDA | 12 GB | Embeddings |
+| RAG Service | 3008 | CUDA | 8 GB | Vector Search |
+| LLM Service | 3009 | CUDA | 32 GB | Trading-Analyse |
+| Watchdog | 3010 | - | 512 MB | Monitoring, Alerts |
 
-### NHITS Service (Port 3001)
-- **Funktion**: NHITS Training & Price Forecasting
-- **Technologie**: FastAPI + PyTorch
-- **GPU**: Ja (CUDA)
-- **Memory**: 16 GB
-
-### LLM Service (Port 3002)
-- **Funktion**: Trading Analysis & RAG
-- **Technologie**: FastAPI + Ollama (llama3.1:70b)
-- **GPU**: Ja (CUDA)
-- **Memory**: 32 GB
-
-### Data Service (Port 3003)
-- **Funktion**: Symbols, Strategies, Sync
-- **Technologie**: FastAPI + PostgreSQL
-- **GPU**: Nein
-- **Memory**: 4 GB
-
-## Deployment
-
-### Voraussetzungen
+## Voraussetzungen
 
 ```bash
 # Docker & Docker Compose
-docker --version  # >= 24.0
-docker-compose --version  # >= 2.20
+docker --version        # >= 24.0
+docker compose version  # >= 2.20
 
-# NVIDIA Docker Runtime
-nvidia-docker --version
+# NVIDIA Container Toolkit
+nvidia-ctk --version
+
+# GPU verfügbar
+nvidia-smi
 ```
 
-### Environment Variables
+## Environment Variables
 
 Erstellen Sie eine `.env` Datei:
 
 ```bash
-# TimescaleDB
-TIMESCALE_HOST=10.1.19.104
-TIMESCALE_PORT=5432
-TIMESCALE_DB=trading
-TIMESCALE_USER=postgres
-TIMESCALE_PASSWORD=your_password_here
-
 # EasyInsight API
-EASYINSIGHT_API_URL=http://10.1.19.102:3000
+EASYINSIGHT_API_URL=http://10.1.19.102:3000/api
 
-# LLM
+# LLM (Ollama auf Host)
 OLLAMA_MODEL=llama3.1:70b
-OLLAMA_BASE_URL=http://ollama:11434
+OLLAMA_BASE_URL=http://host.docker.internal:11434
 
 # NHITS
 NHITS_AUTO_RETRAIN_DAYS=7
 NHITS_USE_GPU=1
 
-# Sync
-TIMESCALE_SYNC_ENABLED=true
-TIMESCALE_SYNC_INTERVAL_MINUTES=60
+# Watchdog Telegram (optional)
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_IDS=123456789
 ```
 
-### Deployment Starten
+## Deployment
+
+### Alle Services starten
 
 ```bash
 # Build alle Services
@@ -100,11 +88,25 @@ docker-compose -f docker-compose.microservices.yml logs -f
 # Alle Container
 docker-compose -f docker-compose.microservices.yml ps
 
-# Health Checks
-curl http://localhost:3000/health  # Frontend
-curl http://localhost:3001/health  # NHITS
-curl http://localhost:3002/health  # LLM
-curl http://localhost:3003/health  # Data
+# Health Checks über Proxy
+curl http://10.1.19.101:3000/data/health
+curl http://10.1.19.101:3000/nhits/health
+curl http://10.1.19.101:3000/tcn/health
+curl http://10.1.19.101:3000/hmm/health
+curl http://10.1.19.101:3000/embedder/health
+curl http://10.1.19.101:3000/rag/health
+curl http://10.1.19.101:3000/llm/health
+curl http://10.1.19.101:3000/watchdog/health
+```
+
+### Watchdog Status
+
+```bash
+# Gesamtstatus aller Services
+curl http://10.1.19.101:3000/watchdog/api/v1/status
+
+# Test-Alert senden
+curl -X POST http://10.1.19.101:3000/watchdog/api/v1/alerts/test
 ```
 
 ## Service Management
@@ -112,24 +114,16 @@ curl http://localhost:3003/health  # Data
 ### Einzelnen Service neu starten
 
 ```bash
-# NHITS Service
 docker-compose -f docker-compose.microservices.yml restart nhits-service
-
-# LLM Service
 docker-compose -f docker-compose.microservices.yml restart llm-service
-
-# Data Service
-docker-compose -f docker-compose.microservices.yml restart data-service
+docker-compose -f docker-compose.microservices.yml restart watchdog-service
 ```
 
 ### Logs eines Services
 
 ```bash
-# NHITS Service
 docker-compose -f docker-compose.microservices.yml logs -f nhits-service
-
-# LLM Service
-docker-compose -f docker-compose.microservices.yml logs -f llm-service
+docker-compose -f docker-compose.microservices.yml logs -f watchdog-service
 ```
 
 ### Service Updates
@@ -138,7 +132,7 @@ docker-compose -f docker-compose.microservices.yml logs -f llm-service
 # Service neu builden
 docker-compose -f docker-compose.microservices.yml build nhits-service
 
-# Service neu starten
+# Service neu starten (Zero-Downtime)
 docker-compose -f docker-compose.microservices.yml up -d nhits-service
 ```
 
@@ -146,18 +140,33 @@ docker-compose -f docker-compose.microservices.yml up -d nhits-service
 
 ### Persistente Daten
 
+| Volume | Service | Beschreibung |
+|--------|---------|--------------|
+| nhits-models | NHITS | Trainierte Prognose-Modelle |
+| tcn-models | TCN | Trainierte Pattern-Modelle |
+| hmm-models | HMM | HMM/LightGBM Modelle |
+| embedder-models | Embedder | Embedding-Modelle Cache |
+| rag-faiss | RAG | FAISS Vector-Datenbank |
+| symbols-data | Data | Symbol-Konfigurationen |
+| logs-data | Alle | Zentrale Log-Dateien |
+
+### Volume Backup
+
 ```bash
 # Volumes anzeigen
 docker volume ls | grep trading
 
-# Volume inspizieren
-docker volume inspect ki-trading-model_models-data
-
-# Volume Backup
+# Backup erstellen
 docker run --rm \
-  -v ki-trading-model_models-data:/data \
+  -v ki-trading-model_nhits-models:/data \
   -v $(pwd):/backup \
-  alpine tar czf /backup/models-backup.tar.gz /data
+  alpine tar czf /backup/nhits-models-backup.tar.gz /data
+
+# Backup wiederherstellen
+docker run --rm \
+  -v ki-trading-model_nhits-models:/data \
+  -v $(pwd):/backup \
+  alpine tar xzf /backup/nhits-models-backup.tar.gz -C /
 ```
 
 ## Monitoring
@@ -165,30 +174,36 @@ docker run --rm \
 ### Resource Usage
 
 ```bash
-# CPU/Memory pro Service
+# CPU/Memory pro Container
 docker stats
 
 # GPU Usage
 nvidia-smi
 
+# GPU Usage im Container
+docker exec trading-nhits nvidia-smi
+
 # Disk Usage
 docker system df
 ```
 
-### Health Checks
+### Watchdog Monitoring
+
+Der Watchdog Service überwacht alle anderen Services automatisch:
 
 ```bash
-# Frontend
-wget -qO- http://localhost:3000/health
+# Status-API
+curl http://10.1.19.101:3000/watchdog/api/v1/status | jq
 
-# NHITS
-curl -s http://localhost:3001/health | jq
+# Alert-Historie
+curl http://10.1.19.101:3000/watchdog/api/v1/alerts/history | jq
+```
 
-# LLM
-curl -s http://localhost:3002/health | jq
+### System-Metriken
 
-# Data
-curl -s http://localhost:3003/health | jq
+```bash
+# NHITS System-Metriken
+curl http://10.1.19.101:3000/nhits/api/v1/system/metrics | jq
 ```
 
 ## Troubleshooting
@@ -220,80 +235,33 @@ docker exec trading-nhits nvidia-smi
 
 ```bash
 # Port Binding prüfen
-netstat -tulpn | grep 3001
+ss -tlnp | grep 3001
 
 # Network prüfen
-docker network inspect ki-trading-model_trading-net
+docker network inspect trading-net
 
 # Service Connectivity
-docker exec trading-frontend ping nhits-service
+docker exec trading-frontend ping trading-nhits
 ```
 
-## Migration vom Monolith
-
-### 1. Backup erstellen
+### Problem: Watchdog sendet keine Alerts
 
 ```bash
-# Aktuellen Container stoppen
-docker-compose -f docker/jetson/docker-compose.yml down
+# Telegram-Konfiguration prüfen
+docker exec trading-watchdog env | grep TELEGRAM
 
-# Volumes sichern
-docker run --rm \
-  -v $(pwd):/backup \
-  alpine tar czf /backup/full-backup.tar.gz /app/data
-```
-
-### 2. Microservices starten
-
-```bash
-# Environment kopieren
-cp .env .env.microservices
-
-# Services starten
-docker-compose -f docker-compose.microservices.yml up -d
-```
-
-### 3. Daten migrieren
-
-```bash
-# Models kopieren
-docker cp /app/data/models/. trading-nhits:/app/data/models/
-
-# RAG Daten kopieren
-docker cp /app/data/rag/. trading-llm:/app/data/rag/
-```
-
-### 4. Testen
-
-```bash
-# Training starten
-curl -X POST "http://localhost:3001/api/v1/forecast/train-all?force=true"
-
-# Forecast abrufen
-curl "http://localhost:3001/api/v1/forecast/EURUSD"
-
-# LLM Analysis
-curl -X POST "http://localhost:3002/api/v1/analyze" \
-  -H "Content-Type: application/json" \
-  -d '{"symbol": "EURUSD"}'
+# Manueller Test-Alert
+curl -X POST http://10.1.19.101:3000/watchdog/api/v1/alerts/test
 ```
 
 ## Performance Tuning
 
-### GPU Memory Management
+### GPU Memory Management (Shared VRAM)
 
-**NHITS Service:**
 ```python
-# In nhits_app/main.py
+# In jedem GPU-Service
 import torch
-torch.cuda.set_per_process_memory_fraction(0.4, device=0)
-```
-
-**LLM Service:**
-```python
-# In llm_app/main.py
-import torch
-torch.cuda.set_per_process_memory_fraction(0.6, device=0)
+torch.cuda.set_per_process_memory_fraction(0.2, device=0)  # 20% pro Service
 ```
 
 ### Nginx Tuning
@@ -303,40 +271,26 @@ torch.cuda.set_per_process_memory_fraction(0.6, device=0)
 worker_processes auto;
 worker_connections 2048;
 
-# Timeouts
+# Timeouts für LLM (längere Antworten)
 proxy_read_timeout 600s;
-proxy_connect_timeout 600s;
+proxy_connect_timeout 60s;
 ```
 
 ### Docker Resource Limits
 
 ```yaml
-# In docker-compose.microservices.yml
 services:
   nhits-service:
     deploy:
       resources:
         limits:
-          cpus: '8'
           memory: 16G
         reservations:
-          cpus: '4'
           memory: 8G
-```
-
-## Rollback
-
-### Zu Monolith zurückkehren
-
-```bash
-# Microservices stoppen
-docker-compose -f docker-compose.microservices.yml down
-
-# Monolith starten
-docker-compose -f docker/jetson/docker-compose.yml up -d
-
-# Volumes wiederherstellen (falls nötig)
-tar xzf full-backup.tar.gz -C /app/data
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 ```
 
 ## Security
@@ -351,91 +305,127 @@ services:
       - "3000:80"
 
   nhits-service:
-    # Keine externe Ports
+    # Keine externe Ports - nur internes Netzwerk
     expose:
-      - "3001"
+      - "3002"
+    networks:
+      - trading-net
 ```
 
 ### Secrets Management
 
 ```bash
 # Docker Secrets verwenden
-echo "your_password" | docker secret create timescale_password -
+echo "your_telegram_token" | docker secret create telegram_token -
 
 # In docker-compose.yml
 services:
-  data-service:
+  watchdog-service:
     secrets:
-      - timescale_password
+      - telegram_token
     environment:
-      - TIMESCALE_PASSWORD_FILE=/run/secrets/timescale_password
+      - TELEGRAM_BOT_TOKEN_FILE=/run/secrets/telegram_token
 ```
 
 ## Best Practices
 
 ### 1. Health Checks aktivieren
 
-Alle Services haben Health Checks - verwenden Sie sie!
-
-```bash
-# Auto-restart bei Failure
-restart: unless-stopped
-
-healthcheck:
-  interval: 30s
-  timeout: 10s
-  retries: 3
+```yaml
+services:
+  nhits-service:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
 ```
 
-### 2. Logs zentralisieren
+### 2. Watchdog Telegram konfigurieren
 
 ```bash
-# Loki + Grafana Stack
-docker-compose -f docker-compose.monitoring.yml up -d
+# 1. Bot bei @BotFather erstellen
+# 2. Chat-ID ermitteln
+curl https://api.telegram.org/bot<TOKEN>/getUpdates
+
+# 3. In .env.watchdog
+TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
+TELEGRAM_CHAT_IDS=123456789,987654321
+CHECK_INTERVAL_SECONDS=30
+ALERT_COOLDOWN_MINUTES=15
 ```
 
 ### 3. Backups automatisieren
 
 ```bash
 # Cronjob für tägliche Backups
-0 2 * * * /path/to/backup-script.sh
+0 2 * * * /home/user/scripts/backup-volumes.sh
 ```
 
-### 4. Updates testen
+### 4. Log-Rotation
+
+```yaml
+services:
+  nhits-service:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+```
+
+## Swagger UI Zugriff
+
+Alle API-Dokumentationen über das Dashboard:
+
+| Service | Swagger UI |
+|---------|------------|
+| Data | <http://10.1.19.101:3000/data/docs> |
+| NHITS | <http://10.1.19.101:3000/nhits/docs> |
+| TCN | <http://10.1.19.101:3000/tcn/docs> |
+| HMM | <http://10.1.19.101:3000/hmm/docs> |
+| Embedder | <http://10.1.19.101:3000/embedder/docs> |
+| RAG | <http://10.1.19.101:3000/rag/docs> |
+| LLM | <http://10.1.19.101:3000/llm/docs> |
+| Watchdog | <http://10.1.19.101:3000/watchdog/docs> |
+
+## Quick Reference
+
+### Deployment
 
 ```bash
-# Staging Environment
-docker-compose -f docker-compose.staging.yml up -d
-
-# Nach Test: Production Update
 docker-compose -f docker-compose.microservices.yml up -d
 ```
 
-## Support
+### Status
 
-Bei Problemen:
-1. Logs prüfen: `docker-compose logs -f <service>`
-2. Health Check: `curl http://localhost:<port>/health`
-3. Documentation: `/docs/MICROSERVICES_ARCHITECTURE.md`
-4. Issues: GitHub Issues
-
-## Zusammenfassung
-
-**Deployment:**
 ```bash
-docker-compose -f docker-compose.microservices.yml up -d
+docker-compose -f docker-compose.microservices.yml ps
+curl http://10.1.19.101:3000/watchdog/api/v1/status
 ```
 
-**Monitoring:**
+### Logs
+
 ```bash
-docker-compose ps
-curl http://localhost:3000/health
+docker-compose -f docker-compose.microservices.yml logs -f
 ```
 
-**Updates:**
+### Restart
+
 ```bash
-docker-compose -f docker-compose.microservices.yml build <service>
-docker-compose -f docker-compose.microservices.yml up -d <service>
+docker-compose -f docker-compose.microservices.yml restart <service>
 ```
 
-Die Microservices-Architektur ist nun produktionsbereit! 🚀
+### Stop
+
+```bash
+docker-compose -f docker-compose.microservices.yml down
+```
+
+## Weiterführende Dokumentation
+
+- [Microservices Architektur](./MICROSERVICES_ARCHITECTURE.md)
+- [Port-Konfiguration](./PORT_CONFIGURATION.md)
+- [Swagger API Kategorien](./SWAGGER_API_CATEGORIES.md)
+- [Watchdog Proposal](./WATCHDOG_PROPOSAL.md)

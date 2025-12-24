@@ -6,19 +6,22 @@ Dieses Dokument enthält projektspezifische Anweisungen für Claude Code.
 
 ### Datenzugriff-Architektur (VERBINDLICH)
 
-```
-Externe APIs (EasyInsight, TwelveData, etc.)
-                    │
-                    ▼
-         ┌─────────────────────┐
-         │    DATA SERVICE     │  ◄── Einziges Gateway für externe Daten
-         │     (Port 3001)     │
-         └──────────┬──────────┘
-                    │
-     ┌──────────────┼──────────────┐
-     ▼              ▼              ▼
- NHITS Service  RAG Service   LLM Service
- (Port 3002)    (Port 3003)   (Port 3004)
+```text
+Externe APIs (EasyInsight, TwelveData, Yahoo Finance)
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │    DATA SERVICE     │  ◄── Einziges Gateway für externe Daten
+              │     (Port 3001)     │
+              └──────────┬──────────┘
+                         │
+     ┌───────┬───────┬───┴───┬───────┬───────┐
+     ▼       ▼       ▼       ▼       ▼       ▼
+  NHITS    TCN     HMM   Embedder  RAG     LLM
+ :3002   :3003   :3004   :3005   :3008   :3009
+                                           │
+                                      Watchdog
+                                       :3010
 ```
 
 ### Verbindliche Regeln
@@ -63,16 +66,17 @@ class NHITSTrainingService:
 
 ## Microservices Ports
 
-| Service | Port | Swagger UI |
-|---------|------|------------|
-| Frontend (Dashboard) | 3000 | - |
-| Data Service | 3001 | /docs |
-| NHITS Service | 3002 | /docs |
-| RAG Service | 3003 | /docs |
-| LLM Service | 3004 | /docs |
-| TCN-Pattern Service | 3005 | /docs |
-| HMM-Regime Service | 3006 | /docs |
-| Embedder Service | 3007 | /docs |
+| Service | Port | Swagger UI | GPU |
+|---------|------|------------|-----|
+| Frontend (Dashboard) | 3000 | - | - |
+| Data Service | 3001 | /docs | - |
+| NHITS Service | 3002 | /docs | CUDA |
+| TCN-Pattern Service | 3003 | /docs | CUDA |
+| HMM-Regime Service | 3004 | /docs | - |
+| Embedder Service | 3005 | /docs | CUDA |
+| RAG Service | 3008 | /docs | CUDA |
+| LLM Service | 3009 | /docs | CUDA |
+| Watchdog Service | 3010 | /docs | - |
 
 ## API-Dokumentation (Swagger UI)
 
@@ -80,14 +84,18 @@ Die Swagger-Dokumentationen aller Microservices sind zentral über das Dashboard
 
 **Dashboard URL:** `http://10.1.19.101:3000/`
 
-Jeder Service-Bereich im Dashboard enthält einen Button, der direkt zur jeweiligen Swagger UI führt:
+Alle Services sind via Nginx-Proxy unter folgenden Pfaden erreichbar:
 
-| Dashboard-Bereich | Swagger UI URL |
-|-------------------|----------------|
-| Daten & Symbole | http://10.1.19.101:3001/docs |
-| NHITS Prognose | http://10.1.19.101:3002/docs |
-| RAG System | http://10.1.19.101:3003/docs |
-| LLM Chat | http://10.1.19.101:3004/docs |
+| Service | Swagger UI URL | Proxy-Pfad |
+|---------|----------------|------------|
+| Data Service | http://10.1.19.101:3000/data/docs | /data/* |
+| NHITS Service | http://10.1.19.101:3000/nhits/docs | /nhits/* |
+| TCN-Pattern Service | http://10.1.19.101:3000/tcn/docs | /tcn/* |
+| HMM-Regime Service | http://10.1.19.101:3000/hmm/docs | /hmm/* |
+| Embedder Service | http://10.1.19.101:3000/embedder/docs | /embedder/* |
+| RAG Service | http://10.1.19.101:3000/rag/docs | /rag/* |
+| LLM Service | http://10.1.19.101:3000/llm/docs | /llm/* |
+| Watchdog Service | http://10.1.19.101:3000/watchdog/docs | /watchdog/* |
 
 Die Swagger UI bietet:
 - Interaktive API-Dokumentation
@@ -162,8 +170,8 @@ Der Data Service stellt 9 externe Datenquellen als Gateway für den RAG Service 
 
 ### Architektur
 
-```
-RAG Service (Port 3003)
+```text
+RAG Service (Port 3008)
         │
         │ DataFetcherProxy
         ▼
@@ -178,12 +186,12 @@ Der RAG Service nutzt den `DataFetcherProxy` um Daten vom Data Service Gateway a
 
 ## Commit-Konvention
 
-```
+```text
 <type>(<scope>): <description>
 ```
 
 Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`
-Scopes: `nhits`, `rag`, `llm`, `api`, `config`, `docker`, `data`
+Scopes: `nhits`, `tcn`, `hmm`, `embedder`, `rag`, `llm`, `data`, `watchdog`, `frontend`, `api`, `config`, `docker`
 
 ## Zeitzonen-Handling (VERBINDLICH)
 
