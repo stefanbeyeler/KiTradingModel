@@ -41,6 +41,23 @@ class PatternDetection:
     pattern_height: Optional[float] = None
     direction: Optional[str] = None  # "bullish" or "bearish"
 
+    def __post_init__(self):
+        """Convert numpy types to Python native types for JSON serialization."""
+        # Convert numpy float types to Python float
+        if hasattr(self.confidence, 'item'):
+            self.confidence = float(self.confidence)
+        if self.price_target is not None and hasattr(self.price_target, 'item'):
+            self.price_target = float(self.price_target)
+        if self.invalidation_level is not None and hasattr(self.invalidation_level, 'item'):
+            self.invalidation_level = float(self.invalidation_level)
+        if self.pattern_height is not None and hasattr(self.pattern_height, 'item'):
+            self.pattern_height = float(self.pattern_height)
+        # Convert numpy int types to Python int
+        if hasattr(self.start_index, 'item'):
+            self.start_index = int(self.start_index)
+        if hasattr(self.end_index, 'item'):
+            self.end_index = int(self.end_index)
+
 
 class PatternClassifier:
     """

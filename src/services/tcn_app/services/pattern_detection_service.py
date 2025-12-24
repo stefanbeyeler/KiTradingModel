@@ -277,6 +277,8 @@ class PatternDetectionService:
         recent_high = np.max(highs[-20:]) if len(highs) >= 20 else highs[-1]
         recent_low = np.min(lows[-20:]) if len(lows) >= 20 else lows[-1]
 
+        price_range_pct = float((recent_high - recent_low) / recent_low * 100) if recent_low > 0 else 0.0
+
         return {
             "trend": trend,
             "price": round(float(current_price), 4),
@@ -285,9 +287,7 @@ class PatternDetectionService:
             "volatility": round(float(volatility), 4),
             "recent_high": round(float(recent_high), 4),
             "recent_low": round(float(recent_low), 4),
-            "price_range_pct": round(
-                (recent_high - recent_low) / recent_low * 100 if recent_low > 0 else 0, 2
-            )
+            "price_range_pct": round(price_range_pct, 2)
         }
 
     def get_supported_patterns(self) -> List[str]:

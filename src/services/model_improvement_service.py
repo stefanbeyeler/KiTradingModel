@@ -11,7 +11,6 @@ This service implements:
 
 import asyncio
 import json
-import logging
 import math
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -20,6 +19,7 @@ from dataclasses import dataclass, asdict
 import numpy as np
 import torch
 import torch.nn as nn
+from loguru import logger
 
 from src.config.settings import settings
 
@@ -41,8 +41,6 @@ def _safe_round(value: Any, decimals: int = 4, default: float = 0.0) -> float:
     """Round value safely, returning default for NaN/Infinity."""
     safe_val = _safe_float(value, default)
     return round(safe_val, decimals)
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -914,26 +912,37 @@ class ModelImprovementService:
 
         This evaluates pending predictions and triggers auto-retrain if needed.
         """
+        if not self._auto_evaluation_enabled:
+            return
+
         if self._evaluation_in_progress:
             logger.debug("Evaluation already in progress, skipping cycle")
             return
 
         self._evaluation_in_progress = True
         try:
+            # Count pending predictions ready for evaluation
+            pending_count = sum(len(v) for v in self.pending_feedback.values())
+            logger.debug(f"Auto-evaluation cycle started. Pending predictions: {pending_count}")
+
             # Evaluate pending predictions via API (no DB required)
             evaluated = await self.evaluate_pending_predictions_via_api()
 
+            # Always update last evaluation time to show loop is running
+            self._last_evaluation_time = datetime.utcnow()
+
             if evaluated:
                 self._total_auto_evaluations += sum(evaluated.values())
-                self._last_evaluation_time = datetime.utcnow()
                 logger.info(f"Auto-evaluation completed: {evaluated}")
 
                 # Check if any symbols need retraining and trigger auto-retrain
                 if self._auto_retrain_enabled:
                     await self._trigger_auto_retrain_if_needed()
+            else:
+                logger.debug("Auto-evaluation cycle: no predictions ready for evaluation")
 
         except Exception as e:
-            logger.error(f"Error in auto-evaluation cycle: {e}")
+            logger.error(f"Error in auto-evaluation cycle: {e}", exc_info=True)
         finally:
             self._evaluation_in_progress = False
 

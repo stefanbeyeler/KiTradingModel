@@ -680,6 +680,50 @@
                     <div class="loading"><div class="spinner"></div></div>
                 </div>
             </div>
+
+            <!-- Auto-Training -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128336; Auto-Training</h3>
+                </div>
+                <div id="auto-training-status">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>Intervall</label>
+                    <select class="form-control" id="auto-interval">
+                        <option value="daily">Taglich</option>
+                        <option value="weekly" selected>Wochentlich</option>
+                        <option value="monthly">Monatlich</option>
+                        <option value="manual">Manuell</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Timeframes</label>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+                            <input type="checkbox" id="auto-tf-1h" checked> 1h
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+                            <input type="checkbox" id="auto-tf-4h" checked> 4h
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+                            <input type="checkbox" id="auto-tf-1d" checked> 1d
+                        </label>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                    <button class="btn btn-success" id="btn-enable-auto" onclick="toggleAutoTraining(true)">
+                        &#9654; Aktivieren
+                    </button>
+                    <button class="btn btn-danger" id="btn-disable-auto" onclick="toggleAutoTraining(false)" disabled>
+                        &#9632; Deaktivieren
+                    </button>
+                    <button class="btn btn-primary" id="btn-run-now" onclick="runAutoTrainingNow()">
+                        &#9889; Jetzt starten
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- History Tab -->
@@ -832,13 +876,13 @@
                     result.innerHTML = data.patterns.map(p => `
                         <div class="detection-result">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="pattern-badge ${getPatternType(p.pattern)}" style="font-size: 0.9rem;">${p.pattern.replace(/_/g, ' ')}</span>
+                                <span class="pattern-badge ${getPatternType(p.pattern_type)}" style="font-size: 0.9rem;">${p.pattern_type.replace(/_/g, ' ')}</span>
                                 <span style="color: #64c8ff; font-weight: 600;">${(p.confidence * 100).toFixed(1)}%</span>
                             </div>
                             <div class="confidence-bar">
                                 <div class="confidence-fill ${p.confidence >= 0.8 ? 'high' : p.confidence >= 0.6 ? 'medium' : 'low'}" style="width: ${p.confidence * 100}%"></div>
                             </div>
-                            ${p.target_price ? `<div style="margin-top: 0.5rem; color: #888;">Ziel: ${p.target_price}</div>` : ''}
+                            ${p.price_target ? `<div style="margin-top: 0.5rem; color: #888;">Ziel: ${p.price_target.toFixed(2)}</div>` : ''}
                         </div>
                     `).join('');
                 } else {
@@ -875,7 +919,7 @@
                             patterns.forEach(p => {
                                 html += `<tr>
                                     <td>${symbol}</td>
-                                    <td><span class="pattern-badge ${getPatternType(p.pattern)}">${p.pattern.replace(/_/g, ' ')}</span></td>
+                                    <td><span class="pattern-badge ${getPatternType(p.pattern_type)}">${p.pattern_type.replace(/_/g, ' ')}</span></td>
                                     <td>${(p.confidence * 100).toFixed(1)}%</td>
                                 </tr>`;
                             });
@@ -1274,6 +1318,170 @@
             Array.from(select.options).forEach(o => o.selected = false);
         }
 
+        // =============================================================================
+        // Auto-Training Functions
+        // =============================================================================
+
+        // Load Auto-Training Status
+        async function loadAutoTrainingStatus() {
+            const container = document.getElementById('auto-training-status');
+
+            try {
+                const response = await fetch(`${API_BASE}/auto-training/status`);
+                if (!response.ok) throw new Error('Failed to load auto-training status');
+
+                const data = await response.json();
+
+                // Update interval dropdown
+                document.getElementById('auto-interval').value = data.interval || 'weekly';
+
+                // Update timeframe checkboxes
+                const timeframes = data.timeframes || ['1h', '4h', '1d'];
+                document.getElementById('auto-tf-1h').checked = timeframes.includes('1h');
+                document.getElementById('auto-tf-4h').checked = timeframes.includes('4h');
+                document.getElementById('auto-tf-1d').checked = timeframes.includes('1d');
+
+                // Update buttons
+                document.getElementById('btn-enable-auto').disabled = data.enabled;
+                document.getElementById('btn-disable-auto').disabled = !data.enabled;
+
+                // Format dates
+                const lastRun = data.last_run ? new Date(data.last_run).toLocaleString('de-CH') : 'Noch nie';
+                const nextRun = data.next_run ? new Date(data.next_run).toLocaleString('de-CH') : '-';
+
+                const intervalLabels = {
+                    'daily': 'Taglich',
+                    'weekly': 'Wochentlich',
+                    'monthly': 'Monatlich',
+                    'manual': 'Manuell'
+                };
+
+                container.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.85rem;">
+                        <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
+                            <div style="color: #888;">Status</div>
+                            <div style="color: ${data.enabled ? '#4caf50' : '#888'}; font-weight: 600;">
+                                ${data.enabled ? '&#10004; Aktiv' : '&#10008; Inaktiv'}
+                            </div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
+                            <div style="color: #888;">Intervall</div>
+                            <div style="color: #fff; font-weight: 600;">${intervalLabels[data.interval] || data.interval}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
+                            <div style="color: #888;">Letzter Lauf</div>
+                            <div style="color: #fff; font-weight: 600;">${lastRun}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
+                            <div style="color: #888;">Nachster Lauf</div>
+                            <div style="color: #fff; font-weight: 600;">${nextRun}</div>
+                        </div>
+                    </div>
+                    ${data.current_training ? `
+                        <div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(100,200,255,0.1); border: 1px solid rgba(100,200,255,0.3); border-radius: 4px;">
+                            <div style="color: #64c8ff; font-weight: 600;">Training lauft...</div>
+                            <div style="font-size: 0.8rem; color: #888; margin-top: 0.25rem;">
+                                ${data.current_training.symbols?.length || 0} Symbole,
+                                ${data.current_training.completed_timeframes?.length || 0}/${data.current_training.timeframes?.length || 0} Timeframes
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+
+            } catch (error) {
+                console.error('Error loading auto-training status:', error);
+                container.innerHTML = '<div class="info-box" style="color: #e57373;">Fehler beim Laden des Auto-Training Status</div>';
+            }
+        }
+
+        // Toggle Auto-Training
+        async function toggleAutoTraining(enable) {
+            try {
+                const endpoint = enable ? 'enable' : 'disable';
+                const response = await fetch(`${API_BASE}/auto-training/${endpoint}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error('Failed to toggle auto-training');
+
+                showToast(enable ? 'Auto-Training aktiviert' : 'Auto-Training deaktiviert');
+                loadAutoTrainingStatus();
+
+            } catch (error) {
+                showToast('Fehler beim Andern des Auto-Training Status', 'error');
+                console.error(error);
+            }
+        }
+
+        // Update Auto-Training Config
+        async function updateAutoTrainingConfig() {
+            const interval = document.getElementById('auto-interval').value;
+            const timeframes = [];
+            if (document.getElementById('auto-tf-1h').checked) timeframes.push('1h');
+            if (document.getElementById('auto-tf-4h').checked) timeframes.push('4h');
+            if (document.getElementById('auto-tf-1d').checked) timeframes.push('1d');
+
+            try {
+                const response = await fetch(`${API_BASE}/auto-training/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ interval, timeframes })
+                });
+
+                if (!response.ok) throw new Error('Failed to update config');
+
+                showToast('Auto-Training Konfiguration aktualisiert');
+                loadAutoTrainingStatus();
+
+            } catch (error) {
+                showToast('Fehler beim Speichern der Konfiguration', 'error');
+                console.error(error);
+            }
+        }
+
+        // Run Auto-Training Now
+        async function runAutoTrainingNow() {
+            const btn = document.getElementById('btn-run-now');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></span> Startet...';
+
+            try {
+                // Get selected timeframes
+                const timeframes = [];
+                if (document.getElementById('auto-tf-1h').checked) timeframes.push('1h');
+                if (document.getElementById('auto-tf-4h').checked) timeframes.push('4h');
+                if (document.getElementById('auto-tf-1d').checked) timeframes.push('1d');
+
+                const response = await fetch(`${API_BASE}/auto-training/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeframes })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Failed to start auto-training');
+                }
+
+                showToast('Auto-Training fur alle Symbole gestartet');
+                loadAutoTrainingStatus();
+                loadTrainingStatus();
+
+            } catch (error) {
+                showToast('Fehler beim Starten des Auto-Trainings', 'error');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '&#9889; Jetzt starten';
+            }
+        }
+
+        // Add event listeners for config changes
+        document.getElementById('auto-interval')?.addEventListener('change', updateAutoTrainingConfig);
+        document.getElementById('auto-tf-1h')?.addEventListener('change', updateAutoTrainingConfig);
+        document.getElementById('auto-tf-4h')?.addEventListener('change', updateAutoTrainingConfig);
+        document.getElementById('auto-tf-1d')?.addEventListener('change', updateAutoTrainingConfig);
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadInfo();
@@ -1281,12 +1489,16 @@
             loadTrainingStatus();
             loadTrainingHistory();
             loadModels();
+            loadAutoTrainingStatus();
 
             // Auto-refresh every 30 seconds
             setInterval(loadInfo, 30000);
 
             // Auto-refresh training status every 3 seconds
             setInterval(loadTrainingStatus, 3000);
+
+            // Auto-refresh auto-training status every 10 seconds
+            setInterval(loadAutoTrainingStatus, 10000);
         });
     </script>
 </body>

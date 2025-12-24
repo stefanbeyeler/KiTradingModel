@@ -2,6 +2,7 @@
 
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, BackgroundTasks
+from pydantic import BaseModel, Field
 from loguru import logger
 
 from ..models.schemas import (
@@ -12,6 +13,24 @@ from ..models.schemas import (
 )
 from ..services.tcn_training_service import tcn_training_service, TrainingConfig
 from ..services.pattern_detection_service import pattern_detection_service
+from ..services.auto_training_scheduler import auto_training_scheduler
+
+
+class AutoTrainingConfigRequest(BaseModel):
+    """Request to update auto-training configuration."""
+    enabled: Optional[bool] = None
+    interval: Optional[str] = Field(None, pattern="^(daily|weekly|monthly|manual)$")
+    timeframes: Optional[List[str]] = None
+    lookback_days: Optional[int] = Field(None, ge=30, le=1000)
+    epochs: Optional[int] = Field(None, ge=10, le=1000)
+    batch_size: Optional[int] = Field(None, ge=8, le=128)
+    learning_rate: Optional[float] = Field(None, ge=1e-6, le=0.1)
+    min_symbols: Optional[int] = Field(None, ge=1, le=100)
+
+
+class AutoTrainingRunRequest(BaseModel):
+    """Request to manually trigger auto-training."""
+    timeframes: Optional[List[str]] = None
 
 router = APIRouter()
 
@@ -177,3 +196,104 @@ async def get_model_info():
         device=pattern_detection_service.device,
         last_training_metrics=None
     )
+
+
+# =============================================================================
+# Auto-Training Scheduler Endpoints
+# =============================================================================
+
+@router.get("/auto-training/status")
+async def get_auto_training_status():
+    """
+    Get auto-training scheduler status.
+
+    Returns current configuration, last/next run times, and running state.
+    """
+    return auto_training_scheduler.get_status()
+
+
+@router.post("/auto-training/config")
+async def update_auto_training_config(request: AutoTrainingConfigRequest):
+    """
+    Update auto-training configuration.
+
+    - **enabled**: Enable/disable automatic training
+    - **interval**: Schedule interval (daily, weekly, monthly, manual)
+    - **timeframes**: List of timeframes to train
+    - **lookback_days**: Days of historical data
+    - **epochs**: Training epochs per model
+    - **batch_size**: Training batch size
+    - **learning_rate**: Learning rate
+    - **min_symbols**: Minimum symbols required to start training
+    """
+    try:
+        config = auto_training_scheduler.update_config(
+            enabled=request.enabled,
+            interval=request.interval,
+            timeframes=request.timeframes,
+            lookback_days=request.lookback_days,
+            epochs=request.epochs,
+            batch_size=request.batch_size,
+            learning_rate=request.learning_rate,
+            min_symbols=request.min_symbols
+        )
+
+        return {
+            "status": "updated",
+            "config": auto_training_scheduler.get_status()
+        }
+
+    except Exception as e:
+        logger.error(f"Auto-training config update error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/auto-training/run")
+async def run_auto_training(
+    background_tasks: BackgroundTasks,
+    request: Optional[AutoTrainingRunRequest] = None
+):
+    """
+    Manually trigger auto-training for all symbols.
+
+    - **timeframes**: Optional list of timeframes (defaults to config timeframes)
+
+    Training runs in the background for all available symbols.
+    """
+    if tcn_training_service.is_training():
+        raise HTTPException(
+            status_code=409,
+            detail="Training already in progress"
+        )
+
+    timeframes = request.timeframes if request else None
+
+    async def run_training():
+        await auto_training_scheduler.run_training_for_all(timeframes)
+
+    background_tasks.add_task(run_training)
+
+    return {
+        "status": "started",
+        "message": "Auto-training started for all symbols",
+        "timeframes": timeframes or auto_training_scheduler.config.timeframes
+    }
+
+
+@router.post("/auto-training/enable")
+async def enable_auto_training():
+    """Enable automatic training scheduler."""
+    auto_training_scheduler.update_config(enabled=True)
+    auto_training_scheduler.start()
+    return {
+        "status": "enabled",
+        "next_run": auto_training_scheduler.config.next_run
+    }
+
+
+@router.post("/auto-training/disable")
+async def disable_auto_training():
+    """Disable automatic training scheduler."""
+    auto_training_scheduler.update_config(enabled=False)
+    auto_training_scheduler.stop()
+    return {"status": "disabled"}

@@ -4,6 +4,7 @@ from typing import List, Optional, Dict
 from dataclasses import dataclass
 from datetime import datetime
 import os
+import json
 import numpy as np
 from loguru import logger
 
@@ -48,9 +49,11 @@ class TCNTrainingService:
     - GPU-accelerated training
     - Early stopping
     - Model checkpointing
+    - Persistent training history
     """
 
     MODEL_DIR = "data/models/tcn"
+    HISTORY_FILE = "data/models/tcn/training_history.json"
 
     def __init__(self, device: str = "cuda"):
         """
@@ -68,6 +71,44 @@ class TCNTrainingService:
 
         # Ensure model directory exists
         os.makedirs(self.MODEL_DIR, exist_ok=True)
+
+        # Load existing training history
+        self._load_history()
+
+    def _load_history(self) -> None:
+        """Load training history from JSON file."""
+        try:
+            if os.path.exists(self.HISTORY_FILE):
+                with open(self.HISTORY_FILE, 'r') as f:
+                    self._training_history = json.load(f)
+                logger.info(f"Loaded {len(self._training_history)} training history entries")
+        except Exception as e:
+            logger.warning(f"Could not load training history: {e}")
+            self._training_history = []
+
+    def _save_history(self) -> None:
+        """Save training history to JSON file."""
+        try:
+            # Prepare history for JSON serialization
+            serializable_history = []
+            for entry in self._training_history:
+                clean_entry = {}
+                for key, value in entry.items():
+                    if isinstance(value, datetime):
+                        clean_entry[key] = value.isoformat()
+                    elif isinstance(value, TrainingStatus):
+                        clean_entry[key] = value.value
+                    elif isinstance(value, (np.floating, np.integer)):
+                        clean_entry[key] = float(value) if isinstance(value, np.floating) else int(value)
+                    else:
+                        clean_entry[key] = value
+                serializable_history.append(clean_entry)
+
+            with open(self.HISTORY_FILE, 'w') as f:
+                json.dump(serializable_history, f, indent=2, default=str)
+            logger.info(f"Saved {len(serializable_history)} training history entries")
+        except Exception as e:
+            logger.error(f"Could not save training history: {e}")
 
     def is_training(self) -> bool:
         """Check if training is in progress."""
@@ -295,7 +336,12 @@ class TCNTrainingService:
 
             self._current_job["status"] = TrainingStatus.COMPLETED
             self._current_job["best_loss"] = result["best_loss"]
+            self._current_job["completed_at"] = datetime.now()
+            self._current_job["model_path"] = model_path
             self._training_history.append(self._current_job.copy())
+
+            # Persist training history
+            self._save_history()
 
             logger.info(f"Training completed: {result}")
 
