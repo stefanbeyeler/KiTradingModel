@@ -669,6 +669,17 @@
                     <div class="loading"><div class="spinner"></div></div>
                 </div>
             </div>
+
+            <!-- Available Models -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128230; Verfugbare Modelle</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="loadModels()">&#8635; Aktualisieren</button>
+                </div>
+                <div id="models-list">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
         </div>
 
         <!-- History Tab -->
@@ -886,6 +897,21 @@
             }
         }
 
+        // Format duration from start time
+        function formatDuration(startTimeISO) {
+            if (!startTimeISO) return '-';
+            const start = new Date(startTimeISO);
+            const now = new Date();
+            const diffMs = now - start;
+            const diffSecs = Math.floor(diffMs / 1000);
+            const mins = Math.floor(diffSecs / 60);
+            const secs = diffSecs % 60;
+            const hours = Math.floor(mins / 60);
+            if (hours > 0) return `${hours}h ${mins % 60}m ${secs}s`;
+            if (mins > 0) return `${mins}m ${secs}s`;
+            return `${secs}s`;
+        }
+
         // Load Training Status
         async function loadTrainingStatus() {
             try {
@@ -895,30 +921,59 @@
                 const data = await response.json();
                 const container = document.getElementById('training-status');
 
-                if (data.in_progress) {
+                const isTraining = data.status === 'training' || data.status === 'preparing';
+
+                if (isTraining) {
                     document.getElementById('btn-train').disabled = true;
                     document.getElementById('btn-stop-train').disabled = false;
 
+                    const progressPercent = data.progress ? (data.progress * 100).toFixed(1) : 0;
+                    const duration = formatDuration(data.started_at);
+
                     container.innerHTML = `
-                        <div class="training-status">
-                            <span class="training-active">&#9679; Training lauft...</span>
+                        <div style="background: linear-gradient(135deg, rgba(76,175,80,0.15), rgba(76,175,80,0.05)); border: 1px solid rgba(76,175,80,0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <span style="color: #4caf50; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></span>
+                                    Training lauft...
+                                </span>
+                                <span style="background: #4caf50; color: #000; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">
+                                    ${progressPercent}%
+                                </span>
+                            </div>
+                            <div class="progress-bar" style="height: 8px; margin-bottom: 0.75rem;">
+                                <div class="progress-fill" style="width: ${progressPercent}%; background: linear-gradient(90deg, #4caf50, #81c784);"></div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.85rem;">
+                                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
+                                    <div style="color: #888;">Epoche</div>
+                                    <div style="color: #fff; font-weight: 600;">${data.current_epoch || 0} / ${data.total_epochs || '-'}</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
+                                    <div style="color: #888;">Laufzeit</div>
+                                    <div style="color: #fff; font-weight: 600;">${duration}</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
+                                    <div style="color: #888;">Samples</div>
+                                    <div style="color: #fff; font-weight: 600;">${data.samples_count?.toLocaleString() || '-'}</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
+                                    <div style="color: #888;">Best Loss</div>
+                                    <div style="color: #fff; font-weight: 600;">${data.best_loss?.toFixed(4) || '-'}</div>
+                                </div>
+                            </div>
+                            ${data.job_id ? `<div style="margin-top: 0.75rem; color: #666; font-size: 0.75rem;">Job: ${data.job_id}</div>` : ''}
                         </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${data.progress || 0}%"></div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; color: #888; font-size: 0.85rem;">
-                            <span>Epoche ${data.current_epoch || 0} / ${data.total_epochs || '-'}</span>
-                            <span>${data.progress || 0}%</span>
-                        </div>
-                        ${data.current_loss ? `<div style="margin-top: 0.5rem; color: #888;">Loss: ${data.current_loss.toFixed(6)}</div>` : ''}
                     `;
                 } else {
                     document.getElementById('btn-train').disabled = false;
                     document.getElementById('btn-stop-train').disabled = true;
 
                     container.innerHTML = `
-                        <div style="color: #888;">Kein Training aktiv</div>
-                        ${data.last_training ? `<div style="margin-top: 0.5rem; font-size: 0.85rem;">Letztes Training: ${new Date(data.last_training).toLocaleString('de-CH')}</div>` : ''}
+                        <div style="text-align: center; padding: 1.5rem; color: #888;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#128308;</div>
+                            <div>Kein Training aktiv</div>
+                        </div>
                     `;
                 }
             } catch (error) {
@@ -1036,6 +1091,82 @@
             }
         }
 
+        // Load Available Models
+        async function loadModels() {
+            const container = document.getElementById('models-list');
+
+            try {
+                const response = await fetch(`${API_BASE}/models`);
+                if (!response.ok) throw new Error('Failed to load models');
+
+                const data = await response.json();
+
+                if (data.models && data.models.length > 0) {
+                    // Sort by creation date (newest first)
+                    const sortedModels = data.models.sort((a, b) =>
+                        new Date(b.created) - new Date(a.created)
+                    );
+
+                    container.innerHTML = `
+                        <div style="margin-bottom: 0.5rem; color: #888; font-size: 0.85rem;">
+                            ${data.count} Modell${data.count !== 1 ? 'e' : ''} verfugbar
+                        </div>
+                        ${sortedModels.map((m, idx) => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: ${idx === 0 ? 'rgba(76,175,80,0.1)' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${idx === 0 ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.05)'}; border-radius: 6px; margin-bottom: 0.5rem;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <span style="font-weight: 600; color: #fff;">${m.name}</span>
+                                        ${idx === 0 ? '<span style="background: #4caf50; color: #000; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.7rem; font-weight: 600;">AKTUELL</span>' : ''}
+                                    </div>
+                                    <div style="display: flex; gap: 1rem; margin-top: 0.3rem; font-size: 0.8rem; color: #888;">
+                                        <span>&#128197; ${new Date(m.created).toLocaleString('de-CH')}</span>
+                                        <span>&#128190; ${m.size_mb} MB</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-secondary btn-sm" onclick="loadModel('${m.name}')" ${idx === 0 ? 'disabled' : ''}>
+                                    ${idx === 0 ? '&#10004; Geladen' : '&#128194; Laden'}
+                                </button>
+                            </div>
+                        `).join('')}
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="info-box" style="text-align: center;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#128230;</div>
+                            <div>Keine trainierten Modelle vorhanden</div>
+                            <div style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+                                Starten Sie ein Training um ein Modell zu erstellen
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading models:', error);
+                container.innerHTML = '<div class="info-box" style="color: #e57373;">Fehler beim Laden der Modelle</div>';
+            }
+        }
+
+        // Load specific model
+        async function loadModel(modelName) {
+            try {
+                const response = await fetch(`${API_BASE}/models/load?model_name=${encodeURIComponent(modelName)}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Failed to load model');
+                }
+
+                showToast(`Modell ${modelName} geladen`);
+                loadModels(); // Refresh list
+                loadInfo();   // Refresh service info
+            } catch (error) {
+                showToast('Fehler beim Laden des Modells', 'error');
+                console.error(error);
+            }
+        }
+
         // Load Pattern History
         async function loadHistory() {
             const symbol = document.getElementById('history-symbol').value;
@@ -1149,9 +1280,13 @@
             loadAvailableSymbols();
             loadTrainingStatus();
             loadTrainingHistory();
+            loadModels();
 
             // Auto-refresh every 30 seconds
             setInterval(loadInfo, 30000);
+
+            // Auto-refresh training status every 3 seconds
+            setInterval(loadTrainingStatus, 3000);
         });
     </script>
 </body>

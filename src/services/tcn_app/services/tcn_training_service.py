@@ -81,13 +81,17 @@ class TCNTrainingService:
                 "message": "No training in progress"
             }
 
+        started_at = self._current_job.get("started_at") if self._current_job else None
+
         return {
             "status": TrainingStatus.TRAINING,
             "job_id": self._current_job.get("job_id") if self._current_job else None,
             "progress": self._current_job.get("progress", 0) if self._current_job else 0,
             "current_epoch": self._current_job.get("current_epoch", 0) if self._current_job else 0,
             "total_epochs": self._current_job.get("total_epochs", 0) if self._current_job else 0,
-            "best_loss": self._current_job.get("best_loss") if self._current_job else None
+            "best_loss": self._current_job.get("best_loss") if self._current_job else None,
+            "started_at": started_at.isoformat() if started_at else None,
+            "samples_count": self._current_job.get("samples_count") if self._current_job else None
         }
 
     async def prepare_training_data(
@@ -254,6 +258,7 @@ class TCNTrainingService:
             )
 
             logger.info(f"Training with {len(sequences)} samples")
+            self._current_job["samples_count"] = len(sequences)
 
             # Split data
             n_samples = len(sequences)

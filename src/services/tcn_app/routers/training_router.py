@@ -88,7 +88,9 @@ async def get_training_status():
         progress=status.get("progress"),
         current_epoch=status.get("current_epoch"),
         total_epochs=status.get("total_epochs"),
-        best_loss=status.get("best_loss")
+        best_loss=status.get("best_loss"),
+        started_at=status.get("started_at"),
+        samples_count=status.get("samples_count")
     )
 
 

@@ -137,13 +137,14 @@ class TrainingResponse(BaseModel):
     """Response for training request."""
     status: TrainingStatus
     job_id: Optional[str] = None
-    message: str
-    started_at: Optional[datetime] = None
+    message: str = ""
+    started_at: Optional[str] = None
     progress: Optional[float] = None
     current_epoch: Optional[int] = None
     total_epochs: Optional[int] = None
     best_loss: Optional[float] = None
     metrics: Optional[dict] = None
+    samples_count: Optional[int] = None
 
 
 class ModelInfoResponse(BaseModel):
