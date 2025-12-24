@@ -556,7 +556,7 @@
 <body>
     <header>
         <div class="container">
-            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
             <span class="header-title">Data Service Konfiguration</span>
             <span class="service-badge">Port 3001</span>
         </div>
@@ -1582,7 +1582,7 @@
                 <div class="stats-bar" style="margin-bottom: 1rem; padding: 0.5rem;">
                     <div class="stat-item">
                         <div class="stat-value" id="import-total">-</div>
-                        <div class="stat-label">Verfugbar</div>
+                        <div class="stat-label">Verfügbar</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-value" id="import-already">-</div>
@@ -1596,9 +1596,9 @@
 
                 <!-- Selection Controls -->
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <button class="btn btn-secondary btn-sm" onclick="selectAllImportSymbols(true)">Alle auswahlen</button>
-                    <button class="btn btn-secondary btn-sm" onclick="selectAllImportSymbols(false)">Alle abwahlen</button>
-                    <button class="btn btn-secondary btn-sm" onclick="selectNewImportSymbols()">Nur neue auswahlen</button>
+                    <button class="btn btn-secondary btn-sm" onclick="selectAllImportSymbols(true)">Alle auswählen</button>
+                    <button class="btn btn-secondary btn-sm" onclick="selectAllImportSymbols(false)">Alle abwählen</button>
+                    <button class="btn btn-secondary btn-sm" onclick="selectNewImportSymbols()">Nur neue auswählen</button>
                     <label class="form-checkbox" style="margin-left: auto;">
                         <input type="checkbox" id="import-hide-existing" onchange="filterImportSymbols()">
                         <span>Bereits importierte ausblenden</span>
@@ -2307,7 +2307,7 @@
 
         async function importSelectedSymbols() {
             if (selectedImportSymbols.size === 0) {
-                showToast('Bitte mindestens ein Symbol auswahlen', 'error');
+                showToast('Bitte mindestens ein Symbol auswählen', 'error');
                 return;
             }
 
@@ -2389,7 +2389,7 @@
                         <button class="btn btn-primary btn-sm" onclick="editStrategy('${s.id}')">Bearbeiten</button>
                         ${!s.is_default ? `<button class="btn btn-success btn-sm" onclick="setDefault('${s.id}')">Als Standard</button>` : ''}
                         <button class="btn btn-warning btn-sm" onclick="exportStrategy('${s.id}')">Exportieren</button>
-                        ${!s.id.startsWith('default_') ? `<button class="btn btn-danger btn-sm" onclick="deleteStrategy('${s.id}')">Loschen</button>` : ''}
+                        ${!s.id.startsWith('default_') ? `<button class="btn btn-danger btn-sm" onclick="deleteStrategy('${s.id}')">Löschen</button>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -2469,13 +2469,13 @@
         }
 
         async function deleteStrategy(id) {
-            if (!confirm('Strategie wirklich loschen?')) return;
+            if (!confirm('Strategie wirklich löschen?')) return;
             try {
                 await fetch(`${API_BASE}/strategies/${id}`, { method: 'DELETE' });
                 await loadStrategies();
                 showToast('Strategie geloscht', 'success');
             } catch (error) {
-                showToast('Fehler beim Loschen', 'error');
+                showToast('Fehler beim Löschen', 'error');
             }
         }
 

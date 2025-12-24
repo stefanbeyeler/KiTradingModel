@@ -336,7 +336,7 @@
 <body>
     <header>
         <div class="container">
-            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
             <span class="service-badge">Port 3005</span>
         </div>
     </header>
@@ -348,13 +348,13 @@
         <div class="content-card">
             <h2>&#129504; Beschreibung</h2>
             <p>
-                Der Embedder Service ist der zentrale Hub fur alle Embedding-Operationen im KI Trading Model.
+                Der Embedder Service ist der zentrale Hub für alle Embedding-Operationen im KI Trading Model.
                 Er stellt verschiedene vortrainierte Modelle bereit, um Texte, Finanznachrichten, Zeitreihen
                 und Features in hochdimensionale Vektoren zu transformieren.
             </p>
             <p>
-                Diese Embeddings werden von anderen Services wie RAG (fur Dokumentensuche), TCN (fur
-                Pattern-Erkennung) und LLM (fur kontextbasierte Analyse) verwendet. Durch die Zentralisierung
+                Diese Embeddings werden von anderen Services wie RAG (für Dokumentensuche), TCN (fur
+                Pattern-Erkennung) und LLM (für kontextbasierte Analyse) verwendet. Durch die Zentralisierung
                 werden Ressourcen gespart und konsistente Embeddings gewahrleistet.
             </p>
         </div>
@@ -367,7 +367,7 @@
                 <div class="embedding-type">
                     <h4>&#128221; Text Embeddings</h4>
                     <span class="model-name">all-MiniLM-L6-v2</span>
-                    <p>Universelle Textembeddings fur allgemeine Dokumente und Suchanfragen.</p>
+                    <p>Universelle Textembeddings für allgemeine Dokumente und Suchanfragen.</p>
                     <span class="dim">Dimension: 384</span>
                 </div>
                 <div class="embedding-type">
@@ -379,20 +379,20 @@
                 <div class="embedding-type">
                     <h4>&#128201; TimeSeries Embeddings</h4>
                     <span class="model-name">Custom TCN Encoder</span>
-                    <p>Embeddings fur OHLCV-Zeitreihen und technische Indikatoren.</p>
+                    <p>Embeddings für OHLCV-Zeitreihen und technische Indikatoren.</p>
                     <span class="dim">Dimension: 256</span>
                 </div>
                 <div class="embedding-type">
                     <h4>&#128202; Feature Embeddings</h4>
                     <span class="model-name">AutoEncoder</span>
-                    <p>Komprimiert Trading-Features fur ML-Modelle.</p>
+                    <p>Komprimiert Trading-Features für ML-Modelle.</p>
                     <span class="dim">Dimension: 64</span>
                 </div>
             </div>
 
             <div class="info-box">
                 <strong>Modell-Auswahl:</strong> Der Service wahlt automatisch das passende Modell
-                basierend auf dem Eingabetyp. Sie konnen das Modell auch explizit angeben.
+                basierend auf dem Eingabetyp. Sie können das Modell auch explizit angeben.
             </div>
         </div>
 
@@ -429,10 +429,10 @@
             <p>Der Embedding-Prozess:</p>
             <ul>
                 <li><strong>Preprocessing:</strong> Text-Tokenisierung, Zeitreihen-Normalisierung</li>
-                <li><strong>Cache-Lookup:</strong> Prufung ob Embedding bereits existiert</li>
+                <li><strong>Cache-Lookup:</strong> Prüfung ob Embedding bereits existiert</li>
                 <li><strong>Model Inference:</strong> GPU-beschleunigte Berechnung falls kein Cache-Hit</li>
-                <li><strong>Pooling:</strong> Mean/CLS Pooling fur Sentence-Level Embeddings</li>
-                <li><strong>Cache-Update:</strong> Speicherung fur zukunftige Anfragen</li>
+                <li><strong>Pooling:</strong> Mean/CLS Pooling für Sentence-Level Embeddings</li>
+                <li><strong>Cache-Update:</strong> Speicherung für zukünftige Anfragen</li>
             </ul>
 
             <div class="info-box warning">
@@ -451,11 +451,11 @@
                 </div>
                 <div class="feature-item">
                     <h4>&#128269; Similarity Search</h4>
-                    <p>Eingebaute Cosine-Similarity fur Ahnlichkeitssuche.</p>
+                    <p>Eingebaute Cosine-Similarity für Ähnlichkeitssuche.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#127760; Multi-Language</h4>
-                    <p>Unterstutzung fur Deutsch und Englisch.</p>
+                    <p>Unterstützung für Deutsch und Englisch.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128190; Persistence</h4>
@@ -510,7 +510,7 @@
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/embeddings/models</span>
-                    <span class="endpoint-desc">Verfugbare Modelle</span>
+                    <span class="endpoint-desc">Verfügbare Modelle</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -542,15 +542,15 @@
             <h2>&#128230; Verwendung durch andere Services</h2>
             <p>Der Embedder Service wird von folgenden Services genutzt:</p>
             <ul>
-                <li><strong>RAG Service:</strong> Dokument- und Query-Embeddings fur FAISS-Suche</li>
+                <li><strong>RAG Service:</strong> Dokument- und Query-Embeddings für FAISS-Suche</li>
                 <li><strong>TCN-Pattern:</strong> TimeSeries-Embeddings als zusatzliche Features</li>
-                <li><strong>LLM Service:</strong> FinBERT-Embeddings fur Sentiment-Analyse</li>
-                <li><strong>Data Service:</strong> Feature-Embeddings fur Symbol-Clustering</li>
+                <li><strong>LLM Service:</strong> FinBERT-Embeddings für Sentiment-Analyse</li>
+                <li><strong>Data Service:</strong> Feature-Embeddings für Symbol-Clustering</li>
             </ul>
 
             <div class="info-box">
-                <strong>Service Discovery:</strong> Andere Services finden den Embedder uber die
-                Umgebungsvariable <code>EMBEDDER_SERVICE_URL</code> oder uber das Docker-Netzwerk.
+                <strong>Service Discovery:</strong> Andere Services finden den Embedder über die
+                Umgebungsvariable <code>EMBEDDER_SERVICE_URL</code> oder über das Docker-Netzwerk.
             </div>
         </div>
 

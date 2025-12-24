@@ -222,25 +222,25 @@
 <body>
     <header>
         <div class="container">
-            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
             <span class="service-badge">Externer Service</span>
         </div>
     </header>
 
     <div class="container">
         <h1>EasyInsight API</h1>
-        <p class="subtitle">Externe Datenquelle fur OHLCV-Marktdaten und Symbol-Informationen</p>
+        <p class="subtitle">Externe Datenquelle für OHLCV-Marktdaten und Symbol-Informationen</p>
 
         <div class="content-card">
             <h2>&#128202; Beschreibung</h2>
             <p>
                 Die EasyInsight API ist die zentrale externe Datenquelle des KI Trading Model Systems.
                 Sie liefert historische und aktuelle Marktdaten (OHLCV - Open, High, Low, Close, Volume)
-                fur verschiedene Finanzinstrumente wie Kryptowahrungen, Forex-Paare, Indizes und Edelmetalle.
+                für verschiedene Finanzinstrumente wie Kryptowährungen, Forex-Paare, Indizes und Edelmetalle.
             </p>
             <p>
                 Die Daten werden in einer TimescaleDB gespeichert, einer zeitreihenoptimierten PostgreSQL-Erweiterung,
-                die besonders fur Finanzdaten mit hoher Schreiblast und komplexen Zeitabfragen geeignet ist.
+                die besonders für Finanzdaten mit hoher Schreiblast und komplexen Zeitabfragen geeignet ist.
             </p>
         </div>
 
@@ -248,15 +248,15 @@
             <h2>&#9881;&#65039; Funktionsweise</h2>
             <p>Der Service funktioniert wie folgt:</p>
             <ul>
-                <li><strong>Datensammlung:</strong> Automatisches Abrufen von Marktdaten von verschiedenen Borsen (Kraken, etc.)</li>
+                <li><strong>Datensammlung:</strong> Automatisches Abrufen von Marktdaten von verschiedenen Börsen (Kraken, etc.)</li>
                 <li><strong>Speicherung:</strong> Persistente Speicherung in TimescaleDB mit optimierter Zeitreihen-Kompression</li>
-                <li><strong>API-Bereitstellung:</strong> RESTful API mit Swagger-Dokumentation fur einfachen Zugriff</li>
+                <li><strong>API-Bereitstellung:</strong> RESTful API mit Swagger-Dokumentation für einfachen Zugriff</li>
                 <li><strong>Kategorisierung:</strong> Automatische Kategorisierung der Symbole (Forex, Crypto, Indices, Metals)</li>
             </ul>
 
             <div class="info-box">
-                <strong>Hinweis:</strong> Dieser Service lauft auf einem separaten Server (10.1.19.102) und wird
-                vom KI Trading Model uber das Netzwerk angesprochen. Die Latenz wird im Dashboard angezeigt.
+                <strong>Hinweis:</strong> Dieser Service läuft auf einem separaten Server (10.1.19.102) und wird
+                vom KI Trading Model über das Netzwerk angesprochen. Die Latenz wird im Dashboard angezeigt.
             </div>
         </div>
 
@@ -266,12 +266,12 @@
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/symbols</span>
-                    <span class="endpoint-desc">Liste aller verfugbaren Symbole</span>
+                    <span class="endpoint-desc">Liste aller verfügbaren Symbole</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/ohlcv/{symbol}</span>
-                    <span class="endpoint-desc">OHLCV-Daten fur ein Symbol</span>
+                    <span class="endpoint-desc">OHLCV-Daten für ein Symbol</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -291,16 +291,16 @@
             <p>Die OHLCV-Daten werden in folgendem Format bereitgestellt:</p>
             <ul>
                 <li><strong>timestamp:</strong> Zeitstempel des Datenpunkts (UTC)</li>
-                <li><strong>open:</strong> Eroffnungspreis der Periode</li>
-                <li><strong>high:</strong> Hochstkurs der Periode</li>
+                <li><strong>open:</strong> Eröffnungspreis der Periode</li>
+                <li><strong>high:</strong> Höchstkurs der Periode</li>
                 <li><strong>low:</strong> Tiefstkurs der Periode</li>
                 <li><strong>close:</strong> Schlusskurs der Periode</li>
                 <li><strong>volume:</strong> Handelsvolumen der Periode</li>
             </ul>
 
             <div class="info-box warning">
-                <strong>Wichtig:</strong> Die Datenqualitat und -verfugbarkeit hangt von der jeweiligen Borse ab.
-                Nicht alle Symbole haben Daten fur alle Zeitraume verfugbar.
+                <strong>Wichtig:</strong> Die Datenqualität und -verfügbarkeit hängt von der jeweiligen Börse ab.
+                Nicht alle Symbole haben Daten für alle Zeiträume verfügbar.
             </div>
         </div>
 

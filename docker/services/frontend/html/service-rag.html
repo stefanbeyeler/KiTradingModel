@@ -298,7 +298,7 @@
 <body>
     <header>
         <div class="container">
-            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
             <span class="service-badge">Port 3008</span>
         </div>
     </header>
@@ -312,18 +312,18 @@
             <p>
                 Der RAG Service (Retrieval-Augmented Generation) ist die Wissensbasis des KI Trading Model Systems.
                 Er speichert Dokumente, Analysen und Trading-relevante Informationen in einem Vektorspeicher
-                und ermoglicht semantische Suchen uber diese Inhalte.
+                und ermöglicht semantische Suchen über diese Inhalte.
             </p>
             <p>
-                RAG kombiniert die Starken von Information Retrieval und generativer KI: Anstatt dass das
-                LLM nur auf sein Trainingswissen zuruckgreift, kann es relevante Dokumente aus der
+                RAG kombiniert die Stärken von Information Retrieval und generativer KI: Anstatt dass das
+                LLM nur auf sein Trainingswissen zurückgreift, kann es relevante Dokumente aus der
                 Wissensbasis abrufen und in seine Antworten einbeziehen.
             </p>
         </div>
 
         <div class="content-card">
             <h2>&#9881;&#65039; Funktionsweise</h2>
-            <p>Der RAG-Prozess verlauft in mehreren Schritten:</p>
+            <p>Der RAG-Prozess verläuft in mehreren Schritten:</p>
 
             <div class="flow-diagram">
                 <div class="flow-step">
@@ -349,7 +349,7 @@
 
             <ul>
                 <li><strong>Dokument-Aufnahme:</strong> Dokumente werden in den Service hochgeladen</li>
-                <li><strong>Text-Chunking:</strong> Lange Texte werden in uberlappende Abschnitte geteilt</li>
+                <li><strong>Text-Chunking:</strong> Lange Texte werden in überlappende Abschnitte geteilt</li>
                 <li><strong>Embedding-Erstellung:</strong> Jeder Chunk wird in einen Vektor umgewandelt</li>
                 <li><strong>Index-Speicherung:</strong> Vektoren werden im FAISS-Index gespeichert</li>
                 <li><strong>Semantische Suche:</strong> Anfragen werden als Vektoren verglichen</li>
@@ -357,8 +357,8 @@
 
             <div class="info-box success">
                 <strong>FAISS:</strong> Facebook AI Similarity Search ist eine hocheffiziente Bibliothek
-                fur Ahnlichkeitssuchen in grossen Vektorraeumen. Sie unterstutzt GPU-Beschleunigung
-                fur schnelle Abfragen.
+                für Ähnlichkeitssuchen in grossen Vektorräumen. Sie unterstützt GPU-Beschleunigung
+                für schnelle Abfragen.
             </div>
         </div>
 
@@ -372,11 +372,11 @@
                 </div>
                 <div class="feature-item">
                     <h4>&#128269; Semantische Suche</h4>
-                    <p>Inhaltsbasierte Suche nach ahnlichen Dokumenten - nicht nur nach Schlusselwortern.</p>
+                    <p>Inhaltsbasierte Suche nach ähnlichen Dokumenten - nicht nur nach Schlusselwortern.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128279; LLM-Integration</h4>
-                    <p>Bereitstellung von Kontext fur den LLM Service fur fundierte Antworten.</p>
+                    <p>Bereitstellung von Kontext für den LLM Service für fundierte Antworten.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128190; Persistenter Speicher</h4>
@@ -388,19 +388,19 @@
         <div class="content-card">
             <h2>&#128300; Embedding-Modell</h2>
             <p>
-                Fur die Vektorisierung von Text wird ein Sentence-Transformer Modell verwendet.
+                Für die Vektorisierung von Text wird ein Sentence-Transformer Modell verwendet.
                 Dieses wandelt beliebige Textabschnitte in hochdimensionale Vektoren (Embeddings) um,
                 die die semantische Bedeutung des Textes erfassen.
             </p>
             <ul>
-                <li><strong>Modell:</strong> all-MiniLM-L6-v2 (oder ahnliches)</li>
+                <li><strong>Modell:</strong> all-MiniLM-L6-v2 (oder ähnliches)</li>
                 <li><strong>Vektor-Dimension:</strong> 384 Dimensionen</li>
-                <li><strong>Chunk-Grosse:</strong> 500-1000 Zeichen mit Uberlappung</li>
-                <li><strong>Ahnlichkeitsmass:</strong> Kosinus-Ahnlichkeit</li>
+                <li><strong>Chunk-Grösse:</strong> 500-1000 Zeichen mit Überlappung</li>
+                <li><strong>Ähnlichkeitsmass:</strong> Kosinus-Ähnlichkeit</li>
             </ul>
 
             <div class="info-box">
-                <strong>Semantische Ahnlichkeit:</strong> Zwei Texte mit ahnlicher Bedeutung haben
+                <strong>Semantische Ähnlichkeit:</strong> Zwei Texte mit ähnlicher Bedeutung haben
                 Vektoren, die im hochdimensionalen Raum nahe beieinander liegen - auch wenn sie
                 unterschiedliche Worte verwenden.
             </div>
@@ -414,7 +414,7 @@
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/rag/document</span>
-                    <span class="endpoint-desc">Dokument hinzufugen</span>
+                    <span class="endpoint-desc">Dokument hinzufügen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -433,7 +433,7 @@
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/rag/query</span>
-                    <span class="endpoint-desc">Semantische Suche ausfuhren</span>
+                    <span class="endpoint-desc">Semantische Suche ausführen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -459,16 +459,16 @@
 
         <div class="content-card">
             <h2>&#128230; Anwendungsfalle</h2>
-            <p>Der RAG Service wird fur verschiedene Zwecke eingesetzt:</p>
+            <p>Der RAG Service wird für verschiedene Zwecke eingesetzt:</p>
             <ul>
                 <li><strong>Trading-Wissen:</strong> Speicherung von Marktanalysen, Strategiebeschreibungen und Handelsregeln</li>
                 <li><strong>Historische Insights:</strong> Archivierung vergangener Handelsentscheidungen und deren Ergebnisse</li>
-                <li><strong>Dokumentation:</strong> Technische Dokumentation und Anleitungen fur das System</li>
+                <li><strong>Dokumentation:</strong> Technische Dokumentation und Anleitungen für das System</li>
                 <li><strong>Nachrichtenarchiv:</strong> Relevante Finanznachrichten und ihre Marktauswirkungen</li>
             </ul>
 
             <div class="info-box warning">
-                <strong>Datenqualitat:</strong> Die Qualitat der RAG-Antworten hangt direkt von der
+                <strong>Datenqualitat:</strong> Die Qualitat der RAG-Antworten hängt direkt von der
                 Qualitat der indizierten Dokumente ab. Stellen Sie sicher, dass nur relevante und
                 akkurate Informationen in die Wissensbasis aufgenommen werden.
             </div>

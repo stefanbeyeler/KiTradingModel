@@ -326,7 +326,7 @@
 <body>
     <header>
         <div class="container">
-            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
             <span class="service-badge">Port 3009</span>
         </div>
     </header>
@@ -345,7 +345,7 @@
             </p>
             <p>
                 Durch die Integration mit dem RAG Service kann das LLM auf die interne Wissensbasis
-                zugreifen und so kontextbezogene, fundierte Antworten liefern, die uber das
+                zugreifen und so kontextbezogene, fundierte Antworten liefern, die über das
                 allgemeine Trainingswissen des Modells hinausgehen.
             </p>
         </div>
@@ -368,8 +368,8 @@
             </div>
 
             <div class="info-box success">
-                <strong>Llama 3.1:</strong> Das Modell wurde im Juli 2024 von Meta AI veroffentlicht
-                und gilt als eines der besten Open-Source LLMs. Es unterstutzt multilingual Antworten
+                <strong>Llama 3.1:</strong> Das Modell wurde im Juli 2024 von Meta AI veröffentlicht
+                und gilt als eines der besten Open-Source LLMs. Es unterstützt multilingual Antworten
                 und hat exzellente Reasoning-Fahigkeiten.
             </div>
         </div>
@@ -406,7 +406,7 @@
             </div>
 
             <ul>
-                <li><strong>Anfrage-Empfang:</strong> Benutzeranfrage wird uber die API empfangen</li>
+                <li><strong>Anfrage-Empfang:</strong> Benutzeranfrage wird über die API empfangen</li>
                 <li><strong>RAG-Abfrage:</strong> Relevante Dokumente werden aus der Wissensbasis abgerufen</li>
                 <li><strong>Kontext-Aufbau:</strong> Dokumente werden mit der Anfrage kombiniert</li>
                 <li><strong>LLM-Verarbeitung:</strong> Llama 3.1 generiert eine kontextbezogene Antwort</li>
@@ -455,7 +455,7 @@
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/recommendation/{symbol}</span>
-                    <span class="endpoint-desc">Handelsempfehlung fur Symbol</span>
+                    <span class="endpoint-desc">Handelsempfehlung für Symbol</span>
                 </div>
             </div>
 
@@ -491,20 +491,20 @@
         <div class="content-card">
             <h2>&#128421;&#65039; Ollama Integration</h2>
             <p>
-                Der LLM Service nutzt <strong>Ollama</strong> als Backend fur die Modellausfuhrung.
+                Der LLM Service nutzt <strong>Ollama</strong> als Backend für die Modellausführung.
                 Ollama ist eine leichtgewichtige Plattform zum lokalen Ausfuhren von LLMs und
-                bietet eine einfache API fur Inferenz.
+                bietet eine einfache API für Inferenz.
             </p>
             <ul>
                 <li><strong>Modell-Management:</strong> Automatisches Herunterladen und Aktualisieren von Modellen</li>
-                <li><strong>GPU-Beschleunigung:</strong> Nutzt NVIDIA CUDA fur schnelle Inferenz</li>
-                <li><strong>Quantisierung:</strong> Unterstutzt verschiedene Quantisierungsstufen (Q4, Q8, etc.)</li>
-                <li><strong>Streaming:</strong> Unterstutzt Streaming-Responses fur interaktive Anwendungen</li>
+                <li><strong>GPU-Beschleunigung:</strong> Nutzt NVIDIA CUDA für schnelle Inferenz</li>
+                <li><strong>Quantisierung:</strong> Unterstützt verschiedene Quantisierungsstufen (Q4, Q8, etc.)</li>
+                <li><strong>Streaming:</strong> Unterstützt Streaming-Responses für interaktive Anwendungen</li>
             </ul>
 
             <div class="info-box warning">
-                <strong>VRAM-Anforderungen:</strong> Llama 3.1 70B benotigt ca. 40-48 GB VRAM fur volle
-                Prasission oder ca. 20-24 GB fur 4-bit Quantisierung. Auf der Jetson Orin wird
+                <strong>VRAM-Anforderungen:</strong> Llama 3.1 70B benötigt ca. 40-48 GB VRAM für volle
+                Präzision oder ca. 20-24 GB für 4-bit Quantisierung. Auf der Jetson Orin wird
                 eine quantisierte Version verwendet.
             </div>
         </div>
@@ -512,7 +512,7 @@
         <div class="content-card">
             <h2>&#128230; Prompt-Engineering</h2>
             <p>
-                Der Service verwendet spezialisierte System-Prompts fur Trading-Analysen:
+                Der Service verwendet spezialisierte System-Prompts für Trading-Analysen:
             </p>
             <ul>
                 <li><strong>Trading-Fokus:</strong> Das Modell ist auf Finanzmarkt-Analysen spezialisiert</li>

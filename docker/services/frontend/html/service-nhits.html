@@ -285,7 +285,7 @@
 <body>
     <header>
         <div class="container">
-            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
             <span class="service-badge">Port 3002</span>
         </div>
     </header>
@@ -299,11 +299,11 @@
             <p>
                 Der NHITS Service ist das Herzstuck des KI Trading Model Systems. Er implementiert das
                 <strong>N-HiTS</strong> (Neural Hierarchical Interpolation for Time Series) Modell,
-                ein State-of-the-Art Deep Learning Modell fur Zeitreihenprognosen, das speziell fur
+                ein State-of-the-Art Deep Learning Modell für Zeitreihenprognosen, das speziell fur
                 Finanzmarktdaten optimiert wurde.
             </p>
             <p>
-                N-HiTS wurde 2022 von Cristian Challu et al. veroffentlicht und ubertrifft klassische
+                N-HiTS wurde 2022 von Cristian Challu et al. veröffentlicht und übertrifft klassische
                 Modelle wie ARIMA, Prophet und sogar andere neuronale Netze in vielen Benchmarks.
                 Es verwendet eine hierarchische Interpolation, um sowohl kurzfristige als auch
                 langfristige Muster effizient zu erfassen.
@@ -321,15 +321,15 @@
             </ul>
 
             <div class="info-box success">
-                <strong>GPU-Beschleunigung:</strong> Der Service nutzt NVIDIA CUDA fur das Training und
-                die Inferenz. Auf der Jetson Orin GPU konnen Modelle signifikant schneller trainiert werden
+                <strong>GPU-Beschleunigung:</strong> Der Service nutzt NVIDIA CUDA für das Training und
+                die Inferenz. Auf der Jetson Orin GPU können Modelle signifikant schneller trainiert werden
                 als auf der CPU.
             </div>
         </div>
 
         <div class="content-card">
             <h2>&#128337; Multi-Timeframe Training</h2>
-            <p>Der Service unterstutzt Training fur verschiedene Zeitintervalle:</p>
+            <p>Der Service unterstützt Training für verschiedene Zeitintervalle:</p>
 
             <div class="timeframe-grid">
                 <div class="timeframe-item">
@@ -351,7 +351,7 @@
             </div>
 
             <div class="info-box">
-                <strong>Trainingsablauf:</strong> Beim Multi-Timeframe Training werden Modelle fur alle
+                <strong>Trainingsablauf:</strong> Beim Multi-Timeframe Training werden Modelle für alle
                 ausgewahlten Zeitrahmen trainiert. Der Fortschritt kann live im Dashboard verfolgt werden.
             </div>
         </div>
@@ -362,7 +362,7 @@
             <div class="feature-grid">
                 <div class="feature-item">
                     <h4>&#128202; Punkt-Prognosen</h4>
-                    <p>Konkrete Preisvorhersagen fur die nachsten N Perioden basierend auf historischen Daten.</p>
+                    <p>Konkrete Preisvorhersagen für die nächsten N Perioden basierend auf historischen Daten.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128201; Konfidenzintervalle</h4>
@@ -370,11 +370,11 @@
                 </div>
                 <div class="feature-item">
                     <h4>&#128640; Batch-Prognosen</h4>
-                    <p>Effiziente Vorhersagen fur mehrere Symbole gleichzeitig.</p>
+                    <p>Effiziente Vorhersagen für mehrere Symbole gleichzeitig.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128190; Modell-Persistenz</h4>
-                    <p>Trainierte Modelle werden gespeichert und konnen wiederverwendet werden.</p>
+                    <p>Trainierte Modelle werden gespeichert und können wiederverwendet werden.</p>
                 </div>
             </div>
         </div>
@@ -387,7 +387,7 @@
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/forecast/{symbol}</span>
-                    <span class="endpoint-desc">Prognose fur ein Symbol</span>
+                    <span class="endpoint-desc">Prognose für ein Symbol</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -457,11 +457,11 @@
             <h2>&#128230; Modell-Parameter</h2>
             <p>Die wichtigsten Hyperparameter des NHITS-Modells:</p>
             <ul>
-                <li><strong>input_size:</strong> Anzahl historischer Datenpunkte als Input (z.B. 168 fur wochentliche Daten)</li>
+                <li><strong>input_size:</strong> Anzahl historischer Datenpunkte als Input (z.B. 168 für wöchentliche Daten)</li>
                 <li><strong>h (horizon):</strong> Prognosehorizont - wie viele Perioden vorhergesagt werden</li>
-                <li><strong>n_pool_kernel_size:</strong> Kernel-Grossen fur das MaxPooling in jeder Schicht</li>
-                <li><strong>n_freq_downsample:</strong> Downsampling-Faktoren fur jede Schicht</li>
-                <li><strong>learning_rate:</strong> Lernrate fur den Optimierer (Standard: 1e-3)</li>
+                <li><strong>n_pool_kernel_size:</strong> Kernel-Grössen für das MaxPooling in jeder Schicht</li>
+                <li><strong>n_freq_downsample:</strong> Downsampling-Faktoren für jede Schicht</li>
+                <li><strong>learning_rate:</strong> Lernrate für den Optimierer (Standard: 1e-3)</li>
                 <li><strong>max_steps:</strong> Maximale Trainingsschritte pro Modell</li>
             </ul>
 

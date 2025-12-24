@@ -734,7 +734,7 @@
                             </div>
                             <div class="scheduler-stat">
                                 <div class="value" id="sched-next-fetch">-</div>
-                                <div class="label">Nachster Abruf</div>
+                                <div class="label">Nächster Abruf</div>
                             </div>
                         </div>
                     </div>
@@ -790,7 +790,7 @@
                         <span class="value" id="sched-cfg-symbols">-</span>
                     </div>
                     <div class="config-item">
-                        <span class="label">Min. Prioritat</span>
+                        <span class="label">Min. Priorität</span>
                         <select class="filter-select" id="sched-priority-select" style="width: 120px;">
                             <option value="critical">Critical</option>
                             <option value="high">High</option>
@@ -817,7 +817,7 @@
                         <h2 class="card-title">Candlestick Pattern Erkennung</h2>
                     </div>
                     <p style="opacity: 0.7; margin-bottom: 1rem;">
-                        Erkennt 24 verschiedene Candlestick-Muster in Echtzeit uber mehrere Timeframes.
+                        Erkennt 24 verschiedene Candlestick-Muster in Echtzeit über mehrere Timeframes.
                     </p>
                     <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
                         <select class="filter-select" id="cs-symbol-select" style="min-width: 120px;">
@@ -842,7 +842,7 @@
                         </button>
                     </div>
                     <div id="cs-results" class="query-results" style="max-height: 350px;">
-                        <p style="opacity: 0.5; text-align: center;">Wahlen Sie ein Symbol und klicken Sie auf "Patterns erkennen"</p>
+                        <p style="opacity: 0.5; text-align: center;">Wählen Sie ein Symbol und klicken Sie auf "Patterns erkennen"</p>
                     </div>
                 </div>
 
@@ -916,7 +916,7 @@
             <!-- Pattern Types -->
             <div class="card" id="cs-types-card" style="display: none;">
                 <div class="card-header">
-                    <h2 class="card-title">Verfugbare Pattern-Typen (24)</h2>
+                    <h2 class="card-title">Verfügbare Pattern-Typen (24)</h2>
                     <button class="btn btn-sm btn-danger" onclick="document.getElementById('cs-types-card').style.display='none'">Schliessen</button>
                 </div>
                 <div class="source-types-grid" id="cs-types-grid">
@@ -1244,7 +1244,7 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    showToast(`Konfiguration gespeichert: Intervall ${interval} Min, Prioritat ${priority}`);
+                    showToast(`Konfiguration gespeichert: Intervall ${interval} Min, Priorität ${priority}`);
                     refreshSchedulerStatus();
                 } else {
                     showToast(data.detail || 'Fehler beim Speichern', 'error');
@@ -1582,7 +1582,7 @@
                 document.getElementById('cs-stored').textContent = data.stored_in_rag || 0;
 
                 if (patterns.length === 0) {
-                    resultsDiv.innerHTML = '<p style="opacity: 0.5; text-align: center;">Keine Patterns gefunden fur diese Konfiguration</p>';
+                    resultsDiv.innerHTML = '<p style="opacity: 0.5; text-align: center;">Keine Patterns gefunden für diese Konfiguration</p>';
                     return;
                 }
 
@@ -1708,12 +1708,12 @@
                 }
 
                 if (patterns.length === 0) {
-                    grid.innerHTML = '<div style="opacity: 0.5;">Keine Pattern-Typen verfugbar</div>';
+                    grid.innerHTML = '<div style="opacity: 0.5;">Keine Pattern-Typen verfügbar</div>';
                     return;
                 }
 
                 // Update card title with actual count
-                document.querySelector('#cs-types-card .card-title').textContent = `Verfugbare Pattern-Typen (${data.total_patterns || patterns.length})`;
+                document.querySelector('#cs-types-card .card-title').textContent = `Verfügbare Pattern-Typen (${data.total_patterns || patterns.length})`;
 
                 grid.innerHTML = patterns.map(p => {
                     const direction = p.direction || 'neutral';

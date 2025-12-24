@@ -743,7 +743,7 @@
                 </div>
                 <div class="stat-item">
                     <div class="stat-value" id="stat-symbols">-</div>
-                    <div class="stat-label">Verfugbare Symbole</div>
+                    <div class="stat-label">Verfügbare Symbole</div>
                 </div>
             </div>
 
@@ -762,7 +762,7 @@
                                 <span id="model-host">-</span>
                             </div>
                             <div class="detail">
-                                <span class="label">Verfugbar</span>
+                                <span class="label">Verfügbar</span>
                                 <span id="model-available">-</span>
                             </div>
                         </div>
@@ -797,7 +797,7 @@
                     <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
                         <h3 style="font-size: 1rem; color: #a78bfa; margin-bottom: 0.75rem;">RAG Integration</h3>
                         <p style="font-size: 0.85rem; opacity: 0.7; line-height: 1.5;">
-                            Der LLM Service nutzt den RAG Service fur kontextbasierte Antworten.
+                            Der LLM Service nutzt den RAG Service für kontextbasierte Antworten.
                             Die Wissensbasis enthalt Trading-relevante Daten wie Sentiment, On-Chain Metriken,
                             technische Levels und mehr.
                         </p>
@@ -808,11 +808,11 @@
             <!-- Available Models Section -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Verfugbare Modelle</h2>
+                    <h2 class="card-title">Verfügbare Modelle</h2>
                     <button class="btn btn-sm btn-primary" onclick="loadOllamaModels()">Aktualisieren</button>
                 </div>
                 <p style="opacity: 0.7; margin-bottom: 0.5rem;">
-                    Multi-Model Architektur fur optimierte Latenz und Ressourcennutzung.
+                    Multi-Model Architektur für optimierte Latenz und Ressourcennutzung.
                 </p>
                 <div class="models-grid" id="models-grid">
                     <!-- Model cards will be loaded dynamically -->
@@ -829,13 +829,13 @@
                 </div>
                 <p style="opacity: 0.7; margin-bottom: 1rem;">
                     Stellen Sie Fragen zu Marktanalysen, Trading-Strategien oder Symbol-Informationen.
-                    <br><span style="color: #ffb74d; font-size: 0.85rem;">Hinweis: Das 70B-Modell kann 30-60 Sekunden fur eine Antwort benotigen.</span>
+                    <br><span style="color: #ffb74d; font-size: 0.85rem;">Hinweis: Das 70B-Modell kann 30-60 Sekunden für eine Antwort benötigen.</span>
                 </p>
                 <div class="chat-container">
                     <div class="chat-messages" id="chat-messages">
                         <div class="chat-message assistant">
                             <div class="role">Assistent</div>
-                            <div class="content">Hallo! Ich bin Ihr Trading-Assistent. Wie kann ich Ihnen helfen? Sie konnen mich nach Marktanalysen, Symbol-Informationen oder Trading-Empfehlungen fragen.</div>
+                            <div class="content">Hallo! Ich bin Ihr Trading-Assistent. Wie kann ich Ihnen helfen? Sie können mich nach Marktanalysen, Symbol-Informationen oder Trading-Empfehlungen fragen.</div>
                         </div>
                     </div>
                     <div class="chat-input-container">
@@ -854,11 +854,11 @@
                 <!-- Symbol Selection -->
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">Symbol auswahlen</h2>
+                        <h2 class="card-title">Symbol auswählen</h2>
                         <button class="btn btn-sm btn-primary" onclick="loadSymbols()">Aktualisieren</button>
                     </div>
                     <p style="opacity: 0.7; margin-bottom: 0.5rem;">
-                        Wahlen Sie ein Symbol fur eine KI-gestutzte Handelsempfehlung.
+                        Wählen Sie ein Symbol für eine KI-gestützte Handelsempfehlung.
                     </p>
                     <div class="symbol-container" id="symbol-container">
                         <div style="opacity: 0.5; text-align: center;">Lade Symbole...</div>
@@ -872,7 +872,7 @@
                     </div>
                     <div id="recommendation-result">
                         <p style="opacity: 0.5; text-align: center; margin-top: 2rem;">
-                            Wahlen Sie ein Symbol aus, um eine Empfehlung zu erhalten.
+                            Wählen Sie ein Symbol aus, um eine Empfehlung zu erhalten.
                         </p>
                     </div>
                 </div>
@@ -940,7 +940,7 @@
                 document.getElementById('model-host').textContent = data.host || '-';
                 document.getElementById('model-available').textContent = data.available ? 'Ja' : 'Nein';
 
-                document.getElementById('stat-ollama-status').textContent = data.available ? 'Verbunden' : 'Nicht verfugbar';
+                document.getElementById('stat-ollama-status').textContent = data.available ? 'Verbunden' : 'Nicht verfügbar';
                 document.getElementById('stat-ollama-status').className = 'stat-value ' + (data.available ? 'success' : 'warning');
                 document.getElementById('cfg-llm-status').textContent = data.available ? 'Verbunden' : 'Nicht verbunden';
                 document.getElementById('cfg-llm-status').className = 'value ' + (data.available ? 'success' : 'warning');
@@ -997,7 +997,7 @@
 
                 const container = document.getElementById('symbol-container');
                 if (symbols.length === 0) {
-                    container.innerHTML = '<div style="opacity: 0.5; text-align: center;">Keine Symbole verfugbar</div>';
+                    container.innerHTML = '<div style="opacity: 0.5; text-align: center;">Keine Symbole verfügbar</div>';
                     return;
                 }
 
@@ -1306,7 +1306,7 @@
                 tierLabel: 'Komplex',
                 latency: '2-3s',
                 useCases: ['Trading-Strategien', 'Komplexe Analysen', 'Multi-Step Reasoning', 'Code-Generierung'],
-                description: 'Haupt-Modell fur komplexe Trading-Analysen und Empfehlungen',
+                description: 'Haupt-Modell für komplexe Trading-Analysen und Empfehlungen',
                 primary: true
             },
             'llama3.1:8b': {
@@ -1314,7 +1314,7 @@
                 tierLabel: 'Schnell',
                 latency: '~200ms',
                 useCases: ['Sentiment-Analyse', 'Klassifikation', 'Entity-Extraction', 'Kurze Zusammenfassungen'],
-                description: 'Schnelles Modell fur einfache Aufgaben mit niedriger Latenz',
+                description: 'Schnelles Modell für einfache Aufgaben mit niedriger Latenz',
                 primary: false
             },
             'qwen2.5:7b': {

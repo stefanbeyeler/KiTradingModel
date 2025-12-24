@@ -354,7 +354,7 @@
 <body>
     <header>
         <div class="container">
-            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
             <span class="service-badge">Port 3004</span>
         </div>
     </header>
@@ -367,12 +367,12 @@
             <h2>&#129504; Beschreibung</h2>
             <p>
                 Der HMM-Regime Service kombiniert <strong>Hidden Markov Models (HMM)</strong> mit
-                <strong>LightGBM</strong> fur eine leistungsstarke Marktanalyse. Das HMM erkennt
+                <strong>LightGBM</strong> für eine leistungsstarke Marktanalyse. Das HMM erkennt
                 versteckte Marktregimes, wahrend LightGBM Trading-Signale basierend auf dem
                 aktuellen Regime bewertet.
             </p>
             <p>
-                Diese Kombination ermoglicht es, Trading-Strategien dynamisch an die Marktbedingungen
+                Diese Kombination ermöglicht es, Trading-Strategien dynamisch an die Marktbedingungen
                 anzupassen. In einem Bull-Regime werden Long-Signale hoher bewertet, in einem Bear-Regime
                 entsprechend Short-Signale.
             </p>
@@ -403,7 +403,7 @@
 
             <div class="info-box">
                 <strong>Ubergangswahrscheinlichkeiten:</strong> Das HMM berechnet auch die
-                Wahrscheinlichkeit von Regime-Wechseln, was fur die Risikobewertung wertvoll ist.
+                Wahrscheinlichkeit von Regime-Wechseln, was für die Risikobewertung wertvoll ist.
             </div>
         </div>
 
@@ -429,7 +429,7 @@
             </div>
 
             <div class="info-box success">
-                <strong>Feature Importance:</strong> Der Scorer berucksichtigt uber 30 Features
+                <strong>Feature Importance:</strong> Der Scorer berücksichtigt über 30 Features
                 inkl. RSI, MACD, Bollinger Bands, Volumen und das aktuelle Marktregime.
             </div>
         </div>
@@ -445,8 +445,8 @@
             </ul>
 
             <div class="info-box warning">
-                <strong>CPU-optimiert:</strong> Dieser Service lauft auf der CPU, da HMM und LightGBM
-                keine GPU-Beschleunigung benotigen. Dies spart GPU-Ressourcen fur andere Services.
+                <strong>CPU-optimiert:</strong> Dieser Service läuft auf der CPU, da HMM und LightGBM
+                keine GPU-Beschleunigung benötigen. Dies spart GPU-Ressourcen für andere Services.
             </div>
         </div>
 
@@ -464,7 +464,7 @@
                 </div>
                 <div class="feature-item">
                     <h4>&#128202; Transition Matrix</h4>
-                    <p>Wahrscheinlichkeiten fur Regime-Wechsel.</p>
+                    <p>Wahrscheinlichkeiten für Regime-Wechsel.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128269; Historische Analyse</h4>
@@ -481,7 +481,7 @@
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/regime/{symbol}</span>
-                    <span class="endpoint-desc">Aktuelles Regime fur ein Symbol</span>
+                    <span class="endpoint-desc">Aktuelles Regime für ein Symbol</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -510,7 +510,7 @@
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/signals/features</span>
-                    <span class="endpoint-desc">Verfugbare Features</span>
+                    <span class="endpoint-desc">Verfügbare Features</span>
                 </div>
             </div>
 
@@ -547,8 +547,8 @@
             <p>Wichtige Hyperparameter des HMM und LightGBM:</p>
             <ul>
                 <li><strong>n_components:</strong> Anzahl der Hidden States (Standard: 4)</li>
-                <li><strong>covariance_type:</strong> "full" fur flexible Kovarianzmatrizen</li>
-                <li><strong>n_iter:</strong> Maximale Iterationen fur EM-Algorithmus</li>
+                <li><strong>covariance_type:</strong> "full" für flexible Kovarianzmatrizen</li>
+                <li><strong>n_iter:</strong> Maximale Iterationen für EM-Algorithmus</li>
                 <li><strong>num_leaves:</strong> LightGBM Baumkomplexitat (Standard: 31)</li>
                 <li><strong>learning_rate:</strong> LightGBM Lernrate (Standard: 0.1)</li>
                 <li><strong>n_estimators:</strong> Anzahl der Boosting-Runden (Standard: 100)</li>

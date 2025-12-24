@@ -291,7 +291,7 @@
 <body>
     <header>
         <div class="container">
-            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
             <span class="service-badge">Port 3003</span>
         </div>
     </header>
@@ -305,7 +305,7 @@
             <p>
                 Der TCN-Pattern Service nutzt <strong>Temporal Convolutional Networks (TCN)</strong> zur
                 automatischen Erkennung von Chart-Patterns in Finanzzeitreihen. TCNs sind speziell fur
-                sequentielle Daten optimiert und bieten gegenuber RNNs den Vorteil paralleler Verarbeitung
+                sequentielle Daten optimiert und bieten gegenüber RNNs den Vorteil paralleler Verarbeitung
                 und stabilerem Training.
             </p>
             <p>
@@ -398,13 +398,13 @@
             <p>Der TCN-Algorithmus funktioniert durch:</p>
             <ul>
                 <li><strong>Dilated Causal Convolutions:</strong> Erweiterte Konvolutionen erfassen lange Abhangigkeiten</li>
-                <li><strong>Residual Connections:</strong> Stabile Gradienten fur tiefe Netzwerke</li>
+                <li><strong>Residual Connections:</strong> Stabile Gradienten für tiefe Netzwerke</li>
                 <li><strong>Multi-Scale Features:</strong> Pattern werden auf verschiedenen Zeitskalen erkannt</li>
                 <li><strong>Attention Mechanismus:</strong> Fokus auf relevante Zeitpunkte im Chart</li>
             </ul>
 
             <div class="info-box success">
-                <strong>GPU-Beschleunigung:</strong> Der Service nutzt NVIDIA CUDA fur Echtzeit-Inferenz.
+                <strong>GPU-Beschleunigung:</strong> Der Service nutzt NVIDIA CUDA für Echtzeit-Inferenz.
                 Die Pattern-Erkennung dauert typischerweise unter 100ms pro Symbol.
             </div>
         </div>
@@ -440,7 +440,7 @@
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/patterns/detect</span>
-                    <span class="endpoint-desc">Pattern fur ein Symbol erkennen</span>
+                    <span class="endpoint-desc">Pattern für ein Symbol erkennen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method post">POST</span>
@@ -498,13 +498,13 @@
                 <li><strong>Input Layer:</strong> OHLCV-Daten normalisiert auf [0,1]</li>
                 <li><strong>TCN Blocks:</strong> 4 Schichten mit Dilation [1, 2, 4, 8]</li>
                 <li><strong>Hidden Channels:</strong> 64 pro Schicht</li>
-                <li><strong>Kernel Size:</strong> 7 fur breite rezeptive Felder</li>
+                <li><strong>Kernel Size:</strong> 7 für breite rezeptive Felder</li>
                 <li><strong>Output Layer:</strong> Multi-Label Klassifikation (16 Pattern + Confidence)</li>
             </ul>
 
             <div class="info-box warning">
-                <strong>Mindestdaten:</strong> Fur eine zuverlassige Pattern-Erkennung werden mindestens
-                100 Kerzen historischer Daten benotigt. Langere Zeitreihen verbessern die Genauigkeit.
+                <strong>Mindestdaten:</strong> Für eine zuverlässige Pattern-Erkennung werden mindestens
+                100 Kerzen historischer Daten benötigt. Langere Zeitreihen verbessern die Genauigkeit.
             </div>
         </div>
 

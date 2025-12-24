@@ -531,16 +531,16 @@
             </div>
             <div class="stat-item">
                 <div class="stat-value" id="stat-size">-</div>
-                <div class="stat-label">Cache Grosse</div>
+                <div class="stat-label">Cache Grösse</div>
             </div>
         </div>
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Ubersicht</button>
+            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Übersicht</button>
             <button class="tab-btn" onclick="showTab('text')">&#128221; Text Embedding</button>
             <button class="tab-btn" onclick="showTab('timeseries')">&#128200; Zeitreihen</button>
-            <button class="tab-btn" onclick="showTab('similarity')">&#128269; Ahnlichkeit</button>
+            <button class="tab-btn" onclick="showTab('similarity')">&#128269; Ähnlichkeit</button>
             <button class="tab-btn" onclick="showTab('cache')">&#128230; Cache</button>
         </div>
 
@@ -550,7 +550,7 @@
                 <!-- Models -->
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">&#129302; Verfugbare Modelle</h3>
+                        <h3 class="card-title">&#129302; Verfügbare Modelle</h3>
                         <button class="btn btn-primary btn-sm" onclick="loadModels()">&#8635; Aktualisieren</button>
                     </div>
                     <div id="models-list">
@@ -575,7 +575,7 @@
                     <h3 class="card-title">&#128293; Modell Warmup</h3>
                 </div>
                 <div class="info-box" style="margin-bottom: 1rem;">
-                    Ladt alle Modelle in den Speicher vor fur schnellere Inferenz. Empfohlen nach einem Neustart.
+                    Lädt alle Modelle in den Speicher vor für schnellere Inferenz. Empfohlen nach einem Neustart.
                 </div>
                 <button class="btn btn-warning" id="btn-warmup" onclick="warmupModels()">&#128293; Warmup starten</button>
                 <div id="warmup-result" style="margin-top: 1rem;"></div>
@@ -655,7 +655,7 @@
                         <h3 class="card-title">&#128202; Ergebnis</h3>
                     </div>
                     <div id="ts-embedding-result">
-                        <div class="info-box">Wahlen Sie ein Symbol und klicken Sie auf "Zeitreihe einbetten".</div>
+                        <div class="info-box">Wählen Sie ein Symbol und klicken Sie auf "Zeitreihe einbetten".</div>
                     </div>
                 </div>
             </div>
@@ -663,10 +663,10 @@
             <!-- Find Similar -->
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">&#128269; Ahnliche Zeitraume finden</h3>
+                    <h3 class="card-title">&#128269; Ähnliche Zeiträume finden</h3>
                 </div>
                 <div class="info-box" style="margin-bottom: 1rem;">
-                    Findet historische Zeitraume mit ahnlichem Preisverhalten basierend auf Embedding-Ahnlichkeit.
+                    Findet historische Zeiträume mit ähnlichem Preisverhalten basierend auf Embedding-Ähnlichkeit.
                 </div>
                 <div style="display: flex; gap: 1rem; align-items: flex-end;">
                     <div class="form-group" style="margin-bottom: 0; flex: 1;">
@@ -692,7 +692,7 @@
                 <!-- Text Similarity -->
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">&#128221; Text-Ahnlichkeit</h3>
+                        <h3 class="card-title">&#128221; Text-Ähnlichkeit</h3>
                     </div>
                     <div class="form-group">
                         <label>Text 1</label>
@@ -702,7 +702,7 @@
                         <label>Text 2</label>
                         <textarea class="form-control" id="sim-text2" style="min-height: 80px;">BTC hat ein starkes Kaufsignal</textarea>
                     </div>
-                    <button class="btn btn-success" id="btn-calc-sim" onclick="calculateSimilarity()">&#128269; Ahnlichkeit berechnen</button>
+                    <button class="btn btn-success" id="btn-calc-sim" onclick="calculateSimilarity()">&#128269; Ähnlichkeit berechnen</button>
                 </div>
 
                 <!-- Result -->
@@ -712,7 +712,7 @@
                     </div>
                     <div id="similarity-result">
                         <div class="similarity-score">
-                            <div style="color: #888; margin-bottom: 0.5rem;">Kosinus-Ahnlichkeit</div>
+                            <div style="color: #888; margin-bottom: 0.5rem;">Kosinus-Ähnlichkeit</div>
                             <div class="similarity-value medium" id="sim-value">-</div>
                             <div id="sim-interpretation" style="margin-top: 0.5rem; color: #888;"></div>
                         </div>
@@ -723,10 +723,10 @@
             <!-- Batch Similarity -->
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">&#128203; Batch-Ahnlichkeit</h3>
+                    <h3 class="card-title">&#128203; Batch-Ähnlichkeit</h3>
                 </div>
                 <div class="info-box" style="margin-bottom: 1rem;">
-                    Berechnet die Ahnlichkeit eines Query-Texts zu mehreren Kandidaten-Texten.
+                    Berechnet die Ähnlichkeit eines Query-Texts zu mehreren Kandidaten-Texten.
                 </div>
                 <div class="form-group">
                     <label>Query</label>
@@ -739,7 +739,7 @@ Ethereum steigt
 Gold fallt
 Bitcoin bearish Signal</textarea>
                 </div>
-                <button class="btn btn-primary" onclick="batchSimilarity()">&#128269; Batch-Ahnlichkeit</button>
+                <button class="btn btn-primary" onclick="batchSimilarity()">&#128269; Batch-Ähnlichkeit</button>
                 <div id="batch-results" style="margin-top: 1rem;"></div>
             </div>
         </div>
@@ -761,7 +761,7 @@ Bitcoin bearish Signal</textarea>
                     <h3 class="card-title">&#128465; Cache-Verwaltung</h3>
                 </div>
                 <div class="info-box" style="margin-bottom: 1rem;">
-                    Der Embedder-Cache speichert berechnete Embeddings fur schnelleren Zugriff. Ein Leeren des Caches kann bei Speicherproblemen helfen.
+                    Der Embedder-Cache speichert berechnete Embeddings für schnelleren Zugriff. Ein Leeren des Caches kann bei Speicherproblemen helfen.
                 </div>
                 <button class="btn btn-danger" id="btn-clear-cache" onclick="clearCache()">&#128465; Cache leeren</button>
             </div>
@@ -896,7 +896,7 @@ Bitcoin bearish Signal</textarea>
                     </div>
                 `;
             } catch (error) {
-                document.getElementById('cache-stats').innerHTML = '<div class="info-box">Cache-Statistiken nicht verfugbar.</div>';
+                document.getElementById('cache-stats').innerHTML = '<div class="info-box">Cache-Statistiken nicht verfügbar.</div>';
             }
         }
 
@@ -1036,7 +1036,7 @@ Bitcoin bearish Signal</textarea>
                 if (data.similar && data.similar.length > 0) {
                     container.innerHTML = `
                         <table class="data-table">
-                            <tr><th>Rang</th><th>Zeitraum</th><th>Ahnlichkeit</th></tr>
+                            <tr><th>Rang</th><th>Zeitraum</th><th>Ähnlichkeit</th></tr>
                             ${data.similar.map((s, i) => `
                                 <tr>
                                     <td>#${i + 1}</td>
@@ -1049,7 +1049,7 @@ Bitcoin bearish Signal</textarea>
                         </table>
                     `;
                 } else {
-                    container.innerHTML = '<div class="info-box">Keine ahnlichen Zeitraume gefunden.</div>';
+                    container.innerHTML = '<div class="info-box">Keine ähnlichen Zeiträume gefunden.</div>';
                 }
             } catch (error) {
                 container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler bei der Suche.</div>';
@@ -1083,16 +1083,16 @@ Bitcoin bearish Signal</textarea>
 
                 const interpEl = document.getElementById('sim-interpretation');
                 if (similarity >= 0.8) {
-                    interpEl.textContent = 'Sehr ahnlich - fast identische Bedeutung';
+                    interpEl.textContent = 'Sehr ähnlich - fast identische Bedeutung';
                 } else if (similarity >= 0.6) {
                     interpEl.textContent = 'Ahnlich - verwandte Konzepte';
                 } else if (similarity >= 0.4) {
-                    interpEl.textContent = 'Teilweise ahnlich';
+                    interpEl.textContent = 'Teilweise ähnlich';
                 } else {
                     interpEl.textContent = 'Unterschiedlich';
                 }
 
-                showToast('Ahnlichkeit berechnet');
+                showToast('Ähnlichkeit berechnet');
             } catch (error) {
                 showToast('Fehler bei der Berechnung', 'error');
             } finally {
@@ -1123,7 +1123,7 @@ Bitcoin bearish Signal</textarea>
                     const sorted = data.results.sort((a, b) => b.similarity - a.similarity);
                     container.innerHTML = `
                         <table class="data-table">
-                            <tr><th>Rang</th><th>Text</th><th>Ahnlichkeit</th></tr>
+                            <tr><th>Rang</th><th>Text</th><th>Ähnlichkeit</th></tr>
                             ${sorted.map((r, i) => `
                                 <tr>
                                     <td>#${i + 1}</td>
@@ -1146,7 +1146,7 @@ Bitcoin bearish Signal</textarea>
                     container.innerHTML = '<div class="info-box">Keine Ergebnisse.</div>';
                 }
             } catch (error) {
-                container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler bei der Batch-Ahnlichkeit.</div>';
+                container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler bei der Batch-Ähnlichkeit.</div>';
             }
         }
 

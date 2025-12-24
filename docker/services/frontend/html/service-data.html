@@ -264,7 +264,7 @@
 <body>
     <header>
         <div class="container">
-            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
             <span class="service-badge">Port 3001</span>
         </div>
     </header>
@@ -282,9 +282,9 @@
                 Marktdaten bereit.
             </p>
             <p>
-                Zusatzlich verwaltet der Service Trading-Strategien und ermoglicht die Synchronisation
+                Zusatzlich verwaltet der Service Trading-Strategien und ermöglicht die Synchronisation
                 von Symbolen zwischen verschiedenen Datenquellen. Er bietet CRUD-Operationen fur
-                Managed Symbols und Strategien sowie Zugriff auf globale Marktdaten uber die Twelve Data API.
+                Managed Symbols und Strategien sowie Zugriff auf globale Marktdaten über die Twelve Data API.
             </p>
         </div>
 
@@ -315,13 +315,13 @@
                 </div>
                 <div class="feature-item">
                     <h4>&#128202; Technische Analyse</h4>
-                    <p>Berechnung von Indikatoren wie SMA, EMA, RSI, MACD, Bollinger Bands uber Twelve Data.</p>
+                    <p>Berechnung von Indikatoren wie SMA, EMA, RSI, MACD, Bollinger Bands über Twelve Data.</p>
                 </div>
             </div>
 
             <div class="info-box">
                 <strong>Architektur:</strong> Der Data Service ist als FastAPI-Anwendung implementiert und
-                kommuniziert uber HTTP mit der EasyInsight API. Er cached haufig abgerufene Daten
+                kommuniziert über HTTP mit der EasyInsight API. Er cached häufig abgerufene Daten
                 zur Performance-Optimierung.
             </div>
         </div>
@@ -339,7 +339,7 @@
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/managed-symbols</span>
-                    <span class="endpoint-desc">Neues Symbol hinzufugen</span>
+                    <span class="endpoint-desc">Neues Symbol hinzufügen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method delete">DEL</span>
@@ -396,7 +396,7 @@
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/twelvedata/status</span>
-                    <span class="endpoint-desc">API-Status und Verfugbarkeit</span>
+                    <span class="endpoint-desc">API-Status und Verfügbarkeit</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -421,17 +421,17 @@
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/twelvedata/stocks</span>
-                    <span class="endpoint-desc">Liste verfugbarer Aktien</span>
+                    <span class="endpoint-desc">Liste verfügbarer Aktien</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/twelvedata/forex</span>
-                    <span class="endpoint-desc">Liste verfugbarer Forex-Paare</span>
+                    <span class="endpoint-desc">Liste verfügbarer Forex-Paare</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/twelvedata/crypto</span>
-                    <span class="endpoint-desc">Liste verfugbarer Kryptowahrungen</span>
+                    <span class="endpoint-desc">Liste verfügbarer Kryptowahrungen</span>
                 </div>
             </div>
         </div>
@@ -455,14 +455,14 @@
         <div class="content-card">
             <h2>&#127760; Twelve Data API</h2>
             <p>
-                Die Twelve Data API bietet Zugriff auf globale Finanzmarktdaten fur uber 125.000 Instrumente
-                aus Aktien, Forex, Kryptowahrungen, ETFs und Indizes. Die Integration ermoglicht:
+                Die Twelve Data API bietet Zugriff auf globale Finanzmarktdaten für über 125.000 Instrumente
+                aus Aktien, Forex, Kryptowahrungen, ETFs und Indizes. Die Integration ermöglicht:
             </p>
             <ul>
-                <li><strong>Echtzeit-Kurse:</strong> Aktuelle Preise fur Aktien, Forex und Krypto</li>
+                <li><strong>Echtzeit-Kurse:</strong> Aktuelle Preise für Aktien, Forex und Krypto</li>
                 <li><strong>Historische Daten:</strong> OHLCV-Zeitreihen in verschiedenen Intervallen (1min bis 1month)</li>
                 <li><strong>Symbol-Suche:</strong> Suche nach Instrumenten anhand von Name oder Ticker</li>
-                <li><strong>Earnings Calendar:</strong> Ubersicht uber kommende Gewinnberichte</li>
+                <li><strong>Earnings Calendar:</strong> Übersicht über kommende Gewinnberichte</li>
             </ul>
 
             <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; color: #a78bfa;">Technische Indikatoren</h3>
@@ -516,7 +516,7 @@
 
             <div class="info-box">
                 <strong>API-Limits:</strong> Der kostenlose Plan bietet 800 API-Aufrufe pro Tag.
-                Der aktuelle Verbrauch kann uber den /twelvedata/usage Endpoint abgefragt werden.
+                Der aktuelle Verbrauch kann über den /twelvedata/usage Endpoint abgefragt werden.
             </div>
         </div>
 
