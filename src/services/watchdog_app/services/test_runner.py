@@ -551,14 +551,37 @@ class TestRunnerService:
         }
 
     def get_history(self, limit: int = 10) -> list[dict]:
-        """Gibt die Test-Historie zurück."""
+        """Gibt die Test-Historie mit detaillierten Ergebnissen zurück."""
         return [
             {
                 "id": run.id,
                 "status": run.status,
                 "started_at": run.started_at,
                 "completed_at": run.completed_at,
-                "summary": run.summary
+                "summary": run.summary,
+                "services": [
+                    {
+                        "name": s.name,
+                        "display_name": s.display_name,
+                        "healthy": s.healthy,
+                        "response_time_ms": s.response_time_ms,
+                        "error": s.error,
+                        "version": s.version
+                    }
+                    for s in run.services
+                ],
+                "results": [
+                    {
+                        "name": r.name,
+                        "status": r.status.value,
+                        "service": r.service,
+                        "endpoint": r.endpoint,
+                        "duration_ms": r.duration_ms,
+                        "message": r.message,
+                        "error_type": r.error_type
+                    }
+                    for r in run.results
+                ]
             }
             for run in reversed(self.history[-limit:])
         ]

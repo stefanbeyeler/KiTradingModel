@@ -368,14 +368,24 @@
         }
 
         .history-item {
-            display: grid;
-            grid-template-columns: auto 1fr auto;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.75rem 1rem;
             background: rgba(0, 0, 0, 0.2);
             border-radius: 8px;
             font-size: 0.85rem;
+            overflow: hidden;
+        }
+
+        .history-header {
+            display: grid;
+            grid-template-columns: auto 1fr auto auto;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .history-header:hover {
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .history-item .time {
@@ -391,6 +401,110 @@
         .history-item .summary span {
             font-size: 0.8rem;
         }
+
+        .history-toggle {
+            color: rgba(255, 255, 255, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .history-item.expanded .history-toggle {
+            transform: rotate(180deg);
+        }
+
+        .history-details {
+            display: none;
+            padding: 0 1rem 1rem 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 0.5rem;
+        }
+
+        .history-item.expanded .history-details {
+            display: block;
+        }
+
+        .history-results {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 0.75rem;
+        }
+
+        .history-result {
+            display: grid;
+            grid-template-columns: 24px 1fr auto auto;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.6rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .history-result .icon {
+            text-align: center;
+        }
+
+        .history-result .name {
+            color: #e8e8e8;
+        }
+
+        .history-result .service-tag {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .history-result .duration {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.4);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .history-result.failed {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .history-result.failed .error-msg {
+            grid-column: 2 / -1;
+            margin-top: 0.25rem;
+            font-size: 0.75rem;
+            color: #f87171;
+        }
+
+        .history-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .history-tab {
+            padding: 0.4rem 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 6px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .history-tab:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .history-tab.active {
+            background: rgba(139, 92, 246, 0.3);
+            color: #a78bfa;
+        }
+
+        .passed-count { color: #4ade80; }
+        .failed-count { color: #f87171; }
+        .skipped-count { color: #fbbf24; }
 
         footer {
             text-align: center;
@@ -563,19 +677,57 @@
                     return;
                 }
 
-                container.innerHTML = data.runs.map(run => {
+                container.innerHTML = data.runs.map((run, index) => {
                     const date = new Date(run.started_at);
                     const statusClass = run.status === 'completed' ?
                         (run.summary && run.summary.failed > 0 ? 'status-failed' : 'status-completed') : 'status-idle';
 
+                    // Group results by status
+                    const results = run.results || [];
+                    const passed = results.filter(r => r.status === 'passed');
+                    const failed = results.filter(r => r.status === 'failed');
+                    const skipped = results.filter(r => r.status === 'skipped');
+
+                    // Build results HTML
+                    const buildResultHtml = (r) => {
+                        const icon = statusIcons[r.status] || '○';
+                        let errorHtml = '';
+                        if (r.status === 'failed' && r.message) {
+                            errorHtml = `<div class="error-msg">${r.error_type}: ${r.message}</div>`;
+                        }
+                        return `
+                            <div class="history-result ${r.status}">
+                                <span class="icon">${icon}</span>
+                                <span class="name">${r.name}</span>
+                                <span class="service-tag">${r.service}</span>
+                                <span class="duration">${r.duration_ms ? Math.round(r.duration_ms) + 'ms' : '-'}</span>
+                                ${errorHtml}
+                            </div>
+                        `;
+                    };
+
                     return `
-                        <div class="history-item">
-                            <span class="status-badge ${statusClass}">${run.status.toUpperCase()}</span>
-                            <span class="time">${date.toLocaleString('de-CH')}</span>
-                            <div class="summary">
-                                <span style="color: #4ade80">✅ ${run.summary?.passed || 0}</span>
-                                <span style="color: #f87171">❌ ${run.summary?.failed || 0}</span>
-                                <span style="color: #fbbf24">⏭️ ${run.summary?.skipped || 0}</span>
+                        <div class="history-item" id="history-${index}">
+                            <div class="history-header" onclick="toggleHistory(${index})">
+                                <span class="status-badge ${statusClass}">${run.status.toUpperCase()}</span>
+                                <span class="time">${date.toLocaleString('de-CH')}</span>
+                                <div class="summary">
+                                    <span class="passed-count">✅ ${run.summary?.passed || 0}</span>
+                                    <span class="failed-count">❌ ${run.summary?.failed || 0}</span>
+                                    <span class="skipped-count">⏭️ ${run.summary?.skipped || 0}</span>
+                                </div>
+                                <span class="history-toggle">▼</span>
+                            </div>
+                            <div class="history-details">
+                                <div class="history-tabs">
+                                    <button type="button" class="history-tab active" onclick="showHistoryTab(${index}, 'all', event)">Alle (${results.length})</button>
+                                    <button type="button" class="history-tab" onclick="showHistoryTab(${index}, 'passed', event)">Passed (${passed.length})</button>
+                                    <button type="button" class="history-tab" onclick="showHistoryTab(${index}, 'failed', event)">Failed (${failed.length})</button>
+                                    <button type="button" class="history-tab" onclick="showHistoryTab(${index}, 'skipped', event)">Skipped (${skipped.length})</button>
+                                </div>
+                                <div class="history-results" data-all='${JSON.stringify(results)}' data-passed='${JSON.stringify(passed)}' data-failed='${JSON.stringify(failed)}' data-skipped='${JSON.stringify(skipped)}'>
+                                    ${results.map(buildResultHtml).join('')}
+                                </div>
                             </div>
                         </div>
                     `;
@@ -583,6 +735,49 @@
             } catch (e) {
                 console.error('Failed to load history:', e);
             }
+        }
+
+        // Toggle history item expansion
+        function toggleHistory(index) {
+            const item = document.getElementById(`history-${index}`);
+            if (item) {
+                item.classList.toggle('expanded');
+            }
+        }
+
+        // Show filtered results in history
+        function showHistoryTab(index, filter, event) {
+            event.stopPropagation();
+
+            const item = document.getElementById(`history-${index}`);
+            if (!item) return;
+
+            // Update active tab
+            const tabs = item.querySelectorAll('.history-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Get filtered results
+            const resultsContainer = item.querySelector('.history-results');
+            const results = JSON.parse(resultsContainer.dataset[filter] || '[]');
+
+            // Render results
+            resultsContainer.innerHTML = results.map(r => {
+                const icon = statusIcons[r.status] || '○';
+                let errorHtml = '';
+                if (r.status === 'failed' && r.message) {
+                    errorHtml = `<div class="error-msg">${r.error_type}: ${r.message}</div>`;
+                }
+                return `
+                    <div class="history-result ${r.status}">
+                        <span class="icon">${icon}</span>
+                        <span class="name">${r.name}</span>
+                        <span class="service-tag">${r.service}</span>
+                        <span class="duration">${r.duration_ms ? Math.round(r.duration_ms) + 'ms' : '-'}</span>
+                        ${errorHtml}
+                    </div>
+                `;
+            }).join('') || '<div class="empty-state">Keine Tests in dieser Kategorie</div>';
         }
 
         // Start tests
