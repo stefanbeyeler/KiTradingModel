@@ -1,8 +1,10 @@
 """API Routes für den Watchdog Service."""
 
+import asyncio
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi.responses import StreamingResponse
 
 router = APIRouter(tags=["Watchdog"])
 
@@ -141,3 +143,132 @@ async def trigger_check():
         "message": "Health check completed",
         "summary": health_checker.get_summary()
     }
+
+
+# ============ Test Runner API ============
+
+def _get_test_runner():
+    """Lazy import für Test Runner."""
+    from ..services.test_runner import test_runner
+    return test_runner
+
+
+@router.post("/tests/run", tags=["Tests"])
+async def start_test_run(background_tasks: BackgroundTasks):
+    """
+    Startet einen neuen API-Test-Lauf.
+
+    Führt alle definierten Tests gegen die Microservices aus.
+    Der Test läuft im Hintergrund - Status kann via /tests/status abgefragt werden.
+    """
+    test_runner = _get_test_runner()
+
+    if test_runner._running:
+        raise HTTPException(
+            status_code=409,
+            detail="A test run is already in progress"
+        )
+
+    # Start test run in background
+    background_tasks.add_task(test_runner.start_test_run)
+
+    return {
+        "message": "Test run started",
+        "status_url": "/api/v1/tests/status"
+    }
+
+
+@router.get("/tests/status", tags=["Tests"])
+async def get_test_status():
+    """
+    Gibt den aktuellen Status des Test-Laufs zurück.
+
+    Enthält:
+    - Service Health Status
+    - Bisherige Test-Ergebnisse
+    - Aktuell laufender Test
+    - Zusammenfassung
+    """
+    test_runner = _get_test_runner()
+    status = test_runner.get_current_status()
+
+    if not status:
+        return {
+            "status": "idle",
+            "message": "No test run active or completed"
+        }
+
+    return status
+
+
+@router.post("/tests/abort", tags=["Tests"])
+async def abort_test_run():
+    """Bricht den aktuellen Test-Lauf ab."""
+    test_runner = _get_test_runner()
+
+    if not test_runner._running:
+        raise HTTPException(
+            status_code=400,
+            detail="No test run in progress"
+        )
+
+    test_runner.abort_test_run()
+
+    return {
+        "message": "Test run abort requested"
+    }
+
+
+@router.get("/tests/history", tags=["Tests"])
+async def get_test_history(limit: int = 10):
+    """Gibt die Historie vergangener Test-Läufe zurück."""
+    test_runner = _get_test_runner()
+
+    return {
+        "runs": test_runner.get_history(limit)
+    }
+
+
+@router.get("/tests/stream", tags=["Tests"])
+async def stream_test_status():
+    """
+    Server-Sent Events Stream für Live-Test-Updates.
+
+    Sendet kontinuierlich den aktuellen Test-Status als SSE.
+    Verbindung wird automatisch geschlossen wenn der Test abgeschlossen ist.
+    """
+    test_runner = _get_test_runner()
+
+    async def event_generator():
+        import json
+
+        last_result_count = 0
+
+        while True:
+            status = test_runner.get_current_status()
+
+            if status:
+                # Send update
+                yield f"data: {json.dumps(status)}\n\n"
+
+                # Check if completed
+                if status["status"] in ["completed", "error", "aborted"]:
+                    yield f"event: complete\ndata: {json.dumps(status)}\n\n"
+                    break
+
+                # Track new results
+                current_result_count = len(status.get("results", []))
+                if current_result_count > last_result_count:
+                    last_result_count = current_result_count
+
+            await asyncio.sleep(0.5)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )

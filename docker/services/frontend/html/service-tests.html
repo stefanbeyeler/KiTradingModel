@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Tests - KI Trading Model</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(139, 92, 246, 0.2));
+            color: #a78bfa;
+            border: 1px solid rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(139, 92, 246, 0.3));
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(239, 68, 68, 0.15));
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(239, 68, 68, 0.25));
+        }
+
+        .btn-secondary {
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(100, 200, 255, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-idle {
+            background: rgba(255, 255, 255, 0.1);
+            color: #9ca3af;
+        }
+
+        .status-running {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .status-completed {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .status-failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        /* Main Grid */
+        .test-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1000px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Service List */
+        .service-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .service-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .service-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .service-dot.healthy {
+            background: #4ade80;
+            box-shadow: 0 0 8px #4ade80;
+        }
+
+        .service-dot.unhealthy {
+            background: #f87171;
+            box-shadow: 0 0 8px #f87171;
+        }
+
+        .service-dot.unknown {
+            background: #fbbf24;
+        }
+
+        .service-name {
+            flex: 1;
+        }
+
+        .service-time {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.75rem;
+        }
+
+        .service-version {
+            font-size: 0.7rem;
+            color: #60a5fa;
+            background: rgba(59, 130, 246, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .summary-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .summary-card .count {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .summary-card .label {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-card.passed .count { color: #4ade80; }
+        .summary-card.failed .count { color: #f87171; }
+        .summary-card.skipped .count { color: #fbbf24; }
+        .summary-card.total .count { color: #60a5fa; }
+
+        /* Progress Bar */
+        .progress-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Test Results */
+        .test-results {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .test-result {
+            display: grid;
+            grid-template-columns: 28px 1fr auto auto;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .test-result.current {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.4);
+        }
+
+        .test-result .icon {
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .test-result .name {
+            color: #e8e8e8;
+        }
+
+        .test-result .service-tag {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .test-result .duration {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .test-result.failed .error-details {
+            grid-column: 2 / -1;
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #f87171;
+        }
+
+        .test-result.failed .error-details .endpoint {
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 0.25rem;
+            word-break: break-all;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* History */
+        .history-section {
+            margin-top: 1.5rem;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .history-item {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .history-item .time {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+        }
+
+        .history-item .summary {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .history-item .summary span {
+            font-size: 0.8rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            opacity: 0.6;
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: #64c8ff;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .running {
+            animation: pulse 1s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🧪 API Test Suite</h1>
+            <div class="header-actions">
+                <span class="status-badge status-idle" id="run-status">BEREIT</span>
+                <button class="btn btn-primary" id="btn-run" onclick="startTests()">
+                    ▶ Tests starten
+                </button>
+                <button class="btn btn-danger" id="btn-abort" onclick="abortTests()" disabled>
+                    ⏹ Abbrechen
+                </button>
+                <a href="index.html" class="btn btn-secondary">← Dashboard</a>
+                <a href="/watchdog/docs#/Tests" target="_blank" class="btn btn-secondary">📚 API Docs</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="test-grid">
+            <!-- Service Health Panel -->
+            <div class="card">
+                <h3>🖥️ Service Status</h3>
+                <div class="service-list" id="service-list">
+                    <div class="empty-state">
+                        <div>Starte Tests um Services zu prüfen</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Results Panel -->
+            <div class="card">
+                <h3>📋 Test Ergebnisse</h3>
+
+                <!-- Progress -->
+                <div class="progress-container" id="progress-container" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="progress-current">Test 0 von 0</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="summary-grid" id="summary-cards" style="display: none;">
+                    <div class="summary-card passed">
+                        <div class="count" id="count-passed">0</div>
+                        <div class="label">Passed</div>
+                    </div>
+                    <div class="summary-card failed">
+                        <div class="count" id="count-failed">0</div>
+                        <div class="label">Failed</div>
+                    </div>
+                    <div class="summary-card skipped">
+                        <div class="count" id="count-skipped">0</div>
+                        <div class="label">Skipped</div>
+                    </div>
+                    <div class="summary-card total">
+                        <div class="count" id="count-total">0</div>
+                        <div class="label">Total</div>
+                    </div>
+                </div>
+
+                <!-- Test Results -->
+                <div class="test-results" id="test-results">
+                    <div class="empty-state">
+                        <div class="icon">🧪</div>
+                        <div>Keine Tests ausgeführt</div>
+                        <div style="margin-top: 0.5rem; font-size: 0.85rem;">
+                            Klicke auf "Tests starten" um die API-Tests auszuführen
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="card history-section">
+            <h3>📜 Test Historie</h3>
+            <div class="history-list" id="history-list">
+                <div class="empty-state">Keine Historie vorhanden</div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <a href="index.html">← Zurück zum Dashboard</a> |
+        KI Trading Model - API Test Suite
+    </footer>
+
+    <script>
+        const API_BASE = '/watchdog/api/v1';
+        let eventSource = null;
+        let isRunning = false;
+
+        // Status Icons
+        const statusIcons = {
+            passed: '✅',
+            failed: '❌',
+            skipped: '⏭️',
+            running: '⏳',
+            pending: '○'
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCurrentStatus();
+            loadHistory();
+        });
+
+        // Load current test status
+        async function loadCurrentStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/tests/status`);
+                const data = await response.json();
+
+                if (data.status && data.status !== 'idle') {
+                    updateUI(data);
+
+                    if (data.status === 'running') {
+                        isRunning = true;
+                        updateButtons();
+                        startEventStream();
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load status:', e);
+            }
+        }
+
+        // Load test history
+        async function loadHistory() {
+            try {
+                const response = await fetch(`${API_BASE}/tests/history?limit=10`);
+                const data = await response.json();
+
+                const container = document.getElementById('history-list');
+
+                if (!data.runs || data.runs.length === 0) {
+                    container.innerHTML = '<div class="empty-state">Keine Historie vorhanden</div>';
+                    return;
+                }
+
+                container.innerHTML = data.runs.map(run => {
+                    const date = new Date(run.started_at);
+                    const statusClass = run.status === 'completed' ?
+                        (run.summary && run.summary.failed > 0 ? 'status-failed' : 'status-completed') : 'status-idle';
+
+                    return `
+                        <div class="history-item">
+                            <span class="status-badge ${statusClass}">${run.status.toUpperCase()}</span>
+                            <span class="time">${date.toLocaleString('de-CH')}</span>
+                            <div class="summary">
+                                <span style="color: #4ade80">✅ ${run.summary?.passed || 0}</span>
+                                <span style="color: #f87171">❌ ${run.summary?.failed || 0}</span>
+                                <span style="color: #fbbf24">⏭️ ${run.summary?.skipped || 0}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error('Failed to load history:', e);
+            }
+        }
+
+        // Start tests
+        async function startTests() {
+            try {
+                const response = await fetch(`${API_BASE}/tests/run`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    isRunning = true;
+                    updateButtons();
+                    document.getElementById('progress-container').style.display = 'block';
+                    document.getElementById('summary-cards').style.display = 'grid';
+                    document.getElementById('test-results').innerHTML = '';
+
+                    // Start SSE for live updates
+                    startEventStream();
+                } else if (response.status === 409) {
+                    alert('Ein Test läuft bereits!');
+                }
+            } catch (e) {
+                console.error('Failed to start tests:', e);
+                alert('Fehler beim Starten der Tests');
+            }
+        }
+
+        // Abort tests
+        async function abortTests() {
+            try {
+                await fetch(`${API_BASE}/tests/abort`, { method: 'POST' });
+            } catch (e) {
+                console.error('Failed to abort:', e);
+            }
+        }
+
+        // Start Server-Sent Events stream
+        function startEventStream() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            eventSource = new EventSource(`${API_BASE}/tests/stream`);
+
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                updateUI(data);
+            };
+
+            eventSource.addEventListener('complete', (event) => {
+                const data = JSON.parse(event.data);
+                updateUI(data);
+                isRunning = false;
+                updateButtons();
+                eventSource.close();
+                eventSource = null;
+                loadHistory();
+            });
+
+            eventSource.onerror = () => {
+                console.error('SSE connection error');
+                isRunning = false;
+                updateButtons();
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+            };
+        }
+
+        // Update UI with test data
+        function updateUI(data) {
+            // Update status badge
+            const statusBadge = document.getElementById('run-status');
+            statusBadge.textContent = data.status.toUpperCase();
+            statusBadge.className = `status-badge status-${data.status}`;
+
+            // Update service list
+            if (data.services && data.services.length > 0) {
+                const serviceList = document.getElementById('service-list');
+                serviceList.innerHTML = data.services.map(s => `
+                    <div class="service-item">
+                        <span class="service-dot ${s.healthy ? 'healthy' : 'unhealthy'}"></span>
+                        <span class="service-name">${s.display_name}</span>
+                        ${s.version ? `<span class="service-version">v${s.version}</span>` : ''}
+                        <span class="service-time">${Math.round(s.response_time_ms)}ms</span>
+                    </div>
+                `).join('');
+            }
+
+            // Update summary
+            if (data.summary) {
+                document.getElementById('summary-cards').style.display = 'grid';
+                document.getElementById('count-passed').textContent = data.summary.passed || 0;
+                document.getElementById('count-failed').textContent = data.summary.failed || 0;
+                document.getElementById('count-skipped').textContent = data.summary.skipped || 0;
+                document.getElementById('count-total').textContent = data.summary.total || 0;
+
+                // Update progress
+                const total = data.summary.total || 1;
+                const completed = (data.summary.passed || 0) + (data.summary.failed || 0) + (data.summary.skipped || 0);
+                const percent = Math.round((completed / total) * 100);
+
+                document.getElementById('progress-container').style.display = 'block';
+                document.getElementById('progress-fill').style.width = `${percent}%`;
+                document.getElementById('progress-current').textContent = `Test ${completed} von ${total}`;
+                document.getElementById('progress-percent').textContent = `${percent}%`;
+            }
+
+            // Update test results
+            if (data.results) {
+                const resultsContainer = document.getElementById('test-results');
+
+                resultsContainer.innerHTML = data.results.map((r) => {
+                    const isCurrent = data.current_test === r.name;
+                    const icon = statusIcons[r.status] || '○';
+
+                    let errorHtml = '';
+                    if (r.status === 'failed' && r.message) {
+                        errorHtml = `
+                            <div class="error-details">
+                                <div class="endpoint">📍 ${r.endpoint}</div>
+                                <div>${r.error_type}: ${r.message}</div>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="test-result ${r.status} ${isCurrent ? 'current' : ''}">
+                            <span class="icon">${icon}</span>
+                            <span class="name">${r.name}</span>
+                            <span class="service-tag">${r.service}</span>
+                            <span class="duration">${r.duration_ms ? Math.round(r.duration_ms) + 'ms' : '-'}</span>
+                            ${errorHtml}
+                        </div>
+                    `;
+                }).join('');
+
+                // Show current test if running
+                if (data.current_test && data.status === 'running') {
+                    const currentTestHtml = `
+                        <div class="test-result current">
+                            <span class="icon running">⏳</span>
+                            <span class="name">${data.current_test}</span>
+                            <span class="service-tag">-</span>
+                            <span class="duration">...</span>
+                        </div>
+                    `;
+                    resultsContainer.innerHTML += currentTestHtml;
+                }
+            }
+        }
+
+        // Update button states
+        function updateButtons() {
+            document.getElementById('btn-run').disabled = isRunning;
+            document.getElementById('btn-abort').disabled = !isRunning;
+        }
+    </script>
+</body>
+</html>
