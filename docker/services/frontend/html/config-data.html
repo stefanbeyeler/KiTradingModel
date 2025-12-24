@@ -3310,7 +3310,10 @@
             if (value === null || value === undefined) return '-';
             const num = parseFloat(value);
             if (isNaN(num)) return value;
-            return num.toFixed(decimals);
+            // Format with Swiss locale (apostrophe as thousand separator)
+            const parts = num.toFixed(decimals).split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+            return parts.join('.');
         }
 
         function formatIndicator(value, type) {
@@ -4100,10 +4103,16 @@
         function formatPrice(val) {
             if (val === null || val === undefined || isNaN(val)) return '-';
             // Auto-detect decimal places based on magnitude
-            if (val < 0.01) return val.toFixed(6);
-            if (val < 1) return val.toFixed(5);
-            if (val < 100) return val.toFixed(4);
-            return val.toFixed(2);
+            let decimals;
+            if (val < 0.01) decimals = 6;
+            else if (val < 1) decimals = 5;
+            else if (val < 100) decimals = 4;
+            else decimals = 2;
+
+            // Format with Swiss locale (apostrophe as thousand separator)
+            const parts = val.toFixed(decimals).split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+            return parts.join('.');
         }
 
         function exportExplorerData() {

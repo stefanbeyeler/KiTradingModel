@@ -1120,8 +1120,8 @@
                         <h4><span class="metric-icon">&#127918;</span> GPU</h4>
                         <div id="gpu-content">
                             <div class="metric-bar-container">
-                                <div class="metric-bar gpu-memory" id="gpu-memory-bar" style="width: 0%">
-                                    <span id="gpu-memory-percent">-</span>
+                                <div class="metric-bar gpu" id="gpu-util-bar" style="width: 0%">
+                                    <span id="gpu-util-percent">-</span>
                                 </div>
                             </div>
                             <div class="resource-stats">
@@ -1713,12 +1713,12 @@
                     gpuContent.style.display = 'block';
                     gpuUnavailable.style.display = 'none';
 
-                    // GPU memory bar
-                    const gpuMemPercent = Math.round(data.gpu.memory_percent || 0);
-                    const gpuMemBar = document.getElementById('gpu-memory-bar');
-                    gpuMemBar.style.width = `${Math.max(gpuMemPercent, 5)}%`;
-                    gpuMemBar.className = `metric-bar gpu-memory ${getColorClass(gpuMemPercent)}`;
-                    document.getElementById('gpu-memory-percent').textContent = `${gpuMemPercent}%`;
+                    // GPU utilization bar
+                    const gpuUtilPercent = Math.round(data.gpu.utilization_percent || 0);
+                    const gpuUtilBar = document.getElementById('gpu-util-bar');
+                    gpuUtilBar.style.width = `${Math.max(gpuUtilPercent, 5)}%`;
+                    gpuUtilBar.className = `metric-bar gpu ${getColorClass(gpuUtilPercent)}`;
+                    document.getElementById('gpu-util-percent').textContent = `${gpuUtilPercent}%`;
 
                     // GPU Temperature
                     const gpuTempEl = document.getElementById('gpu-temp');
