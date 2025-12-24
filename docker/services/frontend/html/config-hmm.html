@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HMM Regime Service - Konfiguration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .service-badge.offline {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+        }
+
+        .tab-btn.active {
+            background: rgba(100, 200, 255, 0.15);
+            color: #64c8ff;
+            border-bottom: 2px solid #64c8ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            top: 50%;
+            right: 8px;
+            margin-top: -6px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .grid-2-equal {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 900px) {
+            .grid-2, .grid-2-equal, .grid-3, .grid-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Regime Badge */
+        .regime-badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            margin: 0.2rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .regime-badge.bull_trend {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .regime-badge.bear_trend {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .regime-badge.sideways {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .regime-badge.high_volatility {
+            background: rgba(156, 39, 176, 0.2);
+            color: #ce93d8;
+            border: 1px solid rgba(156, 39, 176, 0.3);
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .data-table th {
+            color: #888;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        .data-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success {
+            border-left: 4px solid #4caf50;
+        }
+
+        .toast.error {
+            border-left: 4px solid #f44336;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(100, 200, 255, 0.2);
+            border-top-color: #64c8ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.6rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #e8e8e8;
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        /* Info Box */
+        .info-box {
+            background: rgba(33, 150, 243, 0.1);
+            border: 1px solid rgba(33, 150, 243, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 0.85rem;
+            color: #90caf9;
+        }
+
+        /* Score Display */
+        .score-display {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+        }
+
+        .score-value {
+            font-size: 3rem;
+            font-weight: 700;
+        }
+
+        .score-value.positive { color: #4caf50; }
+        .score-value.negative { color: #f44336; }
+        .score-value.neutral { color: #ffc107; }
+
+        /* Regime Card */
+        .regime-card {
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .regime-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .regime-card.bull_trend { background: rgba(76, 175, 80, 0.1); border: 1px solid rgba(76, 175, 80, 0.2); }
+        .regime-card.bear_trend { background: rgba(244, 67, 54, 0.1); border: 1px solid rgba(244, 67, 54, 0.2); }
+        .regime-card.sideways { background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.2); }
+        .regime-card.high_volatility { background: rgba(156, 39, 176, 0.1); border: 1px solid rgba(156, 39, 176, 0.2); }
+
+        .regime-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .regime-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .regime-probability {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="index.html" class="back-link">&#8592; Dashboard</a>
+            <h1 class="header-title">&#128202; HMM Regime Service</h1>
+            <span class="service-badge" id="status-badge">Laden...</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Stats Bar -->
+        <div class="stats-bar" id="stats-bar">
+            <div class="stat-item">
+                <div class="stat-value" id="stat-models">-</div>
+                <div class="stat-label">HMM Modelle</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-regimes">4</div>
+                <div class="stat-label">Regime-Typen</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-features">-</div>
+                <div class="stat-label">Features</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-uptime">-</div>
+                <div class="stat-label">Uptime</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Ubersicht</button>
+            <button class="tab-btn" onclick="showTab('detection')">&#128269; Regime-Erkennung</button>
+            <button class="tab-btn" onclick="showTab('scoring')">&#127919; Trade Scoring</button>
+            <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="tab-overview" class="tab-content active">
+            <div class="grid-2-equal">
+                <!-- Service Info -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#129302; Service-Information</h3>
+                        <button class="btn btn-primary btn-sm" onclick="loadInfo()">&#8635; Aktualisieren</button>
+                    </div>
+                    <div id="service-info">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+
+                <!-- Regime Types -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#127919; Regime-Typen</h3>
+                    </div>
+                    <div class="grid-2-equal" id="regime-types">
+                        <div class="regime-card bull_trend">
+                            <div class="regime-icon">&#128200;</div>
+                            <div class="regime-name">Bull Trend</div>
+                            <div style="color: #888; font-size: 0.8rem;">Aufwartstrend</div>
+                        </div>
+                        <div class="regime-card bear_trend">
+                            <div class="regime-icon">&#128201;</div>
+                            <div class="regime-name">Bear Trend</div>
+                            <div style="color: #888; font-size: 0.8rem;">Abwartstrend</div>
+                        </div>
+                        <div class="regime-card sideways">
+                            <div class="regime-icon">&#8596;</div>
+                            <div class="regime-name">Sideways</div>
+                            <div style="color: #888; font-size: 0.8rem;">Seitwartsbewegung</div>
+                        </div>
+                        <div class="regime-card high_volatility">
+                            <div class="regime-icon">&#9889;</div>
+                            <div class="regime-name">High Volatility</div>
+                            <div style="color: #888; font-size: 0.8rem;">Hohe Volatilitat</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Models Overview -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128203; Geladene Modelle</h3>
+                </div>
+                <div id="models-list">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detection Tab -->
+        <div id="tab-detection" class="tab-content">
+            <div class="grid-2">
+                <!-- Detection Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128269; Regime erkennen</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Symbol</label>
+                        <select class="form-control" id="detect-symbol">
+                            <option value="BTCUSD">BTCUSD</option>
+                            <option value="ETHUSD">ETHUSD</option>
+                            <option value="EURUSD">EURUSD</option>
+                            <option value="XAUUSD">XAUUSD</option>
+                            <option value="GER40">GER40</option>
+                            <option value="US500">US500</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Timeframe</label>
+                        <select class="form-control" id="detect-timeframe">
+                            <option value="M15">M15</option>
+                            <option value="H1" selected>H1</option>
+                            <option value="H4">H4</option>
+                            <option value="D1">D1</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success" id="btn-detect" onclick="detectRegime()">&#128269; Regime erkennen</button>
+
+                    <div id="detection-result" style="margin-top: 1.5rem;"></div>
+                </div>
+
+                <!-- Multi-Symbol Scan -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128640; Multi-Symbol Scan</h3>
+                    </div>
+                    <div class="info-box" style="margin-bottom: 1rem;">
+                        Erkennt das aktuelle Marktregime fur alle aktiven Symbole.
+                    </div>
+                    <button class="btn btn-primary" id="btn-scan" onclick="scanAll()">&#128640; Alle Symbole scannen</button>
+                    <div id="scan-results" style="margin-top: 1rem;"></div>
+                </div>
+            </div>
+
+            <!-- Regime History -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128203; Regime-Verlauf</h3>
+                    <div>
+                        <select class="form-control" id="history-symbol" style="width: auto; display: inline-block;">
+                            <option value="BTCUSD">BTCUSD</option>
+                            <option value="ETHUSD">ETHUSD</option>
+                            <option value="EURUSD">EURUSD</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="loadHistory()">&#8635; Laden</button>
+                    </div>
+                </div>
+                <div id="regime-history">
+                    <div class="info-box">Wahlen Sie ein Symbol und klicken Sie auf "Laden".</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scoring Tab -->
+        <div id="tab-scoring" class="tab-content">
+            <div class="grid-2">
+                <!-- Score Calculator -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#127919; Trade Score berechnen</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Symbol</label>
+                        <select class="form-control" id="score-symbol">
+                            <option value="BTCUSD">BTCUSD</option>
+                            <option value="ETHUSD">ETHUSD</option>
+                            <option value="EURUSD">EURUSD</option>
+                            <option value="XAUUSD">XAUUSD</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Richtung</label>
+                        <select class="form-control" id="score-direction">
+                            <option value="long">Long</option>
+                            <option value="short">Short</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Timeframe</label>
+                        <select class="form-control" id="score-timeframe">
+                            <option value="H1" selected>H1</option>
+                            <option value="H4">H4</option>
+                            <option value="D1">D1</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success" id="btn-score" onclick="calculateScore()">&#127919; Score berechnen</button>
+                </div>
+
+                <!-- Score Result -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128202; Ergebnis</h3>
+                    </div>
+                    <div id="score-result">
+                        <div class="score-display">
+                            <div style="color: #888; margin-bottom: 0.5rem;">Trade Score</div>
+                            <div class="score-value neutral" id="score-value">-</div>
+                            <div id="score-details" style="margin-top: 1rem; font-size: 0.9rem; color: #888;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alignment Check -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128260; Alignment Check</h3>
+                </div>
+                <div class="info-box" style="margin-bottom: 1rem;">
+                    Pruft die Ubereinstimmung von Regime und technischen Indikatoren uber mehrere Timeframes.
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: flex-end;">
+                    <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                        <label>Symbol</label>
+                        <select class="form-control" id="align-symbol">
+                            <option value="BTCUSD">BTCUSD</option>
+                            <option value="ETHUSD">ETHUSD</option>
+                            <option value="EURUSD">EURUSD</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="checkAlignment()">&#128260; Prufen</button>
+                </div>
+                <div id="alignment-result" style="margin-top: 1rem;"></div>
+            </div>
+        </div>
+
+        <!-- Training Tab -->
+        <div id="tab-training" class="tab-content">
+            <div class="grid-2-equal">
+                <!-- HMM Training -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#9881; HMM Training</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Symbol</label>
+                        <select class="form-control" id="train-symbol">
+                            <option value="BTCUSD">BTCUSD</option>
+                            <option value="ETHUSD">ETHUSD</option>
+                            <option value="EURUSD">EURUSD</option>
+                            <option value="XAUUSD">XAUUSD</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Trainingsdaten (Tage)</label>
+                        <input type="number" class="form-control" id="train-days" value="90" min="30" max="365">
+                    </div>
+                    <div class="form-group">
+                        <label>Anzahl Zustande</label>
+                        <input type="number" class="form-control" id="train-states" value="4" min="2" max="8">
+                    </div>
+                    <button class="btn btn-success" id="btn-train-hmm" onclick="trainHMM()">&#9654; HMM trainieren</button>
+                    <div id="hmm-training-result" style="margin-top: 1rem;"></div>
+                </div>
+
+                <!-- Scorer Training -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128295; Scorer Training</h3>
+                    </div>
+                    <div class="info-box" style="margin-bottom: 1rem;">
+                        Trainiert den Trade-Scorer mit historischen Daten. Der Scorer bewertet Trade-Setups basierend auf 18 Features.
+                    </div>
+                    <div id="scorer-status" style="margin-bottom: 1rem;">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                    <button class="btn btn-success" id="btn-train-scorer" onclick="trainScorer()">&#9654; Scorer trainieren</button>
+                </div>
+            </div>
+
+            <!-- Feature Info -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128203; Scorer Features</h3>
+                </div>
+                <div id="feature-list">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/hmm/api/v1';
+
+        // Tab Navigation
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Format Uptime
+        function formatUptime(seconds) {
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            if (days > 0) return `${days}d ${hours}h`;
+            if (hours > 0) return `${hours}h ${mins}m`;
+            return `${mins}m`;
+        }
+
+        // Get Regime Display
+        function getRegimeDisplay(regime) {
+            const displays = {
+                'bull_trend': { icon: '&#128200;', name: 'Bull Trend', color: '#4caf50' },
+                'bear_trend': { icon: '&#128201;', name: 'Bear Trend', color: '#f44336' },
+                'sideways': { icon: '&#8596;', name: 'Sideways', color: '#ffc107' },
+                'high_volatility': { icon: '&#9889;', name: 'High Volatility', color: '#ce93d8' }
+            };
+            return displays[regime] || { icon: '?', name: regime, color: '#888' };
+        }
+
+        // Load Service Info
+        async function loadInfo() {
+            try {
+                const [infoRes, statsRes] = await Promise.all([
+                    fetch(`${API_BASE}/info`),
+                    fetch(`${API_BASE}/stats`)
+                ]);
+
+                if (!infoRes.ok || !statsRes.ok) throw new Error('Failed to load data');
+
+                const info = await infoRes.json();
+                const stats = await statsRes.json();
+
+                // Update status badge
+                const badge = document.getElementById('status-badge');
+                badge.textContent = 'Online';
+                badge.className = 'service-badge';
+
+                // Update stats
+                document.getElementById('stat-models').textContent = stats.hmm_models_count || 0;
+                document.getElementById('stat-features').textContent = info.components?.scorer?.feature_count || 18;
+                document.getElementById('stat-uptime').textContent = stats.uptime_seconds ? formatUptime(stats.uptime_seconds) : '-';
+
+                // Service Info
+                document.getElementById('service-info').innerHTML = `
+                    <table class="data-table">
+                        <tr><td style="color: #888;">Service</td><td>${info.service}</td></tr>
+                        <tr><td style="color: #888;">Version</td><td>${info.version}</td></tr>
+                        <tr><td style="color: #888;">Gestartet</td><td>${new Date(info.started_at).toLocaleString('de-CH')}</td></tr>
+                        <tr><td style="color: #888;">HMM Modelle</td><td>${info.components?.hmm?.loaded_models?.length || 0}</td></tr>
+                        <tr><td style="color: #888;">Scorer trainiert</td><td>${info.components?.scorer?.fitted ? '<span style="color: #4caf50;">Ja</span>' : '<span style="color: #f44336;">Nein</span>'}</td></tr>
+                        <tr><td style="color: #888;">Feature Count</td><td>${info.components?.scorer?.feature_count || 18}</td></tr>
+                    </table>
+                `;
+
+                // Models List
+                const models = info.components?.hmm?.loaded_models || [];
+                document.getElementById('models-list').innerHTML = models.length > 0
+                    ? `<table class="data-table">
+                        <tr><th>Symbol</th><th>Zustande</th><th>Status</th></tr>
+                        ${models.map(m => `<tr><td>${m}</td><td>4</td><td><span style="color: #4caf50;">Aktiv</span></td></tr>`).join('')}
+                       </table>`
+                    : '<div class="info-box">Keine HMM-Modelle geladen. Trainieren Sie Modelle im Training-Tab.</div>';
+
+                // Scorer Status
+                document.getElementById('scorer-status').innerHTML = `
+                    <div style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Status:</span>
+                            <span style="color: ${info.components?.scorer?.fitted ? '#4caf50' : '#f44336'};">
+                                ${info.components?.scorer?.fitted ? 'Trainiert' : 'Nicht trainiert'}
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                            <span>Features:</span>
+                            <span>${info.components?.scorer?.feature_count || 18}</span>
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                showToast('Fehler beim Laden der Service-Info', 'error');
+                console.error(error);
+                document.getElementById('status-badge').textContent = 'Offline';
+                document.getElementById('status-badge').className = 'service-badge offline';
+            }
+        }
+
+        // Load Features
+        async function loadFeatures() {
+            try {
+                const response = await fetch(`${API_BASE}/models/features`);
+                if (!response.ok) throw new Error('Failed to load features');
+
+                const data = await response.json();
+                const container = document.getElementById('feature-list');
+
+                if (data.features && data.features.length > 0) {
+                    container.innerHTML = `
+                        <div class="grid-3">
+                            ${data.features.map(f => `
+                                <div style="padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 6px; font-size: 0.85rem;">
+                                    ${f}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = '<div class="info-box">Feature-Liste nicht verfugbar.</div>';
+                }
+            } catch (error) {
+                document.getElementById('feature-list').innerHTML = '<div class="info-box">Feature-Liste konnte nicht geladen werden.</div>';
+            }
+        }
+
+        // Detect Regime
+        async function detectRegime() {
+            const btn = document.getElementById('btn-detect');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const symbol = document.getElementById('detect-symbol').value;
+                const timeframe = document.getElementById('detect-timeframe').value;
+
+                const response = await fetch(`${API_BASE}/regime/detect/${symbol}?timeframe=${timeframe}`);
+                if (!response.ok) throw new Error('Detection failed');
+
+                const data = await response.json();
+                const result = document.getElementById('detection-result');
+                const regime = getRegimeDisplay(data.regime);
+
+                result.innerHTML = `
+                    <div class="grid-4" style="margin-bottom: 1rem;">
+                        ${['bull_trend', 'bear_trend', 'sideways', 'high_volatility'].map(r => {
+                            const d = getRegimeDisplay(r);
+                            const prob = data.probabilities?.[r] || 0;
+                            const isActive = data.regime === r;
+                            return `
+                                <div class="regime-card ${r}" style="opacity: ${isActive ? 1 : 0.5};">
+                                    <div class="regime-icon">${d.icon}</div>
+                                    <div class="regime-name">${d.name}</div>
+                                    <div class="regime-probability" style="color: ${d.color};">${(prob * 100).toFixed(1)}%</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="color: #888; margin-bottom: 0.5rem;">Aktuelles Regime</div>
+                        <span class="regime-badge ${data.regime}" style="font-size: 1.1rem;">${regime.icon} ${regime.name}</span>
+                        <div style="margin-top: 0.5rem; color: #888; font-size: 0.85rem;">
+                            Confidence: ${((data.probabilities?.[data.regime] || 0) * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                `;
+
+                showToast(`Regime fur ${symbol} erkannt: ${regime.name}`);
+            } catch (error) {
+                showToast('Fehler bei der Regime-Erkennung', 'error');
+                console.error(error);
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Scan All Symbols
+        async function scanAll() {
+            const btn = document.getElementById('btn-scan');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/regime/scan`);
+                if (!response.ok) throw new Error('Scan failed');
+
+                const data = await response.json();
+                const results = document.getElementById('scan-results');
+
+                if (data.results && Object.keys(data.results).length > 0) {
+                    let html = '<table class="data-table"><tr><th>Symbol</th><th>Regime</th><th>Confidence</th></tr>';
+                    for (const [symbol, info] of Object.entries(data.results)) {
+                        const regime = getRegimeDisplay(info.regime);
+                        const confidence = info.probabilities?.[info.regime] || 0;
+                        html += `<tr>
+                            <td>${symbol}</td>
+                            <td><span class="regime-badge ${info.regime}">${regime.icon} ${regime.name}</span></td>
+                            <td>${(confidence * 100).toFixed(1)}%</td>
+                        </tr>`;
+                    }
+                    html += '</table>';
+                    results.innerHTML = html;
+                } else {
+                    results.innerHTML = '<div class="info-box">Keine Ergebnisse.</div>';
+                }
+
+                showToast('Multi-Symbol Scan abgeschlossen');
+            } catch (error) {
+                showToast('Fehler beim Scan', 'error');
+                console.error(error);
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Load Regime History
+        async function loadHistory() {
+            const symbol = document.getElementById('history-symbol').value;
+            const container = document.getElementById('regime-history');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/regime/history/${symbol}`);
+                if (!response.ok) throw new Error('Failed to load history');
+
+                const data = await response.json();
+
+                if (data.history && data.history.length > 0) {
+                    container.innerHTML = `
+                        <table class="data-table">
+                            <tr><th>Zeitpunkt</th><th>Regime</th><th>Confidence</th></tr>
+                            ${data.history.slice(0, 20).map(h => {
+                                const regime = getRegimeDisplay(h.regime);
+                                return `<tr>
+                                    <td>${new Date(h.timestamp).toLocaleString('de-CH')}</td>
+                                    <td><span class="regime-badge ${h.regime}">${regime.icon} ${regime.name}</span></td>
+                                    <td>${(h.confidence * 100).toFixed(1)}%</td>
+                                </tr>`;
+                            }).join('')}
+                        </table>
+                    `;
+                } else {
+                    container.innerHTML = '<div class="info-box">Keine Historie fur dieses Symbol.</div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler beim Laden.</div>';
+            }
+        }
+
+        // Calculate Score
+        async function calculateScore() {
+            const btn = document.getElementById('btn-score');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const symbol = document.getElementById('score-symbol').value;
+                const direction = document.getElementById('score-direction').value;
+                const timeframe = document.getElementById('score-timeframe').value;
+
+                const response = await fetch(`${API_BASE}/scoring/score/${symbol}?direction=${direction}&timeframe=${timeframe}`);
+                if (!response.ok) throw new Error('Scoring failed');
+
+                const data = await response.json();
+                const scoreEl = document.getElementById('score-value');
+                const detailsEl = document.getElementById('score-details');
+
+                const score = data.score || 0;
+                scoreEl.textContent = score.toFixed(1);
+                scoreEl.className = `score-value ${score >= 60 ? 'positive' : score <= 40 ? 'negative' : 'neutral'}`;
+
+                detailsEl.innerHTML = `
+                    <div>Richtung: ${direction.toUpperCase()}</div>
+                    <div>Regime: ${data.regime || '-'}</div>
+                    ${data.recommendation ? `<div style="margin-top: 0.5rem; color: ${score >= 60 ? '#4caf50' : '#f44336'};">${data.recommendation}</div>` : ''}
+                `;
+
+                showToast(`Score berechnet: ${score.toFixed(1)}`);
+            } catch (error) {
+                showToast('Fehler bei der Score-Berechnung', 'error');
+                console.error(error);
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Check Alignment
+        async function checkAlignment() {
+            const symbol = document.getElementById('align-symbol').value;
+            const container = document.getElementById('alignment-result');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/scoring/alignment-check/${symbol}`);
+                if (!response.ok) throw new Error('Alignment check failed');
+
+                const data = await response.json();
+
+                container.innerHTML = `
+                    <div class="grid-3" style="margin-top: 1rem;">
+                        ${Object.entries(data.timeframes || {}).map(([tf, info]) => {
+                            const regime = getRegimeDisplay(info.regime);
+                            return `
+                                <div style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; text-align: center;">
+                                    <div style="font-weight: 600; margin-bottom: 0.5rem;">${tf}</div>
+                                    <span class="regime-badge ${info.regime}">${regime.icon} ${regime.name}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; text-align: center;">
+                        <div style="color: #888; margin-bottom: 0.5rem;">Alignment Score</div>
+                        <div style="font-size: 2rem; font-weight: 700; color: ${data.alignment_score >= 0.7 ? '#4caf50' : data.alignment_score >= 0.4 ? '#ffc107' : '#f44336'};">
+                            ${((data.alignment_score || 0) * 100).toFixed(0)}%
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler beim Alignment Check.</div>';
+            }
+        }
+
+        // Train HMM
+        async function trainHMM() {
+            const btn = document.getElementById('btn-train-hmm');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const symbol = document.getElementById('train-symbol').value;
+                const days = parseInt(document.getElementById('train-days').value);
+                const states = parseInt(document.getElementById('train-states').value);
+
+                const response = await fetch(`${API_BASE}/train/hmm/${symbol}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ days, n_states: states })
+                });
+
+                if (!response.ok) throw new Error('Training failed');
+
+                const data = await response.json();
+                document.getElementById('hmm-training-result').innerHTML = `
+                    <div class="info-box" style="border-color: rgba(76,175,80,0.3); color: #81c784;">
+                        HMM-Modell fur ${symbol} erfolgreich trainiert!
+                    </div>
+                `;
+
+                showToast(`HMM fur ${symbol} trainiert`);
+                loadInfo();
+            } catch (error) {
+                document.getElementById('hmm-training-result').innerHTML = `
+                    <div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">
+                        Fehler beim Training: ${error.message}
+                    </div>
+                `;
+                showToast('Fehler beim HMM Training', 'error');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Train Scorer
+        async function trainScorer() {
+            const btn = document.getElementById('btn-train-scorer');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/train/scorer`, { method: 'POST' });
+                if (!response.ok) throw new Error('Training failed');
+
+                showToast('Scorer erfolgreich trainiert');
+                loadInfo();
+            } catch (error) {
+                showToast('Fehler beim Scorer Training', 'error');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInfo();
+            loadFeatures();
+
+            // Auto-refresh every 30 seconds
+            setInterval(loadInfo, 30000);
+        });
+    </script>
+</body>
+</html>

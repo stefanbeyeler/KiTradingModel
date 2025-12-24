@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedder Service - Konfiguration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .service-badge.offline {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+        }
+
+        .tab-btn.active {
+            background: rgba(100, 200, 255, 0.15);
+            color: #64c8ff;
+            border-bottom: 2px solid #64c8ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            top: 50%;
+            right: 8px;
+            margin-top: -6px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .grid-2-equal {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 900px) {
+            .grid-2, .grid-2-equal, .grid-3, .grid-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Model Card */
+        .model-card {
+            padding: 1.25rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .model-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .model-name {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #64c8ff;
+        }
+
+        .model-detail {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+
+        .model-status {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .model-status.loaded {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .model-status.not-loaded {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .data-table th {
+            color: #888;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        .data-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success {
+            border-left: 4px solid #4caf50;
+        }
+
+        .toast.error {
+            border-left: 4px solid #f44336;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(100, 200, 255, 0.2);
+            border-top-color: #64c8ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.6rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #e8e8e8;
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        /* Info Box */
+        .info-box {
+            background: rgba(33, 150, 243, 0.1);
+            border: 1px solid rgba(33, 150, 243, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 0.85rem;
+            color: #90caf9;
+        }
+
+        /* Embedding Display */
+        .embedding-preview {
+            font-family: monospace;
+            font-size: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow: auto;
+            color: #a78bfa;
+        }
+
+        /* Similarity Score */
+        .similarity-score {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+        }
+
+        .similarity-value {
+            font-size: 3rem;
+            font-weight: 700;
+        }
+
+        .similarity-value.high { color: #4caf50; }
+        .similarity-value.medium { color: #ffc107; }
+        .similarity-value.low { color: #f44336; }
+
+        /* Cache Stats */
+        .cache-stat {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+        }
+
+        .cache-stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .cache-stat-label {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #64c8ff, #a78bfa);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="index.html" class="back-link">&#8592; Dashboard</a>
+            <h1 class="header-title">&#129302; Embedder Service</h1>
+            <span class="service-badge" id="status-badge">Laden...</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Stats Bar -->
+        <div class="stats-bar" id="stats-bar">
+            <div class="stat-item">
+                <div class="stat-value" id="stat-models">4</div>
+                <div class="stat-label">Modelle</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-cache">-</div>
+                <div class="stat-label">Cache Eintrage</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-hitrate">-</div>
+                <div class="stat-label">Hit Rate</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-size">-</div>
+                <div class="stat-label">Cache Grosse</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Ubersicht</button>
+            <button class="tab-btn" onclick="showTab('text')">&#128221; Text Embedding</button>
+            <button class="tab-btn" onclick="showTab('timeseries')">&#128200; Zeitreihen</button>
+            <button class="tab-btn" onclick="showTab('similarity')">&#128269; Ahnlichkeit</button>
+            <button class="tab-btn" onclick="showTab('cache')">&#128230; Cache</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="tab-overview" class="tab-content active">
+            <div class="grid-2-equal">
+                <!-- Models -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#129302; Verfugbare Modelle</h3>
+                        <button class="btn btn-primary btn-sm" onclick="loadModels()">&#8635; Aktualisieren</button>
+                    </div>
+                    <div id="models-list">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+
+                <!-- Dimensions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128202; Embedding-Dimensionen</h3>
+                    </div>
+                    <div id="dimensions-info">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warmup -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128293; Modell Warmup</h3>
+                </div>
+                <div class="info-box" style="margin-bottom: 1rem;">
+                    Ladt alle Modelle in den Speicher vor fur schnellere Inferenz. Empfohlen nach einem Neustart.
+                </div>
+                <button class="btn btn-warning" id="btn-warmup" onclick="warmupModels()">&#128293; Warmup starten</button>
+                <div id="warmup-result" style="margin-top: 1rem;"></div>
+            </div>
+        </div>
+
+        <!-- Text Embedding Tab -->
+        <div id="tab-text" class="tab-content">
+            <div class="grid-2">
+                <!-- Text Input -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128221; Text einbetten</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Text</label>
+                        <textarea class="form-control" id="embed-text" placeholder="Geben Sie einen Text ein...">Bitcoin zeigt starke bullische Signale mit steigendem Volumen.</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Modell</label>
+                        <select class="form-control" id="embed-model">
+                            <option value="text">MiniLM (384 dim)</option>
+                            <option value="finbert">FinBERT (768 dim)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success" id="btn-embed-text" onclick="embedText()">&#128221; Text einbetten</button>
+                </div>
+
+                <!-- Result -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128202; Ergebnis</h3>
+                    </div>
+                    <div id="text-embedding-result">
+                        <div class="info-box">Geben Sie einen Text ein und klicken Sie auf "Text einbetten".</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeseries Tab -->
+        <div id="tab-timeseries" class="tab-content">
+            <div class="grid-2">
+                <!-- Timeseries Input -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128200; Zeitreihe einbetten</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Symbol</label>
+                        <select class="form-control" id="ts-symbol">
+                            <option value="BTCUSD">BTCUSD</option>
+                            <option value="ETHUSD">ETHUSD</option>
+                            <option value="EURUSD">EURUSD</option>
+                            <option value="XAUUSD">XAUUSD</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Timeframe</label>
+                        <select class="form-control" id="ts-timeframe">
+                            <option value="M15">M15</option>
+                            <option value="H1" selected>H1</option>
+                            <option value="H4">H4</option>
+                            <option value="D1">D1</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Lookback (Perioden)</label>
+                        <input type="number" class="form-control" id="ts-lookback" value="100" min="10" max="500">
+                    </div>
+                    <button class="btn btn-success" id="btn-embed-ts" onclick="embedTimeseries()">&#128200; Zeitreihe einbetten</button>
+                </div>
+
+                <!-- Result -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128202; Ergebnis</h3>
+                    </div>
+                    <div id="ts-embedding-result">
+                        <div class="info-box">Wahlen Sie ein Symbol und klicken Sie auf "Zeitreihe einbetten".</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Find Similar -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128269; Ahnliche Zeitraume finden</h3>
+                </div>
+                <div class="info-box" style="margin-bottom: 1rem;">
+                    Findet historische Zeitraume mit ahnlichem Preisverhalten basierend auf Embedding-Ahnlichkeit.
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: flex-end;">
+                    <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                        <label>Symbol</label>
+                        <select class="form-control" id="similar-symbol">
+                            <option value="BTCUSD">BTCUSD</option>
+                            <option value="ETHUSD">ETHUSD</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Top N</label>
+                        <input type="number" class="form-control" id="similar-topn" value="5" min="1" max="20" style="width: 80px;">
+                    </div>
+                    <button class="btn btn-primary" onclick="findSimilar()">&#128269; Suchen</button>
+                </div>
+                <div id="similar-results" style="margin-top: 1rem;"></div>
+            </div>
+        </div>
+
+        <!-- Similarity Tab -->
+        <div id="tab-similarity" class="tab-content">
+            <div class="grid-2-equal">
+                <!-- Text Similarity -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128221; Text-Ahnlichkeit</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Text 1</label>
+                        <textarea class="form-control" id="sim-text1" style="min-height: 80px;">Bitcoin zeigt bullische Signale</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Text 2</label>
+                        <textarea class="form-control" id="sim-text2" style="min-height: 80px;">BTC hat ein starkes Kaufsignal</textarea>
+                    </div>
+                    <button class="btn btn-success" id="btn-calc-sim" onclick="calculateSimilarity()">&#128269; Ahnlichkeit berechnen</button>
+                </div>
+
+                <!-- Result -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128202; Ergebnis</h3>
+                    </div>
+                    <div id="similarity-result">
+                        <div class="similarity-score">
+                            <div style="color: #888; margin-bottom: 0.5rem;">Kosinus-Ahnlichkeit</div>
+                            <div class="similarity-value medium" id="sim-value">-</div>
+                            <div id="sim-interpretation" style="margin-top: 0.5rem; color: #888;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch Similarity -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128203; Batch-Ahnlichkeit</h3>
+                </div>
+                <div class="info-box" style="margin-bottom: 1rem;">
+                    Berechnet die Ahnlichkeit eines Query-Texts zu mehreren Kandidaten-Texten.
+                </div>
+                <div class="form-group">
+                    <label>Query</label>
+                    <input class="form-control" id="batch-query" value="Bitcoin Kaufsignal">
+                </div>
+                <div class="form-group">
+                    <label>Kandidaten (einer pro Zeile)</label>
+                    <textarea class="form-control" id="batch-candidates" style="min-height: 100px;">BTC bullish Trend
+Ethereum steigt
+Gold fallt
+Bitcoin bearish Signal</textarea>
+                </div>
+                <button class="btn btn-primary" onclick="batchSimilarity()">&#128269; Batch-Ahnlichkeit</button>
+                <div id="batch-results" style="margin-top: 1rem;"></div>
+            </div>
+        </div>
+
+        <!-- Cache Tab -->
+        <div id="tab-cache" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128230; Cache-Statistiken</h3>
+                    <button class="btn btn-primary btn-sm" onclick="loadCacheStats()">&#8635; Aktualisieren</button>
+                </div>
+                <div id="cache-stats">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128465; Cache-Verwaltung</h3>
+                </div>
+                <div class="info-box" style="margin-bottom: 1rem;">
+                    Der Embedder-Cache speichert berechnete Embeddings fur schnelleren Zugriff. Ein Leeren des Caches kann bei Speicherproblemen helfen.
+                </div>
+                <button class="btn btn-danger" id="btn-clear-cache" onclick="clearCache()">&#128465; Cache leeren</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/embedder/api/v1';
+
+        // Tab Navigation
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Load Models
+        async function loadModels() {
+            try {
+                const response = await fetch(`${API_BASE}/models`);
+                if (!response.ok) throw new Error('Failed to load models');
+
+                const data = await response.json();
+                const container = document.getElementById('models-list');
+
+                // Update status badge
+                document.getElementById('status-badge').textContent = 'Online';
+                document.getElementById('status-badge').className = 'service-badge';
+
+                container.innerHTML = `
+                    <div class="grid-2-equal">
+                        ${Object.entries(data).map(([key, model]) => `
+                            <div class="model-card">
+                                <div class="model-name">${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                                <div class="model-detail">Modell: ${model.model}</div>
+                                <div class="model-detail">Dimension: ${model.dimension}</div>
+                                <span class="model-status ${model.loaded ? 'loaded' : 'not-loaded'}">
+                                    ${model.loaded ? 'Geladen' : 'Nicht geladen'}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+                // Count loaded models
+                const loadedCount = Object.values(data).filter(m => m.loaded).length;
+                document.getElementById('stat-models').textContent = `${loadedCount}/${Object.keys(data).length}`;
+
+            } catch (error) {
+                showToast('Fehler beim Laden der Modelle', 'error');
+                document.getElementById('status-badge').textContent = 'Offline';
+                document.getElementById('status-badge').className = 'service-badge offline';
+            }
+        }
+
+        // Load Dimensions
+        async function loadDimensions() {
+            try {
+                const response = await fetch(`${API_BASE}/dimensions`);
+                if (!response.ok) throw new Error('Failed to load dimensions');
+
+                const data = await response.json();
+                const container = document.getElementById('dimensions-info');
+
+                container.innerHTML = `
+                    <table class="data-table">
+                        <tr><th>Embedder</th><th>Dimension</th></tr>
+                        ${Object.entries(data).map(([key, dim]) => `
+                            <tr>
+                                <td>${key}</td>
+                                <td style="color: #64c8ff; font-weight: 600;">${dim}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+            } catch (error) {
+                document.getElementById('dimensions-info').innerHTML = '<div class="info-box">Dimensionen konnten nicht geladen werden.</div>';
+            }
+        }
+
+        // Load Cache Stats
+        async function loadCacheStats() {
+            try {
+                const response = await fetch(`${API_BASE}/cache/stats`);
+                if (!response.ok) throw new Error('Failed to load cache stats');
+
+                const data = await response.json();
+
+                // Update stats bar
+                document.getElementById('stat-cache').textContent = data.entries || 0;
+                document.getElementById('stat-hitrate').textContent = `${((data.hit_rate || 0) * 100).toFixed(1)}%`;
+                document.getElementById('stat-size').textContent = `${(data.size_mb || 0).toFixed(1)} MB`;
+
+                // Update cache tab
+                const container = document.getElementById('cache-stats');
+                container.innerHTML = `
+                    <div class="grid-4">
+                        <div class="cache-stat">
+                            <div class="cache-stat-value">${data.entries || 0}</div>
+                            <div class="cache-stat-label">Eintrage</div>
+                        </div>
+                        <div class="cache-stat">
+                            <div class="cache-stat-value">${(data.size_mb || 0).toFixed(2)} MB</div>
+                            <div class="cache-stat-label">Speicher</div>
+                        </div>
+                        <div class="cache-stat">
+                            <div class="cache-stat-value">${((data.hit_rate || 0) * 100).toFixed(1)}%</div>
+                            <div class="cache-stat-label">Hit Rate</div>
+                        </div>
+                        <div class="cache-stat">
+                            <div class="cache-stat-value" style="color: ${data.hit_rate >= 0.7 ? '#4caf50' : data.hit_rate >= 0.3 ? '#ffc107' : '#f44336'};">
+                                ${data.hit_rate >= 0.7 ? 'Gut' : data.hit_rate >= 0.3 ? 'OK' : 'Niedrig'}
+                            </div>
+                            <div class="cache-stat-label">Effizienz</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <div style="color: #888; margin-bottom: 0.5rem; font-size: 0.85rem;">Hit Rate</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(data.hit_rate || 0) * 100}%;"></div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('cache-stats').innerHTML = '<div class="info-box">Cache-Statistiken nicht verfugbar.</div>';
+            }
+        }
+
+        // Warmup Models
+        async function warmupModels() {
+            const btn = document.getElementById('btn-warmup');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/warmup`, { method: 'POST' });
+                if (!response.ok) throw new Error('Warmup failed');
+
+                const data = await response.json();
+                document.getElementById('warmup-result').innerHTML = `
+                    <div class="info-box" style="border-color: rgba(76,175,80,0.3); color: #81c784;">
+                        Warmup erfolgreich abgeschlossen! Alle Modelle sind bereit.
+                    </div>
+                `;
+                showToast('Warmup abgeschlossen');
+                loadModels();
+            } catch (error) {
+                document.getElementById('warmup-result').innerHTML = `
+                    <div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">
+                        Fehler beim Warmup: ${error.message}
+                    </div>
+                `;
+                showToast('Warmup fehlgeschlagen', 'error');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Embed Text
+        async function embedText() {
+            const btn = document.getElementById('btn-embed-text');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const text = document.getElementById('embed-text').value;
+                const model = document.getElementById('embed-model').value;
+
+                const response = await fetch(`${API_BASE}/text/embed`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, model })
+                });
+
+                if (!response.ok) throw new Error('Embedding failed');
+
+                const data = await response.json();
+                const container = document.getElementById('text-embedding-result');
+
+                container.innerHTML = `
+                    <div style="margin-bottom: 1rem;">
+                        <div style="color: #888; margin-bottom: 0.5rem;">Dimension: <span style="color: #64c8ff;">${data.dimension || data.embedding?.length || '-'}</span></div>
+                        <div style="color: #888;">Modell: <span style="color: #64c8ff;">${model}</span></div>
+                    </div>
+                    <div style="color: #888; margin-bottom: 0.5rem; font-size: 0.85rem;">Embedding (erste 20 Werte):</div>
+                    <div class="embedding-preview">
+                        [${(data.embedding || []).slice(0, 20).map(v => v.toFixed(6)).join(', ')}${data.embedding?.length > 20 ? ', ...' : ''}]
+                    </div>
+                `;
+
+                showToast('Text erfolgreich eingebettet');
+            } catch (error) {
+                showToast('Fehler beim Einbetten', 'error');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Embed Timeseries
+        async function embedTimeseries() {
+            const btn = document.getElementById('btn-embed-ts');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const symbol = document.getElementById('ts-symbol').value;
+                const timeframe = document.getElementById('ts-timeframe').value;
+                const lookback = parseInt(document.getElementById('ts-lookback').value);
+
+                const response = await fetch(`${API_BASE}/timeseries/embed`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol, timeframe, lookback })
+                });
+
+                if (!response.ok) throw new Error('Embedding failed');
+
+                const data = await response.json();
+                const container = document.getElementById('ts-embedding-result');
+
+                container.innerHTML = `
+                    <div style="margin-bottom: 1rem;">
+                        <div style="color: #888; margin-bottom: 0.5rem;">Symbol: <span style="color: #64c8ff;">${symbol}</span></div>
+                        <div style="color: #888; margin-bottom: 0.5rem;">Dimension: <span style="color: #64c8ff;">${data.dimension || data.embedding?.length || '-'}</span></div>
+                        <div style="color: #888;">Perioden: <span style="color: #64c8ff;">${lookback}</span></div>
+                    </div>
+                    <div style="color: #888; margin-bottom: 0.5rem; font-size: 0.85rem;">Embedding (erste 20 Werte):</div>
+                    <div class="embedding-preview">
+                        [${(data.embedding || []).slice(0, 20).map(v => v.toFixed(6)).join(', ')}${data.embedding?.length > 20 ? ', ...' : ''}]
+                    </div>
+                `;
+
+                showToast('Zeitreihe erfolgreich eingebettet');
+            } catch (error) {
+                showToast('Fehler beim Einbetten', 'error');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Find Similar
+        async function findSimilar() {
+            const symbol = document.getElementById('similar-symbol').value;
+            const topN = parseInt(document.getElementById('similar-topn').value);
+            const container = document.getElementById('similar-results');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/timeseries/find-similar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol, top_n: topN })
+                });
+
+                if (!response.ok) throw new Error('Search failed');
+
+                const data = await response.json();
+
+                if (data.similar && data.similar.length > 0) {
+                    container.innerHTML = `
+                        <table class="data-table">
+                            <tr><th>Rang</th><th>Zeitraum</th><th>Ahnlichkeit</th></tr>
+                            ${data.similar.map((s, i) => `
+                                <tr>
+                                    <td>#${i + 1}</td>
+                                    <td>${new Date(s.start_date).toLocaleDateString('de-CH')} - ${new Date(s.end_date).toLocaleDateString('de-CH')}</td>
+                                    <td style="color: ${s.similarity >= 0.8 ? '#4caf50' : s.similarity >= 0.5 ? '#ffc107' : '#888'};">
+                                        ${(s.similarity * 100).toFixed(1)}%
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                } else {
+                    container.innerHTML = '<div class="info-box">Keine ahnlichen Zeitraume gefunden.</div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler bei der Suche.</div>';
+            }
+        }
+
+        // Calculate Similarity
+        async function calculateSimilarity() {
+            const btn = document.getElementById('btn-calc-sim');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const text1 = document.getElementById('sim-text1').value;
+                const text2 = document.getElementById('sim-text2').value;
+
+                const response = await fetch(`${API_BASE}/text/similarity`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text1, text2 })
+                });
+
+                if (!response.ok) throw new Error('Similarity calculation failed');
+
+                const data = await response.json();
+                const similarity = data.similarity || 0;
+
+                const simEl = document.getElementById('sim-value');
+                simEl.textContent = (similarity * 100).toFixed(1) + '%';
+                simEl.className = `similarity-value ${similarity >= 0.7 ? 'high' : similarity >= 0.4 ? 'medium' : 'low'}`;
+
+                const interpEl = document.getElementById('sim-interpretation');
+                if (similarity >= 0.8) {
+                    interpEl.textContent = 'Sehr ahnlich - fast identische Bedeutung';
+                } else if (similarity >= 0.6) {
+                    interpEl.textContent = 'Ahnlich - verwandte Konzepte';
+                } else if (similarity >= 0.4) {
+                    interpEl.textContent = 'Teilweise ahnlich';
+                } else {
+                    interpEl.textContent = 'Unterschiedlich';
+                }
+
+                showToast('Ahnlichkeit berechnet');
+            } catch (error) {
+                showToast('Fehler bei der Berechnung', 'error');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Batch Similarity
+        async function batchSimilarity() {
+            const query = document.getElementById('batch-query').value;
+            const candidates = document.getElementById('batch-candidates').value.split('\n').filter(c => c.trim());
+            const container = document.getElementById('batch-results');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/text/batch-similarity`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, candidates })
+                });
+
+                if (!response.ok) throw new Error('Batch similarity failed');
+
+                const data = await response.json();
+
+                if (data.results && data.results.length > 0) {
+                    const sorted = data.results.sort((a, b) => b.similarity - a.similarity);
+                    container.innerHTML = `
+                        <table class="data-table">
+                            <tr><th>Rang</th><th>Text</th><th>Ahnlichkeit</th></tr>
+                            ${sorted.map((r, i) => `
+                                <tr>
+                                    <td>#${i + 1}</td>
+                                    <td>${r.text}</td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div class="progress-bar" style="width: 60px; height: 6px;">
+                                                <div class="progress-fill" style="width: ${r.similarity * 100}%;"></div>
+                                            </div>
+                                            <span style="color: ${r.similarity >= 0.7 ? '#4caf50' : r.similarity >= 0.4 ? '#ffc107' : '#888'};">
+                                                ${(r.similarity * 100).toFixed(1)}%
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                } else {
+                    container.innerHTML = '<div class="info-box">Keine Ergebnisse.</div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler bei der Batch-Ahnlichkeit.</div>';
+            }
+        }
+
+        // Clear Cache
+        async function clearCache() {
+            if (!confirm('Mochten Sie den Cache wirklich leeren?')) return;
+
+            const btn = document.getElementById('btn-clear-cache');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/cache`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Clear cache failed');
+
+                showToast('Cache geleert');
+                loadCacheStats();
+            } catch (error) {
+                showToast('Fehler beim Leeren des Caches', 'error');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadModels();
+            loadDimensions();
+            loadCacheStats();
+
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                loadCacheStats();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>
