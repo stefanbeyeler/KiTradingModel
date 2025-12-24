@@ -107,6 +107,7 @@ app.include_router(router, prefix="/api/v1")
 @app.get("/health")
 async def health_check():
     """Health-Check für den Watchdog selbst."""
+    summary = health_checker.get_summary() if health_checker else {}
     return {
         "service": "watchdog",
         "status": "healthy",
@@ -114,6 +115,8 @@ async def health_check():
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "monitoring_active": health_checker._running if health_checker else False,
         "services_monitored": len(health_checker.services) if health_checker else 0,
+        "healthy_count": summary.get("healthy", 0),
+        "unhealthy_count": summary.get("unhealthy", 0),
         "telegram_enabled": telegram_notifier.enabled if telegram_notifier else False
     }
 

@@ -30,7 +30,7 @@ class HealthChecker:
         """Service-Registry mit Konfiguration."""
         return {
             "frontend": {
-                "url": "http://trading-frontend:3000/health",
+                "url": "http://trading-frontend:80/health",
                 "criticality": "medium",
                 "startup_grace": 10,
                 "dependencies": []
@@ -76,6 +76,12 @@ class HealthChecker:
                 "criticality": "medium",
                 "startup_grace": 60,
                 "dependencies": ["rag"]
+            },
+            "easyinsight": {
+                "url": "http://10.1.19.102:3000/api/health",
+                "criticality": "critical",
+                "startup_grace": 10,
+                "dependencies": []
             }
         }
 
@@ -100,8 +106,15 @@ class HealthChecker:
                 ).total_seconds() * 1000
 
                 if response.status_code == 200:
-                    data = response.json()
-                    status = data.get("status", "healthy")
+                    # Try to parse JSON, fall back to plain text
+                    try:
+                        data = response.json()
+                        status = data.get("status", "healthy")
+                    except Exception:
+                        # Plain text response (e.g., nginx health endpoint)
+                        text = response.text.strip().lower()
+                        status = "healthy" if text == "healthy" else "unhealthy"
+                        data = {"status": status, "raw": response.text.strip()}
 
                     return ServiceStatus(
                         name=name,
