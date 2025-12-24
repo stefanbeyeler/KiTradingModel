@@ -124,7 +124,7 @@ class TCNTrainingService:
 
                 data = await data_gateway.get_historical_data(
                     symbol=symbol,
-                    interval=timeframe,
+                    timeframe=timeframe,
                     limit=limit
                 )
 
@@ -132,9 +132,19 @@ class TCNTrainingService:
                     logger.warning(f"Insufficient data for {symbol}")
                     continue
 
-                # Convert to numpy
+                # Map timeframe to field prefix
+                tf_map = {"1h": "h1", "4h": "h1", "1d": "d1", "15m": "m15", "m15": "m15", "h1": "h1", "d1": "d1"}
+                prefix = tf_map.get(timeframe.lower(), "h1")
+
+                # Convert to numpy - handle both direct OHLC and prefixed fields
                 ohlcv = np.array([
-                    [d['open'], d['high'], d['low'], d['close'], d.get('volume', 0)]
+                    [
+                        d.get('open') or d.get(f'{prefix}_open', 0),
+                        d.get('high') or d.get(f'{prefix}_high', 0),
+                        d.get('low') or d.get(f'{prefix}_low', 0),
+                        d.get('close') or d.get(f'{prefix}_close', 0),
+                        d.get('volume', 0)
+                    ]
                     for d in data
                 ], dtype=np.float32)
 
@@ -345,6 +355,7 @@ class TCNTrainingService:
             for i in range(0, len(indices), config.batch_size):
                 batch_indices = indices[i:i + config.batch_size]
 
+                # Shape: (batch, sequence_length, channels) - model handles transpose
                 batch_x = torch.tensor(
                     train_sequences[batch_indices],
                     dtype=torch.float32
@@ -369,6 +380,7 @@ class TCNTrainingService:
             # Validation
             model.eval()
             with torch.no_grad():
+                # Shape: (batch, sequence_length, channels) - model handles transpose
                 val_x = torch.tensor(val_sequences, dtype=torch.float32).to(device)
                 val_y = torch.tensor(val_labels, dtype=torch.float32).to(device)
 

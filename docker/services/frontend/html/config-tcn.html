@@ -619,6 +619,29 @@
                         <h3 class="card-title">&#128295; Training starten</h3>
                     </div>
                     <div class="form-group">
+                        <label>Symbole (fur Training) <span id="symbols-count" style="color: #888; font-weight: normal;"></span></label>
+                        <select class="form-control" id="train-symbols" multiple style="height: 150px;">
+                            <option disabled>Lade Symbole...</option>
+                        </select>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                            <button type="button" class="btn btn-secondary" onclick="selectAllSymbols()" style="flex: 1; padding: 0.3rem;">Alle</button>
+                            <button type="button" class="btn btn-secondary" onclick="selectNoSymbols()" style="flex: 1; padding: 0.3rem;">Keine</button>
+                        </div>
+                        <small style="color: #888;">Ctrl+Klick fur Mehrfachauswahl</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Timeframe</label>
+                        <select class="form-control" id="train-timeframe">
+                            <option value="1h" selected>1h</option>
+                            <option value="4h">4h</option>
+                            <option value="1d">1d</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Lookback (Tage)</label>
+                        <input type="number" class="form-control" id="train-lookback" value="365" min="30" max="1000">
+                    </div>
+                    <div class="form-group">
                         <label>Epochen</label>
                         <input type="number" class="form-control" id="train-epochs" value="100" min="10" max="1000">
                     </div>
@@ -628,7 +651,7 @@
                     </div>
                     <div class="form-group">
                         <label>Learning Rate</label>
-                        <input type="number" class="form-control" id="train-lr" value="0.001" min="0.0001" max="0.1" step="0.0001">
+                        <input type="number" class="form-control" id="train-lr" value="0.0001" min="0.00001" max="0.01" step="0.0001">
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
                         <button class="btn btn-success" id="btn-train" onclick="startTraining()">&#9654; Training starten</button>
@@ -910,6 +933,18 @@
             btn.disabled = true;
 
             try {
+                // Get selected symbols
+                const symbolSelect = document.getElementById('train-symbols');
+                const symbols = Array.from(symbolSelect.selectedOptions).map(o => o.value);
+                if (symbols.length === 0) {
+                    showToast('Bitte mindestens ein Symbol auswahlen', 'error');
+                    btn.classList.remove('btn-loading');
+                    btn.disabled = false;
+                    return;
+                }
+
+                const timeframe = document.getElementById('train-timeframe').value;
+                const lookbackDays = parseInt(document.getElementById('train-lookback').value);
                 const epochs = parseInt(document.getElementById('train-epochs').value);
                 const batchSize = parseInt(document.getElementById('train-batch').value);
                 const learningRate = parseFloat(document.getElementById('train-lr').value);
@@ -917,10 +952,20 @@
                 const response = await fetch(`${API_BASE}/train`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ epochs, batch_size: batchSize, learning_rate: learningRate })
+                    body: JSON.stringify({
+                        symbols,
+                        timeframe,
+                        lookback_days: lookbackDays,
+                        epochs,
+                        batch_size: batchSize,
+                        learning_rate: learningRate
+                    })
                 });
 
-                if (!response.ok) throw new Error('Failed to start training');
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Failed to start training');
+                }
 
                 showToast('Training gestartet');
                 document.getElementById('btn-stop-train').disabled = false;
@@ -1031,9 +1076,77 @@
             }
         }
 
+        // Load Available Symbols from Data Service
+        async function loadAvailableSymbols() {
+            const select = document.getElementById('train-symbols');
+            const countSpan = document.getElementById('symbols-count');
+
+            try {
+                // managed-symbols liefert Array mit {symbol, category, has_timescaledb_data, ...}
+                const response = await fetch('/data/api/v1/managed-symbols');
+                if (!response.ok) throw new Error('Failed to load symbols');
+
+                const data = await response.json();
+
+                // Nur Symbole mit Daten, sortiert nach Kategorie und Name
+                const symbols = data
+                    .filter(s => s.has_timescaledb_data && s.status === 'active')
+                    .sort((a, b) => {
+                        // Erst nach Kategorie, dann alphabetisch
+                        if (a.category !== b.category) return a.category.localeCompare(b.category);
+                        return a.symbol.localeCompare(b.symbol);
+                    });
+
+                select.innerHTML = '';
+                let currentCategory = '';
+
+                symbols.forEach(s => {
+                    // Optgroup für Kategorien
+                    if (s.category !== currentCategory) {
+                        currentCategory = s.category;
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = currentCategory.toUpperCase();
+                        select.appendChild(optgroup);
+                    }
+
+                    const option = document.createElement('option');
+                    option.value = s.symbol;
+                    option.textContent = s.display_name || s.symbol;
+                    option.selected = true; // Alle standardmässig ausgewählt
+                    select.lastElementChild.appendChild(option);
+                });
+
+                countSpan.textContent = `(${symbols.length} verfugbar)`;
+
+            } catch (error) {
+                console.error('Error loading symbols:', error);
+                // Fallback auf einige Standard-Symbole
+                select.innerHTML = `
+                    <option value="BTCUSD" selected>BTCUSD</option>
+                    <option value="ETHUSD" selected>ETHUSD</option>
+                    <option value="EURUSD" selected>EURUSD</option>
+                    <option value="XAUUSD" selected>XAUUSD</option>
+                `;
+                countSpan.textContent = '(Fallback)';
+            }
+        }
+
+        // Select All Symbols
+        function selectAllSymbols() {
+            const select = document.getElementById('train-symbols');
+            Array.from(select.options).forEach(o => o.selected = true);
+        }
+
+        // Select No Symbols
+        function selectNoSymbols() {
+            const select = document.getElementById('train-symbols');
+            Array.from(select.options).forEach(o => o.selected = false);
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadInfo();
+            loadAvailableSymbols();
             loadTrainingStatus();
             loadTrainingHistory();
 

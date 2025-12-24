@@ -175,8 +175,10 @@ class TCNPatternClassifier:
             def __init__(self):
                 super().__init__()
 
-                # Build TCN blocks
-                layers = []
+                # Build TCN blocks with proper residual connections
+                self.blocks = nn.ModuleList()
+                self.residuals = nn.ModuleList()
+
                 in_ch = input_channels
                 for i, out_ch in enumerate(hidden_channels):
                     dilation = 2 ** i
@@ -192,15 +194,16 @@ class TCNPatternClassifier:
                         nn.ReLU(),
                         nn.Dropout(dropout),
                     )
-                    layers.append(block)
+                    self.blocks.append(block)
 
-                    # Residual connection
+                    # Residual connection (1x1 conv if channel mismatch)
                     if in_ch != out_ch:
-                        layers.append(nn.Conv1d(in_ch, out_ch, 1))
+                        self.residuals.append(nn.Conv1d(in_ch, out_ch, 1))
+                    else:
+                        self.residuals.append(nn.Identity())
 
                     in_ch = out_ch
 
-                self.tcn = nn.ModuleList(layers)
                 self.global_pool = nn.AdaptiveAvgPool1d(1)
 
                 # Classifier head
@@ -217,9 +220,15 @@ class TCNPatternClassifier:
                 if x.dim() == 3 and x.size(-1) == input_channels:
                     x = x.transpose(1, 2)
 
-                # Apply TCN blocks
-                for layer in self.tcn:
-                    x = layer(x)
+                # Apply TCN blocks with residual connections
+                for block, residual in zip(self.blocks, self.residuals):
+                    out = block(x)
+                    res = residual(x)
+                    # Align sizes - trim the longer one to match the shorter
+                    min_len = min(out.size(-1), res.size(-1))
+                    out = out[:, :, :min_len]
+                    res = res[:, :, :min_len]
+                    x = nn.functional.relu(out + res)
 
                 # Global pooling
                 x = self.global_pool(x).squeeze(-1)
