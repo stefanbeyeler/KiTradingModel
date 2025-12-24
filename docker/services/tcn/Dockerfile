@@ -1,5 +1,9 @@
 # TCN-Pattern Service Dockerfile
 # Port: 3003
+#
+# Note: NVIDIA Thor GPU (sm_110) is not yet supported by PyTorch stable releases.
+# Training currently runs on CPU. GPU support will be available when PyTorch
+# adds sm_110 support (expected in PyTorch 2.6+).
 
 FROM python:3.11-slim
 ARG SERVICE_PORT=3003

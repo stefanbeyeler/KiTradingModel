@@ -78,6 +78,73 @@ class NHITSTrainingService:
 | LLM Service | 3009 | /docs | CUDA |
 | Watchdog Service | 3010 | /docs | - |
 
+## GPU-Konfiguration (NVIDIA Thor / Jetson)
+
+### Hardware-Umgebung
+
+- **System**: NVIDIA Tegra (JetPack R38)
+- **Architektur**: aarch64 (ARM64)
+- **GPU**: NVIDIA Thor mit Compute Capability **sm_110**
+- **CUDA Version**: 13.0
+
+### PyTorch Kompatibilität (KRITISCH)
+
+**NVIDIA Thor (sm_110) wird von PyTorch noch NICHT unterstützt!**
+
+| PyTorch Version | Unterstützte Compute Capabilities |
+|-----------------|-----------------------------------|
+| 2.5.x           | sm_50, sm_80, sm_86, sm_89, sm_90, sm_90a |
+| 2.6+ (erwartet) | sm_110 Support geplant |
+
+### Vor Container-Umbau IMMER prüfen
+
+Bevor GPU-bezogene Dockerfile-Änderungen vorgenommen werden:
+
+```bash
+# 1. Aktuelle PyTorch-Version auf PyPI prüfen
+pip index versions torch
+
+# 2. CUDA Support für sm_110 prüfen (auf dem Server)
+ssh sbeyeler@10.1.19.101 "docker exec <container> python3 -c \"
+import torch
+print('PyTorch:', torch.__version__)
+print('CUDA available:', torch.cuda.is_available())
+if torch.cuda.is_available():
+    print('Device:', torch.cuda.get_device_name(0))
+\""
+
+# 3. PyTorch Release Notes auf sm_110 Support prüfen
+# https://pytorch.org/get-started/locally/
+# https://github.com/pytorch/pytorch/releases
+```
+
+### Aktueller Status (Stand: Dezember 2024)
+
+- **TCN, NHITS, Embedder, RAG, LLM**: Laufen auf **CPU**
+- **Grund**: PyTorch 2.5.x unterstützt sm_110 nicht
+- **Training**: ~4x langsamer als mit GPU, aber funktional
+
+### Wenn PyTorch 2.6+ verfügbar ist
+
+Sobald sm_110 Support bestätigt ist, Dockerfiles anpassen:
+
+```dockerfile
+# Option 1: NVIDIA L4T Base Image (bevorzugt für Jetson)
+FROM nvcr.io/nvidia/l4t-pytorch:r38.x.x-pthX.X-py3
+
+# Option 2: CUDA Base Image mit PyTorch
+FROM nvidia/cuda:13.0-runtime-ubuntu22.04
+RUN pip install torch --index-url https://download.pytorch.org/whl/cu130
+```
+
+### Betroffene Dockerfiles
+
+- `docker/services/tcn/Dockerfile`
+- `docker/services/nhits/Dockerfile`
+- `docker/services/embedder/Dockerfile`
+- `docker/services/rag/Dockerfile`
+- `docker/services/llm/Dockerfile`
+
 ## API-Dokumentation (Swagger UI)
 
 Die Swagger-Dokumentationen aller Microservices sind zentral über das Dashboard erreichbar:
