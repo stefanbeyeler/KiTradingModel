@@ -2627,7 +2627,13 @@
                 const candlesBack = 50; // Show 50 candles of context
                 const patternTimestamp = encodeURIComponent(timestamp);
 
-                const ohlcResponse = await fetch(`/data/api/v1/patterns/chart/${symbol}?candles_before=${candlesBack}&candles_after=5&timeframe=${timeframe}&timestamp=${patternTimestamp}`);
+                let ohlcResponse = await fetch(`/data/api/v1/patterns/chart/${symbol}?candles_before=${candlesBack}&candles_after=5&timeframe=${timeframe}&timestamp=${patternTimestamp}`);
+
+                // If historical data not available (e.g., weekend/holiday), try without timestamp for current data
+                if (!ohlcResponse.ok || ohlcResponse.status === 404) {
+                    console.warn(`Historische Daten für ${timestamp} nicht verfügbar, lade aktuelle Daten...`);
+                    ohlcResponse = await fetch(`/data/api/v1/patterns/chart/${symbol}?candles_before=${candlesBack}&candles_after=5&timeframe=${timeframe}`);
+                }
 
                 if (!ohlcResponse.ok) {
                     throw new Error(`OHLC-Daten konnten nicht geladen werden: ${ohlcResponse.status}`);
@@ -2636,8 +2642,13 @@
                 const ohlcData = await ohlcResponse.json();
                 const candles = ohlcData.candles || ohlcData.data || ohlcData;
 
+                // Check for error in response (e.g., market closed)
+                if (ohlcData.error || ohlcData.detail) {
+                    throw new Error(ohlcData.error || ohlcData.detail || 'Keine Daten verfügbar');
+                }
+
                 if (!candles || candles.length === 0) {
-                    throw new Error('Keine Candlestick-Daten verfügbar');
+                    throw new Error('Keine Candlestick-Daten verfügbar (Markt geschlossen?)');
                 }
 
                 // Hide loading, show chart
@@ -2649,11 +2660,19 @@
 
             } catch (error) {
                 console.error('Fehler beim Laden des Charts:', error);
-                // Fall back to SVG visualization
+                // Fall back to SVG visualization with error message
                 if (loadingEl) loadingEl.style.display = 'none';
                 chartContainer.style.display = 'none';
                 svgContainer.style.display = 'flex';
-                svgContainer.innerHTML = getPatternSvg(patternType);
+                svgContainer.innerHTML = `
+                    <div style="text-align: center; width: 100%;">
+                        ${getPatternSvg(patternType)}
+                        <p style="color: #888; font-size: 11px; margin-top: 10px;">
+                            Historische Chart-Daten nicht verfügbar<br>
+                            <span style="color: #666;">(${error.message})</span>
+                        </p>
+                    </div>
+                `;
             }
         }
 
