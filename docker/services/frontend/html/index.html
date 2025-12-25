@@ -984,12 +984,23 @@
                     <!-- Gateway Stage -->
                     <div class="dataflow-stage">
                         <span class="dataflow-stage-label">Gateway</span>
-                        <div class="dataflow-node gateway">
-                            <span class="node-status loading" id="df-data-status"></span>
-                            <span class="node-icon">&#128279;</span>
-                            <div class="node-info">
-                                <span class="node-name">Data Service</span>
-                                <span class="node-port">:3001</span>
+                        <div class="dataflow-nodes-vertical">
+                            <div class="dataflow-node gateway">
+                                <span class="node-status loading" id="df-data-status"></span>
+                                <span class="node-icon">&#128279;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Data Service</span>
+                                    <span class="node-port">:3001</span>
+                                </div>
+                            </div>
+                            <span class="dataflow-stage-label" style="margin-top: 0.3rem;">Training</span>
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                                <span class="node-status loading" id="df-tcn-train-status"></span>
+                                <span class="node-icon">&#127891;</span>
+                                <div class="node-info">
+                                    <span class="node-name">TCN-Train</span>
+                                    <span class="node-port">:3013</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1030,23 +1041,6 @@
                                 <div class="node-info">
                                     <span class="node-name">Embedder</span>
                                     <span class="node-port">:3005</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="dataflow-arrow">&#8595;</div>
-
-                    <!-- Training Stage -->
-                    <div class="dataflow-stage">
-                        <span class="dataflow-stage-label">Training</span>
-                        <div class="dataflow-nodes-vertical">
-                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
-                                <span class="node-status loading" id="df-tcn-train-status"></span>
-                                <span class="node-icon">&#127891;</span>
-                                <div class="node-info">
-                                    <span class="node-name">TCN-Train</span>
-                                    <span class="node-port">:3013</span>
                                 </div>
                             </div>
                         </div>
