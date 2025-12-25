@@ -16,8 +16,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from .routers import detection_router, training_router, system_router
+from .routers import detection_router, training_router, system_router, history_router
 from .services.pattern_detection_service import pattern_detection_service
+from .services.tcn_pattern_history_service import tcn_pattern_history_service
 
 # Configuration
 VERSION = "1.0.0"
@@ -54,7 +55,18 @@ async def lifespan(app: FastAPI):
         logger.info("No pre-trained model found, using rule-based detection only")
         pattern_detection_service.load_model(None)
 
+    # Start auto-scan for pattern history
+    auto_scan_enabled = os.getenv("TCN_AUTO_SCAN", "true").lower() == "true"
+    if auto_scan_enabled:
+        await tcn_pattern_history_service.start_auto_scan()
+        logger.info("TCN Pattern History auto-scan started")
+
     yield
+
+    # Stop auto-scan on shutdown
+    if tcn_pattern_history_service.is_scan_running():
+        await tcn_pattern_history_service.stop_auto_scan()
+        logger.info("TCN Pattern History auto-scan stopped")
 
     logger.info("Shutting down TCN-Pattern Service...")
 
@@ -112,7 +124,8 @@ app.add_middleware(
 # Include routers
 app.include_router(system_router, prefix="/api/v1", tags=["1. System & Monitoring"])
 app.include_router(detection_router, prefix="/api/v1", tags=["2. Pattern Detection"])
-app.include_router(training_router, prefix="/api/v1", tags=["3. Model Training"])
+app.include_router(history_router, prefix="/api/v1", tags=["3. Pattern History"])
+app.include_router(training_router, prefix="/api/v1", tags=["4. Model Training"])
 
 
 @app.get("/")
@@ -127,6 +140,9 @@ async def root():
             "detect": "/api/v1/detect",
             "scan": "/api/v1/scan",
             "patterns": "/api/v1/patterns",
+            "history": "/api/v1/history",
+            "history_by_symbol": "/api/v1/history/{symbol}",
+            "history_statistics": "/api/v1/history/statistics",
             "train": "/api/v1/train",
             "models": "/api/v1/models"
         }

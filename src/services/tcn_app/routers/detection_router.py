@@ -11,7 +11,6 @@ from ..models.schemas import (
     PatternScanRequest,
     PatternScanResponse,
     SymbolPatternResult,
-    PatternHistoryResponse,
 )
 from ..services.pattern_detection_service import pattern_detection_service
 
@@ -165,30 +164,6 @@ async def scan_all_symbols(
     except Exception as e:
         logger.error(f"Scan all error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/history/{symbol}", response_model=PatternHistoryResponse)
-async def get_pattern_history(
-    symbol: str,
-    days: int = Query(default=30, ge=1, le=365),
-    pattern_type: Optional[str] = Query(default=None)
-):
-    """
-    Get historical pattern detections for a symbol.
-
-    - **symbol**: Trading symbol
-    - **days**: Number of days of history
-    - **pattern_type**: Optional filter for specific pattern type
-    """
-    # Note: This would require a database to store historical detections
-    # For now, return empty response
-    return PatternHistoryResponse(
-        symbol=symbol,
-        timeframe="1h",
-        patterns=[],
-        total_count=0,
-        accuracy_stats=None
-    )
 
 
 @router.get("/patterns")

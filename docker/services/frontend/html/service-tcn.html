@@ -889,6 +889,87 @@
         </div>
 
         <div class="content-card">
+            <h2>&#128202; Pattern-Historie (Live)</h2>
+            <p>Automatisch erkannte Patterns der letzten 7 Tage mit Echtzeit-Updates alle 5 Minuten.</p>
+
+            <div id="history-stats" class="info-box" style="margin: 1rem 0;">
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                    <span><strong>Total Patterns:</strong> <span id="stat-total">-</span></span>
+                    <span><strong>Symbole:</strong> <span id="stat-symbols">-</span></span>
+                    <span><strong>Auto-Scan:</strong> <span id="stat-scan-status">-</span></span>
+                    <span><strong>Letzter Scan:</strong> <span id="stat-last-scan">-</span></span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                <select id="symbol-filter" style="padding: 0.5rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; min-width: 150px;">
+                    <option value="">Alle Symbole</option>
+                </select>
+                <select id="category-filter" style="padding: 0.5rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px;">
+                    <option value="">Alle Kategorien</option>
+                    <option value="reversal">Reversal</option>
+                    <option value="continuation">Continuation</option>
+                    <option value="trend">Trend</option>
+                </select>
+                <select id="direction-filter" style="padding: 0.5rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px;">
+                    <option value="">Alle Richtungen</option>
+                    <option value="bullish">Bullish</option>
+                    <option value="bearish">Bearish</option>
+                    <option value="neutral">Neutral</option>
+                </select>
+                <button onclick="loadPatternHistory()" style="padding: 0.5rem 1rem; background: rgba(100,200,255,0.2); border: 1px solid rgba(100,200,255,0.3); color: #64c8ff; border-radius: 6px; cursor: pointer;">
+                    Aktualisieren
+                </button>
+            </div>
+
+            <div id="pattern-history-table" style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="background: rgba(0,0,0,0.3); text-align: left;">
+                            <th style="padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Symbol</th>
+                            <th style="padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Pattern</th>
+                            <th style="padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Richtung</th>
+                            <th style="padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Konfidenz</th>
+                            <th style="padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Timeframe</th>
+                            <th style="padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Erkannt</th>
+                            <th style="padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1);">Preis</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pattern-history-body">
+                        <tr><td colspan="7" style="padding: 2rem; text-align: center; opacity: 0.6;">Lade Pattern-Historie...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <span id="history-count" style="opacity: 0.7; font-size: 0.85rem;"></span>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button onclick="triggerManualScan()" style="padding: 0.5rem 1rem; background: rgba(76,175,80,0.2); border: 1px solid rgba(76,175,80,0.3); color: #81c784; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                        Manueller Scan
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128200; Pattern-Statistiken</h2>
+            <div id="pattern-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
+                    <h4 style="color: #64c8ff; margin-bottom: 0.5rem; font-size: 0.9rem;">Nach Pattern-Typ</h4>
+                    <div id="stats-by-type" style="font-size: 0.85rem;">Lade...</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
+                    <h4 style="color: #a78bfa; margin-bottom: 0.5rem; font-size: 0.9rem;">Nach Kategorie</h4>
+                    <div id="stats-by-category" style="font-size: 0.85rem;">Lade...</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
+                    <h4 style="color: #ffc107; margin-bottom: 0.5rem; font-size: 0.9rem;">Nach Timeframe</h4>
+                    <div id="stats-by-timeframe" style="font-size: 0.85rem;">Lade...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
             <h2>&#128640; Schnellzugriff</h2>
             <div class="quick-links">
                 <a href="/tcn/docs" target="_blank">&#128196; API Dokumentation</a>
@@ -897,6 +978,170 @@
             </div>
         </div>
     </div>
+
+    <script>
+        const TCN_API_BASE = '/tcn/api/v1';
+
+        function formatPatternType(type) {
+            return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+
+        function formatTimestamp(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            return date.toLocaleString('de-CH', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function getDirectionBadge(direction) {
+            const colors = {
+                bullish: { bg: 'rgba(76,175,80,0.2)', color: '#81c784' },
+                bearish: { bg: 'rgba(244,67,54,0.2)', color: '#ef5350' },
+                neutral: { bg: 'rgba(255,193,7,0.2)', color: '#ffc107' }
+            };
+            const style = colors[direction] || colors.neutral;
+            return `<span style="background: ${style.bg}; color: ${style.color}; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">${direction}</span>`;
+        }
+
+        async function loadStatistics() {
+            try {
+                const response = await fetch(`${TCN_API_BASE}/history/statistics`);
+                const stats = await response.json();
+
+                document.getElementById('stat-total').textContent = stats.total_patterns || 0;
+                document.getElementById('stat-symbols').textContent = stats.symbols_with_patterns || 0;
+                document.getElementById('stat-scan-status').innerHTML = stats.scan_running
+                    ? '<span style="color: #81c784;">Aktiv</span>'
+                    : '<span style="color: #ffc107;">Gestoppt</span>';
+                document.getElementById('stat-last-scan').textContent = formatTimestamp(stats.last_scan);
+
+                // Pattern types
+                const typeHtml = Object.entries(stats.by_pattern_type || {}).slice(0, 5)
+                    .map(([type, count]) => `<div style="display: flex; justify-content: space-between; padding: 0.25rem 0;"><span>${formatPatternType(type)}</span><span style="color: #64c8ff;">${count}</span></div>`)
+                    .join('');
+                document.getElementById('stats-by-type').innerHTML = typeHtml || 'Keine Daten';
+
+                // Categories
+                const catHtml = Object.entries(stats.by_category || {})
+                    .map(([cat, count]) => `<div style="display: flex; justify-content: space-between; padding: 0.25rem 0;"><span>${cat}</span><span style="color: #a78bfa;">${count}</span></div>`)
+                    .join('');
+                document.getElementById('stats-by-category').innerHTML = catHtml || 'Keine Daten';
+
+                // Timeframes
+                const tfHtml = Object.entries(stats.by_timeframe || {})
+                    .map(([tf, count]) => `<div style="display: flex; justify-content: space-between; padding: 0.25rem 0;"><span>${tf}</span><span style="color: #ffc107;">${count}</span></div>`)
+                    .join('');
+                document.getElementById('stats-by-timeframe').innerHTML = tfHtml || 'Keine Daten';
+
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        async function loadPatternHistory() {
+            const symbol = document.getElementById('symbol-filter').value;
+            const category = document.getElementById('category-filter').value;
+            const direction = document.getElementById('direction-filter').value;
+
+            let url = `${TCN_API_BASE}/history?limit=50`;
+            if (symbol) url += `&symbol=${symbol}`;
+            if (category) url += `&category=${category}`;
+            if (direction) url += `&direction=${direction}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const tbody = document.getElementById('pattern-history-body');
+
+                if (!data.patterns || data.patterns.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="padding: 2rem; text-align: center; opacity: 0.6;">Keine Patterns gefunden</td></tr>';
+                    document.getElementById('history-count').textContent = '0 Patterns';
+                    return;
+                }
+
+                tbody.innerHTML = data.patterns.map(p => `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 0.75rem; font-weight: 500;">${p.symbol}</td>
+                        <td style="padding: 0.75rem;">${formatPatternType(p.pattern_type)}</td>
+                        <td style="padding: 0.75rem;">${getDirectionBadge(p.direction)}</td>
+                        <td style="padding: 0.75rem; color: ${p.confidence >= 0.7 ? '#81c784' : p.confidence >= 0.5 ? '#ffc107' : '#ef5350'};">${(p.confidence * 100).toFixed(1)}%</td>
+                        <td style="padding: 0.75rem;">${p.timeframe}</td>
+                        <td style="padding: 0.75rem; opacity: 0.8;">${formatTimestamp(p.detected_at)}</td>
+                        <td style="padding: 0.75rem; font-family: monospace;">${p.price_at_detection ? p.price_at_detection.toLocaleString('de-CH', {maximumFractionDigits: 2}) : '-'}</td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('history-count').textContent = `${data.count} Patterns angezeigt`;
+
+                // Update symbol filter options
+                await updateSymbolFilter();
+
+            } catch (error) {
+                console.error('Error loading pattern history:', error);
+                document.getElementById('pattern-history-body').innerHTML =
+                    '<tr><td colspan="7" style="padding: 2rem; text-align: center; color: #ef5350;">Fehler beim Laden</td></tr>';
+            }
+        }
+
+        async function updateSymbolFilter() {
+            try {
+                const response = await fetch(`${TCN_API_BASE}/history-by-symbol?limit_per_symbol=1`);
+                const data = await response.json();
+
+                const select = document.getElementById('symbol-filter');
+                const currentValue = select.value;
+
+                // Clear existing options except first
+                while (select.options.length > 1) {
+                    select.remove(1);
+                }
+
+                // Add symbols
+                Object.keys(data.by_symbol || {}).sort().forEach(symbol => {
+                    const option = document.createElement('option');
+                    option.value = symbol;
+                    option.textContent = symbol;
+                    select.appendChild(option);
+                });
+
+                select.value = currentValue;
+            } catch (error) {
+                console.error('Error updating symbol filter:', error);
+            }
+        }
+
+        async function triggerManualScan() {
+            try {
+                const response = await fetch(`${TCN_API_BASE}/history/scan`, { method: 'POST' });
+                const result = await response.json();
+
+                alert(`Scan abgeschlossen:\n- ${result.symbols_scanned} Symbole gescannt\n- ${result.patterns_found} Patterns gefunden\n- ${result.patterns_added} neue Patterns hinzugefuegt`);
+
+                loadPatternHistory();
+                loadStatistics();
+            } catch (error) {
+                console.error('Error triggering scan:', error);
+                alert('Fehler beim Ausfuehren des Scans');
+            }
+        }
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStatistics();
+            loadPatternHistory();
+
+            // Auto-refresh every 60 seconds
+            setInterval(() => {
+                loadStatistics();
+                loadPatternHistory();
+            }, 60000);
+        });
+    </script>
 
     <footer>
         KI Trading Model - Service Dokumentation | TCN-Pattern Service

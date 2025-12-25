@@ -182,7 +182,9 @@
       "Bash(TEST_SERVICE_HOST=10.1.19.101 python -m pytest:*)",
       "Bash(rsync:*)",
       "Bash(src/services/watchdog_app )",
-      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/src/services/)"
+      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/src/services/)",
+      "Bash(/Users/sbeyeler/GIT/KiTradingModel/src/services/tcn_app/ )",
+      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/src/services/tcn_app/)"
     ],
     "deny": [],
     "ask": []
