@@ -1,4 +1,29 @@
+# =============================================================================
+# KI Trading Model - Microservices Docker Compose
+# =============================================================================
+# Resource Allocation Strategy (14 CPU cores, 122 GB RAM):
+#
+# HIGH PRIORITY (API responses - always responsive):
+#   - frontend:   1 CPU,   512MB  (nginx proxy)
+#   - data:       2 CPU,   4GB    (central data gateway)
+#   - hmm:        2 CPU,   4GB    (regime detection)
+#   - embedder:   2 CPU,   12GB   (embedding service)
+#   - rag:        2 CPU,   8GB    (vector search)
+#   - llm:        2 CPU,   32GB   (LLM inference)
+#
+# LOW PRIORITY (Training - uses remaining resources):
+#   - nhits:      4 CPU,   16GB   (with nice priority)
+#   - tcn:        4 CPU,   8GB    (with nice priority)
+#
+# Total Reserved: ~15 CPUs (with overcommit), ~84 GB RAM
+# Remaining for system: ~38 GB RAM
+# =============================================================================
+
 services:
+  # =========================================================================
+  # HIGH PRIORITY SERVICES - Always responsive for API requests
+  # =========================================================================
+
   # Frontend - API Gateway & Dashboard (Port 3000)
   frontend:
     build:
@@ -35,62 +60,18 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
     healthcheck:
       test: ["CMD", "curl", "-f", "-s", "http://localhost/health"]
       interval: 30s
       timeout: 3s
       retries: 3
 
-  # NHITS Service - Training & Forecasting
-  nhits-service:
-    build:
-      context: .
-      dockerfile: docker/services/nhits/Dockerfile
-      args:
-        - SERVICE_PORT=${NHITS_SERVICE_PORT:-3002}
-    container_name: trading-nhits
-    runtime: nvidia
-    ports:
-      - "${NHITS_SERVICE_PORT:-3002}:${NHITS_SERVICE_PORT:-3002}"
-    volumes:
-      - nhits-models:/app/data/models/nhits
-      - nhits-feedback:/app/data/model_feedback
-      - nhits-metrics:/app/data/model_metrics
-      - symbols-data:/app/data/symbols
-      - ./src:/app/src:ro
-      - logs-data:/app/logs
-      - /tmp:/host_tmp:ro
-    environment:
-      - SERVICE_NAME=nhits
-      - PORT=${NHITS_SERVICE_PORT:-3002}
-      - ROOT_PATH=/nhits
-      - NHITS_USE_GPU=1
-      - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
-      - NHITS_AUTO_RETRAIN_DAYS=${NHITS_AUTO_RETRAIN_DAYS:-7}
-      - OLLAMA_HOST=http://host.docker.internal:11434
-      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
-    networks:
-      - trading-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 16G
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${NHITS_SERVICE_PORT:-3002}/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Data Service - Symbols, Strategies, Sync
+  # Data Service - Symbols, Strategies, Sync (CRITICAL - all services depend on this)
   data-service:
     build:
       context: .
@@ -125,6 +106,7 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '2'
           memory: 4G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${DATA_SERVICE_PORT:-3001}/health"]
@@ -132,59 +114,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
-
-  # TCN-Pattern Service - Chart Pattern Detection (Port 3003)
-  tcn-service:
-    build:
-      context: .
-      dockerfile: docker/services/tcn/Dockerfile
-      args:
-        - SERVICE_PORT=${TCN_SERVICE_PORT:-3003}
-    container_name: trading-tcn
-    runtime: nvidia
-    ports:
-      - "${TCN_SERVICE_PORT:-3003}:${TCN_SERVICE_PORT:-3003}"
-    volumes:
-      - tcn-models:/app/data/models/tcn
-      - symbols-data:/app/data/symbols
-      - ./src/services/tcn_app:/app/src/services/tcn_app:ro
-      - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
-      - ./src/shared:/app/src/shared:ro
-      - ./src/config:/app/src/config:ro
-      - logs-data:/app/logs
-    environment:
-      - SERVICE_NAME=tcn
-      - PORT=${TCN_SERVICE_PORT:-3003}
-      - ROOT_PATH=/tcn
-      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
-      - EMBEDDER_SERVICE_URL=http://trading-embedder:${EMBEDDER_SERVICE_PORT:-3005}
-      # Limit PyTorch CPU threads to prevent blocking during training
-      - OMP_NUM_THREADS=4
-      - MKL_NUM_THREADS=4
-      - OPENBLAS_NUM_THREADS=4
-    networks:
-      - trading-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
-    depends_on:
-      - data-service
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 8G
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${TCN_SERVICE_PORT:-3003}/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # HMM-Regime Service - Market Regime Detection & Signal Scoring (Port 3004)
   hmm-service:
@@ -219,6 +148,7 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '2'
           memory: 4G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${HMM_SERVICE_PORT:-3004}/health"]
@@ -262,6 +192,7 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '2'
           memory: 12G
         reservations:
           devices:
@@ -309,6 +240,7 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '2'
           memory: 8G
         reservations:
           devices:
@@ -357,6 +289,7 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '2'
           memory: 32G
         reservations:
           devices:
@@ -370,6 +303,122 @@ services:
       retries: 3
       start_period: 60s
 
+  # =========================================================================
+  # LOW PRIORITY SERVICES - Training tasks, use remaining resources
+  # =========================================================================
+
+  # NHITS Service - Training & Forecasting (LOW PRIORITY for training)
+  nhits-service:
+    build:
+      context: .
+      dockerfile: docker/services/nhits/Dockerfile
+      args:
+        - SERVICE_PORT=${NHITS_SERVICE_PORT:-3002}
+    container_name: trading-nhits
+    runtime: nvidia
+    ports:
+      - "${NHITS_SERVICE_PORT:-3002}:${NHITS_SERVICE_PORT:-3002}"
+    volumes:
+      - nhits-models:/app/data/models/nhits
+      - nhits-feedback:/app/data/model_feedback
+      - nhits-metrics:/app/data/model_metrics
+      - symbols-data:/app/data/symbols
+      - ./src:/app/src:ro
+      - logs-data:/app/logs
+      - /tmp:/host_tmp:ro
+    environment:
+      - SERVICE_NAME=nhits
+      - PORT=${NHITS_SERVICE_PORT:-3002}
+      - ROOT_PATH=/nhits
+      - NHITS_USE_GPU=1
+      - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
+      - NHITS_AUTO_RETRAIN_DAYS=${NHITS_AUTO_RETRAIN_DAYS:-7}
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      # Limit CPU threads for training to prevent blocking
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+      - OPENBLAS_NUM_THREADS=4
+      - NUMEXPR_MAX_THREADS=4
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${NHITS_SERVICE_PORT:-3002}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # TCN-Pattern Service - Chart Pattern Detection (LOW PRIORITY for training)
+  tcn-service:
+    build:
+      context: .
+      dockerfile: docker/services/tcn/Dockerfile
+      args:
+        - SERVICE_PORT=${TCN_SERVICE_PORT:-3003}
+    container_name: trading-tcn
+    runtime: nvidia
+    ports:
+      - "${TCN_SERVICE_PORT:-3003}:${TCN_SERVICE_PORT:-3003}"
+    volumes:
+      - tcn-models:/app/data/models/tcn
+      - symbols-data:/app/data/symbols
+      - ./src/services/tcn_app:/app/src/services/tcn_app:ro
+      - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
+      - ./src/shared:/app/src/shared:ro
+      - ./src/config:/app/src/config:ro
+      - logs-data:/app/logs
+    environment:
+      - SERVICE_NAME=tcn
+      - PORT=${TCN_SERVICE_PORT:-3003}
+      - ROOT_PATH=/tcn
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - EMBEDDER_SERVICE_URL=http://trading-embedder:${EMBEDDER_SERVICE_PORT:-3005}
+      # Limit CPU threads for training to prevent blocking
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+      - OPENBLAS_NUM_THREADS=4
+      - NUMEXPR_MAX_THREADS=4
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${TCN_SERVICE_PORT:-3003}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
 volumes:
   # NHITS Service Volumes
   nhits-models:
@@ -409,6 +458,9 @@ volumes:
   logs-data:
     driver: local
 
+# =============================================================================
+# NETWORKS
+# =============================================================================
 networks:
   trading-net:
     driver: bridge
