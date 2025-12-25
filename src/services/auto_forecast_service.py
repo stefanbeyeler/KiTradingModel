@@ -39,7 +39,7 @@ class AutoForecastService:
         self._daily_task: Optional[asyncio.Task] = None
         self._daily_last_run: Optional[datetime] = None
         self._daily_scheduled_time: time = time(5, 0)  # Default: 05:00 local time
-        self._daily_timezone: str = "Europe/Zurich"  # Configurable timezone
+        self._daily_timezone: str = settings.display_timezone  # From central config
 
         # Legacy compatibility
         self._running = False
@@ -344,7 +344,7 @@ class AutoForecastService:
         try:
             tz = pytz.timezone(self._daily_timezone)
         except Exception:
-            tz = pytz.timezone("Europe/Zurich")
+            tz = pytz.timezone(settings.display_timezone)
 
         now = datetime.now(tz)
         scheduled_today = now.replace(
@@ -468,7 +468,7 @@ class AutoForecastService:
 
         Args:
             scheduled_time: Time in HH:MM format (default: "05:00")
-            timezone_str: Timezone string (default: "Europe/Zurich")
+            timezone_str: Timezone string (default: from settings.display_timezone)
         """
         if self._daily_running:
             logger.warning("Daily auto-forecast already running")
@@ -489,7 +489,7 @@ class AutoForecastService:
                 self._daily_timezone = timezone_str
             except Exception as e:
                 logger.error(f"Invalid timezone: {e}")
-                self._daily_timezone = "Europe/Zurich"
+                self._daily_timezone = settings.display_timezone
 
         self._daily_running = True
         self._daily_task = asyncio.create_task(self._daily_forecast_loop())

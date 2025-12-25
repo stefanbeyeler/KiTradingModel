@@ -98,7 +98,7 @@ async def startup_event():
     if auto_forecast_daily:
         # Start daily auto-forecast for non-favorites
         daily_time = os.getenv("AUTO_FORECAST_DAILY_TIME", "05:00")
-        daily_timezone = os.getenv("AUTO_FORECAST_DAILY_TIMEZONE", "Europe/Zurich")
+        daily_timezone = os.getenv("AUTO_FORECAST_DAILY_TIMEZONE", settings.display_timezone)
         await auto_forecast_service.start_daily_auto_forecast(
             scheduled_time=daily_time,
             timezone_str=daily_timezone

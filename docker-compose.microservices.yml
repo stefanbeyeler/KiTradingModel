@@ -158,6 +158,10 @@ services:
       - ROOT_PATH=/tcn
       - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
       - EMBEDDER_SERVICE_URL=http://trading-embedder:${EMBEDDER_SERVICE_PORT:-3005}
+      # Limit PyTorch CPU threads to prevent blocking during training
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+      - OPENBLAS_NUM_THREADS=4
     networks:
       - trading-net
     extra_hosts:
@@ -168,6 +172,7 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '4'
           memory: 8G
         reservations:
           devices:

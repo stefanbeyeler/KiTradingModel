@@ -2499,19 +2499,23 @@ async def stop_favorites_auto_forecast(
 @training_router.post("/forecast/auto/daily/start")
 async def start_daily_auto_forecast(
     scheduled_time: str = "05:00",
-    timezone: str = "Europe/Zurich"
+    timezone: str = Query(default=None, description="Timezone (default: from settings.display_timezone)")
 ):
     """
     Start daily automatic forecasting for non-favorite symbols.
 
     Parameters:
     - scheduled_time: Time in HH:MM format (default: 05:00)
-    - timezone: Timezone string (default: Europe/Zurich)
+    - timezone: Timezone string (default: from settings.display_timezone)
 
     The service runs once daily at the specified time and generates
     H1 forecasts for all non-favorite symbols that have trained models.
     """
     from ..services.auto_forecast_service import auto_forecast_service
+    import pytz
+
+    # Use default timezone from settings if not provided
+    effective_timezone = timezone if timezone else settings.display_timezone
 
     # Validate time format
     try:
@@ -2528,22 +2532,21 @@ async def start_daily_auto_forecast(
 
     # Validate timezone
     try:
-        import pytz
-        pytz.timezone(timezone)
+        pytz.timezone(effective_timezone)
     except Exception:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid timezone: {timezone}. Use IANA timezone format (e.g., Europe/Zurich)"
+            detail=f"Invalid timezone: {effective_timezone}. Use IANA timezone format (e.g., Europe/Zurich)"
         )
 
-    await auto_forecast_service.start_daily_auto_forecast(scheduled_time, timezone)
+    await auto_forecast_service.start_daily_auto_forecast(scheduled_time, effective_timezone)
 
     return {
         "status": "started",
         "mode": "daily",
         "scheduled_time": scheduled_time,
-        "timezone": timezone,
-        "message": f"Daily auto-forecast started (scheduled at {scheduled_time} {timezone})",
+        "timezone": effective_timezone,
+        "message": f"Daily auto-forecast started (scheduled at {scheduled_time} {effective_timezone})",
     }
 
 
