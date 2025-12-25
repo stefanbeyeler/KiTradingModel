@@ -93,13 +93,15 @@ async def get_training_status():
 @router.get("/train/history")
 async def get_training_history():
     """Get training history."""
-    return training_service.get_training_history()
+    history = training_service.get_training_history()
+    return {"history": history}
 
 
 @router.get("/models")
 async def list_models():
     """List available trained models."""
-    return training_service.list_models()
+    models = training_service.list_models()
+    return {"models": models, "count": len(models)}
 
 
 @router.delete("/models/cleanup")
@@ -166,4 +168,99 @@ async def run_training_now(background_tasks: BackgroundTasks):
     return {
         "status": "started",
         "message": "Scheduled training started in background"
+    }
+
+
+@router.post("/train/stop")
+async def stop_training():
+    """Stop current training."""
+    if not training_service.is_training():
+        return {
+            "status": "not_running",
+            "message": "No training in progress"
+        }
+
+    # Signal training to stop
+    training_service.request_stop()
+
+    return {
+        "status": "stopping",
+        "message": "Training stop requested"
+    }
+
+
+# =============================================================================
+# Auto-Training Aliases (for Frontend compatibility)
+# Frontend expects /auto-training/* but backend has /scheduler/*
+# =============================================================================
+
+@router.get("/auto-training/status")
+async def get_auto_training_status():
+    """Get auto-training status (alias for /scheduler)."""
+    return training_scheduler.get_status()
+
+
+@router.post("/auto-training/enable")
+async def enable_auto_training():
+    """Enable auto-training."""
+    training_scheduler.update_config(enabled=True)
+    return {
+        "status": "enabled",
+        "message": "Auto-training enabled",
+        "config": training_scheduler.get_status()
+    }
+
+
+@router.post("/auto-training/disable")
+async def disable_auto_training():
+    """Disable auto-training."""
+    training_scheduler.update_config(enabled=False)
+    return {
+        "status": "disabled",
+        "message": "Auto-training disabled",
+        "config": training_scheduler.get_status()
+    }
+
+
+class AutoTrainingConfigRequest(BaseModel):
+    """Auto-training configuration request."""
+    interval: Optional[str] = None
+    timeframes: Optional[List[str]] = None
+
+
+@router.post("/auto-training/config")
+async def update_auto_training_config(config: AutoTrainingConfigRequest):
+    """Update auto-training configuration."""
+    training_scheduler.update_config(
+        interval=config.interval,
+        timeframes=config.timeframes
+    )
+    return {
+        "status": "updated",
+        "config": training_scheduler.get_status()
+    }
+
+
+class AutoTrainingRunRequest(BaseModel):
+    """Auto-training run request."""
+    timeframes: Optional[List[str]] = None
+
+
+@router.post("/auto-training/run")
+async def run_auto_training(request: AutoTrainingRunRequest, background_tasks: BackgroundTasks):
+    """Trigger immediate auto-training run."""
+    if training_service.is_training():
+        raise HTTPException(
+            status_code=409,
+            detail="Training already in progress"
+        )
+
+    async def run():
+        await training_scheduler.run_training_for_all(timeframes=request.timeframes)
+
+    background_tasks.add_task(run)
+
+    return {
+        "status": "started",
+        "message": "Auto-training started in background"
     }

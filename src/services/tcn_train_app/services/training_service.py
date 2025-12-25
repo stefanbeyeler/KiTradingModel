@@ -77,6 +77,7 @@ class TCNTrainingService:
         """Initialize training service."""
         self.device = device
         self._training_in_progress = False
+        self._stop_requested = False
         self._current_job: Optional[Dict] = None
         self._training_history: List[Dict] = []
         self._model = None
@@ -130,6 +131,16 @@ class TCNTrainingService:
     def is_training(self) -> bool:
         """Check if training is in progress."""
         return self._training_in_progress
+
+    def request_stop(self) -> None:
+        """Request training to stop."""
+        if self._training_in_progress:
+            self._stop_requested = True
+            logger.info("Training stop requested")
+
+    def is_stop_requested(self) -> bool:
+        """Check if stop was requested."""
+        return self._stop_requested
 
     def get_training_status(self) -> Dict:
         """Get current training status."""
@@ -329,6 +340,7 @@ class TCNTrainingService:
         job_id = f"tcn_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
         self._training_in_progress = True
+        self._stop_requested = False  # Reset stop flag
         self._current_job = {
             "job_id": job_id,
             "status": TrainingStatus.PREPARING,
@@ -521,6 +533,11 @@ class TCNTrainingService:
                 f"Epoch {epoch + 1}/{config.epochs} - "
                 f"Train Loss: {avg_train_loss:.4f}, Val Loss: {val_loss:.4f}"
             )
+
+            # Check for stop request
+            if self._stop_requested:
+                logger.info(f"Training stopped by user at epoch {epoch + 1}")
+                break
 
             # Early stopping
             if val_loss < best_val_loss:

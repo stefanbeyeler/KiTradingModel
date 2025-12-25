@@ -828,7 +828,9 @@
     </div>
 
     <script>
+        // Inference endpoints remain on /tcn, training moved to /tcn-train
         const API_BASE = '/tcn/api/v1';
+        const TRAIN_API_BASE = '/tcn-train/api/v1';
         let trainingInterval = null;
 
         // Tab Navigation
@@ -902,8 +904,8 @@
                 badge.textContent = info.model?.loaded ? 'Online' : 'Offline';
                 badge.className = `service-badge ${info.model?.loaded ? '' : 'offline'}`;
 
-                // Update stats
-                document.getElementById('stat-patterns').textContent = info.model?.num_classes || '-';
+                // Update stats - info has num_classes at top level, model info under model object
+                document.getElementById('stat-patterns').textContent = info.num_classes || info.model?.num_classes || '-';
                 document.getElementById('stat-params').textContent = info.model?.parameters ? (info.model.parameters / 1000000).toFixed(2) + 'M' : '-';
                 document.getElementById('stat-uptime').textContent = stats.uptime_seconds ? formatUptime(stats.uptime_seconds) : '-';
                 document.getElementById('stat-models').textContent = stats.available_models || 0;
@@ -915,19 +917,20 @@
                         <tr><td style="color: #888;">Version</td><td>${info.version}</td></tr>
                         <tr><td style="color: #888;">Gestartet</td><td>${formatLocalDateTime(info.started_at, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td></tr>
                         <tr><td style="color: #888;">Modell geladen</td><td>${info.model?.loaded ? '<span style="color: #4caf50;">Ja</span>' : '<span style="color: #f44336;">Nein</span>'}</td></tr>
-                        <tr><td style="color: #888;">Pattern-Klassen</td><td>${info.model?.num_classes || '-'}</td></tr>
+                        <tr><td style="color: #888;">Pattern-Klassen</td><td>${info.num_classes || info.model?.num_classes || '-'}</td></tr>
                         <tr><td style="color: #888;">Parameter</td><td>${info.model?.parameters?.toLocaleString() || '-'}</td></tr>
                         <tr><td style="color: #888;">Training aktiv</td><td>${info.training?.in_progress ? '<span style="color: #ffc107;">Ja</span>' : 'Nein'}</td></tr>
                     </table>
                 `;
 
-                // Pattern Classes
-                const patterns = info.model?.pattern_classes || [];
+                // Pattern Classes - pattern_classes is at top level in info response
+                const patterns = info.pattern_classes || info.model?.pattern_classes || [];
                 document.getElementById('pattern-classes').innerHTML = patterns.length > 0
                     ? patterns.map(p => `<span class="pattern-badge ${getPatternType(p)}">${p.replace(/_/g, ' ')}</span>`).join('')
                     : '<span style="color: #888;">Keine Pattern geladen</span>';
 
-                // Service Status
+                // Service Status - model info is under stats.model
+                const modelLoaded = stats.model?.loaded || false;
                 document.getElementById('service-status').innerHTML = `
                     <div class="grid-3">
                         <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
@@ -935,7 +938,7 @@
                             <div style="color: #888; font-size: 0.85rem;">Training Sessions</div>
                         </div>
                         <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
-                            <div style="font-size: 1.5rem; color: ${stats.model_loaded ? '#4caf50' : '#f44336'};">${stats.model_loaded ? 'Bereit' : 'Nicht bereit'}</div>
+                            <div style="font-size: 1.5rem; color: ${modelLoaded ? '#4caf50' : '#f44336'};">${modelLoaded ? 'Bereit' : 'Nicht bereit'}</div>
                             <div style="color: #888; font-size: 0.85rem;">Model Status</div>
                         </div>
                         <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
@@ -1160,7 +1163,7 @@
         // Load Training Status
         async function loadTrainingStatus() {
             try {
-                const response = await fetch(`${API_BASE}/train/status`);
+                const response = await fetch(`${TRAIN_API_BASE}/train/status`);
                 if (!response.ok) throw new Error('Failed to load training status');
 
                 const data = await response.json();
@@ -1216,7 +1219,7 @@
 
                     // Try to get last training info
                     try {
-                        const histResponse = await fetch(`${API_BASE}/train/history`);
+                        const histResponse = await fetch(`${TRAIN_API_BASE}/train/history`);
                         if (histResponse.ok) {
                             const histData = await histResponse.json();
                             if (histData.history && histData.history.length > 0) {
@@ -1289,7 +1292,7 @@
                 const batchSize = parseInt(document.getElementById('train-batch').value);
                 const learningRate = parseFloat(document.getElementById('train-lr').value);
 
-                const response = await fetch(`${API_BASE}/train`, {
+                const response = await fetch(`${TRAIN_API_BASE}/train`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1325,7 +1328,7 @@
         // Stop Training
         async function stopTraining() {
             try {
-                const response = await fetch(`${API_BASE}/train/stop`, { method: 'POST' });
+                const response = await fetch(`${TRAIN_API_BASE}/train/stop`, { method: 'POST' });
                 if (!response.ok) throw new Error('Failed to stop training');
 
                 showToast('Training gestoppt');
@@ -1343,7 +1346,7 @@
         // Load Training History
         async function loadTrainingHistory() {
             try {
-                const response = await fetch(`${API_BASE}/train/history`);
+                const response = await fetch(`${TRAIN_API_BASE}/train/history`);
                 if (!response.ok) throw new Error('Failed to load history');
 
                 const data = await response.json();
@@ -1402,7 +1405,7 @@
             const container = document.getElementById('models-list');
 
             try {
-                const response = await fetch(`${API_BASE}/models`);
+                const response = await fetch(`${TRAIN_API_BASE}/models`);
                 if (!response.ok) throw new Error('Failed to load models');
 
                 const data = await response.json();
@@ -1452,11 +1455,14 @@
             }
         }
 
-        // Load specific model
+        // Load specific model (reload model in inference service)
         async function loadModel(modelName) {
             try {
-                const response = await fetch(`${API_BASE}/models/load?model_name=${encodeURIComponent(modelName)}`, {
-                    method: 'POST'
+                // Notify inference service to reload the model
+                const response = await fetch(`${API_BASE}/model/reload`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_path: `data/models/tcn/${modelName}` })
                 });
 
                 if (!response.ok) {
@@ -1674,7 +1680,7 @@
             const container = document.getElementById('auto-training-status');
 
             try {
-                const response = await fetch(`${API_BASE}/auto-training/status`);
+                const response = await fetch(`${TRAIN_API_BASE}/auto-training/status`);
                 if (!response.ok) throw new Error('Failed to load auto-training status');
 
                 const data = await response.json();
@@ -1745,7 +1751,7 @@
         async function toggleAutoTraining(enable) {
             try {
                 const endpoint = enable ? 'enable' : 'disable';
-                const response = await fetch(`${API_BASE}/auto-training/${endpoint}`, {
+                const response = await fetch(`${TRAIN_API_BASE}/auto-training/${endpoint}`, {
                     method: 'POST'
                 });
 
@@ -1769,7 +1775,7 @@
             if (document.getElementById('auto-tf-1d').checked) timeframes.push('1d');
 
             try {
-                const response = await fetch(`${API_BASE}/auto-training/config`, {
+                const response = await fetch(`${TRAIN_API_BASE}/auto-training/config`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ interval, timeframes })
@@ -1799,7 +1805,7 @@
                 if (document.getElementById('auto-tf-4h').checked) timeframes.push('4h');
                 if (document.getElementById('auto-tf-1d').checked) timeframes.push('1d');
 
-                const response = await fetch(`${API_BASE}/auto-training/run`, {
+                const response = await fetch(`${TRAIN_API_BASE}/auto-training/run`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ timeframes })
