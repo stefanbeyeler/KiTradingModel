@@ -551,35 +551,62 @@
 
         <!-- Detection Tab -->
         <div id="tab-detection" class="tab-content">
+            <!-- Auto-Scan Status -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128336; Auto-Erkennung</h3>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-success btn-sm" id="btn-start-autoscan" onclick="toggleAutoScan(true)">&#9654; Starten</button>
+                        <button class="btn btn-danger btn-sm" id="btn-stop-autoscan" onclick="toggleAutoScan(false)" disabled>&#9632; Stoppen</button>
+                    </div>
+                </div>
+                <div id="autoscan-status" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem;" id="autoscan-status-indicator">-</div>
+                        <div style="color: #888; font-size: 0.85rem;">Status</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem; color: #64c8ff;" id="autoscan-total">-</div>
+                        <div style="color: #888; font-size: 0.85rem;">Gespeicherte Patterns</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem; color: #a78bfa;" id="autoscan-symbols">-</div>
+                        <div style="color: #888; font-size: 0.85rem;">Symbole</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1rem; color: #fff;" id="autoscan-lastscan">-</div>
+                        <div style="color: #888; font-size: 0.85rem;">Letzter Scan</div>
+                    </div>
+                </div>
+                <div class="info-box" style="margin-top: 1rem;">
+                    Auto-Erkennung scannt alle 5 Minuten alle aktiven Symbole auf den Timeframes 1h, 4h und 1d.
+                    Erkannte Patterns werden 7 Tage gespeichert (max. 2000 Eintraege).
+                </div>
+            </div>
+
             <div class="grid-2">
                 <!-- Detection Form -->
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">&#128269; Pattern erkennen</h3>
+                        <h3 class="card-title">&#128269; Manuelle Erkennung</h3>
                     </div>
                     <div class="form-group">
                         <label>Symbol</label>
                         <select class="form-control" id="detect-symbol">
-                            <option value="BTCUSD">BTCUSD</option>
-                            <option value="ETHUSD">ETHUSD</option>
-                            <option value="EURUSD">EURUSD</option>
-                            <option value="XAUUSD">XAUUSD</option>
-                            <option value="GER40">GER40</option>
-                            <option value="US500">US500</option>
+                            <option value="">Lade Symbole...</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Timeframe</label>
                         <select class="form-control" id="detect-timeframe">
-                            <option value="M15">M15</option>
-                            <option value="H1" selected>H1</option>
-                            <option value="H4">H4</option>
-                            <option value="D1">D1</option>
+                            <option value="1h" selected>1h</option>
+                            <option value="4h">4h</option>
+                            <option value="1d">1d</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Min. Confidence</label>
-                        <input type="number" class="form-control" id="detect-confidence" value="0.6" min="0" max="1" step="0.05">
+                        <input type="number" class="form-control" id="detect-confidence" value="0.5" min="0" max="1" step="0.05">
                     </div>
                     <button class="btn btn-success" id="btn-detect" onclick="detectPattern()">&#128269; Pattern erkennen</button>
 
@@ -589,12 +616,12 @@
                 <!-- Scan All -->
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">&#128640; Multi-Symbol Scan</h3>
+                        <h3 class="card-title">&#128640; Manueller Multi-Symbol Scan</h3>
                     </div>
                     <div class="info-box" style="margin-bottom: 1rem;">
-                        Scannt alle aktiven Symbole nach Pattern. Dies kann einige Sekunden dauern.
+                        Scannt alle aktiven Symbole sofort nach Patterns und speichert sie in der Historie.
                     </div>
-                    <button class="btn btn-primary" id="btn-scan-all" onclick="scanAll()">&#128640; Alle Symbole scannen</button>
+                    <button class="btn btn-primary" id="btn-scan-all" onclick="scanAllAndSave()">&#128640; Alle Symbole scannen</button>
                     <div id="scan-results" style="margin-top: 1rem;"></div>
                 </div>
             </div>
@@ -728,21 +755,97 @@
 
         <!-- History Tab -->
         <div id="tab-history" class="tab-content">
+            <!-- History Stats -->
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">&#128203; Erkennungs-Verlauf</h3>
-                    <div>
-                        <select class="form-control" id="history-symbol" style="width: auto; display: inline-block;">
-                            <option value="BTCUSD">BTCUSD</option>
-                            <option value="ETHUSD">ETHUSD</option>
-                            <option value="EURUSD">EURUSD</option>
-                            <option value="XAUUSD">XAUUSD</option>
-                        </select>
-                        <button class="btn btn-primary btn-sm" onclick="loadHistory()">&#8635; Laden</button>
+                    <h3 class="card-title">&#128202; Pattern-Historie (Live)</h3>
+                    <button class="btn btn-success btn-sm" onclick="triggerManualScan()">&#128269; Manueller Scan</button>
+                </div>
+                <div id="history-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem; color: #64c8ff;" id="hist-stat-total">-</div>
+                        <div style="color: #888; font-size: 0.85rem;">Total Patterns</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem; color: #a78bfa;" id="hist-stat-symbols">-</div>
+                        <div style="color: #888; font-size: 0.85rem;">Symbole</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.5rem;" id="hist-stat-scan-status">-</div>
+                        <div style="color: #888; font-size: 0.85rem;">Auto-Scan</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1rem; color: #fff;" id="hist-stat-last-scan">-</div>
+                        <div style="color: #888; font-size: 0.85rem;">Letzter Scan</div>
                     </div>
                 </div>
-                <div id="pattern-history">
-                    <div class="info-box">Wählen Sie ein Symbol und klicken Sie auf "Laden".</div>
+            </div>
+
+            <!-- Filter and Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128203; Erkannte Patterns</h3>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <select class="form-control" id="history-symbol-filter" style="width: auto;">
+                            <option value="">Alle Symbole</option>
+                        </select>
+                        <select class="form-control" id="history-category-filter" style="width: auto;">
+                            <option value="">Alle Kategorien</option>
+                            <option value="reversal">Reversal</option>
+                            <option value="continuation">Continuation</option>
+                            <option value="trend">Trend</option>
+                        </select>
+                        <select class="form-control" id="history-direction-filter" style="width: auto;">
+                            <option value="">Alle Richtungen</option>
+                            <option value="bullish">Bullish</option>
+                            <option value="bearish">Bearish</option>
+                            <option value="neutral">Neutral</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="loadPatternHistory()">&#8635; Aktualisieren</button>
+                    </div>
+                </div>
+                <div id="pattern-history-table" style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Pattern</th>
+                                <th>Richtung</th>
+                                <th>Konfidenz</th>
+                                <th>Timeframe</th>
+                                <th>Erkannt</th>
+                                <th>Preis</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pattern-history-body">
+                            <tr><td colspan="7" style="text-align: center; padding: 2rem; color: #888;">Lade Pattern-Historie...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span id="history-count" style="color: #888; font-size: 0.85rem;"></span>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="grid-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Nach Pattern-Typ</h3>
+                    </div>
+                    <div id="stats-by-type" style="font-size: 0.85rem;">Lade...</div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Nach Kategorie</h3>
+                    </div>
+                    <div id="stats-by-category" style="font-size: 0.85rem;">Lade...</div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Nach Timeframe</h3>
+                    </div>
+                    <div id="stats-by-timeframe" style="font-size: 0.85rem;">Lade...</div>
                 </div>
             </div>
         </div>
@@ -899,39 +1002,139 @@
             }
         }
 
-        // Scan All Symbols
-        async function scanAll() {
+        // =============================================================================
+        // Auto-Scan Functions (Pattern Detection)
+        // =============================================================================
+
+        // Load Auto-Scan Status for Detection Tab
+        async function loadAutoScanStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/history/statistics`);
+                if (!response.ok) throw new Error('Failed to load auto-scan status');
+
+                const stats = await response.json();
+
+                // Update status indicator
+                const statusIndicator = document.getElementById('autoscan-status-indicator');
+                if (stats.scan_running) {
+                    statusIndicator.innerHTML = '<span style="color: #4caf50;">Aktiv</span>';
+                    document.getElementById('btn-start-autoscan').disabled = true;
+                    document.getElementById('btn-stop-autoscan').disabled = false;
+                } else {
+                    statusIndicator.innerHTML = '<span style="color: #ffc107;">Gestoppt</span>';
+                    document.getElementById('btn-start-autoscan').disabled = false;
+                    document.getElementById('btn-stop-autoscan').disabled = true;
+                }
+
+                // Update other stats
+                document.getElementById('autoscan-total').textContent = stats.total_patterns || 0;
+                document.getElementById('autoscan-symbols').textContent = stats.symbols_with_patterns || 0;
+                document.getElementById('autoscan-lastscan').textContent = stats.last_scan
+                    ? new Date(stats.last_scan).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                    : '-';
+
+            } catch (error) {
+                console.error('Error loading auto-scan status:', error);
+            }
+        }
+
+        // Toggle Auto-Scan
+        async function toggleAutoScan(enable) {
+            const endpoint = enable ? 'start-auto-scan' : 'stop-auto-scan';
+            const btn = enable ? document.getElementById('btn-start-autoscan') : document.getElementById('btn-stop-autoscan');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/history/${endpoint}`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to toggle auto-scan');
+
+                const result = await response.json();
+                showToast(enable ? 'Auto-Erkennung gestartet' : 'Auto-Erkennung gestoppt');
+                loadAutoScanStatus();
+
+            } catch (error) {
+                showToast('Fehler beim Ändern des Auto-Scan Status', 'error');
+                console.error(error);
+            } finally {
+                btn.classList.remove('btn-loading');
+            }
+        }
+
+        // Load Symbols for Detection Dropdown
+        async function loadDetectionSymbols() {
+            const select = document.getElementById('detect-symbol');
+
+            try {
+                const response = await fetch('/data/api/v1/managed-symbols');
+                if (!response.ok) throw new Error('Failed to load symbols');
+
+                const data = await response.json();
+
+                // Filter active symbols with data
+                const symbols = data
+                    .filter(s => s.has_timescaledb_data && s.status === 'active')
+                    .sort((a, b) => a.symbol.localeCompare(b.symbol));
+
+                select.innerHTML = '';
+
+                // Add default option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Symbol wählen...';
+                select.appendChild(defaultOption);
+
+                // Add symbols
+                symbols.forEach(s => {
+                    const option = document.createElement('option');
+                    option.value = s.symbol;
+                    option.textContent = s.display_name || s.symbol;
+                    select.appendChild(option);
+                });
+
+                // Select first symbol if available
+                if (symbols.length > 0) {
+                    select.value = symbols[0].symbol;
+                }
+
+            } catch (error) {
+                console.error('Error loading detection symbols:', error);
+                // Fallback
+                select.innerHTML = `
+                    <option value="BTCUSD">BTCUSD</option>
+                    <option value="ETHUSD">ETHUSD</option>
+                    <option value="EURUSD">EURUSD</option>
+                    <option value="XAUUSD">XAUUSD</option>
+                `;
+            }
+        }
+
+        // Scan All Symbols and Save to History
+        async function scanAllAndSave() {
             const btn = document.getElementById('btn-scan-all');
             btn.classList.add('btn-loading');
             btn.disabled = true;
 
             try {
-                const response = await fetch(`${API_BASE}/scan-all`);
+                // Use the history/scan endpoint which saves to history
+                const response = await fetch(`${API_BASE}/history/scan`, { method: 'POST' });
                 if (!response.ok) throw new Error('Scan failed');
 
-                const data = await response.json();
+                const result = await response.json();
                 const results = document.getElementById('scan-results');
 
-                if (data.results && Object.keys(data.results).length > 0) {
-                    let html = '<table class="data-table"><tr><th>Symbol</th><th>Pattern</th><th>Confidence</th></tr>';
-                    for (const [symbol, patterns] of Object.entries(data.results)) {
-                        if (patterns && patterns.length > 0) {
-                            patterns.forEach(p => {
-                                html += `<tr>
-                                    <td>${symbol}</td>
-                                    <td><span class="pattern-badge ${getPatternType(p.pattern_type)}">${p.pattern_type.replace(/_/g, ' ')}</span></td>
-                                    <td>${(p.confidence * 100).toFixed(1)}%</td>
-                                </tr>`;
-                            });
-                        }
-                    }
-                    html += '</table>';
-                    results.innerHTML = html;
-                } else {
-                    results.innerHTML = '<div class="info-box">Keine Pattern in aktiven Symbolen erkannt.</div>';
-                }
+                results.innerHTML = `
+                    <div class="info-box" style="background: rgba(76,175,80,0.1); border-color: rgba(76,175,80,0.3); color: #81c784;">
+                        <strong>Scan abgeschlossen</strong><br>
+                        ${result.patterns_found || 0} Patterns gefunden, ${result.patterns_added || 0} neu gespeichert
+                    </div>
+                `;
 
-                showToast('Multi-Symbol Scan abgeschlossen');
+                showToast(`Scan: ${result.patterns_found || 0} Patterns gefunden`);
+
+                // Refresh stats
+                loadAutoScanStatus();
+
             } catch (error) {
                 showToast('Fehler beim Scan', 'error');
                 console.error(error);
@@ -939,6 +1142,11 @@
                 btn.classList.remove('btn-loading');
                 btn.disabled = false;
             }
+        }
+
+        // Legacy function for backwards compatibility
+        async function scanAll() {
+            return scanAllAndSave();
         }
 
         // Format duration from start time
@@ -1211,42 +1419,136 @@
             }
         }
 
-        // Load Pattern History
-        async function loadHistory() {
-            const symbol = document.getElementById('history-symbol').value;
-            const container = document.getElementById('pattern-history');
-            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        // Load Pattern History Statistics
+        async function loadHistoryStats() {
+            try {
+                const response = await fetch(`${API_BASE}/history/statistics`);
+                if (!response.ok) throw new Error('Failed to load history stats');
+
+                const stats = await response.json();
+
+                document.getElementById('hist-stat-total').textContent = stats.total_patterns || 0;
+                document.getElementById('hist-stat-symbols').textContent = stats.symbols_with_patterns || 0;
+                document.getElementById('hist-stat-scan-status').innerHTML = stats.scan_running
+                    ? '<span style="color: #4caf50;">Aktiv</span>'
+                    : '<span style="color: #ffc107;">Gestoppt</span>';
+                document.getElementById('hist-stat-last-scan').textContent = stats.last_scan
+                    ? new Date(stats.last_scan).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                    : '-';
+
+                // Pattern types (top 5)
+                const typeHtml = Object.entries(stats.by_pattern_type || {}).slice(0, 5)
+                    .map(([type, count]) => `<div style="display: flex; justify-content: space-between; padding: 0.25rem 0;"><span>${type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span><span style="color: #64c8ff;">${count}</span></div>`)
+                    .join('');
+                document.getElementById('stats-by-type').innerHTML = typeHtml || '<span style="color: #888;">Keine Daten</span>';
+
+                // Categories
+                const catHtml = Object.entries(stats.by_category || {})
+                    .map(([cat, count]) => `<div style="display: flex; justify-content: space-between; padding: 0.25rem 0;"><span>${cat}</span><span style="color: #a78bfa;">${count}</span></div>`)
+                    .join('');
+                document.getElementById('stats-by-category').innerHTML = catHtml || '<span style="color: #888;">Keine Daten</span>';
+
+                // Timeframes
+                const tfHtml = Object.entries(stats.by_timeframe || {})
+                    .map(([tf, count]) => `<div style="display: flex; justify-content: space-between; padding: 0.25rem 0;"><span>${tf}</span><span style="color: #ffc107;">${count}</span></div>`)
+                    .join('');
+                document.getElementById('stats-by-timeframe').innerHTML = tfHtml || '<span style="color: #888;">Keine Daten</span>';
+
+            } catch (error) {
+                console.error('Error loading history stats:', error);
+            }
+        }
+
+        // Load Pattern History Table
+        async function loadPatternHistory() {
+            const symbol = document.getElementById('history-symbol-filter').value;
+            const category = document.getElementById('history-category-filter').value;
+            const direction = document.getElementById('history-direction-filter').value;
+
+            let url = `${API_BASE}/history?limit=50`;
+            if (symbol) url += `&symbol=${symbol}`;
+            if (category) url += `&category=${category}`;
+            if (direction) url += `&direction=${direction}`;
 
             try {
-                const response = await fetch(`${API_BASE}/history/${symbol}`);
-                if (!response.ok) throw new Error('Failed to load history');
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to load pattern history');
 
                 const data = await response.json();
+                const tbody = document.getElementById('pattern-history-body');
 
-                if (data.history && data.history.length > 0) {
-                    container.innerHTML = `
-                        <table class="data-table">
-                            <tr>
-                                <th>Zeitpunkt</th>
-                                <th>Pattern</th>
-                                <th>Confidence</th>
-                                <th>Timeframe</th>
-                            </tr>
-                            ${data.history.map(h => `
-                                <tr>
-                                    <td>${new Date(h.timestamp).toLocaleString('de-CH')}</td>
-                                    <td><span class="pattern-badge ${getPatternType(h.pattern)}">${h.pattern.replace(/_/g, ' ')}</span></td>
-                                    <td>${(h.confidence * 100).toFixed(1)}%</td>
-                                    <td>${h.timeframe || '-'}</td>
-                                </tr>
-                            `).join('')}
-                        </table>
-                    `;
-                } else {
-                    container.innerHTML = '<div class="info-box">Keine Pattern-Historie für dieses Symbol.</div>';
+                if (!data.patterns || data.patterns.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #888;">Keine Patterns gefunden</td></tr>';
+                    document.getElementById('history-count').textContent = '0 Patterns';
+                    return;
                 }
+
+                tbody.innerHTML = data.patterns.map(p => `
+                    <tr>
+                        <td style="font-weight: 500;">${p.symbol}</td>
+                        <td><span class="pattern-badge ${p.direction}">${p.pattern_type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span></td>
+                        <td><span class="pattern-badge ${p.direction}">${p.direction}</span></td>
+                        <td style="color: ${p.confidence >= 0.7 ? '#4caf50' : p.confidence >= 0.5 ? '#ffc107' : '#f44336'};">${(p.confidence * 100).toFixed(1)}%</td>
+                        <td>${p.timeframe}</td>
+                        <td style="color: #888;">${new Date(p.detected_at).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td style="font-family: monospace;">${p.price_at_detection ? p.price_at_detection.toLocaleString('de-CH', {maximumFractionDigits: 2}) : '-'}</td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('history-count').textContent = `${data.count} Patterns angezeigt`;
+
+                // Update symbol filter
+                await updateHistorySymbolFilter();
+
             } catch (error) {
-                container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler beim Laden der Historie.</div>';
+                console.error('Error loading pattern history:', error);
+                document.getElementById('pattern-history-body').innerHTML =
+                    '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #f44336;">Fehler beim Laden</td></tr>';
+            }
+        }
+
+        // Update symbol filter dropdown
+        async function updateHistorySymbolFilter() {
+            try {
+                const response = await fetch(`${API_BASE}/history-by-symbol?limit_per_symbol=1`);
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const select = document.getElementById('history-symbol-filter');
+                const currentValue = select.value;
+
+                // Keep first option
+                while (select.options.length > 1) {
+                    select.remove(1);
+                }
+
+                Object.keys(data.by_symbol || {}).sort().forEach(symbol => {
+                    const option = document.createElement('option');
+                    option.value = symbol;
+                    option.textContent = symbol;
+                    select.appendChild(option);
+                });
+
+                select.value = currentValue;
+            } catch (error) {
+                console.error('Error updating symbol filter:', error);
+            }
+        }
+
+        // Trigger manual pattern scan
+        async function triggerManualScan() {
+            try {
+                showToast('Scan gestartet...');
+                const response = await fetch(`${API_BASE}/history/scan`, { method: 'POST' });
+                if (!response.ok) throw new Error('Scan failed');
+
+                const result = await response.json();
+                showToast(`Scan abgeschlossen: ${result.patterns_found} Patterns gefunden, ${result.patterns_added} neu`);
+
+                loadPatternHistory();
+                loadHistoryStats();
+            } catch (error) {
+                showToast('Fehler beim Scan', 'error');
                 console.error(error);
             }
         }
@@ -1486,10 +1788,14 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadInfo();
             loadAvailableSymbols();
+            loadDetectionSymbols();
+            loadAutoScanStatus();
             loadTrainingStatus();
             loadTrainingHistory();
             loadModels();
             loadAutoTrainingStatus();
+            loadHistoryStats();
+            loadPatternHistory();
 
             // Auto-refresh every 30 seconds
             setInterval(loadInfo, 30000);
@@ -1499,6 +1805,15 @@
 
             // Auto-refresh auto-training status every 10 seconds
             setInterval(loadAutoTrainingStatus, 10000);
+
+            // Auto-refresh auto-scan status every 15 seconds
+            setInterval(loadAutoScanStatus, 15000);
+
+            // Auto-refresh pattern history every 60 seconds
+            setInterval(() => {
+                loadHistoryStats();
+                loadPatternHistory();
+            }, 60000);
         });
     </script>
 </body>
