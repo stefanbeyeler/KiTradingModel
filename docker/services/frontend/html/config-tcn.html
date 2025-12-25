@@ -858,6 +858,23 @@
             return `${mins}m`;
         }
 
+        // Parse UTC timestamp (timestamps from API are UTC but without Z suffix)
+        function parseUTCTimestamp(timestamp) {
+            if (!timestamp) return null;
+            // If timestamp doesn't have timezone info, treat as UTC
+            if (!timestamp.endsWith('Z') && !timestamp.includes('+')) {
+                timestamp = timestamp + 'Z';
+            }
+            return new Date(timestamp);
+        }
+
+        // Format UTC timestamp to local timezone
+        function formatLocalDateTime(timestamp, options = { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) {
+            const date = parseUTCTimestamp(timestamp);
+            if (!date || isNaN(date.getTime())) return '-';
+            return date.toLocaleString('de-CH', { timeZone: 'Europe/Zurich', ...options });
+        }
+
         // Pattern Type Detection
         function getPatternType(pattern) {
             const bullish = ['inverse_head_and_shoulders', 'double_bottom', 'triple_bottom', 'ascending_triangle', 'bull_flag', 'cup_and_handle', 'falling_wedge', 'channel_up'];
@@ -896,7 +913,7 @@
                     <table class="data-table">
                         <tr><td style="color: #888;">Service</td><td>${info.service}</td></tr>
                         <tr><td style="color: #888;">Version</td><td>${info.version}</td></tr>
-                        <tr><td style="color: #888;">Gestartet</td><td>${new Date(info.started_at).toLocaleString('de-CH')}</td></tr>
+                        <tr><td style="color: #888;">Gestartet</td><td>${formatLocalDateTime(info.started_at, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td></tr>
                         <tr><td style="color: #888;">Modell geladen</td><td>${info.model?.loaded ? '<span style="color: #4caf50;">Ja</span>' : '<span style="color: #f44336;">Nein</span>'}</td></tr>
                         <tr><td style="color: #888;">Pattern-Klassen</td><td>${info.model?.num_classes || '-'}</td></tr>
                         <tr><td style="color: #888;">Parameter</td><td>${info.model?.parameters?.toLocaleString() || '-'}</td></tr>
@@ -1006,7 +1023,7 @@
                 document.getElementById('autoscan-total').textContent = stats.total_patterns || 0;
                 document.getElementById('autoscan-symbols').textContent = stats.symbols_with_patterns || 0;
                 document.getElementById('autoscan-lastscan').textContent = stats.last_scan
-                    ? new Date(stats.last_scan).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                    ? formatLocalDateTime(stats.last_scan)
                     : '-';
 
             } catch (error) {
@@ -1197,10 +1214,50 @@
                     document.getElementById('btn-train').disabled = false;
                     document.getElementById('btn-stop-train').disabled = true;
 
+                    // Try to get last training info
+                    try {
+                        const histResponse = await fetch(`${API_BASE}/train/history`);
+                        if (histResponse.ok) {
+                            const histData = await histResponse.json();
+                            if (histData.history && histData.history.length > 0) {
+                                // Get most recent training
+                                const lastTraining = [...histData.history].sort((a, b) =>
+                                    new Date(b.started_at) - new Date(a.started_at)
+                                )[0];
+
+                                let duration = '-';
+                                if (lastTraining.started_at && lastTraining.completed_at) {
+                                    const durationSecs = Math.floor((new Date(lastTraining.completed_at) - new Date(lastTraining.started_at)) / 1000);
+                                    duration = formatUptime(durationSecs);
+                                }
+
+                                container.innerHTML = `
+                                    <div style="text-align: center; padding: 1rem; color: #888; margin-bottom: 1rem;">
+                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">&#9989;</div>
+                                        <div>Bereit für Training</div>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 6px; font-size: 0.85rem;">
+                                        <div style="color: #888; margin-bottom: 0.5rem;">Letztes Training:</div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                                            <div><span style="color: #888;">Status:</span> <span style="color: ${lastTraining.status === 'completed' ? '#4caf50' : '#f44336'};">${lastTraining.status}</span></div>
+                                            <div><span style="color: #888;">Datum:</span> ${formatLocalDateTime(lastTraining.started_at)}</div>
+                                            <div><span style="color: #888;">Epochen:</span> ${lastTraining.current_epoch || 0}/${lastTraining.total_epochs || '-'}</div>
+                                            <div><span style="color: #888;">Loss:</span> ${lastTraining.best_loss?.toFixed(4) || '-'}</div>
+                                        </div>
+                                    </div>
+                                `;
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        // Ignore error, show default message
+                    }
+
                     container.innerHTML = `
                         <div style="text-align: center; padding: 1.5rem; color: #888;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#128308;</div>
-                            <div>Kein Training aktiv</div>
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#9989;</div>
+                            <div>Bereit für Training</div>
+                            <div style="font-size: 0.85rem; margin-top: 0.5rem;">Noch keine Trainings durchgeführt</div>
                         </div>
                     `;
                 }
@@ -1293,26 +1350,47 @@
                 const container = document.getElementById('training-history');
 
                 if (data.history && data.history.length > 0) {
+                    // Sort by date (newest first)
+                    const sortedHistory = [...data.history].sort((a, b) =>
+                        new Date(b.started_at) - new Date(a.started_at)
+                    );
+
                     container.innerHTML = `
                         <table class="data-table">
                             <tr>
                                 <th>Datum</th>
+                                <th>Status</th>
                                 <th>Epochen</th>
-                                <th>Final Loss</th>
+                                <th>Samples</th>
+                                <th>Best Loss</th>
                                 <th>Dauer</th>
                             </tr>
-                            ${data.history.map(h => `
+                            ${sortedHistory.map(h => {
+                                // Calculate duration from started_at and completed_at
+                                let duration = '-';
+                                if (h.started_at && h.completed_at) {
+                                    const startDate = parseUTCTimestamp(h.started_at);
+                                    const endDate = parseUTCTimestamp(h.completed_at);
+                                    if (startDate && endDate) {
+                                        const durationSecs = Math.floor((endDate - startDate) / 1000);
+                                        duration = formatUptime(durationSecs);
+                                    }
+                                }
+                                const statusColor = h.status === 'completed' ? '#4caf50' : h.status === 'failed' ? '#f44336' : '#ffc107';
+                                return `
                                 <tr>
-                                    <td>${new Date(h.started_at).toLocaleString('de-CH')}</td>
-                                    <td>${h.epochs}</td>
-                                    <td>${h.final_loss?.toFixed(6) || '-'}</td>
-                                    <td>${h.duration_seconds ? formatUptime(h.duration_seconds) : '-'}</td>
+                                    <td>${formatLocalDateTime(h.started_at)}</td>
+                                    <td><span style="color: ${statusColor};">${h.status}</span></td>
+                                    <td>${h.current_epoch || 0}/${h.total_epochs || '-'}</td>
+                                    <td>${h.samples_count?.toLocaleString() || '-'}</td>
+                                    <td>${h.best_loss?.toFixed(4) || '-'}</td>
+                                    <td>${duration}</td>
                                 </tr>
-                            `).join('')}
+                            `}).join('')}
                         </table>
                     `;
                 } else {
-                    container.innerHTML = '<div class="info-box">Noch keine Trainings durchgefuhrt.</div>';
+                    container.innerHTML = '<div class="info-box">Noch keine Trainings durchgeführt.</div>';
                 }
             } catch (error) {
                 console.error(error);
@@ -1347,7 +1425,7 @@
                                         ${idx === 0 ? '<span style="background: #4caf50; color: #000; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.7rem; font-weight: 600;">AKTUELL</span>' : ''}
                                     </div>
                                     <div style="display: flex; gap: 1rem; margin-top: 0.3rem; font-size: 0.8rem; color: #888;">
-                                        <span>&#128197; ${new Date(m.created).toLocaleString('de-CH')}</span>
+                                        <span>&#128197; ${formatLocalDateTime(m.created, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                                         <span>&#128190; ${m.size_mb} MB</span>
                                     </div>
                                 </div>
@@ -1457,7 +1535,7 @@
                         <td><span class="pattern-badge ${p.direction}">${p.direction}</span></td>
                         <td style="color: ${p.confidence >= 0.7 ? '#4caf50' : p.confidence >= 0.5 ? '#ffc107' : '#f44336'};">${(p.confidence * 100).toFixed(1)}%</td>
                         <td>${p.timeframe}</td>
-                        <td style="color: #888;">${new Date(p.detected_at).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td style="color: #888;">${formatLocalDateTime(p.detected_at)}</td>
                         <td style="font-family: monospace;">${p.price_at_detection ? p.price_at_detection.toLocaleString('de-CH', {maximumFractionDigits: 2}) : '-'}</td>
                     </tr>
                 `).join('');
@@ -1615,8 +1693,8 @@
                 document.getElementById('btn-disable-auto').disabled = !data.enabled;
 
                 // Format dates
-                const lastRun = data.last_run ? new Date(data.last_run).toLocaleString('de-CH') : 'Noch nie';
-                const nextRun = data.next_run ? new Date(data.next_run).toLocaleString('de-CH') : '-';
+                const lastRun = data.last_run ? formatLocalDateTime(data.last_run, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Noch nie';
+                const nextRun = data.next_run ? formatLocalDateTime(data.next_run, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
 
                 const intervalLabels = {
                     'daily': 'Taglich',

@@ -273,9 +273,11 @@ Scopes: `nhits`, `tcn`, `hmm`, `embedder`, `rag`, `llm`, `data`, `watchdog`, `fr
    - Alle Timestamps für die Anzeige in die konfigurierte Zeitzone konvertieren
    - Zeitzone ist konfigurierbar (Standard: `Europe/Zurich`)
 
-3. **Konfiguration**
-   - Zeitzone wird in `src/core/config.py` als `DISPLAY_TIMEZONE` definiert
+3. **Konfiguration (EINZIGE QUELLE)**
+   - Zeitzone wird in `src/config/settings.py` als `display_timezone` definiert
    - Umgebungsvariable: `DISPLAY_TIMEZONE`
+   - **NIEMALS** `"Europe/Zurich"` oder andere Zeitzonen hardcoden
+   - **IMMER** `settings.display_timezone` importieren und verwenden
 
 ### Beispiele
 
