@@ -17,6 +17,7 @@ class TestHealthContractTests:
         ("data", SERVICE_URLS["data"]),
         ("nhits", SERVICE_URLS["nhits"]),
         ("tcn", SERVICE_URLS["tcn"]),
+        ("tcn-train", SERVICE_URLS["tcn-train"]),
         ("hmm", SERVICE_URLS["hmm"]),
         ("embedder", SERVICE_URLS["embedder"]),
         ("rag", SERVICE_URLS["rag"]),
@@ -34,6 +35,10 @@ class TestHealthContractTests:
                 # Contract: must have status field
                 assert "status" in data
                 assert data["status"] in ["healthy", "ok", "running", "degraded"]
+
+                # TCN-Train specific: must have training_active field
+                if service == "tcn-train":
+                    assert "training_active" in data
 
             except httpx.ConnectError:
                 pytest.skip(f"{service} not reachable")

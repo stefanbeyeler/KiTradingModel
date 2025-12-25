@@ -147,6 +147,24 @@ async def test_tcn_service_health_details():
 
 
 @pytest.mark.smoke
+async def test_tcn_train_service_health_details():
+    """Test TCN-Train Service health endpoint returns expected fields."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            response = await client.get(f"{SERVICE_URLS['tcn-train']}/health")
+
+            assert response.status_code == 200
+            data = response.json()
+
+            assert "status" in data
+            # TCN-Train specific: check for training_active field
+            assert "training_active" in data
+
+        except httpx.ConnectError:
+            pytest.skip("TCN-Train service not reachable")
+
+
+@pytest.mark.smoke
 async def test_hmm_service_health_details():
     """Test HMM Service health endpoint returns expected fields."""
     async with httpx.AsyncClient(timeout=30.0) as client:

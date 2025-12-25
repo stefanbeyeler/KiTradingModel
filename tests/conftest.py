@@ -31,6 +31,7 @@ if IN_DOCKER:
         "data": "http://localhost:3001",  # Same container, use localhost
         "nhits": "http://trading-nhits:3002",
         "tcn": "http://trading-tcn:3003",
+        "tcn-train": "http://trading-tcn-train:3013",
         "hmm": "http://trading-hmm:3004",
         "embedder": "http://trading-embedder:3005",
         "rag": "http://trading-rag:3008",
@@ -43,6 +44,7 @@ else:
         "data": f"http://{SERVICE_HOST}:3001",
         "nhits": f"http://{SERVICE_HOST}:3002",
         "tcn": f"http://{SERVICE_HOST}:3003",
+        "tcn-train": f"http://{SERVICE_HOST}:3013",
         "hmm": f"http://{SERVICE_HOST}:3004",
         "embedder": f"http://{SERVICE_HOST}:3005",
         "rag": f"http://{SERVICE_HOST}:3008",
@@ -54,6 +56,7 @@ SERVICE_CONFIGS = {
     "data": {"url": SERVICE_URLS["data"], "health": "/health"},
     "nhits": {"url": SERVICE_URLS["nhits"], "health": "/health"},
     "tcn": {"url": SERVICE_URLS["tcn"], "health": "/health"},
+    "tcn-train": {"url": SERVICE_URLS["tcn-train"], "health": "/health"},
     "hmm": {"url": SERVICE_URLS["hmm"], "health": "/health"},
     "embedder": {"url": SERVICE_URLS["embedder"], "health": "/health"},
     "rag": {"url": SERVICE_URLS["rag"], "health": "/health"},
@@ -104,6 +107,16 @@ async def tcn_client() -> AsyncGenerator[httpx.AsyncClient, None]:
     async with httpx.AsyncClient(
         base_url=SERVICE_URLS["tcn"],
         timeout=60.0
+    ) as client:
+        yield client
+
+
+@pytest.fixture
+async def tcn_train_client() -> AsyncGenerator[httpx.AsyncClient, None]:
+    """HTTP client for TCN-Train Service."""
+    async with httpx.AsyncClient(
+        base_url=SERVICE_URLS["tcn-train"],
+        timeout=120.0  # Longer timeout for training operations
     ) as client:
         yield client
 

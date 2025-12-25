@@ -1521,7 +1521,7 @@
             smoke: {
                 title: 'Smoke Tests',
                 icon: '&#128168;',
-                description: 'Health Checks für alle 8 Microservices. Schnelle Überprüfung ob Services erreichbar und funktional sind - sollte vor allen anderen Tests laufen.',
+                description: 'Health Checks für alle 10 Microservices. Schnelle Überprüfung ob Services erreichbar und funktional sind - sollte vor allen anderen Tests laufen.',
                 files: [
                     {
                         name: 'test_health_checks.py',
@@ -1532,16 +1532,18 @@
                             { name: 'test_service_health[data]', desc: 'Data Service (Port 3001): JSON Response mit status="healthy" oder "ok"', tags: ['parametrized'] },
                             { name: 'test_service_health[nhits]', desc: 'NHITS Service (Port 3002): Preis-Forecast-Modell Health Check', tags: ['parametrized'] },
                             { name: 'test_service_health[tcn]', desc: 'TCN Service (Port 3003): Pattern-Erkennung Health Check', tags: ['parametrized'] },
+                            { name: 'test_service_health[tcn-train]', desc: 'TCN-Train Service (Port 3013): Training-Container Health Check', tags: ['parametrized'] },
                             { name: 'test_service_health[hmm]', desc: 'HMM Service (Port 3004): Regime-Erkennung Health Check', tags: ['parametrized'] },
                             { name: 'test_service_health[embedder]', desc: 'Embedder Service (Port 3005): Text/Zeitreihen-Embedding Health Check', tags: ['parametrized'] },
                             { name: 'test_service_health[rag]', desc: 'RAG Service (Port 3008): Retrieval-Augmented Generation Health Check', tags: ['parametrized'] },
                             { name: 'test_service_health[llm]', desc: 'LLM Service (Port 3009): Ollama LLM Gateway Health Check', tags: ['parametrized'] },
-                            { name: 'test_all_services_up', desc: 'Parallele Health-Checks aller 8 Services, zeigt Running/Failed Übersicht' },
+                            { name: 'test_all_services_up', desc: 'Parallele Health-Checks aller 10 Services, zeigt Running/Failed Übersicht' },
                             { name: 'test_data_service_health_details', desc: 'Data Service Response hat "status" und "service/name" Felder' },
                             { name: 'test_nhits_service_health_details', desc: 'NHITS Service Response enthält "status" Feld' },
                             { name: 'test_rag_service_health_details', desc: 'RAG Service Response enthält "status" Feld' },
                             { name: 'test_llm_service_health_details', desc: 'LLM Service Response enthält "status" Feld' },
                             { name: 'test_tcn_service_health_details', desc: 'TCN Service Response enthält "status" Feld' },
+                            { name: 'test_tcn_train_service_health_details', desc: 'TCN-Train Service Response enthält "status" und "training_active" Felder' },
                             { name: 'test_hmm_service_health_details', desc: 'HMM Service Response enthält "status" Feld' },
                             { name: 'test_embedder_service_health_details', desc: 'Embedder Service Response enthält "status" Feld' },
                             { name: 'test_frontend_health', desc: 'Frontend nginx antwortet mit HTTP 200 auf /health' }
@@ -1657,6 +1659,22 @@
                             { name: 'test_list_patterns', desc: 'GET /patterns: Liste aller erkennbaren Pattern-Typen' },
                             { name: 'test_get_pattern_history', desc: 'GET /patterns/history/{symbol}: Historische Pattern-Erkennungen' },
                             { name: 'test_detect_with_empty_symbol', desc: 'POST /detect mit leerem Symbol: Fehlerbehandlung testen' }
+                        ]
+                    },
+                    {
+                        name: 'test_tcn_train_api.py',
+                        path: 'tests/api/',
+                        description: 'TCN Training Service: Dedizierter Container für Modell-Training ohne API-Blockierung',
+                        tests: [
+                            { name: 'test_get_training_status', desc: 'GET /train/status: Aktueller Training-Status (idle/training/preparing)' },
+                            { name: 'test_get_training_history', desc: 'GET /train/history: Historie aller bisherigen Trainingsläufe' },
+                            { name: 'test_list_models', desc: 'GET /models: Liste aller trainierten TCN-Modelle mit Metadaten' },
+                            { name: 'test_get_auto_training_status', desc: 'GET /auto-training/status: Auto-Training Scheduler Konfiguration' },
+                            { name: 'test_get_scheduler_status', desc: 'GET /scheduler: Scheduler-Status (Alias für auto-training)' },
+                            { name: 'test_health_endpoint', desc: 'GET /health: Health Check mit training_active Flag' },
+                            { name: 'test_root_endpoint', desc: 'GET /: Service-Info mit Version und verfügbaren Endpoints' },
+                            { name: 'test_train_endpoint_validation', desc: 'POST /train: Training-Parameter Validierung (ohne echtes Training)' },
+                            { name: 'test_stop_training_when_idle', desc: 'POST /train/stop: Stop-Anfrage wenn kein Training läuft' }
                         ]
                     },
                     {
@@ -1809,6 +1827,7 @@
                             { name: 'test_health_response_contract[data]', desc: 'Data Service: /health Response hat "status" Feld mit healthy/ok/running', tags: ['parametrized'] },
                             { name: 'test_health_response_contract[nhits]', desc: 'NHITS Service: /health Response Schema konform', tags: ['parametrized'] },
                             { name: 'test_health_response_contract[tcn]', desc: 'TCN Service: /health Response Schema konform', tags: ['parametrized'] },
+                            { name: 'test_health_response_contract[tcn-train]', desc: 'TCN-Train Service: /health Response hat training_active Feld', tags: ['parametrized'] },
                             { name: 'test_health_response_contract[hmm]', desc: 'HMM Service: /health Response Schema konform', tags: ['parametrized'] },
                             { name: 'test_health_response_contract[embedder]', desc: 'Embedder Service: /health Response Schema konform', tags: ['parametrized'] },
                             { name: 'test_health_response_contract[rag]', desc: 'RAG Service: /health Response Schema konform', tags: ['parametrized'] },
