@@ -255,39 +255,7 @@
             margin-bottom: 0;
         }
 
-        .pattern-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0.75rem;
-            margin-top: 1rem;
-        }
-
-        @media (max-width: 700px) {
-            .pattern-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        .pattern-item {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.75rem;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .pattern-item .pattern-name {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #64c8ff;
-        }
-
-        .pattern-item .pattern-type {
-            font-size: 0.7rem;
-            opacity: 0.6;
-            margin-top: 0.2rem;
-        }
-
-        /* Pattern Explanation Cards */
+        /* Pattern Cards with SVG Graphics */
         .pattern-explain-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -425,85 +393,13 @@
 
         <div class="content-card">
             <h2>&#128200; Erkannte Pattern (16 Typen)</h2>
-            <p>Der Service erkennt folgende klassische Chart-Patterns:</p>
+            <p>Der Service erkennt folgende klassische Chart-Patterns mit grafischer Darstellung und Trading-Signalen:</p>
 
-            <div class="pattern-grid">
-                <div class="pattern-item">
-                    <div class="pattern-name">Head & Shoulders</div>
-                    <div class="pattern-type">Reversal</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Inv. Head & Shoulders</div>
-                    <div class="pattern-type">Reversal</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Double Top</div>
-                    <div class="pattern-type">Reversal</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Double Bottom</div>
-                    <div class="pattern-type">Reversal</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Triple Top</div>
-                    <div class="pattern-type">Reversal</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Triple Bottom</div>
-                    <div class="pattern-type">Reversal</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Asc. Triangle</div>
-                    <div class="pattern-type">Continuation</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Desc. Triangle</div>
-                    <div class="pattern-type">Continuation</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Sym. Triangle</div>
-                    <div class="pattern-type">Continuation</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Rising Wedge</div>
-                    <div class="pattern-type">Reversal</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Falling Wedge</div>
-                    <div class="pattern-type">Reversal</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Bull Flag</div>
-                    <div class="pattern-type">Continuation</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Bear Flag</div>
-                    <div class="pattern-type">Continuation</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Cup & Handle</div>
-                    <div class="pattern-type">Continuation</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Rounding Bottom</div>
-                    <div class="pattern-type">Reversal</div>
-                </div>
-                <div class="pattern-item">
-                    <div class="pattern-name">Rectangle</div>
-                    <div class="pattern-type">Continuation</div>
-                </div>
-            </div>
-
-            <div class="info-box">
+            <div class="info-box" style="margin-bottom: 1.5rem;">
                 <strong>Pattern-Klassifikation:</strong> Jedes erkannte Pattern enthalt einen Confidence-Score (0-1),
                 der die Sicherheit der Erkennung angibt. Zusatzlich werden Start/End-Punkte und erwartete
                 Preisziele berechnet.
             </div>
-        </div>
-
-        <div class="content-card">
-            <h2>&#128218; Pattern-Beispiele</h2>
-            <p>Grafische Darstellung der erkannten Chart-Patterns mit Trading-Signalen:</p>
 
             <div class="pattern-explain-grid">
                 <!-- Head & Shoulders -->
