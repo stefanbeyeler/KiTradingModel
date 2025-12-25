@@ -188,7 +188,11 @@
       "Bash(src/services/tcn_train_app/ )",
       "Bash(docker/services/tcn-train/ )",
       "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/)",
-      "Bash(/Users/sbeyeler/GIT/KiTradingModel/docker-compose.microservices.yml )"
+      "Bash(/Users/sbeyeler/GIT/KiTradingModel/docker-compose.microservices.yml )",
+      "Bash(/Users/sbeyeler/GIT/KiTradingModel/docker/services/tcn-train/ )",
+      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/docker/services/tcn-train/)",
+      "Bash(/Users/sbeyeler/GIT/KiTradingModel/src/services/tcn_train_app/ )",
+      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/src/services/tcn_train_app/)"
     ],
     "deny": [],
     "ask": []
