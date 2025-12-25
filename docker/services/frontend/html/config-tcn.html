@@ -510,7 +510,6 @@
             <button class="tab-btn active" onclick="showTab('overview')">&#128200; Übersicht</button>
             <button class="tab-btn" onclick="showTab('detection')">&#128269; Pattern-Erkennung</button>
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
-            <button class="tab-btn" onclick="showTab('history')">&#128203; Verlauf</button>
         </div>
 
         <!-- Overview Tab -->
@@ -623,6 +622,74 @@
                     </div>
                     <button class="btn btn-primary" id="btn-scan-all" onclick="scanAllAndSave()">&#128640; Alle Symbole scannen</button>
                     <div id="scan-results" style="margin-top: 1rem;"></div>
+                </div>
+            </div>
+
+            <!-- Pattern History Table (moved from Verlauf tab) -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128203; Erkannte Patterns</h3>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <select class="form-control" id="history-symbol-filter" style="width: auto;">
+                            <option value="">Alle Symbole</option>
+                        </select>
+                        <select class="form-control" id="history-category-filter" style="width: auto;">
+                            <option value="">Alle Kategorien</option>
+                            <option value="reversal">Reversal</option>
+                            <option value="continuation">Continuation</option>
+                            <option value="trend">Trend</option>
+                        </select>
+                        <select class="form-control" id="history-direction-filter" style="width: auto;">
+                            <option value="">Alle Richtungen</option>
+                            <option value="bullish">Bullish</option>
+                            <option value="bearish">Bearish</option>
+                            <option value="neutral">Neutral</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="loadPatternHistory()">&#8635; Aktualisieren</button>
+                    </div>
+                </div>
+                <div id="pattern-history-table" style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Pattern</th>
+                                <th>Richtung</th>
+                                <th>Konfidenz</th>
+                                <th>Timeframe</th>
+                                <th>Erkannt</th>
+                                <th>Preis</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pattern-history-body">
+                            <tr><td colspan="7" style="text-align: center; padding: 2rem; color: #888;">Lade Pattern-Historie...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span id="history-count" style="color: #888; font-size: 0.85rem;"></span>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="grid-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Nach Pattern-Typ</h3>
+                    </div>
+                    <div id="stats-by-type" style="font-size: 0.85rem;">Lade...</div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Nach Kategorie</h3>
+                    </div>
+                    <div id="stats-by-category" style="font-size: 0.85rem;">Lade...</div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Nach Timeframe</h3>
+                    </div>
+                    <div id="stats-by-timeframe" style="font-size: 0.85rem;">Lade...</div>
                 </div>
             </div>
         </div>
@@ -753,102 +820,6 @@
             </div>
         </div>
 
-        <!-- History Tab -->
-        <div id="tab-history" class="tab-content">
-            <!-- History Stats -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128202; Pattern-Historie (Live)</h3>
-                    <button class="btn btn-success btn-sm" onclick="triggerManualScan()">&#128269; Manueller Scan</button>
-                </div>
-                <div id="history-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem;">
-                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 1.5rem; color: #64c8ff;" id="hist-stat-total">-</div>
-                        <div style="color: #888; font-size: 0.85rem;">Total Patterns</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 1.5rem; color: #a78bfa;" id="hist-stat-symbols">-</div>
-                        <div style="color: #888; font-size: 0.85rem;">Symbole</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 1.5rem;" id="hist-stat-scan-status">-</div>
-                        <div style="color: #888; font-size: 0.85rem;">Auto-Scan</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 1rem; color: #fff;" id="hist-stat-last-scan">-</div>
-                        <div style="color: #888; font-size: 0.85rem;">Letzter Scan</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Filter and Table -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128203; Erkannte Patterns</h3>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <select class="form-control" id="history-symbol-filter" style="width: auto;">
-                            <option value="">Alle Symbole</option>
-                        </select>
-                        <select class="form-control" id="history-category-filter" style="width: auto;">
-                            <option value="">Alle Kategorien</option>
-                            <option value="reversal">Reversal</option>
-                            <option value="continuation">Continuation</option>
-                            <option value="trend">Trend</option>
-                        </select>
-                        <select class="form-control" id="history-direction-filter" style="width: auto;">
-                            <option value="">Alle Richtungen</option>
-                            <option value="bullish">Bullish</option>
-                            <option value="bearish">Bearish</option>
-                            <option value="neutral">Neutral</option>
-                        </select>
-                        <button class="btn btn-primary btn-sm" onclick="loadPatternHistory()">&#8635; Aktualisieren</button>
-                    </div>
-                </div>
-                <div id="pattern-history-table" style="overflow-x: auto;">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Symbol</th>
-                                <th>Pattern</th>
-                                <th>Richtung</th>
-                                <th>Konfidenz</th>
-                                <th>Timeframe</th>
-                                <th>Erkannt</th>
-                                <th>Preis</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pattern-history-body">
-                            <tr><td colspan="7" style="text-align: center; padding: 2rem; color: #888;">Lade Pattern-Historie...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                    <span id="history-count" style="color: #888; font-size: 0.85rem;"></span>
-                </div>
-            </div>
-
-            <!-- Statistics -->
-            <div class="grid-3">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Nach Pattern-Typ</h3>
-                    </div>
-                    <div id="stats-by-type" style="font-size: 0.85rem;">Lade...</div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Nach Kategorie</h3>
-                    </div>
-                    <div id="stats-by-category" style="font-size: 0.85rem;">Lade...</div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Nach Timeframe</h3>
-                    </div>
-                    <div id="stats-by-timeframe" style="font-size: 0.85rem;">Lade...</div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -1426,15 +1397,6 @@
                 if (!response.ok) throw new Error('Failed to load history stats');
 
                 const stats = await response.json();
-
-                document.getElementById('hist-stat-total').textContent = stats.total_patterns || 0;
-                document.getElementById('hist-stat-symbols').textContent = stats.symbols_with_patterns || 0;
-                document.getElementById('hist-stat-scan-status').innerHTML = stats.scan_running
-                    ? '<span style="color: #4caf50;">Aktiv</span>'
-                    : '<span style="color: #ffc107;">Gestoppt</span>';
-                document.getElementById('hist-stat-last-scan').textContent = stats.last_scan
-                    ? new Date(stats.last_scan).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-                    : '-';
 
                 // Pattern types (top 5)
                 const typeHtml = Object.entries(stats.by_pattern_type || {}).slice(0, 5)
