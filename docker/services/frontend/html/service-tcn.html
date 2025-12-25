@@ -286,6 +286,114 @@
             opacity: 0.6;
             margin-top: 0.2rem;
         }
+
+        /* Pattern Explanation Cards */
+        .pattern-explain-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        @media (max-width: 800px) {
+            .pattern-explain-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pattern-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s;
+        }
+
+        .pattern-card:hover {
+            border-color: rgba(100, 200, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .pattern-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .pattern-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .pattern-card-badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .pattern-card-badge.bullish {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .pattern-card-badge.bearish {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ef5350;
+        }
+
+        .pattern-card-badge.neutral {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .pattern-svg-container {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pattern-svg-container svg {
+            width: 100%;
+            max-width: 280px;
+            height: 100px;
+        }
+
+        .pattern-card-desc {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            opacity: 0.85;
+            margin-bottom: 0.75rem;
+        }
+
+        .pattern-card-signal {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .pattern-card-signal span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .pattern-card-signal .label {
+            opacity: 0.6;
+        }
+
+        .pattern-card-signal .value {
+            color: #ffd54f;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -390,6 +498,382 @@
                 <strong>Pattern-Klassifikation:</strong> Jedes erkannte Pattern enthalt einen Confidence-Score (0-1),
                 der die Sicherheit der Erkennung angibt. Zusatzlich werden Start/End-Punkte und erwartete
                 Preisziele berechnet.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128218; Pattern-Beispiele</h2>
+            <p>Grafische Darstellung der erkannten Chart-Patterns mit Trading-Signalen:</p>
+
+            <div class="pattern-explain-grid">
+                <!-- Head & Shoulders -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Head & Shoulders</span>
+                        <span class="pattern-card-badge bearish">Bearish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 70 L40 50 L55 70 L80 20 L105 70 L120 50 L150 70" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="10" y1="70" x2="150" y2="70" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                            <path d="M150 70 L180 85 L210 90" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            <text x="80" y="15" fill="#64c8ff" font-size="8">Kopf</text>
+                            <text x="40" y="45" fill="#81c784" font-size="7">L.Schulter</text>
+                            <text x="105" y="45" fill="#81c784" font-size="7">R.Schulter</text>
+                            <text x="155" y="65" fill="#ffc107" font-size="7">Neckline</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Klassisches Umkehrmuster mit zwei Schultern und einem höheren Kopf. Signal beim Durchbruch der Nackenlinie.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Short</span></span>
+                        <span><span class="label">Ziel:</span> <span class="value">Kopfhöhe</span></span>
+                    </div>
+                </div>
+
+                <!-- Inverse Head & Shoulders -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Inv. Head & Shoulders</span>
+                        <span class="pattern-card-badge bullish">Bullish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 30 L40 50 L55 30 L80 80 L105 30 L120 50 L150 30" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="10" y1="30" x2="150" y2="30" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                            <path d="M150 30 L180 15 L210 10" stroke="#81c784" stroke-width="2" fill="none"/>
+                            <text x="80" y="90" fill="#64c8ff" font-size="8">Kopf</text>
+                            <text x="40" y="58" fill="#81c784" font-size="7">L.Schulter</text>
+                            <text x="105" y="58" fill="#81c784" font-size="7">R.Schulter</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Umgekehrtes H&S-Muster am Boden eines Abwärtstrends. Bullishes Umkehrsignal.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Long</span></span>
+                        <span><span class="label">Ziel:</span> <span class="value">Kopftiefe</span></span>
+                    </div>
+                </div>
+
+                <!-- Double Top -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Double Top</span>
+                        <span class="pattern-card-badge bearish">Bearish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 70 L50 20 L90 55 L130 20 L170 55" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="50" y1="20" x2="130" y2="20" stroke="#ef5350" stroke-width="1" stroke-dasharray="3"/>
+                            <line x1="10" y1="55" x2="170" y2="55" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                            <path d="M170 55 L200 75 L230 85" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            <text x="50" y="15" fill="#ef5350" font-size="8">Top 1</text>
+                            <text x="130" y="15" fill="#ef5350" font-size="8">Top 2</text>
+                            <text x="175" y="50" fill="#ffc107" font-size="7">Support</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Zwei Hochs auf gleichem Niveau bilden einen Widerstand. Durchbruch des Supports bestätigt Pattern.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Short</span></span>
+                        <span><span class="label">Ziel:</span> <span class="value">Pattern-Höhe</span></span>
+                    </div>
+                </div>
+
+                <!-- Double Bottom -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Double Bottom</span>
+                        <span class="pattern-card-badge bullish">Bullish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 30 L50 80 L90 45 L130 80 L170 45" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="50" y1="80" x2="130" y2="80" stroke="#81c784" stroke-width="1" stroke-dasharray="3"/>
+                            <line x1="10" y1="45" x2="170" y2="45" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                            <path d="M170 45 L200 25 L230 15" stroke="#81c784" stroke-width="2" fill="none"/>
+                            <text x="50" y="90" fill="#81c784" font-size="8">Bot 1</text>
+                            <text x="130" y="90" fill="#81c784" font-size="8">Bot 2</text>
+                            <text x="175" y="50" fill="#ffc107" font-size="7">Resistance</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Zwei Tiefs auf gleichem Niveau bilden starken Support. Ausbruch über Widerstand löst Kaufsignal aus.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Long</span></span>
+                        <span><span class="label">Ziel:</span> <span class="value">Pattern-Höhe</span></span>
+                    </div>
+                </div>
+
+                <!-- Triple Top -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Triple Top</span>
+                        <span class="pattern-card-badge bearish">Bearish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 70 L35 20 L60 55 L90 20 L120 55 L150 20 L180 55" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="35" y1="20" x2="150" y2="20" stroke="#ef5350" stroke-width="1" stroke-dasharray="3"/>
+                            <line x1="10" y1="55" x2="180" y2="55" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                            <path d="M180 55 L210 75 L240 85" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            <text x="90" y="15" fill="#ef5350" font-size="8">3x Widerstand</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Drei gescheiterte Versuche, den Widerstand zu durchbrechen. Stärkeres Signal als Double Top.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Short</span></span>
+                        <span><span class="label">Stärke:</span> <span class="value">Hoch</span></span>
+                    </div>
+                </div>
+
+                <!-- Triple Bottom -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Triple Bottom</span>
+                        <span class="pattern-card-badge bullish">Bullish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 30 L35 80 L60 45 L90 80 L120 45 L150 80 L180 45" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="35" y1="80" x2="150" y2="80" stroke="#81c784" stroke-width="1" stroke-dasharray="3"/>
+                            <line x1="10" y1="45" x2="180" y2="45" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                            <path d="M180 45 L210 25 L240 15" stroke="#81c784" stroke-width="2" fill="none"/>
+                            <text x="90" y="92" fill="#81c784" font-size="8">3x Support</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Dreifacher Test des Supports zeigt starke Kaufbereitschaft. Ausbruch generiert kraftvolles Long-Signal.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Long</span></span>
+                        <span><span class="label">Stärke:</span> <span class="value">Hoch</span></span>
+                    </div>
+                </div>
+
+                <!-- Ascending Triangle -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Ascending Triangle</span>
+                        <span class="pattern-card-badge bullish">Bullish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 80 L40 30 L60 70 L90 30 L110 60 L140 30 L160 50" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="40" y1="30" x2="160" y2="30" stroke="#ffc107" stroke-width="1.5"/>
+                            <line x1="10" y1="80" x2="160" y2="50" stroke="#81c784" stroke-width="1.5"/>
+                            <path d="M160 30 L190 15 L220 10" stroke="#81c784" stroke-width="2" fill="none"/>
+                            <text x="165" y="27" fill="#ffc107" font-size="7">Flat Resistance</text>
+                            <text x="85" y="75" fill="#81c784" font-size="7">Rising Support</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Flacher Widerstand mit steigenden Tiefs. Käufer werden aggressiver, Ausbruch nach oben wahrscheinlich.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Long</span></span>
+                        <span><span class="label">Typ:</span> <span class="value">Continuation</span></span>
+                    </div>
+                </div>
+
+                <!-- Descending Triangle -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Descending Triangle</span>
+                        <span class="pattern-card-badge bearish">Bearish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 20 L40 70 L60 30 L90 70 L110 40 L140 70 L160 50" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="40" y1="70" x2="160" y2="70" stroke="#ffc107" stroke-width="1.5"/>
+                            <line x1="10" y1="20" x2="160" y2="50" stroke="#ef5350" stroke-width="1.5"/>
+                            <path d="M160 70 L190 85 L220 90" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            <text x="165" y="73" fill="#ffc107" font-size="7">Flat Support</text>
+                            <text x="85" y="25" fill="#ef5350" font-size="7">Falling Resistance</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Flacher Support mit fallenden Hochs. Verkaufsdruck steigt, Durchbruch nach unten erwartet.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Short</span></span>
+                        <span><span class="label">Typ:</span> <span class="value">Continuation</span></span>
+                    </div>
+                </div>
+
+                <!-- Symmetrical Triangle -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Symmetrical Triangle</span>
+                        <span class="pattern-card-badge neutral">Neutral</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 50 L30 20 L50 70 L80 30 L100 60 L130 40 L150 55" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="30" y1="20" x2="150" y2="47" stroke="#a78bfa" stroke-width="1.5"/>
+                            <line x1="50" y1="70" x2="150" y2="53" stroke="#a78bfa" stroke-width="1.5"/>
+                            <path d="M150 47 L180 25 L210 15" stroke="#81c784" stroke-width="2" stroke-dasharray="4" fill="none"/>
+                            <path d="M150 53 L180 75 L210 85" stroke="#ef5350" stroke-width="2" stroke-dasharray="4" fill="none"/>
+                            <text x="155" y="20" fill="#81c784" font-size="7">Bullish?</text>
+                            <text x="155" y="88" fill="#ef5350" font-size="7">Bearish?</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Konvergierende Trendlinien zeigen Unentschlossenheit. Richtung des Ausbruchs bestimmt das Signal.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Breakout</span></span>
+                        <span><span class="label">Typ:</span> <span class="value">Continuation</span></span>
+                    </div>
+                </div>
+
+                <!-- Rising Wedge -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Rising Wedge</span>
+                        <span class="pattern-card-badge bearish">Bearish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 85 L40 60 L55 75 L90 40 L105 55 L140 25 L155 40" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="10" y1="85" x2="155" y2="40" stroke="#81c784" stroke-width="1.5"/>
+                            <line x1="40" y1="60" x2="155" y2="25" stroke="#ef5350" stroke-width="1.5"/>
+                            <path d="M155 40 L185 60 L215 75" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            <text x="80" y="18" fill="#ef5350" font-size="8">Konvergierend</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Aufwärts geneigte, konvergierende Linien. Trotz steigender Kurse schwächelt das Momentum - bearish.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Short</span></span>
+                        <span><span class="label">Typ:</span> <span class="value">Reversal</span></span>
+                    </div>
+                </div>
+
+                <!-- Falling Wedge -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Falling Wedge</span>
+                        <span class="pattern-card-badge bullish">Bullish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 15 L40 40 L55 25 L90 60 L105 45 L140 75 L155 60" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="10" y1="15" x2="155" y2="60" stroke="#ef5350" stroke-width="1.5"/>
+                            <line x1="40" y1="40" x2="155" y2="75" stroke="#81c784" stroke-width="1.5"/>
+                            <path d="M155 60 L185 40 L215 25" stroke="#81c784" stroke-width="2" fill="none"/>
+                            <text x="80" y="88" fill="#81c784" font-size="8">Konvergierend</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Abwärts geneigte, konvergierende Linien. Verkaufsdruck lässt nach - bullisher Ausbruch erwartet.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Long</span></span>
+                        <span><span class="label">Typ:</span> <span class="value">Reversal</span></span>
+                    </div>
+                </div>
+
+                <!-- Bull Flag -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Bull Flag</span>
+                        <span class="pattern-card-badge bullish">Bullish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 90 L50 30" stroke="#81c784" stroke-width="3" fill="none"/>
+                            <path d="M50 30 L70 40 L85 35 L100 45 L115 40 L130 50" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="50" y1="30" x2="130" y2="50" stroke="#ffc107" stroke-width="1" stroke-dasharray="3"/>
+                            <line x1="70" y1="40" x2="130" y2="55" stroke="#ffc107" stroke-width="1" stroke-dasharray="3"/>
+                            <path d="M130 45 L170 15 L200 5" stroke="#81c784" stroke-width="2" fill="none"/>
+                            <text x="15" y="60" fill="#81c784" font-size="8">Flagpole</text>
+                            <text x="85" y="60" fill="#ffc107" font-size="7">Flag</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Starke Aufwärtsbewegung gefolgt von leicht abwärts geneigter Konsolidierung. Fortsetzung erwartet.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Long</span></span>
+                        <span><span class="label">Ziel:</span> <span class="value">Flagpole</span></span>
+                    </div>
+                </div>
+
+                <!-- Bear Flag -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Bear Flag</span>
+                        <span class="pattern-card-badge bearish">Bearish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 10 L50 70" stroke="#ef5350" stroke-width="3" fill="none"/>
+                            <path d="M50 70 L70 60 L85 65 L100 55 L115 60 L130 50" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="50" y1="70" x2="130" y2="50" stroke="#ffc107" stroke-width="1" stroke-dasharray="3"/>
+                            <line x1="70" y1="60" x2="130" y2="45" stroke="#ffc107" stroke-width="1" stroke-dasharray="3"/>
+                            <path d="M130 55 L170 85 L200 95" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            <text x="15" y="40" fill="#ef5350" font-size="8">Flagpole</text>
+                            <text x="85" y="42" fill="#ffc107" font-size="7">Flag</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Starke Abwärtsbewegung mit leicht aufwärts geneigter Konsolidierung. Weitere Verluste wahrscheinlich.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Short</span></span>
+                        <span><span class="label">Ziel:</span> <span class="value">Flagpole</span></span>
+                    </div>
+                </div>
+
+                <!-- Cup and Handle -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Cup & Handle</span>
+                        <span class="pattern-card-badge bullish">Bullish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 25 Q 20 25, 30 35 Q 60 85, 100 85 Q 140 85, 160 35 Q 170 25, 180 25" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <path d="M180 25 L190 35 L200 30 L210 38 L220 32" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="10" y1="25" x2="220" y2="25" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                            <path d="M220 28 L250 10" stroke="#81c784" stroke-width="2" fill="none"/>
+                            <text x="85" y="75" fill="#64c8ff" font-size="8">Cup</text>
+                            <text x="195" y="45" fill="#64c8ff" font-size="7">Handle</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">U-förmige Tasse mit kleinem Henkel. Langfristiges bullishes Muster mit hoher Erfolgsrate.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Long</span></span>
+                        <span><span class="label">Ziel:</span> <span class="value">Cup-Tiefe</span></span>
+                    </div>
+                </div>
+
+                <!-- Rounding Bottom -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Rounding Bottom</span>
+                        <span class="pattern-card-badge bullish">Bullish</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 25 Q 30 30, 50 50 Q 80 80, 130 85 Q 180 80, 210 50 Q 230 30, 250 25" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="10" y1="25" x2="250" y2="25" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                            <path d="M250 25 L265 15" stroke="#81c784" stroke-width="2" fill="none"/>
+                            <text x="110" y="78" fill="#64c8ff" font-size="8">Rounding</text>
+                            <text x="200" y="20" fill="#ffc107" font-size="7">Breakout</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Langsame, runde Bodenbildung zeigt graduellen Stimmungswechsel. Starkes langfristiges Kaufsignal.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Long</span></span>
+                        <span><span class="label">Dauer:</span> <span class="value">Langfristig</span></span>
+                    </div>
+                </div>
+
+                <!-- Rectangle -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">Rectangle</span>
+                        <span class="pattern-card-badge neutral">Neutral</span>
+                    </div>
+                    <div class="pattern-svg-container">
+                        <svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 30 L40 70 L60 30 L80 70 L100 30 L120 70 L140 30 L160 70 L180 35" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                            <line x1="20" y1="30" x2="180" y2="30" stroke="#ef5350" stroke-width="1.5"/>
+                            <line x1="20" y1="70" x2="180" y2="70" stroke="#81c784" stroke-width="1.5"/>
+                            <path d="M180 30 L210 15 L240 10" stroke="#81c784" stroke-width="2" stroke-dasharray="4" fill="none"/>
+                            <path d="M180 70 L210 85 L240 90" stroke="#ef5350" stroke-width="2" stroke-dasharray="4" fill="none"/>
+                            <text x="90" y="50" fill="#a78bfa" font-size="8">Range</text>
+                        </svg>
+                    </div>
+                    <p class="pattern-card-desc">Horizontale Konsolidierung zwischen Support und Resistance. Breakout-Richtung gibt Signal.</p>
+                    <div class="pattern-card-signal">
+                        <span><span class="label">Signal:</span> <span class="value">Breakout</span></span>
+                        <span><span class="label">Typ:</span> <span class="value">Continuation</span></span>
+                    </div>
+                </div>
             </div>
         </div>
 
