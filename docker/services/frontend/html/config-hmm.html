@@ -509,7 +509,7 @@
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Übersicht</button>
+            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Ubersicht</button>
             <button class="tab-btn" onclick="showTab('detection')">&#128269; Regime-Erkennung</button>
             <button class="tab-btn" onclick="showTab('scoring')">&#127919; Trade Scoring</button>
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
@@ -609,7 +609,7 @@
                         <h3 class="card-title">&#128640; Multi-Symbol Scan</h3>
                     </div>
                     <div class="info-box" style="margin-bottom: 1rem;">
-                        Erkennt das aktuelle Marktregime für alle aktiven Symbole.
+                        Erkennt das aktuelle Marktregime fur alle aktiven Symbole.
                     </div>
                     <button class="btn btn-primary" id="btn-scan" onclick="scanAll()">&#128640; Alle Symbole scannen</button>
                     <div id="scan-results" style="margin-top: 1rem;"></div>
@@ -630,7 +630,7 @@
                     </div>
                 </div>
                 <div id="regime-history">
-                    <div class="info-box">Wählen Sie ein Symbol und klicken Sie auf "Laden".</div>
+                    <div class="info-box">Wahlen Sie ein Symbol und klicken Sie auf "Laden".</div>
                 </div>
             </div>
         </div>
@@ -691,7 +691,7 @@
                     <h3 class="card-title">&#128260; Alignment Check</h3>
                 </div>
                 <div class="info-box" style="margin-bottom: 1rem;">
-                    Prüft die Übereinstimmung von Regime und technischen Indikatoren über mehrere Timeframes.
+                    Pruft die Ubereinstimmung von Regime und technischen Indikatoren uber mehrere Timeframes.
                 </div>
                 <div style="display: flex; gap: 1rem; align-items: flex-end;">
                     <div class="form-group" style="margin-bottom: 0; flex: 1;">
@@ -893,7 +893,7 @@
                         </div>
                     `;
                 } else {
-                    container.innerHTML = '<div class="info-box">Feature-Liste nicht verfügbar.</div>';
+                    container.innerHTML = '<div class="info-box">Feature-Liste nicht verfugbar.</div>';
                 }
             } catch (error) {
                 document.getElementById('feature-list').innerHTML = '<div class="info-box">Feature-Liste konnte nicht geladen werden.</div>';
@@ -941,7 +941,7 @@
                     </div>
                 `;
 
-                showToast(`Regime für ${symbol} erkannt: ${regime.name}`);
+                showToast(`Regime fur ${symbol} erkannt: ${regime.name}`);
             } catch (error) {
                 showToast('Fehler bei der Regime-Erkennung', 'error');
                 console.error(error);
@@ -1018,7 +1018,7 @@
                         </table>
                     `;
                 } else {
-                    container.innerHTML = '<div class="info-box">Keine Historie für dieses Symbol.</div>';
+                    container.innerHTML = '<div class="info-box">Keine Historie fur dieses Symbol.</div>';
                 }
             } catch (error) {
                 container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler beim Laden.</div>';
@@ -1121,11 +1121,11 @@
                 const data = await response.json();
                 document.getElementById('hmm-training-result').innerHTML = `
                     <div class="info-box" style="border-color: rgba(76,175,80,0.3); color: #81c784;">
-                        HMM-Modell für ${symbol} erfolgreich trainiert!
+                        HMM-Modell fur ${symbol} erfolgreich trainiert!
                     </div>
                 `;
 
-                showToast(`HMM für ${symbol} trainiert`);
+                showToast(`HMM fur ${symbol} trainiert`);
                 loadInfo();
             } catch (error) {
                 document.getElementById('hmm-training-result').innerHTML = `

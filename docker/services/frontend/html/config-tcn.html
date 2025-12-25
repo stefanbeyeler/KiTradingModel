@@ -705,7 +705,7 @@
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Übersicht</button>
+            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Ubersicht</button>
             <button class="tab-btn" onclick="showTab('detection')">&#128269; Pattern-Erkennung</button>
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
         </div>
@@ -1004,14 +1004,15 @@
                         <h3 class="card-title">&#128295; Manuelles Training</h3>
                     </div>
                     <div class="form-group">
-                        <label>Symbole <span id="symbols-count" style="color: #888; font-weight: normal;"></span></label>
-                        <select class="form-control" id="train-symbols" multiple style="height: 120px;">
+                        <label>Symbole (für Training) <span id="symbols-count" style="color: #888; font-weight: normal;"></span></label>
+                        <select class="form-control" id="train-symbols" multiple style="height: 150px;">
                             <option disabled>Lade Symbole...</option>
                         </select>
                         <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
                             <button type="button" class="btn btn-secondary" onclick="selectAllSymbols()" style="flex: 1; padding: 0.3rem;">Alle</button>
                             <button type="button" class="btn btn-secondary" onclick="selectNoSymbols()" style="flex: 1; padding: 0.3rem;">Keine</button>
                         </div>
+                        <small style="color: #888;">Ctrl+Klick für Mehrfachauswahl</small>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                         <div class="form-group">
@@ -1049,7 +1050,7 @@
             <!-- Available Models -->
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">&#128230; Verfügbare Modelle</h3>
+                    <h3 class="card-title">&#128230; Verfugbare Modelle</h3>
                     <button class="btn btn-secondary btn-sm" onclick="loadModels()">&#8635; Aktualisieren</button>
                 </div>
                 <div id="models-list">
@@ -1068,6 +1069,26 @@
             </div>
         </div>
 
+        <!-- History Tab -->
+        <div id="tab-history" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128203; Erkennungs-Verlauf</h3>
+                    <div>
+                        <select class="form-control" id="history-symbol" style="width: auto; display: inline-block;">
+                            <option value="BTCUSD">BTCUSD</option>
+                            <option value="ETHUSD">ETHUSD</option>
+                            <option value="EURUSD">EURUSD</option>
+                            <option value="XAUUSD">XAUUSD</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="loadHistory()">&#8635; Laden</button>
+                    </div>
+                </div>
+                <div id="pattern-history">
+                    <div class="info-box">Wählen Sie ein Symbol und klicken Sie auf "Laden".</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1189,7 +1210,7 @@
                         </div>
                         <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
                             <div style="font-size: 1.5rem; color: #a78bfa;">${stats.available_models || 0}</div>
-                            <div style="color: #888; font-size: 0.85rem;">Verfügbare Modelle</div>
+                            <div style="color: #888; font-size: 0.85rem;">Verfugbare Modelle</div>
                         </div>
                     </div>
                 `;
@@ -1234,7 +1255,7 @@
                     result.innerHTML = '<div class="detection-result" style="color: #888; text-align: center;">Keine Pattern erkannt</div>';
                 }
 
-                showToast(`Pattern-Erkennung für ${symbol} abgeschlossen`);
+                showToast(`Pattern-Erkennung fur ${symbol} abgeschlossen`);
             } catch (error) {
                 showToast('Fehler bei der Pattern-Erkennung', 'error');
                 console.error(error);
@@ -1429,7 +1450,7 @@
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                                 <span style="color: #4caf50; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
                                     <span class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></span>
-                                    Training läuft...
+                                    Training lauft...
                                 </span>
                                 <span style="background: #4caf50; color: #000; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">
                                     ${progressPercent}%
@@ -1526,7 +1547,7 @@
                 const symbolSelect = document.getElementById('train-symbols');
                 const symbols = Array.from(symbolSelect.selectedOptions).map(o => o.value);
                 if (symbols.length === 0) {
-                    showToast('Bitte mindestens ein Symbol auswählen', 'error');
+                    showToast('Bitte mindestens ein Symbol auswahlen', 'error');
                     btn.classList.remove('btn-loading');
                     btn.disabled = false;
                     return;
@@ -1664,7 +1685,7 @@
 
                     container.innerHTML = `
                         <div style="margin-bottom: 0.5rem; color: #888; font-size: 0.85rem;">
-                            ${data.count} Modell${data.count !== 1 ? 'e' : ''} verfügbar
+                            ${data.count} Modell${data.count !== 1 ? 'e' : ''} verfugbar
                         </div>
                         ${sortedModels.map((m, idx) => `
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: ${idx === 0 ? 'rgba(76,175,80,0.1)' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${idx === 0 ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.05)'}; border-radius: 6px; margin-bottom: 0.5rem;">
@@ -1975,7 +1996,7 @@
                     select.lastElementChild.appendChild(option);
                 });
 
-                countSpan.textContent = `(${symbols.length} verfügbar)`;
+                countSpan.textContent = `(${symbols.length} verfugbar)`;
 
             } catch (error) {
                 console.error('Error loading symbols:', error);
@@ -2073,7 +2094,7 @@
                     </div>
                     ${data.current_training ? `
                         <div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(100,200,255,0.1); border: 1px solid rgba(100,200,255,0.3); border-radius: 4px;">
-                            <div style="color: #64c8ff; font-weight: 600;">Training läuft...</div>
+                            <div style="color: #64c8ff; font-weight: 600;">Training lauft...</div>
                             <div style="font-size: 0.8rem; color: #888; margin-top: 0.25rem;">
                                 ${data.current_training.symbols?.length || 0} Symbole,
                                 ${data.current_training.completed_timeframes?.length || 0}/${data.current_training.timeframes?.length || 0} Timeframes
@@ -2102,7 +2123,7 @@
                 loadAutoTrainingStatus();
 
             } catch (error) {
-                showToast('Fehler beim Ändern des Auto-Training Status', 'error');
+                showToast('Fehler beim Andern des Auto-Training Status', 'error');
                 console.error(error);
             }
         }
@@ -2159,7 +2180,7 @@
                     throw new Error(errData.detail || 'Failed to start auto-training');
                 }
 
-                showToast('Auto-Training für alle Symbole gestartet');
+                showToast('Auto-Training fur alle Symbole gestartet');
                 loadAutoTrainingStatus();
                 loadTrainingStatus();
 

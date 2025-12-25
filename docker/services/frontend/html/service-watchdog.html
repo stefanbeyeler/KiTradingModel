@@ -360,7 +360,7 @@
 <body>
     <header>
         <div class="container">
-            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
+            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
             <span class="service-badge">Port 3010</span>
         </div>
     </header>
@@ -373,8 +373,8 @@
             <h2>&#128202; Beschreibung</h2>
             <p>
                 Der Watchdog Service ist das zentrale Monitoring-System des KI Trading Model.
-                Er überwacht kontinuierlich alle Microservices auf Verfügbarkeit und Gesundheit
-                und sendet bei Problemen sofortige Benachrichtigungen über Telegram.
+                Er uberwacht kontinuierlich alle Microservices auf Verfugbarkeit und Gesundheit
+                und sendet bei Problemen sofortige Benachrichtigungen uber Telegram.
             </p>
             <p>
                 Der Service fuhrt regelmasig Health-Checks durch, erkennt Ausfalle und Recovery-Events
@@ -390,7 +390,7 @@
             <div class="feature-grid">
                 <div class="feature-item">
                     <h4>&#128308; Health Monitoring</h4>
-                    <p>Regelmässige Health-Checks aller Services über deren /health Endpoints mit konfigurierbarem Intervall.</p>
+                    <p>Regelmasige Health-Checks aller Services uber deren /health Endpoints mit konfigurierbarem Intervall.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128233; Telegram Alerts</h4>
@@ -398,39 +398,39 @@
                 </div>
                 <div class="feature-item">
                     <h4>&#9200; Alert Cooldown</h4>
-                    <p>Intelligenter Cooldown-Mechanismus verhindert wiederholte Alerts für denselben Service.</p>
+                    <p>Intelligenter Cooldown-Mechanismus verhindert wiederholte Alerts fur denselben Service.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128200; Status Dashboard</h4>
-                    <p>API-Endpoints für Echtzeit-Status aller überwachten Services und Alert-Historie.</p>
+                    <p>API-Endpoints fur Echtzeit-Status aller uberwachten Services und Alert-Historie.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#127919; Criticality Levels</h4>
-                    <p>Services werden nach Kritikalität (critical, high, medium, low) klassifiziert für priorisierte Alerts.</p>
+                    <p>Services werden nach Kritikalitat (critical, high, medium, low) klassifiziert fur priorisierte Alerts.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128260; Auto-Recovery Detection</h4>
-                    <p>Automatische Erkennung wenn ein ausgefallener Service wieder verfügbar wird.</p>
+                    <p>Automatische Erkennung wenn ein ausgefallener Service wieder verfugbar wird.</p>
                 </div>
             </div>
 
             <div class="info-box">
-                <strong>Architektur:</strong> Der Watchdog läuft als eigenstandiger FastAPI-Service
-                im Docker-Netzwerk und kann alle anderen Container über deren Service-Namen erreichen.
+                <strong>Architektur:</strong> Der Watchdog lauft als eigenstandiger FastAPI-Service
+                im Docker-Netzwerk und kann alle anderen Container uber deren Service-Namen erreichen.
                 Er ist bewusst lightweight gehalten, um selbst minimale Ressourcen zu verbrauchen.
             </div>
         </div>
 
         <div class="content-card">
             <h2>&#128279; Uberwachte Services</h2>
-            <p>Der Watchdog überwacht folgende Microservices:</p>
+            <p>Der Watchdog uberwacht folgende Microservices:</p>
 
             <table class="service-table">
                 <thead>
                     <tr>
                         <th>Service</th>
                         <th>URL</th>
-                        <th>Kritikalität</th>
+                        <th>Kritikalitat</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -495,12 +495,12 @@
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/status</span>
-                    <span class="endpoint-desc">Aktueller Status aller überwachten Services</span>
+                    <span class="endpoint-desc">Aktueller Status aller uberwachten Services</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/services</span>
-                    <span class="endpoint-desc">Liste aller überwachten Services mit Konfiguration</span>
+                    <span class="endpoint-desc">Liste aller uberwachten Services mit Konfiguration</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -510,7 +510,7 @@
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/alerts/test</span>
-                    <span class="endpoint-desc">Test-Alert über Telegram senden</span>
+                    <span class="endpoint-desc">Test-Alert uber Telegram senden</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -528,7 +528,7 @@
         <div class="content-card">
             <h2>&#128233; Telegram Integration</h2>
             <p>
-                Der Watchdog verwendet die Telegram Bot API für Benachrichtigungen.
+                Der Watchdog verwendet die Telegram Bot API fur Benachrichtigungen.
                 Alerts werden mit Emoji-Icons und formatiertem Text gesendet fur
                 optimale Lesbarkeit auf mobilen Geraten.
             </p>
@@ -553,7 +553,7 @@
 
         <div class="content-card">
             <h2>&#128295; Konfiguration</h2>
-            <p>Der Watchdog wird über Umgebungsvariablen konfiguriert:</p>
+            <p>Der Watchdog wird uber Umgebungsvariablen konfiguriert:</p>
 
             <table class="service-table">
                 <thead>
@@ -576,7 +576,7 @@
                     </tr>
                     <tr>
                         <td><code>ALERT_COOLDOWN_MINUTES</code></td>
-                        <td>Mindestzeit zwischen Alerts für denselben Service</td>
+                        <td>Mindestzeit zwischen Alerts fur denselben Service</td>
                         <td>15</td>
                     </tr>
                     <tr>
