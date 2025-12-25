@@ -9,13 +9,13 @@
 #   - hmm:        2 CPU,   4GB    (regime detection)
 #   - embedder:   2 CPU,   12GB   (embedding service)
 #   - rag:        2 CPU,   8GB    (vector search)
-#   - llm:        2 CPU,   32GB   (LLM inference)
+#   - llm:        2 CPU,   4GB    (API proxy to Ollama)
 #
 # LOW PRIORITY (Training - uses remaining resources):
 #   - nhits:      4 CPU,   16GB   (with nice priority)
 #   - tcn:        4 CPU,   8GB    (with nice priority)
 #
-# Total Reserved: ~15 CPUs (with overcommit), ~84 GB RAM
+# Total Reserved: ~15 CPUs (with overcommit), ~56 GB RAM
 # Remaining for system: ~38 GB RAM
 # =============================================================================
 
@@ -290,7 +290,7 @@ services:
       resources:
         limits:
           cpus: '2'
-          memory: 32G
+          memory: 4G
         reservations:
           devices:
             - driver: nvidia
