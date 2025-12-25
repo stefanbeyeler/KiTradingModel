@@ -473,6 +473,204 @@
             font-size: 0.85rem;
             color: #90caf9;
         }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 5000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-title {
+            color: #64c8ff;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+        }
+
+        .modal-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .modal-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .modal-section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Chart Modal - Larger */
+        .chart-modal .modal {
+            max-width: 900px;
+            width: 95%;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 280px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: #888;
+        }
+
+        .chart-error {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: #e57373;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .chart-canvas-container {
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+        }
+
+        .chart-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .chart-info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-info-label {
+            color: #888;
+        }
+
+        .chart-info-value {
+            color: #64c8ff;
+            font-weight: 500;
+        }
+
+        .modal-implication {
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-style: italic;
+        }
+
+        .modal-implication.bullish {
+            background: rgba(76, 175, 80, 0.15);
+            color: #81c784;
+            border-left: 3px solid #81c784;
+        }
+
+        .modal-implication.bearish {
+            background: rgba(244, 67, 54, 0.15);
+            color: #e57373;
+            border-left: 3px solid #e57373;
+        }
+
+        .modal-implication.neutral {
+            background: rgba(255, 152, 0, 0.15);
+            color: #ffb74d;
+            border-left: 3px solid #ffb74d;
+        }
+
+        .modal-description {
+            color: #ccc;
+            line-height: 1.6;
+        }
+
+        /* Chart Button */
+        .btn-chart {
+            background: rgba(156, 39, 176, 0.2);
+            color: #ce93d8;
+            border: 1px solid rgba(156, 39, 176, 0.3);
+            padding: 0.2rem 0.5rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .btn-chart:hover {
+            background: rgba(156, 39, 176, 0.3);
+        }
+
+        /* Clickable table row */
+        .data-table tr.clickable-row {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .data-table tr.clickable-row:hover {
+            background: rgba(100, 200, 255, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -675,10 +873,11 @@
                                 <th>Timeframe</th>
                                 <th>Erkannt</th>
                                 <th>Preis</th>
+                                <th style="text-align: center;">Chart</th>
                             </tr>
                         </thead>
                         <tbody id="pattern-history-body">
-                            <tr><td colspan="7" style="text-align: center; padding: 2rem; color: #888;">Lade Pattern-Historie...</td></tr>
+                            <tr><td colspan="8" style="text-align: center; padding: 2rem; color: #888;">Lade Pattern-Historie...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1625,13 +1824,13 @@
                 const tbody = document.getElementById('pattern-history-body');
 
                 if (!data.patterns || data.patterns.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #888;">Keine Patterns gefunden</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #888;">Keine Patterns gefunden</td></tr>';
                     document.getElementById('history-count').textContent = '0 Patterns';
                     return;
                 }
 
                 tbody.innerHTML = data.patterns.map(p => `
-                    <tr>
+                    <tr class="clickable-row" onclick="showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}')">
                         <td style="font-weight: 500;">${p.symbol}</td>
                         <td><span class="pattern-badge ${p.direction}">${p.pattern_type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span></td>
                         <td><span class="pattern-badge ${p.direction}">${p.direction}</span></td>
@@ -1639,6 +1838,11 @@
                         <td>${p.timeframe}</td>
                         <td style="color: #888;">${formatLocalDateTime(p.detected_at)}</td>
                         <td style="font-family: monospace;">${p.price_at_detection ? p.price_at_detection.toLocaleString('de-CH', {maximumFractionDigits: 2}) : '-'}</td>
+                        <td style="text-align: center;">
+                            <button type="button" class="btn-chart" onclick="event.stopPropagation(); showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}')" title="Chart anzeigen">
+                                &#128200;
+                            </button>
+                        </td>
                     </tr>
                 `).join('');
 
@@ -1650,7 +1854,7 @@
             } catch (error) {
                 console.error('Error loading pattern history:', error);
                 document.getElementById('pattern-history-body').innerHTML =
-                    '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #f44336;">Fehler beim Laden</td></tr>';
+                    '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #f44336;">Fehler beim Laden</td></tr>';
             }
         }
 
@@ -1985,7 +2189,501 @@
                 loadHistoryStats();
                 loadPatternHistory();
             }, 60000);
+
+            // Setup chart modal
+            setupChartModal();
         });
+
+        // =============================================================================
+        // Pattern Modal Functions
+        // =============================================================================
+
+        // TCN Pattern SVG visualizations
+        const tcnPatternSvgs = {
+            'head_and_shoulders': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 70 L40 50 L55 70 L80 20 L105 70 L120 50 L150 70" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="10" y1="70" x2="150" y2="70" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                <path d="M150 70 L180 85 L210 90" stroke="#ef5350" stroke-width="2" fill="none"/>
+                <text x="80" y="15" fill="#64c8ff" font-size="8">Kopf</text>
+                <text x="40" y="45" fill="#81c784" font-size="7">L.Schulter</text>
+                <text x="105" y="45" fill="#81c784" font-size="7">R.Schulter</text>
+                <text x="155" y="65" fill="#ffc107" font-size="7">Neckline</text>
+            </svg>`,
+            'inverse_head_and_shoulders': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 30 L40 50 L55 30 L80 80 L105 30 L120 50 L150 30" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="10" y1="30" x2="150" y2="30" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                <path d="M150 30 L180 15 L210 10" stroke="#81c784" stroke-width="2" fill="none"/>
+                <text x="80" y="90" fill="#64c8ff" font-size="8">Kopf</text>
+                <text x="40" y="58" fill="#81c784" font-size="7">L.Schulter</text>
+                <text x="105" y="58" fill="#81c784" font-size="7">R.Schulter</text>
+            </svg>`,
+            'double_top': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 70 L50 20 L90 55 L130 20 L170 55" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="50" y1="20" x2="130" y2="20" stroke="#ef5350" stroke-width="1" stroke-dasharray="3"/>
+                <line x1="10" y1="55" x2="170" y2="55" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                <path d="M170 55 L200 75 L230 85" stroke="#ef5350" stroke-width="2" fill="none"/>
+                <text x="50" y="15" fill="#ef5350" font-size="8">Top 1</text>
+                <text x="130" y="15" fill="#ef5350" font-size="8">Top 2</text>
+                <text x="175" y="50" fill="#ffc107" font-size="7">Support</text>
+            </svg>`,
+            'double_bottom': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 30 L50 80 L90 45 L130 80 L170 45" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="50" y1="80" x2="130" y2="80" stroke="#81c784" stroke-width="1" stroke-dasharray="3"/>
+                <line x1="10" y1="45" x2="170" y2="45" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                <path d="M170 45 L200 25 L230 15" stroke="#81c784" stroke-width="2" fill="none"/>
+                <text x="50" y="90" fill="#81c784" font-size="8">Bot 1</text>
+                <text x="130" y="90" fill="#81c784" font-size="8">Bot 2</text>
+                <text x="175" y="50" fill="#ffc107" font-size="7">Resistance</text>
+            </svg>`,
+            'triple_top': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 70 L35 20 L60 55 L90 20 L120 55 L150 20 L180 55" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="35" y1="20" x2="150" y2="20" stroke="#ef5350" stroke-width="1" stroke-dasharray="3"/>
+                <line x1="10" y1="55" x2="180" y2="55" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                <path d="M180 55 L210 75 L240 85" stroke="#ef5350" stroke-width="2" fill="none"/>
+                <text x="90" y="15" fill="#ef5350" font-size="8">3x Widerstand</text>
+            </svg>`,
+            'triple_bottom': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 30 L35 80 L60 45 L90 80 L120 45 L150 80 L180 45" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="35" y1="80" x2="150" y2="80" stroke="#81c784" stroke-width="1" stroke-dasharray="3"/>
+                <line x1="10" y1="45" x2="180" y2="45" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                <path d="M180 45 L210 25 L240 15" stroke="#81c784" stroke-width="2" fill="none"/>
+                <text x="90" y="92" fill="#81c784" font-size="8">3x Support</text>
+            </svg>`,
+            'ascending_triangle': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 80 L40 30 L60 70 L90 30 L110 60 L140 30 L160 50" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="40" y1="30" x2="160" y2="30" stroke="#ffc107" stroke-width="1.5"/>
+                <line x1="10" y1="80" x2="160" y2="50" stroke="#81c784" stroke-width="1.5"/>
+                <path d="M160 30 L190 15 L220 10" stroke="#81c784" stroke-width="2" fill="none"/>
+                <text x="165" y="27" fill="#ffc107" font-size="7">Flat Resistance</text>
+                <text x="85" y="75" fill="#81c784" font-size="7">Rising Support</text>
+            </svg>`,
+            'descending_triangle': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 20 L40 70 L60 30 L90 70 L110 40 L140 70 L160 50" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="40" y1="70" x2="160" y2="70" stroke="#ffc107" stroke-width="1.5"/>
+                <line x1="10" y1="20" x2="160" y2="50" stroke="#ef5350" stroke-width="1.5"/>
+                <path d="M160 70 L190 85 L220 90" stroke="#ef5350" stroke-width="2" fill="none"/>
+                <text x="165" y="73" fill="#ffc107" font-size="7">Flat Support</text>
+                <text x="85" y="25" fill="#ef5350" font-size="7">Falling Resistance</text>
+            </svg>`,
+            'symmetrical_triangle': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 50 L30 20 L50 70 L80 30 L100 60 L130 40 L150 55" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="30" y1="20" x2="150" y2="47" stroke="#a78bfa" stroke-width="1.5"/>
+                <line x1="50" y1="70" x2="150" y2="53" stroke="#a78bfa" stroke-width="1.5"/>
+                <path d="M150 47 L180 25 L210 15" stroke="#81c784" stroke-width="2" stroke-dasharray="4" fill="none"/>
+                <path d="M150 53 L180 75 L210 85" stroke="#ef5350" stroke-width="2" stroke-dasharray="4" fill="none"/>
+                <text x="155" y="20" fill="#81c784" font-size="7">Bullish?</text>
+                <text x="155" y="88" fill="#ef5350" font-size="7">Bearish?</text>
+            </svg>`,
+            'rising_wedge': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 85 L40 60 L55 75 L90 40 L105 55 L140 25 L155 40" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="10" y1="85" x2="155" y2="40" stroke="#81c784" stroke-width="1.5"/>
+                <line x1="40" y1="60" x2="155" y2="25" stroke="#ef5350" stroke-width="1.5"/>
+                <path d="M155 40 L185 60 L215 75" stroke="#ef5350" stroke-width="2" fill="none"/>
+                <text x="80" y="18" fill="#ef5350" font-size="8">Konvergierend</text>
+            </svg>`,
+            'falling_wedge': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 15 L40 40 L55 25 L90 60 L105 45 L140 75 L155 60" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="10" y1="15" x2="155" y2="60" stroke="#ef5350" stroke-width="1.5"/>
+                <line x1="40" y1="40" x2="155" y2="75" stroke="#81c784" stroke-width="1.5"/>
+                <path d="M155 60 L185 40 L215 25" stroke="#81c784" stroke-width="2" fill="none"/>
+                <text x="80" y="88" fill="#81c784" font-size="8">Konvergierend</text>
+            </svg>`,
+            'bull_flag': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 90 L50 30" stroke="#81c784" stroke-width="3" fill="none"/>
+                <path d="M50 30 L70 40 L85 35 L100 45 L115 40 L130 50" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="50" y1="30" x2="130" y2="50" stroke="#ffc107" stroke-width="1" stroke-dasharray="3"/>
+                <line x1="70" y1="40" x2="130" y2="55" stroke="#ffc107" stroke-width="1" stroke-dasharray="3"/>
+                <path d="M130 45 L170 15 L200 5" stroke="#81c784" stroke-width="2" fill="none"/>
+                <text x="15" y="60" fill="#81c784" font-size="8">Flagpole</text>
+                <text x="85" y="60" fill="#ffc107" font-size="7">Flag</text>
+            </svg>`,
+            'bear_flag': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 10 L50 70" stroke="#ef5350" stroke-width="3" fill="none"/>
+                <path d="M50 70 L70 60 L85 65 L100 55 L115 60 L130 50" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="50" y1="70" x2="130" y2="50" stroke="#ffc107" stroke-width="1" stroke-dasharray="3"/>
+                <line x1="70" y1="60" x2="130" y2="45" stroke="#ffc107" stroke-width="1" stroke-dasharray="3"/>
+                <path d="M130 55 L170 85 L200 95" stroke="#ef5350" stroke-width="2" fill="none"/>
+                <text x="15" y="40" fill="#ef5350" font-size="8">Flagpole</text>
+                <text x="85" y="42" fill="#ffc107" font-size="7">Flag</text>
+            </svg>`,
+            'cup_and_handle': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 25 Q 20 25, 30 35 Q 60 85, 100 85 Q 140 85, 160 35 Q 170 25, 180 25" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <path d="M180 25 L190 35 L200 30 L210 38 L220 32" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="10" y1="25" x2="220" y2="25" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                <path d="M220 28 L250 10" stroke="#81c784" stroke-width="2" fill="none"/>
+                <text x="85" y="75" fill="#64c8ff" font-size="8">Cup</text>
+                <text x="195" y="45" fill="#64c8ff" font-size="7">Handle</text>
+            </svg>`,
+            'channel_up': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 80 L40 60 L70 75 L100 55 L130 70 L160 50 L190 65 L220 45" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="10" y1="80" x2="220" y2="45" stroke="#81c784" stroke-width="1.5"/>
+                <line x1="40" y1="55" x2="220" y2="25" stroke="#81c784" stroke-width="1.5"/>
+                <path d="M220 45 L250 30" stroke="#81c784" stroke-width="2" fill="none"/>
+                <text x="120" y="20" fill="#81c784" font-size="8">Aufwärtskanal</text>
+            </svg>`,
+            'channel_down': `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 20 L40 40 L70 25 L100 45 L130 30 L160 50 L190 35 L220 55" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                <line x1="10" y1="20" x2="220" y2="55" stroke="#ef5350" stroke-width="1.5"/>
+                <line x1="40" y1="45" x2="220" y2="75" stroke="#ef5350" stroke-width="1.5"/>
+                <path d="M220 55 L250 70" stroke="#ef5350" stroke-width="2" fill="none"/>
+                <text x="120" y="85" fill="#ef5350" font-size="8">Abwärtskanal</text>
+            </svg>`
+        };
+
+        // Get SVG for pattern type with fallback
+        function getPatternSvg(patternType) {
+            return tcnPatternSvgs[patternType] || `<svg viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <text x="140" y="50" fill="#888" font-size="10" text-anchor="middle">Pattern: ${patternType.replace(/_/g, ' ')}</text>
+                <text x="140" y="65" fill="#666" font-size="8" text-anchor="middle">Keine Visualisierung verfügbar</text>
+            </svg>`;
+        }
+
+        // TCN Pattern descriptions
+        const tcnPatternDescriptions = {
+            'head_and_shoulders': {
+                name: 'Head and Shoulders',
+                description: 'Drei Gipfel, wobei der mittlere (Kopf) höher ist als die beiden äusseren (Schultern). Signalisiert das Ende eines Aufwärtstrends.',
+                implication: 'Starkes bärisches Umkehrsignal. Preisziel entspricht der Distanz vom Kopf zur Nackenlinie.'
+            },
+            'inverse_head_and_shoulders': {
+                name: 'Inverse Head and Shoulders',
+                description: 'Drei Tiefpunkte, wobei der mittlere tiefer ist als die beiden äusseren. Signalisiert das Ende eines Abwärtstrends.',
+                implication: 'Starkes bullisches Umkehrsignal. Preisziel entspricht der Distanz vom Kopf zur Nackenlinie.'
+            },
+            'double_top': {
+                name: 'Double Top',
+                description: 'Zwei aufeinanderfolgende Hochs auf ähnlichem Preisniveau, getrennt durch ein Tal.',
+                implication: 'Bärisches Umkehrsignal. Break unter die Unterstützung bestätigt das Muster.'
+            },
+            'double_bottom': {
+                name: 'Double Bottom',
+                description: 'Zwei aufeinanderfolgende Tiefs auf ähnlichem Preisniveau, getrennt durch einen Gipfel.',
+                implication: 'Bullisches Umkehrsignal. Break über den Widerstand bestätigt das Muster.'
+            },
+            'triple_top': {
+                name: 'Triple Top',
+                description: 'Drei aufeinanderfolgende Hochs auf ähnlichem Preisniveau.',
+                implication: 'Starkes bärisches Umkehrsignal, stärker als Double Top.'
+            },
+            'triple_bottom': {
+                name: 'Triple Bottom',
+                description: 'Drei aufeinanderfolgende Tiefs auf ähnlichem Preisniveau.',
+                implication: 'Starkes bullisches Umkehrsignal, stärker als Double Bottom.'
+            },
+            'ascending_triangle': {
+                name: 'Ascending Triangle',
+                description: 'Horizontale Widerstandslinie mit aufsteigender Unterstützungslinie. Höhere Tiefs zeigen zunehmenden Kaufdruck.',
+                implication: 'Bullisches Fortsetzungsmuster. Ausbruch nach oben wahrscheinlich.'
+            },
+            'descending_triangle': {
+                name: 'Descending Triangle',
+                description: 'Horizontale Unterstützungslinie mit absteigender Widerstandslinie. Tiefere Hochs zeigen zunehmenden Verkaufsdruck.',
+                implication: 'Bärisches Fortsetzungsmuster. Ausbruch nach unten wahrscheinlich.'
+            },
+            'symmetrical_triangle': {
+                name: 'Symmetrical Triangle',
+                description: 'Konvergierende Trend-Linien mit tieferen Hochs und höheren Tiefs. Zeigt Konsolidierung.',
+                implication: 'Neutrales Muster. Ausbruchsrichtung bestimmt den Trend.'
+            },
+            'bull_flag': {
+                name: 'Bull Flag',
+                description: 'Starke Aufwärtsbewegung gefolgt von paralleler Konsolidierung nach unten.',
+                implication: 'Bullisches Fortsetzungsmuster. Erwarteter Ausbruch nach oben.'
+            },
+            'bear_flag': {
+                name: 'Bear Flag',
+                description: 'Starke Abwärtsbewegung gefolgt von paralleler Konsolidierung nach oben.',
+                implication: 'Bärisches Fortsetzungsmuster. Erwarteter Ausbruch nach unten.'
+            },
+            'cup_and_handle': {
+                name: 'Cup and Handle',
+                description: 'U-förmige Rundung (Tasse) gefolgt von kleiner Abwärtskonsolidierung (Henkel).',
+                implication: 'Bullisches Fortsetzungsmuster. Ausbruch über den Henkel-Widerstand erwartet.'
+            },
+            'falling_wedge': {
+                name: 'Falling Wedge',
+                description: 'Konvergierende Trendlinien, beide nach unten gerichtet. Preis macht tiefere Hochs und tiefere Tiefs.',
+                implication: 'Bullisches Umkehrmuster (im Abwärtstrend) oder Fortsetzung (im Aufwärtstrend).'
+            },
+            'rising_wedge': {
+                name: 'Rising Wedge',
+                description: 'Konvergierende Trendlinien, beide nach oben gerichtet. Preis macht höhere Hochs und höhere Tiefs.',
+                implication: 'Bärisches Umkehrmuster (im Aufwärtstrend) oder Fortsetzung (im Abwärtstrend).'
+            },
+            'channel_up': {
+                name: 'Channel Up',
+                description: 'Parallele aufsteigende Trendlinien. Preis bewegt sich zwischen Unterstützung und Widerstand.',
+                implication: 'Bullischer Trend. Long bei Unterstützung, Vorsicht bei Widerstand.'
+            },
+            'channel_down': {
+                name: 'Channel Down',
+                description: 'Parallele absteigende Trendlinien. Preis bewegt sich zwischen Unterstützung und Widerstand.',
+                implication: 'Bärischer Trend. Short bei Widerstand, Vorsicht bei Unterstützung.'
+            }
+        };
+
+        // Get pattern info with fallback
+        function getTcnPatternInfo(patternType) {
+            return tcnPatternDescriptions[patternType] || {
+                name: patternType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+                description: 'TCN-erkanntes Chart-Muster.',
+                implication: 'Richtung und Stärke beachten für Trading-Entscheidung.'
+            };
+        }
+
+        // Format price for display
+        function formatPrice(price) {
+            if (price >= 1000) return price.toFixed(0);
+            if (price >= 1) return price.toFixed(2);
+            return price.toFixed(5);
+        }
+
+        // Draw candlestick chart using Canvas
+        function drawCandlestickChart(canvasId, candles, patternIndex) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const container = canvas.parentElement;
+
+            // Set canvas size
+            canvas.width = container.clientWidth - 20;
+            canvas.height = container.clientHeight - 20;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = { top: 20, right: 60, bottom: 30, left: 10 };
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            if (!candles || candles.length === 0) {
+                ctx.fillStyle = '#888';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Keine Daten verfügbar', width / 2, height / 2);
+                return;
+            }
+
+            // Calculate price range
+            const prices = candles.flatMap(c => [c.high, c.low]);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const priceRange = maxPrice - minPrice || 1;
+            const pricePadding = priceRange * 0.1;
+
+            const scaledMinPrice = minPrice - pricePadding;
+            const scaledMaxPrice = maxPrice + pricePadding;
+            const scaledRange = scaledMaxPrice - scaledMinPrice;
+
+            // Calculate candle dimensions
+            const candleWidth = Math.max(4, Math.min(20, (chartWidth / candles.length) * 0.7));
+            const candleSpacing = chartWidth / candles.length;
+
+            // Helper to convert price to Y coordinate
+            const priceToY = (price) => {
+                return padding.top + chartHeight - ((price - scaledMinPrice) / scaledRange * chartHeight);
+            };
+
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            const gridLines = 5;
+            for (let i = 0; i <= gridLines; i++) {
+                const y = padding.top + (chartHeight / gridLines) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(width - padding.right, y);
+                ctx.stroke();
+
+                // Price labels
+                const price = scaledMaxPrice - (scaledRange / gridLines) * i;
+                ctx.fillStyle = '#888';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(formatPrice(price), width - padding.right + 5, y + 3);
+            }
+
+            // Draw candles
+            candles.forEach((candle, i) => {
+                const x = padding.left + (i + 0.5) * candleSpacing;
+                const isPattern = i === patternIndex;
+
+                const openY = priceToY(candle.open);
+                const closeY = priceToY(candle.close);
+                const highY = priceToY(candle.high);
+                const lowY = priceToY(candle.low);
+
+                const isBullish = candle.close >= candle.open;
+                const bodyTop = Math.min(openY, closeY);
+                const bodyHeight = Math.max(1, Math.abs(closeY - openY));
+
+                // Highlight pattern candle background
+                if (isPattern) {
+                    ctx.fillStyle = 'rgba(255, 193, 7, 0.15)';
+                    ctx.fillRect(x - candleSpacing / 2, padding.top, candleSpacing, chartHeight);
+                }
+
+                // Draw wick
+                ctx.strokeStyle = isBullish ? '#81c784' : '#e57373';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x, highY);
+                ctx.lineTo(x, lowY);
+                ctx.stroke();
+
+                // Draw body
+                ctx.fillStyle = isBullish ? '#81c784' : '#e57373';
+                ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+
+                // Draw body outline
+                ctx.strokeStyle = isBullish ? '#4caf50' : '#f44336';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+
+                // Pattern marker
+                if (isPattern) {
+                    ctx.strokeStyle = '#ffc107';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4, 2]);
+                    ctx.strokeRect(x - candleWidth / 2 - 3, highY - 5, candleWidth + 6, lowY - highY + 10);
+                    ctx.setLineDash([]);
+
+                    // Arrow pointing to pattern
+                    ctx.fillStyle = '#ffc107';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('▼', x, padding.top - 5);
+                }
+
+                // Time labels (show every few candles)
+                if (i === 0 || i === candles.length - 1 || i === patternIndex) {
+                    const time = new Date(candle.timestamp);
+                    const timeStr = time.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+                    ctx.fillStyle = i === patternIndex ? '#ffc107' : '#666';
+                    ctx.font = '9px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(timeStr, x, height - 5);
+                }
+            });
+
+            // Draw legend
+            ctx.fillStyle = '#888';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Pattern-Kerze markiert (gelb)', padding.left, height - 5);
+        }
+
+        // Show pattern modal with SVG visualization
+        function showPatternChart(symbol, timeframe, timestamp, patternType, direction) {
+            const modal = document.getElementById('chartModal');
+            const svgContainer = document.getElementById('patternSvgContainer');
+            const chartInfo = document.getElementById('chartInfo');
+
+            // Get pattern info
+            const info = getTcnPatternInfo(patternType);
+
+            // Set title and badges
+            document.getElementById('chartModalTitle').textContent = `${symbol} - ${info.name}`;
+            document.getElementById('chartModalBadges').innerHTML = `
+                <span class="pattern-badge ${direction}">${direction}</span>
+                <span class="pattern-badge">${timeframe}</span>
+            `;
+
+            // Set SVG visualization
+            svgContainer.innerHTML = getPatternSvg(patternType);
+
+            // Set description
+            document.getElementById('chartPatternDescription').textContent = info.description;
+            const implEl = document.getElementById('chartPatternImplication');
+            implEl.textContent = info.implication;
+            implEl.className = 'modal-implication ' + (direction === 'bullish' ? 'bullish' : direction === 'bearish' ? 'bearish' : 'neutral');
+
+            // Update chart info
+            document.getElementById('chartSymbol').textContent = symbol;
+            document.getElementById('chartTimeframe').textContent = timeframe;
+            document.getElementById('chartPatternTime').textContent = formatLocalDateTime(timestamp, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            document.getElementById('chartPatternType').textContent = info.name;
+
+            // Show elements
+            svgContainer.style.display = 'block';
+            chartInfo.style.display = 'flex';
+
+            // Show modal
+            modal.classList.add('show');
+        }
+
+        // Close chart modal
+        function closeChartModal() {
+            document.getElementById('chartModal').classList.remove('show');
+        }
+
+        // Setup chart modal events
+        function setupChartModal() {
+            const modal = document.getElementById('chartModal');
+            if (!modal) return;
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeChartModal();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('show')) {
+                    closeChartModal();
+                }
+            });
+        }
     </script>
+
+    <!-- Pattern Modal for Pattern Visualization -->
+    <div class="modal-overlay chart-modal" id="chartModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <span id="chartModalTitle">Pattern</span>
+                    <span id="chartModalBadges" style="margin-left: 0.5rem;"></span>
+                </h3>
+                <button type="button" class="modal-close" onclick="closeChartModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <div class="modal-section-title">Pattern-Visualisierung</div>
+                    <div class="chart-container" id="patternSvgContainer" style="display: flex; justify-content: center; align-items: center; padding: 1rem;">
+                        <!-- SVG wird dynamisch eingefügt -->
+                    </div>
+                    <div class="chart-info" id="chartInfo" style="display: none;">
+                        <div class="chart-info-item">
+                            <span class="chart-info-label">Symbol:</span>
+                            <span class="chart-info-value" id="chartSymbol">-</span>
+                        </div>
+                        <div class="chart-info-item">
+                            <span class="chart-info-label">Timeframe:</span>
+                            <span class="chart-info-value" id="chartTimeframe">-</span>
+                        </div>
+                        <div class="chart-info-item">
+                            <span class="chart-info-label">Erkannt:</span>
+                            <span class="chart-info-value" id="chartPatternTime">-</span>
+                        </div>
+                        <div class="chart-info-item">
+                            <span class="chart-info-label">Typ:</span>
+                            <span class="chart-info-value" id="chartPatternType">-</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">Pattern-Beschreibung</div>
+                    <div class="modal-description" id="chartPatternDescription"></div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">Trading-Implikation</div>
+                    <div class="modal-implication" id="chartPatternImplication"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
