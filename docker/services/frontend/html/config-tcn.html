@@ -2623,9 +2623,11 @@
 
             try {
                 // Fetch OHLC data from Data Service using the patterns/chart endpoint
+                // Use the pattern detection timestamp to get historical data at that point in time
                 const candlesBack = 50; // Show 50 candles of context
+                const patternTimestamp = encodeURIComponent(timestamp);
 
-                const ohlcResponse = await fetch(`/data/api/v1/patterns/chart/${symbol}?candles_before=${candlesBack}&candles_after=0&timeframe=${timeframe}`);
+                const ohlcResponse = await fetch(`/data/api/v1/patterns/chart/${symbol}?candles_before=${candlesBack}&candles_after=5&timeframe=${timeframe}&timestamp=${patternTimestamp}`);
 
                 if (!ohlcResponse.ok) {
                     throw new Error(`OHLC-Daten konnten nicht geladen werden: ${ohlcResponse.status}`);
