@@ -10,13 +10,14 @@
 #   - embedder:   2 CPU,   12GB   (embedding service)
 #   - rag:        2 CPU,   8GB    (vector search)
 #   - llm:        2 CPU,   4GB    (API proxy to Ollama)
+#   - tcn:        2 CPU,   4GB    (pattern detection - inference only)
 #
 # LOW PRIORITY (Training - uses remaining resources):
 #   - nhits:      4 CPU,   16GB   (with nice priority)
-#   - tcn:        4 CPU,   8GB    (with nice priority)
+#   - tcn-train:  4 CPU,   8GB    (with nice priority, separate from inference)
 #
-# Total Reserved: ~15 CPUs (with overcommit), ~56 GB RAM
-# Remaining for system: ~38 GB RAM
+# Total Reserved: ~17 CPUs (with overcommit), ~60 GB RAM
+# Remaining for system: ~34 GB RAM
 # =============================================================================
 
 services:
@@ -362,7 +363,8 @@ services:
       retries: 3
       start_period: 40s
 
-  # TCN-Pattern Service - Chart Pattern Detection (LOW PRIORITY for training)
+  # TCN-Pattern Service - Chart Pattern Detection (INFERENCE ONLY)
+  # Training is handled by the separate tcn-train-service
   tcn-service:
     build:
       context: .
@@ -387,11 +389,8 @@ services:
       - ROOT_PATH=/tcn
       - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
       - EMBEDDER_SERVICE_URL=http://trading-embedder:${EMBEDDER_SERVICE_PORT:-3005}
-      # Limit CPU threads for training to prevent blocking
-      - OMP_NUM_THREADS=4
-      - MKL_NUM_THREADS=4
-      - OPENBLAS_NUM_THREADS=4
-      - NUMEXPR_MAX_THREADS=4
+      - TCN_MODEL_PATH=/app/data/models/tcn/latest.pt
+      - TCN_AUTO_SCAN=true
     networks:
       - trading-net
     extra_hosts:
@@ -402,8 +401,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4'
-          memory: 8G
+          cpus: '2'
+          memory: 4G
         reservations:
           devices:
             - driver: nvidia
@@ -415,6 +414,64 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # TCN Training Service - Dedicated training container (LOW PRIORITY)
+  # Runs separately from inference to prevent blocking API requests
+  tcn-train-service:
+    build:
+      context: .
+      dockerfile: docker/services/tcn-train/Dockerfile
+      args:
+        - SERVICE_PORT=${TCN_TRAIN_SERVICE_PORT:-3013}
+    container_name: trading-tcn-train
+    runtime: nvidia
+    ports:
+      - "${TCN_TRAIN_SERVICE_PORT:-3013}:${TCN_TRAIN_SERVICE_PORT:-3013}"
+    volumes:
+      - tcn-models:/app/data/models/tcn
+      - symbols-data:/app/data/symbols
+      - ./src/services/tcn_train_app:/app/src/services/tcn_train_app:ro
+      - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
+      - ./src/shared:/app/src/shared:ro
+      - ./src/config:/app/src/config:ro
+      - logs-data:/app/logs
+    environment:
+      - SERVICE_NAME=tcn-train
+      - PORT=${TCN_TRAIN_SERVICE_PORT:-3013}
+      - ROOT_PATH=/tcn-train
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - TCN_SERVICE_URL=http://trading-tcn:${TCN_SERVICE_PORT:-3003}
+      - TCN_AUTO_TRAIN=true
+      - TCN_MODEL_DIR=/app/data/models/tcn
+      # Limit CPU threads for training
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+      - OPENBLAS_NUM_THREADS=4
+      - NUMEXPR_MAX_THREADS=4
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+      - tcn-service
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${TCN_TRAIN_SERVICE_PORT:-3013}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 # =============================================================================
 # VOLUMES

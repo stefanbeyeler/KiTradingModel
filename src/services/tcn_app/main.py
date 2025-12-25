@@ -1,11 +1,14 @@
 """
 TCN-Pattern Service - Chart Pattern Detection using Temporal Convolutional Networks
 
-Port: 3005
+Port: 3003
 Detects chart patterns like:
 - Head & Shoulders, Double Top/Bottom
 - Triangles, Flags, Wedges
 - Channels and more
+
+Note: Training has been moved to a separate service (tcn_train_app) to prevent
+training from blocking pattern detection API requests.
 """
 
 import os
@@ -16,7 +19,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from .routers import detection_router, training_router, system_router, history_router
+from .routers import detection_router, system_router, history_router
 from .services.pattern_detection_service import pattern_detection_service
 from .services.tcn_pattern_history_service import tcn_pattern_history_service
 
@@ -122,10 +125,10 @@ app.add_middleware(
 )
 
 # Include routers
+# Note: Training router moved to tcn_train_app service
 app.include_router(system_router, prefix="/api/v1", tags=["1. System & Monitoring"])
 app.include_router(detection_router, prefix="/api/v1", tags=["2. Pattern Detection"])
 app.include_router(history_router, prefix="/api/v1", tags=["3. Pattern History"])
-app.include_router(training_router, prefix="/api/v1", tags=["4. Model Training"])
 
 
 @app.get("/")
@@ -136,6 +139,7 @@ async def root():
         "version": VERSION,
         "docs": "/docs",
         "health": "/api/v1/health",
+        "note": "Training moved to tcn-train service (port 3013)",
         "endpoints": {
             "detect": "/api/v1/detect",
             "scan": "/api/v1/scan",
@@ -143,8 +147,8 @@ async def root():
             "history": "/api/v1/history",
             "history_by_symbol": "/api/v1/history/{symbol}",
             "history_statistics": "/api/v1/history/statistics",
-            "train": "/api/v1/train",
-            "models": "/api/v1/models"
+            "model": "/api/v1/model",
+            "model_reload": "/api/v1/model/reload"
         }
     }
 

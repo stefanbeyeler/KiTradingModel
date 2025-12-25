@@ -1,5 +1,6 @@
 """Pattern detection service."""
 
+import os
 from typing import List, Optional, Dict
 from datetime import datetime
 import numpy as np
@@ -30,20 +31,65 @@ class PatternDetectionService:
         self.rule_classifier = PatternClassifier()
         self._model_loaded = False
         self._model_version = "1.0.0"
+        self._model_path: Optional[str] = None
 
     def load_model(self, model_path: Optional[str] = None):
         """Load the TCN model."""
         try:
             self.tcn_model.load(model_path)
             self._model_loaded = True
-            logger.info("TCN Pattern model loaded")
+            self._model_path = model_path
+            logger.info(f"TCN Pattern model loaded from {model_path}")
         except Exception as e:
             logger.warning(f"Could not load TCN model: {e}")
             self._model_loaded = False
 
+    def reload_model(self, model_path: Optional[str] = None) -> bool:
+        """
+        Hot-reload the model from disk.
+
+        Called by training service when a new model is available.
+
+        Args:
+            model_path: Path to new model. If None, uses latest.pt symlink.
+
+        Returns:
+            True if reload successful
+        """
+        # Default to latest.pt if no path provided
+        if model_path is None:
+            model_path = os.getenv("TCN_MODEL_PATH", "data/models/tcn/latest.pt")
+
+        # Check if model exists
+        if not os.path.exists(model_path):
+            logger.warning(f"Model not found: {model_path}")
+            return False
+
+        try:
+            # Reinitialize the TCN model
+            self.tcn_model = TCNPatternClassifier(device=self.device)
+            self.tcn_model.load(model_path)
+            self._model_loaded = True
+            self._model_path = model_path
+            logger.info(f"TCN model hot-reloaded from {model_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to reload model: {e}")
+            return False
+
     def is_model_loaded(self) -> bool:
         """Check if model is loaded."""
         return self._model_loaded
+
+    def get_model_info(self) -> Dict:
+        """Get information about the loaded model."""
+        return {
+            "loaded": self._model_loaded,
+            "path": self._model_path,
+            "version": self._model_version,
+            "device": self.device,
+            "parameters": self.tcn_model.get_num_parameters() if self._model_loaded else 0
+        }
 
     async def detect_patterns(
         self,
