@@ -629,9 +629,15 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">&#128203; Erkannte Patterns</h3>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                         <select class="form-control" id="history-symbol-filter" style="width: auto;">
                             <option value="">Alle Symbole</option>
+                        </select>
+                        <select class="form-control" id="history-timeframe-filter" style="width: auto;">
+                            <option value="">Alle Timeframes</option>
+                            <option value="1h">1h</option>
+                            <option value="4h">4h</option>
+                            <option value="1d">1d</option>
                         </select>
                         <select class="form-control" id="history-category-filter" style="width: auto;">
                             <option value="">Alle Kategorien</option>
@@ -645,6 +651,16 @@
                             <option value="bearish">Bearish</option>
                             <option value="neutral">Neutral</option>
                         </select>
+                        <select class="form-control" id="history-confidence-filter" style="width: auto;">
+                            <option value="">Alle Konfidenzen</option>
+                            <option value="0.8">≥ 80%</option>
+                            <option value="0.7">≥ 70%</option>
+                            <option value="0.6">≥ 60%</option>
+                            <option value="0.5">≥ 50%</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" id="btn-reset-filters" onclick="resetPatternFilters()" style="display: none;" title="Filter zurücksetzen">
+                            &#10005; Filter
+                        </button>
                         <button class="btn btn-primary btn-sm" onclick="loadPatternHistory()">&#8635; Aktualisieren</button>
                     </div>
                 </div>
@@ -1522,16 +1538,84 @@
             }
         }
 
+        // Pattern Filter Storage Key
+        const PATTERN_FILTERS_KEY = 'tcn_pattern_filters';
+
+        // Save pattern filters to localStorage
+        function savePatternFilters() {
+            const filters = {
+                symbol: document.getElementById('history-symbol-filter').value,
+                timeframe: document.getElementById('history-timeframe-filter').value,
+                category: document.getElementById('history-category-filter').value,
+                direction: document.getElementById('history-direction-filter').value,
+                confidence: document.getElementById('history-confidence-filter').value
+            };
+            localStorage.setItem(PATTERN_FILTERS_KEY, JSON.stringify(filters));
+            updateResetButtonVisibility();
+        }
+
+        // Load pattern filters from localStorage
+        function loadPatternFilters() {
+            try {
+                const saved = localStorage.getItem(PATTERN_FILTERS_KEY);
+                if (saved) {
+                    const filters = JSON.parse(saved);
+                    if (filters.symbol) document.getElementById('history-symbol-filter').value = filters.symbol;
+                    if (filters.timeframe) document.getElementById('history-timeframe-filter').value = filters.timeframe;
+                    if (filters.category) document.getElementById('history-category-filter').value = filters.category;
+                    if (filters.direction) document.getElementById('history-direction-filter').value = filters.direction;
+                    if (filters.confidence) document.getElementById('history-confidence-filter').value = filters.confidence;
+                }
+            } catch (e) {
+                console.error('Error loading filters:', e);
+            }
+            updateResetButtonVisibility();
+        }
+
+        // Reset all pattern filters
+        function resetPatternFilters() {
+            document.getElementById('history-symbol-filter').value = '';
+            document.getElementById('history-timeframe-filter').value = '';
+            document.getElementById('history-category-filter').value = '';
+            document.getElementById('history-direction-filter').value = '';
+            document.getElementById('history-confidence-filter').value = '';
+            localStorage.removeItem(PATTERN_FILTERS_KEY);
+            updateResetButtonVisibility();
+            loadPatternHistory();
+        }
+
+        // Show/hide reset button based on active filters
+        function updateResetButtonVisibility() {
+            const hasFilters =
+                document.getElementById('history-symbol-filter').value ||
+                document.getElementById('history-timeframe-filter').value ||
+                document.getElementById('history-category-filter').value ||
+                document.getElementById('history-direction-filter').value ||
+                document.getElementById('history-confidence-filter').value;
+
+            const btn = document.getElementById('btn-reset-filters');
+            if (btn) {
+                btn.style.display = hasFilters ? 'inline-block' : 'none';
+            }
+        }
+
         // Load Pattern History Table
         async function loadPatternHistory() {
             const symbol = document.getElementById('history-symbol-filter').value;
+            const timeframe = document.getElementById('history-timeframe-filter').value;
             const category = document.getElementById('history-category-filter').value;
             const direction = document.getElementById('history-direction-filter').value;
+            const minConfidence = document.getElementById('history-confidence-filter').value;
+
+            // Save filters to localStorage
+            savePatternFilters();
 
             let url = `${API_BASE}/history?limit=50`;
             if (symbol) url += `&symbol=${symbol}`;
+            if (timeframe) url += `&timeframe=${timeframe}`;
             if (category) url += `&category=${category}`;
             if (direction) url += `&direction=${direction}`;
+            if (minConfidence) url += `&min_confidence=${minConfidence}`;
 
             try {
                 const response = await fetch(url);
@@ -1861,8 +1945,18 @@
         document.getElementById('auto-tf-4h')?.addEventListener('change', updateAutoTrainingConfig);
         document.getElementById('auto-tf-1d')?.addEventListener('change', updateAutoTrainingConfig);
 
+        // Add event listeners for pattern history filters (apply on change)
+        document.getElementById('history-symbol-filter')?.addEventListener('change', loadPatternHistory);
+        document.getElementById('history-timeframe-filter')?.addEventListener('change', loadPatternHistory);
+        document.getElementById('history-category-filter')?.addEventListener('change', loadPatternHistory);
+        document.getElementById('history-direction-filter')?.addEventListener('change', loadPatternHistory);
+        document.getElementById('history-confidence-filter')?.addEventListener('change', loadPatternHistory);
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            // Load saved pattern filters before loading history
+            loadPatternFilters();
+
             loadInfo();
             loadAvailableSymbols();
             loadDetectionSymbols();
