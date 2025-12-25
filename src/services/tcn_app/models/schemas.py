@@ -46,6 +46,14 @@ class PatternDetectionRequest(BaseModel):
     model_config = {"json_schema_extra": {"example": {"symbol": "BTCUSD", "timeframe": "1h", "lookback": 200, "threshold": 0.6}}}
 
 
+class PatternPointSchema(BaseModel):
+    """A key point in a pattern for visualization."""
+    index: int = Field(..., description="Candle index in the data")
+    price: float = Field(..., description="Price at this point")
+    point_type: str = Field(..., description="Type of point: pivot_high, pivot_low, neckline, support, resistance, etc.")
+    timestamp: Optional[str] = Field(default=None, description="ISO 8601 timestamp")
+
+
 class DetectedPattern(BaseModel):
     """A detected pattern."""
     pattern_type: str = Field(..., description="Type of pattern detected")
@@ -58,6 +66,7 @@ class DetectedPattern(BaseModel):
     invalidation_level: Optional[float] = Field(default=None, description="Pattern invalidation level")
     pattern_height: Optional[float] = Field(default=None, description="Height of the pattern")
     direction: Optional[str] = Field(default=None, description="Bullish or bearish")
+    pattern_points: Optional[List[PatternPointSchema]] = Field(default=None, description="Key points for pattern visualization")
 
 
 class PatternDetectionResponse(BaseModel):

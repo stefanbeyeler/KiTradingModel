@@ -28,6 +28,22 @@ class PatternType(str, Enum):
 
 
 @dataclass
+class PatternPoint:
+    """A key point in a pattern for visualization."""
+    index: int           # Candle index in the data
+    price: float         # Price at this point
+    point_type: str      # "pivot_high", "pivot_low", "neckline_left", "neckline_right", "support", "resistance"
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "index": int(self.index) if hasattr(self.index, 'item') else self.index,
+            "price": float(self.price) if hasattr(self.price, 'item') else self.price,
+            "point_type": self.point_type
+        }
+
+
+@dataclass
 class PatternDetection:
     """Detected pattern with metadata."""
     pattern_type: PatternType
@@ -40,6 +56,7 @@ class PatternDetection:
     invalidation_level: Optional[float] = None
     pattern_height: Optional[float] = None
     direction: Optional[str] = None  # "bullish" or "bearish"
+    pattern_points: Optional[List["PatternPoint"]] = None  # Key points for visualization
 
     def __post_init__(self):
         """Convert numpy types to Python native types for JSON serialization."""
@@ -57,6 +74,12 @@ class PatternDetection:
             self.start_index = int(self.start_index)
         if hasattr(self.end_index, 'item'):
             self.end_index = int(self.end_index)
+
+    def get_pattern_points_as_dicts(self) -> Optional[List[dict]]:
+        """Get pattern points as list of dicts for JSON serialization."""
+        if self.pattern_points is None:
+            return None
+        return [p.to_dict() for p in self.pattern_points]
 
 
 class PatternClassifier:
@@ -166,6 +189,27 @@ class PatternClassifier:
                         pattern_height = head - neckline
                         target = neckline - pattern_height
 
+                        # Find neckline indices
+                        neck_indices = [
+                            j for j in swing_lows
+                            if left_shoulder_idx < j < right_shoulder_idx
+                        ]
+
+                        # Create pattern points for visualization
+                        pattern_points = [
+                            PatternPoint(left_shoulder_idx, float(left_shoulder), "left_shoulder"),
+                            PatternPoint(head_idx, float(head), "head"),
+                            PatternPoint(right_shoulder_idx, float(right_shoulder), "right_shoulder"),
+                        ]
+                        # Add neckline points
+                        if len(neck_indices) >= 1:
+                            pattern_points.append(PatternPoint(neck_indices[0], float(lows[neck_indices[0]]), "neckline_left"))
+                        if len(neck_indices) >= 2:
+                            pattern_points.append(PatternPoint(neck_indices[-1], float(lows[neck_indices[-1]]), "neckline_right"))
+                        elif len(neck_indices) == 1:
+                            # Extrapolate neckline to right shoulder
+                            pattern_points.append(PatternPoint(right_shoulder_idx, float(neckline), "neckline_right"))
+
                         return PatternDetection(
                             pattern_type=PatternType.HEAD_AND_SHOULDERS,
                             confidence=0.7,
@@ -174,7 +218,8 @@ class PatternClassifier:
                             price_target=target,
                             invalidation_level=head,
                             pattern_height=pattern_height,
-                            direction="bearish"
+                            direction="bearish",
+                            pattern_points=pattern_points
                         )
 
         return None
@@ -216,8 +261,18 @@ class PatternClassifier:
 
                 if valley_lows:
                     valley = min(valley_lows)
+                    valley_idx = [j for j in swing_lows if first_top_idx < j < second_top_idx and lows[j] == valley][0] if valley_lows else (first_top_idx + second_top_idx) // 2
                     pattern_height = max(first_top, second_top) - valley
                     target = valley - pattern_height
+
+                    # Create pattern points for visualization
+                    pattern_points = [
+                        PatternPoint(first_top_idx, float(first_top), "top_1"),
+                        PatternPoint(valley_idx, float(valley), "valley"),
+                        PatternPoint(second_top_idx, float(second_top), "top_2"),
+                        PatternPoint(first_top_idx, float(valley), "support_left"),
+                        PatternPoint(second_top_idx, float(valley), "support_right"),
+                    ]
 
                     return PatternDetection(
                         pattern_type=PatternType.DOUBLE_TOP,
@@ -227,7 +282,8 @@ class PatternClassifier:
                         price_target=target,
                         invalidation_level=max(first_top, second_top),
                         pattern_height=pattern_height,
-                        direction="bearish"
+                        direction="bearish",
+                        pattern_points=pattern_points
                     )
 
         return None
@@ -269,8 +325,18 @@ class PatternClassifier:
 
                 if peak_highs:
                     peak = max(peak_highs)
+                    peak_idx = [j for j in swing_highs if first_bottom_idx < j < second_bottom_idx and highs[j] == peak][0] if peak_highs else (first_bottom_idx + second_bottom_idx) // 2
                     pattern_height = peak - min(first_bottom, second_bottom)
                     target = peak + pattern_height
+
+                    # Create pattern points for visualization
+                    pattern_points = [
+                        PatternPoint(first_bottom_idx, float(first_bottom), "bottom_1"),
+                        PatternPoint(peak_idx, float(peak), "peak"),
+                        PatternPoint(second_bottom_idx, float(second_bottom), "bottom_2"),
+                        PatternPoint(first_bottom_idx, float(peak), "resistance_left"),
+                        PatternPoint(second_bottom_idx, float(peak), "resistance_right"),
+                    ]
 
                     return PatternDetection(
                         pattern_type=PatternType.DOUBLE_BOTTOM,
@@ -280,7 +346,8 @@ class PatternClassifier:
                         price_target=target,
                         invalidation_level=min(first_bottom, second_bottom),
                         pattern_height=pattern_height,
-                        direction="bullish"
+                        direction="bullish",
+                        pattern_points=pattern_points
                     )
 
         return None

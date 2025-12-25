@@ -7,7 +7,7 @@ import numpy as np
 from loguru import logger
 
 from ..models.tcn_model import TCNPatternClassifier
-from ..models.pattern_classifier import PatternClassifier, PatternDetection, PatternType
+from ..models.pattern_classifier import PatternClassifier, PatternDetection, PatternType, PatternPoint
 from ..models.schemas import DetectedPattern, PatternDetectionResponse
 
 
@@ -90,6 +90,132 @@ class PatternDetectionService:
             "device": self.device,
             "parameters": self.tcn_model.get_num_parameters() if self._model_loaded else 0
         }
+
+    def _generate_pattern_points(
+        self,
+        pattern_type: str,
+        ohlcv: np.ndarray,
+        start_idx: int,
+        end_idx: int
+    ) -> Optional[List[PatternPoint]]:
+        """
+        Generate approximate pattern points for TCN-detected patterns.
+
+        Uses swing point detection to find key levels within the pattern window.
+        """
+        try:
+            # Extract data window
+            window = ohlcv[start_idx:end_idx + 1]
+            if len(window) < 5:
+                return None
+
+            highs = window[:, 1]  # High prices
+            lows = window[:, 2]   # Low prices
+
+            # Find swing points in window
+            swing_highs, swing_lows = self.rule_classifier.find_swing_points(highs, lows, window=3)
+
+            points = []
+
+            if pattern_type in ["head_and_shoulders", "triple_top"]:
+                # Find highest points for head/shoulders
+                if len(swing_highs) >= 3:
+                    sorted_highs = sorted(swing_highs, key=lambda i: highs[i], reverse=True)
+                    head_i = sorted_highs[0]
+                    shoulders = sorted([h for h in sorted_highs[1:3]])
+                    points = [
+                        PatternPoint(start_idx + shoulders[0], float(highs[shoulders[0]]), "left_shoulder"),
+                        PatternPoint(start_idx + head_i, float(highs[head_i]), "head"),
+                        PatternPoint(start_idx + shoulders[1], float(highs[shoulders[1]]), "right_shoulder"),
+                    ]
+                    # Neckline from lows
+                    if len(swing_lows) >= 2:
+                        nl_left = min(swing_lows)
+                        nl_right = max(swing_lows)
+                        points.append(PatternPoint(start_idx + nl_left, float(lows[nl_left]), "neckline_left"))
+                        points.append(PatternPoint(start_idx + nl_right, float(lows[nl_right]), "neckline_right"))
+
+            elif pattern_type in ["inverse_head_and_shoulders", "triple_bottom"]:
+                # Find lowest points
+                if len(swing_lows) >= 3:
+                    sorted_lows = sorted(swing_lows, key=lambda i: lows[i])
+                    head_i = sorted_lows[0]
+                    shoulders = sorted([l for l in sorted_lows[1:3]])
+                    points = [
+                        PatternPoint(start_idx + shoulders[0], float(lows[shoulders[0]]), "left_shoulder"),
+                        PatternPoint(start_idx + head_i, float(lows[head_i]), "head"),
+                        PatternPoint(start_idx + shoulders[1], float(lows[shoulders[1]]), "right_shoulder"),
+                    ]
+                    # Neckline from highs
+                    if len(swing_highs) >= 2:
+                        nl_left = min(swing_highs)
+                        nl_right = max(swing_highs)
+                        points.append(PatternPoint(start_idx + nl_left, float(highs[nl_left]), "neckline_left"))
+                        points.append(PatternPoint(start_idx + nl_right, float(highs[nl_right]), "neckline_right"))
+
+            elif pattern_type == "double_top":
+                if len(swing_highs) >= 2:
+                    top1_i, top2_i = swing_highs[0], swing_highs[-1]
+                    valley_i = swing_lows[len(swing_lows)//2] if swing_lows else len(window)//2
+                    points = [
+                        PatternPoint(start_idx + top1_i, float(highs[top1_i]), "top_1"),
+                        PatternPoint(start_idx + valley_i, float(lows[valley_i]) if valley_i < len(lows) else float(np.min(lows)), "valley"),
+                        PatternPoint(start_idx + top2_i, float(highs[top2_i]), "top_2"),
+                    ]
+
+            elif pattern_type == "double_bottom":
+                if len(swing_lows) >= 2:
+                    bot1_i, bot2_i = swing_lows[0], swing_lows[-1]
+                    peak_i = swing_highs[len(swing_highs)//2] if swing_highs else len(window)//2
+                    points = [
+                        PatternPoint(start_idx + bot1_i, float(lows[bot1_i]), "bottom_1"),
+                        PatternPoint(start_idx + peak_i, float(highs[peak_i]) if peak_i < len(highs) else float(np.max(highs)), "peak"),
+                        PatternPoint(start_idx + bot2_i, float(lows[bot2_i]), "bottom_2"),
+                    ]
+
+            elif pattern_type in ["ascending_triangle", "descending_triangle", "symmetrical_triangle"]:
+                # Triangle uses trendlines
+                if len(swing_highs) >= 2 and len(swing_lows) >= 2:
+                    points = [
+                        PatternPoint(start_idx + swing_highs[0], float(highs[swing_highs[0]]), "resistance_start"),
+                        PatternPoint(start_idx + swing_highs[-1], float(highs[swing_highs[-1]]), "resistance_end"),
+                        PatternPoint(start_idx + swing_lows[0], float(lows[swing_lows[0]]), "support_start"),
+                        PatternPoint(start_idx + swing_lows[-1], float(lows[swing_lows[-1]]), "support_end"),
+                    ]
+
+            elif pattern_type in ["channel_up", "channel_down"]:
+                # Channel uses parallel lines
+                if len(swing_highs) >= 2 and len(swing_lows) >= 2:
+                    points = [
+                        PatternPoint(start_idx, float(highs[0]), "upper_start"),
+                        PatternPoint(end_idx, float(highs[-1]), "upper_end"),
+                        PatternPoint(start_idx, float(lows[0]), "lower_start"),
+                        PatternPoint(end_idx, float(lows[-1]), "lower_end"),
+                    ]
+
+            elif pattern_type in ["bull_flag", "bear_flag"]:
+                # Flag has pole and flag portion
+                mid = len(window) // 3
+                points = [
+                    PatternPoint(start_idx, float(lows[0]) if pattern_type == "bull_flag" else float(highs[0]), "pole_start"),
+                    PatternPoint(start_idx + mid, float(highs[mid]) if pattern_type == "bull_flag" else float(lows[mid]), "pole_end"),
+                    PatternPoint(end_idx, float(window[-1, 3]), "flag_end"),  # Close price
+                ]
+
+            elif pattern_type in ["rising_wedge", "falling_wedge"]:
+                if len(swing_highs) >= 2 and len(swing_lows) >= 2:
+                    points = [
+                        PatternPoint(start_idx + swing_highs[0], float(highs[swing_highs[0]]), "upper_start"),
+                        PatternPoint(start_idx + swing_highs[-1], float(highs[swing_highs[-1]]), "upper_end"),
+                        PatternPoint(start_idx + swing_lows[0], float(lows[swing_lows[0]]), "lower_start"),
+                        PatternPoint(start_idx + swing_lows[-1], float(lows[swing_lows[-1]]), "lower_end"),
+                    ]
+
+            return points if points else None
+
+        except Exception as e:
+            logger.debug(f"Error generating pattern points for {pattern_type}: {e}")
+            return None
 
     async def detect_patterns(
         self,
@@ -208,14 +334,26 @@ class PatternDetectionService:
                     PatternType(pattern_type)
                 )
 
+                start_idx = max(0, len(ohlcv) - 50)
+                end_idx = len(ohlcv) - 1
+
+                # Generate pattern points for visualization
+                pattern_points = self._generate_pattern_points(
+                    pattern_type, ohlcv, start_idx, end_idx
+                )
+                pattern_points_dicts = None
+                if pattern_points:
+                    pattern_points_dicts = [p.to_dict() for p in pattern_points]
+
                 detected.append(DetectedPattern(
                     pattern_type=pattern_type,
                     confidence=round(confidence, 4),
-                    start_index=max(0, len(ohlcv) - 50),
-                    end_index=len(ohlcv) - 1,
-                    start_time=str(timestamps[max(0, len(ohlcv) - 50)]) if timestamps else None,
-                    end_time=str(timestamps[-1]) if timestamps else None,
-                    direction=pattern_info.get("direction")
+                    start_index=start_idx,
+                    end_index=end_idx,
+                    start_time=str(timestamps[start_idx]) if timestamps and start_idx < len(timestamps) else None,
+                    end_time=str(timestamps[end_idx]) if timestamps and end_idx < len(timestamps) else None,
+                    direction=pattern_info.get("direction"),
+                    pattern_points=pattern_points_dicts
                 ))
 
         # Rule-based detection (supplement)
@@ -232,17 +370,21 @@ class PatternDetectionService:
             )
 
             if not tcn_detected:
+                # Get pattern points from rule-based detection
+                pattern_points_dicts = pattern.get_pattern_points_as_dicts()
+
                 detected.append(DetectedPattern(
                     pattern_type=pattern.pattern_type.value,
                     confidence=round(pattern.confidence, 4),
                     start_index=pattern.start_index,
                     end_index=pattern.end_index,
-                    start_time=str(timestamps[pattern.start_index]) if timestamps else None,
-                    end_time=str(timestamps[pattern.end_index]) if timestamps else None,
+                    start_time=str(timestamps[pattern.start_index]) if timestamps and pattern.start_index < len(timestamps) else None,
+                    end_time=str(timestamps[pattern.end_index]) if timestamps and pattern.end_index < len(timestamps) else None,
                     price_target=pattern.price_target,
                     invalidation_level=pattern.invalidation_level,
                     pattern_height=pattern.pattern_height,
-                    direction=pattern.direction
+                    direction=pattern.direction,
+                    pattern_points=pattern_points_dicts
                 ))
 
         # Sort by confidence

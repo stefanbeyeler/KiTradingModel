@@ -11,8 +11,17 @@ import asyncio
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 from loguru import logger
+
+
+@dataclass
+class PatternPoint:
+    """A key point in a pattern (pivot, neckline intersection, etc.)."""
+    index: int           # Candle index in the data
+    price: float         # Price at this point
+    point_type: str      # Type: "pivot_high", "pivot_low", "neckline", "support", "resistance"
+    timestamp: str = ""  # ISO 8601 timestamp
 
 
 @dataclass
@@ -32,6 +41,8 @@ class TCNPatternHistoryEntry:
     invalidation_level: Optional[float]  # Level where pattern is invalidated
     pattern_height: Optional[float]  # Height of the pattern
     category: str                    # reversal, continuation, or trend
+    # Pattern geometry - key points for visualization
+    pattern_points: Optional[List[dict]] = None  # List of PatternPoint as dicts
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
@@ -208,7 +219,8 @@ class TCNPatternHistoryService:
         price_at_detection: float,
         price_target: Optional[float] = None,
         invalidation_level: Optional[float] = None,
-        pattern_height: Optional[float] = None
+        pattern_height: Optional[float] = None,
+        pattern_points: Optional[List[dict]] = None
     ) -> Optional[TCNPatternHistoryEntry]:
         """
         Add a detected pattern to history.
@@ -237,7 +249,8 @@ class TCNPatternHistoryService:
             price_target=price_target,
             invalidation_level=invalidation_level,
             pattern_height=pattern_height,
-            category=category
+            category=category,
+            pattern_points=pattern_points
         )
 
         # Check for duplicates
@@ -424,6 +437,14 @@ class TCNPatternHistoryService:
                             # Get current price from market context
                             price = response.market_context.get("price", 0.0)
 
+                            # Convert pattern_points to dicts if they are Pydantic objects
+                            pattern_points_dicts = None
+                            if pattern.pattern_points:
+                                pattern_points_dicts = [
+                                    p.model_dump() if hasattr(p, 'model_dump') else (p.dict() if hasattr(p, 'dict') else p)
+                                    for p in pattern.pattern_points
+                                ]
+
                             # Add to history
                             entry = self.add_pattern(
                                 symbol=symbol,
@@ -436,7 +457,8 @@ class TCNPatternHistoryService:
                                 price_at_detection=price,
                                 price_target=pattern.price_target,
                                 invalidation_level=pattern.invalidation_level,
-                                pattern_height=pattern.pattern_height
+                                pattern_height=pattern.pattern_height,
+                                pattern_points=pattern_points_dicts
                             )
 
                             if entry:

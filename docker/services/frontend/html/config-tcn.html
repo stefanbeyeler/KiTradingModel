@@ -1829,8 +1829,14 @@
                     return;
                 }
 
-                tbody.innerHTML = data.patterns.map(p => `
-                    <tr class="clickable-row" onclick="showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}')">
+                // Store pattern data for click handlers
+                window.patternHistoryData = {};
+                data.patterns.forEach((p, idx) => {
+                    window.patternHistoryData[`pattern_${idx}`] = p.pattern_points || null;
+                });
+
+                tbody.innerHTML = data.patterns.map((p, idx) => `
+                    <tr class="clickable-row" onclick="showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}', window.patternHistoryData['pattern_${idx}'])">
                         <td style="font-weight: 500;">${p.symbol}</td>
                         <td><span class="pattern-badge ${p.direction}">${p.pattern_type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span></td>
                         <td><span class="pattern-badge ${p.direction}">${p.direction}</span></td>
@@ -1839,7 +1845,7 @@
                         <td style="color: #888;">${formatLocalDateTime(p.detected_at)}</td>
                         <td style="font-family: monospace;">${p.price_at_detection ? p.price_at_detection.toLocaleString('de-CH', {maximumFractionDigits: 2}) : '-'}</td>
                         <td style="text-align: center;">
-                            <button type="button" class="btn-chart" onclick="event.stopPropagation(); showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}')" title="Chart anzeigen">
+                            <button type="button" class="btn-chart" onclick="event.stopPropagation(); showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}', window.patternHistoryData['pattern_${idx}'])" title="Chart anzeigen">
                                 &#128200;
                             </button>
                         </td>
@@ -2576,11 +2582,13 @@
             ctx.fillText('Pattern-Kerze markiert (gelb)', padding.left, height - 5);
         }
 
-        // Show pattern modal with SVG visualization
-        function showPatternChart(symbol, timeframe, timestamp, patternType, direction) {
+        // Show pattern modal with real chart and pattern overlay
+        async function showPatternChart(symbol, timeframe, timestamp, patternType, direction, patternPoints) {
             const modal = document.getElementById('chartModal');
+            const chartContainer = document.getElementById('patternChartContainer');
             const svgContainer = document.getElementById('patternSvgContainer');
             const chartInfo = document.getElementById('chartInfo');
+            const loadingEl = document.getElementById('chartLoading');
 
             // Get pattern info
             const info = getTcnPatternInfo(patternType);
@@ -2591,9 +2599,6 @@
                 <span class="pattern-badge ${direction}">${direction}</span>
                 <span class="pattern-badge">${timeframe}</span>
             `;
-
-            // Set SVG visualization
-            svgContainer.innerHTML = getPatternSvg(patternType);
 
             // Set description
             document.getElementById('chartPatternDescription').textContent = info.description;
@@ -2607,12 +2612,569 @@
             document.getElementById('chartPatternTime').textContent = formatLocalDateTime(timestamp, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
             document.getElementById('chartPatternType').textContent = info.name;
 
-            // Show elements
-            svgContainer.style.display = 'block';
+            // Show loading state
+            if (loadingEl) loadingEl.style.display = 'flex';
+            chartContainer.style.display = 'none';
+            svgContainer.style.display = 'none';
             chartInfo.style.display = 'flex';
 
             // Show modal
             modal.classList.add('show');
+
+            try {
+                // Fetch OHLC data from Data Service
+                const patternTime = new Date(timestamp);
+                const endTime = patternTime.toISOString();
+                // Calculate start time: go back enough candles for the pattern
+                const intervalMinutes = getIntervalMinutes(timeframe);
+                const candlesBack = 50; // Show 50 candles of context
+                const startTime = new Date(patternTime.getTime() - candlesBack * intervalMinutes * 60 * 1000).toISOString();
+
+                const ohlcResponse = await fetch(`/data/api/v1/ohlcv/${symbol}?interval=${timeframe}&start_time=${startTime}&end_time=${endTime}&limit=60`);
+
+                if (!ohlcResponse.ok) {
+                    throw new Error(`OHLC-Daten konnten nicht geladen werden: ${ohlcResponse.status}`);
+                }
+
+                const ohlcData = await ohlcResponse.json();
+                const candles = ohlcData.data || ohlcData;
+
+                if (!candles || candles.length === 0) {
+                    throw new Error('Keine Candlestick-Daten verfügbar');
+                }
+
+                // Hide loading, show chart
+                if (loadingEl) loadingEl.style.display = 'none';
+                chartContainer.style.display = 'block';
+
+                // Draw the chart with pattern overlay
+                drawCandlestickChartWithPattern('patternCanvas', candles, patternType, patternPoints, timestamp);
+
+            } catch (error) {
+                console.error('Fehler beim Laden des Charts:', error);
+                // Fall back to SVG visualization
+                if (loadingEl) loadingEl.style.display = 'none';
+                chartContainer.style.display = 'none';
+                svgContainer.style.display = 'flex';
+                svgContainer.innerHTML = getPatternSvg(patternType);
+            }
+        }
+
+        // Get interval in minutes
+        function getIntervalMinutes(timeframe) {
+            const mapping = {
+                'M1': 1, 'M5': 5, 'M15': 15, 'M30': 30,
+                'H1': 60, 'H4': 240, 'D1': 1440, 'W1': 10080
+            };
+            return mapping[timeframe] || 60;
+        }
+
+        // Draw candlestick chart with pattern overlay
+        function drawCandlestickChartWithPattern(canvasId, candles, patternType, patternPoints, patternTimestamp) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const container = canvas.parentElement;
+
+            // Set canvas size
+            canvas.width = container.clientWidth - 20;
+            canvas.height = 300;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = { top: 25, right: 65, bottom: 35, left: 15 };
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            if (!candles || candles.length === 0) {
+                ctx.fillStyle = '#888';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Keine Daten verfügbar', width / 2, height / 2);
+                return;
+            }
+
+            // Calculate price range
+            const prices = candles.flatMap(c => [c.high, c.low]);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const priceRange = maxPrice - minPrice || 1;
+            const pricePadding = priceRange * 0.1;
+
+            const scaledMinPrice = minPrice - pricePadding;
+            const scaledMaxPrice = maxPrice + pricePadding;
+            const scaledRange = scaledMaxPrice - scaledMinPrice;
+
+            // Calculate candle dimensions
+            const candleWidth = Math.max(3, Math.min(15, (chartWidth / candles.length) * 0.65));
+            const candleSpacing = chartWidth / candles.length;
+
+            // Helper to convert price to Y coordinate
+            const priceToY = (price) => {
+                return padding.top + chartHeight - ((price - scaledMinPrice) / scaledRange * chartHeight);
+            };
+
+            // Helper to convert index to X coordinate
+            const indexToX = (idx) => {
+                return padding.left + (idx + 0.5) * candleSpacing;
+            };
+
+            // Find pattern candle index
+            const patternTime = new Date(patternTimestamp).getTime();
+            let patternIndex = candles.length - 1;
+            for (let i = 0; i < candles.length; i++) {
+                const candleTime = new Date(candles[i].timestamp).getTime();
+                if (Math.abs(candleTime - patternTime) < 60000) { // within 1 minute
+                    patternIndex = i;
+                    break;
+                }
+            }
+
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 1;
+            const gridLines = 5;
+            for (let i = 0; i <= gridLines; i++) {
+                const y = padding.top + (chartHeight / gridLines) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(width - padding.right, y);
+                ctx.stroke();
+
+                // Price labels
+                const price = scaledMaxPrice - (scaledRange / gridLines) * i;
+                ctx.fillStyle = '#888';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(formatPrice(price), width - padding.right + 5, y + 3);
+            }
+
+            // Draw candles
+            candles.forEach((candle, i) => {
+                const x = indexToX(i);
+                const openY = priceToY(candle.open);
+                const closeY = priceToY(candle.close);
+                const highY = priceToY(candle.high);
+                const lowY = priceToY(candle.low);
+
+                const isBullish = candle.close >= candle.open;
+                const bodyTop = Math.min(openY, closeY);
+                const bodyHeight = Math.max(1, Math.abs(closeY - openY));
+
+                // Draw wick
+                ctx.strokeStyle = isBullish ? '#4caf50' : '#f44336';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x, highY);
+                ctx.lineTo(x, lowY);
+                ctx.stroke();
+
+                // Draw body
+                ctx.fillStyle = isBullish ? '#81c784' : '#e57373';
+                ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+
+                // Draw body outline
+                ctx.strokeStyle = isBullish ? '#4caf50' : '#f44336';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+            });
+
+            // Draw pattern overlay lines based on pattern_points
+            if (patternPoints && patternPoints.length > 0) {
+                drawPatternOverlay(ctx, candles, patternPoints, patternType, indexToX, priceToY, padding, chartHeight);
+            }
+
+            // Draw time labels (show a few key ones)
+            const labelIndices = [0, Math.floor(candles.length / 2), candles.length - 1];
+            labelIndices.forEach(i => {
+                if (i >= 0 && i < candles.length) {
+                    const candle = candles[i];
+                    const x = indexToX(i);
+                    const time = new Date(candle.timestamp);
+                    const timeStr = time.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+                    const dateStr = time.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
+                    ctx.fillStyle = '#888';
+                    ctx.font = '9px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(dateStr, x, height - 18);
+                    ctx.fillText(timeStr, x, height - 6);
+                }
+            });
+
+            // Draw pattern title
+            const info = getTcnPatternInfo(patternType);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(info.name, padding.left + 5, padding.top - 8);
+        }
+
+        // Draw pattern overlay based on pattern points
+        function drawPatternOverlay(ctx, candles, patternPoints, patternType, indexToX, priceToY, padding, chartHeight) {
+            if (!patternPoints || patternPoints.length === 0) return;
+
+            // Find the min index from pattern points to normalize to our candle array
+            const minPatternIndex = Math.min(...patternPoints.map(p => p.index));
+            const maxPatternIndex = Math.max(...patternPoints.map(p => p.index));
+
+            // Map pattern indices to candle array indices
+            // Pattern points are typically at the end of the data, so we map them to end of candles
+            const patternRange = maxPatternIndex - minPatternIndex;
+            const startCandleIdx = Math.max(0, candles.length - patternRange - 10);
+
+            const mapIndex = (patternIdx) => {
+                const relativeIdx = patternIdx - minPatternIndex;
+                return Math.min(Math.max(0, startCandleIdx + relativeIdx), candles.length - 1);
+            };
+
+            // Categorize points by type
+            const headShoulderTypes = ['left_shoulder', 'head', 'right_shoulder', 'neckline_left', 'neckline_right'];
+            const doubleTypes = ['first_peak', 'second_peak', 'valley', 'first_trough', 'second_trough', 'peak'];
+            const tripleTypes = ['peak1', 'peak2', 'peak3', 'trough1', 'trough2', 'trough3'];
+            const triangleTypes = ['upper_start', 'upper_end', 'lower_start', 'lower_end', 'apex'];
+            const channelTypes = ['upper_start', 'upper_end', 'lower_start', 'lower_end'];
+            const flagTypes = ['pole_start', 'pole_end', 'flag_start', 'flag_end'];
+            const cupTypes = ['left_rim', 'cup_bottom', 'right_rim', 'handle_start', 'handle_end'];
+            const wedgeTypes = ['upper_start', 'upper_end', 'lower_start', 'lower_end'];
+
+            // Also support generic pivot types
+            const pivotHighs = patternPoints.filter(p => p.point_type === 'pivot_high');
+            const pivotLows = patternPoints.filter(p => p.point_type === 'pivot_low');
+
+            ctx.save();
+
+            // Pattern line color based on type
+            const direction = getPatternDirection(patternType);
+            const colors = {
+                bullish: { line: '#4caf50', point: '#81c784', secondary: '#2196f3' },
+                bearish: { line: '#f44336', point: '#e57373', secondary: '#ff9800' },
+                neutral: { line: '#ffc107', point: '#ffeb3b', secondary: '#9c27b0' }
+            }[direction] || { line: '#ffc107', point: '#ffeb3b', secondary: '#9c27b0' };
+
+            // Draw pattern-specific overlays based on pattern type
+            if (patternType.includes('head_and_shoulders') || patternType.includes('inverse_head')) {
+                drawHeadAndShoulders(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+            } else if (patternType.includes('double_top') || patternType.includes('double_bottom')) {
+                drawDoublePattern(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+            } else if (patternType.includes('triple_top') || patternType.includes('triple_bottom')) {
+                drawTriplePattern(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+            } else if (patternType.includes('triangle') || patternType.includes('wedge')) {
+                drawTriangleWedge(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+            } else if (patternType.includes('channel')) {
+                drawChannel(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+            } else if (patternType.includes('flag')) {
+                drawFlag(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+            } else if (patternType.includes('cup_and_handle')) {
+                drawCupAndHandle(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+            } else {
+                // Generic pivot point drawing
+                drawGenericPivots(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+            }
+
+            ctx.restore();
+        }
+
+        // Draw Head and Shoulders pattern
+        function drawHeadAndShoulders(ctx, points, mapIndex, indexToX, priceToY, colors) {
+            const byType = {};
+            points.forEach(p => byType[p.point_type] = p);
+
+            const order = ['left_shoulder', 'head', 'right_shoulder'];
+            const orderedPoints = order.filter(t => byType[t]).map(t => byType[t]);
+
+            if (orderedPoints.length >= 2) {
+                // Draw pattern line through shoulders and head
+                ctx.strokeStyle = colors.line;
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                orderedPoints.forEach((p, i) => {
+                    const x = indexToX(mapIndex(p.index));
+                    const y = priceToY(p.price);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                // Draw circles on key points
+                orderedPoints.forEach((p, i) => {
+                    const x = indexToX(mapIndex(p.index));
+                    const y = priceToY(p.price);
+                    ctx.fillStyle = i === 1 ? colors.secondary : colors.point; // Head in different color
+                    ctx.beginPath();
+                    ctx.arc(x, y, i === 1 ? 7 : 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                });
+            }
+
+            // Draw neckline
+            const nl1 = byType['neckline_left'];
+            const nl2 = byType['neckline_right'];
+            if (nl1 && nl2) {
+                ctx.strokeStyle = '#9c27b0';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 3]);
+                ctx.beginPath();
+                ctx.moveTo(indexToX(mapIndex(nl1.index)), priceToY(nl1.price));
+                ctx.lineTo(indexToX(mapIndex(nl2.index)), priceToY(nl2.price));
+                ctx.stroke();
+            }
+        }
+
+        // Draw Double Top/Bottom pattern
+        function drawDoublePattern(ctx, points, mapIndex, indexToX, priceToY, colors) {
+            const byType = {};
+            points.forEach(p => byType[p.point_type] = p);
+
+            // Double top: first_peak, valley, second_peak
+            // Double bottom: first_trough, peak, second_trough
+            const peakOrder = ['first_peak', 'valley', 'second_peak'];
+            const troughOrder = ['first_trough', 'peak', 'second_trough'];
+            const order = byType['first_peak'] ? peakOrder : troughOrder;
+            const orderedPoints = order.filter(t => byType[t]).map(t => byType[t]);
+
+            if (orderedPoints.length >= 2) {
+                ctx.strokeStyle = colors.line;
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                orderedPoints.forEach((p, i) => {
+                    const x = indexToX(mapIndex(p.index));
+                    const y = priceToY(p.price);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                // Draw circles
+                orderedPoints.forEach((p, i) => {
+                    const x = indexToX(mapIndex(p.index));
+                    const y = priceToY(p.price);
+                    ctx.fillStyle = i === 1 ? colors.secondary : colors.point;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                });
+            }
+        }
+
+        // Draw Triple Top/Bottom pattern
+        function drawTriplePattern(ctx, points, mapIndex, indexToX, priceToY, colors) {
+            const sorted = [...points].sort((a, b) => a.index - b.index);
+
+            if (sorted.length >= 2) {
+                ctx.strokeStyle = colors.line;
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                sorted.forEach((p, i) => {
+                    const x = indexToX(mapIndex(p.index));
+                    const y = priceToY(p.price);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                sorted.forEach(p => {
+                    const x = indexToX(mapIndex(p.index));
+                    const y = priceToY(p.price);
+                    ctx.fillStyle = colors.point;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                });
+            }
+        }
+
+        // Draw Triangle/Wedge pattern
+        function drawTriangleWedge(ctx, points, mapIndex, indexToX, priceToY, colors) {
+            const byType = {};
+            points.forEach(p => byType[p.point_type] = p);
+
+            // Upper trendline
+            const us = byType['upper_start'];
+            const ue = byType['upper_end'];
+            if (us && ue) {
+                ctx.strokeStyle = colors.line;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(indexToX(mapIndex(us.index)), priceToY(us.price));
+                ctx.lineTo(indexToX(mapIndex(ue.index)), priceToY(ue.price));
+                ctx.stroke();
+            }
+
+            // Lower trendline
+            const ls = byType['lower_start'];
+            const le = byType['lower_end'];
+            if (ls && le) {
+                ctx.strokeStyle = colors.secondary;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(indexToX(mapIndex(ls.index)), priceToY(ls.price));
+                ctx.lineTo(indexToX(mapIndex(le.index)), priceToY(le.price));
+                ctx.stroke();
+            }
+
+            // Draw apex if exists
+            const apex = byType['apex'];
+            if (apex) {
+                ctx.fillStyle = '#ffeb3b';
+                ctx.beginPath();
+                ctx.arc(indexToX(mapIndex(apex.index)), priceToY(apex.price), 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw corner points
+            [us, ue, ls, le].filter(p => p).forEach(p => {
+                const x = indexToX(mapIndex(p.index));
+                const y = priceToY(p.price);
+                ctx.fillStyle = colors.point;
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Draw Channel pattern
+        function drawChannel(ctx, points, mapIndex, indexToX, priceToY, colors) {
+            drawTriangleWedge(ctx, points, mapIndex, indexToX, priceToY, colors);
+        }
+
+        // Draw Flag pattern
+        function drawFlag(ctx, points, mapIndex, indexToX, priceToY, colors) {
+            const byType = {};
+            points.forEach(p => byType[p.point_type] = p);
+
+            // Pole
+            const ps = byType['pole_start'];
+            const pe = byType['pole_end'];
+            if (ps && pe) {
+                ctx.strokeStyle = colors.line;
+                ctx.lineWidth = 3;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(indexToX(mapIndex(ps.index)), priceToY(ps.price));
+                ctx.lineTo(indexToX(mapIndex(pe.index)), priceToY(pe.price));
+                ctx.stroke();
+            }
+
+            // Flag
+            const fs = byType['flag_start'];
+            const fe = byType['flag_end'];
+            if (fs && fe) {
+                ctx.strokeStyle = colors.secondary;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 2]);
+                ctx.beginPath();
+                ctx.moveTo(indexToX(mapIndex(fs.index)), priceToY(fs.price));
+                ctx.lineTo(indexToX(mapIndex(fe.index)), priceToY(fe.price));
+                ctx.stroke();
+            }
+        }
+
+        // Draw Cup and Handle pattern
+        function drawCupAndHandle(ctx, points, mapIndex, indexToX, priceToY, colors) {
+            const byType = {};
+            points.forEach(p => byType[p.point_type] = p);
+
+            // Cup curve (simplified as line through points)
+            const cupPoints = ['left_rim', 'cup_bottom', 'right_rim'].filter(t => byType[t]).map(t => byType[t]);
+            if (cupPoints.length >= 2) {
+                ctx.strokeStyle = colors.line;
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([]);
+
+                // Draw as curve
+                ctx.beginPath();
+                if (cupPoints.length === 3) {
+                    const [left, bottom, right] = cupPoints;
+                    ctx.moveTo(indexToX(mapIndex(left.index)), priceToY(left.price));
+                    ctx.quadraticCurveTo(
+                        indexToX(mapIndex(bottom.index)), priceToY(bottom.price),
+                        indexToX(mapIndex(right.index)), priceToY(right.price)
+                    );
+                } else {
+                    cupPoints.forEach((p, i) => {
+                        const x = indexToX(mapIndex(p.index));
+                        const y = priceToY(p.price);
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    });
+                }
+                ctx.stroke();
+            }
+
+            // Handle
+            const hs = byType['handle_start'];
+            const he = byType['handle_end'];
+            if (hs && he) {
+                ctx.strokeStyle = colors.secondary;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 2]);
+                ctx.beginPath();
+                ctx.moveTo(indexToX(mapIndex(hs.index)), priceToY(hs.price));
+                ctx.lineTo(indexToX(mapIndex(he.index)), priceToY(he.price));
+                ctx.stroke();
+            }
+        }
+
+        // Draw generic pivot points
+        function drawGenericPivots(ctx, points, mapIndex, indexToX, priceToY, colors) {
+            const sorted = [...points].sort((a, b) => a.index - b.index);
+
+            if (sorted.length >= 2) {
+                ctx.strokeStyle = colors.line;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                sorted.forEach((p, i) => {
+                    const x = indexToX(mapIndex(p.index));
+                    const y = priceToY(p.price);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                sorted.forEach(p => {
+                    const x = indexToX(mapIndex(p.index));
+                    const y = priceToY(p.price);
+                    const isHigh = p.point_type.includes('high') || p.point_type.includes('peak') || p.point_type.includes('shoulder') || p.point_type.includes('head');
+                    ctx.fillStyle = isHigh ? '#ff9800' : '#2196f3';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                });
+            }
+        }
+
+        // Get pattern direction
+        function getPatternDirection(patternType) {
+            const bullishPatterns = ['inverse_head_and_shoulders', 'double_bottom', 'triple_bottom',
+                                     'ascending_triangle', 'bull_flag', 'cup_and_handle', 'falling_wedge', 'channel_up'];
+            const bearishPatterns = ['head_and_shoulders', 'double_top', 'triple_top',
+                                     'descending_triangle', 'bear_flag', 'rising_wedge', 'channel_down'];
+
+            if (bullishPatterns.includes(patternType)) return 'bullish';
+            if (bearishPatterns.includes(patternType)) return 'bearish';
+            return 'neutral';
         }
 
         // Close chart modal
@@ -2651,8 +3213,17 @@
             </div>
             <div class="modal-body">
                 <div class="modal-section">
-                    <div class="modal-section-title">Pattern-Visualisierung</div>
-                    <div class="chart-container" id="patternSvgContainer" style="display: flex; justify-content: center; align-items: center; padding: 1rem;">
+                    <div class="modal-section-title">Pattern-Chart</div>
+                    <!-- Loading indicator -->
+                    <div id="chartLoading" style="display: flex; justify-content: center; align-items: center; padding: 2rem; color: #888;">
+                        <span style="margin-right: 0.5rem;">⏳</span> Chart wird geladen...
+                    </div>
+                    <!-- Real candlestick chart with pattern overlay -->
+                    <div class="chart-container" id="patternChartContainer" style="display: none; height: 320px; padding: 0.5rem;">
+                        <canvas id="patternCanvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                    <!-- Fallback SVG visualization -->
+                    <div class="chart-container" id="patternSvgContainer" style="display: none; justify-content: center; align-items: center; padding: 1rem;">
                         <!-- SVG wird dynamisch eingefügt -->
                     </div>
                     <div class="chart-info" id="chartInfo" style="display: none;">
