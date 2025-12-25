@@ -192,7 +192,11 @@
       "Bash(/Users/sbeyeler/GIT/KiTradingModel/docker/services/tcn-train/ )",
       "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/docker/services/tcn-train/)",
       "Bash(/Users/sbeyeler/GIT/KiTradingModel/src/services/tcn_train_app/ )",
-      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/src/services/tcn_train_app/)"
+      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/src/services/tcn_train_app/)",
+      "Bash(/Users/sbeyeler/GIT/KiTradingModel/docker/services/frontend/html/index.html )",
+      "Bash(/Users/sbeyeler/GIT/KiTradingModel/docker/services/frontend/nginx.conf )",
+      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/docker/services/frontend/)",
+      "Bash(/Users/sbeyeler/GIT/KiTradingModel/docker/services/frontend/nginx.conf.template )"
     ],
     "deny": [],
     "ask": []

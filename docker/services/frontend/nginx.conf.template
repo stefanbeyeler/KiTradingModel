@@ -54,6 +54,10 @@ http {
         server trading-tcn:${TCN_SERVICE_PORT};
     }
 
+    upstream tcn-train-backend {
+        server trading-tcn-train:3013;
+    }
+
     upstream hmm-backend {
         server trading-hmm:${HMM_SERVICE_PORT};
     }
@@ -146,7 +150,7 @@ http {
             proxy_read_timeout 300s;
         }
 
-        # TCN-Pattern Service - Direct Access
+        # TCN-Pattern Service - Direct Access (Inference)
         location /tcn/ {
             proxy_pass http://tcn-backend/;
             proxy_http_version 1.1;
@@ -158,6 +162,20 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
             proxy_read_timeout 300s;
+        }
+
+        # TCN-Training Service - Direct Access (Training)
+        location /tcn-train/ {
+            proxy_pass http://tcn-train-backend/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+            proxy_read_timeout 600s;  # Long timeout for training requests
         }
 
         # HMM-Regime Service - Direct Access
