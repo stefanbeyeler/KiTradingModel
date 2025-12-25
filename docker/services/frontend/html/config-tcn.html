@@ -898,15 +898,18 @@
         // Load Service Info
         async function loadInfo() {
             try {
-                const [infoRes, statsRes] = await Promise.all([
+                const [infoRes, statsRes, trainStatusRes] = await Promise.all([
                     fetch(`${API_BASE}/info`),
-                    fetch(`${API_BASE}/stats`)
+                    fetch(`${API_BASE}/stats`),
+                    fetch(`${TRAIN_API_BASE}/train/status`).catch(() => null)
                 ]);
 
                 if (!infoRes.ok || !statsRes.ok) throw new Error('Failed to load data');
 
                 const info = await infoRes.json();
                 const stats = await statsRes.json();
+                const trainStatus = trainStatusRes?.ok ? await trainStatusRes.json() : { status: 'unknown' };
+                const isTraining = trainStatus.status === 'training' || trainStatus.status === 'preparing';
 
                 // Update status badge
                 const badge = document.getElementById('status-badge');
@@ -919,7 +922,7 @@
                 document.getElementById('stat-uptime').textContent = stats.uptime_seconds ? formatUptime(stats.uptime_seconds) : '-';
                 document.getElementById('stat-models').textContent = stats.available_models || 0;
 
-                // Model Info
+                // Model Info - Training status now comes from TCN-Train service
                 document.getElementById('model-info').innerHTML = `
                     <table class="data-table">
                         <tr><td style="color: #888;">Service</td><td>${info.service}</td></tr>
@@ -928,7 +931,7 @@
                         <tr><td style="color: #888;">Modell geladen</td><td>${info.model?.loaded ? '<span style="color: #4caf50;">Ja</span>' : '<span style="color: #f44336;">Nein</span>'}</td></tr>
                         <tr><td style="color: #888;">Pattern-Klassen</td><td>${info.num_classes || info.model?.num_classes || '-'}</td></tr>
                         <tr><td style="color: #888;">Parameter</td><td>${info.model?.parameters?.toLocaleString() || '-'}</td></tr>
-                        <tr><td style="color: #888;">Training aktiv</td><td>${info.training?.in_progress ? '<span style="color: #ffc107;">Ja</span>' : 'Nein'}</td></tr>
+                        <tr><td style="color: #888;">Training aktiv</td><td>${isTraining ? '<span style="color: #ffc107;">Ja</span>' : 'Nein'}</td></tr>
                     </table>
                 `;
 

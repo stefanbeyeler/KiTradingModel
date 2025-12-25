@@ -558,8 +558,21 @@ class TCNTrainingService:
         }
 
     def get_training_history(self) -> List[Dict]:
-        """Get training history."""
-        return self._training_history
+        """Get training history with sanitized values."""
+        import math
+
+        def sanitize_value(v):
+            """Sanitize value for JSON serialization."""
+            if isinstance(v, float):
+                if math.isnan(v) or math.isinf(v):
+                    return None
+            return v
+
+        def sanitize_entry(entry: Dict) -> Dict:
+            """Sanitize an entry for JSON serialization."""
+            return {k: sanitize_value(v) for k, v in entry.items()}
+
+        return [sanitize_entry(e) for e in self._training_history]
 
     def list_models(self) -> List[Dict]:
         """List available trained models."""
