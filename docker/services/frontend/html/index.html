@@ -1543,9 +1543,23 @@
             }
         }
 
+        // Fetch with timeout helper
+        async function fetchWithTimeout(url, timeoutMs = 5000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                return response;
+            } catch (err) {
+                clearTimeout(timeoutId);
+                throw err;
+            }
+        }
+
         async function checkHealth(service, port, statusId) {
             try {
-                const res = await fetch(`/${service}/health`);
+                const res = await fetchWithTimeout(`/${service}/health`, 5000);
                 const data = await res.json();
 
                 const statusEl = document.getElementById(statusId);
@@ -1560,7 +1574,7 @@
                 return data;
             } catch (err) {
                 const statusEl = document.getElementById(statusId);
-                statusEl.textContent = 'Offline';
+                statusEl.textContent = err.name === 'AbortError' ? 'Timeout' : 'Offline';
                 statusEl.className = 'status-badge status-unhealthy';
 
                 // Update dataflow status indicator
@@ -1603,15 +1617,15 @@
         async function updateTcnInfo() {
             const data = await checkHealth('tcn', 3003, 'tcn-status');
             if (data) {
-                // Try to get model info
+                // Try to get model info with timeout
                 try {
-                    const modelRes = await fetch('/tcn/api/v1/model');
+                    const modelRes = await fetchWithTimeout('/tcn/api/v1/model', 5000);
                     if (modelRes.ok) {
                         const modelData = await modelRes.json();
                         document.getElementById('tcn-model-status').textContent = modelData.loaded ? 'Geladen' : 'Nicht geladen';
                     }
                 } catch (e) {
-                    document.getElementById('tcn-model-status').textContent = '-';
+                    document.getElementById('tcn-model-status').textContent = e.name === 'AbortError' ? 'Timeout' : '-';
                 }
             }
         }
@@ -1619,22 +1633,38 @@
         async function updateTcnTrainInfo() {
             const data = await checkHealth('tcn-train', 3013, 'tcn-train-status');
             if (data) {
-                document.getElementById('tcn-train-active').textContent = data.training_active ? 'Aktiv' : 'Inaktiv';
+                const activeEl = document.getElementById('tcn-train-active');
+                const epochEl = document.getElementById('tcn-train-epoch');
 
-                // Get detailed training status
+                // Get detailed training status with timeout
                 try {
-                    const statusRes = await fetch('/tcn-train/api/v1/train/status');
+                    const statusRes = await fetchWithTimeout('/tcn-train/api/v1/train/status', 5000);
                     if (statusRes.ok) {
                         const statusData = await statusRes.json();
-                        if (statusData.status === 'training' && statusData.current_epoch) {
-                            document.getElementById('tcn-train-epoch').textContent =
-                                `${statusData.current_epoch}/${statusData.total_epochs}`;
+
+                        if (statusData.status === 'training') {
+                            activeEl.textContent = 'Training...';
+                            activeEl.style.color = '#ffd54f';
+                            if (statusData.current_epoch) {
+                                const progress = Math.round((statusData.current_epoch / statusData.total_epochs) * 100);
+                                epochEl.textContent = `${statusData.current_epoch}/${statusData.total_epochs} (${progress}%)`;
+                            } else {
+                                epochEl.textContent = 'Vorbereitung...';
+                            }
+                        } else if (statusData.status === 'preparing') {
+                            activeEl.textContent = 'Vorbereitung';
+                            activeEl.style.color = '#ffd54f';
+                            epochEl.textContent = 'Daten laden...';
                         } else {
-                            document.getElementById('tcn-train-epoch').textContent = '-';
+                            activeEl.textContent = 'Inaktiv';
+                            activeEl.style.color = '';
+                            epochEl.textContent = '-';
                         }
                     }
                 } catch (e) {
-                    document.getElementById('tcn-train-epoch').textContent = '-';
+                    // Fallback to health check data
+                    activeEl.textContent = data.training_active ? 'Aktiv' : 'Inaktiv';
+                    epochEl.textContent = e.name === 'AbortError' ? 'Timeout' : '-';
                 }
             }
         }
