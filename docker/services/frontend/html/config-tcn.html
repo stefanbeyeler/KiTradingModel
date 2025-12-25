@@ -2622,22 +2622,17 @@
             modal.classList.add('show');
 
             try {
-                // Fetch OHLC data from Data Service
-                const patternTime = new Date(timestamp);
-                const endTime = patternTime.toISOString();
-                // Calculate start time: go back enough candles for the pattern
-                const intervalMinutes = getIntervalMinutes(timeframe);
+                // Fetch OHLC data from Data Service using the patterns/chart endpoint
                 const candlesBack = 50; // Show 50 candles of context
-                const startTime = new Date(patternTime.getTime() - candlesBack * intervalMinutes * 60 * 1000).toISOString();
 
-                const ohlcResponse = await fetch(`/data/api/v1/ohlcv/${symbol}?interval=${timeframe}&start_time=${startTime}&end_time=${endTime}&limit=60`);
+                const ohlcResponse = await fetch(`/data/api/v1/patterns/chart/${symbol}?candles_before=${candlesBack}&candles_after=0&timeframe=${timeframe}`);
 
                 if (!ohlcResponse.ok) {
                     throw new Error(`OHLC-Daten konnten nicht geladen werden: ${ohlcResponse.status}`);
                 }
 
                 const ohlcData = await ohlcResponse.json();
-                const candles = ohlcData.data || ohlcData;
+                const candles = ohlcData.candles || ohlcData.data || ohlcData;
 
                 if (!candles || candles.length === 0) {
                     throw new Error('Keine Candlestick-Daten verfügbar');
@@ -2679,11 +2674,11 @@
 
             // Set canvas size
             canvas.width = container.clientWidth - 20;
-            canvas.height = 300;
+            canvas.height = 320;
 
             const width = canvas.width;
             const height = canvas.height;
-            const padding = { top: 25, right: 65, bottom: 35, left: 15 };
+            const padding = { top: 30, right: 70, bottom: 45, left: 20 };
             const chartWidth = width - padding.left - padding.right;
             const chartHeight = height - padding.top - padding.bottom;
 
@@ -2723,15 +2718,63 @@
                 return padding.left + (idx + 0.5) * candleSpacing;
             };
 
-            // Find pattern candle index
-            const patternTime = new Date(patternTimestamp).getTime();
-            let patternIndex = candles.length - 1;
-            for (let i = 0; i < candles.length; i++) {
-                const candleTime = new Date(candles[i].timestamp).getTime();
-                if (Math.abs(candleTime - patternTime) < 60000) { // within 1 minute
-                    patternIndex = i;
-                    break;
-                }
+            // Determine pattern range from pattern_points
+            let patternStartIdx = candles.length - 1;
+            let patternEndIdx = candles.length - 1;
+
+            if (patternPoints && patternPoints.length > 0) {
+                const minPatternIndex = Math.min(...patternPoints.map(p => p.index));
+                const maxPatternIndex = Math.max(...patternPoints.map(p => p.index));
+                const patternRange = maxPatternIndex - minPatternIndex;
+
+                // Map pattern indices to candle array
+                patternEndIdx = candles.length - 1;
+                patternStartIdx = Math.max(0, candles.length - patternRange - 5);
+            }
+
+            // Draw pattern zone background (highlighting pattern formation period)
+            if (patternPoints && patternPoints.length > 0) {
+                const startX = indexToX(patternStartIdx) - candleSpacing / 2;
+                const endX = indexToX(patternEndIdx) + candleSpacing / 2;
+
+                // Pattern zone fill - more visible
+                ctx.fillStyle = 'rgba(255, 193, 7, 0.15)';
+                ctx.fillRect(startX, padding.top, endX - startX, chartHeight);
+
+                // Pattern zone border - solid lines
+                ctx.strokeStyle = '#ffc107';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(startX, padding.top);
+                ctx.lineTo(startX, padding.top + chartHeight);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(endX, padding.top);
+                ctx.lineTo(endX, padding.top + chartHeight);
+                ctx.stroke();
+
+                // Pattern zone label at top with background
+                const labelText = 'Pattern-Formation';
+                ctx.font = 'bold 10px sans-serif';
+                const labelX = (startX + endX) / 2;
+                const labelWidth = ctx.measureText(labelText).width + 10;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(labelX - labelWidth / 2, padding.top + 3, labelWidth, 16);
+                ctx.fillStyle = '#ffc107';
+                ctx.textAlign = 'center';
+                ctx.fillText(labelText, labelX, padding.top + 15);
+
+                // Start/End markers with arrows
+                ctx.font = 'bold 9px sans-serif';
+                ctx.fillStyle = '#ffc107';
+                ctx.textAlign = 'center';
+                // Start arrow and label
+                ctx.fillText('▼', startX, padding.top + 32);
+                ctx.fillText('Start', startX, padding.top + 44);
+                // End arrow and label
+                ctx.fillText('▼', endX, padding.top + 32);
+                ctx.fillText('Ende', endX, padding.top + 44);
             }
 
             // Draw grid lines
@@ -2745,13 +2788,23 @@
                 ctx.lineTo(width - padding.right, y);
                 ctx.stroke();
 
-                // Price labels
+                // Price labels on Y-axis
                 const price = scaledMaxPrice - (scaledRange / gridLines) * i;
-                ctx.fillStyle = '#888';
+                ctx.fillStyle = '#aaa';
                 ctx.font = '10px sans-serif';
                 ctx.textAlign = 'left';
                 ctx.fillText(formatPrice(price), width - padding.right + 5, y + 3);
             }
+
+            // Y-axis label (Preis)
+            ctx.save();
+            ctx.fillStyle = '#888';
+            ctx.font = '10px sans-serif';
+            ctx.translate(width - 8, padding.top + chartHeight / 2);
+            ctx.rotate(Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.fillText('Preis', 0, 0);
+            ctx.restore();
 
             // Draw candles
             candles.forEach((candle, i) => {
@@ -2788,29 +2841,81 @@
                 drawPatternOverlay(ctx, candles, patternPoints, patternType, indexToX, priceToY, padding, chartHeight);
             }
 
-            // Draw time labels (show a few key ones)
-            const labelIndices = [0, Math.floor(candles.length / 2), candles.length - 1];
-            labelIndices.forEach(i => {
-                if (i >= 0 && i < candles.length) {
-                    const candle = candles[i];
-                    const x = indexToX(i);
-                    const time = new Date(candle.timestamp);
-                    const timeStr = time.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
-                    const dateStr = time.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
-                    ctx.fillStyle = '#888';
-                    ctx.font = '9px sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(dateStr, x, height - 18);
-                    ctx.fillText(timeStr, x, height - 6);
-                }
-            });
+            // X-axis with time labels
+            const numTimeLabels = Math.min(6, candles.length);
+            const labelStep = Math.floor(candles.length / (numTimeLabels - 1));
 
-            // Draw pattern title
+            for (let i = 0; i < candles.length; i += labelStep) {
+                if (i >= candles.length) break;
+                const candle = candles[i];
+                const x = indexToX(i);
+                const time = new Date(candle.timestamp);
+
+                // Tick mark
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x, padding.top + chartHeight);
+                ctx.lineTo(x, padding.top + chartHeight + 4);
+                ctx.stroke();
+
+                // Date and time
+                const dateStr = time.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
+                const timeStr = time.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+                ctx.fillStyle = '#888';
+                ctx.font = '9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(dateStr, x, height - 22);
+                ctx.fillText(timeStr, x, height - 11);
+            }
+
+            // Also show last candle time if not already shown
+            const lastIdx = candles.length - 1;
+            if (lastIdx % labelStep !== 0) {
+                const candle = candles[lastIdx];
+                const x = indexToX(lastIdx);
+                const time = new Date(candle.timestamp);
+                const dateStr = time.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
+                const timeStr = time.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+                ctx.fillStyle = '#ffc107';
+                ctx.font = '9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(dateStr, x, height - 22);
+                ctx.fillText(timeStr, x, height - 11);
+            }
+
+            // X-axis label (Zeit)
+            ctx.fillStyle = '#888';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Zeit', padding.left + chartWidth / 2, height - 1);
+
+            // Draw pattern title and info
             const info = getTcnPatternInfo(patternType);
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 11px sans-serif';
             ctx.textAlign = 'left';
-            ctx.fillText(info.name, padding.left + 5, padding.top - 8);
+            ctx.fillText(info.name, padding.left + 5, padding.top - 12);
+
+            // Pattern duration info
+            if (patternPoints && patternPoints.length > 0 && patternStartIdx < patternEndIdx) {
+                const startCandle = candles[patternStartIdx];
+                const endCandle = candles[patternEndIdx];
+                if (startCandle && endCandle) {
+                    const startTime = new Date(startCandle.timestamp);
+                    const endTime = new Date(endCandle.timestamp);
+                    const durationMs = endTime - startTime;
+                    const durationHours = Math.round(durationMs / (1000 * 60 * 60));
+                    const durationText = durationHours >= 24
+                        ? `${Math.round(durationHours / 24)}d`
+                        : `${durationHours}h`;
+
+                    ctx.fillStyle = '#888';
+                    ctx.font = '9px sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`Dauer: ~${durationText} (${patternEndIdx - patternStartIdx + 1} Kerzen)`, width - padding.right, padding.top - 12);
+                }
+            }
         }
 
         // Draw pattern overlay based on pattern points
