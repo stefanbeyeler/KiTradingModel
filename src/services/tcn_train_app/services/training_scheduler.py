@@ -31,6 +31,8 @@ class AutoTrainingConfig:
     batch_size: int = 32
     learning_rate: float = 1e-4
     min_symbols: int = 5
+    scheduled_hour: int = 2  # Default: 02:00 Uhr
+    scheduled_minute: int = 0
     last_run: Optional[str] = None
     next_run: Optional[str] = None
 
@@ -75,10 +77,13 @@ class TrainingScheduler:
                         batch_size=data.get("batch_size", 32),
                         learning_rate=data.get("learning_rate", 1e-4),
                         min_symbols=data.get("min_symbols", 5),
+                        scheduled_hour=data.get("scheduled_hour", 2),
+                        scheduled_minute=data.get("scheduled_minute", 0),
                         last_run=data.get("last_run"),
                         next_run=data.get("next_run")
                     )
-                logger.info(f"Loaded auto-training config: enabled={self.config.enabled}")
+                logger.info(f"Loaded auto-training config: enabled={self.config.enabled}, "
+                           f"scheduled_time={self.config.scheduled_hour:02d}:{self.config.scheduled_minute:02d}")
         except Exception as e:
             logger.warning(f"Could not load auto-training config: {e}")
 
@@ -94,6 +99,8 @@ class TrainingScheduler:
                 "batch_size": self.config.batch_size,
                 "learning_rate": self.config.learning_rate,
                 "min_symbols": self.config.min_symbols,
+                "scheduled_hour": self.config.scheduled_hour,
+                "scheduled_minute": self.config.scheduled_minute,
                 "last_run": self.config.last_run,
                 "next_run": self.config.next_run
             }
@@ -106,32 +113,36 @@ class TrainingScheduler:
     def _calculate_next_run(self) -> Optional[datetime]:
         """Calculate next scheduled run time."""
         now = datetime.now()
+        scheduled_hour = self.config.scheduled_hour
+        scheduled_minute = self.config.scheduled_minute
 
         if self.config.interval == ScheduleInterval.DAILY:
-            # Run at 2 AM next day
-            next_run = now.replace(hour=2, minute=0, second=0, microsecond=0)
+            # Run at scheduled time next day
+            next_run = now.replace(hour=scheduled_hour, minute=scheduled_minute, second=0, microsecond=0)
             if next_run <= now:
                 next_run += timedelta(days=1)
         elif self.config.interval == ScheduleInterval.WEEKLY:
-            # Run Sunday at 2 AM
+            # Run Sunday at scheduled time
             days_until_sunday = (6 - now.weekday()) % 7
-            if days_until_sunday == 0 and now.hour >= 2:
+            current_scheduled = now.replace(hour=scheduled_hour, minute=scheduled_minute, second=0, microsecond=0)
+            if days_until_sunday == 0 and now >= current_scheduled:
                 days_until_sunday = 7
             next_run = (now + timedelta(days=days_until_sunday)).replace(
-                hour=2, minute=0, second=0, microsecond=0
+                hour=scheduled_hour, minute=scheduled_minute, second=0, microsecond=0
             )
         elif self.config.interval == ScheduleInterval.MONTHLY:
-            # Run 1st of month at 2 AM
-            if now.day == 1 and now.hour < 2:
-                next_run = now.replace(hour=2, minute=0, second=0, microsecond=0)
+            # Run 1st of month at scheduled time
+            scheduled_today = now.replace(hour=scheduled_hour, minute=scheduled_minute, second=0, microsecond=0)
+            if now.day == 1 and now < scheduled_today:
+                next_run = scheduled_today
             else:
                 # First day of next month
                 if now.month == 12:
                     next_run = now.replace(year=now.year + 1, month=1, day=1,
-                                          hour=2, minute=0, second=0, microsecond=0)
+                                          hour=scheduled_hour, minute=scheduled_minute, second=0, microsecond=0)
                 else:
                     next_run = now.replace(month=now.month + 1, day=1,
-                                          hour=2, minute=0, second=0, microsecond=0)
+                                          hour=scheduled_hour, minute=scheduled_minute, second=0, microsecond=0)
         else:
             # Manual - no automatic scheduling
             return None
@@ -298,7 +309,9 @@ class TrainingScheduler:
         epochs: Optional[int] = None,
         batch_size: Optional[int] = None,
         learning_rate: Optional[float] = None,
-        min_symbols: Optional[int] = None
+        min_symbols: Optional[int] = None,
+        scheduled_hour: Optional[int] = None,
+        scheduled_minute: Optional[int] = None
     ) -> AutoTrainingConfig:
         """Update scheduler configuration."""
         if enabled is not None:
@@ -317,6 +330,10 @@ class TrainingScheduler:
             self.config.learning_rate = learning_rate
         if min_symbols is not None:
             self.config.min_symbols = min_symbols
+        if scheduled_hour is not None:
+            self.config.scheduled_hour = max(0, min(23, scheduled_hour))
+        if scheduled_minute is not None:
+            self.config.scheduled_minute = max(0, min(59, scheduled_minute))
 
         # Recalculate next run
         if self.config.enabled:
@@ -337,6 +354,9 @@ class TrainingScheduler:
             "batch_size": self.config.batch_size,
             "learning_rate": self.config.learning_rate,
             "min_symbols": self.config.min_symbols,
+            "scheduled_hour": self.config.scheduled_hour,
+            "scheduled_minute": self.config.scheduled_minute,
+            "scheduled_time": f"{self.config.scheduled_hour:02d}:{self.config.scheduled_minute:02d}",
             "last_run": self.config.last_run,
             "next_run": self.config.next_run,
             "is_running": self._running,

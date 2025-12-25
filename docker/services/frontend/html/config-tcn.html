@@ -712,7 +712,7 @@
                 <div id="auto-training-status">
                     <div class="loading"><div class="spinner"></div></div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label>Intervall</label>
                         <select class="form-control" id="auto-interval">
@@ -721,6 +721,15 @@
                             <option value="monthly">Monatlich</option>
                             <option value="manual">Manuell</option>
                         </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Startzeit</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="number" class="form-control" id="auto-scheduled-hour" value="2" min="0" max="23" style="width: 60px; text-align: center;">
+                            <span style="color: #888;">:</span>
+                            <input type="number" class="form-control" id="auto-scheduled-minute" value="0" min="0" max="59" style="width: 60px; text-align: center;">
+                            <span style="color: #888; font-size: 0.85rem;">Uhr</span>
+                        </div>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label>Timeframes</label>
@@ -1688,6 +1697,10 @@
                 // Update interval dropdown
                 document.getElementById('auto-interval').value = data.interval || 'weekly';
 
+                // Update scheduled time inputs
+                document.getElementById('auto-scheduled-hour').value = data.scheduled_hour ?? 2;
+                document.getElementById('auto-scheduled-minute').value = data.scheduled_minute ?? 0;
+
                 // Update timeframe checkboxes
                 const timeframes = data.timeframes || ['1h', '4h', '1d'];
                 document.getElementById('auto-tf-1h').checked = timeframes.includes('1h');
@@ -1709,8 +1722,10 @@
                     'manual': 'Manuell'
                 };
 
+                const scheduledTime = data.scheduled_time || `${String(data.scheduled_hour ?? 2).padStart(2, '0')}:${String(data.scheduled_minute ?? 0).padStart(2, '0')}`;
+
                 container.innerHTML = `
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.85rem;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; font-size: 0.85rem;">
                         <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
                             <div style="color: #888;">Status</div>
                             <div style="color: ${data.enabled ? '#4caf50' : '#888'}; font-weight: 600;">
@@ -1722,10 +1737,14 @@
                             <div style="color: #fff; font-weight: 600;">${intervalLabels[data.interval] || data.interval}</div>
                         </div>
                         <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
+                            <div style="color: #888;">Startzeit</div>
+                            <div style="color: #64c8ff; font-weight: 600;">${scheduledTime} Uhr</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
                             <div style="color: #888;">Letzter Lauf</div>
                             <div style="color: #fff; font-weight: 600;">${lastRun}</div>
                         </div>
-                        <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
+                        <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px; grid-column: span 2;">
                             <div style="color: #888;">Nächster Lauf</div>
                             <div style="color: #fff; font-weight: 600;">${nextRun}</div>
                         </div>
@@ -1769,6 +1788,8 @@
         // Update Auto-Training Config
         async function updateAutoTrainingConfig() {
             const interval = document.getElementById('auto-interval').value;
+            const scheduled_hour = parseInt(document.getElementById('auto-scheduled-hour').value) || 2;
+            const scheduled_minute = parseInt(document.getElementById('auto-scheduled-minute').value) || 0;
             const timeframes = [];
             if (document.getElementById('auto-tf-1h').checked) timeframes.push('1h');
             if (document.getElementById('auto-tf-4h').checked) timeframes.push('4h');
@@ -1778,7 +1799,7 @@
                 const response = await fetch(`${TRAIN_API_BASE}/auto-training/config`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ interval, timeframes })
+                    body: JSON.stringify({ interval, timeframes, scheduled_hour, scheduled_minute })
                 });
 
                 if (!response.ok) throw new Error('Failed to update config');
@@ -1831,6 +1852,8 @@
 
         // Add event listeners for config changes
         document.getElementById('auto-interval')?.addEventListener('change', updateAutoTrainingConfig);
+        document.getElementById('auto-scheduled-hour')?.addEventListener('change', updateAutoTrainingConfig);
+        document.getElementById('auto-scheduled-minute')?.addEventListener('change', updateAutoTrainingConfig);
         document.getElementById('auto-tf-1h')?.addEventListener('change', updateAutoTrainingConfig);
         document.getElementById('auto-tf-4h')?.addEventListener('change', updateAutoTrainingConfig);
         document.getElementById('auto-tf-1d')?.addEventListener('change', updateAutoTrainingConfig);

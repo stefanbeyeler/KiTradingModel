@@ -34,6 +34,8 @@ class SchedulerConfigRequest(BaseModel):
     batch_size: Optional[int] = None
     learning_rate: Optional[float] = None
     min_symbols: Optional[int] = None
+    scheduled_hour: Optional[int] = Field(None, ge=0, le=23, description="Hour for scheduled training (0-23)")
+    scheduled_minute: Optional[int] = Field(None, ge=0, le=59, description="Minute for scheduled training (0-59)")
 
 
 @router.post("/train")
@@ -132,7 +134,9 @@ async def update_scheduler_config(config: SchedulerConfigRequest):
         epochs=config.epochs,
         batch_size=config.batch_size,
         learning_rate=config.learning_rate,
-        min_symbols=config.min_symbols
+        min_symbols=config.min_symbols,
+        scheduled_hour=config.scheduled_hour,
+        scheduled_minute=config.scheduled_minute
     )
 
     return {
@@ -146,6 +150,9 @@ async def update_scheduler_config(config: SchedulerConfigRequest):
             "batch_size": updated.batch_size,
             "learning_rate": updated.learning_rate,
             "min_symbols": updated.min_symbols,
+            "scheduled_hour": updated.scheduled_hour,
+            "scheduled_minute": updated.scheduled_minute,
+            "scheduled_time": f"{updated.scheduled_hour:02d}:{updated.scheduled_minute:02d}",
             "next_run": updated.next_run
         }
     }
@@ -226,6 +233,8 @@ class AutoTrainingConfigRequest(BaseModel):
     """Auto-training configuration request."""
     interval: Optional[str] = None
     timeframes: Optional[List[str]] = None
+    scheduled_hour: Optional[int] = Field(None, ge=0, le=23, description="Hour for scheduled training (0-23)")
+    scheduled_minute: Optional[int] = Field(None, ge=0, le=59, description="Minute for scheduled training (0-59)")
 
 
 @router.post("/auto-training/config")
@@ -233,7 +242,9 @@ async def update_auto_training_config(config: AutoTrainingConfigRequest):
     """Update auto-training configuration."""
     training_scheduler.update_config(
         interval=config.interval,
-        timeframes=config.timeframes
+        timeframes=config.timeframes,
+        scheduled_hour=config.scheduled_hour,
+        scheduled_minute=config.scheduled_minute
     )
     return {
         "status": "updated",
