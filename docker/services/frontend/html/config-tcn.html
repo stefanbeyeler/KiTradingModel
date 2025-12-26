@@ -2809,14 +2809,15 @@
                 const isLowPoint = (pointType) => lowPointTypes.includes(pointType || '');
 
                 // Find the best matching candle for a pattern point based on price proximity
-                const findBestCandleForZone = (point) => {
+                // minSearchIdx ensures temporal order is preserved
+                const findBestCandleForZone = (point, minSearchIdx = 0) => {
                     const targetPrice = point.price;
                     const pointType = point.point_type || '';
                     const isHigh = isHighPoint(pointType);
                     const isLow = isLowPoint(pointType);
 
-                    const searchStart = Math.max(0, candles.length - 100);
-                    let bestIdx = candles.length - 1;
+                    const searchStart = Math.max(minSearchIdx, candles.length - 100);
+                    let bestIdx = searchStart;
                     let bestScore = Infinity;
 
                     for (let i = searchStart; i < candles.length; i++) {
@@ -2842,8 +2843,15 @@
                     return bestIdx;
                 };
 
-                // Map all pattern points to their actual candle positions
-                const mappedIndices = patternPoints.map(p => findBestCandleForZone(p));
+                // Sort pattern points by original index and map preserving temporal order
+                const sortedForZone = [...patternPoints].sort((a, b) => a.index - b.index);
+                const mappedIndices = [];
+                let lastIdx = Math.max(0, candles.length - 100);
+                sortedForZone.forEach(p => {
+                    const idx = findBestCandleForZone(p, lastIdx);
+                    mappedIndices.push(idx);
+                    lastIdx = idx;
+                });
                 patternStartIdx = Math.max(0, Math.min(...mappedIndices) - 2);  // Small buffer before first point
                 patternEndIdx = Math.min(candles.length - 1, Math.max(...mappedIndices) + 2);  // Small buffer after last point
             }
@@ -3051,17 +3059,16 @@
             const isLowPoint = (pointType) => lowPointTypes.includes(pointType || '');
 
             // Find the best matching candle for a pattern point based on price proximity
-            // This avoids placing markers in data gaps (weekends, holidays)
-            const findBestCandleForPoint = (point) => {
+            // minSearchIdx ensures temporal order is preserved (later points must be >= earlier points)
+            const findBestCandleForPoint = (point, minSearchIdx = 0) => {
                 const targetPrice = point.price;
                 const pointType = point.point_type || '';
                 const isHigh = isHighPoint(pointType);
                 const isLow = isLowPoint(pointType);
 
-                // Search within the pattern formation area (last portion of candles)
-                // Limit search to reasonable range to find nearest matching candle
-                const searchStart = Math.max(0, candles.length - 100);
-                let bestIdx = candles.length - 1;
+                // Search within the pattern formation area, respecting minimum index for temporal order
+                const searchStart = Math.max(minSearchIdx, candles.length - 100);
+                let bestIdx = searchStart;
                 let bestScore = Infinity;
 
                 for (let i = searchStart; i < candles.length; i++) {
@@ -3091,10 +3098,17 @@
                 return bestIdx;
             };
 
-            // Pre-calculate best candle index for each pattern point
+            // Sort pattern points by their original index to establish temporal order
+            const sortedByOriginalIndex = [...patternPoints].sort((a, b) => a.index - b.index);
+
+            // Pre-calculate best candle index for each pattern point, preserving temporal order
             const pointToCandleMap = new Map();
-            patternPoints.forEach(p => {
-                pointToCandleMap.set(p, findBestCandleForPoint(p));
+            let lastMappedIdx = Math.max(0, candles.length - 100);
+
+            sortedByOriginalIndex.forEach(p => {
+                const mappedIdx = findBestCandleForPoint(p, lastMappedIdx);
+                pointToCandleMap.set(p, mappedIdx);
+                lastMappedIdx = mappedIdx;  // Next point must be at or after this one
             });
 
             // Sort pattern points by their mapped candle index to maintain time order
