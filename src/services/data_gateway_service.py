@@ -187,23 +187,23 @@ class DataGatewayService:
         timeframe: str = "H1"
     ) -> tuple[list[dict], str]:
         """
-        Get historical data with TwelveData fallback.
+        Get historical data with TwelveData as primary source.
 
-        EasyInsight only supports M15, H1, D1 natively. For all other timeframes
-        (M1, M5, M30, M45, H2, H4, W1, MN), TwelveData is used as primary source.
+        TwelveData is used exclusively for pattern analysis to ensure consistent
+        OHLC data across all timeframes.
 
         Supported timeframes:
-            - M1: 1 minute (TwelveData only)
-            - M5: 5 minutes (TwelveData only)
-            - M15: 15 minutes (EasyInsight primary)
-            - M30: 30 minutes (TwelveData only)
-            - M45: 45 minutes (TwelveData only)
-            - H1: 1 hour (EasyInsight primary)
-            - H2: 2 hours (TwelveData only)
-            - H4: 4 hours (TwelveData only)
-            - D1: 1 day (EasyInsight primary)
-            - W1: 1 week (TwelveData only)
-            - MN: 1 month (TwelveData only)
+            - M1: 1 minute
+            - M5: 5 minutes
+            - M15: 15 minutes
+            - M30: 30 minutes
+            - M45: 45 minutes
+            - H1: 1 hour
+            - H2: 2 hours
+            - H4: 4 hours
+            - D1: 1 day
+            - W1: 1 week
+            - MN: 1 month
 
         Args:
             symbol: Trading symbol
@@ -211,87 +211,16 @@ class DataGatewayService:
             timeframe: Timeframe (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN)
 
         Returns:
-            Tuple of (data_list, source) where source is 'easyinsight' or 'twelvedata'
+            Tuple of (data_list, source) where source is 'twelvedata' or 'easyinsight'
         """
-        # EasyInsight only supports M15, H1, D1 natively
-        # All other timeframes use TwelveData as primary source
-        easyinsight_timeframes = ("M15", "H1", "D1")
-        tf_upper = timeframe.upper()
+        # Use TwelveData as primary source for all timeframes (pattern analysis)
+        td_data = await self._get_twelvedata_candles(symbol, timeframe, limit)
+        if td_data:
+            return td_data, "twelvedata"
 
-        if tf_upper not in easyinsight_timeframes:
-            td_data = await self._get_twelvedata_candles(symbol, timeframe, limit)
-            if td_data:
-                return td_data, "twelvedata"
-            # Fall through to EasyInsight as last resort
-            logger.warning(f"TwelveData failed for {symbol} {timeframe}, trying EasyInsight")
-
-        # Try EasyInsight first for supported timeframes (M15, H1, D1)
+        # Fallback to EasyInsight only if TwelveData fails
+        logger.warning(f"TwelveData failed for {symbol} {timeframe}, trying EasyInsight fallback")
         data = await self.get_historical_data(symbol, limit, timeframe)
-        if data and len(data) >= limit * 0.8:  # At least 80% of requested data
-            return data, "easyinsight"
-
-        # Fallback to TwelveData
-        logger.warning(
-            f"EasyInsight returned insufficient data for {symbol} "
-            f"({len(data)}/{limit}), trying TwelveData fallback"
-        )
-
-        try:
-            from .twelvedata_service import twelvedata_service
-            from ..services.symbol_service import symbol_service
-
-            # Get TwelveData symbol format
-            managed_symbol = await symbol_service.get_symbol(symbol)
-            td_symbol = None
-            if managed_symbol and managed_symbol.twelvedata_symbol:
-                td_symbol = managed_symbol.twelvedata_symbol
-            else:
-                # Generate TwelveData symbol format
-                td_symbol = symbol_service._generate_twelvedata_symbol(
-                    symbol,
-                    managed_symbol.category if managed_symbol else None
-                )
-
-            if not td_symbol:
-                logger.warning(f"No TwelveData symbol mapping for {symbol}")
-                return data, "easyinsight"
-
-            # Map timeframe - all TwelveData supported intervals
-            td_interval_map = {
-                "M1": "1min",
-                "M5": "5min",
-                "M15": "15min",
-                "M30": "30min",
-                "M45": "45min",
-                "H1": "1h",
-                "H2": "2h",
-                "H4": "4h",
-                "D1": "1day",
-                "W1": "1week",
-                "MN": "1month"
-            }
-            td_interval = td_interval_map.get(timeframe.upper(), "1h")
-
-            # Fetch from TwelveData
-            td_data = await twelvedata_service.get_time_series(
-                symbol=td_symbol,
-                interval=td_interval,
-                outputsize=limit
-            )
-
-            if td_data and td_data.get("values"):
-                # Convert TwelveData format to EasyInsight format
-                converted = self._convert_twelvedata_to_easyinsight(
-                    td_data["values"],
-                    symbol,
-                    timeframe
-                )
-                logger.info(f"TwelveData fallback returned {len(converted)} data points for {symbol}")
-                return converted, "twelvedata"
-
-        except Exception as e:
-            logger.error(f"TwelveData fallback failed for {symbol}: {e}")
-
         return data, "easyinsight"
 
     def _convert_twelvedata_to_easyinsight(
