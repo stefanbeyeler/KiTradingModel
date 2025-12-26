@@ -37,11 +37,20 @@ from src.api.routes import (
     router as general_router
 )
 from src.api.testing_routes import testing_router
-from src.services.timescaledb_sync_service import TimescaleDBSyncService
-from src.services.rag_service import RAGService
 from src.services.training_data_cache_service import training_data_cache
 from src.service_registry import register_service
 import asyncio
+
+# Optional imports for RAG sync (requires sentence_transformers)
+try:
+    from src.services.timescaledb_sync_service import TimescaleDBSyncService
+    from src.services.rag_service import RAGService
+    _rag_available = True
+except ImportError:
+    TimescaleDBSyncService = None
+    RAGService = None
+    _rag_available = False
+    logger.warning("RAG services not available - sentence_transformers not installed")
 
 # Global service instances
 sync_service = None
@@ -243,28 +252,31 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Failed to cleanup training data cache: {e}")
 
-    # Initialize RAG Service (for sync service)
-    try:
-        rag_service = RAGService()
-        register_service('rag_service', rag_service)
-        logger.info("RAG Service initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize RAG Service: {e}")
-        rag_service = None
+    # Initialize RAG Service (for sync service) - optional, requires sentence_transformers
+    if _rag_available:
+        try:
+            rag_service = RAGService()
+            register_service('rag_service', rag_service)
+            logger.info("RAG Service initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize RAG Service: {e}")
+            rag_service = None
 
-    # Initialize TimescaleDB Sync Service
-    try:
-        sync_service = TimescaleDBSyncService(rag_service)
-        register_service('sync_service', sync_service)
-        logger.info("TimescaleDB Sync Service initialized")
+        # Initialize TimescaleDB Sync Service
+        try:
+            sync_service = TimescaleDBSyncService(rag_service)
+            register_service('sync_service', sync_service)
+            logger.info("TimescaleDB Sync Service initialized")
 
-        # Auto-start sync if configured
-        if settings.rag_sync_enabled:
-            await sync_service.start()
-            logger.info("TimescaleDB Sync Service started (auto-start)")
+            # Auto-start sync if configured
+            if settings.rag_sync_enabled:
+                await sync_service.start()
+                logger.info("TimescaleDB Sync Service started (auto-start)")
 
-    except Exception as e:
-        logger.error(f"Failed to initialize Sync Service: {e}")
+        except Exception as e:
+            logger.error(f"Failed to initialize Sync Service: {e}")
+    else:
+        logger.info("RAG/Sync services skipped - dependencies not available")
 
     # Start Pattern History Auto-Scan
     try:

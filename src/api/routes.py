@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timezone
 from typing import Optional, List
 import torch
-from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Query
 from fastapi.responses import PlainTextResponse
 from loguru import logger
 
@@ -39,7 +39,28 @@ from ..models.forecast_data import (
     TrainingProgressResults,
     TrainingProgressTiming,
 )
-from ..services import AnalysisService, LLMService, StrategyService
+# Optional service imports (may not be available in all containers)
+try:
+    from ..services import AnalysisService
+    _analysis_available = True
+except ImportError:
+    AnalysisService = None
+    _analysis_available = False
+
+try:
+    from ..services import LLMService
+    _llm_available = True
+except ImportError:
+    LLMService = None
+    _llm_available = False
+
+try:
+    from ..services import StrategyService
+    _strategy_available = True
+except ImportError:
+    StrategyService = None
+    _strategy_available = False
+
 from ..services.query_log_service import query_log_service, QueryLogEntry
 from ..services.symbol_service import symbol_service
 from ..services.event_based_training_service import event_based_training_service
@@ -66,10 +87,10 @@ yfinance_router = APIRouter()  # Yahoo Finance API
 external_sources_router = APIRouter()  # External Data Sources (Economic, Sentiment, etc.)
 backup_router = APIRouter()  # Backup & Restore
 
-# Service instances
-analysis_service = AnalysisService()
-llm_service = LLMService()
-strategy_service = StrategyService()
+# Service instances (created only if available)
+analysis_service = AnalysisService() if _analysis_available else None
+llm_service = LLMService() if _llm_available else None
+strategy_service = StrategyService() if _strategy_available else None
 
 
 def get_rag_service():
