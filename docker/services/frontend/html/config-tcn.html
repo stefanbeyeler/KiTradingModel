@@ -2791,18 +2791,61 @@
                 return padding.left + (idx + 0.5) * candleSpacing;
             };
 
-            // Determine pattern range from pattern_points
+            // Determine pattern range from pattern_points using actual price-based mapping
             let patternStartIdx = candles.length - 1;
             let patternEndIdx = candles.length - 1;
 
             if (patternPoints && patternPoints.length > 0) {
-                const minPatternIndex = Math.min(...patternPoints.map(p => p.index));
-                const maxPatternIndex = Math.max(...patternPoints.map(p => p.index));
-                const patternRange = maxPatternIndex - minPatternIndex;
+                // Use the same mapping logic as drawPatternOverlay to find actual candle positions
+                const highPointTypes = ['left_shoulder', 'head', 'right_shoulder', 'first_peak', 'second_peak',
+                    'peak', 'peak1', 'peak2', 'peak3', 'top_1', 'top_2', 'pivot_high',
+                    'resistance_start', 'resistance_end', 'upper_start', 'upper_end',
+                    'pole_start', 'pole_end', 'flag_start', 'flag_end', 'left_rim', 'right_rim', 'handle_start', 'handle_end'];
+                const lowPointTypes = ['first_trough', 'second_trough', 'valley', 'trough1', 'trough2', 'trough3',
+                    'bottom_1', 'bottom_2', 'pivot_low', 'support_start', 'support_end',
+                    'lower_start', 'lower_end', 'cup_bottom', 'neckline_left', 'neckline_right'];
 
-                // Map pattern indices to candle array
-                patternEndIdx = candles.length - 1;
-                patternStartIdx = Math.max(0, candles.length - patternRange - 5);
+                const isHighPoint = (pointType) => highPointTypes.includes(pointType || '');
+                const isLowPoint = (pointType) => lowPointTypes.includes(pointType || '');
+
+                // Find the best matching candle for a pattern point based on price proximity
+                const findBestCandleForZone = (point) => {
+                    const targetPrice = point.price;
+                    const pointType = point.point_type || '';
+                    const isHigh = isHighPoint(pointType);
+                    const isLow = isLowPoint(pointType);
+
+                    const searchStart = Math.max(0, candles.length - 100);
+                    let bestIdx = candles.length - 1;
+                    let bestScore = Infinity;
+
+                    for (let i = searchStart; i < candles.length; i++) {
+                        const candle = candles[i];
+                        let priceDiff;
+
+                        if (isHigh) {
+                            priceDiff = Math.abs(candle.high - targetPrice);
+                        } else if (isLow) {
+                            priceDiff = Math.abs(candle.low - targetPrice);
+                        } else {
+                            priceDiff = Math.min(
+                                Math.abs(candle.high - targetPrice),
+                                Math.abs(candle.low - targetPrice)
+                            );
+                        }
+
+                        if (priceDiff < bestScore) {
+                            bestScore = priceDiff;
+                            bestIdx = i;
+                        }
+                    }
+                    return bestIdx;
+                };
+
+                // Map all pattern points to their actual candle positions
+                const mappedIndices = patternPoints.map(p => findBestCandleForZone(p));
+                patternStartIdx = Math.max(0, Math.min(...mappedIndices) - 2);  // Small buffer before first point
+                patternEndIdx = Math.min(candles.length - 1, Math.max(...mappedIndices) + 2);  // Small buffer after last point
             }
 
             // Draw pattern zone background (highlighting pattern formation period)
