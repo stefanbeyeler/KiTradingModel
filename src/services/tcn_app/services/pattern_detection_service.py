@@ -1,10 +1,26 @@
 """Pattern detection service."""
 
 import os
-from typing import List, Optional, Dict
-from datetime import datetime
+from typing import List, Optional, Dict, Set
+from datetime import datetime, timedelta
+from dateutil import parser as date_parser
 import numpy as np
 from loguru import logger
+
+# Expected candle intervals for gap detection
+TIMEFRAME_INTERVALS = {
+    "1m": timedelta(minutes=1),
+    "5m": timedelta(minutes=5),
+    "15m": timedelta(minutes=15),
+    "30m": timedelta(minutes=30),
+    "1h": timedelta(hours=1),
+    "4h": timedelta(hours=4),
+    "1d": timedelta(days=1),
+    "1w": timedelta(weeks=1),
+}
+
+# Gap threshold multiplier (gap = interval * multiplier)
+GAP_THRESHOLD_MULTIPLIER = 2.5
 
 from ..models.tcn_model import TCNPatternClassifier
 from ..models.pattern_classifier import PatternClassifier, PatternDetection, PatternType, PatternPoint
@@ -32,6 +48,72 @@ class PatternDetectionService:
         self._model_loaded = False
         self._model_version = "1.0.0"
         self._model_path: Optional[str] = None
+
+    def _detect_trading_gaps(
+        self,
+        timestamps: List[str],
+        timeframe: str = "1h"
+    ) -> Set[int]:
+        """
+        Detect trading gaps (weekends, holidays, non-trading hours) in timestamps.
+
+        Args:
+            timestamps: List of ISO 8601 timestamp strings
+            timeframe: Timeframe of the candles (e.g., "1h", "4h", "1d")
+
+        Returns:
+            Set of indices where a gap starts (i.e., index i means gap between i and i+1)
+        """
+        if len(timestamps) < 2:
+            return set()
+
+        gap_indices = set()
+        expected_interval = TIMEFRAME_INTERVALS.get(timeframe, timedelta(hours=1))
+        gap_threshold = expected_interval * GAP_THRESHOLD_MULTIPLIER
+
+        for i in range(len(timestamps) - 1):
+            try:
+                t1 = date_parser.parse(timestamps[i])
+                t2 = date_parser.parse(timestamps[i + 1])
+
+                # Calculate time difference
+                time_diff = t2 - t1
+
+                # If gap is larger than threshold, mark it
+                if time_diff > gap_threshold:
+                    gap_indices.add(i)
+                    logger.debug(f"Trading gap detected at index {i}: {t1} -> {t2} ({time_diff})")
+
+            except Exception as e:
+                logger.warning(f"Error parsing timestamps at index {i}: {e}")
+                continue
+
+        if gap_indices:
+            logger.info(f"Detected {len(gap_indices)} trading gap(s) in {len(timestamps)} candles")
+
+        return gap_indices
+
+    def _pattern_contains_gap(
+        self,
+        start_index: int,
+        end_index: int,
+        gap_indices: Set[int]
+    ) -> bool:
+        """
+        Check if a pattern range contains any trading gaps.
+
+        Args:
+            start_index: Pattern start index
+            end_index: Pattern end index
+            gap_indices: Set of gap indices from _detect_trading_gaps
+
+        Returns:
+            True if the pattern range contains a gap
+        """
+        for gap_idx in gap_indices:
+            if start_index <= gap_idx < end_index:
+                return True
+        return False
 
     def load_model(self, model_path: Optional[str] = None):
         """Load the TCN model."""
@@ -352,11 +434,11 @@ class PatternDetectionService:
                 for d in data
             ], dtype=np.float32)
 
-            timestamps = [d.get('timestamp', d.get('time', '')) for d in data]
+            timestamps = [d.get('timestamp', d.get('time', d.get('snapshot_time', ''))) for d in data]
 
-            # Detect patterns
+            # Detect patterns (with gap awareness)
             detected = await self._detect_in_sequence(
-                ohlcv, timestamps, threshold, pattern_filter
+                ohlcv, timestamps, threshold, pattern_filter, timeframe
             )
 
             # Get market context
@@ -389,14 +471,19 @@ class PatternDetectionService:
         ohlcv: np.ndarray,
         timestamps: List[str],
         threshold: float,
-        pattern_filter: Optional[List[str]]
+        pattern_filter: Optional[List[str]],
+        timeframe: str = "1h"
     ) -> List[DetectedPattern]:
         """
         Detect patterns in OHLCV sequence.
 
         Combines TCN predictions with rule-based detection.
+        Filters out patterns that span trading gaps (weekends, holidays).
         """
         detected = []
+
+        # Detect trading gaps (weekends, holidays, non-trading hours)
+        gap_indices = self._detect_trading_gaps(timestamps, timeframe)
 
         # TCN predictions
         if self._model_loaded:
@@ -413,6 +500,11 @@ class PatternDetectionService:
 
                 start_idx = max(0, len(ohlcv) - 50)
                 end_idx = len(ohlcv) - 1
+
+                # Skip patterns that span trading gaps
+                if self._pattern_contains_gap(start_idx, end_idx, gap_indices):
+                    logger.debug(f"Skipping {pattern_type} - contains trading gap")
+                    continue
 
                 # Generate pattern points for visualization
                 pattern_points = self._generate_pattern_points(
@@ -447,6 +539,11 @@ class PatternDetectionService:
             )
 
             if not tcn_detected:
+                # Skip patterns that span trading gaps
+                if self._pattern_contains_gap(pattern.start_index, pattern.end_index, gap_indices):
+                    logger.debug(f"Skipping rule-based {pattern.pattern_type.value} - contains trading gap")
+                    continue
+
                 # Get pattern points from rule-based detection
                 pattern_points_dicts = pattern.get_pattern_points_as_dicts()
 
