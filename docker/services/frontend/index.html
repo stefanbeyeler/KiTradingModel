@@ -1,0 +1,2088 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KI Trading Model - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .header-status {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            align-items: center;
+        }
+
+        .header-status span {
+            padding: 0.4rem 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+        }
+
+        .header-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.2));
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+        }
+
+        .header-btn:hover {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(16, 185, 129, 0.3));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1400px) {
+            .services-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .services-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .service-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            min-height: 280px;
+        }
+
+        .service-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(100, 200, 255, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .service-card h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-healthy {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status-unhealthy {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .status-loading {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffd54f;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .service-card p {
+            opacity: 0.8;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+            flex-grow: 1;
+        }
+
+        .service-info {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 0.8rem;
+            margin-bottom: 1rem;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+            margin-top: auto;
+        }
+
+        .service-info div {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .service-info div:last-child {
+            border-bottom: none;
+        }
+
+        .service-info .label {
+            opacity: 0.6;
+        }
+
+        .service-links {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: nowrap;
+            flex-shrink: 0;
+        }
+
+        .service-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.4rem 0.5rem;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            white-space: nowrap;
+        }
+
+        .service-links a:hover {
+            background: rgba(100, 200, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* System Resources Section Styles */
+        .system-resources-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .system-resources-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .system-resources-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .resources-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 1400px) {
+            .resources-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 1000px) {
+            .resources-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .resources-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .resource-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .resource-panel h4 {
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .metric-icon {
+            font-size: 1.1rem;
+        }
+
+        .metric-bar-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            height: 20px;
+            overflow: hidden;
+            margin-bottom: 0.6rem;
+            position: relative;
+        }
+
+        .metric-bar {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.5s ease, background 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            min-width: 35px;
+        }
+
+        .metric-bar.cpu {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        }
+
+        .metric-bar.memory {
+            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+        }
+
+        .metric-bar.gpu {
+            background: linear-gradient(90deg, #10b981, #34d399);
+        }
+
+        .metric-bar.gpu-memory {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
+        .metric-bar.disk {
+            background: linear-gradient(90deg, #06b6d4, #22d3ee);
+        }
+
+        .metric-bar.power {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
+        .metric-bar.high {
+            background: linear-gradient(90deg, #ef4444, #f87171) !important;
+        }
+
+        .metric-bar.medium {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
+        }
+
+        .resource-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+        }
+
+        .resource-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 0.4rem 0.3rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .resource-stat .value {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.15rem;
+        }
+
+        .resource-stat .label {
+            opacity: 0.6;
+            font-size: 0.65rem;
+        }
+
+        .resource-stat.full-width {
+            grid-column: span 2;
+        }
+
+        .temp-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .temp-indicator.cool { color: #34d399; }
+        .temp-indicator.warm { color: #fbbf24; }
+        .temp-indicator.hot { color: #f87171; }
+
+        .power-indicator {
+            color: #60a5fa;
+            font-weight: 600;
+        }
+
+        /* Storage Details Row */
+        .storage-details-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 900px) {
+            .storage-details-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .storage-volumes {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .storage-volumes h4 {
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .volume-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .volume-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.7rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .volume-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(100, 200, 255, 0.2);
+        }
+
+        .volume-name {
+            font-weight: 500;
+            color: #e8e8e8;
+        }
+
+        .volume-size {
+            font-size: 0.7rem;
+            opacity: 0.6;
+        }
+
+        .storage-loading {
+            text-align: center;
+            padding: 1.5rem;
+            opacity: 0.5;
+            font-size: 0.85rem;
+        }
+
+        /* Service Resource Info in Cards */
+        .service-resources {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.8rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .service-resource {
+            text-align: center;
+            padding: 0.3rem;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        .service-resource .value {
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: block;
+        }
+
+        .service-resource .label {
+            opacity: 0.6;
+            font-size: 0.65rem;
+        }
+
+        .service-resource.cpu .value { color: #60a5fa; }
+        .service-resource.ram .value { color: #a78bfa; }
+        .service-resource.net .value { color: #34d399; }
+
+        /* Data Flow Diagram Styles - Horizontal Layout */
+        .dataflow-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .dataflow-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .dataflow-card h3 {
+            font-size: 1rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dataflow-diagram {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem;
+            overflow-x: auto;
+        }
+
+        .dataflow-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .dataflow-stage-label {
+            font-size: 0.55rem;
+            opacity: 0.5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.2rem;
+        }
+
+        .dataflow-nodes-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .dataflow-node {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 0.4rem 0.6rem;
+            text-align: center;
+            min-width: 70px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .dataflow-node:hover {
+            transform: scale(1.02);
+            border-color: rgba(100, 200, 255, 0.5);
+            box-shadow: 0 2px 8px rgba(100, 200, 255, 0.2);
+        }
+
+        .dataflow-node.external {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .dataflow-node.gateway {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .dataflow-node.ml {
+            border-color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .dataflow-node.analysis {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .dataflow-node.output {
+            border-color: #06b6d4;
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        .dataflow-node.monitoring {
+            border-color: #ec4899;
+            background: rgba(236, 72, 153, 0.1);
+        }
+
+        .dataflow-node .node-icon {
+            font-size: 1rem;
+        }
+
+        .dataflow-node .node-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .dataflow-node .node-name {
+            font-size: 0.65rem;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .dataflow-node .node-port {
+            font-size: 0.5rem;
+            opacity: 0.6;
+        }
+
+        .dataflow-node .node-status {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(0, 0, 0, 0.3);
+            background: #6b7280;
+        }
+
+        .dataflow-node .node-status.healthy {
+            background: #10b981;
+            box-shadow: 0 0 4px rgba(16, 185, 129, 0.6);
+        }
+
+        .dataflow-node .node-status.unhealthy {
+            background: #ef4444;
+            box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+        }
+
+        .dataflow-node .node-status.loading {
+            background: #f59e0b;
+            animation: pulse-status 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-status {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .dataflow-arrow {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            padding: 0 0.2rem;
+        }
+
+        @media (max-width: 1200px) {
+            .dataflow-diagram {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .dataflow-stage {
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dataflow-node {
+                min-width: 60px;
+                padding: 0.3rem 0.5rem;
+            }
+            .dataflow-node .node-name {
+                font-size: 0.6rem;
+            }
+            .dataflow-node .node-icon {
+                font-size: 0.85rem;
+            }
+        }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            border-left: 4px solid #64c8ff;
+            display: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #e8e8e8;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #e8e8e8;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .category-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .category-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .category-icon {
+            font-size: 1.2rem;
+        }
+
+        .category-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .category-count {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .symbols-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .symbol-chip {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #e8e8e8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+
+        .symbol-chip:hover {
+            background: rgba(100, 200, 255, 0.15);
+            border-color: rgba(100, 200, 255, 0.3);
+        }
+
+        .modal-summary {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .summary-stat {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .summary-stat .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .summary-stat .label {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        .clickable-symbol-count {
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 4px;
+            padding: 0.15rem 0.5rem;
+            margin: 0 -4px;
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .clickable-symbol-count::after {
+            content: '\25B6';
+            font-size: 0.6rem;
+            opacity: 0.7;
+        }
+
+        .clickable-symbol-count:hover {
+            background: rgba(100, 200, 255, 0.25);
+            border-color: rgba(100, 200, 255, 0.4);
+            color: #fff;
+            transform: translateX(2px);
+        }
+
+        .clickable-symbol-count:hover::after {
+            opacity: 1;
+        }
+
+        .modal-loading {
+            text-align: center;
+            padding: 3rem;
+            color: #64c8ff;
+        }
+
+        .modal-loading .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(100, 200, 255, 0.2);
+            border-top-color: #64c8ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>KI Trading Model</h1>
+            <div class="header-status">
+                <a href="/testing.html" class="header-btn">&#128203; Tests</a>
+                <span id="services-count">Services: -/10</span>
+                <span id="endpoints-count">Endpoints: -</span>
+                <span id="last-update">Update: -</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Data Flow Diagram - Horizontal -->
+        <div class="dataflow-section">
+            <div class="dataflow-card">
+                <h3><span class="metric-icon">&#128260;</span> Datenfluss Architektur</h3>
+                <div class="dataflow-diagram">
+                    <!-- External Sources Stage -->
+                    <div class="dataflow-stage">
+                        <span class="dataflow-stage-label">Extern</span>
+                        <div class="dataflow-nodes-vertical">
+                            <div class="dataflow-node external">
+                                <span class="node-icon">&#127760;</span>
+                                <div class="node-info">
+                                    <span class="node-name">EasyInsight</span>
+                                    <span class="node-port">TimescaleDB</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node external">
+                                <span class="node-icon">&#128200;</span>
+                                <div class="node-info">
+                                    <span class="node-name">TwelveData</span>
+                                    <span class="node-port">Fallback 1</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node external">
+                                <span class="node-icon">&#128176;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Yahoo Finance</span>
+                                    <span class="node-port">Fallback 2</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dataflow-arrow">&#8594;</div>
+
+                    <!-- Gateway Stage -->
+                    <div class="dataflow-stage">
+                        <span class="dataflow-stage-label">Gateway</span>
+                        <div class="dataflow-node gateway">
+                            <span class="node-status loading" id="df-data-status"></span>
+                            <span class="node-icon">&#128279;</span>
+                            <div class="node-info">
+                                <span class="node-name">Data Service</span>
+                                <span class="node-port">:3001</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dataflow-arrow">&#8594;</div>
+
+                    <!-- ML Services Stage -->
+                    <div class="dataflow-stage">
+                        <span class="dataflow-stage-label">ML Inference</span>
+                        <div class="dataflow-nodes-vertical">
+                            <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-nhits-status"></span>
+                                <span class="node-icon">&#128202;</span>
+                                <div class="node-info">
+                                    <span class="node-name">NHITS</span>
+                                    <span class="node-port">:3002</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-tcn-status"></span>
+                                <span class="node-icon">&#128200;</span>
+                                <div class="node-info">
+                                    <span class="node-name">TCN</span>
+                                    <span class="node-port">:3003</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-hmm-status"></span>
+                                <span class="node-icon">&#128201;</span>
+                                <div class="node-info">
+                                    <span class="node-name">HMM</span>
+                                    <span class="node-port">:3004</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-embedder-status"></span>
+                                <span class="node-icon">&#129302;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Embedder</span>
+                                    <span class="node-port">:3005</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dataflow-arrow">&#8595;</div>
+
+                    <!-- Training Stage -->
+                    <div class="dataflow-stage">
+                        <span class="dataflow-stage-label">Training</span>
+                        <div class="dataflow-nodes-vertical">
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                                <span class="node-status loading" id="df-tcn-train-status"></span>
+                                <span class="node-icon">&#127891;</span>
+                                <div class="node-info">
+                                    <span class="node-name">TCN-Train</span>
+                                    <span class="node-port">:3013</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dataflow-arrow">&#8594;</div>
+
+                    <!-- Analysis Stage -->
+                    <div class="dataflow-stage">
+                        <span class="dataflow-stage-label">Analyse</span>
+                        <div class="dataflow-nodes-vertical">
+                            <div class="dataflow-node analysis">
+                                <span class="node-status loading" id="df-rag-status"></span>
+                                <span class="node-icon">&#128269;</span>
+                                <div class="node-info">
+                                    <span class="node-name">RAG</span>
+                                    <span class="node-port">:3008</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node analysis">
+                                <span class="node-status loading" id="df-llm-status"></span>
+                                <span class="node-icon">&#129504;</span>
+                                <div class="node-info">
+                                    <span class="node-name">LLM</span>
+                                    <span class="node-port">:3009</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dataflow-arrow">&#8594;</div>
+
+                    <!-- Output Stage -->
+                    <div class="dataflow-stage">
+                        <span class="dataflow-stage-label">Output</span>
+                        <div class="dataflow-nodes-vertical">
+                            <div class="dataflow-node output">
+                                <span class="node-status healthy" id="df-frontend-status"></span>
+                                <span class="node-icon">&#128187;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Frontend</span>
+                                    <span class="node-port">:3000</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node monitoring">
+                                <span class="node-status loading" id="df-watchdog-status"></span>
+                                <span class="node-icon">&#128065;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Watchdog</span>
+                                    <span class="node-port">:3010</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Resources Section (Combined CPU, GPU, Storage) -->
+        <div class="system-resources-section">
+            <div class="system-resources-card">
+                <h3><span class="metric-icon">&#9881;</span> System-Ressourcen (Jetson AGX Thor)</h3>
+
+                <!-- Main Resources Grid -->
+                <div class="resources-grid">
+                    <!-- CPU Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#128187;</span> CPU</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar cpu" id="cpu-bar" style="width: 0%">
+                                <span id="cpu-percent">-</span>
+                            </div>
+                        </div>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
+                                <span class="value" id="cpu-cores">-</span>
+                                <span class="label">Kerne</span>
+                            </div>
+                            <div class="resource-stat">
+                                <span class="value temp-indicator" id="cpu-temp">-</span>
+                                <span class="label">Temp</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GPU Panel -->
+                    <div class="resource-panel" id="gpu-panel">
+                        <h4><span class="metric-icon">&#127918;</span> GPU</h4>
+                        <div id="gpu-content">
+                            <div class="metric-bar-container">
+                                <div class="metric-bar gpu" id="gpu-util-bar" style="width: 0%">
+                                    <span id="gpu-util-percent">-</span>
+                                </div>
+                            </div>
+                            <div class="resource-stats">
+                                <div class="resource-stat">
+                                    <span class="value" id="gpu-vram">-</span>
+                                    <span class="label">VRAM</span>
+                                </div>
+                                <div class="resource-stat">
+                                    <span class="value temp-indicator" id="gpu-temp">-</span>
+                                    <span class="label">Temp</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="gpu-unavailable" class="storage-loading" style="display: none;">
+                            Keine GPU
+                        </div>
+                    </div>
+
+                    <!-- Shared VRAM Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#128204;</span> Shared VRAM</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar memory" id="memory-bar" style="width: 0%">
+                                <span id="memory-percent">-</span>
+                            </div>
+                        </div>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
+                                <span class="value" id="memory-total">-</span>
+                                <span class="label">Gesamt</span>
+                            </div>
+                            <div class="resource-stat">
+                                <span class="value" id="memory-used">-</span>
+                                <span class="label">Belegt</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Storage Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#128190;</span> Storage</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar disk" id="disk-bar" style="width: 0%">
+                                <span id="disk-percent">-</span>
+                            </div>
+                        </div>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
+                                <span class="value" id="disk-total">-</span>
+                                <span class="label">Gesamt</span>
+                            </div>
+                            <div class="resource-stat">
+                                <span class="value" id="disk-free">-</span>
+                                <span class="label">Frei</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Power Panel -->
+                    <div class="resource-panel">
+                        <h4><span class="metric-icon">&#9889;</span> Power</h4>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar power" id="power-bar" style="width: 0%">
+                                <span id="power-percent">-</span>
+                            </div>
+                        </div>
+                        <div class="resource-stats">
+                            <div class="resource-stat">
+                                <span class="value power-indicator" id="gpu-power">-</span>
+                                <span class="label">GPU</span>
+                            </div>
+                            <div class="resource-stat">
+                                <span class="value power-indicator" id="total-power">-</span>
+                                <span class="label">Gesamt</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Volumes Row -->
+                <div class="storage-details-row" style="grid-template-columns: 1fr;">
+                    <div class="storage-volumes">
+                        <h4>&#128451; Docker Volumes</h4>
+                        <div class="volume-list" id="volume-list">
+                            <div class="storage-loading">Lade Volumes...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="services-grid">
+            <!-- EasyInsight API -->
+            <div class="service-card" id="easyinsight-card">
+                <div class="service-header">
+                    <h2>EasyInsight API</h2>
+                    <span class="status-badge status-loading" id="easyinsight-status">Laden...</span>
+                </div>
+                <p>Externe Datenquelle - OHLCV-Marktdaten und Symbol-Informationen via TimescaleDB.</p>
+                <div class="service-info" id="easyinsight-info">
+                    <div><span class="label">Host</span><span>10.1.19.102:3000</span></div>
+                    <div><span class="label">Symbole</span><span id="easyinsight-symbols" class="clickable-symbol-count" onclick="openSymbolsModal()" title="Klicken für Details">-</span></div>
+                    <div><span class="label">Latenz</span><span id="easyinsight-latency">-</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-easyinsight.html" target="_blank">Info</a>
+                    <a href="http://10.1.19.102:3000/swagger/" target="_blank">API Docs</a>
+                    <a href="http://10.1.19.102:3000" target="_blank">Cockpit</a>
+                </div>
+            </div>
+
+            <!-- Data Service -->
+            <div class="service-card" id="data-card">
+                <div class="service-header">
+                    <h2>Data Service</h2>
+                    <span class="status-badge status-loading" id="data-status">Laden...</span>
+                </div>
+                <p>Symbol-Management, Trading-Strategien und Daten-Synchronisation mit EasyInsight.</p>
+                <div class="service-info" id="data-info">
+                    <div><span class="label">Port</span><span>3001</span></div>
+                    <div><span class="label">EasyInsight</span><span id="data-easyinsight">-</span></div>
+                    <div><span class="label">Sync</span><span id="data-sync">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-data.html" target="_blank">Info</a>
+                    <a href="/data/docs" target="_blank">API Docs</a>
+                    <a href="/config-data.html" target="_blank">Config</a>
+                </div>
+            </div>
+
+            <!-- NHITS Service -->
+            <div class="service-card" id="nhits-card">
+                <div class="service-header">
+                    <h2>NHITS Service</h2>
+                    <span class="status-badge status-loading" id="nhits-status">Laden...</span>
+                </div>
+                <p>Neural Hierarchical Interpolation for Time Series - Preisprognosen und Modell-Training.</p>
+                <div class="service-info" id="nhits-info">
+                    <div><span class="label">Port</span><span>3002</span></div>
+                    <div><span class="label">Training</span><span id="nhits-training">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">4 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">16 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">GPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-nhits.html" target="_blank">Info</a>
+                    <a href="/nhits/docs" target="_blank">API Docs</a>
+                    <a href="/config-nhits.html" target="_blank">Config</a>
+                </div>
+            </div>
+
+            <!-- TCN-Pattern Service (Inference) -->
+            <div class="service-card" id="tcn-card">
+                <div class="service-header">
+                    <h2>TCN-Pattern</h2>
+                    <span class="status-badge status-loading" id="tcn-status">Laden...</span>
+                </div>
+                <p>Temporal Convolutional Network - Erkennung von 16 Chart-Pattern Typen (Inference Only).</p>
+                <div class="service-info" id="tcn-info">
+                    <div><span class="label">Port</span><span>3003</span></div>
+                    <div><span class="label">Pattern</span><span id="tcn-patterns">16 Typen</span></div>
+                    <div><span class="label">Model</span><span id="tcn-model-status">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">GPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-tcn.html" target="_blank">Info</a>
+                    <a href="/tcn/docs" target="_blank">API Docs</a>
+                    <a href="/config-tcn.html" target="_blank">Config</a>
+                </div>
+            </div>
+
+            <!-- TCN-Training Service -->
+            <div class="service-card" id="tcn-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
+                <div class="service-header">
+                    <h2>TCN-Training</h2>
+                    <span class="status-badge status-loading" id="tcn-train-status">Laden...</span>
+                </div>
+                <p>Dedizierter Training-Container - Modell-Training ohne API-Blockierung. Low Priority.</p>
+                <div class="service-info" id="tcn-train-info">
+                    <div><span class="label">Port</span><span>3013</span></div>
+                    <div><span class="label">Training</span><span id="tcn-train-active">-</span></div>
+                    <div><span class="label">Epoch</span><span id="tcn-train-epoch">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">4 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">8 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/tcn-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
+                    <a href="/tcn-train/api/v1/train/status" target="_blank">Status</a>
+                    <a href="/tcn-train/api/v1/models" target="_blank">Models</a>
+                </div>
+            </div>
+
+            <!-- HMM-Regime Service -->
+            <div class="service-card" id="hmm-card">
+                <div class="service-header">
+                    <h2>HMM-Regime</h2>
+                    <span class="status-badge status-loading" id="hmm-status">Laden...</span>
+                </div>
+                <p>Hidden Markov Model + LightGBM - Regime-Erkennung und Signal-Scoring für Trading.</p>
+                <div class="service-info" id="hmm-info">
+                    <div><span class="label">Port</span><span>3004</span></div>
+                    <div><span class="label">Regimes</span><span id="hmm-regimes">4 States</span></div>
+                    <div><span class="label">Scorer</span><span id="hmm-scorer">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-hmm.html" target="_blank">Info</a>
+                    <a href="/hmm/docs" target="_blank">API Docs</a>
+                    <a href="/config-hmm.html" target="_blank">Config</a>
+                </div>
+            </div>
+
+            <!-- Embedder Service -->
+            <div class="service-card" id="embedder-card">
+                <div class="service-header">
+                    <h2>Embedder</h2>
+                    <span class="status-badge status-loading" id="embedder-status">Laden...</span>
+                </div>
+                <p>Zentraler Embedding-Service - Text, FinBERT, TimeSeries und Feature Embeddings.</p>
+                <div class="service-info" id="embedder-info">
+                    <div><span class="label">Port</span><span>3005</span></div>
+                    <div><span class="label">Modelle</span><span id="embedder-models">4 Types</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">12 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">GPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-embedder.html" target="_blank">Info</a>
+                    <a href="/embedder/docs" target="_blank">API Docs</a>
+                    <a href="/config-embedder.html" target="_blank">Config</a>
+                </div>
+            </div>
+
+            <!-- RAG Service -->
+            <div class="service-card" id="rag-card">
+                <div class="service-header">
+                    <h2>RAG Service</h2>
+                    <span class="status-badge status-loading" id="rag-status">Laden...</span>
+                </div>
+                <p>Vector Search & Knowledge Base - FAISS-basierte Dokumentensuche und Retrieval.</p>
+                <div class="service-info" id="rag-info">
+                    <div><span class="label">Port</span><span>3008</span></div>
+                    <div><span class="label">Dokumente</span><span id="rag-docs">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">8 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">GPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-rag.html" target="_blank">Info</a>
+                    <a href="/rag/docs" target="_blank">API Docs</a>
+                    <a href="/config-rag.html" target="_blank">Config</a>
+                </div>
+            </div>
+
+            <!-- LLM Service -->
+            <div class="service-card" id="llm-card">
+                <div class="service-header">
+                    <h2>LLM Service</h2>
+                    <span class="status-badge status-loading" id="llm-status">Laden...</span>
+                </div>
+                <p>Large Language Model Analyse mit RAG - Trading-Insights powered by Llama 3.1 70B.</p>
+                <div class="service-info" id="llm-info">
+                    <div><span class="label">Port</span><span>3009</span></div>
+                    <div><span class="label">Modell</span><span id="llm-model">-</span></div>
+                    <div><span class="label">RAG</span><span id="llm-rag">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">GPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-llm.html" target="_blank">Info</a>
+                    <a href="/llm/docs" target="_blank">API Docs</a>
+                    <a href="/config-llm.html" target="_blank">Config</a>
+                </div>
+            </div>
+
+            <!-- Watchdog Service -->
+            <div class="service-card" id="watchdog-card">
+                <div class="service-header">
+                    <h2>Watchdog</h2>
+                    <span class="status-badge status-loading" id="watchdog-status">Laden...</span>
+                </div>
+                <p>Service-Monitoring mit Telegram-Alerts - Überwacht alle Microservices und sendet Alarme.</p>
+                <div class="service-info" id="watchdog-info">
+                    <div><span class="label">Port</span><span>3010</span></div>
+                    <div><span class="label">Services</span><span id="watchdog-services">-</span></div>
+                    <div><span class="label">Telegram</span><span id="watchdog-telegram">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">1 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">512 MB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-watchdog.html" target="_blank">Info</a>
+                    <a href="/watchdog/docs" target="_blank">API Docs</a>
+                    <a href="/watchdog/health" target="_blank">Health</a>
+                    <a href="/watchdog/api/v1/status" target="_blank">Status</a>
+                </div>
+            </div>
+
+            <!-- API Tests -->
+            <div class="service-card" id="tests-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05)); border-color: rgba(139, 92, 246, 0.3);">
+                <div class="service-header">
+                    <h2>API Tests</h2>
+                    <span class="status-badge" id="tests-status" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;">BEREIT</span>
+                </div>
+                <p>Interaktive Test-Suite - Testet alle API-Endpunkte mit Live-Feedback und detaillierter Fehlerausgabe.</p>
+                <div class="service-info" id="tests-info">
+                    <div><span class="label">Tests</span><span id="tests-count">21</span></div>
+                    <div><span class="label">Services</span><span id="tests-services">9</span></div>
+                    <div><span class="label">Letzter Lauf</span><span id="tests-last-run">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource ram"><span class="value" id="tests-passed">-</span><span class="label">Passed</span></div>
+                    <div class="service-resource cpu"><span class="value" id="tests-failed">-</span><span class="label">Failed</span></div>
+                    <div class="service-resource net"><span class="value" id="tests-skipped">-</span><span class="label">Skipped</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-tests.html" target="_blank" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(139, 92, 246, 0.15)); color: #a78bfa; font-weight: 600;">Tests starten</a>
+                    <a href="/watchdog/docs#/Tests" target="_blank">API Docs</a>
+                    <a href="/watchdog/api/v1/tests/history" target="_blank">Historie</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + TCN + HMM + Embedder + RAG + LLM + Watchdog
+    </footer>
+
+    <!-- Symbols Modal -->
+    <div class="modal-overlay" id="symbols-modal" onclick="closeSymbolsModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>EasyInsight Symbole nach Kategorie</h2>
+                <button class="modal-close" onclick="closeSymbolsModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="symbols-modal-content">
+                <div class="modal-loading">
+                    <div class="spinner"></div>
+                    <div>Symbole werden geladen...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '';  // Relative URLs via nginx proxy
+
+        let healthyServices = 0;
+        let totalEndpoints = 0;
+
+        // Mapping service name to dataflow status element id
+        const dataflowStatusMap = {
+            'data': 'df-data-status',
+            'nhits': 'df-nhits-status',
+            'tcn': 'df-tcn-status',
+            'tcn-train': 'df-tcn-train-status',
+            'hmm': 'df-hmm-status',
+            'embedder': 'df-embedder-status',
+            'rag': 'df-rag-status',
+            'llm': 'df-llm-status',
+            'watchdog': 'df-watchdog-status'
+        };
+
+        function updateDataflowStatus(service, isHealthy) {
+            const dfStatusId = dataflowStatusMap[service];
+            if (dfStatusId) {
+                const dfStatusEl = document.getElementById(dfStatusId);
+                if (dfStatusEl) {
+                    dfStatusEl.classList.remove('loading', 'healthy', 'unhealthy');
+                    dfStatusEl.classList.add(isHealthy ? 'healthy' : 'unhealthy');
+                }
+            }
+        }
+
+        async function checkHealth(service, port, statusId) {
+            try {
+                const res = await fetch(`/${service}/health`);
+                const data = await res.json();
+
+                const statusEl = document.getElementById(statusId);
+                statusEl.textContent = data.status === 'healthy' ? 'Online' : 'Degraded';
+                statusEl.className = `status-badge ${data.status === 'healthy' ? 'status-healthy' : 'status-unhealthy'}`;
+
+                if (data.status === 'healthy') healthyServices++;
+
+                // Update dataflow status indicator
+                updateDataflowStatus(service, data.status === 'healthy');
+
+                return data;
+            } catch (err) {
+                const statusEl = document.getElementById(statusId);
+                statusEl.textContent = 'Offline';
+                statusEl.className = 'status-badge status-unhealthy';
+
+                // Update dataflow status indicator
+                updateDataflowStatus(service, false);
+
+                return null;
+            }
+        }
+
+        async function updateNhitsInfo() {
+            const data = await checkHealth('nhits', 3002, 'nhits-status');
+            if (data) {
+                document.getElementById('nhits-training').textContent = data.training_in_progress ? 'Aktiv' : 'Inaktiv';
+            }
+        }
+
+        async function updateLlmInfo() {
+            const data = await checkHealth('llm', 3009, 'llm-status');
+            if (data) {
+                document.getElementById('llm-model').textContent = data.llm_model || '-';
+                document.getElementById('llm-rag').textContent = data.rag_enabled ? 'Aktiviert' : 'Deaktiviert';
+            }
+        }
+
+        async function updateDataInfo() {
+            const data = await checkHealth('data', 3001, 'data-status');
+            if (data) {
+                document.getElementById('data-easyinsight').textContent = data.easyinsight_api ? 'Verbunden' : '-';
+                document.getElementById('data-sync').textContent = data.sync_service_status || '-';
+            }
+        }
+
+        async function updateRagInfo() {
+            const data = await checkHealth('rag', 3008, 'rag-status');
+            if (data) {
+                document.getElementById('rag-docs').textContent = data.document_count || 0;
+            }
+        }
+
+        async function updateTcnInfo() {
+            const data = await checkHealth('tcn', 3003, 'tcn-status');
+            if (data) {
+                // Try to get model info
+                try {
+                    const modelRes = await fetch('/tcn/api/v1/model');
+                    if (modelRes.ok) {
+                        const modelData = await modelRes.json();
+                        document.getElementById('tcn-model-status').textContent = modelData.loaded ? 'Geladen' : 'Nicht geladen';
+                    }
+                } catch (e) {
+                    document.getElementById('tcn-model-status').textContent = '-';
+                }
+            }
+        }
+
+        async function updateTcnTrainInfo() {
+            const data = await checkHealth('tcn-train', 3013, 'tcn-train-status');
+            if (data) {
+                document.getElementById('tcn-train-active').textContent = data.training_active ? 'Aktiv' : 'Inaktiv';
+
+                // Get detailed training status
+                try {
+                    const statusRes = await fetch('/tcn-train/api/v1/train/status');
+                    if (statusRes.ok) {
+                        const statusData = await statusRes.json();
+                        if (statusData.status === 'training' && statusData.current_epoch) {
+                            document.getElementById('tcn-train-epoch').textContent =
+                                `${statusData.current_epoch}/${statusData.total_epochs}`;
+                        } else {
+                            document.getElementById('tcn-train-epoch').textContent = '-';
+                        }
+                    }
+                } catch (e) {
+                    document.getElementById('tcn-train-epoch').textContent = '-';
+                }
+            }
+        }
+
+        async function updateHmmInfo() {
+            const data = await checkHealth('hmm', 3004, 'hmm-status');
+            if (data) {
+                document.getElementById('hmm-scorer').textContent = data.lightgbm_available ? 'Bereit' : '-';
+            }
+        }
+
+        async function updateEmbedderInfo() {
+            await checkHealth('embedder', 3005, 'embedder-status');
+        }
+
+        async function updateWatchdogInfo() {
+            const data = await checkHealth('watchdog', 3010, 'watchdog-status');
+            if (data) {
+                // Count healthy/total services from watchdog status
+                const servicesEl = document.getElementById('watchdog-services');
+                const telegramEl = document.getElementById('watchdog-telegram');
+
+                if (data.services_monitored !== undefined) {
+                    servicesEl.textContent = `${data.healthy_count || 0}/${data.services_monitored}`;
+                } else {
+                    servicesEl.textContent = '-';
+                }
+
+                telegramEl.textContent = data.telegram_enabled ? 'Aktiv' : 'Inaktiv';
+            }
+        }
+
+        async function updateTestsInfo() {
+            try {
+                const response = await fetch('/watchdog/api/v1/tests/status');
+                const data = await response.json();
+
+                const statusEl = document.getElementById('tests-status');
+                const lastRunEl = document.getElementById('tests-last-run');
+                const passedEl = document.getElementById('tests-passed');
+                const failedEl = document.getElementById('tests-failed');
+                const skippedEl = document.getElementById('tests-skipped');
+
+                if (data.status === 'running') {
+                    statusEl.textContent = 'RUNNING';
+                    statusEl.style.background = 'rgba(59, 130, 246, 0.2)';
+                    statusEl.style.color = '#60a5fa';
+                } else if (data.summary) {
+                    if (data.summary.failed > 0) {
+                        statusEl.textContent = 'FAILED';
+                        statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
+                        statusEl.style.color = '#f87171';
+                    } else {
+                        statusEl.textContent = 'PASSED';
+                        statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
+                        statusEl.style.color = '#4ade80';
+                    }
+
+                    passedEl.textContent = data.summary.passed || 0;
+                    failedEl.textContent = data.summary.failed || 0;
+                    skippedEl.textContent = data.summary.skipped || 0;
+
+                    if (data.completed_at) {
+                        const date = new Date(data.completed_at);
+                        lastRunEl.textContent = date.toLocaleTimeString('de-CH');
+                    }
+                }
+            } catch (e) {
+                // Tests API not available, keep default state
+            }
+        }
+
+        async function updateEasyInsightInfo() {
+            const statusEl = document.getElementById('easyinsight-status');
+            const symbolsEl = document.getElementById('easyinsight-symbols');
+            const latencyEl = document.getElementById('easyinsight-latency');
+
+            try {
+                const startTime = performance.now();
+                const res = await fetch('/easyinsight/api/symbols');
+                const latency = Math.round(performance.now() - startTime);
+
+                if (res.ok) {
+                    const symbols = await res.json();
+                    statusEl.textContent = 'Online';
+                    statusEl.className = 'status-badge status-healthy';
+                    symbolsEl.textContent = symbols.length;
+                    latencyEl.textContent = `${latency}ms`;
+                    healthyServices++;
+                } else {
+                    throw new Error('API returned error');
+                }
+            } catch (err) {
+                statusEl.textContent = 'Offline';
+                statusEl.className = 'status-badge status-unhealthy';
+                symbolsEl.textContent = '-';
+                latencyEl.textContent = '-';
+            }
+        }
+
+        async function updateSystemMetrics() {
+            try {
+                const res = await fetch('/nhits/api/v1/system/metrics');
+                if (!res.ok) throw new Error('Metrics fetch failed');
+                const data = await res.json();
+
+                // Helper function to determine bar color class based on percentage
+                function getColorClass(percent) {
+                    if (percent >= 90) return 'high';
+                    if (percent >= 70) return 'medium';
+                    return '';
+                }
+
+                // Helper function for temperature color class
+                function getTempClass(temp) {
+                    if (temp >= 70) return 'hot';
+                    if (temp >= 50) return 'warm';
+                    return 'cool';
+                }
+
+                // CPU metrics
+                if (data.cpu) {
+                    const cpuPercent = Math.round(data.cpu.percent || 0);
+                    const cpuBar = document.getElementById('cpu-bar');
+                    cpuBar.style.width = `${Math.max(cpuPercent, 5)}%`;
+                    cpuBar.className = `metric-bar cpu ${getColorClass(cpuPercent)}`;
+                    document.getElementById('cpu-percent').textContent = `${cpuPercent}%`;
+                    document.getElementById('cpu-cores').textContent = `${data.cpu.cores_logical || '-'}`;
+
+                    // CPU Temperature
+                    const cpuTempEl = document.getElementById('cpu-temp');
+                    if (data.cpu.temp_celsius) {
+                        const temp = Math.round(data.cpu.temp_celsius);
+                        cpuTempEl.textContent = `${temp}°C`;
+                        cpuTempEl.className = `value temp-indicator ${getTempClass(temp)}`;
+                    } else {
+                        cpuTempEl.textContent = '-';
+                    }
+                }
+
+                // Memory metrics
+                if (data.memory) {
+                    const memPercent = Math.round(data.memory.percent || 0);
+                    const memBar = document.getElementById('memory-bar');
+                    memBar.style.width = `${Math.max(memPercent, 5)}%`;
+                    memBar.className = `metric-bar memory ${getColorClass(memPercent)}`;
+                    document.getElementById('memory-percent').textContent = `${memPercent}%`;
+                    document.getElementById('memory-total').textContent = `${data.memory.total_gb} GB`;
+                    document.getElementById('memory-used').textContent = `${data.memory.used_gb} GB`;
+                }
+
+                // GPU metrics
+                const gpuContent = document.getElementById('gpu-content');
+                const gpuUnavailable = document.getElementById('gpu-unavailable');
+
+                if (data.gpu && data.gpu.available) {
+                    gpuContent.style.display = 'block';
+                    gpuUnavailable.style.display = 'none';
+
+                    // GPU utilization bar
+                    const gpuUtilPercent = Math.round(data.gpu.utilization_percent || 0);
+                    const gpuUtilBar = document.getElementById('gpu-util-bar');
+                    gpuUtilBar.style.width = `${Math.max(gpuUtilPercent, 5)}%`;
+                    gpuUtilBar.className = `metric-bar gpu ${getColorClass(gpuUtilPercent)}`;
+                    document.getElementById('gpu-util-percent').textContent = `${gpuUtilPercent}%`;
+
+                    // GPU Temperature
+                    const gpuTempEl = document.getElementById('gpu-temp');
+                    if (data.gpu.temp_celsius) {
+                        const temp = Math.round(data.gpu.temp_celsius);
+                        gpuTempEl.textContent = `${temp}°C`;
+                        gpuTempEl.className = `value temp-indicator ${getTempClass(temp)}`;
+                    } else {
+                        gpuTempEl.textContent = '-';
+                    }
+
+                    // GPU VRAM (nur genutzt, Total ist bei Shared VRAM)
+                    document.getElementById('gpu-vram').textContent =
+                        `${data.gpu.memory_allocated_gb} GB`;
+                } else {
+                    gpuContent.style.display = 'none';
+                    gpuUnavailable.style.display = 'block';
+                }
+
+                // Total Power (from power object)
+                if (data.power && data.power.available) {
+                    const totalPowerEl = document.getElementById('total-power');
+                    const gpuPowerEl = document.getElementById('gpu-power');
+                    const powerBar = document.getElementById('power-bar');
+                    const powerPercentEl = document.getElementById('power-percent');
+
+                    if (data.power.total_watts) {
+                        totalPowerEl.textContent = `${data.power.total_watts} W`;
+                        // Assume max power of 100W for Jetson AGX Thor, calculate percentage
+                        const maxPower = 100;
+                        const powerPercent = Math.min(Math.round((data.power.total_watts / maxPower) * 100), 100);
+                        powerBar.style.width = `${Math.max(powerPercent, 5)}%`;
+                        powerPercentEl.textContent = `${powerPercent}%`;
+                        // Color based on power consumption
+                        if (powerPercent >= 80) {
+                            powerBar.className = 'metric-bar power high';
+                        } else if (powerPercent >= 60) {
+                            powerBar.className = 'metric-bar power medium';
+                        } else {
+                            powerBar.className = 'metric-bar power';
+                        }
+                    } else {
+                        totalPowerEl.textContent = '-';
+                        powerBar.style.width = '0%';
+                        powerPercentEl.textContent = '-';
+                    }
+
+                    if (data.power.gpu_watts) {
+                        gpuPowerEl.textContent = `${data.power.gpu_watts} W`;
+                    } else {
+                        gpuPowerEl.textContent = '-';
+                    }
+                }
+
+            } catch (err) {
+                console.error('System metrics error:', err);
+            }
+        }
+
+        async function updateStorageMetrics() {
+            try {
+                const res = await fetch('/nhits/api/v1/system/storage');
+                if (!res.ok) throw new Error('Storage metrics fetch failed');
+                const data = await res.json();
+
+                // Helper function to determine bar color class based on percentage
+                function getColorClass(percent) {
+                    if (percent >= 90) return 'high';
+                    if (percent >= 70) return 'medium';
+                    return '';
+                }
+
+                // Disk metrics
+                if (data.disk) {
+                    const diskPercent = Math.round(data.disk.percent || 0);
+                    const diskBar = document.getElementById('disk-bar');
+                    diskBar.style.width = `${Math.max(diskPercent, 5)}%`;
+                    diskBar.className = `metric-bar disk ${getColorClass(diskPercent)}`;
+                    document.getElementById('disk-percent').textContent = `${diskPercent}%`;
+                    document.getElementById('disk-total').textContent = `${data.disk.total_gb} GB`;
+                    document.getElementById('disk-free').textContent = `${data.disk.free_gb} GB`;
+                }
+
+                // Volumes list
+                const volumeList = document.getElementById('volume-list');
+                if (data.app_storage && data.app_storage.volumes && data.app_storage.volumes.length > 0) {
+                    volumeList.innerHTML = data.app_storage.volumes.map(volume => `
+                        <div class="volume-item">
+                            <div>
+                                <div class="volume-name">${volume.name}</div>
+                                <div class="container-size">${volume.path}</div>
+                            </div>
+                            <div class="volume-driver">${volume.size}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    volumeList.innerHTML = '<div class="storage-loading">Keine Volume-Daten</div>';
+                }
+
+            } catch (err) {
+                console.error('Storage metrics error:', err);
+                document.getElementById('volume-list').innerHTML = '<div class="storage-loading">Fehler beim Laden</div>';
+            }
+        }
+
+        async function countEndpoints() {
+            // Count API endpoints from OpenAPI specs of all services
+            const services = ['data', 'nhits', 'tcn', 'tcn-train', 'hmm', 'embedder', 'rag', 'llm', 'watchdog'];
+            let count = 0;
+
+            for (const service of services) {
+                try {
+                    const res = await fetch(`/${service}/openapi.json`);
+                    if (res.ok) {
+                        const spec = await res.json();
+                        if (spec.paths) {
+                            count += Object.keys(spec.paths).length;
+                        }
+                    }
+                } catch (e) {
+                    // Service not available, skip
+                }
+            }
+            return count;
+        }
+
+        async function refreshStatus() {
+            healthyServices = 0;
+            await Promise.all([
+                updateNhitsInfo(),
+                updateLlmInfo(),
+                updateDataInfo(),
+                updateRagInfo(),
+                updateTcnInfo(),
+                updateTcnTrainInfo(),
+                updateHmmInfo(),
+                updateEmbedderInfo(),
+                updateWatchdogInfo(),
+                updateTestsInfo(),
+                updateEasyInsightInfo(),
+                updateSystemMetrics(),
+                updateStorageMetrics()
+            ]);
+
+            // Count endpoints (run in background to not block UI)
+            countEndpoints().then(count => {
+                totalEndpoints = count;
+                document.getElementById('endpoints-count').textContent = `Endpoints: ${totalEndpoints}`;
+            });
+
+            document.getElementById('services-count').textContent = `Services: ${healthyServices}/10`;
+            document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Symbol Modal Functions
+        let cachedSymbols = null;
+
+        // Category info mapping - uses EasyInsight API categories as master
+        const categoryInfo = {
+            'Forex': { icon: '\u{1F4B1}', name: 'Forex', order: 1 },
+            'Crypto': { icon: '\u{1FA99}', name: 'Krypto', order: 2 },
+            'Indices': { icon: '\u{1F4CA}', name: 'Indizes', order: 3 },
+            'Metals': { icon: '\u{1F947}', name: 'Metalle', order: 4 },
+            'Extra': { icon: '\u{2B50}', name: 'Extra', order: 5 },
+            'Other': { icon: '\u{2753}', name: 'Sonstige', order: 99 }
+        };
+
+        function groupSymbolsByCategory(symbols) {
+            const groups = {};
+
+            symbols.forEach(symbolData => {
+                // Use category from API directly
+                const symbol = symbolData.symbol || symbolData;
+                const category = symbolData.category || 'Other';
+
+                if (!groups[category]) {
+                    groups[category] = [];
+                }
+                groups[category].push(symbol);
+            });
+
+            // Sort symbols within each category
+            Object.keys(groups).forEach(cat => {
+                groups[cat].sort();
+            });
+
+            return groups;
+        }
+
+        function renderSymbolsModal(symbols) {
+            const groups = groupSymbolsByCategory(symbols);
+            const content = document.getElementById('symbols-modal-content');
+
+            // Summary stats
+            let html = '<div class="modal-summary">';
+            html += `<div class="summary-stat"><div class="value">${symbols.length}</div><div class="label">Gesamt</div></div>`;
+
+            const sortedCategories = Object.keys(groups).sort((a, b) =>
+                (categoryInfo[a]?.order || 99) - (categoryInfo[b]?.order || 99)
+            );
+
+            sortedCategories.forEach(cat => {
+                const info = categoryInfo[cat] || { icon: '\u2753', name: cat };
+                html += `<div class="summary-stat"><div class="value">${groups[cat].length}</div><div class="label">${info.icon} ${info.name}</div></div>`;
+            });
+            html += '</div>';
+
+            // Category groups
+            sortedCategories.forEach(cat => {
+                const info = categoryInfo[cat] || { icon: '\u2753', name: cat };
+                const symbolsList = groups[cat];
+
+                html += `
+                    <div class="category-group">
+                        <div class="category-header">
+                            <span class="category-icon">${info.icon}</span>
+                            <span class="category-name">${info.name}</span>
+                            <span class="category-count">${symbolsList.length}</span>
+                        </div>
+                        <div class="symbols-grid">
+                            ${symbolsList.map(s => `<span class="symbol-chip">${s}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            content.innerHTML = html;
+        }
+
+        async function openSymbolsModal() {
+            const modal = document.getElementById('symbols-modal');
+            const content = document.getElementById('symbols-modal-content');
+
+            // Show modal with loading state
+            modal.classList.add('show');
+            content.innerHTML = '<div class="modal-loading"><div class="spinner"></div><div>Symbole werden geladen...</div></div>';
+
+            try {
+                // Use cached symbols if available
+                if (cachedSymbols) {
+                    renderSymbolsModal(cachedSymbols);
+                    return;
+                }
+
+                const res = await fetch('/easyinsight/api/symbols');
+                if (res.ok) {
+                    cachedSymbols = await res.json();
+                    renderSymbolsModal(cachedSymbols);
+                } else {
+                    content.innerHTML = '<div class="modal-loading"><div>Fehler beim Laden der Symbole</div></div>';
+                }
+            } catch (err) {
+                content.innerHTML = '<div class="modal-loading"><div>Verbindungsfehler: ' + err.message + '</div></div>';
+            }
+        }
+
+        function closeSymbolsModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('symbols-modal').classList.remove('show');
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeSymbolsModal();
+            }
+        });
+
+        // Initial load
+        refreshStatus();
+
+        // Auto-refresh service status every 10 seconds
+        setInterval(refreshStatus, 10000);
+
+        // Update system metrics more frequently (every 3 seconds) for smoother monitoring
+        setInterval(updateSystemMetrics, 3000);
+    </script>
+</body>
+</html>

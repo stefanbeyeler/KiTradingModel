@@ -1,44 +1,20 @@
-# Core Framework
+# TCN Training Service Requirements
+
+# Framework
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 pydantic>=2.5.0
-pydantic-settings>=2.1.0
-python-multipart>=0.0.6
+pydantic-settings>=2.0.0
 
-# LLM Integration (Ollama for Llama 3.1 70B)
-ollama>=0.1.6
-
-# PyTorch with CUDA support (for RTX 3070)
-# Install manually: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-torch>=2.0.0
-
-# RAG System (FAISS with GPU support)
-# For GPU: pip install faiss-gpu (requires CUDA)
-# For CPU fallback: pip install faiss-cpu
-faiss-cpu>=1.7.4
-sentence-transformers>=2.2.2
-transformers>=4.30.0,<4.46.0
-
-# Database & API Client
+# HTTP Client
 httpx>=0.25.0
 aiohttp>=3.9.0
-sqlalchemy[asyncio]>=2.0.23
-asyncpg>=0.29.0
 
-# Market Data APIs
-twelvedata>=1.2.0
-yfinance>=0.2.36
-
-# Data Processing
-pandas>=2.0.0
+# ML/Deep Learning
+# Note: Thor GPU (sm_110) not yet supported by PyTorch - runs on CPU
+torch>=2.0.0
 numpy>=1.24.0
 
 # Utilities
-python-dotenv>=1.0.0
 loguru>=0.7.0
-tenacity>=8.2.0
-psutil>=5.9.0
-
-# NHITS Neural Forecasting (Custom PyTorch implementation)
-# Note: Uses PyTorch directly instead of NeuralForecast due to Ray dependency issues on Windows
-# torch is already installed above
+python-dotenv>=1.0.0
