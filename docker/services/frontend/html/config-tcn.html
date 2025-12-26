@@ -831,6 +831,25 @@
                         <select class="form-control" id="history-symbol-filter" style="width: auto;">
                             <option value="">Alle Symbole</option>
                         </select>
+                        <select class="form-control" id="history-pattern-filter" style="width: auto;">
+                            <option value="">Alle Patterns</option>
+                            <option value="head_and_shoulders">Head &amp; Shoulders</option>
+                            <option value="inverse_head_and_shoulders">Inv. Head &amp; Shoulders</option>
+                            <option value="double_top">Double Top</option>
+                            <option value="double_bottom">Double Bottom</option>
+                            <option value="triple_top">Triple Top</option>
+                            <option value="triple_bottom">Triple Bottom</option>
+                            <option value="ascending_triangle">Ascending Triangle</option>
+                            <option value="descending_triangle">Descending Triangle</option>
+                            <option value="symmetrical_triangle">Symmetrical Triangle</option>
+                            <option value="rising_wedge">Rising Wedge</option>
+                            <option value="falling_wedge">Falling Wedge</option>
+                            <option value="bull_flag">Bull Flag</option>
+                            <option value="bear_flag">Bear Flag</option>
+                            <option value="channel_up">Channel Up</option>
+                            <option value="channel_down">Channel Down</option>
+                            <option value="cup_and_handle">Cup &amp; Handle</option>
+                        </select>
                         <select class="form-control" id="history-timeframe-filter" style="width: auto;">
                             <option value="">Alle Timeframes</option>
                             <option value="1h">1h</option>
@@ -1744,6 +1763,7 @@
         function savePatternFilters() {
             const filters = {
                 symbol: document.getElementById('history-symbol-filter').value,
+                pattern: document.getElementById('history-pattern-filter').value,
                 timeframe: document.getElementById('history-timeframe-filter').value,
                 category: document.getElementById('history-category-filter').value,
                 direction: document.getElementById('history-direction-filter').value,
@@ -1760,6 +1780,7 @@
                 if (saved) {
                     const filters = JSON.parse(saved);
                     if (filters.symbol) document.getElementById('history-symbol-filter').value = filters.symbol;
+                    if (filters.pattern) document.getElementById('history-pattern-filter').value = filters.pattern;
                     if (filters.timeframe) document.getElementById('history-timeframe-filter').value = filters.timeframe;
                     if (filters.category) document.getElementById('history-category-filter').value = filters.category;
                     if (filters.direction) document.getElementById('history-direction-filter').value = filters.direction;
@@ -1774,6 +1795,7 @@
         // Reset all pattern filters
         function resetPatternFilters() {
             document.getElementById('history-symbol-filter').value = '';
+            document.getElementById('history-pattern-filter').value = '';
             document.getElementById('history-timeframe-filter').value = '';
             document.getElementById('history-category-filter').value = '';
             document.getElementById('history-direction-filter').value = '';
@@ -1787,6 +1809,7 @@
         function updateResetButtonVisibility() {
             const hasFilters =
                 document.getElementById('history-symbol-filter').value ||
+                document.getElementById('history-pattern-filter').value ||
                 document.getElementById('history-timeframe-filter').value ||
                 document.getElementById('history-category-filter').value ||
                 document.getElementById('history-direction-filter').value ||
@@ -1801,6 +1824,7 @@
         // Load Pattern History Table
         async function loadPatternHistory() {
             const symbol = document.getElementById('history-symbol-filter').value;
+            const patternType = document.getElementById('history-pattern-filter').value;
             const timeframe = document.getElementById('history-timeframe-filter').value;
             const category = document.getElementById('history-category-filter').value;
             const direction = document.getElementById('history-direction-filter').value;
@@ -1811,6 +1835,7 @@
 
             let url = `${API_BASE}/history?limit=50`;
             if (symbol) url += `&symbol=${symbol}`;
+            if (patternType) url += `&pattern_type=${patternType}`;
             if (timeframe) url += `&timeframe=${timeframe}`;
             if (category) url += `&category=${category}`;
             if (direction) url += `&direction=${direction}`;
@@ -2157,6 +2182,7 @@
 
         // Add event listeners for pattern history filters (apply on change)
         document.getElementById('history-symbol-filter')?.addEventListener('change', loadPatternHistory);
+        document.getElementById('history-pattern-filter')?.addEventListener('change', loadPatternHistory);
         document.getElementById('history-timeframe-filter')?.addEventListener('change', loadPatternHistory);
         document.getElementById('history-category-filter')?.addEventListener('change', loadPatternHistory);
         document.getElementById('history-direction-filter')?.addEventListener('change', loadPatternHistory);
@@ -2714,10 +2740,15 @@
                 return;
             }
 
-            // Calculate price range
-            const prices = candles.flatMap(c => [c.high, c.low]);
-            const minPrice = Math.min(...prices);
-            const maxPrice = Math.max(...prices);
+            // Calculate price range - include pattern points in the range for proper scaling
+            const candlePrices = candles.flatMap(c => [c.high, c.low]);
+            const patternPrices = (patternPoints && patternPoints.length > 0)
+                ? patternPoints.map(p => p.price)
+                : [];
+            const allPrices = [...candlePrices, ...patternPrices];
+
+            const minPrice = Math.min(...allPrices);
+            const maxPrice = Math.max(...allPrices);
             const priceRange = maxPrice - minPrice || 1;
             const pricePadding = priceRange * 0.1;
 
@@ -2943,18 +2974,97 @@
         function drawPatternOverlay(ctx, candles, patternPoints, patternType, indexToX, priceToY, padding, chartHeight) {
             if (!patternPoints || patternPoints.length === 0) return;
 
-            // Find the min index from pattern points to normalize to our candle array
-            const minPatternIndex = Math.min(...patternPoints.map(p => p.index));
-            const maxPatternIndex = Math.max(...patternPoints.map(p => p.index));
+            // Determine if point is a high point (peaks/shoulders) or low point (troughs/valleys)
+            const highPointTypes = ['left_shoulder', 'head', 'right_shoulder', 'first_peak', 'second_peak',
+                'peak', 'peak1', 'peak2', 'peak3', 'top_1', 'top_2', 'pivot_high',
+                'resistance_start', 'resistance_end', 'upper_start', 'upper_end',
+                'pole_start', 'pole_end', 'flag_start', 'flag_end', 'left_rim', 'right_rim', 'handle_start', 'handle_end'];
+            const lowPointTypes = ['first_trough', 'second_trough', 'valley', 'trough1', 'trough2', 'trough3',
+                'bottom_1', 'bottom_2', 'pivot_low', 'support_start', 'support_end',
+                'lower_start', 'lower_end', 'cup_bottom', 'neckline_left', 'neckline_right'];
 
-            // Map pattern indices to candle array indices
-            // Pattern points are typically at the end of the data, so we map them to end of candles
-            const patternRange = maxPatternIndex - minPatternIndex;
-            const startCandleIdx = Math.max(0, candles.length - patternRange - 10);
+            const isHighPoint = (pointType) => highPointTypes.includes(pointType || '');
+            const isLowPoint = (pointType) => lowPointTypes.includes(pointType || '');
 
-            const mapIndex = (patternIdx) => {
-                const relativeIdx = patternIdx - minPatternIndex;
-                return Math.min(Math.max(0, startCandleIdx + relativeIdx), candles.length - 1);
+            // Find the best matching candle for a pattern point based on price proximity
+            // This avoids placing markers in data gaps (weekends, holidays)
+            const findBestCandleForPoint = (point) => {
+                const targetPrice = point.price;
+                const pointType = point.point_type || '';
+                const isHigh = isHighPoint(pointType);
+                const isLow = isLowPoint(pointType);
+
+                // Search within the pattern formation area (last portion of candles)
+                // Limit search to reasonable range to find nearest matching candle
+                const searchStart = Math.max(0, candles.length - 100);
+                let bestIdx = candles.length - 1;
+                let bestScore = Infinity;
+
+                for (let i = searchStart; i < candles.length; i++) {
+                    const candle = candles[i];
+                    let priceDiff;
+
+                    if (isHigh) {
+                        // For high points, find candle where high is closest to target price
+                        priceDiff = Math.abs(candle.high - targetPrice);
+                    } else if (isLow) {
+                        // For low points, find candle where low is closest to target price
+                        priceDiff = Math.abs(candle.low - targetPrice);
+                    } else {
+                        // Unknown type - use closest of high or low
+                        priceDiff = Math.min(
+                            Math.abs(candle.high - targetPrice),
+                            Math.abs(candle.low - targetPrice)
+                        );
+                    }
+
+                    if (priceDiff < bestScore) {
+                        bestScore = priceDiff;
+                        bestIdx = i;
+                    }
+                }
+
+                return bestIdx;
+            };
+
+            // Pre-calculate best candle index for each pattern point
+            const pointToCandleMap = new Map();
+            patternPoints.forEach(p => {
+                pointToCandleMap.set(p, findBestCandleForPoint(p));
+            });
+
+            // Sort pattern points by their mapped candle index to maintain time order
+            const sortedPoints = [...patternPoints].sort((a, b) => {
+                return pointToCandleMap.get(a) - pointToCandleMap.get(b);
+            });
+
+            // Map pattern point to candle index
+            const mapIndex = (pointOrIndex) => {
+                if (typeof pointOrIndex === 'object' && pointOrIndex !== null) {
+                    return pointToCandleMap.get(pointOrIndex) || candles.length - 1;
+                }
+                // For raw index, fall back to last candle
+                return candles.length - 1;
+            };
+
+            // Get actual price from candle at mapped index
+            const getActualPrice = (point) => {
+                const candleIdx = mapIndex(point);
+                const candle = candles[candleIdx];
+                if (!candle) return point.price;
+
+                const pointType = point.point_type || '';
+
+                if (isHighPoint(pointType)) {
+                    return candle.high;
+                } else if (isLowPoint(pointType)) {
+                    return candle.low;
+                } else {
+                    // Unknown type - use the one closest to stored price
+                    const storedPrice = point.price;
+                    return Math.abs(candle.high - storedPrice) < Math.abs(candle.low - storedPrice)
+                        ? candle.high : candle.low;
+                }
             };
 
             // Categorize points by type
@@ -2983,60 +3093,82 @@
 
             // Draw pattern-specific overlays based on pattern type
             if (patternType.includes('head_and_shoulders') || patternType.includes('inverse_head')) {
-                drawHeadAndShoulders(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+                drawHeadAndShoulders(ctx, patternPoints, mapIndex, getActualPrice, indexToX, priceToY, colors);
             } else if (patternType.includes('double_top') || patternType.includes('double_bottom')) {
-                drawDoublePattern(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+                drawDoublePattern(ctx, patternPoints, mapIndex, getActualPrice, indexToX, priceToY, colors);
             } else if (patternType.includes('triple_top') || patternType.includes('triple_bottom')) {
-                drawTriplePattern(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+                drawTriplePattern(ctx, patternPoints, mapIndex, getActualPrice, indexToX, priceToY, colors);
             } else if (patternType.includes('triangle') || patternType.includes('wedge')) {
-                drawTriangleWedge(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+                drawTriangleWedge(ctx, patternPoints, mapIndex, getActualPrice, indexToX, priceToY, colors);
             } else if (patternType.includes('channel')) {
-                drawChannel(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+                drawChannel(ctx, patternPoints, mapIndex, getActualPrice, indexToX, priceToY, colors);
             } else if (patternType.includes('flag')) {
-                drawFlag(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+                drawFlag(ctx, patternPoints, mapIndex, getActualPrice, indexToX, priceToY, colors);
             } else if (patternType.includes('cup_and_handle')) {
-                drawCupAndHandle(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+                drawCupAndHandle(ctx, patternPoints, mapIndex, getActualPrice, indexToX, priceToY, colors);
             } else {
                 // Generic pivot point drawing
-                drawGenericPivots(ctx, patternPoints, mapIndex, indexToX, priceToY, colors);
+                drawGenericPivots(ctx, patternPoints, mapIndex, getActualPrice, indexToX, priceToY, colors);
             }
 
             ctx.restore();
         }
 
         // Draw Head and Shoulders pattern
-        function drawHeadAndShoulders(ctx, points, mapIndex, indexToX, priceToY, colors) {
+        function drawHeadAndShoulders(ctx, points, mapIndex, getActualPrice, indexToX, priceToY, colors) {
             const byType = {};
             points.forEach(p => byType[p.point_type] = p);
 
-            const order = ['left_shoulder', 'head', 'right_shoulder'];
-            const orderedPoints = order.filter(t => byType[t]).map(t => byType[t]);
+            // Get the three main points
+            const ls = byType['left_shoulder'];
+            const head = byType['head'];
+            const rs = byType['right_shoulder'];
 
-            if (orderedPoints.length >= 2) {
-                // Draw pattern line through shoulders and head
+            // Collect points and sort by their mapped candle index (time order)
+            const mainPoints = [ls, head, rs].filter(p => p);
+            if (mainPoints.length >= 2) {
+                // Sort by mapped index to ensure correct time order (left to right)
+                const sortedPoints = mainPoints
+                    .map(p => ({ point: p, mappedIdx: mapIndex(p) }))
+                    .sort((a, b) => a.mappedIdx - b.mappedIdx)
+                    .map(item => item.point);
+
+                // Draw pattern line through points in time order
                 ctx.strokeStyle = colors.line;
                 ctx.lineWidth = 2.5;
                 ctx.setLineDash([]);
                 ctx.beginPath();
-                orderedPoints.forEach((p, i) => {
-                    const x = indexToX(mapIndex(p.index));
-                    const y = priceToY(p.price);
+                sortedPoints.forEach((p, i) => {
+                    const x = indexToX(mapIndex(p));
+                    const y = priceToY(getActualPrice(p));
                     if (i === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
                 });
                 ctx.stroke();
 
-                // Draw circles on key points
-                orderedPoints.forEach((p, i) => {
-                    const x = indexToX(mapIndex(p.index));
-                    const y = priceToY(p.price);
-                    ctx.fillStyle = i === 1 ? colors.secondary : colors.point; // Head in different color
+                // Draw circles with correct labels based on point type
+                sortedPoints.forEach((p) => {
+                    const x = indexToX(mapIndex(p));
+                    const y = priceToY(getActualPrice(p));
+                    const isHead = p.point_type === 'head';
+                    const radius = isHead ? 8 : 6;
+
+                    // Fill circle
+                    ctx.fillStyle = isHead ? colors.secondary : colors.point;
                     ctx.beginPath();
-                    ctx.arc(x, y, i === 1 ? 7 : 5, 0, Math.PI * 2);
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = 1.5;
                     ctx.stroke();
+
+                    // Label based on actual point type
+                    const labelMap = { 'left_shoulder': 'LS', 'head': 'H', 'right_shoulder': 'RS' };
+                    const label = labelMap[p.point_type] || '?';
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 9px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(label, x, y - radius - 4);
                 });
             }
 
@@ -3048,23 +3180,45 @@
                 ctx.lineWidth = 2;
                 ctx.setLineDash([6, 3]);
                 ctx.beginPath();
-                ctx.moveTo(indexToX(mapIndex(nl1.index)), priceToY(nl1.price));
-                ctx.lineTo(indexToX(mapIndex(nl2.index)), priceToY(nl2.price));
+                ctx.moveTo(indexToX(mapIndex(nl1)), priceToY(getActualPrice(nl1)));
+                ctx.lineTo(indexToX(mapIndex(nl2)), priceToY(getActualPrice(nl2)));
                 ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Neckline label
+                const nlMidX = (indexToX(mapIndex(nl1)) + indexToX(mapIndex(nl2))) / 2;
+                const nlMidY = (priceToY(getActualPrice(nl1)) + priceToY(getActualPrice(nl2))) / 2;
+                ctx.fillStyle = '#9c27b0';
+                ctx.font = 'bold 9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Neckline', nlMidX, nlMidY - 8);
             }
         }
 
         // Draw Double Top/Bottom pattern
-        function drawDoublePattern(ctx, points, mapIndex, indexToX, priceToY, colors) {
+        function drawDoublePattern(ctx, points, mapIndex, getActualPrice, indexToX, priceToY, colors) {
             const byType = {};
             points.forEach(p => byType[p.point_type] = p);
 
-            // Double top: first_peak, valley, second_peak
-            // Double bottom: first_trough, peak, second_trough
-            const peakOrder = ['first_peak', 'valley', 'second_peak'];
-            const troughOrder = ['first_trough', 'peak', 'second_trough'];
-            const order = byType['first_peak'] ? peakOrder : troughOrder;
-            const orderedPoints = order.filter(t => byType[t]).map(t => byType[t]);
+            // Support both naming conventions:
+            // Backend uses: top_1, valley, top_2 / bottom_1, peak, bottom_2
+            // Also support: first_peak, valley, second_peak / first_trough, peak, second_trough
+            let orderedPoints = [];
+
+            // Double Top patterns
+            if (byType['top_1'] || byType['first_peak']) {
+                const p1 = byType['top_1'] || byType['first_peak'];
+                const mid = byType['valley'];
+                const p2 = byType['top_2'] || byType['second_peak'];
+                orderedPoints = [p1, mid, p2].filter(p => p);
+            }
+            // Double Bottom patterns
+            else if (byType['bottom_1'] || byType['first_trough']) {
+                const p1 = byType['bottom_1'] || byType['first_trough'];
+                const mid = byType['peak'];
+                const p2 = byType['bottom_2'] || byType['second_trough'];
+                orderedPoints = [p1, mid, p2].filter(p => p);
+            }
 
             if (orderedPoints.length >= 2) {
                 ctx.strokeStyle = colors.line;
@@ -3072,121 +3226,308 @@
                 ctx.setLineDash([]);
                 ctx.beginPath();
                 orderedPoints.forEach((p, i) => {
-                    const x = indexToX(mapIndex(p.index));
-                    const y = priceToY(p.price);
+                    const x = indexToX(mapIndex(p));
+                    const y = priceToY(getActualPrice(p));
                     if (i === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
                 });
                 ctx.stroke();
 
-                // Draw circles
+                // Draw circles with labels
                 orderedPoints.forEach((p, i) => {
-                    const x = indexToX(mapIndex(p.index));
-                    const y = priceToY(p.price);
-                    ctx.fillStyle = i === 1 ? colors.secondary : colors.point;
+                    const x = indexToX(mapIndex(p));
+                    const y = priceToY(getActualPrice(p));
+                    const isMiddle = i === 1;
+                    const radius = isMiddle ? 5 : 7;
+
+                    // Fill circle
+                    ctx.fillStyle = isMiddle ? colors.secondary : colors.point;
                     ctx.beginPath();
-                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = 1.5;
                     ctx.stroke();
+
+                    // Label for tops/bottoms
+                    if (!isMiddle) {
+                        ctx.fillStyle = '#fff';
+                        ctx.font = 'bold 10px sans-serif';
+                        ctx.textAlign = 'center';
+                        const label = i === 0 ? '1' : '2';
+                        ctx.fillText(label, x, y - radius - 5);
+                    }
                 });
+
+                // Draw horizontal resistance/support line connecting the two peaks/troughs
+                if (orderedPoints.length >= 3) {
+                    const p1 = orderedPoints[0];
+                    const p2 = orderedPoints[2];
+                    const avgPrice = (getActualPrice(p1) + getActualPrice(p2)) / 2;
+
+                    ctx.strokeStyle = colors.line;
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([5, 3]);
+                    ctx.beginPath();
+                    ctx.moveTo(indexToX(mapIndex(p1)), priceToY(avgPrice));
+                    ctx.lineTo(indexToX(mapIndex(p2)), priceToY(avgPrice));
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
             }
         }
 
         // Draw Triple Top/Bottom pattern
-        function drawTriplePattern(ctx, points, mapIndex, indexToX, priceToY, colors) {
-            const sorted = [...points].sort((a, b) => a.index - b.index);
+        function drawTriplePattern(ctx, points, mapIndex, getActualPrice, indexToX, priceToY, colors) {
+            const byType = {};
+            points.forEach(p => byType[p.point_type] = p);
 
-            if (sorted.length >= 2) {
+            // Identify peaks and troughs
+            const peaks = points.filter(p =>
+                p.point_type.includes('peak') || p.point_type.includes('top') ||
+                p.point_type.includes('high') || p.point_type.includes('resistance')
+            ).sort((a, b) => a.index - b.index);
+
+            const troughs = points.filter(p =>
+                p.point_type.includes('trough') || p.point_type.includes('bottom') ||
+                p.point_type.includes('low') || p.point_type.includes('support')
+            ).sort((a, b) => a.index - b.index);
+
+            // Determine if triple top or triple bottom
+            const isTripleTop = peaks.length >= troughs.length;
+            const mainPoints = isTripleTop ? peaks : troughs;
+            const secondaryPoints = isTripleTop ? troughs : peaks;
+
+            // Sort all points by index for line drawing
+            const allPoints = [...points].sort((a, b) => a.index - b.index);
+
+            if (allPoints.length >= 2) {
+                // Draw connecting line
                 ctx.strokeStyle = colors.line;
                 ctx.lineWidth = 2.5;
                 ctx.setLineDash([]);
                 ctx.beginPath();
-                sorted.forEach((p, i) => {
-                    const x = indexToX(mapIndex(p.index));
-                    const y = priceToY(p.price);
+                allPoints.forEach((p, i) => {
+                    const x = indexToX(mapIndex(p));
+                    const y = priceToY(getActualPrice(p));
                     if (i === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
                 });
                 ctx.stroke();
 
-                sorted.forEach(p => {
-                    const x = indexToX(mapIndex(p.index));
-                    const y = priceToY(p.price);
-                    ctx.fillStyle = colors.point;
+                // Draw horizontal resistance/support line through main points
+                if (mainPoints.length >= 2) {
+                    const avgPrice = mainPoints.reduce((sum, p) => sum + getActualPrice(p), 0) / mainPoints.length;
+                    const minIdx = Math.min(...mainPoints.map(p => p.index));
+                    const maxIdx = Math.max(...mainPoints.map(p => p.index));
+
+                    ctx.strokeStyle = colors.line;
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([5, 3]);
                     ctx.beginPath();
-                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.moveTo(indexToX(mapIndex(minIdx)), priceToY(avgPrice));
+                    ctx.lineTo(indexToX(mapIndex(maxIdx)), priceToY(avgPrice));
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // Draw circles with numbers
+                let peakNum = 1, troughNum = 1;
+                allPoints.forEach(p => {
+                    const x = indexToX(mapIndex(p));
+                    const y = priceToY(getActualPrice(p));
+                    const isPeak = peaks.includes(p);
+                    const radius = 6;
+
+                    // Fill circle
+                    ctx.fillStyle = isPeak ? colors.point : colors.secondary;
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = 1.5;
                     ctx.stroke();
+
+                    // Label
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 9px sans-serif';
+                    ctx.textAlign = 'center';
+                    const label = isPeak ? (peakNum++).toString() : '';
+                    if (label) ctx.fillText(label, x, y - radius - 4);
                 });
             }
         }
 
         // Draw Triangle/Wedge pattern
-        function drawTriangleWedge(ctx, points, mapIndex, indexToX, priceToY, colors) {
+        function drawTriangleWedge(ctx, points, mapIndex, getActualPrice, indexToX, priceToY, colors) {
             const byType = {};
             points.forEach(p => byType[p.point_type] = p);
 
-            // Upper trendline
-            const us = byType['upper_start'];
-            const ue = byType['upper_end'];
+            // Support both naming conventions:
+            // Backend may use: upper_start/upper_end OR resistance_start/resistance_end
+            // Backend may use: lower_start/lower_end OR support_start/support_end
+            const us = byType['upper_start'] || byType['resistance_start'];
+            const ue = byType['upper_end'] || byType['resistance_end'];
+            const ls = byType['lower_start'] || byType['support_start'];
+            const le = byType['lower_end'] || byType['support_end'];
+
+            // Upper trendline (Resistance)
             if (us && ue) {
                 ctx.strokeStyle = colors.line;
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 2.5;
                 ctx.setLineDash([]);
                 ctx.beginPath();
-                ctx.moveTo(indexToX(mapIndex(us.index)), priceToY(us.price));
-                ctx.lineTo(indexToX(mapIndex(ue.index)), priceToY(ue.price));
+                ctx.moveTo(indexToX(mapIndex(us)), priceToY(getActualPrice(us)));
+                ctx.lineTo(indexToX(mapIndex(ue)), priceToY(getActualPrice(ue)));
                 ctx.stroke();
+
+                // Label for upper trendline
+                const midX = (indexToX(mapIndex(us)) + indexToX(mapIndex(ue))) / 2;
+                const midY = (priceToY(getActualPrice(us)) + priceToY(getActualPrice(ue))) / 2;
+                ctx.fillStyle = colors.line;
+                ctx.font = 'bold 9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('R', midX, midY - 8);
             }
 
-            // Lower trendline
-            const ls = byType['lower_start'];
-            const le = byType['lower_end'];
+            // Lower trendline (Support)
             if (ls && le) {
                 ctx.strokeStyle = colors.secondary;
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 2.5;
                 ctx.setLineDash([]);
                 ctx.beginPath();
-                ctx.moveTo(indexToX(mapIndex(ls.index)), priceToY(ls.price));
-                ctx.lineTo(indexToX(mapIndex(le.index)), priceToY(le.price));
+                ctx.moveTo(indexToX(mapIndex(ls)), priceToY(getActualPrice(ls)));
+                ctx.lineTo(indexToX(mapIndex(le)), priceToY(getActualPrice(le)));
                 ctx.stroke();
+
+                // Label for lower trendline
+                const midX = (indexToX(mapIndex(ls)) + indexToX(mapIndex(le))) / 2;
+                const midY = (priceToY(getActualPrice(ls)) + priceToY(getActualPrice(le))) / 2;
+                ctx.fillStyle = colors.secondary;
+                ctx.font = 'bold 9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('S', midX, midY + 14);
             }
 
-            // Draw apex if exists
+            // Draw apex if exists (convergence point)
             const apex = byType['apex'];
             if (apex) {
+                const x = indexToX(mapIndex(apex));
+                const y = priceToY(getActualPrice(apex));
                 ctx.fillStyle = '#ffeb3b';
                 ctx.beginPath();
-                ctx.arc(indexToX(mapIndex(apex.index)), priceToY(apex.price), 6, 0, Math.PI * 2);
+                ctx.arc(x, y, 7, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Apex label
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Apex', x, y - 10);
             }
 
-            // Draw corner points
-            [us, ue, ls, le].filter(p => p).forEach(p => {
-                const x = indexToX(mapIndex(p.index));
-                const y = priceToY(p.price);
-                ctx.fillStyle = colors.point;
+            // Draw corner points with circles
+            [us, ue, ls, le].filter(p => p).forEach((p, i) => {
+                const x = indexToX(mapIndex(p));
+                const y = priceToY(getActualPrice(p));
+                const isUpper = p === us || p === ue;
+
+                ctx.fillStyle = isUpper ? colors.point : colors.secondary;
                 ctx.beginPath();
-                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
             });
         }
 
-        // Draw Channel pattern
-        function drawChannel(ctx, points, mapIndex, indexToX, priceToY, colors) {
-            drawTriangleWedge(ctx, points, mapIndex, indexToX, priceToY, colors);
-        }
-
-        // Draw Flag pattern
-        function drawFlag(ctx, points, mapIndex, indexToX, priceToY, colors) {
+        // Draw Channel pattern (parallel trendlines)
+        function drawChannel(ctx, points, mapIndex, getActualPrice, indexToX, priceToY, colors) {
             const byType = {};
             points.forEach(p => byType[p.point_type] = p);
 
-            // Pole
+            // Support both naming conventions
+            const us = byType['upper_start'] || byType['resistance_start'];
+            const ue = byType['upper_end'] || byType['resistance_end'];
+            const ls = byType['lower_start'] || byType['support_start'];
+            const le = byType['lower_end'] || byType['support_end'];
+
+            // Upper channel line (Resistance)
+            if (us && ue) {
+                ctx.strokeStyle = colors.line;
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(indexToX(mapIndex(us)), priceToY(getActualPrice(us)));
+                ctx.lineTo(indexToX(mapIndex(ue)), priceToY(getActualPrice(ue)));
+                ctx.stroke();
+
+                // Upper channel label
+                const midX = (indexToX(mapIndex(us)) + indexToX(mapIndex(ue))) / 2;
+                const midY = (priceToY(getActualPrice(us)) + priceToY(getActualPrice(ue))) / 2;
+                ctx.fillStyle = colors.line;
+                ctx.font = 'bold 9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Upper', midX, midY - 8);
+            }
+
+            // Lower channel line (Support)
+            if (ls && le) {
+                ctx.strokeStyle = colors.secondary;
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(indexToX(mapIndex(ls)), priceToY(getActualPrice(ls)));
+                ctx.lineTo(indexToX(mapIndex(le)), priceToY(getActualPrice(le)));
+                ctx.stroke();
+
+                // Lower channel label
+                const midX = (indexToX(mapIndex(ls)) + indexToX(mapIndex(le))) / 2;
+                const midY = (priceToY(getActualPrice(ls)) + priceToY(getActualPrice(le))) / 2;
+                ctx.fillStyle = colors.secondary;
+                ctx.font = 'bold 9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Lower', midX, midY + 14);
+            }
+
+            // Draw corner points with labels
+            const allPoints = [
+                { point: us, label: 'H1', isUpper: true },
+                { point: ue, label: 'H2', isUpper: true },
+                { point: ls, label: 'L1', isUpper: false },
+                { point: le, label: 'L2', isUpper: false }
+            ].filter(item => item.point);
+
+            allPoints.forEach(({ point, label, isUpper }) => {
+                const x = indexToX(mapIndex(point));
+                const y = priceToY(getActualPrice(point));
+
+                ctx.fillStyle = isUpper ? colors.point : colors.secondary;
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Point label
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 8px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(label, x, isUpper ? y - 8 : y + 14);
+            });
+        }
+
+        // Draw Flag pattern (Bull Flag / Bear Flag)
+        function drawFlag(ctx, points, mapIndex, getActualPrice, indexToX, priceToY, colors) {
+            const byType = {};
+            points.forEach(p => byType[p.point_type] = p);
+
+            // Pole (the initial strong move)
             const ps = byType['pole_start'];
             const pe = byType['pole_end'];
             if (ps && pe) {
@@ -3194,32 +3535,76 @@
                 ctx.lineWidth = 3;
                 ctx.setLineDash([]);
                 ctx.beginPath();
-                ctx.moveTo(indexToX(mapIndex(ps.index)), priceToY(ps.price));
-                ctx.lineTo(indexToX(mapIndex(pe.index)), priceToY(pe.price));
+                ctx.moveTo(indexToX(mapIndex(ps)), priceToY(getActualPrice(ps)));
+                ctx.lineTo(indexToX(mapIndex(pe)), priceToY(getActualPrice(pe)));
                 ctx.stroke();
+
+                // Pole start/end points
+                [ps, pe].forEach((p, i) => {
+                    const x = indexToX(mapIndex(p));
+                    const y = priceToY(getActualPrice(p));
+                    ctx.fillStyle = colors.point;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                });
+
+                // Pole label
+                const midX = (indexToX(mapIndex(ps)) + indexToX(mapIndex(pe))) / 2;
+                const midY = (priceToY(getActualPrice(ps)) + priceToY(getActualPrice(pe))) / 2;
+                ctx.fillStyle = colors.line;
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Pole', midX - 20, midY);
             }
 
-            // Flag
-            const fs = byType['flag_start'];
+            // Flag (the consolidation pattern)
+            const fs = byType['flag_start'] || pe;  // flag_start often equals pole_end
             const fe = byType['flag_end'];
             if (fs && fe) {
+                // Draw flag rectangle/channel area
                 ctx.strokeStyle = colors.secondary;
                 ctx.lineWidth = 2;
                 ctx.setLineDash([4, 2]);
                 ctx.beginPath();
-                ctx.moveTo(indexToX(mapIndex(fs.index)), priceToY(fs.price));
-                ctx.lineTo(indexToX(mapIndex(fe.index)), priceToY(fe.price));
+                ctx.moveTo(indexToX(mapIndex(fs)), priceToY(getActualPrice(fs)));
+                ctx.lineTo(indexToX(mapIndex(fe)), priceToY(getActualPrice(fe)));
                 ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Flag endpoint
+                const x = indexToX(mapIndex(fe));
+                const y = priceToY(getActualPrice(fe));
+                ctx.fillStyle = colors.secondary;
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Flag label
+                const flagMidX = (indexToX(mapIndex(fs)) + indexToX(mapIndex(fe))) / 2;
+                const flagMidY = (priceToY(getActualPrice(fs)) + priceToY(getActualPrice(fe))) / 2;
+                ctx.fillStyle = colors.secondary;
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Flag', flagMidX + 20, flagMidY);
             }
         }
 
         // Draw Cup and Handle pattern
-        function drawCupAndHandle(ctx, points, mapIndex, indexToX, priceToY, colors) {
+        function drawCupAndHandle(ctx, points, mapIndex, getActualPrice, indexToX, priceToY, colors) {
             const byType = {};
             points.forEach(p => byType[p.point_type] = p);
 
             // Cup curve (simplified as line through points)
             const cupPoints = ['left_rim', 'cup_bottom', 'right_rim'].filter(t => byType[t]).map(t => byType[t]);
+            const cupLabels = ['LR', 'Bottom', 'RR'];  // Left Rim, Bottom, Right Rim
+
             if (cupPoints.length >= 2) {
                 ctx.strokeStyle = colors.line;
                 ctx.lineWidth = 2.5;
@@ -3229,20 +3614,57 @@
                 ctx.beginPath();
                 if (cupPoints.length === 3) {
                     const [left, bottom, right] = cupPoints;
-                    ctx.moveTo(indexToX(mapIndex(left.index)), priceToY(left.price));
+                    ctx.moveTo(indexToX(mapIndex(left)), priceToY(getActualPrice(left)));
                     ctx.quadraticCurveTo(
-                        indexToX(mapIndex(bottom.index)), priceToY(bottom.price),
-                        indexToX(mapIndex(right.index)), priceToY(right.price)
+                        indexToX(mapIndex(bottom)), priceToY(getActualPrice(bottom)),
+                        indexToX(mapIndex(right)), priceToY(getActualPrice(right))
                     );
                 } else {
                     cupPoints.forEach((p, i) => {
-                        const x = indexToX(mapIndex(p.index));
-                        const y = priceToY(p.price);
+                        const x = indexToX(mapIndex(p));
+                        const y = priceToY(getActualPrice(p));
                         if (i === 0) ctx.moveTo(x, y);
                         else ctx.lineTo(x, y);
                     });
                 }
                 ctx.stroke();
+
+                // Draw cup points with labels
+                cupPoints.forEach((p, i) => {
+                    const x = indexToX(mapIndex(p));
+                    const y = priceToY(getActualPrice(p));
+                    const isBottom = i === 1;
+                    const radius = isBottom ? 7 : 5;
+
+                    ctx.fillStyle = isBottom ? colors.secondary : colors.point;
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    // Label
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 8px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(cupLabels[i], x, isBottom ? y + radius + 12 : y - radius - 5);
+                });
+
+                // Add "Cup" label in the middle
+                if (cupPoints.length >= 2) {
+                    const firstPoint = cupPoints[0];
+                    const lastPoint = cupPoints[cupPoints.length - 1];
+                    const cupMidX = (indexToX(mapIndex(firstPoint.index)) + indexToX(mapIndex(lastPoint.index))) / 2;
+                    const cupMidY = cupPoints.length === 3
+                        ? priceToY(getActualPrice(cupPoints[1]))
+                        : (priceToY(getActualPrice(firstPoint)) + priceToY(getActualPrice(lastPoint))) / 2;
+
+                    ctx.fillStyle = colors.line;
+                    ctx.font = 'bold 10px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Cup', cupMidX, cupMidY + 25);
+                }
             }
 
             // Handle
@@ -3253,41 +3675,95 @@
                 ctx.lineWidth = 2;
                 ctx.setLineDash([4, 2]);
                 ctx.beginPath();
-                ctx.moveTo(indexToX(mapIndex(hs.index)), priceToY(hs.price));
-                ctx.lineTo(indexToX(mapIndex(he.index)), priceToY(he.price));
+                ctx.moveTo(indexToX(mapIndex(hs)), priceToY(getActualPrice(hs)));
+                ctx.lineTo(indexToX(mapIndex(he)), priceToY(getActualPrice(he)));
                 ctx.stroke();
-            }
-        }
-
-        // Draw generic pivot points
-        function drawGenericPivots(ctx, points, mapIndex, indexToX, priceToY, colors) {
-            const sorted = [...points].sort((a, b) => a.index - b.index);
-
-            if (sorted.length >= 2) {
-                ctx.strokeStyle = colors.line;
-                ctx.lineWidth = 2;
                 ctx.setLineDash([]);
-                ctx.beginPath();
-                sorted.forEach((p, i) => {
-                    const x = indexToX(mapIndex(p.index));
-                    const y = priceToY(p.price);
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                });
-                ctx.stroke();
 
-                sorted.forEach(p => {
-                    const x = indexToX(mapIndex(p.index));
-                    const y = priceToY(p.price);
-                    const isHigh = p.point_type.includes('high') || p.point_type.includes('peak') || p.point_type.includes('shoulder') || p.point_type.includes('head');
-                    ctx.fillStyle = isHigh ? '#ff9800' : '#2196f3';
+                // Handle endpoints
+                [hs, he].forEach((p, i) => {
+                    const x = indexToX(mapIndex(p));
+                    const y = priceToY(getActualPrice(p));
+                    ctx.fillStyle = colors.secondary;
                     ctx.beginPath();
-                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.arc(x, y, 4, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = 1;
                     ctx.stroke();
                 });
+
+                // Handle label
+                const handleMidX = (indexToX(mapIndex(hs)) + indexToX(mapIndex(he))) / 2;
+                const handleMidY = (priceToY(getActualPrice(hs)) + priceToY(getActualPrice(he))) / 2;
+                ctx.fillStyle = colors.secondary;
+                ctx.font = 'bold 9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Handle', handleMidX, handleMidY - 10);
+            }
+        }
+
+        // Draw generic pivot points (fallback for unrecognized patterns)
+        function drawGenericPivots(ctx, points, mapIndex, getActualPrice, indexToX, priceToY, colors) {
+            const sorted = [...points].sort((a, b) => a.index - b.index);
+
+            if (sorted.length >= 2) {
+                // Draw connecting line
+                ctx.strokeStyle = colors.line;
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                sorted.forEach((p, i) => {
+                    const x = indexToX(mapIndex(p));
+                    const y = priceToY(getActualPrice(p));
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                // Draw numbered points
+                let highNum = 1, lowNum = 1;
+                sorted.forEach((p, idx) => {
+                    const x = indexToX(mapIndex(p));
+                    const y = priceToY(getActualPrice(p));
+                    const isHigh = p.point_type.includes('high') || p.point_type.includes('peak') ||
+                                   p.point_type.includes('shoulder') || p.point_type.includes('head') ||
+                                   p.point_type.includes('top') || p.point_type.includes('resistance');
+
+                    // Circle
+                    ctx.fillStyle = isHigh ? colors.point : colors.secondary;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    // Label with H1, H2... for highs and L1, L2... for lows
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 8px sans-serif';
+                    ctx.textAlign = 'center';
+                    const label = isHigh ? `H${highNum++}` : `L${lowNum++}`;
+                    ctx.fillText(label, x, isHigh ? y - 10 : y + 14);
+                });
+            } else if (sorted.length === 1) {
+                // Single point
+                const p = sorted[0];
+                const x = indexToX(mapIndex(p));
+                const y = priceToY(getActualPrice(p));
+
+                ctx.fillStyle = colors.point;
+                ctx.beginPath();
+                ctx.arc(x, y, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('P', x, y - 10);
             }
         }
 

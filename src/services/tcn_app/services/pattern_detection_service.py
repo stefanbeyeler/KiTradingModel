@@ -119,39 +119,111 @@ class PatternDetectionService:
 
             if pattern_type in ["head_and_shoulders", "triple_top"]:
                 # Find highest points for head/shoulders
+                # Head should be the highest, shoulders on each side
                 if len(swing_highs) >= 3:
-                    sorted_highs = sorted(swing_highs, key=lambda i: highs[i], reverse=True)
-                    head_i = sorted_highs[0]
-                    shoulders = sorted([h for h in sorted_highs[1:3]])
-                    points = [
-                        PatternPoint(start_idx + shoulders[0], float(highs[shoulders[0]]), "left_shoulder"),
-                        PatternPoint(start_idx + head_i, float(highs[head_i]), "head"),
-                        PatternPoint(start_idx + shoulders[1], float(highs[shoulders[1]]), "right_shoulder"),
-                    ]
-                    # Neckline from lows
-                    if len(swing_lows) >= 2:
-                        nl_left = min(swing_lows)
-                        nl_right = max(swing_lows)
-                        points.append(PatternPoint(start_idx + nl_left, float(lows[nl_left]), "neckline_left"))
-                        points.append(PatternPoint(start_idx + nl_right, float(lows[nl_right]), "neckline_right"))
+                    # Sort by price to find the head (highest point)
+                    sorted_by_price = sorted(swing_highs, key=lambda i: highs[i], reverse=True)
+
+                    # Try to find head with shoulders on both sides
+                    head_i = None
+                    left_shoulder_i = None
+                    right_shoulder_i = None
+
+                    for candidate_head in sorted_by_price:
+                        left_candidates = [h for h in swing_highs if h < candidate_head]
+                        right_candidates = [h for h in swing_highs if h > candidate_head]
+
+                        if left_candidates and right_candidates:
+                            head_i = candidate_head
+                            left_shoulder_i = max(left_candidates, key=lambda i: highs[i])
+                            right_shoulder_i = max(right_candidates, key=lambda i: highs[i])
+                            break
+
+                    # Fallback: use first 3 swing highs in order
+                    if head_i is None:
+                        sorted_by_index = sorted(swing_highs)[:3]
+                        if len(sorted_by_index) >= 3:
+                            left_shoulder_i = sorted_by_index[0]
+                            head_i = sorted_by_index[1]
+                            right_shoulder_i = sorted_by_index[2]
+
+                    if head_i is not None and left_shoulder_i is not None and right_shoulder_i is not None:
+                        points = [
+                            PatternPoint(start_idx + left_shoulder_i, float(highs[left_shoulder_i]), "left_shoulder"),
+                            PatternPoint(start_idx + head_i, float(highs[head_i]), "head"),
+                            PatternPoint(start_idx + right_shoulder_i, float(highs[right_shoulder_i]), "right_shoulder"),
+                        ]
+                        # Neckline from lows between shoulders
+                        neckline_lows = [l for l in swing_lows if left_shoulder_i < l < right_shoulder_i]
+                        if len(neckline_lows) >= 2:
+                            nl_left = min(neckline_lows)
+                            nl_right = max(neckline_lows)
+                            points.append(PatternPoint(start_idx + nl_left, float(lows[nl_left]), "neckline_left"))
+                            points.append(PatternPoint(start_idx + nl_right, float(lows[nl_right]), "neckline_right"))
+                        elif len(neckline_lows) == 1:
+                            nl_i = neckline_lows[0]
+                            points.append(PatternPoint(start_idx + nl_i, float(lows[nl_i]), "neckline_left"))
+                            points.append(PatternPoint(start_idx + right_shoulder_i, float(lows[nl_i]), "neckline_right"))
+                        elif swing_lows:
+                            # Use first and last swing lows as neckline
+                            nl_left = min(swing_lows)
+                            nl_right = max(swing_lows)
+                            points.append(PatternPoint(start_idx + nl_left, float(lows[nl_left]), "neckline_left"))
+                            points.append(PatternPoint(start_idx + nl_right, float(lows[nl_right]), "neckline_right"))
 
             elif pattern_type in ["inverse_head_and_shoulders", "triple_bottom"]:
-                # Find lowest points
+                # Find lowest points for inverse head/shoulders
+                # Head should be the lowest, shoulders on each side
                 if len(swing_lows) >= 3:
-                    sorted_lows = sorted(swing_lows, key=lambda i: lows[i])
-                    head_i = sorted_lows[0]
-                    shoulders = sorted([l for l in sorted_lows[1:3]])
-                    points = [
-                        PatternPoint(start_idx + shoulders[0], float(lows[shoulders[0]]), "left_shoulder"),
-                        PatternPoint(start_idx + head_i, float(lows[head_i]), "head"),
-                        PatternPoint(start_idx + shoulders[1], float(lows[shoulders[1]]), "right_shoulder"),
-                    ]
-                    # Neckline from highs
-                    if len(swing_highs) >= 2:
-                        nl_left = min(swing_highs)
-                        nl_right = max(swing_highs)
-                        points.append(PatternPoint(start_idx + nl_left, float(highs[nl_left]), "neckline_left"))
-                        points.append(PatternPoint(start_idx + nl_right, float(highs[nl_right]), "neckline_right"))
+                    # Sort by price to find the head (lowest point)
+                    sorted_by_price = sorted(swing_lows, key=lambda i: lows[i])
+
+                    # Try to find head with shoulders on both sides
+                    head_i = None
+                    left_shoulder_i = None
+                    right_shoulder_i = None
+
+                    for candidate_head in sorted_by_price:
+                        left_candidates = [l for l in swing_lows if l < candidate_head]
+                        right_candidates = [l for l in swing_lows if l > candidate_head]
+
+                        if left_candidates and right_candidates:
+                            head_i = candidate_head
+                            left_shoulder_i = min(left_candidates, key=lambda i: lows[i])
+                            right_shoulder_i = min(right_candidates, key=lambda i: lows[i])
+                            break
+
+                    # Fallback: use first 3 swing lows in order
+                    if head_i is None:
+                        sorted_by_index = sorted(swing_lows)[:3]
+                        if len(sorted_by_index) >= 3:
+                            left_shoulder_i = sorted_by_index[0]
+                            head_i = sorted_by_index[1]
+                            right_shoulder_i = sorted_by_index[2]
+
+                    if head_i is not None and left_shoulder_i is not None and right_shoulder_i is not None:
+                        points = [
+                            PatternPoint(start_idx + left_shoulder_i, float(lows[left_shoulder_i]), "left_shoulder"),
+                            PatternPoint(start_idx + head_i, float(lows[head_i]), "head"),
+                            PatternPoint(start_idx + right_shoulder_i, float(lows[right_shoulder_i]), "right_shoulder"),
+                        ]
+                        # Neckline from highs between shoulders
+                        neckline_highs = [h for h in swing_highs if left_shoulder_i < h < right_shoulder_i]
+                        if len(neckline_highs) >= 2:
+                            nl_left = min(neckline_highs)
+                            nl_right = max(neckline_highs)
+                            points.append(PatternPoint(start_idx + nl_left, float(highs[nl_left]), "neckline_left"))
+                            points.append(PatternPoint(start_idx + nl_right, float(highs[nl_right]), "neckline_right"))
+                        elif len(neckline_highs) == 1:
+                            nl_i = neckline_highs[0]
+                            points.append(PatternPoint(start_idx + nl_i, float(highs[nl_i]), "neckline_left"))
+                            points.append(PatternPoint(start_idx + right_shoulder_i, float(highs[nl_i]), "neckline_right"))
+                        elif swing_highs:
+                            # Use first and last swing highs as neckline
+                            nl_left = min(swing_highs)
+                            nl_right = max(swing_highs)
+                            points.append(PatternPoint(start_idx + nl_left, float(highs[nl_left]), "neckline_left"))
+                            points.append(PatternPoint(start_idx + nl_right, float(highs[nl_right]), "neckline_right"))
 
             elif pattern_type == "double_top":
                 if len(swing_highs) >= 2:
@@ -184,13 +256,18 @@ class PatternDetectionService:
                     ]
 
             elif pattern_type in ["channel_up", "channel_down"]:
-                # Channel uses parallel lines
+                # Channel uses parallel lines connecting swing points
                 if len(swing_highs) >= 2 and len(swing_lows) >= 2:
+                    # Use first and last swing points for trendlines
+                    h_start_i = swing_highs[0]
+                    h_end_i = swing_highs[-1]
+                    l_start_i = swing_lows[0]
+                    l_end_i = swing_lows[-1]
                     points = [
-                        PatternPoint(start_idx, float(highs[0]), "upper_start"),
-                        PatternPoint(end_idx, float(highs[-1]), "upper_end"),
-                        PatternPoint(start_idx, float(lows[0]), "lower_start"),
-                        PatternPoint(end_idx, float(lows[-1]), "lower_end"),
+                        PatternPoint(start_idx + h_start_i, float(highs[h_start_i]), "upper_start"),
+                        PatternPoint(start_idx + h_end_i, float(highs[h_end_i]), "upper_end"),
+                        PatternPoint(start_idx + l_start_i, float(lows[l_start_i]), "lower_start"),
+                        PatternPoint(start_idx + l_end_i, float(lows[l_end_i]), "lower_end"),
                     ]
 
             elif pattern_type in ["bull_flag", "bear_flag"]:
