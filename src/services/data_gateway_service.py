@@ -157,7 +157,7 @@ class DataGatewayService:
         Args:
             symbol: Trading symbol (e.g., BTCUSD)
             limit: Number of data points to fetch
-            timeframe: Timeframe (M15, H1, D1)
+            timeframe: Timeframe (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN)
 
         Returns:
             List of OHLCV dictionaries
@@ -189,13 +189,26 @@ class DataGatewayService:
         """
         Get historical data with TwelveData fallback.
 
-        For M5 and H4 timeframes, TwelveData is used as primary source since
-        EasyInsight doesn't provide native OHLC data for these timeframes.
+        EasyInsight only supports M15, H1, D1 natively. For all other timeframes
+        (M1, M5, M30, M45, H2, H4, W1, MN), TwelveData is used as primary source.
+
+        Supported timeframes:
+            - M1: 1 minute (TwelveData only)
+            - M5: 5 minutes (TwelveData only)
+            - M15: 15 minutes (EasyInsight primary)
+            - M30: 30 minutes (TwelveData only)
+            - M45: 45 minutes (TwelveData only)
+            - H1: 1 hour (EasyInsight primary)
+            - H2: 2 hours (TwelveData only)
+            - H4: 4 hours (TwelveData only)
+            - D1: 1 day (EasyInsight primary)
+            - W1: 1 week (TwelveData only)
+            - MN: 1 month (TwelveData only)
 
         Args:
             symbol: Trading symbol
             limit: Number of data points
-            timeframe: Timeframe
+            timeframe: Timeframe (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN)
 
         Returns:
             Tuple of (data_list, source) where source is 'easyinsight' or 'twelvedata'
@@ -323,13 +336,13 @@ class DataGatewayService:
         """
         Get candle data directly from TwelveData.
 
-        Used as primary source for M5 and H4 timeframes since EasyInsight
-        doesn't provide native OHLC data for these.
+        Used as primary source for timeframes not supported by EasyInsight
+        (M1, M5, M30, M45, H2, H4, W1, MN).
 
         Args:
             symbol: Trading symbol (e.g., BTCUSD)
-            timeframe: Timeframe (M5, H4)
-            limit: Number of candles to fetch
+            timeframe: Timeframe (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN)
+            limit: Number of candles to fetch (max 5000)
 
         Returns:
             List of candle dictionaries in EasyInsight-compatible format
@@ -354,13 +367,19 @@ class DataGatewayService:
                 logger.warning(f"No TwelveData symbol mapping for {symbol}")
                 return []
 
-            # Map timeframe to TwelveData interval
+            # Map timeframe to TwelveData interval - all supported intervals
             td_interval_map = {
+                "M1": "1min",
                 "M5": "5min",
                 "M15": "15min",
+                "M30": "30min",
+                "M45": "45min",
                 "H1": "1h",
+                "H2": "2h",
                 "H4": "4h",
-                "D1": "1day"
+                "D1": "1day",
+                "W1": "1week",
+                "MN": "1month"
             }
             td_interval = td_interval_map.get(timeframe.upper(), "1h")
 
@@ -402,7 +421,7 @@ class DataGatewayService:
 
         Args:
             symbol: Trading symbol
-            timeframe: Timeframe (M15, H1, D1)
+            timeframe: Timeframe (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN)
             min_points: Minimum required data points
 
         Returns:
@@ -501,7 +520,8 @@ class DataGatewayService:
         Args:
             symbol: Trading symbol (will be converted to TwelveData format)
             indicator: Indicator name (rsi, macd, bbands, stoch, adx, etc.)
-            interval: Time interval ('1min', '5min', '15min', '1h', '4h', '1day')
+            interval: Time interval (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
+                      or TwelveData format: 1min, 5min, 15min, 1h, 4h, 1day, etc.)
             outputsize: Number of data points
             **kwargs: Additional indicator-specific parameters
 
@@ -527,12 +547,19 @@ class DataGatewayService:
             if not td_symbol:
                 return {"error": f"No TwelveData symbol mapping for {symbol}"}
 
-            # Map interval formats
+            # Map interval formats - all TwelveData supported intervals
             td_interval_map = {
+                "M1": "1min", "1min": "1min",
+                "M5": "5min", "5min": "5min",
                 "M15": "15min", "15min": "15min",
+                "M30": "30min", "30min": "30min",
+                "M45": "45min", "45min": "45min",
                 "H1": "1h", "1h": "1h",
+                "H2": "2h", "2h": "2h",
                 "H4": "4h", "4h": "4h",
                 "D1": "1day", "1day": "1day",
+                "W1": "1week", "1week": "1week",
+                "MN": "1month", "1month": "1month",
             }
             td_interval = td_interval_map.get(interval.upper(), interval)
 
@@ -733,9 +760,11 @@ class DataGatewayService:
             if not td_symbol:
                 return {"error": f"No TwelveData symbol mapping for {symbol}"}
 
-            # Map interval
+            # Map interval - all TwelveData supported intervals
             td_interval_map = {
-                "M15": "15min", "H1": "1h", "H4": "4h", "D1": "1day"
+                "M1": "1min", "M5": "5min", "M15": "15min", "M30": "30min", "M45": "45min",
+                "H1": "1h", "H2": "2h", "H4": "4h",
+                "D1": "1day", "W1": "1week", "MN": "1month"
             }
             td_interval = td_interval_map.get(interval.upper(), interval)
 
