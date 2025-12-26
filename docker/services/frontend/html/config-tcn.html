@@ -2844,7 +2844,8 @@
                 };
 
                 // Sort pattern points by original index and map preserving temporal order
-                const sortedForZone = [...patternPoints].sort((a, b) => a.index - b.index);
+                // Use index if available, otherwise fall back to array position
+                const sortedForZone = [...patternPoints].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
                 const mappedIndices = [];
                 let lastIdx = Math.max(0, candles.length - 100);
                 sortedForZone.forEach(p => {
@@ -2852,8 +2853,10 @@
                     mappedIndices.push(idx);
                     lastIdx = idx;
                 });
-                patternStartIdx = Math.max(0, Math.min(...mappedIndices) - 2);  // Small buffer before first point
-                patternEndIdx = Math.min(candles.length - 1, Math.max(...mappedIndices) + 2);  // Small buffer after last point
+                if (mappedIndices.length > 0) {
+                    patternStartIdx = Math.max(0, Math.min(...mappedIndices) - 2);  // Small buffer before first point
+                    patternEndIdx = Math.min(candles.length - 1, Math.max(...mappedIndices) + 2);  // Small buffer after last point
+                }
             }
 
             // Draw pattern zone background (highlighting pattern formation period)
@@ -3099,7 +3102,8 @@
             };
 
             // Sort pattern points by their original index to establish temporal order
-            const sortedByOriginalIndex = [...patternPoints].sort((a, b) => a.index - b.index);
+            // Use index if available, otherwise fall back to 0
+            const sortedByOriginalIndex = [...patternPoints].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
 
             // Pre-calculate best candle index for each pattern point, preserving temporal order
             const pointToCandleMap = new Map();
