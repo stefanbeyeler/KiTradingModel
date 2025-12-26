@@ -115,6 +115,43 @@ class PatternDetectionService:
                 return True
         return False
 
+    def _calculate_candle_timestamps(
+        self,
+        reference_time: datetime,
+        count: int,
+        timeframe: str
+    ) -> List[str]:
+        """
+        Calculate proper candle timestamps based on timeframe.
+
+        EasyInsight data uses snapshot_time which is the import time,
+        not the actual candle time. This function calculates proper
+        timestamps for each candle based on the timeframe.
+
+        Args:
+            reference_time: The reference time (newest candle)
+            count: Number of candles
+            timeframe: Timeframe string (1h, 4h, 1d, etc.)
+
+        Returns:
+            List of ISO 8601 timestamp strings (newest first)
+        """
+        # Normalize timeframe to match TIMEFRAME_INTERVALS keys
+        tf_map = {
+            "M1": "1m", "M5": "5m", "M15": "15m", "M30": "30m",
+            "H1": "1h", "H4": "4h", "D1": "1d", "1D": "1d", "W1": "1w"
+        }
+        normalized_tf = tf_map.get(timeframe.upper(), timeframe.lower())
+        interval = TIMEFRAME_INTERVALS.get(normalized_tf, timedelta(hours=1))
+
+        # Data is newest first, so index 0 is the newest candle
+        timestamps = []
+        for i in range(count):
+            ts = reference_time - (i * interval)
+            timestamps.append(ts.isoformat())
+
+        return timestamps
+
     def load_model(self, model_path: Optional[str] = None):
         """Load the TCN model."""
         try:
@@ -450,7 +487,16 @@ class PatternDetectionService:
                 for d in data
             ], dtype=np.float32)
 
-            timestamps = [d.get('timestamp', d.get('time', d.get('snapshot_time', ''))) for d in data]
+            # Calculate proper candle timestamps based on timeframe
+            # EasyInsight's snapshot_time is import time, not candle time
+            # So we calculate timestamps from the reference time and timeframe
+            reference_time_str = data[0].get('timestamp', data[0].get('time', data[0].get('snapshot_time', '')))
+            try:
+                reference_time = date_parser.parse(reference_time_str) if reference_time_str else datetime.now()
+            except Exception:
+                reference_time = datetime.now()
+
+            timestamps = self._calculate_candle_timestamps(reference_time, len(data), timeframe)
 
             # Detect patterns (with gap awareness)
             detected = await self._detect_in_sequence(

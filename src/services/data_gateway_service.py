@@ -200,8 +200,12 @@ class DataGatewayService:
         Returns:
             Tuple of (data_list, source) where source is 'easyinsight' or 'twelvedata'
         """
-        # For M5 and H4: Use TwelveData as primary source (EasyInsight doesn't have native support)
-        if timeframe.upper() in ("M5", "H4"):
+        # EasyInsight only supports M15, H1, D1 natively
+        # All other timeframes use TwelveData as primary source
+        easyinsight_timeframes = ("M15", "H1", "D1")
+        tf_upper = timeframe.upper()
+
+        if tf_upper not in easyinsight_timeframes:
             td_data = await self._get_twelvedata_candles(symbol, timeframe, limit)
             if td_data:
                 return td_data, "twelvedata"
@@ -239,13 +243,19 @@ class DataGatewayService:
                 logger.warning(f"No TwelveData symbol mapping for {symbol}")
                 return data, "easyinsight"
 
-            # Map timeframe
+            # Map timeframe - all TwelveData supported intervals
             td_interval_map = {
+                "M1": "1min",
                 "M5": "5min",
                 "M15": "15min",
+                "M30": "30min",
+                "M45": "45min",
                 "H1": "1h",
+                "H2": "2h",
                 "H4": "4h",
-                "D1": "1day"
+                "D1": "1day",
+                "W1": "1week",
+                "MN": "1month"
             }
             td_interval = td_interval_map.get(timeframe.upper(), "1h")
 
