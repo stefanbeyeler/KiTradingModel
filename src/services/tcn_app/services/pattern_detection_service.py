@@ -229,29 +229,37 @@ class PatternDetectionService:
                             head_i = sorted_by_index[1]
                             right_shoulder_i = sorted_by_index[2]
 
-                    if head_i is not None and left_shoulder_i is not None and right_shoulder_i is not None:
+                    # Minimum distance check - need space for neckline points
+                    MIN_DISTANCE = 3
+                    if (head_i is not None and left_shoulder_i is not None and right_shoulder_i is not None
+                        and (head_i - left_shoulder_i) >= MIN_DISTANCE
+                        and (right_shoulder_i - head_i) >= MIN_DISTANCE):
                         points = [
                             PatternPoint(start_idx + left_shoulder_i, float(highs[left_shoulder_i]), "left_shoulder"),
                             PatternPoint(start_idx + head_i, float(highs[head_i]), "head"),
                             PatternPoint(start_idx + right_shoulder_i, float(highs[right_shoulder_i]), "right_shoulder"),
                         ]
-                        # Neckline from lows between shoulders
-                        neckline_lows = [l for l in swing_lows if left_shoulder_i < l < right_shoulder_i]
-                        if len(neckline_lows) >= 2:
-                            nl_left = min(neckline_lows)
-                            nl_right = max(neckline_lows)
+                        # Neckline from lows - split between left/right of head
+                        neck_left_lows = [l for l in swing_lows if left_shoulder_i < l < head_i]
+                        neck_right_lows = [l for l in swing_lows if head_i < l < right_shoulder_i]
+
+                        if neck_left_lows:
+                            nl_left = max(neck_left_lows)  # closest to head
                             points.append(PatternPoint(start_idx + nl_left, float(lows[nl_left]), "neckline_left"))
+                        else:
+                            # Fallback: midpoint between left shoulder and head
+                            mid = (left_shoulder_i + head_i) // 2
+                            avg_low = np.mean(lows[left_shoulder_i:head_i+1]) if head_i > left_shoulder_i else lows[left_shoulder_i]
+                            points.append(PatternPoint(start_idx + mid, float(avg_low), "neckline_left"))
+
+                        if neck_right_lows:
+                            nl_right = min(neck_right_lows)  # closest to head
                             points.append(PatternPoint(start_idx + nl_right, float(lows[nl_right]), "neckline_right"))
-                        elif len(neckline_lows) == 1:
-                            nl_i = neckline_lows[0]
-                            points.append(PatternPoint(start_idx + nl_i, float(lows[nl_i]), "neckline_left"))
-                            points.append(PatternPoint(start_idx + right_shoulder_i, float(lows[nl_i]), "neckline_right"))
-                        elif swing_lows:
-                            # Use first and last swing lows as neckline
-                            nl_left = min(swing_lows)
-                            nl_right = max(swing_lows)
-                            points.append(PatternPoint(start_idx + nl_left, float(lows[nl_left]), "neckline_left"))
-                            points.append(PatternPoint(start_idx + nl_right, float(lows[nl_right]), "neckline_right"))
+                        else:
+                            # Fallback: midpoint between head and right shoulder
+                            mid = (head_i + right_shoulder_i) // 2
+                            avg_low = np.mean(lows[head_i:right_shoulder_i+1]) if right_shoulder_i > head_i else lows[head_i]
+                            points.append(PatternPoint(start_idx + mid, float(avg_low), "neckline_right"))
 
             elif pattern_type in ["inverse_head_and_shoulders", "triple_bottom"]:
                 # Find lowest points for inverse head/shoulders
@@ -283,29 +291,37 @@ class PatternDetectionService:
                             head_i = sorted_by_index[1]
                             right_shoulder_i = sorted_by_index[2]
 
-                    if head_i is not None and left_shoulder_i is not None and right_shoulder_i is not None:
+                    # Minimum distance check - need space for neckline points
+                    MIN_DISTANCE = 3
+                    if (head_i is not None and left_shoulder_i is not None and right_shoulder_i is not None
+                        and (head_i - left_shoulder_i) >= MIN_DISTANCE
+                        and (right_shoulder_i - head_i) >= MIN_DISTANCE):
                         points = [
                             PatternPoint(start_idx + left_shoulder_i, float(lows[left_shoulder_i]), "left_shoulder"),
                             PatternPoint(start_idx + head_i, float(lows[head_i]), "head"),
                             PatternPoint(start_idx + right_shoulder_i, float(lows[right_shoulder_i]), "right_shoulder"),
                         ]
-                        # Neckline from highs between shoulders
-                        neckline_highs = [h for h in swing_highs if left_shoulder_i < h < right_shoulder_i]
-                        if len(neckline_highs) >= 2:
-                            nl_left = min(neckline_highs)
-                            nl_right = max(neckline_highs)
+                        # Neckline from highs - split between left/right of head
+                        neck_left_highs = [h for h in swing_highs if left_shoulder_i < h < head_i]
+                        neck_right_highs = [h for h in swing_highs if head_i < h < right_shoulder_i]
+
+                        if neck_left_highs:
+                            nl_left = max(neck_left_highs)  # closest to head
                             points.append(PatternPoint(start_idx + nl_left, float(highs[nl_left]), "neckline_left"))
+                        else:
+                            # Fallback: midpoint between left shoulder and head
+                            mid = (left_shoulder_i + head_i) // 2
+                            avg_high = np.mean(highs[left_shoulder_i:head_i+1]) if head_i > left_shoulder_i else highs[left_shoulder_i]
+                            points.append(PatternPoint(start_idx + mid, float(avg_high), "neckline_left"))
+
+                        if neck_right_highs:
+                            nl_right = min(neck_right_highs)  # closest to head
                             points.append(PatternPoint(start_idx + nl_right, float(highs[nl_right]), "neckline_right"))
-                        elif len(neckline_highs) == 1:
-                            nl_i = neckline_highs[0]
-                            points.append(PatternPoint(start_idx + nl_i, float(highs[nl_i]), "neckline_left"))
-                            points.append(PatternPoint(start_idx + right_shoulder_i, float(highs[nl_i]), "neckline_right"))
-                        elif swing_highs:
-                            # Use first and last swing highs as neckline
-                            nl_left = min(swing_highs)
-                            nl_right = max(swing_highs)
-                            points.append(PatternPoint(start_idx + nl_left, float(highs[nl_left]), "neckline_left"))
-                            points.append(PatternPoint(start_idx + nl_right, float(highs[nl_right]), "neckline_right"))
+                        else:
+                            # Fallback: midpoint between head and right shoulder
+                            mid = (head_i + right_shoulder_i) // 2
+                            avg_high = np.mean(highs[head_i:right_shoulder_i+1]) if right_shoulder_i > head_i else highs[head_i]
+                            points.append(PatternPoint(start_idx + mid, float(avg_high), "neckline_right"))
 
             elif pattern_type == "double_top":
                 if len(swing_highs) >= 2:
@@ -514,13 +530,15 @@ class PatternDetectionService:
                 if pattern_points:
                     pattern_points_dicts = [p.to_dict() for p in pattern_points]
 
+                # Note: Data is in reverse chronological order (newest first)
+                # So end_idx has older timestamp (pattern start), start_idx has newer (pattern end)
                 detected.append(DetectedPattern(
                     pattern_type=pattern_type,
                     confidence=round(confidence, 4),
                     start_index=start_idx,
                     end_index=end_idx,
-                    start_time=str(timestamps[start_idx]) if timestamps and start_idx < len(timestamps) else None,
-                    end_time=str(timestamps[end_idx]) if timestamps and end_idx < len(timestamps) else None,
+                    start_time=str(timestamps[end_idx]) if timestamps and end_idx < len(timestamps) else None,
+                    end_time=str(timestamps[start_idx]) if timestamps and start_idx < len(timestamps) else None,
                     direction=pattern_info.get("direction"),
                     pattern_points=pattern_points_dicts
                 ))
@@ -532,9 +550,15 @@ class PatternDetectionService:
             if pattern_filter and pattern.pattern_type.value not in pattern_filter:
                 continue
 
-            # Check if already detected by TCN
+            # Check if already detected by TCN with overlapping location
+            # Two patterns are considered the same if they have same type AND overlapping indices
             tcn_detected = any(
                 d.pattern_type == pattern.pattern_type.value
+                and (  # Check for overlapping index ranges
+                    (pattern.start_index <= d.start_index <= pattern.end_index) or
+                    (pattern.start_index <= d.end_index <= pattern.end_index) or
+                    (d.start_index <= pattern.start_index and d.end_index >= pattern.end_index)
+                )
                 for d in detected
             )
 
@@ -547,13 +571,14 @@ class PatternDetectionService:
                 # Get pattern points from rule-based detection
                 pattern_points_dicts = pattern.get_pattern_points_as_dicts()
 
+                # Note: Data is in reverse chronological order (newest first)
                 detected.append(DetectedPattern(
                     pattern_type=pattern.pattern_type.value,
                     confidence=round(pattern.confidence, 4),
                     start_index=pattern.start_index,
                     end_index=pattern.end_index,
-                    start_time=str(timestamps[pattern.start_index]) if timestamps and pattern.start_index < len(timestamps) else None,
-                    end_time=str(timestamps[pattern.end_index]) if timestamps and pattern.end_index < len(timestamps) else None,
+                    start_time=str(timestamps[pattern.end_index]) if timestamps and pattern.end_index < len(timestamps) else None,
+                    end_time=str(timestamps[pattern.start_index]) if timestamps and pattern.start_index < len(timestamps) else None,
                     price_target=pattern.price_target,
                     invalidation_level=pattern.invalidation_level,
                     pattern_height=pattern.pattern_height,

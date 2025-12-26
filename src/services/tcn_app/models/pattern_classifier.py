@@ -189,10 +189,14 @@ class PatternClassifier:
                         pattern_height = head - neckline
                         target = neckline - pattern_height
 
-                        # Find neckline indices
-                        neck_indices = [
+                        # Find neckline indices - split into left and right of head
+                        neck_left_indices = [
                             j for j in swing_lows
-                            if left_shoulder_idx < j < right_shoulder_idx
+                            if left_shoulder_idx < j < head_idx
+                        ]
+                        neck_right_indices = [
+                            j for j in swing_lows
+                            if head_idx < j < right_shoulder_idx
                         ]
 
                         # Create pattern points for visualization
@@ -201,14 +205,22 @@ class PatternClassifier:
                             PatternPoint(head_idx, float(head), "head"),
                             PatternPoint(right_shoulder_idx, float(right_shoulder), "right_shoulder"),
                         ]
-                        # Add neckline points
-                        if len(neck_indices) >= 1:
-                            pattern_points.append(PatternPoint(neck_indices[0], float(lows[neck_indices[0]]), "neckline_left"))
-                        if len(neck_indices) >= 2:
-                            pattern_points.append(PatternPoint(neck_indices[-1], float(lows[neck_indices[-1]]), "neckline_right"))
-                        elif len(neck_indices) == 1:
-                            # Extrapolate neckline to right shoulder
-                            pattern_points.append(PatternPoint(right_shoulder_idx, float(neckline), "neckline_right"))
+                        # Add neckline points - left of head and right of head
+                        if neck_left_indices:
+                            nl_left = neck_left_indices[-1]  # closest to head
+                            pattern_points.append(PatternPoint(nl_left, float(lows[nl_left]), "neckline_left"))
+                        else:
+                            # Fallback: use midpoint between left shoulder and head
+                            mid_left = (left_shoulder_idx + head_idx) // 2
+                            pattern_points.append(PatternPoint(mid_left, float(neckline), "neckline_left"))
+
+                        if neck_right_indices:
+                            nl_right = neck_right_indices[0]  # closest to head
+                            pattern_points.append(PatternPoint(nl_right, float(lows[nl_right]), "neckline_right"))
+                        else:
+                            # Fallback: use midpoint between head and right shoulder
+                            mid_right = (head_idx + right_shoulder_idx) // 2
+                            pattern_points.append(PatternPoint(mid_right, float(neckline), "neckline_right"))
 
                         return PatternDetection(
                             pattern_type=PatternType.HEAD_AND_SHOULDERS,
@@ -243,9 +255,18 @@ class PatternClassifier:
         if len(swing_highs) < 2:
             return None
 
+        # Minimum candle distance between tops for valid double top
+        MIN_TOP_DISTANCE = 7
+        # Minimum valley depth as percentage below the tops
+        MIN_VALLEY_DEPTH_PCT = 0.01  # 1.0%
+
         for i in range(len(swing_highs) - 1):
             first_top_idx = swing_highs[i]
             second_top_idx = swing_highs[i + 1]
+
+            # Ensure minimum distance between tops
+            if second_top_idx - first_top_idx < MIN_TOP_DISTANCE:
+                continue
 
             first_top = highs[first_top_idx]
             second_top = highs[second_top_idx]
@@ -261,6 +282,13 @@ class PatternClassifier:
 
                 if valley_lows:
                     valley = min(valley_lows)
+                    avg_top = (first_top + second_top) / 2
+
+                    # Valley must be significantly below the tops
+                    valley_depth_pct = (avg_top - valley) / avg_top
+                    if valley_depth_pct < MIN_VALLEY_DEPTH_PCT:
+                        continue
+
                     valley_idx = [j for j in swing_lows if first_top_idx < j < second_top_idx and lows[j] == valley][0] if valley_lows else (first_top_idx + second_top_idx) // 2
                     pattern_height = max(first_top, second_top) - valley
                     target = valley - pattern_height
@@ -307,9 +335,18 @@ class PatternClassifier:
         if len(swing_lows) < 2:
             return None
 
+        # Minimum candle distance between bottoms for valid double bottom
+        MIN_BOTTOM_DISTANCE = 7
+        # Minimum peak height as percentage above the bottoms
+        MIN_PEAK_HEIGHT_PCT = 0.01  # 1.0%
+
         for i in range(len(swing_lows) - 1):
             first_bottom_idx = swing_lows[i]
             second_bottom_idx = swing_lows[i + 1]
+
+            # Ensure minimum distance between bottoms
+            if second_bottom_idx - first_bottom_idx < MIN_BOTTOM_DISTANCE:
+                continue
 
             first_bottom = lows[first_bottom_idx]
             second_bottom = lows[second_bottom_idx]
@@ -325,6 +362,13 @@ class PatternClassifier:
 
                 if peak_highs:
                     peak = max(peak_highs)
+                    avg_bottom = (first_bottom + second_bottom) / 2
+
+                    # Peak must be significantly above the bottoms
+                    peak_height_pct = (peak - avg_bottom) / avg_bottom
+                    if peak_height_pct < MIN_PEAK_HEIGHT_PCT:
+                        continue
+
                     peak_idx = [j for j in swing_highs if first_bottom_idx < j < second_bottom_idx and highs[j] == peak][0] if peak_highs else (first_bottom_idx + second_bottom_idx) // 2
                     pattern_height = peak - min(first_bottom, second_bottom)
                     target = peak + pattern_height

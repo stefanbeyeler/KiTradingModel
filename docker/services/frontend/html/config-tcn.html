@@ -1875,10 +1875,10 @@
                     return;
                 }
 
-                // Store pattern data for click handlers
+                // Store full pattern data for click handlers (includes start_time, end_time, pattern_points)
                 window.patternHistoryData = {};
                 data.patterns.forEach((p, idx) => {
-                    window.patternHistoryData[`pattern_${idx}`] = p.pattern_points || null;
+                    window.patternHistoryData[`pattern_${idx}`] = p;
                 });
 
                 tbody.innerHTML = data.patterns.map((p, idx) => `
@@ -2630,12 +2630,18 @@
         }
 
         // Show pattern modal with real chart and pattern overlay
-        async function showPatternChart(symbol, timeframe, timestamp, patternType, direction, patternPoints) {
+        async function showPatternChart(symbol, timeframe, timestamp, patternType, direction, patternData) {
             const modal = document.getElementById('chartModal');
             const chartContainer = document.getElementById('patternChartContainer');
             const svgContainer = document.getElementById('patternSvgContainer');
             const chartInfo = document.getElementById('chartInfo');
             const loadingEl = document.getElementById('chartLoading');
+
+            // Extract pattern_points from full pattern data (backward compatible)
+            const patternPoints = patternData && patternData.pattern_points ? patternData.pattern_points : patternData;
+            // Pattern history uses pattern_start_time/pattern_end_time, detection API uses start_time/end_time
+            const startTime = patternData && (patternData.pattern_start_time || patternData.start_time) ? (patternData.pattern_start_time || patternData.start_time) : null;
+            const endTime = patternData && (patternData.pattern_end_time || patternData.end_time) ? (patternData.pattern_end_time || patternData.end_time) : null;
 
             // Get pattern info
             const info = getTcnPatternInfo(patternType);
@@ -2658,6 +2664,8 @@
             document.getElementById('chartTimeframe').textContent = timeframe;
             document.getElementById('chartPatternTime').textContent = formatLocalDateTime(timestamp, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
             document.getElementById('chartPatternType').textContent = info.name;
+            document.getElementById('chartPatternStart').textContent = startTime ? formatLocalDateTime(startTime, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+            document.getElementById('chartPatternEnd').textContent = endTime ? formatLocalDateTime(endTime, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
 
             // Show loading state
             if (loadingEl) loadingEl.style.display = 'flex';
@@ -3926,6 +3934,14 @@
                         <div class="chart-info-item">
                             <span class="chart-info-label">Typ:</span>
                             <span class="chart-info-value" id="chartPatternType">-</span>
+                        </div>
+                        <div class="chart-info-item">
+                            <span class="chart-info-label">Start:</span>
+                            <span class="chart-info-value" id="chartPatternStart">-</span>
+                        </div>
+                        <div class="chart-info-item">
+                            <span class="chart-info-label">Ende:</span>
+                            <span class="chart-info-value" id="chartPatternEnd">-</span>
                         </div>
                     </div>
                 </div>
