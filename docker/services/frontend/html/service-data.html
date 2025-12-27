@@ -459,6 +459,60 @@
         </div>
 
         <div class="content-card">
+            <h2>&#128640; Redis Caching</h2>
+            <p>
+                Der Data Service nutzt <strong>Redis</strong> als zentralen Cache für alle Marktdaten.
+                Dies reduziert API-Aufrufe zu externen Quellen und verbessert die Response-Zeiten erheblich.
+            </p>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>&#128337; MARKET_DATA (60s)</h4>
+                    <p>Echtzeit-Kurse, schnelle Updates</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128200; OHLCV (5min)</h4>
+                    <p>Kerzendaten für Charts</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128202; INDICATORS (5min)</h4>
+                    <p>RSI, MACD, Bollinger Bands etc.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128279; SYMBOLS (1h)</h4>
+                    <p>Symbol-Listen und Metadaten</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128176; SENTIMENT (15min)</h4>
+                    <p>Fear & Greed, Social Media</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#127968; TRAINING (6h)</h4>
+                    <p>Training-Daten für ML-Services</p>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Cache-Endpunkte</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/cache/stats</span>
+                    <span class="endpoint-desc">Cache-Statistiken (Hits, Misses)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/cache/clear</span>
+                    <span class="endpoint-desc">Cache leeren (kategorie-spezifisch)</span>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Architektur:</strong> Redis läuft auf Port 6379 mit 512MB maxmemory und LRU-Eviction.
+                Alle Services nutzen den gemeinsamen Cache über den Data Service als Gateway.
+            </div>
+        </div>
+
+        <div class="content-card">
             <h2>&#127760; Twelve Data API</h2>
             <p>
                 Die Twelve Data API bietet Zugriff auf globale Finanzmarktdaten für über 125.000 Instrumente
@@ -528,6 +582,15 @@
 
         <div class="content-card">
             <h2>&#128367; Candlestick Pattern Detection</h2>
+            <div class="info-box warning">
+                <strong>Hinweis:</strong> Candlestick Pattern Detection wurde in einen eigenen Service ausgelagert.
+                Nutze den <strong>Candlestick Service (Port 3006)</strong> für Pattern-Erkennung und den
+                <strong>Candlestick-Train Service (Port 3016)</strong> für Training.
+                <div class="quick-links" style="margin-top: 0.75rem;">
+                    <a href="/candlestick/docs" target="_blank">&#128367; Candlestick Service</a>
+                    <a href="/candlestick-train/docs" target="_blank">&#127891; Candlestick Training</a>
+                </div>
+            </div>
             <p>
                 Multi-Timeframe Pattern-Erkennung fur M15, H1, H4 und D1 Zeitrahmen.
                 Unterstutzt Reversal-, Continuation- und Indecision-Patterns.
@@ -544,21 +607,21 @@
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Pattern-Endpunkte</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Pattern-Endpunkte (via Candlestick Service)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/patterns/scan</span>
+                    <span class="endpoint-path">/candlestick/api/v1/scan</span>
                     <span class="endpoint-desc">Pattern-Scan fur Symbol</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/patterns/types</span>
+                    <span class="endpoint-path">/candlestick/api/v1/patterns</span>
                     <span class="endpoint-desc">Liste aller Pattern-Typen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/patterns/history/{symbol}</span>
+                    <span class="endpoint-path">/candlestick/api/v1/history/{symbol}</span>
                     <span class="endpoint-desc">Pattern-Historie fur Symbol</span>
                 </div>
             </div>
@@ -638,6 +701,7 @@
             <div class="tech-stack">
                 <span class="tech-tag">Python 3.11</span>
                 <span class="tech-tag">FastAPI</span>
+                <span class="tech-tag">Redis</span>
                 <span class="tech-tag">SQLite</span>
                 <span class="tech-tag">Pydantic</span>
                 <span class="tech-tag">httpx</span>
