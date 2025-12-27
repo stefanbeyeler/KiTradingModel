@@ -133,63 +133,63 @@ logger.add(
 tags_metadata = [
     {
         "name": "Health & Info",
-        "description": "Service health checks and basic information endpoints.",
+        "description": "Health checks und Service-Informationen",
     },
     {
         "name": "Documents",
-        "description": "Store and manage documents in the RAG vector database. Supports chunking and pattern storage.",
+        "description": "Dokumente speichern und verwalten",
     },
     {
         "name": "Query",
-        "description": "Semantic search and retrieval from the RAG knowledge base.",
+        "description": "Semantische Suche in der Wissensbasis",
     },
     {
         "name": "Stats & Management",
-        "description": "Database statistics, persistence, and index management.",
+        "description": "Datenbank-Statistiken und Index-Verwaltung",
     },
     {
         "name": "Economic Calendar",
-        "description": "**Wirtschaftskalender** - Fed/ECB/BOJ decisions, NFP, CPI, GDP, and other economic events.",
+        "description": "Wirtschaftskalender (Fed, ECB, NFP, CPI, GDP)",
     },
     {
         "name": "On-Chain Data",
-        "description": "**On-Chain Metriken** - Whale movements, exchange flows, mining data, DeFi TVL, MVRV, SOPR.",
+        "description": "On-Chain Metriken (Whale, Exchange Flows, DeFi)",
     },
     {
         "name": "Sentiment",
-        "description": "**Sentiment-Daten** - Fear & Greed Index, social media sentiment, options Put/Call ratio, VIX, funding rates.",
+        "description": "Sentiment-Daten (Fear & Greed, VIX, Funding Rates)",
     },
     {
         "name": "Orderbook & Liquidity",
-        "description": "**Orderbook-Daten** - Bid/Ask walls, liquidation levels, open interest, CVD, order flow analysis.",
+        "description": "Orderbook-Analyse (Walls, Liquidations, CVD)",
     },
     {
         "name": "Macro & Correlations",
-        "description": "**Makro-Daten** - DXY, bond yields, cross-asset correlations, sector rotation, global liquidity.",
+        "description": "Makro-Daten (DXY, Bonds, Korrelationen)",
     },
     {
         "name": "Historical Patterns",
-        "description": "**Historische Patterns** - Seasonality, drawdown history, event-based returns, comparable market phases.",
+        "description": "Historische Patterns (Saisonalitaet, Drawdowns)",
     },
     {
         "name": "Technical Levels",
-        "description": "**Technische Levels** - Support/Resistance, Fibonacci, Pivot Points, VWAP, Moving Averages, Volume Profile.",
+        "description": "Technische Levels (S/R, Fibonacci, Pivots)",
     },
     {
         "name": "Regulatory",
-        "description": "**Regulatorische Updates** - SEC/CFTC decisions, ETF approvals and flows, global regulation, enforcement actions.",
+        "description": "Regulatorische Updates (SEC, ETFs, Enforcement)",
     },
     {
         "name": "EasyInsight",
-        "description": "**EasyInsight Daten** - Managed symbols, symbol statistics, MT5 trading logs, NHITS model status.",
+        "description": "EasyInsight-Daten (Symbols, MT5 Logs, NHITS)",
     },
     {
         "name": "Candlestick Patterns",
-        "description": "**Candlestick Patterns** - 24 pattern types, multi-timeframe detection, confidence scoring, trading implications.",
+        "description": "Candlestick-Muster (24 Typen, Multi-Timeframe)",
     },
     {
         "name": "Data Ingestion",
-        "description": "Fetch and ingest data from all external sources into the RAG database.",
+        "description": "Daten von externen Quellen abrufen und speichern",
     },
 ]
 

@@ -151,6 +151,46 @@ Wenn Redis nicht verfügbar ist:
 2. Warnung wird geloggt
 3. System bleibt funktionsfähig (aber ohne verteilten Cache)
 
+## Swagger UI / OpenAPI Tags (VERBINDLICH)
+
+### Kurze Tag-Beschreibungen
+
+OpenAPI Tag-Beschreibungen müssen **kurz und einzeilig** sein (max. 60 Zeichen), damit sie in der Swagger UI korrekt angezeigt werden.
+
+```python
+# ❌ FALSCH: Lange, mehrzeilige Beschreibungen
+openapi_tags = [
+    {
+        "name": "2. Training",
+        "description": """Training-Jobs starten, überwachen und verwalten.
+
+**Features:**
+- Job-Management
+- Scheduler
+- Model-Versioning
+"""
+    },
+]
+
+# ✅ RICHTIG: Kurze, einzeilige Beschreibungen
+openapi_tags = [
+    {
+        "name": "1. System",
+        "description": "Health checks und Service-Informationen"
+    },
+    {
+        "name": "2. Training",
+        "description": "Training-Jobs starten, überwachen und verwalten"
+    },
+]
+```
+
+### Gründe
+
+- Lange Beschreibungen werden in Swagger UI inline neben dem Tag-Namen angezeigt
+- Dies macht die Tags schwer lesbar und die Navigation unübersichtlich
+- Kurze Beschreibungen (1 Satz, max. 60 Zeichen) halten die UI sauber
+
 ## Code-Stil
 
 - **Python 3.11+**

@@ -75,40 +75,15 @@ async def lifespan(app: FastAPI):
 openapi_tags = [
     {
         "name": "1. System",
-        "description": "Health checks, version info, and system monitoring"
+        "description": "Health checks und Service-Informationen"
     },
     {
         "name": "2. Pattern Detection",
-        "description": """Candlestick pattern detection across multiple timeframes.
-
-**Supported Patterns:**
-
-**Reversal Patterns (13):**
-- Hammer, Inverted Hammer, Shooting Star, Hanging Man
-- Doji, Dragonfly Doji, Gravestone Doji
-- Bullish Engulfing, Bearish Engulfing
-- Morning Star, Evening Star
-- Piercing Line, Dark Cloud Cover
-
-**Continuation Patterns (4):**
-- Three White Soldiers, Three Black Crows
-- Rising Three Methods, Falling Three Methods
-
-**Indecision Patterns (4):**
-- Spinning Top, Bullish Harami, Bearish Harami, Harami Cross
-
-**Timeframes:** M5, M15, H1, H4, D1
-"""
+        "description": "Candlestick-Muster erkennen (21 Typen, Multi-Timeframe)"
     },
     {
         "name": "3. Pattern History",
-        "description": """Pattern history and automatic scanning.
-
-- View detected patterns with filtering
-- Trigger manual scans
-- Start/stop automatic scanning
-- Statistics and aggregations
-"""
+        "description": "Pattern-Historie, Auto-Scan und Statistiken"
     },
 ]
 
