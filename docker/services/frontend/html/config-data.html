@@ -3805,9 +3805,11 @@
 
             indicators.forEach(ind => {
                 if (!ind || !ind.data) return;
-                const indValues = ind.data.data || ind.data.values || ind.data || [];
+                const rawValues = ind.data.data || ind.data.values || ind.data;
+                // Ensure indValues is always an array
+                const indValues = Array.isArray(rawValues) ? rawValues : [];
                 const mapper = indicatorFieldMap[ind.name];
-                if (!mapper) return;
+                if (!mapper || !indValues.length) return;
 
                 indValues.forEach(v => {
                     const idx = dtMap[v.datetime];
