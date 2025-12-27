@@ -1244,6 +1244,12 @@
                                 <option value="yfinance">Yahoo Finance (Historisch)</option>
                             </select>
                         </div>
+                        <div class="form-group" style="display: flex; align-items: flex-end;">
+                            <label class="form-checkbox" style="margin-bottom: 0.5rem;">
+                                <input type="checkbox" id="explorer-bypass-cache">
+                                <span>Cache umgehen</span>
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Indicator section - dynamically updated based on source -->
@@ -3620,6 +3626,7 @@
             const interval = document.getElementById('explorer-interval').value;
             const limit = document.getElementById('explorer-limit').value;
             const source = document.getElementById('explorer-source').value;
+            const bypassCache = document.getElementById('explorer-bypass-cache')?.checked || false;
 
             if (!rawSymbol) {
                 showToast('Bitte ein Symbol auswählen', 'error');
@@ -3697,7 +3704,8 @@
                     days = Math.min(days, 90); // Max 90 days
 
                     // Fetch from EasyInsight via training-data endpoint (historical data)
-                    const res = await fetch(`${API_BASE}/training-data/${rawSymbol}?timeframe=${timeframe}&days=${days}&use_cache=false`);
+                    const useCache = bypassCache ? 'false' : 'true';
+                    const res = await fetch(`${API_BASE}/training-data/${rawSymbol}?timeframe=${timeframe}&days=${days}&use_cache=${useCache}`);
                     if (!res.ok) throw new Error('Fehler beim Laden der EasyInsight-Daten');
                     const trainingData = await res.json();
 
@@ -3710,8 +3718,9 @@
                     }
 
                 } else if (source === 'twelvedata') {
-                    // Fetch OHLCV data
-                    const ohlcvRes = await fetch(`${API_BASE}/twelvedata/time_series/${symbol}?interval=${interval}&outputsize=${limit}`);
+                    // Fetch OHLCV data (bypassCache parameter for future cache implementation)
+                    const cacheParam = bypassCache ? '&bypass_cache=true' : '';
+                    const ohlcvRes = await fetch(`${API_BASE}/twelvedata/time_series/${symbol}?interval=${interval}&outputsize=${limit}${cacheParam}`);
                     if (!ohlcvRes.ok) throw new Error('Fehler beim Laden der OHLCV-Daten');
                     const ohlcv = await ohlcvRes.json();
 
