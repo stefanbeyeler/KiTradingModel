@@ -76,9 +76,12 @@ class NHITSTrainingService:
 | TCN-Pattern Service | 3003 | /docs | CUDA |
 | HMM-Regime Service | 3004 | /docs | - |
 | Embedder Service | 3005 | /docs | CUDA |
+| Candlestick Service | 3006 | /docs | - |
 | RAG Service | 3008 | /docs | CUDA |
 | LLM Service | 3009 | /docs | CUDA |
 | Watchdog Service | 3010 | /docs | - |
+| TCN-Train Service | 3013 | /docs | CUDA |
+| Candlestick-Train Service | 3016 | /docs | CUDA |
 
 ## GPU-Konfiguration (NVIDIA Thor / Jetson)
 

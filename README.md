@@ -25,23 +25,29 @@ Microservices-basiertes KI-System für Trading-Analyse und Preisprognosen auf NV
 | TCN-Pattern Service | 3003 | Chart-Pattern-Erkennung (16 Typen) | CUDA |
 | HMM-Regime Service | 3004 | Marktphasen-Erkennung, Signal-Scoring | - |
 | Embedder Service | 3005 | Text/FinBERT/TimeSeries Embeddings | CUDA |
+| Candlestick Service | 3006 | Candlestick-Pattern-Erkennung (21 Typen) | - |
 | RAG Service | 3008 | Vector Search & Knowledge Base | CUDA |
 | LLM Service | 3009 | Trading-Analyse mit Llama 3.1 | CUDA |
 | Watchdog Service | 3010 | Service-Monitoring, Testing, Telegram-Alerts | - |
+| TCN-Train Service | 3013 | TCN Model Training | CUDA |
+| Candlestick-Train Service | 3016 | Candlestick Model Training | CUDA |
 
 ```text
                          Frontend (Dashboard)
                               Port 3000
                                   |
-              +-------+-------+---+---+-------+-------+
-              |       |       |       |       |       |
-           Data    NHITS    TCN     HMM   Embedder  Watchdog
-          :3001   :3002   :3003   :3004   :3005    :3010
-                              |
-                      +-------+-------+
-                      |               |
-                     RAG            LLM
-                    :3008          :3009
+        +-------+-------+-------+-+-------+-------+-------+
+        |       |       |       |         |       |       |
+      Data   NHITS    TCN    Candle   Embedder  HMM   Watchdog
+     :3001  :3002   :3003    :3006    :3005   :3004   :3010
+                      |        |
+                TCN-Train  Candle-Train
+                  :3013      :3016
+                                  |
+                          +-------+-------+
+                          |               |
+                         RAG            LLM
+                        :3008          :3009
 ```
 
 ## Quick Start
@@ -103,6 +109,7 @@ Jeder Service bietet eine interaktive Swagger UI:
 | TCN Service | <http://10.1.19.101:3000/tcn/docs> |
 | HMM Service | <http://10.1.19.101:3000/hmm/docs> |
 | Embedder Service | <http://10.1.19.101:3000/embedder/docs> |
+| Candlestick Service | <http://10.1.19.101:3000/candlestick/docs> |
 | RAG Service | <http://10.1.19.101:3000/rag/docs> |
 | LLM Service | <http://10.1.19.101:3000/llm/docs> |
 | Watchdog Service | <http://10.1.19.101:3000/watchdog/docs> |

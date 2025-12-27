@@ -1,13 +1,17 @@
 """
-Data Service - Symbol Management, Sync & Pattern Detection Microservice
+Data Service - Symbol Management & Data Gateway Microservice
 
 Handles:
 - Symbol Management
 - Trading Strategies
 - RAG Synchronization
 - Query Logs
-- Candlestick Pattern Detection
+- External Data Sources Gateway
 - System Monitoring
+
+Note: Candlestick Pattern Detection has been moved to:
+- Candlestick Service (Port 3006) - Pattern Detection
+- Candlestick Train Service (Port 3016) - Model Training
 """
 
 import uvicorn
@@ -31,11 +35,11 @@ from src.api.routes import (
     twelvedata_router,
     easyinsight_router,
     config_router,
-    patterns_router,
     yfinance_router,
     external_sources_router,
     router as general_router
 )
+# Note: patterns_router has been moved to Candlestick Service (Port 3006)
 # Note: training_router (NHITS Training) is NOT included here
 # These endpoints belong to the NHITS Service (Port 3002)
 from src.api.testing_routes import testing_router
@@ -127,19 +131,15 @@ openapi_tags = [
 - Unterstützt Aktien, ETFs, Indizes, Forex, Crypto"""
     },
     {
-        "name": "8. Candlestick Patterns",
-        "description": "Multi-Timeframe Candlestick Pattern Detection (M15, H1, H4, D1). Reversal: Hammer, Shooting Star, Doji, Engulfing, Morning/Evening Star. Continuation: Three White Soldiers, Three Black Crows. Indecision: Spinning Top, Harami."
-    },
-    {
-        "name": "9. RAG Sync",
+        "name": "8. RAG Sync",
         "description": "Synchronization of market data to RAG knowledge base (optional, disabled by default)"
     },
     {
-        "name": "10. Query Logs & Analytics",
+        "name": "9. Query Logs & Analytics",
         "description": "Query logging and analytics for monitoring"
     },
     {
-        "name": "11. External Data Sources",
+        "name": "10. External Data Sources",
         "description": """Externe Datenquellen für Trading Intelligence (Gateway für RAG Service).
 
 **Datenquellen:**
@@ -156,11 +156,11 @@ openapi_tags = [
 - **Institutional Flow**: COT Reports, ETF Flows, Whale Tracking"""
     },
     {
-        "name": "12. Testing",
+        "name": "11. Testing",
         "description": """Test Suite Execution für automatisierte Qualitätssicherung.
 
 **Test-Kategorien:**
-- **Smoke Tests**: Health Checks für alle 9 Microservices
+- **Smoke Tests**: Health Checks für alle Microservices
 - **API Tests**: Endpoint-Tests für alle Service-APIs
 - **Integration Tests**: Service-übergreifende Tests
 - **Contract Tests**: API-Schema-Validierung mit Pydantic
@@ -179,10 +179,12 @@ Zentraler Service für Datenmanagement im KI Trading Model System.
 
 - **Symbol Management**: Verwaltung von Trading-Symbolen (Forex, Crypto, Indizes)
 - **Trading Strategies**: Konfiguration und Verwaltung von Handelsstrategien
-- **Candlestick Patterns**: Multi-Timeframe Pattern-Erkennung
 - **TwelveData Integration**: Marktdaten und technische Indikatoren
 - **Yahoo Finance Integration**: Historische Kursdaten als Fallback
+- **External Data Sources**: Gateway für externe Datenquellen
 - **RAG Sync**: Synchronisation von Marktdaten zur RAG Knowledge Base
+
+**Hinweis:** Candlestick Pattern Detection wurde in eigenen Service migriert (Port 3006).
 
 ### Architektur
 
@@ -218,12 +220,12 @@ app.include_router(config_router, prefix="/api/v1", tags=["4. Config Export/Impo
 app.include_router(twelvedata_router, prefix="/api/v1", tags=["5. Twelve Data API"])
 app.include_router(easyinsight_router, prefix="/api/v1", tags=["6. EasyInsight API"])
 app.include_router(yfinance_router, prefix="/api/v1", tags=["7. Yahoo Finance"])
-app.include_router(patterns_router, prefix="/api/v1", tags=["8. Candlestick Patterns"])
+# Note: patterns_router has been moved to Candlestick Service (Port 3006)
 # Note: NHITS Training endpoints are in the NHITS Service (Port 3002), not here
-app.include_router(sync_router, prefix="/api/v1", tags=["9. RAG Sync"])
-app.include_router(query_log_router, prefix="/api/v1", tags=["10. Query Logs & Analytics"])
-app.include_router(external_sources_router, prefix="/api/v1", tags=["11. External Data Sources"])
-app.include_router(testing_router, prefix="/api/v1/testing", tags=["12. Testing"])
+app.include_router(sync_router, prefix="/api/v1", tags=["8. RAG Sync"])
+app.include_router(query_log_router, prefix="/api/v1", tags=["9. Query Logs & Analytics"])
+app.include_router(external_sources_router, prefix="/api/v1", tags=["10. External Data Sources"])
+app.include_router(testing_router, prefix="/api/v1/testing", tags=["11. Testing"])
 
 
 async def _periodic_cache_cleanup():
@@ -291,13 +293,7 @@ async def startup_event():
     else:
         logger.info("RAG/Sync services skipped - dependencies not available")
 
-    # Start Pattern History Auto-Scan
-    try:
-        from src.services.pattern_history_service import pattern_history_service
-        await pattern_history_service.start()
-        logger.info("Pattern History Auto-Scan started")
-    except Exception as e:
-        logger.error(f"Failed to start Pattern History Auto-Scan: {e}")
+    # Note: Pattern History Auto-Scan has been moved to Candlestick Service (Port 3006)
 
     logger.info("Data Service started successfully")
 
@@ -323,14 +319,7 @@ async def shutdown_event():
         await sync_service.stop()
         logger.info("TimescaleDB Sync Service stopped")
 
-    # Stop Pattern History Auto-Scan
-    try:
-        from src.services.pattern_history_service import pattern_history_service
-        if pattern_history_service._running:
-            await pattern_history_service.stop()
-            logger.info("Pattern History Auto-Scan stopped")
-    except Exception as e:
-        logger.error(f"Failed to stop Pattern History Auto-Scan: {e}")
+    # Note: Pattern History Auto-Scan has been moved to Candlestick Service (Port 3006)
 
     logger.info("Data Service stopped")
 

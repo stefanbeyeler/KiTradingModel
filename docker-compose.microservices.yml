@@ -4,20 +4,22 @@
 # Resource Allocation Strategy (14 CPU cores, 122 GB RAM):
 #
 # HIGH PRIORITY (API responses - always responsive):
-#   - frontend:   1 CPU,   512MB  (nginx proxy)
-#   - data:       2 CPU,   4GB    (central data gateway)
-#   - hmm:        2 CPU,   4GB    (regime detection)
-#   - embedder:   2 CPU,   12GB   (embedding service)
-#   - rag:        2 CPU,   8GB    (vector search)
-#   - llm:        2 CPU,   4GB    (API proxy to Ollama)
-#   - tcn:        2 CPU,   4GB    (pattern detection - inference only)
+#   - frontend:     1 CPU,   512MB  (nginx proxy)
+#   - data:         2 CPU,   4GB    (central data gateway)
+#   - hmm:          2 CPU,   4GB    (regime detection)
+#   - embedder:     2 CPU,   12GB   (embedding service)
+#   - rag:          2 CPU,   8GB    (vector search)
+#   - llm:          2 CPU,   4GB    (API proxy to Ollama)
+#   - tcn:          2 CPU,   4GB    (chart pattern detection - inference)
+#   - candlestick:  2 CPU,   2GB    (candlestick pattern detection - inference)
 #
 # LOW PRIORITY (Training - uses remaining resources):
-#   - nhits:      4 CPU,   16GB   (with nice priority)
-#   - tcn-train:  4 CPU,   8GB    (with nice priority, separate from inference)
+#   - nhits:            4 CPU,   16GB   (with nice priority)
+#   - tcn-train:        4 CPU,   8GB    (with nice priority)
+#   - candlestick-train: 2 CPU,   4GB   (with nice priority)
 #
-# Total Reserved: ~17 CPUs (with overcommit), ~60 GB RAM
-# Remaining for system: ~34 GB RAM
+# Total Reserved: ~21 CPUs (with overcommit), ~66 GB RAM
+# Remaining for system: ~56 GB RAM
 # =============================================================================
 
 services:
@@ -415,6 +417,47 @@ services:
       retries: 3
       start_period: 40s
 
+  # Candlestick Pattern Service - Candlestick Pattern Detection (INFERENCE)
+  # Port 3006 - Detects candlestick patterns like Hammer, Doji, Engulfing etc.
+  candlestick-service:
+    build:
+      context: .
+      dockerfile: docker/services/candlestick/Dockerfile
+    container_name: trading-candlestick
+    ports:
+      - "${CANDLESTICK_SERVICE_PORT:-3006}:${CANDLESTICK_SERVICE_PORT:-3006}"
+    volumes:
+      - candlestick-data:/app/data
+      - ./src/services/candlestick_app:/app/src/services/candlestick_app:ro
+      - logs-data:/app/logs
+    environment:
+      - SERVICE_NAME=candlestick
+      - PORT=${CANDLESTICK_SERVICE_PORT:-3006}
+      - ROOT_PATH=/candlestick
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - AUTO_SCAN_ENABLED=true
+      - SCAN_INTERVAL_SECONDS=300
+      - MAX_HISTORY_ENTRIES=1000
+      - MAX_HISTORY_AGE_HOURS=24
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CANDLESTICK_SERVICE_PORT:-3006}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   # TCN Training Service - Dedicated training container (LOW PRIORITY)
   # Runs separately from inference to prevent blocking API requests
   tcn-train-service:
@@ -473,6 +516,55 @@ services:
       retries: 3
       start_period: 10s
 
+  # Candlestick Training Service - Dedicated training container (LOW PRIORITY)
+  # Port 3016 - Trains TCN models for candlestick pattern recognition
+  candlestick-train-service:
+    build:
+      context: .
+      dockerfile: docker/services/candlestick-train/Dockerfile
+    container_name: trading-candlestick-train
+    ports:
+      - "${CANDLESTICK_TRAIN_SERVICE_PORT:-3016}:${CANDLESTICK_TRAIN_SERVICE_PORT:-3016}"
+    volumes:
+      - candlestick-models:/app/models
+      - candlestick-data:/app/data
+      - ./src/services/candlestick_train_app:/app/src/services/candlestick_train_app:ro
+      - logs-data:/app/logs
+    environment:
+      - SERVICE_NAME=candlestick-train
+      - PORT=${CANDLESTICK_TRAIN_SERVICE_PORT:-3016}
+      - ROOT_PATH=/candlestick-train
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - CANDLESTICK_SERVICE_URL=http://trading-candlestick:${CANDLESTICK_SERVICE_PORT:-3006}
+      - MODEL_DIR=/app/models
+      - SCHEDULED_TRAINING_ENABLED=false
+      - TRAINING_INTERVAL_HOURS=24
+      - TRAINING_HOUR_UTC=2
+      # Limit CPU threads for training
+      - OMP_NUM_THREADS=2
+      - MKL_NUM_THREADS=2
+      - OPENBLAS_NUM_THREADS=2
+      - NUMEXPR_MAX_THREADS=2
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+      - candlestick-service
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CANDLESTICK_TRAIN_SERVICE_PORT:-3016}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
 # =============================================================================
 # VOLUMES
 # =============================================================================
@@ -495,6 +587,12 @@ volumes:
 
   # TCN Service Volumes
   tcn-models:
+    driver: local
+
+  # Candlestick Service Volumes
+  candlestick-models:
+    driver: local
+  candlestick-data:
     driver: local
 
   # HMM Service Volumes

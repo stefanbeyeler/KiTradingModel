@@ -1,0 +1,24 @@
+# Candlestick Pattern Training Service - Dependencies
+
+# Web Framework
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.5.0
+
+# HTTP Client
+httpx>=0.25.0
+
+# Date parsing
+python-dateutil>=2.8.0
+
+# Logging
+loguru>=0.7.0
+
+# ML/Deep Learning
+numpy>=1.24.0
+torch>=2.0.0
+
+# Note: For NVIDIA Thor (sm_110), PyTorch with CUDA support
+# may require a specific version. Currently running on CPU.
+# When PyTorch 2.6+ with sm_110 support is available:
+# torch --index-url https://download.pytorch.org/whl/cu130

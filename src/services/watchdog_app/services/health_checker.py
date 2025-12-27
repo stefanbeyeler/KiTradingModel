@@ -65,6 +65,18 @@ class HealthChecker:
                 "startup_grace": 120,
                 "dependencies": ["data"]
             },
+            "candlestick": {
+                "url": "http://trading-candlestick:3006/health",
+                "criticality": "high",
+                "startup_grace": 30,
+                "dependencies": ["data"]
+            },
+            "candlestick-train": {
+                "url": "http://trading-candlestick-train:3016/health",
+                "criticality": "medium",
+                "startup_grace": 60,
+                "dependencies": ["data"]
+            },
             "rag": {
                 "url": "http://trading-rag:3008/health",
                 "criticality": "high",

@@ -60,6 +60,8 @@ class ServiceURLs:
     TCN_TRAIN = "http://trading-tcn-train:3013"
     HMM = "http://trading-hmm:3004"
     EMBEDDER = "http://trading-embedder:3005"
+    CANDLESTICK = "http://trading-candlestick:3006"
+    CANDLESTICK_TRAIN = "http://trading-candlestick-train:3016"
     RAG = "http://trading-rag:3008"
     LLM = "http://trading-llm:3009"
     WATCHDOG = "http://localhost:3010"
@@ -130,6 +132,8 @@ def get_all_tests() -> List[TestDefinition]:
         ("tcn_train", ServiceURLs.TCN_TRAIN, "TCN-Train Service"),
         ("hmm", ServiceURLs.HMM, "HMM-Regime Service"),
         ("embedder", ServiceURLs.EMBEDDER, "Embedder Service"),
+        ("candlestick", ServiceURLs.CANDLESTICK, "Candlestick Service"),
+        ("candlestick_train", ServiceURLs.CANDLESTICK_TRAIN, "Candlestick-Train Service"),
         ("rag", ServiceURLs.RAG, "RAG Service"),
         ("llm", ServiceURLs.LLM, "LLM Service"),
         ("watchdog", ServiceURLs.WATCHDOG, "Watchdog Service"),
@@ -332,28 +336,8 @@ def get_all_tests() -> List[TestDefinition]:
         ),
     ])
 
-    # Pattern-Erkennung
-    tests.extend([
-        TestDefinition(
-            name="Scan Patterns",
-            service="data",
-            category=TestCategory.API,
-            priority=TestPriority.MEDIUM,
-            endpoint=f"{data_url}/api/v1/patterns/scan/BTCUSD",
-            params={"interval": "1h"},
-            expected_status=[200, 404, 503],
-            description="Candlestick-Pattern-Scan"
-        ),
-        TestDefinition(
-            name="Get Pattern Summary",
-            service="data",
-            category=TestCategory.API,
-            priority=TestPriority.LOW,
-            endpoint=f"{data_url}/api/v1/patterns/summary/BTCUSD",
-            expected_status=[200, 404, 503],
-            description="Pattern-Zusammenfassung"
-        ),
-    ])
+    # Note: Pattern-Erkennung wurde in Candlestick Service (Port 3006) verschoben
+    # Siehe CANDLESTICK SERVICE API TESTS weiter unten
 
     # Konfiguration
     tests.extend([
@@ -570,6 +554,121 @@ def get_all_tests() -> List[TestDefinition]:
             expected_status=[200, 422, 503],
             timeout=60.0,
             description="Text-Ähnlichkeit"
+        ),
+    ])
+
+    # ===== CANDLESTICK SERVICE API TESTS =====
+    candlestick_url = ServiceURLs.CANDLESTICK
+
+    tests.extend([
+        TestDefinition(
+            name="Get Candlestick Pattern Types",
+            service="candlestick",
+            category=TestCategory.API,
+            priority=TestPriority.HIGH,
+            endpoint=f"{candlestick_url}/api/v1/patterns",
+            expected_status=[200],
+            description="Unterstützte Candlestick-Pattern-Typen"
+        ),
+        TestDefinition(
+            name="Candlestick Pattern Scan",
+            service="candlestick",
+            category=TestCategory.API,
+            priority=TestPriority.HIGH,
+            endpoint=f"{candlestick_url}/api/v1/scan/BTCUSD",
+            expected_status=[200, 404, 503],
+            timeout=60.0,
+            description="Pattern-Scan für BTCUSD"
+        ),
+        TestDefinition(
+            name="Multi-Timeframe Pattern Scan",
+            service="candlestick",
+            category=TestCategory.API,
+            priority=TestPriority.MEDIUM,
+            endpoint=f"{candlestick_url}/api/v1/scan",
+            method="POST",
+            body={"symbol": "BTCUSD", "timeframes": ["H1", "H4"]},
+            expected_status=[200, 404, 422, 503],
+            timeout=60.0,
+            description="Multi-Timeframe Pattern-Erkennung"
+        ),
+        TestDefinition(
+            name="Get Candlestick Chart Data",
+            service="candlestick",
+            category=TestCategory.API,
+            priority=TestPriority.MEDIUM,
+            endpoint=f"{candlestick_url}/api/v1/chart/BTCUSD",
+            expected_status=[200, 404, 503],
+            description="Chart-Daten mit Patterns"
+        ),
+        TestDefinition(
+            name="Get Pattern History",
+            service="candlestick",
+            category=TestCategory.API,
+            priority=TestPriority.MEDIUM,
+            endpoint=f"{candlestick_url}/api/v1/history",
+            expected_status=[200],
+            description="Pattern-Historie"
+        ),
+        TestDefinition(
+            name="Get Pattern History by Symbol",
+            service="candlestick",
+            category=TestCategory.API,
+            priority=TestPriority.MEDIUM,
+            endpoint=f"{candlestick_url}/api/v1/history/BTCUSD",
+            expected_status=[200, 404],
+            description="Pattern-Historie für BTCUSD"
+        ),
+        TestDefinition(
+            name="Get Pattern Statistics",
+            service="candlestick",
+            category=TestCategory.API,
+            priority=TestPriority.LOW,
+            endpoint=f"{candlestick_url}/api/v1/history/statistics",
+            expected_status=[200],
+            description="Pattern-Statistiken"
+        ),
+    ])
+
+    # ===== CANDLESTICK-TRAIN SERVICE API TESTS =====
+    candlestick_train_url = ServiceURLs.CANDLESTICK_TRAIN
+
+    tests.extend([
+        TestDefinition(
+            name="Candlestick Training Status",
+            service="candlestick_train",
+            category=TestCategory.API,
+            priority=TestPriority.HIGH,
+            endpoint=f"{candlestick_train_url}/api/v1/train/status",
+            expected_status=[200],
+            description="Training-Status"
+        ),
+        TestDefinition(
+            name="List Candlestick Training Jobs",
+            service="candlestick_train",
+            category=TestCategory.API,
+            priority=TestPriority.MEDIUM,
+            endpoint=f"{candlestick_train_url}/api/v1/train/jobs",
+            expected_status=[200],
+            description="Training-Jobs"
+        ),
+        TestDefinition(
+            name="Get Training Progress",
+            service="candlestick_train",
+            category=TestCategory.API,
+            priority=TestPriority.MEDIUM,
+            endpoint=f"{candlestick_train_url}/api/v1/train/progress",
+            expected_status=[200],
+            description="Training-Fortschritt"
+        ),
+        TestDefinition(
+            name="Get Candlestick Model Info",
+            service="candlestick_train",
+            category=TestCategory.API,
+            priority=TestPriority.LOW,
+            endpoint=f"{candlestick_train_url}/api/v1/model",
+            expected_status=[200, 404],
+            description="Modell-Informationen"
         ),
     ])
 
