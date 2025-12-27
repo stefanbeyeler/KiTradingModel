@@ -72,19 +72,7 @@ openapi_tags = [
     },
     {
         "name": "2. Training",
-        "description": """Model training for candlestick pattern recognition.
-
-**Features:**
-- PyTorch TCN model training
-- Training job management
-- Progress tracking
-- Scheduled automatic training
-
-**Usage:**
-1. Start training with POST /api/v1/train
-2. Monitor progress with GET /api/v1/train/progress
-3. View job history with GET /api/v1/train/jobs
-"""
+        "description": "Training-Jobs starten, überwachen und verwalten"
     },
 ]
 
