@@ -53,16 +53,47 @@ class CacheCategory(str, Enum):
 
 
 # Standard-TTL pro Kategorie (in Sekunden)
+# Optimiert für nachgelagerte Services (NHITS, TCN, HMM):
+# - OHLCV/Indicators: 5 Min für schnelle Inference-Anfragen
+# - Training: 6h für Batch-Training
+# - Market Data: 30s für Echtzeit-Quotes
 DEFAULT_TTL = {
-    CacheCategory.MARKET_DATA: 60,
-    CacheCategory.OHLCV: 300,
-    CacheCategory.INDICATORS: 300,
-    CacheCategory.SYMBOLS: 3600,
-    CacheCategory.METADATA: 3600,
-    CacheCategory.SENTIMENT: 900,
-    CacheCategory.ECONOMIC: 1800,
-    CacheCategory.ONCHAIN: 600,
-    CacheCategory.TRAINING: 21600,
+    CacheCategory.MARKET_DATA: 30,      # 30s - Echtzeit-Kurse, häufige Updates
+    CacheCategory.OHLCV: 300,           # 5m - Kerzendaten, neue Kerze alle 1-60min
+    CacheCategory.INDICATORS: 300,      # 5m - Synchron mit OHLCV
+    CacheCategory.SYMBOLS: 3600,        # 1h - Symbol-Listen ändern sich selten
+    CacheCategory.METADATA: 3600,       # 1h - Metadaten stabil
+    CacheCategory.SENTIMENT: 600,       # 10m - Sentiment ändert sich moderat (was 15m)
+    CacheCategory.ECONOMIC: 1800,       # 30m - Wirtschaftskalender
+    CacheCategory.ONCHAIN: 300,         # 5m - On-Chain für Crypto wichtig (was 10m)
+    CacheCategory.TRAINING: 21600,      # 6h - Training-Daten für Batch-Jobs
+}
+
+# Timeframe-spezifische TTL für OHLCV (kleinere Timeframes = kürzere TTL)
+TIMEFRAME_TTL = {
+    "1min": 60,       # 1m - neue Kerze jede Minute
+    "5min": 120,      # 2m - neue Kerze alle 5 Minuten
+    "15min": 300,     # 5m - neue Kerze alle 15 Minuten
+    "30min": 600,     # 10m - neue Kerze alle 30 Minuten
+    "45min": 900,     # 15m - neue Kerze alle 45 Minuten
+    "1h": 900,        # 15m - neue Kerze jede Stunde
+    "2h": 1800,       # 30m - neue Kerze alle 2 Stunden
+    "4h": 3600,       # 1h - neue Kerze alle 4 Stunden
+    "1day": 7200,     # 2h - neue Kerze täglich
+    "1week": 14400,   # 4h - neue Kerze wöchentlich
+    "1month": 21600,  # 6h - neue Kerze monatlich
+    # Standard-Format Aliase
+    "M1": 60,
+    "M5": 120,
+    "M15": 300,
+    "M30": 600,
+    "M45": 900,
+    "H1": 900,
+    "H2": 1800,
+    "H4": 3600,
+    "D1": 7200,
+    "W1": 14400,
+    "MN": 21600,
 }
 
 

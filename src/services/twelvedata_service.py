@@ -23,7 +23,7 @@ except ImportError:
     TDClient = None
 
 from ..config import settings
-from .cache_service import cache_service, CacheCategory
+from .cache_service import cache_service, CacheCategory, TIMEFRAME_TTL
 
 
 class RateLimiter:
@@ -355,9 +355,11 @@ class TwelveDataService:
             }
 
             # Cache the result (only if not using date filters)
+            # Use timeframe-specific TTL for optimal cache behavior
             if not start_date and not end_date and data:
-                await cache_service.set(CacheCategory.OHLCV, result, cache_symbol, interval, params=cache_params)
-                logger.debug(f"Cached {len(data)} OHLCV data points for {symbol}/{interval}")
+                ttl = TIMEFRAME_TTL.get(interval, 300)  # Default 5 min if unknown
+                await cache_service.set(CacheCategory.OHLCV, result, cache_symbol, interval, params=cache_params, ttl=ttl)
+                logger.debug(f"Cached {len(data)} OHLCV data points for {symbol}/{interval} (TTL: {ttl}s)")
 
             logger.info(f"Retrieved {len(data)} data points for {symbol}")
             return result

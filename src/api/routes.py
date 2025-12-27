@@ -1087,6 +1087,197 @@ def _format_ttl(seconds: int) -> str:
 
 
 # ============================================
+# Pre-Fetching Endpoints
+# ============================================
+
+@system_router.get("/prefetch/status", tags=["1. System"])
+async def get_prefetch_status():
+    """
+    Get pre-fetching service status and statistics.
+
+    Returns configuration, running state, and fetch statistics.
+    """
+    from ..services.prefetch_service import prefetch_service
+
+    try:
+        stats = prefetch_service.get_stats()
+        config = prefetch_service.get_config()
+
+        return {
+            "status": "ok",
+            "running": stats["running"],
+            "config": config,
+            "statistics": {
+                "last_run": stats["last_run"],
+                "total_runs": stats["total_runs"],
+                "symbols_fetched": stats["symbols_fetched"],
+                "timeframes_fetched": stats["timeframes_fetched"],
+                "cache_entries_created": stats["cache_entries_created"],
+                "errors": stats["errors"],
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Prefetch status failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@system_router.post("/prefetch/start", tags=["1. System"])
+async def start_prefetch_service():
+    """
+    Start the pre-fetching service.
+
+    The service will immediately fetch data for all configured symbols/timeframes
+    and then continue with periodic updates.
+    """
+    from ..services.prefetch_service import prefetch_service
+
+    try:
+        await prefetch_service.start()
+        stats = prefetch_service.get_stats()
+
+        return {
+            "status": "ok",
+            "message": "Pre-fetch service started",
+            "running": stats["running"],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Prefetch start failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@system_router.post("/prefetch/stop", tags=["1. System"])
+async def stop_prefetch_service():
+    """
+    Stop the pre-fetching service.
+    """
+    from ..services.prefetch_service import prefetch_service
+
+    try:
+        await prefetch_service.stop()
+
+        return {
+            "status": "ok",
+            "message": "Pre-fetch service stopped",
+            "running": False,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Prefetch stop failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@system_router.post("/prefetch/configure", tags=["1. System"])
+async def configure_prefetch_service(
+    enabled: Optional[bool] = None,
+    timeframes: Optional[List[str]] = Query(None),
+    max_symbols: Optional[int] = None,
+    favorites_only: Optional[bool] = None,
+    refresh_interval: Optional[int] = None,
+    ohlcv_limit: Optional[int] = None,
+    api_delay: Optional[float] = None,
+):
+    """
+    Configure the pre-fetching service.
+
+    Args:
+        enabled: Enable/disable pre-fetching
+        timeframes: List of timeframes to pre-fetch (e.g. ["1h", "4h", "1day"])
+        max_symbols: Maximum number of symbols to pre-fetch
+        favorites_only: Only pre-fetch favorite symbols
+        refresh_interval: Interval between pre-fetch runs (seconds)
+        ohlcv_limit: Number of OHLCV data points to fetch per request
+        api_delay: Delay between API calls for rate limiting (seconds)
+    """
+    from ..services.prefetch_service import prefetch_service
+
+    try:
+        # Build config dict from non-None parameters
+        config_updates = {}
+        if enabled is not None:
+            config_updates["enabled"] = enabled
+        if timeframes is not None:
+            config_updates["timeframes"] = timeframes
+        if max_symbols is not None:
+            config_updates["max_symbols"] = max_symbols
+        if favorites_only is not None:
+            config_updates["favorites_only"] = favorites_only
+        if refresh_interval is not None:
+            config_updates["refresh_interval"] = refresh_interval
+        if ohlcv_limit is not None:
+            config_updates["ohlcv_limit"] = ohlcv_limit
+        if api_delay is not None:
+            config_updates["api_delay"] = api_delay
+
+        if config_updates:
+            prefetch_service.configure(**config_updates)
+
+        return {
+            "status": "ok",
+            "message": "Pre-fetch configuration updated",
+            "updated": config_updates,
+            "config": prefetch_service.get_config(),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Prefetch configure failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@system_router.post("/prefetch/run", tags=["1. System"])
+async def run_prefetch_now(background_tasks: BackgroundTasks):
+    """
+    Trigger an immediate pre-fetch run.
+
+    The pre-fetch runs in the background and returns immediately.
+    """
+    from ..services.prefetch_service import prefetch_service
+
+    try:
+        # Run in background
+        background_tasks.add_task(prefetch_service._run_prefetch)
+
+        return {
+            "status": "ok",
+            "message": "Pre-fetch triggered (running in background)",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Prefetch run failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@system_router.post("/prefetch/symbol/{symbol}", tags=["1. System"])
+async def prefetch_single_symbol(
+    symbol: str,
+    timeframes: Optional[List[str]] = Query(None)
+):
+    """
+    Pre-fetch data for a single symbol.
+
+    Args:
+        symbol: Symbol to pre-fetch (e.g. "BTCUSD", "EUR/USD")
+        timeframes: Optional list of timeframes (default: configured timeframes)
+
+    Returns pre-fetch results for the symbol.
+    """
+    from ..services.prefetch_service import prefetch_service
+
+    try:
+        result = await prefetch_service.prefetch_symbol(symbol, timeframes)
+
+        return {
+            "status": "ok",
+            "result": result,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Prefetch symbol failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
 # Trading Strategy Endpoints
 # ============================================
 

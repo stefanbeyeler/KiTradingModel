@@ -892,6 +892,97 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Pre-Fetching Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Pre-Fetching für ML-Services</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="prefetch-status-badge" class="service-badge" style="background: rgba(158, 158, 158, 0.2); color: #bbb;">Unbekannt</span>
+                        <button class="btn btn-primary btn-sm" onclick="loadPrefetchStatus()">Aktualisieren</button>
+                    </div>
+                </div>
+
+                <!-- Prefetch Stats Bar -->
+                <div class="stats-bar" id="prefetch-stats" style="margin-top: 1rem;">
+                    <div class="stat-item">
+                        <div class="stat-value" id="prefetch-last-run">-</div>
+                        <div class="stat-label">Letzter Lauf</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="prefetch-total-runs">-</div>
+                        <div class="stat-label">Durchläufe</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="prefetch-symbols">-</div>
+                        <div class="stat-label">Symbole</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="prefetch-entries">-</div>
+                        <div class="stat-label">Cache-Einträge</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="prefetch-errors">-</div>
+                        <div class="stat-label">Fehler</div>
+                    </div>
+                </div>
+
+                <!-- Prefetch Configuration -->
+                <div style="padding: 1rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 1rem; color: #64c8ff;">Konfiguration</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn btn-success btn-sm" id="prefetch-start-btn" onclick="startPrefetch()">Starten</button>
+                                <button class="btn btn-warning btn-sm" id="prefetch-stop-btn" onclick="stopPrefetch()">Stoppen</button>
+                                <button class="btn btn-primary btn-sm" onclick="triggerPrefetch()">Jetzt ausführen</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Intervall (Sekunden)</label>
+                            <input type="number" class="form-input" id="prefetch-interval" value="300" min="60" max="3600">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max. Symbole</label>
+                            <input type="number" class="form-input" id="prefetch-max-symbols" value="50" min="1" max="200">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Timeframes</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-1h" checked><span>1h</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-4h" checked><span>4h</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-1day" checked><span>1day</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-15min"><span>15min</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-1week"><span>1week</span></label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Optionen</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                <label class="form-checkbox"><input type="checkbox" id="pf-favorites-only"><span>Nur Favoriten</span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn btn-primary" onclick="savePrefetchConfig()">Konfiguration speichern</button>
+                    </div>
+                </div>
+
+                <!-- Info Box -->
+                <div style="padding: 0 1rem 1rem 1rem;">
+                    <div style="background: rgba(100, 200, 255, 0.1); border: 1px solid rgba(100, 200, 255, 0.3); border-radius: 8px; padding: 1rem;">
+                        <div style="font-weight: 600; color: #64c8ff; margin-bottom: 0.5rem;">Optimiert für nachgelagerte ML-Services</div>
+                        <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem; color: #bbb;">
+                            <li><strong>NHITS:</strong> Benötigt H1, D1 für Price Forecasting</li>
+                            <li><strong>TCN:</strong> Benötigt M15-D1 für Pattern-Erkennung</li>
+                            <li><strong>HMM:</strong> Benötigt H1, H4, D1 für Regime-Detection</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- External Sources Tab -->
@@ -5164,6 +5255,148 @@
             return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`;
         }
 
+        // ============================================
+        // Pre-Fetching Functions
+        // ============================================
+
+        let prefetchData = null;
+
+        async function loadPrefetchStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/prefetch/status`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                prefetchData = await response.json();
+                updatePrefetchUI(prefetchData);
+            } catch (error) {
+                console.error('Error loading prefetch status:', error);
+                showToast(`Fehler beim Laden des Pre-Fetch-Status: ${error.message}`, 'error');
+            }
+        }
+
+        function updatePrefetchUI(data) {
+            const badge = document.getElementById('prefetch-status-badge');
+            const isRunning = data.running;
+
+            badge.textContent = isRunning ? 'Aktiv' : 'Gestoppt';
+            badge.style.background = isRunning ? 'rgba(76, 175, 80, 0.2)' : 'rgba(158, 158, 158, 0.2)';
+            badge.style.color = isRunning ? '#81c784' : '#bbb';
+
+            // Update buttons
+            document.getElementById('prefetch-start-btn').disabled = isRunning;
+            document.getElementById('prefetch-stop-btn').disabled = !isRunning;
+
+            // Update stats
+            const stats = data.statistics || {};
+            document.getElementById('prefetch-last-run').textContent =
+                stats.last_run ? formatDateTime(stats.last_run) : 'Nie';
+            document.getElementById('prefetch-total-runs').textContent = stats.total_runs || 0;
+            document.getElementById('prefetch-symbols').textContent = stats.symbols_fetched || 0;
+            document.getElementById('prefetch-entries').textContent = stats.cache_entries_created || 0;
+            document.getElementById('prefetch-errors').textContent = stats.errors || 0;
+
+            // Update config fields
+            const config = data.config || {};
+            document.getElementById('prefetch-interval').value = config.refresh_interval || 300;
+            document.getElementById('prefetch-max-symbols').value = config.max_symbols || 50;
+            document.getElementById('pf-favorites-only').checked = config.favorites_only || false;
+
+            // Update timeframe checkboxes
+            const timeframes = config.timeframes || ['1h', '4h', '1day'];
+            document.getElementById('pf-tf-1h').checked = timeframes.includes('1h');
+            document.getElementById('pf-tf-4h').checked = timeframes.includes('4h');
+            document.getElementById('pf-tf-1day').checked = timeframes.includes('1day');
+            document.getElementById('pf-tf-15min').checked = timeframes.includes('15min');
+            document.getElementById('pf-tf-1week').checked = timeframes.includes('1week');
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            return date.toLocaleString('de-CH', {
+                hour: '2-digit',
+                minute: '2-digit',
+                day: '2-digit',
+                month: '2-digit'
+            });
+        }
+
+        async function startPrefetch() {
+            try {
+                const response = await fetch(`${API_BASE}/prefetch/start`, { method: 'POST' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                showToast('Pre-Fetch Service gestartet', 'success');
+                setTimeout(loadPrefetchStatus, 500);
+            } catch (error) {
+                console.error('Error starting prefetch:', error);
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
+        async function stopPrefetch() {
+            try {
+                const response = await fetch(`${API_BASE}/prefetch/stop`, { method: 'POST' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                showToast('Pre-Fetch Service gestoppt', 'success');
+                setTimeout(loadPrefetchStatus, 500);
+            } catch (error) {
+                console.error('Error stopping prefetch:', error);
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
+        async function triggerPrefetch() {
+            try {
+                const response = await fetch(`${API_BASE}/prefetch/run`, { method: 'POST' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                showToast('Pre-Fetch gestartet (läuft im Hintergrund)', 'success');
+                // Refresh status after a few seconds
+                setTimeout(loadPrefetchStatus, 3000);
+            } catch (error) {
+                console.error('Error triggering prefetch:', error);
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
+        async function savePrefetchConfig() {
+            try {
+                // Build timeframes array
+                const timeframes = [];
+                if (document.getElementById('pf-tf-1h').checked) timeframes.push('1h');
+                if (document.getElementById('pf-tf-4h').checked) timeframes.push('4h');
+                if (document.getElementById('pf-tf-1day').checked) timeframes.push('1day');
+                if (document.getElementById('pf-tf-15min').checked) timeframes.push('15min');
+                if (document.getElementById('pf-tf-1week').checked) timeframes.push('1week');
+
+                const interval = parseInt(document.getElementById('prefetch-interval').value) || 300;
+                const maxSymbols = parseInt(document.getElementById('prefetch-max-symbols').value) || 50;
+                const favoritesOnly = document.getElementById('pf-favorites-only').checked;
+
+                // Build query params
+                const params = new URLSearchParams();
+                params.append('refresh_interval', interval);
+                params.append('max_symbols', maxSymbols);
+                params.append('favorites_only', favoritesOnly);
+                timeframes.forEach(tf => params.append('timeframes', tf));
+
+                const response = await fetch(`${API_BASE}/prefetch/configure?${params.toString()}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                showToast('Pre-Fetch Konfiguration gespeichert', 'success');
+                loadPrefetchStatus();
+            } catch (error) {
+                console.error('Error saving prefetch config:', error);
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
         // Initialize
         loadSymbols();
         loadStrategies();
@@ -5178,13 +5411,16 @@
         setTimeout(populateExternalSymbols, 1200);
         // Check external sources availability
         setTimeout(checkExternalSourcesAvailability, 1500);
-        // Load cache overview when tab is visible
+        // Load cache overview and prefetch status when tab is visible
         setTimeout(() => {
             // Check if cache tab is active on load
             const cacheTab = document.querySelector('[data-tab="cache"]');
             if (cacheTab) {
                 cacheTab.addEventListener('click', () => {
-                    setTimeout(loadCacheOverview, 100);
+                    setTimeout(() => {
+                        loadCacheOverview();
+                        loadPrefetchStatus();
+                    }, 100);
                 });
             }
         }, 500);

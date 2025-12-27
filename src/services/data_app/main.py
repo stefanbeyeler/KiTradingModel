@@ -62,6 +62,7 @@ except ImportError:
 sync_service = None
 rag_service = None
 _cache_cleanup_task = None
+_prefetch_task = None
 
 # Configure logging
 logger.remove()
@@ -250,7 +251,7 @@ async def _periodic_cache_cleanup():
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup."""
-    global sync_service, rag_service, _cache_cleanup_task
+    global sync_service, rag_service, _cache_cleanup_task, _prefetch_task
 
     logger.info("Starting Data Service...")
     logger.info(f"Version: {VERSION}")
@@ -295,6 +296,38 @@ async def startup_event():
 
     # Note: Pattern History Auto-Scan has been moved to Candlestick Service (Port 3006)
 
+    # Initialize Pre-Fetching Service for cache warming
+    try:
+        from src.services.prefetch_service import prefetch_service
+        from src.services.cache_service import cache_service
+
+        # Connect cache service first
+        await cache_service.connect()
+        logger.info("Cache service connected")
+
+        # Configure pre-fetch based on environment
+        prefetch_enabled = os.getenv("PREFETCH_ENABLED", "true").lower() == "true"
+        prefetch_interval = int(os.getenv("PREFETCH_INTERVAL", "300"))  # 5 minutes default
+        prefetch_favorites_only = os.getenv("PREFETCH_FAVORITES_ONLY", "false").lower() == "true"
+
+        prefetch_service.configure(
+            enabled=prefetch_enabled,
+            refresh_interval=prefetch_interval,
+            favorites_only=prefetch_favorites_only,
+        )
+
+        if prefetch_enabled:
+            await prefetch_service.start()
+            logger.info(
+                f"Pre-fetch service started "
+                f"(interval: {prefetch_interval}s, favorites_only: {prefetch_favorites_only})"
+            )
+        else:
+            logger.info("Pre-fetch service disabled via PREFETCH_ENABLED=false")
+
+    except Exception as e:
+        logger.error(f"Failed to initialize pre-fetch service: {e}")
+
     logger.info("Data Service started successfully")
 
 
@@ -321,6 +354,14 @@ async def shutdown_event():
 
     # Note: Pattern History Auto-Scan has been moved to Candlestick Service (Port 3006)
 
+    # Stop pre-fetch service
+    try:
+        from src.services.prefetch_service import prefetch_service
+        await prefetch_service.stop()
+        logger.info("Pre-fetch service stopped")
+    except Exception as e:
+        logger.warning(f"Error stopping pre-fetch service: {e}")
+
     logger.info("Data Service stopped")
 
 
@@ -331,12 +372,21 @@ async def health_check():
     if sync_service:
         sync_status = "running" if getattr(sync_service, '_running', False) else "stopped"
 
+    # Get pre-fetch status
+    prefetch_status = "unknown"
+    try:
+        from src.services.prefetch_service import prefetch_service
+        prefetch_status = "running" if prefetch_service._running else "stopped"
+    except Exception:
+        pass
+
     return {
         "service": "data",
         "status": "healthy",
         "version": VERSION,
         "easyinsight_api": settings.easyinsight_api_url,
-        "sync_service_status": sync_status
+        "sync_service_status": sync_status,
+        "prefetch_service_status": prefetch_status
     }
 
 
