@@ -3702,26 +3702,14 @@
                     };
                     const timeframe = timeframeMap[interval] || 'H1';
 
-                    // Calculate days based on limit and timeframe
-                    let days = 7;
-                    if (timeframe === 'M15') days = Math.ceil(parseInt(limit) / 96) + 1;
-                    else if (timeframe === 'H1') days = Math.ceil(parseInt(limit) / 24) + 1;
-                    else if (timeframe === 'D1') days = Math.ceil(parseInt(limit) / 1) + 1;
-                    days = Math.min(days, 90); // Max 90 days
-
-                    // Fetch from EasyInsight via training-data endpoint (historical data)
-                    const useCache = bypassCache ? 'false' : 'true';
-                    const res = await fetch(`${API_BASE}/training-data/${rawSymbol}?timeframe=${timeframe}&days=${days}&use_cache=${useCache}`);
+                    // Fetch from EasyInsight indicators endpoint (includes all indicators)
+                    const cacheParam = bypassCache ? '&bypass_cache=true' : '';
+                    const res = await fetch(`${API_BASE}/easyinsight/indicators/${rawSymbol}?limit=${limit}${cacheParam}`);
                     if (!res.ok) throw new Error('Fehler beim Laden der EasyInsight-Daten');
-                    const trainingData = await res.json();
+                    const easyInsightData = await res.json();
 
                     // Convert EasyInsight response to explorer format (pass timeframe for OHLC mapping)
-                    data = convertEasyInsightHistoricalData(trainingData, indicators, timeframe);
-
-                    // Limit to requested amount
-                    if (data.length > parseInt(limit)) {
-                        data = data.slice(0, parseInt(limit));
-                    }
+                    data = convertEasyInsightHistoricalData({ data: easyInsightData.data, source: 'easyinsight' }, indicators, timeframe);
 
                 } else if (source === 'twelvedata') {
                     // Fetch OHLCV data (bypassCache parameter for future cache implementation)
