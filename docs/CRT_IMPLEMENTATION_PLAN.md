@@ -1,11 +1,35 @@
 # Candle Range Theory (CRT) - Implementierungsplan
 
-## Übersicht
+## Status: IMPLEMENTIERT
 
-Dieses Dokument beschreibt die Implementierung der Candle Range Theory (CRT) als neues Modul im KiTradingModel.
+Dieses Dokument beschreibt die Implementierung der Candle Range Theory (CRT) als Modul im TCN-Pattern Service.
 
-**Geschätzter Aufwand:** ~16 Stunden
+**Status:** Implementiert am 27.12.2024
 **Erwarteter Edge:** +0.3-0.8% pro Trade (bei korrekter Anwendung)
+
+### Implementierte Dateien
+
+| Datei | Beschreibung |
+|-------|--------------|
+| `src/utils/session_utils.py` | EST/UTC Konvertierung, H4 Boundaries |
+| `src/services/tcn_app/services/crt/session_manager.py` | Session-Zeit Management |
+| `src/services/tcn_app/services/crt/range_tracker.py` | CRT Range State Machine |
+| `src/services/tcn_app/services/crt/purge_detector.py` | Purge/Re-Entry Detection |
+| `src/services/tcn_app/services/crt/crt_signal_service.py` | Signal-Generierung |
+| `src/services/tcn_app/routers/crt_router.py` | API Endpoints |
+
+### API Endpoints (TCN Service - Port 3003)
+
+| Endpoint | Methode | Beschreibung |
+|----------|---------|--------------|
+| `/api/v1/crt/session` | GET | Session-Informationen |
+| `/api/v1/crt/status/{symbol}` | GET | CRT Range Status |
+| `/api/v1/crt/signal/{symbol}` | GET | Aktives Trading-Signal |
+| `/api/v1/crt/scan` | GET | Alle Signale scannen |
+| `/api/v1/crt/analyze` | POST | Vollständige Analyse |
+| `/api/v1/crt/ranges` | GET | Alle aktiven Ranges |
+| `/api/v1/crt/range/create` | POST | Range manuell erstellen |
+| `/api/v1/crt/price/update` | POST | Preis-Update für State Machine |
 
 ---
 

@@ -19,7 +19,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from .routers import detection_router, system_router, history_router
+from .routers import detection_router, system_router, history_router, crt_router
 from .services.pattern_detection_service import pattern_detection_service
 from .services.tcn_pattern_history_service import tcn_pattern_history_service
 
@@ -104,11 +104,20 @@ app = FastAPI(
     ### Trend Patterns
     - Channel Up / Channel Down
 
+    ## CRT (Candle Range Theory)
+
+    New! ICT/SMC-style Candle Range Theory detection:
+    - Session-based H4 range tracking (1/5/9 AM EST)
+    - Liquidity purge detection
+    - Re-entry signal generation
+    - Multi-service confirmation (HMM, NHITS, TCN)
+
     ## Usage
 
     1. Use `/api/v1/detect` to analyze a specific symbol
     2. Use `/api/v1/scan` to scan multiple symbols
-    3. Train custom models with `/api/v1/train`
+    3. Use `/api/v1/crt/status/{symbol}` for CRT range status
+    4. Use `/api/v1/crt/signal/{symbol}` for CRT trading signals
     """,
     version=VERSION,
     root_path=ROOT_PATH,
@@ -129,6 +138,7 @@ app.add_middleware(
 app.include_router(system_router, prefix="/api/v1", tags=["1. System & Monitoring"])
 app.include_router(detection_router, prefix="/api/v1", tags=["2. Pattern Detection"])
 app.include_router(history_router, prefix="/api/v1", tags=["3. Pattern History"])
+app.include_router(crt_router, prefix="/api/v1", tags=["4. CRT (Candle Range Theory)"])
 
 
 @app.get("/")
@@ -148,7 +158,12 @@ async def root():
             "history_by_symbol": "/api/v1/history/{symbol}",
             "history_statistics": "/api/v1/history/statistics",
             "model": "/api/v1/model",
-            "model_reload": "/api/v1/model/reload"
+            "model_reload": "/api/v1/model/reload",
+            "crt_status": "/api/v1/crt/status/{symbol}",
+            "crt_signal": "/api/v1/crt/signal/{symbol}",
+            "crt_session": "/api/v1/crt/session",
+            "crt_scan": "/api/v1/crt/scan",
+            "crt_ranges": "/api/v1/crt/ranges"
         }
     }
 
