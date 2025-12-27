@@ -688,11 +688,12 @@
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab-btn active" data-tab="symbols">Symbole</button>
+            <button class="tab-btn" data-tab="indicators">Indikatoren</button>
             <button class="tab-btn" data-tab="explorer">Daten-Explorer</button>
-            <button class="tab-btn" data-tab="cache">Cache</button>
             <button class="tab-btn" data-tab="strategies">Trading-Strategien</button>
             <button class="tab-btn" data-tab="external">External Sources</button>
             <button class="tab-btn" data-tab="mt5logs">MT5 Logs</button>
+            <button class="tab-btn" data-tab="cache">Cache</button>
             <button class="tab-btn" data-tab="export">Export / Import</button>
         </div>
 
@@ -797,6 +798,96 @@
                             <tr><td colspan="9" class="loading"><div class="spinner"></div><br>Lade Symbole...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicators Tab -->
+        <div id="indicators-tab" class="tab-content">
+            <div class="stats-bar" id="indicator-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="total-indicators">-</div>
+                    <div class="stat-label">Gesamt</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="enabled-indicators">-</div>
+                    <div class="stat-label">Aktiv</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="twelvedata-indicators">-</div>
+                    <div class="stat-label">TwelveData</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="easyinsight-indicators">-</div>
+                    <div class="stat-label">EasyInsight</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Indikator-Register</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-primary" onclick="loadIndicators()">Aktualisieren</button>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <input type="text" class="search-box" id="indicator-search" placeholder="Indikator suchen..." oninput="filterIndicators()">
+                    <select class="filter-select" id="indicator-category-filter" onchange="filterIndicators()">
+                        <option value="">Alle Kategorien</option>
+                        <option value="trend">Trend / Moving Averages</option>
+                        <option value="momentum">Momentum</option>
+                        <option value="volatility">Volatilität</option>
+                        <option value="volume">Volumen</option>
+                        <option value="trend_filter">Trend-Filter</option>
+                        <option value="price_transform">Price Transform</option>
+                        <option value="ml_features">ML Features</option>
+                        <option value="pattern">Pattern</option>
+                    </select>
+                    <select class="filter-select" id="indicator-source-filter" onchange="filterIndicators()">
+                        <option value="">Alle Quellen</option>
+                        <option value="twelvedata">TwelveData</option>
+                        <option value="easyinsight">EasyInsight</option>
+                    </select>
+                    <select class="filter-select" id="indicator-status-filter" onchange="filterIndicators()">
+                        <option value="">Alle Status</option>
+                        <option value="enabled">Aktiv</option>
+                        <option value="disabled">Inaktiv</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm" onclick="clearIndicatorFilters()" title="Filter zurücksetzen">✕ Filter</button>
+                </div>
+
+                <div class="table-container" id="indicators-table-container" style="max-height: calc(100vh - 400px); min-height: 300px;">
+                    <table id="indicators-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">Status</th>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Kategorie</th>
+                                <th>TwelveData</th>
+                                <th>EasyInsight</th>
+                                <th>Beschreibung</th>
+                                <th style="width: 80px;">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="indicators-body">
+                            <tr><td colspan="8" class="loading"><div class="spinner"></div><br>Lade Indikatoren...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicator Detail Modal -->
+        <div class="modal-overlay" id="indicator-detail-modal">
+            <div class="modal" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="indicator-detail-title">Indikator-Details</h3>
+                    <button class="modal-close" onclick="closeIndicatorDetailModal()">&times;</button>
+                </div>
+                <div id="indicator-detail-content">
+                    <!-- Content will be populated dynamically -->
                 </div>
             </div>
         </div>
@@ -1982,6 +2073,7 @@
         const API_BASE = '/data/api/v1';
         let allSymbols = [];
         let allStrategies = [];
+        let allIndicators = [];
 
         // Subcategory mapping per category (using backend enum values)
         const SUBCATEGORIES = {
@@ -2107,6 +2199,294 @@
             updateSubcategoryFilter();
             filterSymbols();
         }
+
+        // ==================== INDICATORS ====================
+
+        // Indicator category labels
+        const INDICATOR_CATEGORY_LABELS = {
+            'trend': 'Trend / Moving Averages',
+            'momentum': 'Momentum',
+            'volatility': 'Volatilität',
+            'volume': 'Volumen',
+            'trend_filter': 'Trend-Filter',
+            'price_transform': 'Price Transform',
+            'ml_features': 'ML Features',
+            'pattern': 'Pattern'
+        };
+
+        // Load indicators
+        async function loadIndicators() {
+            try {
+                const response = await fetch(`${API_BASE}/indicators`);
+                const data = await response.json();
+                allIndicators = data.indicators || [];
+                updateIndicatorStats();
+                filterIndicators();
+            } catch (error) {
+                console.error('Error loading indicators:', error);
+                document.getElementById('indicators-body').innerHTML =
+                    '<tr><td colspan="8" class="empty-state">Fehler beim Laden der Indikatoren</td></tr>';
+            }
+        }
+
+        // Update indicator statistics
+        async function updateIndicatorStats() {
+            try {
+                const response = await fetch(`${API_BASE}/indicators/stats`);
+                const stats = await response.json();
+                document.getElementById('total-indicators').textContent = stats.total;
+                document.getElementById('enabled-indicators').textContent = stats.enabled;
+                document.getElementById('twelvedata-indicators').textContent = stats.twelvedata_supported;
+                document.getElementById('easyinsight-indicators').textContent = stats.easyinsight_supported;
+            } catch (error) {
+                console.error('Error loading indicator stats:', error);
+            }
+        }
+
+        // Filter indicators
+        function filterIndicators() {
+            const search = document.getElementById('indicator-search').value.toLowerCase();
+            const category = document.getElementById('indicator-category-filter').value;
+            const source = document.getElementById('indicator-source-filter').value;
+            const status = document.getElementById('indicator-status-filter').value;
+
+            let filtered = allIndicators.filter(ind => {
+                // Search filter
+                if (search && !ind.id.toLowerCase().includes(search) &&
+                    !ind.name.toLowerCase().includes(search) &&
+                    !ind.description.toLowerCase().includes(search)) {
+                    return false;
+                }
+                // Category filter
+                if (category && ind.category !== category) {
+                    return false;
+                }
+                // Source filter
+                if (source === 'twelvedata' && !ind.twelvedata_name) {
+                    return false;
+                }
+                if (source === 'easyinsight' && !ind.easyinsight_name) {
+                    return false;
+                }
+                // Status filter
+                if (status === 'enabled' && !ind.enabled) {
+                    return false;
+                }
+                if (status === 'disabled' && ind.enabled) {
+                    return false;
+                }
+                return true;
+            });
+
+            renderIndicators(filtered);
+        }
+
+        // Render indicators table
+        function renderIndicators(indicators) {
+            const tbody = document.getElementById('indicators-body');
+
+            if (indicators.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Keine Indikatoren gefunden</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = indicators.map(ind => `
+                <tr>
+                    <td>
+                        <span class="badge ${ind.enabled ? 'badge-active' : 'badge-inactive'}"
+                              onclick="toggleIndicator('${ind.id}', ${!ind.enabled})"
+                              style="cursor: pointer;" title="Klicken zum ${ind.enabled ? 'Deaktivieren' : 'Aktivieren'}">
+                            ${ind.enabled ? 'Aktiv' : 'Inaktiv'}
+                        </span>
+                    </td>
+                    <td><code>${ind.id}</code></td>
+                    <td><strong>${ind.name}</strong></td>
+                    <td>
+                        <span class="badge badge-${getCategoryBadgeClass(ind.category)}">
+                            ${INDICATOR_CATEGORY_LABELS[ind.category] || ind.category}
+                        </span>
+                    </td>
+                    <td>
+                        ${ind.twelvedata_name ?
+                            `<span class="badge" style="background: rgba(33, 150, 243, 0.2); color: #64b5f6;">${ind.twelvedata_name}</span>` :
+                            '<span style="color: #666;">-</span>'}
+                    </td>
+                    <td>
+                        ${ind.easyinsight_name ?
+                            `<span class="badge" style="background: rgba(76, 175, 80, 0.2); color: #81c784;">${ind.easyinsight_name}</span>` :
+                            '<span style="color: #666;">-</span>'}
+                    </td>
+                    <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${ind.description}">
+                        ${ind.description}
+                    </td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="showIndicatorDetails('${ind.id}')">
+                            Details
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Get badge class for category
+        function getCategoryBadgeClass(category) {
+            const classes = {
+                'trend': 'forex',
+                'momentum': 'crypto',
+                'volatility': 'index',
+                'volume': 'commodity',
+                'trend_filter': 'stock',
+                'price_transform': 'etf',
+                'ml_features': 'active',
+                'pattern': 'other'
+            };
+            return classes[category] || 'other';
+        }
+
+        // Toggle indicator enabled/disabled
+        async function toggleIndicator(indicatorId, enabled) {
+            try {
+                const response = await fetch(`${API_BASE}/indicators/${indicatorId}/toggle?enabled=${enabled}`, {
+                    method: 'PUT'
+                });
+                if (response.ok) {
+                    showToast(`Indikator ${enabled ? 'aktiviert' : 'deaktiviert'}`, 'success');
+                    loadIndicators();
+                } else {
+                    throw new Error('Toggle failed');
+                }
+            } catch (error) {
+                console.error('Error toggling indicator:', error);
+                showToast('Fehler beim Ändern des Status', 'error');
+            }
+        }
+
+        // Show indicator details modal
+        async function showIndicatorDetails(indicatorId) {
+            try {
+                const response = await fetch(`${API_BASE}/indicators/${indicatorId}`);
+                const data = await response.json();
+                const ind = data.indicator;
+                const catInfo = data.category_info;
+
+                document.getElementById('indicator-detail-title').textContent = ind.name;
+                document.getElementById('indicator-detail-content').innerHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <div class="form-label">ID</div>
+                            <code style="font-size: 1rem;">${ind.id}</code>
+                        </div>
+                        <div>
+                            <div class="form-label">Status</div>
+                            <span class="badge ${ind.enabled ? 'badge-active' : 'badge-inactive'}">
+                                ${ind.enabled ? 'Aktiv' : 'Inaktiv'}
+                            </span>
+                        </div>
+                        <div>
+                            <div class="form-label">Kategorie</div>
+                            <span class="badge badge-${getCategoryBadgeClass(ind.category)}">
+                                ${catInfo.name}
+                            </span>
+                        </div>
+                        <div>
+                            <div class="form-label">Kategorie-Beschreibung</div>
+                            <span style="color: #a0a0a0;">${catInfo.description || '-'}</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="background: rgba(33, 150, 243, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(33, 150, 243, 0.3);">
+                            <div style="color: #64b5f6; font-weight: 600; margin-bottom: 0.5rem;">TwelveData API</div>
+                            ${ind.twelvedata_name ?
+                                `<code style="font-size: 1rem;">${ind.twelvedata_name}</code>` :
+                                '<span style="color: #888;">Nicht unterstützt</span>'}
+                        </div>
+                        <div style="background: rgba(76, 175, 80, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(76, 175, 80, 0.3);">
+                            <div style="color: #81c784; font-weight: 600; margin-bottom: 0.5rem;">EasyInsight API</div>
+                            ${ind.easyinsight_name ?
+                                `<code style="font-size: 1rem;">${ind.easyinsight_name}</code>` :
+                                '<span style="color: #888;">Nicht unterstützt</span>'}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label">Beschreibung</div>
+                        <p style="color: #e8e8e8; line-height: 1.5;">${ind.description}</p>
+                    </div>
+
+                    ${ind.calculation ? `
+                        <div class="form-group">
+                            <div class="form-label">Berechnung</div>
+                            <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 6px; font-family: monospace; color: #64c8ff;">
+                                ${ind.calculation}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <div class="form-label" style="color: #81c784;">Stärken</div>
+                            <ul style="margin: 0; padding-left: 1.2rem; color: #a0a0a0;">
+                                ${ind.strengths.length > 0 ?
+                                    ind.strengths.map(s => `<li style="margin-bottom: 0.25rem;">${s}</li>`).join('') :
+                                    '<li>Keine angegeben</li>'}
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="form-label" style="color: #e57373;">Schwächen</div>
+                            <ul style="margin: 0; padding-left: 1.2rem; color: #a0a0a0;">
+                                ${ind.weaknesses.length > 0 ?
+                                    ind.weaknesses.map(w => `<li style="margin-bottom: 0.25rem;">${w}</li>`).join('') :
+                                    '<li>Keine angegeben</li>'}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label" style="color: #64c8ff;">Anwendungsgebiete</div>
+                        <ul style="margin: 0; padding-left: 1.2rem; color: #a0a0a0;">
+                            ${ind.use_cases.length > 0 ?
+                                ind.use_cases.map(u => `<li style="margin-bottom: 0.25rem;">${u}</li>`).join('') :
+                                '<li>Keine angegeben</li>'}
+                        </ul>
+                    </div>
+
+                    ${Object.keys(ind.default_params).length > 0 ? `
+                        <div class="form-group">
+                            <div class="form-label">Standard-Parameter</div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                ${Object.entries(ind.default_params).map(([key, value]) => `
+                                    <span class="badge" style="background: rgba(100, 200, 255, 0.1); color: #64c8ff;">
+                                        ${key}: ${value}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+
+                document.getElementById('indicator-detail-modal').classList.add('active');
+            } catch (error) {
+                console.error('Error loading indicator details:', error);
+                showToast('Fehler beim Laden der Details', 'error');
+            }
+        }
+
+        // Close indicator detail modal
+        function closeIndicatorDetailModal() {
+            document.getElementById('indicator-detail-modal').classList.remove('active');
+        }
+
+        // Clear indicator filters
+        function clearIndicatorFilters() {
+            document.getElementById('indicator-search').value = '';
+            document.getElementById('indicator-category-filter').value = '';
+            document.getElementById('indicator-source-filter').value = '';
+            document.getElementById('indicator-status-filter').value = '';
+            filterIndicators();
+        }
+
+        // ==================== END INDICATORS ====================
 
         // Tab switching
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -5400,6 +5780,7 @@
         // Initialize
         loadSymbols();
         loadStrategies();
+        loadIndicators();
         loadExports();
 
         // Populate explorer symbols after loading and init indicator options for TwelveData

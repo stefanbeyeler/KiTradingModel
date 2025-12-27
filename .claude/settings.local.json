@@ -205,7 +205,9 @@
       "Bash(__NEW_LINE__ echo \"=== Testing 1h \\(H1\\) ===\")",
       "Bash(__NEW_LINE__ echo \"\")",
       "Bash(# Prüfe TwelveData API Status und Datenformat echo \"\"=== TwelveData API Diagnose ===\"\" curl -s \"\"http://10.1.19.101:3001/api/v1/twelvedata/time_series/EUR/USD?interval=1h&outputsize=3\"\" | python3 -m json.tool)",
-      "Bash(# Prüfe TwelveData mit korrektem Symbol-Format \\(mit Slash\\) echo \"\"=== TwelveData API mit EUR/USD ===\"\" curl -s \"\"http://10.1.19.101:3001/api/v1/twelvedata/time_series/EUR%2FUSD?interval=1h&outputsize=3\"\" echo \"\"\"\" echo \"\"=== EasyInsight API Status ===\"\" curl -s \"\"http://10.1.19.101:3001/api/v1/easyinsight/status\"\")"
+      "Bash(# Prüfe TwelveData mit korrektem Symbol-Format \\(mit Slash\\) echo \"\"=== TwelveData API mit EUR/USD ===\"\" curl -s \"\"http://10.1.19.101:3001/api/v1/twelvedata/time_series/EUR%2FUSD?interval=1h&outputsize=3\"\" echo \"\"\"\" echo \"\"=== EasyInsight API Status ===\"\" curl -s \"\"http://10.1.19.101:3001/api/v1/easyinsight/status\"\")",
+      "Bash(/e/KiTradingModel/venv/Scripts/python.exe:*)",
+      "Bash(e:/KiTradingModel/venv/Scripts/python.exe:*)"
     ],
     "deny": [],
     "ask": []

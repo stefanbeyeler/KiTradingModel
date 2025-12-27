@@ -37,6 +37,7 @@ from src.api.routes import (
     config_router,
     yfinance_router,
     external_sources_router,
+    indicators_router,
     router as general_router
 )
 # Note: patterns_router has been moved to Candlestick Service (Port 3006)
@@ -157,7 +158,18 @@ openapi_tags = [
 - **Institutional Flow**: COT Reports, ETF Flows, Whale Tracking"""
     },
     {
-        "name": "11. Testing",
+        "name": "11. Technical Indicators",
+        "description": """Technische Indikatoren Registry mit API-Mappings.
+
+**Funktionen:**
+- Vollständige Liste aller verfügbaren Indikatoren
+- TwelveData und EasyInsight API-Bezeichnungen
+- Kategorisierung: Trend, Momentum, Volatilität, Volumen, etc.
+- Stärken, Schwächen und Anwendungsgebiete je Indikator
+- Aktivieren/Deaktivieren von Indikatoren"""
+    },
+    {
+        "name": "12. Testing",
         "description": """Test Suite Execution für automatisierte Qualitätssicherung.
 
 **Test-Kategorien:**
@@ -226,7 +238,8 @@ app.include_router(yfinance_router, prefix="/api/v1", tags=["7. Yahoo Finance"])
 app.include_router(sync_router, prefix="/api/v1", tags=["8. RAG Sync"])
 app.include_router(query_log_router, prefix="/api/v1", tags=["9. Query Logs & Analytics"])
 app.include_router(external_sources_router, prefix="/api/v1", tags=["10. External Data Sources"])
-app.include_router(testing_router, prefix="/api/v1/testing", tags=["11. Testing"])
+app.include_router(indicators_router, prefix="/api/v1", tags=["11. Technical Indicators"])
+app.include_router(testing_router, prefix="/api/v1/testing", tags=["12. Testing"])
 
 
 async def _periodic_cache_cleanup():

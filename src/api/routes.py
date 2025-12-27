@@ -21,6 +21,20 @@ from ..config.timeframes import (
     calculate_limit_for_days,
     is_valid_timeframe,
 )
+from ..config.indicators import (
+    IndicatorCategory,
+    IndicatorConfig,
+    INDICATORS_REGISTRY,
+    CATEGORY_DESCRIPTIONS,
+    get_indicator,
+    get_all_indicators,
+    get_enabled_indicators,
+    get_indicators_by_category,
+    get_twelvedata_indicators,
+    get_easyinsight_indicators,
+    search_indicators,
+    get_indicator_stats,
+)
 from ..version import get_version_info, VERSION, RELEASE_DATE
 from ..models.trading_data import (
     AnalysisRequest,
@@ -97,6 +111,7 @@ patterns_router = APIRouter()  # Candlestick Pattern Detection
 yfinance_router = APIRouter()  # Yahoo Finance API
 external_sources_router = APIRouter()  # External Data Sources (Economic, Sentiment, etc.)
 backup_router = APIRouter()  # Backup & Restore
+indicators_router = APIRouter()  # Technical Indicators Registry
 
 # Service instances (created only if available)
 analysis_service = AnalysisService() if _analysis_available else None
@@ -6819,6 +6834,240 @@ async def clear_predictions():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== Indicators Router (Technical Indicators Registry) ====================
+
+
+@indicators_router.get("/indicators")
+async def list_indicators(
+    category: Optional[str] = Query(None, description="Filter by category (trend, momentum, volatility, volume, trend_filter, price_transform, ml_features, pattern)"),
+    enabled_only: bool = Query(False, description="Only show enabled indicators"),
+    search: Optional[str] = Query(None, description="Search by name, id, or description"),
+    source: Optional[str] = Query(None, description="Filter by data source (twelvedata, easyinsight)")
+):
+    """
+    List all registered technical indicators.
+
+    Returns comprehensive indicator registry with filtering options.
+    Each indicator includes TwelveData/EasyInsight mappings, descriptions,
+    strengths, weaknesses, and use cases.
+    """
+    try:
+        # Start with all indicators
+        if enabled_only:
+            indicators = get_enabled_indicators()
+        else:
+            indicators = get_all_indicators()
+
+        # Filter by category
+        if category:
+            try:
+                cat_enum = IndicatorCategory(category.lower())
+                indicators = [ind for ind in indicators if ind.category == cat_enum]
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid category: {category}. Valid: {[c.value for c in IndicatorCategory]}"
+                )
+
+        # Filter by source
+        if source:
+            source_lower = source.lower()
+            if source_lower == "twelvedata":
+                indicators = [ind for ind in indicators if ind.twelvedata_name]
+            elif source_lower == "easyinsight":
+                indicators = [ind for ind in indicators if ind.easyinsight_name]
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid source: {source}. Valid: twelvedata, easyinsight"
+                )
+
+        # Search filter
+        if search:
+            search_results = search_indicators(search)
+            search_ids = {ind.id for ind in search_results}
+            indicators = [ind for ind in indicators if ind.id in search_ids]
+
+        return {
+            "total": len(indicators),
+            "indicators": [ind.model_dump() for ind in indicators]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing indicators: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@indicators_router.get("/indicators/stats")
+async def get_indicators_statistics():
+    """
+    Get statistics about registered indicators.
+
+    Returns counts by category, source availability, and enabled/disabled status.
+    """
+    try:
+        stats = get_indicator_stats()
+        return {
+            "total": stats["total"],
+            "enabled": stats["enabled"],
+            "disabled": stats["disabled"],
+            "twelvedata_supported": stats["twelvedata_supported"],
+            "easyinsight_supported": stats["easyinsight_supported"],
+            "by_category": stats["by_category"],
+            "categories": [
+                {
+                    "id": cat.value,
+                    "name": cat.name,
+                    "description": CATEGORY_DESCRIPTIONS.get(cat, ""),
+                    "count": stats["by_category"].get(cat.value, 0)
+                }
+                for cat in IndicatorCategory
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error getting indicator stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@indicators_router.get("/indicators/categories")
+async def list_categories():
+    """
+    List all indicator categories with descriptions.
+    """
+    return {
+        "categories": [
+            {
+                "id": cat.value,
+                "name": cat.name.replace("_", " ").title(),
+                "description": CATEGORY_DESCRIPTIONS.get(cat, ""),
+                "indicator_count": len(get_indicators_by_category(cat))
+            }
+            for cat in IndicatorCategory
+        ]
+    }
+
+
+@indicators_router.get("/indicators/{indicator_id}")
+async def get_indicator_details(indicator_id: str):
+    """
+    Get detailed information about a specific indicator.
+
+    Returns full documentation including calculation, strengths,
+    weaknesses, use cases, and default parameters.
+    """
+    indicator = get_indicator(indicator_id)
+    if not indicator:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Indicator not found: {indicator_id}"
+        )
+
+    return {
+        "indicator": indicator.model_dump(),
+        "category_info": {
+            "id": indicator.category.value,
+            "name": indicator.category.name.replace("_", " ").title(),
+            "description": CATEGORY_DESCRIPTIONS.get(indicator.category, "")
+        }
+    }
+
+
+@indicators_router.put("/indicators/{indicator_id}/toggle")
+async def toggle_indicator(indicator_id: str, enabled: bool):
+    """
+    Enable or disable an indicator.
+
+    Disabled indicators won't be used in automatic analysis but
+    remain in the registry for reference.
+    """
+    indicator = get_indicator(indicator_id)
+    if not indicator:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Indicator not found: {indicator_id}"
+        )
+
+    # Update the indicator in the registry
+    INDICATORS_REGISTRY[indicator_id].enabled = enabled
+
+    return {
+        "success": True,
+        "indicator_id": indicator_id,
+        "enabled": enabled,
+        "message": f"Indicator {indicator.name} {'enabled' if enabled else 'disabled'}"
+    }
+
+
+@indicators_router.get("/indicators/by-category/{category}")
+async def get_indicators_by_category_endpoint(category: str):
+    """
+    Get all indicators for a specific category.
+    """
+    try:
+        cat_enum = IndicatorCategory(category.lower())
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid category: {category}. Valid: {[c.value for c in IndicatorCategory]}"
+        )
+
+    indicators = get_indicators_by_category(cat_enum)
+    return {
+        "category": {
+            "id": cat_enum.value,
+            "name": cat_enum.name.replace("_", " ").title(),
+            "description": CATEGORY_DESCRIPTIONS.get(cat_enum, "")
+        },
+        "total": len(indicators),
+        "indicators": [ind.model_dump() for ind in indicators]
+    }
+
+
+@indicators_router.get("/indicators/source/twelvedata")
+async def get_twelvedata_supported():
+    """
+    Get all indicators supported by TwelveData API.
+    """
+    indicators = get_twelvedata_indicators()
+    return {
+        "source": "twelvedata",
+        "total": len(indicators),
+        "indicators": [
+            {
+                "id": ind.id,
+                "name": ind.name,
+                "twelvedata_name": ind.twelvedata_name,
+                "category": ind.category.value,
+                "enabled": ind.enabled
+            }
+            for ind in indicators
+        ]
+    }
+
+
+@indicators_router.get("/indicators/source/easyinsight")
+async def get_easyinsight_supported():
+    """
+    Get all indicators supported by EasyInsight API.
+    """
+    indicators = get_easyinsight_indicators()
+    return {
+        "source": "easyinsight",
+        "total": len(indicators),
+        "indicators": [
+            {
+                "id": ind.id,
+                "name": ind.name,
+                "easyinsight_name": ind.easyinsight_name,
+                "category": ind.category.value,
+                "enabled": ind.enabled
+            }
+            for ind in indicators
+        ]
+    }
+
+
 # ==================== Router Export ====================
 
 def get_all_routers():
@@ -6888,5 +7137,9 @@ def get_all_routers():
         (backup_router, "/api/v1", ["💾 Backup & Restore"], {
             "name": "Backup",
             "description": "Backup and restore NHITS models and prediction data"
+        }),
+        (indicators_router, "/api/v1", ["📊 Technical Indicators"], {
+            "name": "Indicators",
+            "description": "Technical indicators registry with API mappings"
         }),
     ]
