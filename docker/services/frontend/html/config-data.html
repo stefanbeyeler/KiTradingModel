@@ -1388,16 +1388,32 @@
             </div>
             <form id="symbol-form" onsubmit="saveSymbol(event)">
                 <input type="hidden" id="symbol-id">
+                <input type="hidden" id="symbol-display-name">
+                <!-- Anzeigename -->
+                <div class="form-group">
+                    <label class="form-label">Anzeigename *</label>
+                    <input type="text" class="form-input" id="symbol-name" required placeholder="z.B. BTCUSD, EURUSD, US500">
+                </div>
+                <!-- API Symbol Mappings -->
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Symbol *</label>
-                        <input type="text" class="form-input" id="symbol-name" required placeholder="z.B. BTCUSD">
+                        <label class="form-label">TwelveData Symbol</label>
+                        <input type="text" class="form-input" id="symbol-twelvedata" placeholder="z.B. BTC/USD, EUR/USD, SPX">
+                        <small style="color: #888; font-size: 0.8rem;">Format für TwelveData API</small>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Anzeigename</label>
-                        <input type="text" class="form-input" id="symbol-display-name" placeholder="z.B. Bitcoin/USD">
+                        <label class="form-label">EasyInsight Symbol</label>
+                        <input type="text" class="form-input" id="symbol-easyinsight" placeholder="z.B. BTCUSD, EURUSD">
+                        <small style="color: #888; font-size: 0.8rem;">Format für EasyInsight API</small>
                     </div>
                 </div>
+                <!-- Synonyme / Aliase -->
+                <div class="form-group">
+                    <label class="form-label">Synonyme / Aliase</label>
+                    <input type="text" class="form-input" id="symbol-aliases" placeholder="z.B. BTC/USD, XBTUSD (kommagetrennt)">
+                    <small style="color: #888; font-size: 0.8rem;">Alternative Bezeichnungen, kommagetrennt</small>
+                </div>
+                <!-- Kategorie und Sub-Kategorie -->
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Kategorie *</label>
@@ -1418,6 +1434,18 @@
                         </select>
                     </div>
                 </div>
+                <!-- Basis- und Gegenwährung -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Basiswahrung</label>
+                        <input type="text" class="form-input" id="symbol-base-currency" placeholder="z.B. BTC, EUR">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gegenwährung</label>
+                        <input type="text" class="form-input" id="symbol-quote-currency" placeholder="z.B. USD">
+                    </div>
+                </div>
+                <!-- Status -->
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Status</label>
@@ -1428,36 +1456,10 @@
                     </div>
                     <div class="form-group"></div>
                 </div>
+                <!-- Beschreibung -->
                 <div class="form-group">
                     <label class="form-label">Beschreibung</label>
                     <textarea class="form-textarea" id="symbol-description" placeholder="Optionale Beschreibung des Symbols..."></textarea>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">TwelveData Symbol</label>
-                        <input type="text" class="form-input" id="symbol-twelvedata" placeholder="z.B. BTC/USD, EUR/USD">
-                        <small style="color: #888; font-size: 0.8rem;">Format für TwelveData API (mit Slash)</small>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">EasyInsight Symbol</label>
-                        <input type="text" class="form-input" id="symbol-easyinsight" placeholder="z.B. BTCUSD, EURUSD">
-                        <small style="color: #888; font-size: 0.8rem;">Format für EasyInsight API (ohne Slash)</small>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Basiswahrung</label>
-                        <input type="text" class="form-input" id="symbol-base-currency" placeholder="z.B. BTC">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Gegenwährung</label>
-                        <input type="text" class="form-input" id="symbol-quote-currency" placeholder="z.B. USD">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Synonyme / Aliase</label>
-                    <input type="text" class="form-input" id="symbol-aliases" placeholder="z.B. BTC/USD, XBTUSD (kommagetrennt)">
-                    <small style="color: #888; font-size: 0.8rem;">Alternative Bezeichnungen für dieses Symbol, kommagetrennt eingeben</small>
                 </div>
                 <div class="form-checkbox" style="margin-bottom: 1rem;">
                     <input type="checkbox" id="symbol-favorite">
