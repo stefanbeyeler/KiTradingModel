@@ -658,6 +658,56 @@ class SymbolService:
             "total": len(self._symbols)
         }
 
+    async def cleanup_redundant_aliases(self) -> dict:
+        """
+        Remove aliases that are identical to TwelveData or EasyInsight symbols.
+
+        Returns:
+            Dictionary with cleanup statistics
+        """
+        cleaned_count = 0
+        removed_aliases = []
+        errors = []
+
+        for symbol in self._symbols.values():
+            try:
+                if not symbol.aliases:
+                    continue
+
+                td_symbol = symbol.twelvedata_symbol or ""
+                ei_symbol = symbol.easyinsight_symbol or ""
+
+                # Filter out aliases that match API symbols
+                original_aliases = symbol.aliases.copy()
+                symbol.aliases = [
+                    alias for alias in symbol.aliases
+                    if alias != td_symbol and alias != ei_symbol
+                ]
+
+                removed = set(original_aliases) - set(symbol.aliases)
+                if removed:
+                    symbol.updated_at = datetime.utcnow()
+                    cleaned_count += 1
+                    removed_aliases.append({
+                        "symbol": symbol.symbol,
+                        "removed": list(removed)
+                    })
+
+            except Exception as e:
+                errors.append(f"{symbol.symbol}: {str(e)}")
+                logger.error(f"Error cleaning aliases for {symbol.symbol}: {e}")
+
+        if cleaned_count > 0:
+            self._save_symbols()
+            logger.info(f"Cleaned redundant aliases from {cleaned_count} symbols")
+
+        return {
+            "cleaned": cleaned_count,
+            "removed_aliases": removed_aliases,
+            "errors": errors,
+            "total": len(self._symbols)
+        }
+
 
 # Global service instance
 symbol_service = SymbolService()

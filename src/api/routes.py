@@ -2974,6 +2974,23 @@ async def migrate_api_symbols():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@symbol_router.post("/managed-symbols/cleanup-aliases")
+async def cleanup_redundant_aliases():
+    """
+    Remove aliases that are identical to TwelveData or EasyInsight symbols.
+
+    Returns:
+        Cleanup result with counts and list of removed aliases.
+    """
+    try:
+        result = await symbol_service.cleanup_redundant_aliases()
+        logger.info(f"Alias cleanup completed: {result['cleaned']} symbols cleaned")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to cleanup aliases: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== Data Statistics ====================
 # NOTE: This route MUST be defined BEFORE the generic {symbol_id:path} routes
 
