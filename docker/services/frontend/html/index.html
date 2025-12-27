@@ -938,7 +938,7 @@
             <h1>KI Trading Model</h1>
             <div class="header-status">
                 <a href="/testing.html" class="header-btn">&#128203; Tests</a>
-                <span id="services-count">Services: -/10</span>
+                <span id="services-count">Services: -/12</span>
                 <span id="endpoints-count">Endpoints: -</span>
                 <span id="last-update">Update: -</span>
             </div>
@@ -1002,6 +1002,14 @@
                                     <span class="node-port">:3013</span>
                                 </div>
                             </div>
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                                <span class="node-status loading" id="df-candlestick-train-status"></span>
+                                <span class="node-icon">&#127891;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Candle-Train</span>
+                                    <span class="node-port">:3016</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1041,6 +1049,14 @@
                                 <div class="node-info">
                                     <span class="node-name">Embedder</span>
                                     <span class="node-port">:3005</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-candlestick-status"></span>
+                                <span class="node-icon">&#128293;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Candlestick</span>
+                                    <span class="node-port">:3006</span>
                                 </div>
                             </div>
                         </div>
@@ -1386,6 +1402,54 @@
                 </div>
             </div>
 
+            <!-- Candlestick Pattern Service (Inference) -->
+            <div class="service-card" id="candlestick-card">
+                <div class="service-header">
+                    <h2>Candlestick</h2>
+                    <span class="status-badge status-loading" id="candlestick-status">Laden...</span>
+                </div>
+                <p>Candlestick Pattern Detection - Erkennung von 21 Kerzen-Mustern (Hammer, Doji, Engulfing, etc.).</p>
+                <div class="service-info" id="candlestick-info">
+                    <div><span class="label">Port</span><span>3006</span></div>
+                    <div><span class="label">Pattern</span><span id="candlestick-patterns">21 Typen</span></div>
+                    <div><span class="label">Auto-Scan</span><span id="candlestick-autoscan">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">2 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-candlestick.html" target="_blank">Info</a>
+                    <a href="/candlestick/docs" target="_blank">API Docs</a>
+                    <a href="/candlestick/api/v1/patterns" target="_blank">Patterns</a>
+                </div>
+            </div>
+
+            <!-- Candlestick Training Service -->
+            <div class="service-card" id="candlestick-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
+                <div class="service-header">
+                    <h2>Candle-Training</h2>
+                    <span class="status-badge status-loading" id="candlestick-train-status">Laden...</span>
+                </div>
+                <p>Dedizierter Training-Container fuer Candlestick Pattern-Modelle. Low Priority.</p>
+                <div class="service-info" id="candlestick-train-info">
+                    <div><span class="label">Port</span><span>3016</span></div>
+                    <div><span class="label">Training</span><span id="candlestick-train-active">-</span></div>
+                    <div><span class="label">Jobs</span><span id="candlestick-train-jobs">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/candlestick-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
+                    <a href="/candlestick-train/api/v1/train/status" target="_blank">Status</a>
+                    <a href="/candlestick-train/api/v1/model" target="_blank">Model</a>
+                </div>
+            </div>
+
             <!-- RAG Service -->
             <div class="service-card" id="rag-card">
                 <div class="service-header">
@@ -1486,7 +1550,7 @@
     </div>
 
     <footer>
-        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + TCN + HMM + Embedder + RAG + LLM + Watchdog
+        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + TCN + Candlestick + HMM + Embedder + RAG + LLM + Watchdog
     </footer>
 
     <!-- Symbols Modal -->
@@ -1521,6 +1585,8 @@
             'tcn-train': 'df-tcn-train-status',
             'hmm': 'df-hmm-status',
             'embedder': 'df-embedder-status',
+            'candlestick': 'df-candlestick-status',
+            'candlestick-train': 'df-candlestick-train-status',
             'rag': 'df-rag-status',
             'llm': 'df-llm-status',
             'watchdog': 'df-watchdog-status'
@@ -1672,6 +1738,54 @@
 
         async function updateEmbedderInfo() {
             await checkHealth('embedder', 3005, 'embedder-status');
+        }
+
+        async function updateCandlestickInfo() {
+            const data = await checkHealth('candlestick', 3006, 'candlestick-status');
+            if (data) {
+                const autoscanEl = document.getElementById('candlestick-autoscan');
+                autoscanEl.textContent = data.auto_scan_enabled ? 'Aktiv' : 'Inaktiv';
+            }
+        }
+
+        async function updateCandlestickTrainInfo() {
+            const data = await checkHealth('candlestick-train', 3016, 'candlestick-train-status');
+            if (data) {
+                const activeEl = document.getElementById('candlestick-train-active');
+                const jobsEl = document.getElementById('candlestick-train-jobs');
+
+                // Get detailed training status with timeout
+                try {
+                    const statusRes = await fetchWithTimeout('/candlestick-train/api/v1/train/status', 5000);
+                    if (statusRes.ok) {
+                        const statusData = await statusRes.json();
+
+                        if (statusData.status === 'training') {
+                            activeEl.textContent = 'Training...';
+                            activeEl.style.color = '#ffd54f';
+                        } else if (statusData.status === 'preparing') {
+                            activeEl.textContent = 'Vorbereitung';
+                            activeEl.style.color = '#ffd54f';
+                        } else {
+                            activeEl.textContent = 'Inaktiv';
+                            activeEl.style.color = '';
+                        }
+                    }
+                } catch (e) {
+                    activeEl.textContent = data.training_active ? 'Aktiv' : 'Inaktiv';
+                }
+
+                // Get jobs count
+                try {
+                    const jobsRes = await fetchWithTimeout('/candlestick-train/api/v1/train/jobs', 5000);
+                    if (jobsRes.ok) {
+                        const jobsData = await jobsRes.json();
+                        jobsEl.textContent = jobsData.length || 0;
+                    }
+                } catch (e) {
+                    jobsEl.textContent = '-';
+                }
+            }
         }
 
         async function updateWatchdogInfo() {
@@ -1931,7 +2045,7 @@
 
         async function countEndpoints() {
             // Count API endpoints from OpenAPI specs of all services
-            const services = ['data', 'nhits', 'tcn', 'tcn-train', 'hmm', 'embedder', 'rag', 'llm', 'watchdog'];
+            const services = ['data', 'nhits', 'tcn', 'tcn-train', 'hmm', 'embedder', 'candlestick', 'candlestick-train', 'rag', 'llm', 'watchdog'];
             let count = 0;
 
             for (const service of services) {
@@ -1961,6 +2075,8 @@
                 updateTcnTrainInfo(),
                 updateHmmInfo(),
                 updateEmbedderInfo(),
+                updateCandlestickInfo(),
+                updateCandlestickTrainInfo(),
                 updateWatchdogInfo(),
                 updateTestsInfo(),
                 updateEasyInsightInfo(),
@@ -1974,7 +2090,7 @@
                 document.getElementById('endpoints-count').textContent = `Endpoints: ${totalEndpoints}`;
             });
 
-            document.getElementById('services-count').textContent = `Services: ${healthyServices}/10`;
+            document.getElementById('services-count').textContent = `Services: ${healthyServices}/12`;
             document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
         }
 
