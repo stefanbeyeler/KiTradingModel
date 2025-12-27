@@ -7,16 +7,19 @@ from dateutil import parser as date_parser
 import numpy as np
 from loguru import logger
 
-# Expected candle intervals for gap detection
+# Expected candle intervals for gap detection - all supported timeframes
 TIMEFRAME_INTERVALS = {
     "1m": timedelta(minutes=1),
     "5m": timedelta(minutes=5),
     "15m": timedelta(minutes=15),
     "30m": timedelta(minutes=30),
+    "45m": timedelta(minutes=45),
     "1h": timedelta(hours=1),
+    "2h": timedelta(hours=2),
     "4h": timedelta(hours=4),
     "1d": timedelta(days=1),
     "1w": timedelta(weeks=1),
+    "1M": timedelta(days=30),  # Approximate month
 }
 
 # Gap threshold multiplier (gap = interval * multiplier)
@@ -138,8 +141,11 @@ class PatternDetectionService:
         """
         # Normalize timeframe to match TIMEFRAME_INTERVALS keys
         tf_map = {
-            "M1": "1m", "M5": "5m", "M15": "15m", "M30": "30m",
-            "H1": "1h", "H4": "4h", "D1": "1d", "1D": "1d", "W1": "1w"
+            "M1": "1m", "M5": "5m", "M15": "15m", "M30": "30m", "M45": "45m",
+            "H1": "1h", "H2": "2h", "H4": "4h",
+            "D1": "1d", "1D": "1d",
+            "W1": "1w",
+            "MN": "1M"
         }
         normalized_tf = tf_map.get(timeframe.upper(), timeframe.lower())
         interval = TIMEFRAME_INTERVALS.get(normalized_tf, timedelta(hours=1))
@@ -451,10 +457,10 @@ class PatternDetectionService:
             PatternDetectionResponse with detected patterns
         """
         try:
-            # Fetch OHLCV data
+            # Fetch OHLCV data via TwelveData (primary source for pattern analysis)
             from src.services.data_gateway_service import data_gateway
 
-            data = await data_gateway.get_historical_data(
+            data, source = await data_gateway.get_historical_data_with_fallback(
                 symbol=symbol,
                 timeframe=timeframe,
                 limit=lookback
@@ -467,12 +473,24 @@ class PatternDetectionService:
                     timestamp=datetime.now(),
                     patterns=[],
                     total_patterns=0,
-                    market_context={},
+                    market_context={"data_source": source if data else "none"},
                     model_version=self._model_version
                 )
 
-            # Map timeframe to field prefix
-            tf_map = {"1h": "h1", "4h": "h1", "1d": "d1", "15m": "m15", "m15": "m15", "h1": "h1", "d1": "d1"}
+            # Map timeframe to field prefix - all supported timeframes
+            tf_map = {
+                "m1": "m1", "1m": "m1",
+                "m5": "m5", "5m": "m5",
+                "m15": "m15", "15m": "m15",
+                "m30": "m30", "30m": "m30",
+                "m45": "m45", "45m": "m45",
+                "h1": "h1", "1h": "h1",
+                "h2": "h2", "2h": "h2",
+                "h4": "h4", "4h": "h4",
+                "d1": "d1", "1d": "d1",
+                "w1": "w1", "1w": "w1",
+                "mn": "mn", "1M": "mn"
+            }
             prefix = tf_map.get(timeframe.lower(), "h1")
 
             # Convert to numpy array - handle both direct OHLC and prefixed fields
@@ -505,6 +523,7 @@ class PatternDetectionService:
 
             # Get market context
             context = self._get_market_context(ohlcv)
+            context["data_source"] = source
 
             return PatternDetectionResponse(
                 symbol=symbol,
