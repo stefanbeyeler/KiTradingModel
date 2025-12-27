@@ -197,7 +197,8 @@
       "Bash(/Users/sbeyeler/GIT/KiTradingModel/docker/services/frontend/nginx.conf )",
       "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/docker/services/frontend/)",
       "Bash(/Users/sbeyeler/GIT/KiTradingModel/docker/services/frontend/nginx.conf.template )",
-      "Bash(node --check:*)"
+      "Bash(node --check:*)",
+      "Bash(git -C \"e:/KiTradingModel\" status src/api/routes.py)"
     ],
     "deny": [],
     "ask": []
