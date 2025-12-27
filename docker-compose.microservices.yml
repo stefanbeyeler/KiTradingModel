@@ -6,20 +6,23 @@
 # HIGH PRIORITY (API responses - always responsive):
 #   - frontend:     1 CPU,   512MB  (nginx proxy)
 #   - data:         2 CPU,   4GB    (central data gateway)
-#   - hmm:          2 CPU,   4GB    (regime detection)
+#   - hmm:          2 CPU,   4GB    (regime detection - inference)
 #   - embedder:     2 CPU,   12GB   (embedding service)
 #   - rag:          2 CPU,   8GB    (vector search)
 #   - llm:          2 CPU,   4GB    (API proxy to Ollama)
 #   - tcn:          2 CPU,   4GB    (chart pattern detection - inference)
 #   - candlestick:  2 CPU,   2GB    (candlestick pattern detection - inference)
+#   - nhits:        2 CPU,   4GB    (price forecasting - inference only)
+#   - watchdog:     1 CPU,   1GB    (monitoring + training orchestrator)
 #
-# LOW PRIORITY (Training - uses remaining resources):
-#   - nhits:            4 CPU,   16GB   (with nice priority)
-#   - tcn-train:        4 CPU,   8GB    (with nice priority)
+# LOW PRIORITY (Training - uses remaining resources, orchestrated by Watchdog):
+#   - nhits-train:       4 CPU,   16GB  (with nice priority)
+#   - tcn-train:         4 CPU,   8GB   (with nice priority)
+#   - hmm-train:         2 CPU,   4GB   (with nice priority)
 #   - candlestick-train: 2 CPU,   4GB   (with nice priority)
 #
-# Total Reserved: ~21 CPUs (with overcommit), ~66 GB RAM
-# Remaining for system: ~56 GB RAM
+# Total Reserved: ~28 CPUs (with overcommit), ~75 GB RAM
+# Remaining for system: ~47 GB RAM
 # =============================================================================
 
 services:
@@ -598,6 +601,168 @@ services:
       retries: 3
       start_period: 10s
 
+  # NHITS Training Service - Dedicated training container (LOW PRIORITY)
+  # Port 3012 - Trains NHITS price forecast models
+  nhits-train-service:
+    build:
+      context: .
+      dockerfile: docker/services/nhits-train/Dockerfile
+      args:
+        - SERVICE_PORT=${NHITS_TRAIN_SERVICE_PORT:-3012}
+    container_name: trading-nhits-train
+    runtime: nvidia
+    ports:
+      - "${NHITS_TRAIN_SERVICE_PORT:-3012}:${NHITS_TRAIN_SERVICE_PORT:-3012}"
+    volumes:
+      - nhits-models:/app/data/models/nhits
+      - symbols-data:/app/data/symbols
+      - ./src/services/nhits_train_app:/app/src/services/nhits_train_app:ro
+      - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
+      - ./src/shared:/app/src/shared:ro
+      - ./src/config:/app/src/config:ro
+      - logs-data:/app/logs
+    environment:
+      - SERVICE_NAME=nhits-train
+      - PORT=${NHITS_TRAIN_SERVICE_PORT:-3012}
+      - ROOT_PATH=/nhits-train
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - NHITS_SERVICE_URL=http://trading-nhits:${NHITS_SERVICE_PORT:-3002}
+      - MODEL_DIR=/app/data/models/nhits
+      # Limit CPU threads for training
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+      - OPENBLAS_NUM_THREADS=4
+      - NUMEXPR_MAX_THREADS=4
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+      - nhits-service
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${NHITS_TRAIN_SERVICE_PORT:-3012}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # HMM Training Service - Dedicated training container (LOW PRIORITY)
+  # Port 3014 - Trains HMM regime detection and LightGBM scorer models
+  hmm-train-service:
+    build:
+      context: .
+      dockerfile: docker/services/hmm-train/Dockerfile
+      args:
+        - SERVICE_PORT=${HMM_TRAIN_SERVICE_PORT:-3014}
+    container_name: trading-hmm-train
+    ports:
+      - "${HMM_TRAIN_SERVICE_PORT:-3014}:${HMM_TRAIN_SERVICE_PORT:-3014}"
+    volumes:
+      - hmm-models:/app/data/models/hmm
+      - symbols-data:/app/data/symbols
+      - ./src/services/hmm_train_app:/app/src/services/hmm_train_app:ro
+      - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
+      - ./src/shared:/app/src/shared:ro
+      - ./src/config:/app/src/config:ro
+      - logs-data:/app/logs
+    environment:
+      - SERVICE_NAME=hmm-train
+      - PORT=${HMM_TRAIN_SERVICE_PORT:-3014}
+      - ROOT_PATH=/hmm-train
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - HMM_SERVICE_URL=http://trading-hmm:${HMM_SERVICE_PORT:-3004}
+      - MODEL_DIR=/app/data/models/hmm
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+      - hmm-service
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${HMM_TRAIN_SERVICE_PORT:-3014}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # =========================================================================
+  # MONITORING & ORCHESTRATION
+  # =========================================================================
+
+  # Watchdog Service - Monitoring & Training Orchestrator (Port 3010)
+  watchdog-service:
+    build:
+      context: .
+      dockerfile: docker/services/watchdog/Dockerfile
+      args:
+        - SERVICE_PORT=${WATCHDOG_SERVICE_PORT:-3010}
+    container_name: trading-watchdog
+    ports:
+      - "${WATCHDOG_SERVICE_PORT:-3010}:${WATCHDOG_SERVICE_PORT:-3010}"
+    volumes:
+      - watchdog-data:/app/data
+      - ./src/services/watchdog_app:/app/src/services/watchdog_app:ro
+      - ./src/shared:/app/src/shared:ro
+      - ./src/config:/app/src/config:ro
+      - logs-data:/app/logs
+    environment:
+      - SERVICE_NAME=watchdog
+      - PORT=${WATCHDOG_SERVICE_PORT:-3010}
+      - ROOT_PATH=/watchdog
+      # Training service URLs for orchestrator
+      - NHITS_TRAIN_URL=http://trading-nhits-train:${NHITS_TRAIN_SERVICE_PORT:-3012}
+      - TCN_TRAIN_URL=http://trading-tcn-train:${TCN_TRAIN_SERVICE_PORT:-3013}
+      - HMM_TRAIN_URL=http://trading-hmm-train:${HMM_TRAIN_SERVICE_PORT:-3014}
+      - CANDLESTICK_TRAIN_URL=http://trading-candlestick-train:${CANDLESTICK_TRAIN_SERVICE_PORT:-3016}
+      # Monitoring service URLs
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - NHITS_SERVICE_URL=http://trading-nhits:${NHITS_SERVICE_PORT:-3002}
+      - TCN_SERVICE_URL=http://trading-tcn:${TCN_SERVICE_PORT:-3003}
+      - HMM_SERVICE_URL=http://trading-hmm:${HMM_SERVICE_PORT:-3004}
+      - EMBEDDER_SERVICE_URL=http://trading-embedder:${EMBEDDER_SERVICE_PORT:-3005}
+      - RAG_SERVICE_URL=http://trading-rag:${RAG_SERVICE_PORT:-3008}
+      - LLM_SERVICE_URL=http://trading-llm:${LLM_SERVICE_PORT:-3009}
+      # Telegram configuration
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_IDS=${TELEGRAM_CHAT_IDS:-}
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${WATCHDOG_SERVICE_PORT:-3010}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
 # =============================================================================
 # VOLUMES
 # =============================================================================
@@ -648,6 +813,10 @@ volumes:
 
   # Shared Logs Volume
   logs-data:
+    driver: local
+
+  # Watchdog Service Volume
+  watchdog-data:
     driver: local
 
 # =============================================================================

@@ -1,4 +1,7 @@
-"""Watchdog Service - Microservice Monitoring mit Telegram Alerts."""
+"""Watchdog Service - Microservice Monitoring mit Telegram Alerts.
+
+Extended with Training Orchestrator for centralized ML model training coordination.
+"""
 
 import asyncio
 from contextlib import asynccontextmanager
@@ -10,12 +13,14 @@ from loguru import logger
 from src.shared.logging_config import log_shutdown_info, log_startup_info, setup_logging
 
 from .api.routes import router
+from .api.training_routes import router as training_router
 from .config import settings
 from .services.alert_manager import AlertManager
 from .services.health_checker import HealthChecker
 from .services.telegram_notifier import TelegramNotifier
+from .services.training_orchestrator import training_orchestrator
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 # Global services
 health_checker: HealthChecker | None = None
@@ -67,6 +72,9 @@ async def lifespan(app: FastAPI):
     # Monitoring-Loop starten
     monitoring_task = asyncio.create_task(run_monitoring_with_alerts())
 
+    # Training Orchestrator starten
+    await training_orchestrator.start()
+
     logger.info(f"Monitoring {len(health_checker.services)} services")
     logger.info(
         f"Telegram: {'enabled' if telegram_notifier.enabled else 'disabled'} "
@@ -74,6 +82,7 @@ async def lifespan(app: FastAPI):
     )
     logger.info(f"Check interval: {settings.check_interval_seconds}s")
     logger.info(f"Alert cooldown: {settings.alert_cooldown_minutes}min")
+    logger.info("Training Orchestrator started")
 
     yield
 
@@ -85,6 +94,10 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
 
+    # Stop Training Orchestrator
+    await training_orchestrator.stop()
+    logger.info("Training Orchestrator stopped")
+
     if health_checker:
         health_checker.stop()
 
@@ -93,7 +106,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Watchdog Service",
-    description="Überwacht alle Microservices und alarmiert per Telegram",
+    description="Überwacht alle Microservices und alarmiert per Telegram. Inkludiert Training Orchestrator für ML-Modell-Training.",
     version=VERSION,
     lifespan=lifespan,
     root_path="/watchdog",
@@ -102,12 +115,14 @@ app = FastAPI(
 )
 
 app.include_router(router, prefix="/api/v1")
+app.include_router(training_router, prefix="/api/v1")
 
 
 @app.get("/health")
 async def health_check():
     """Health-Check für den Watchdog selbst."""
     summary = health_checker.get_summary() if health_checker else {}
+    orchestrator_status = training_orchestrator.get_status()
     return {
         "service": "watchdog",
         "status": "healthy",
@@ -117,7 +132,12 @@ async def health_check():
         "services_monitored": len(health_checker.services) if health_checker else 0,
         "healthy_count": summary.get("healthy", 0),
         "unhealthy_count": summary.get("unhealthy", 0),
-        "telegram_enabled": telegram_notifier.enabled if telegram_notifier else False
+        "telegram_enabled": telegram_notifier.enabled if telegram_notifier else False,
+        "training_orchestrator": {
+            "running": orchestrator_status.get("running", False),
+            "queued_jobs": orchestrator_status.get("queued_jobs", 0),
+            "running_jobs": orchestrator_status.get("running_jobs", 0)
+        }
     }
 
 

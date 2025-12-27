@@ -202,21 +202,62 @@ openapi_tags = [
 
 ## Microservices Ports
 
-| Service | Port | Swagger UI | GPU |
-|---------|------|------------|-----|
-| Frontend (Dashboard) | 3000 | - | - |
-| Data Service | 3001 | /docs | - |
-| NHITS Service | 3002 | /docs | CUDA |
-| TCN-Pattern Service | 3003 | /docs | CUDA |
-| HMM-Regime Service | 3004 | /docs | - |
-| Embedder Service | 3005 | /docs | CUDA |
-| Candlestick Service | 3006 | /docs | - |
-| **Redis Cache** | **6379** | - | - |
-| RAG Service | 3008 | /docs | CUDA |
-| LLM Service | 3009 | /docs | CUDA |
-| Watchdog Service | 3010 | /docs | - |
-| TCN-Train Service | 3013 | /docs | CUDA |
-| Candlestick-Train Service | 3016 | /docs | CUDA |
+### Inference Services (High Priority)
+
+| Service | Port | Swagger UI | GPU | Beschreibung |
+|---------|------|------------|-----|--------------|
+| Frontend (Dashboard) | 3000 | - | - | Nginx Proxy + Dashboard |
+| Data Service | 3001 | /docs | - | Zentrales Data Gateway |
+| NHITS Service | 3002 | /docs | CUDA | Price Forecasts (Inference) |
+| TCN-Pattern Service | 3003 | /docs | CUDA | Chart Patterns (Inference) |
+| HMM-Regime Service | 3004 | /docs | - | Regime Detection (Inference) |
+| Embedder Service | 3005 | /docs | CUDA | Feature Embeddings |
+| Candlestick Service | 3006 | /docs | - | Candlestick Patterns (Inference) |
+| **Redis Cache** | **6379** | - | - | Zentraler Cache |
+| RAG Service | 3008 | /docs | CUDA | Vector Search |
+| LLM Service | 3009 | /docs | CUDA | LLM Analysis |
+| Watchdog Service | 3010 | /docs | - | Monitoring + Training Orchestrator |
+
+### Training Services (Low Priority, orchestriert von Watchdog)
+
+| Service | Port | Swagger UI | GPU | Beschreibung |
+|---------|------|------------|-----|--------------|
+| NHITS-Train Service | 3012 | /docs | CUDA | NHITS Model Training |
+| TCN-Train Service | 3013 | /docs | CUDA | TCN Pattern Training |
+| HMM-Train Service | 3014 | /docs | - | HMM + LightGBM Training |
+| Candlestick-Train Service | 3016 | /docs | - | Candlestick Pattern Training |
+
+### Training-Architektur
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│                   WATCHDOG SERVICE                       │
+│                 Training Orchestrator                    │
+│                     (Port 3010)                          │
+└────────────────────────┬────────────────────────────────┘
+                         │
+         ┌───────────────┼───────────────┬───────────────┐
+         ▼               ▼               ▼               ▼
+   ┌───────────┐   ┌───────────┐   ┌───────────┐   ┌───────────┐
+   │  NHITS    │   │   TCN     │   │   HMM     │   │Candlestick│
+   │  TRAIN    │   │  TRAIN    │   │  TRAIN    │   │  TRAIN    │
+   │  :3012    │   │  :3013    │   │  :3014    │   │  :3016    │
+   └─────┬─────┘   └─────┬─────┘   └─────┬─────┘   └─────┬─────┘
+         │               │               │               │
+         │ Shared Volume │               │               │
+         ▼               ▼               ▼               ▼
+   ┌───────────┐   ┌───────────┐   ┌───────────┐   ┌───────────┐
+   │  NHITS    │   │   TCN     │   │   HMM     │   │Candlestick│
+   │ INFERENCE │   │ INFERENCE │   │ INFERENCE │   │ INFERENCE │
+   │  :3002    │   │  :3003    │   │  :3004    │   │  :3006    │
+   └───────────┘   └───────────┘   └───────────┘   └───────────┘
+```
+
+**Vorteile der separaten Training-Container:**
+- Training blockiert keine Inference-API-Requests
+- Unabhängige Skalierung von Training und Inference
+- Low-Priority (`nice -n 19`) für Training-Prozesse
+- Zentrale Koordination über Watchdog Orchestrator
 
 ## GPU-Konfiguration (NVIDIA Thor / Jetson)
 
@@ -423,6 +464,63 @@ curl -X POST http://10.1.19.101:3010/api/v1/tests/run/smoke
 - `src/services/watchdog_app/api/routes.py` - API-Endpoints
 
 Vollständige Dokumentation: `docs/TESTING_PROPOSAL.md`
+
+## Training Orchestrator (Watchdog-integriert)
+
+Der **Training Orchestrator** im Watchdog Service koordiniert alle ML-Model-Trainings zentral.
+
+### Training-API
+
+```bash
+# Training für einen Service starten
+curl -X POST http://10.1.19.101:3010/api/v1/training/queue \
+  -H "Content-Type: application/json" \
+  -d '{"service": "nhits", "symbols": ["BTCUSD", "EURUSD"], "priority": "normal"}'
+
+# Training für alle Services starten
+curl -X POST http://10.1.19.101:3010/api/v1/training/train-all
+
+# Training-Status abfragen
+curl http://10.1.19.101:3010/api/v1/training/status
+
+# Alle Training-Services Status
+curl http://10.1.19.101:3010/api/v1/training/services
+```
+
+### Training-Services
+
+| Service | Modell-Typ | Beschreibung |
+|---------|------------|--------------|
+| **nhits** | Neural Network | Preisvorhersage (H1, D1) |
+| **tcn** | Temporal CNN | Chart-Pattern-Erkennung |
+| **hmm** | HMM + LightGBM | Regime-Detection + Signal Scorer |
+| **candlestick** | CNN | Candlestick-Pattern-Erkennung |
+
+### Priority-Levels
+
+| Priority | Beschreibung |
+|----------|--------------|
+| **low** | Background-Training, niedrige CPU-Priorität |
+| **normal** | Standard-Priorität (default) |
+| **high** | Bevorzugte Ausführung |
+| **critical** | Sofortige Ausführung |
+
+### Scheduled Training
+
+```bash
+# Tägliches Training einrichten
+curl -X POST http://10.1.19.101:3010/api/v1/training/schedules \
+  -H "Content-Type: application/json" \
+  -d '{"service": "nhits", "schedule": "daily"}'
+
+# Schedules anzeigen
+curl http://10.1.19.101:3010/api/v1/training/schedules
+```
+
+### Implementierung
+
+- `src/services/watchdog_app/services/training_orchestrator.py` - Orchestrator-Service
+- `src/services/watchdog_app/api/training_routes.py` - API-Endpoints
 
 ## Commit-Konvention
 
