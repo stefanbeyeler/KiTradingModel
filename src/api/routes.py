@@ -4377,7 +4377,7 @@ async def get_api_usage():
 
 # ==================== Training Data Cache (for NHITS Service) ====================
 
-@twelvedata_router.get("/training-data/{symbol}", tags=["8. NHITS Training"])
+@twelvedata_router.get("/training-data/{symbol}")
 async def get_training_data(
     symbol: str,
     timeframe: str = "H1",
@@ -4569,21 +4569,21 @@ async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache
         return []
 
 
-@twelvedata_router.get("/training-data/cache/stats", tags=["8. NHITS Training"])
+@twelvedata_router.get("/training-data/cache/stats")
 async def get_training_cache_stats():
     """Get training data cache statistics."""
     from ..services.training_data_cache_service import training_data_cache
     return training_data_cache.get_stats()
 
 
-@twelvedata_router.get("/training-data/cache/symbols", tags=["8. NHITS Training"])
+@twelvedata_router.get("/training-data/cache/symbols")
 async def get_cached_training_symbols():
     """Get list of symbols currently in training data cache."""
     from ..services.training_data_cache_service import training_data_cache
     return training_data_cache.get_cached_symbols()
 
 
-@twelvedata_router.delete("/training-data/cache", tags=["8. NHITS Training"])
+@twelvedata_router.delete("/training-data/cache")
 async def clear_training_cache():
     """Clear all training data cache."""
     from ..services.training_data_cache_service import training_data_cache
@@ -4591,7 +4591,7 @@ async def clear_training_cache():
     return {"removed": removed, "message": f"Cleared {removed} cache files"}
 
 
-@twelvedata_router.delete("/training-data/cache/expired", tags=["8. NHITS Training"])
+@twelvedata_router.delete("/training-data/cache/expired")
 async def cleanup_expired_training_cache():
     """Remove only expired training cache entries."""
     from ..services.training_data_cache_service import training_data_cache

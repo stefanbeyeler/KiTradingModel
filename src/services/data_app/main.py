@@ -32,10 +32,11 @@ from src.api.routes import (
     config_router,
     patterns_router,
     yfinance_router,
-    training_router,
     external_sources_router,
     router as general_router
 )
+# Note: training_router (NHITS Training) is NOT included here
+# These endpoints belong to the NHITS Service (Port 3002)
 from src.api.testing_routes import testing_router
 from src.services.training_data_cache_service import training_data_cache
 from src.service_registry import register_service
@@ -115,19 +116,15 @@ openapi_tags = [
         "description": "Multi-Timeframe Candlestick Pattern Detection (M15, H1, H4, D1). Reversal: Hammer, Shooting Star, Doji, Engulfing, Morning/Evening Star. Continuation: Three White Soldiers, Three Black Crows. Indecision: Spinning Top, Harami."
     },
     {
-        "name": "8. NHITS Training",
-        "description": "NHITS model training, evaluation, and performance monitoring. Train forecasting models, track progress, and manage retraining workflows."
-    },
-    {
-        "name": "9. RAG Sync",
+        "name": "8. RAG Sync",
         "description": "Synchronization of market data to RAG knowledge base (optional, disabled by default)"
     },
     {
-        "name": "10. Query Logs & Analytics",
+        "name": "9. Query Logs & Analytics",
         "description": "Query logging and analytics for monitoring"
     },
     {
-        "name": "11. External Data Sources",
+        "name": "10. External Data Sources",
         "description": """Externe Datenquellen für Trading Intelligence (Gateway für RAG Service).
 
 **Datenquellen:**
@@ -144,11 +141,11 @@ openapi_tags = [
 - **Institutional Flow**: COT Reports, ETF Flows, Whale Tracking"""
     },
     {
-        "name": "12. Testing",
+        "name": "11. Testing",
         "description": """Test Suite Execution für automatisierte Qualitätssicherung.
 
 **Test-Kategorien:**
-- **Smoke Tests**: Health Checks für alle 8 Microservices
+- **Smoke Tests**: Health Checks für alle 9 Microservices
 - **API Tests**: Endpoint-Tests für alle Service-APIs
 - **Integration Tests**: Service-übergreifende Tests
 - **Contract Tests**: API-Schema-Validierung mit Pydantic
@@ -206,11 +203,11 @@ app.include_router(config_router, prefix="/api/v1", tags=["4. Config Export/Impo
 app.include_router(twelvedata_router, prefix="/api/v1", tags=["5. Twelve Data API"])
 app.include_router(yfinance_router, prefix="/api/v1", tags=["6. Yahoo Finance"])
 app.include_router(patterns_router, prefix="/api/v1", tags=["7. Candlestick Patterns"])
-app.include_router(training_router, prefix="/api/v1", tags=["8. NHITS Training"])
-app.include_router(sync_router, prefix="/api/v1", tags=["9. RAG Sync"])
-app.include_router(query_log_router, prefix="/api/v1", tags=["10. Query Logs & Analytics"])
-app.include_router(external_sources_router, prefix="/api/v1", tags=["11. External Data Sources"])
-app.include_router(testing_router, prefix="/api/v1/testing", tags=["12. Testing"])
+# Note: NHITS Training endpoints are in the NHITS Service (Port 3002), not here
+app.include_router(sync_router, prefix="/api/v1", tags=["8. RAG Sync"])
+app.include_router(query_log_router, prefix="/api/v1", tags=["9. Query Logs & Analytics"])
+app.include_router(external_sources_router, prefix="/api/v1", tags=["10. External Data Sources"])
+app.include_router(testing_router, prefix="/api/v1/testing", tags=["11. Testing"])
 
 
 async def _periodic_cache_cleanup():
