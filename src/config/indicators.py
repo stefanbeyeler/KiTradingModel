@@ -1395,6 +1395,752 @@ HT_TRENDMODE = IndicatorConfig(
 )
 
 # =============================================================================
+# EASYINSIGHT SPECIFIC
+# =============================================================================
+
+STRENGTH = IndicatorConfig(
+    id="strength",
+    name="Multi-Timeframe Strength",
+    twelvedata_name=None,
+    easyinsight_name="strength",
+    category=IndicatorCategory.MOMENTUM,
+    enabled=True,
+    description="Proprietärer EasyInsight-Indikator, der die Trendstärke über mehrere Timeframes (4H, D1, W1) misst.",
+    calculation="Proprietäre Berechnung basierend auf Preis-Momentum und Trend-Konsistenz über H4, D1, W1",
+    strengths=[
+        "Multi-Timeframe-Analyse in einem Wert",
+        "Zeigt Trend-Alignment über Zeitebenen",
+        "Gut für Confluence-Trading",
+        "Proprietärer EasyInsight-Algorithmus"
+    ],
+    weaknesses=[
+        "Nur über EasyInsight API verfügbar",
+        "Proprietäre Berechnung (Black-Box)",
+        "Abhängig von EasyInsight-Infrastruktur"
+    ],
+    use_cases=[
+        "Multi-Timeframe Trend-Bestätigung",
+        "Confluence-Signale",
+        "Filter für Trade-Qualität",
+        "Positionsgrössen-Anpassung"
+    ],
+    default_params={"timeframes": ["4h", "1d", "1w"]}
+)
+
+CCI_EASYINSIGHT = IndicatorConfig(
+    id="cci_easyinsight",
+    name="Commodity Channel Index (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="cci",
+    category=IndicatorCategory.MOMENTUM,
+    enabled=True,
+    description="EasyInsight-Version des CCI mit vorberechneten Werten.",
+    calculation="CCI = (TP - SMA(TP)) / (0.015 × Mean Deviation)",
+    strengths=[
+        "Vorberechnet und optimiert",
+        "Konsistent mit anderen EasyInsight-Indikatoren",
+        "Schneller Zugriff ohne API-Limits"
+    ],
+    weaknesses=[
+        "Nur H1 Timeframe",
+        "Feste Parameter (nicht anpassbar)"
+    ],
+    use_cases=[
+        "Overbought/Oversold (±100)",
+        "Trend-Trading",
+        "Divergenz-Analyse"
+    ],
+    default_params={"period": 20}
+)
+
+# Strength Timeframe-spezifisch
+STRENGTH_4H = IndicatorConfig(
+    id="strength_4h",
+    name="Currency Strength 4H",
+    twelvedata_name=None,
+    easyinsight_name="strength_4h",
+    category=IndicatorCategory.MOMENTUM,
+    enabled=True,
+    description="EasyInsight Currency Strength auf 4-Stunden-Basis.",
+    calculation="Proprietäre Berechnung der relativen Währungsstärke über 4H Timeframe",
+    strengths=[
+        "Kurzfristige Stärke-Analyse",
+        "Gut für Intraday-Trading",
+        "Zeigt relative Währungsstärke"
+    ],
+    weaknesses=[
+        "Nur über EasyInsight verfügbar",
+        "Höheres Rauschen als längere Timeframes"
+    ],
+    use_cases=[
+        "Intraday Währungspaar-Auswahl",
+        "Kurzfristige Trend-Bestätigung",
+        "Momentum-Filter"
+    ],
+    default_params={"timeframe": "4h"}
+)
+
+STRENGTH_1D = IndicatorConfig(
+    id="strength_1d",
+    name="Currency Strength Daily",
+    twelvedata_name=None,
+    easyinsight_name="strength_1d",
+    category=IndicatorCategory.MOMENTUM,
+    enabled=True,
+    description="EasyInsight Currency Strength auf Tagesbasis.",
+    calculation="Proprietäre Berechnung der relativen Währungsstärke über D1 Timeframe",
+    strengths=[
+        "Stabilere Signale als 4H",
+        "Gute Balance zwischen Reaktion und Stabilität",
+        "Standard für Swing-Trading"
+    ],
+    weaknesses=[
+        "Nur über EasyInsight verfügbar",
+        "Tägliche Aktualisierung"
+    ],
+    use_cases=[
+        "Swing-Trading Währungsauswahl",
+        "Daily Trend-Bestätigung",
+        "Multi-Timeframe-Analyse"
+    ],
+    default_params={"timeframe": "1d"}
+)
+
+STRENGTH_1W = IndicatorConfig(
+    id="strength_1w",
+    name="Currency Strength Weekly",
+    twelvedata_name=None,
+    easyinsight_name="strength_1w",
+    category=IndicatorCategory.MOMENTUM,
+    enabled=True,
+    description="EasyInsight Currency Strength auf Wochenbasis.",
+    calculation="Proprietäre Berechnung der relativen Währungsstärke über W1 Timeframe",
+    strengths=[
+        "Langfristige Trendrichtung",
+        "Wenig Rauschen",
+        "Ideal für Positions-Trading"
+    ],
+    weaknesses=[
+        "Nur über EasyInsight verfügbar",
+        "Langsame Reaktion auf Änderungen"
+    ],
+    use_cases=[
+        "Langfristige Positionierung",
+        "Makro-Trend-Analyse",
+        "Strategische Währungsauswahl"
+    ],
+    default_params={"timeframe": "1w"}
+)
+
+# ATR/Range EasyInsight
+ATR_D1 = IndicatorConfig(
+    id="atr_d1",
+    name="ATR Daily (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="atr_d1",
+    category=IndicatorCategory.VOLATILITY,
+    enabled=True,
+    description="EasyInsight vorberechneter ATR auf Tagesbasis.",
+    calculation="ATR = Wilder's Smoothed Average of True Range über 14 Tage",
+    strengths=[
+        "Vorberechnet und optimiert",
+        "Tägliche Volatilitätsreferenz",
+        "Gut für Position Sizing"
+    ],
+    weaknesses=[
+        "Nur D1 Timeframe",
+        "Feste 14-Perioden-Einstellung"
+    ],
+    use_cases=[
+        "Stop-Loss-Berechnung",
+        "Position Sizing",
+        "Volatilitäts-Filter"
+    ],
+    default_params={"period": 14}
+)
+
+RANGE_D1 = IndicatorConfig(
+    id="range_d1",
+    name="Range Daily (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="range_d1",
+    category=IndicatorCategory.VOLATILITY,
+    enabled=True,
+    description="Tägliche Handelsspanne (High - Low) von EasyInsight.",
+    calculation="Range = High_D1 - Low_D1",
+    strengths=[
+        "Einfache Volatilitätsmessung",
+        "Direkter Marktüberblick",
+        "Gut für Breakout-Strategien"
+    ],
+    weaknesses=[
+        "Nur absoluter Wert",
+        "Nicht normalisiert"
+    ],
+    use_cases=[
+        "Breakout-Erkennung",
+        "Volatilitäts-Screening",
+        "Range-Trading-Setup"
+    ],
+    default_params={}
+)
+
+ATR_PCT_D1 = IndicatorConfig(
+    id="atr_pct_d1",
+    name="ATR Prozent Daily (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="atr_pct_d1",
+    category=IndicatorCategory.VOLATILITY,
+    enabled=True,
+    description="ATR als Prozentsatz des Preises für Vergleichbarkeit zwischen Assets.",
+    calculation="ATR% = (ATR / Close) × 100",
+    strengths=[
+        "Vergleichbar zwischen Assets",
+        "Normalisierte Volatilität",
+        "Gut für Cross-Asset-Analyse"
+    ],
+    weaknesses=[
+        "Nur D1 Timeframe",
+        "Abhängig von ATR-Berechnung"
+    ],
+    use_cases=[
+        "Asset-Vergleich nach Volatilität",
+        "Risiko-normiertes Position Sizing",
+        "Volatilitäts-Ranking"
+    ],
+    default_params={}
+)
+
+# Support/Resistance EasyInsight
+S1_LEVEL_M5 = IndicatorConfig(
+    id="s1_level_m5",
+    name="Support Level M5 (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="s1_level_m5",
+    category=IndicatorCategory.PATTERN,
+    enabled=True,
+    description="EasyInsight berechneter Support-Level auf M5 Basis.",
+    calculation="Proprietäre S/R-Berechnung basierend auf Preiscluster",
+    strengths=[
+        "Automatisch aktualisiert",
+        "Kurzfristig relevant",
+        "Für Scalping geeignet"
+    ],
+    weaknesses=[
+        "Nur M5 Timeframe",
+        "Kann schnell invalidiert werden"
+    ],
+    use_cases=[
+        "Scalping Entry-Points",
+        "Kurzfristiger Support",
+        "Stop-Loss-Platzierung"
+    ],
+    default_params={}
+)
+
+R1_LEVEL_M5 = IndicatorConfig(
+    id="r1_level_m5",
+    name="Resistance Level M5 (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="r1_level_m5",
+    category=IndicatorCategory.PATTERN,
+    enabled=True,
+    description="EasyInsight berechneter Resistance-Level auf M5 Basis.",
+    calculation="Proprietäre S/R-Berechnung basierend auf Preiscluster",
+    strengths=[
+        "Automatisch aktualisiert",
+        "Kurzfristig relevant",
+        "Für Scalping geeignet"
+    ],
+    weaknesses=[
+        "Nur M5 Timeframe",
+        "Kann schnell invalidiert werden"
+    ],
+    use_cases=[
+        "Scalping Take-Profit",
+        "Kurzfristiger Widerstand",
+        "Breakout-Ziele"
+    ],
+    default_params={}
+)
+
+# OHLC EasyInsight
+OHLC_M15 = IndicatorConfig(
+    id="ohlc_m15",
+    name="OHLC M15 (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="m15_ohlc",
+    category=IndicatorCategory.PRICE_TRANSFORM,
+    enabled=True,
+    description="EasyInsight M15 Kerzendaten (Open, High, Low, Close).",
+    calculation="Aggregierte OHLC-Werte über 15-Minuten-Intervalle",
+    strengths=[
+        "Schneller Zugriff auf M15 Daten",
+        "Vorberechnet und konsistent",
+        "Keine zusätzliche Aggregation nötig"
+    ],
+    weaknesses=[
+        "Fester Timeframe",
+        "Keine historische Tiefe"
+    ],
+    use_cases=[
+        "M15 Chart-Analyse",
+        "Multi-Timeframe-Daten",
+        "Schnelle Kursabfrage"
+    ],
+    default_params={"fields": ["m15_open", "m15_high", "m15_low", "m15_close"]}
+)
+
+OHLC_H1 = IndicatorConfig(
+    id="ohlc_h1",
+    name="OHLC H1 (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="h1_ohlc",
+    category=IndicatorCategory.PRICE_TRANSFORM,
+    enabled=True,
+    description="EasyInsight H1 Kerzendaten (Open, High, Low, Close).",
+    calculation="Aggregierte OHLC-Werte über 1-Stunden-Intervalle",
+    strengths=[
+        "Standard-Timeframe für Intraday",
+        "Vorberechnet und konsistent",
+        "Gut für Swing-Trading"
+    ],
+    weaknesses=[
+        "Fester Timeframe",
+        "Keine historische Tiefe"
+    ],
+    use_cases=[
+        "H1 Chart-Analyse",
+        "Intraday-Trading",
+        "Trend-Identifikation"
+    ],
+    default_params={"fields": ["h1_open", "h1_high", "h1_low", "h1_close"]}
+)
+
+OHLC_D1 = IndicatorConfig(
+    id="ohlc_d1",
+    name="OHLC D1 (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="d1_ohlc",
+    category=IndicatorCategory.PRICE_TRANSFORM,
+    enabled=True,
+    description="EasyInsight D1 Kerzendaten (Open, High, Low, Close).",
+    calculation="Aggregierte OHLC-Werte über Tages-Intervalle",
+    strengths=[
+        "Tägliche Referenzwerte",
+        "Wichtig für Gap-Analyse",
+        "Stabile Signale"
+    ],
+    weaknesses=[
+        "Nur End-of-Day Werte",
+        "Keine Intraday-Details"
+    ],
+    use_cases=[
+        "Daily Chart-Analyse",
+        "Gap-Trading",
+        "Swing-Trading"
+    ],
+    default_params={"fields": ["d1_open", "d1_high", "d1_low", "d1_close"]}
+)
+
+# Preis EasyInsight
+BID_ASK = IndicatorConfig(
+    id="bid_ask",
+    name="Bid/Ask (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="bid_ask",
+    category=IndicatorCategory.PRICE_TRANSFORM,
+    enabled=True,
+    description="Aktuelle Bid und Ask Kurse von EasyInsight.",
+    calculation="Echtzeit Bid/Ask aus MT5 Feed",
+    strengths=[
+        "Echtzeit-Kurse",
+        "Für präzise Order-Ausführung",
+        "Zeigt Marktliquidität"
+    ],
+    weaknesses=[
+        "Nur Snapshot (nicht historisch)",
+        "Kann sich schnell ändern"
+    ],
+    use_cases=[
+        "Order-Ausführung",
+        "Spread-Monitoring",
+        "Entry/Exit-Timing"
+    ],
+    default_params={"fields": ["bid", "ask"]}
+)
+
+SPREAD = IndicatorConfig(
+    id="spread",
+    name="Spread (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="spread",
+    category=IndicatorCategory.PRICE_TRANSFORM,
+    enabled=True,
+    description="Aktueller Spread (Ask - Bid) absolut und prozentual.",
+    calculation="Spread = Ask - Bid; Spread% = Spread / Mid × 100",
+    strengths=[
+        "Liquiditätsindikator",
+        "Trading-Kosten-Übersicht",
+        "Volatilitäts-Proxy"
+    ],
+    weaknesses=[
+        "Variiert stark nach Tageszeit",
+        "Broker-abhängig"
+    ],
+    use_cases=[
+        "Kostenanalyse",
+        "Liquiditäts-Check",
+        "Beste Trading-Zeiten finden"
+    ],
+    default_params={"fields": ["spread", "spread_pct"]}
+)
+
+# ADX Komponenten EasyInsight
+ADX_PLUSDI = IndicatorConfig(
+    id="adx_plusdi",
+    name="+DI (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="adx_plusdi",
+    category=IndicatorCategory.MOMENTUM,
+    enabled=True,
+    description="Positive Directional Indicator von EasyInsight ADX.",
+    calculation="+DI = 100 × Smoothed +DM / ATR",
+    strengths=[
+        "Zeigt Aufwärtsdruck",
+        "Teil des ADX-Systems",
+        "Crossover-Signale mit -DI"
+    ],
+    weaknesses=[
+        "Nur mit -DI sinnvoll",
+        "Lagging Indicator"
+    ],
+    use_cases=[
+        "Bullish Trend-Stärke",
+        "+DI/-DI Crossovers",
+        "Trend-Richtung"
+    ],
+    default_params={}
+)
+
+ADX_MINUSDI = IndicatorConfig(
+    id="adx_minusdi",
+    name="-DI (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="adx_minusdi",
+    category=IndicatorCategory.MOMENTUM,
+    enabled=True,
+    description="Negative Directional Indicator von EasyInsight ADX.",
+    calculation="-DI = 100 × Smoothed -DM / ATR",
+    strengths=[
+        "Zeigt Abwärtsdruck",
+        "Teil des ADX-Systems",
+        "Crossover-Signale mit +DI"
+    ],
+    weaknesses=[
+        "Nur mit +DI sinnvoll",
+        "Lagging Indicator"
+    ],
+    use_cases=[
+        "Bearish Trend-Stärke",
+        "+DI/-DI Crossovers",
+        "Trend-Richtung"
+    ],
+    default_params={}
+)
+
+# Bollinger Bands Komponenten EasyInsight
+BB_BASE = IndicatorConfig(
+    id="bb_base",
+    name="Bollinger Mittellinie (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="bb_base",
+    category=IndicatorCategory.VOLATILITY,
+    enabled=True,
+    description="Mittellinie (SMA) der EasyInsight Bollinger Bands.",
+    calculation="BB_Base = SMA(Close, 20)",
+    strengths=[
+        "Dynamischer Durchschnitt",
+        "Mean-Reversion-Referenz",
+        "Trend-Indikator"
+    ],
+    weaknesses=[
+        "Feste 20-Perioden",
+        "Keine Parameter-Anpassung"
+    ],
+    use_cases=[
+        "Mean-Reversion-Ziel",
+        "Trend-Richtung",
+        "Mittelfristiger Durchschnitt"
+    ],
+    default_params={}
+)
+
+BB_UPPER = IndicatorConfig(
+    id="bb_upper",
+    name="Bollinger Oberes Band (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="bb_upper",
+    category=IndicatorCategory.VOLATILITY,
+    enabled=True,
+    description="Oberes Band der EasyInsight Bollinger Bands.",
+    calculation="BB_Upper = SMA + (2 × StdDev)",
+    strengths=[
+        "Dynamischer Widerstand",
+        "Volatilitäts-angepasst",
+        "Overbought-Referenz"
+    ],
+    weaknesses=[
+        "Feste Parameter (20, 2)",
+        "Kein eigenständiges Signal"
+    ],
+    use_cases=[
+        "Overbought-Zone",
+        "Breakout-Ziele",
+        "Volatilitäts-Expansion"
+    ],
+    default_params={}
+)
+
+BB_LOWER = IndicatorConfig(
+    id="bb_lower",
+    name="Bollinger Unteres Band (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="bb_lower",
+    category=IndicatorCategory.VOLATILITY,
+    enabled=True,
+    description="Unteres Band der EasyInsight Bollinger Bands.",
+    calculation="BB_Lower = SMA - (2 × StdDev)",
+    strengths=[
+        "Dynamischer Support",
+        "Volatilitäts-angepasst",
+        "Oversold-Referenz"
+    ],
+    weaknesses=[
+        "Feste Parameter (20, 2)",
+        "Kein eigenständiges Signal"
+    ],
+    use_cases=[
+        "Oversold-Zone",
+        "Support-Level",
+        "Mean-Reversion-Entry"
+    ],
+    default_params={}
+)
+
+# Ichimoku Komponenten EasyInsight
+ICHIMOKU_TENKAN = IndicatorConfig(
+    id="ichimoku_tenkan",
+    name="Ichimoku Tenkan-sen (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="ichimoku_tenkan",
+    category=IndicatorCategory.TREND_FILTER,
+    enabled=True,
+    description="Conversion Line des EasyInsight Ichimoku (9-Perioden Mittelwert).",
+    calculation="Tenkan = (Highest High + Lowest Low) / 2 über 9 Perioden",
+    strengths=[
+        "Schnelle Trend-Linie",
+        "Kurzfristiges Momentum",
+        "Crossover mit Kijun"
+    ],
+    weaknesses=[
+        "Kurze Periode (volatil)",
+        "Nur Teil des Systems"
+    ],
+    use_cases=[
+        "Kurzfristiger Trend",
+        "TK-Crossover-Signale",
+        "Momentum-Indikator"
+    ],
+    default_params={"period": 9}
+)
+
+ICHIMOKU_KIJUN = IndicatorConfig(
+    id="ichimoku_kijun",
+    name="Ichimoku Kijun-sen (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="ichimoku_kijun",
+    category=IndicatorCategory.TREND_FILTER,
+    enabled=True,
+    description="Base Line des EasyInsight Ichimoku (26-Perioden Mittelwert).",
+    calculation="Kijun = (Highest High + Lowest Low) / 2 über 26 Perioden",
+    strengths=[
+        "Mittelfristige Trend-Linie",
+        "Starker Support/Resistance",
+        "Pullback-Ziel"
+    ],
+    weaknesses=[
+        "Langsamere Reaktion",
+        "Nur Teil des Systems"
+    ],
+    use_cases=[
+        "Mittelfristiger Trend",
+        "Pullback-Entry",
+        "Stop-Loss-Referenz"
+    ],
+    default_params={"period": 26}
+)
+
+ICHIMOKU_SENKOUA = IndicatorConfig(
+    id="ichimoku_senkoua",
+    name="Ichimoku Senkou Span A (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="ichimoku_senkoua",
+    category=IndicatorCategory.TREND_FILTER,
+    enabled=True,
+    description="Leading Span A der EasyInsight Ichimoku Cloud.",
+    calculation="Senkou A = (Tenkan + Kijun) / 2, 26 Perioden voraus projiziert",
+    strengths=[
+        "Vorausschauend",
+        "Cloud-Grenze (schnell)",
+        "Trend-Wechsel-Signal"
+    ],
+    weaknesses=[
+        "Projiziert, nicht aktuell",
+        "Nur mit Senkou B sinnvoll"
+    ],
+    use_cases=[
+        "Cloud-Obergrenze",
+        "Zukünftiger Support",
+        "Trend-Projektion"
+    ],
+    default_params={}
+)
+
+ICHIMOKU_SENKOUB = IndicatorConfig(
+    id="ichimoku_senkoub",
+    name="Ichimoku Senkou Span B (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="ichimoku_senkoub",
+    category=IndicatorCategory.TREND_FILTER,
+    enabled=True,
+    description="Leading Span B der EasyInsight Ichimoku Cloud.",
+    calculation="Senkou B = (Highest + Lowest) / 2 über 52 Perioden, 26 voraus",
+    strengths=[
+        "Langfristige Cloud-Grenze",
+        "Starker S/R-Level",
+        "Flacher = starker Trend"
+    ],
+    weaknesses=[
+        "Sehr langsam",
+        "Nur mit Senkou A sinnvoll"
+    ],
+    use_cases=[
+        "Cloud-Untergrenze",
+        "Langfristiger S/R",
+        "Trend-Stärke"
+    ],
+    default_params={}
+)
+
+ICHIMOKU_CHIKOU = IndicatorConfig(
+    id="ichimoku_chikou",
+    name="Ichimoku Chikou Span (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="ichimoku_chikou",
+    category=IndicatorCategory.TREND_FILTER,
+    enabled=True,
+    description="Lagging Span des EasyInsight Ichimoku (Close 26 Perioden zurück).",
+    calculation="Chikou = Close, 26 Perioden zurückversetzt",
+    strengths=[
+        "Momentum-Bestätigung",
+        "Trend-Validierung",
+        "Historischer Vergleich"
+    ],
+    weaknesses=[
+        "Rückwärts blickend",
+        "Zusätzliche Komplexität"
+    ],
+    use_cases=[
+        "Trend-Bestätigung",
+        "Signal-Validierung",
+        "Momentum-Check"
+    ],
+    default_params={}
+)
+
+# MA EasyInsight
+MA_10 = IndicatorConfig(
+    id="ma_10",
+    name="Moving Average 10 (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="ma_10",
+    category=IndicatorCategory.TREND,
+    enabled=True,
+    description="EasyInsight 10-Perioden Moving Average.",
+    calculation="MA = SMA(Close, 10)",
+    strengths=[
+        "Schneller Trend-Indikator",
+        "Gut für kurzfristiges Trading",
+        "Dynamischer Support"
+    ],
+    weaknesses=[
+        "Kurze Periode (volatil)",
+        "Viele Whipsaws"
+    ],
+    use_cases=[
+        "Kurzfristiger Trend",
+        "Schnelle Crossovers",
+        "Intraday-Trading"
+    ],
+    default_params={"period": 10}
+)
+
+# MACD Komponenten EasyInsight
+MACD_SIGNAL = IndicatorConfig(
+    id="macd_signal",
+    name="MACD Signal Line (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="macd_signal",
+    category=IndicatorCategory.MOMENTUM,
+    enabled=True,
+    description="Signal-Linie des EasyInsight MACD (9-Perioden EMA).",
+    calculation="MACD_Signal = EMA(MACD, 9)",
+    strengths=[
+        "Crossover-Trigger",
+        "Glättet MACD-Signale",
+        "Timing-Indikator"
+    ],
+    weaknesses=[
+        "Lagging zum MACD",
+        "Kann verspätet reagieren"
+    ],
+    use_cases=[
+        "MACD-Crossover",
+        "Signal-Bestätigung",
+        "Entry/Exit-Timing"
+    ],
+    default_params={}
+)
+
+# Stochastic Komponenten EasyInsight
+STO_SIGNAL = IndicatorConfig(
+    id="sto_signal",
+    name="Stochastic Signal (%D) (EasyInsight)",
+    twelvedata_name=None,
+    easyinsight_name="sto_signal",
+    category=IndicatorCategory.MOMENTUM,
+    enabled=True,
+    description="Signal-Linie (%D) des EasyInsight Stochastic.",
+    calculation="%D = SMA(%K, 3)",
+    strengths=[
+        "Crossover-Trigger",
+        "Glättet %K-Signale",
+        "Bestätigt Momentum"
+    ],
+    weaknesses=[
+        "Lagging zu %K",
+        "Kann verspätet reagieren"
+    ],
+    use_cases=[
+        "%K/%D-Crossover",
+        "Signal-Glättung",
+        "Entry-Timing"
+    ],
+    default_params={}
+)
+
+# =============================================================================
 # PATTERN
 # =============================================================================
 
@@ -1492,6 +2238,56 @@ INDICATORS_REGISTRY: Dict[str, IndicatorConfig] = {
     # ML Features
     "linearregslope": LINEARREG_SLOPE,
     "ht_trendmode": HT_TRENDMODE,
+
+    # EasyInsight Specific - General
+    "strength": STRENGTH,
+    "cci_easyinsight": CCI_EASYINSIGHT,
+
+    # EasyInsight Specific - Strength Timeframes
+    "strength_4h": STRENGTH_4H,
+    "strength_1d": STRENGTH_1D,
+    "strength_1w": STRENGTH_1W,
+
+    # EasyInsight Specific - ATR/Range
+    "atr_d1": ATR_D1,
+    "range_d1": RANGE_D1,
+    "atr_pct_d1": ATR_PCT_D1,
+
+    # EasyInsight Specific - Support/Resistance
+    "s1_level_m5": S1_LEVEL_M5,
+    "r1_level_m5": R1_LEVEL_M5,
+
+    # EasyInsight Specific - OHLC
+    "ohlc_m15": OHLC_M15,
+    "ohlc_h1": OHLC_H1,
+    "ohlc_d1": OHLC_D1,
+
+    # EasyInsight Specific - Price
+    "bid_ask": BID_ASK,
+    "spread": SPREAD,
+
+    # EasyInsight Specific - ADX Components
+    "adx_plusdi": ADX_PLUSDI,
+    "adx_minusdi": ADX_MINUSDI,
+
+    # EasyInsight Specific - Bollinger Components
+    "bb_base": BB_BASE,
+    "bb_upper": BB_UPPER,
+    "bb_lower": BB_LOWER,
+
+    # EasyInsight Specific - Ichimoku Components
+    "ichimoku_tenkan": ICHIMOKU_TENKAN,
+    "ichimoku_kijun": ICHIMOKU_KIJUN,
+    "ichimoku_senkoua": ICHIMOKU_SENKOUA,
+    "ichimoku_senkoub": ICHIMOKU_SENKOUB,
+    "ichimoku_chikou": ICHIMOKU_CHIKOU,
+
+    # EasyInsight Specific - MA
+    "ma_10": MA_10,
+
+    # EasyInsight Specific - MACD/Stochastic Components
+    "macd_signal": MACD_SIGNAL,
+    "sto_signal": STO_SIGNAL,
 
     # Pattern
     "pivot_points_hl": PIVOT_POINTS_HL,
