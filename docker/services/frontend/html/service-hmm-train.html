@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HMM-Training Service - Service Dokumentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .service-badge {
+            background: rgba(249, 115, 22, 0.2);
+            color: #fb923c;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .subtitle {
+            opacity: 0.7;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .content-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #fb923c;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-card p {
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .content-card ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .content-card li {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tech-tag {
+            background: rgba(249, 115, 22, 0.2);
+            color: #fb923c;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(249, 115, 22, 0.3);
+        }
+
+        .endpoint-list {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .endpoint {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .endpoint:last-child {
+            border-bottom: none;
+        }
+
+        .method {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .method.post {
+            background: rgba(33, 150, 243, 0.2);
+            color: #64b5f6;
+        }
+
+        .method.delete {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ef5350;
+        }
+
+        .endpoint-path {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #ffd54f;
+        }
+
+        .endpoint-desc {
+            opacity: 0.7;
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .info-box {
+            background: rgba(249, 115, 22, 0.1);
+            border-left: 3px solid #fb923c;
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+
+        .info-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+        }
+
+        .info-box.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-left-color: #4caf50;
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .quick-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(249, 115, 22, 0.1);
+            color: #fb923c;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(249, 115, 22, 0.2);
+        }
+
+        .quick-links a:hover {
+            background: rgba(249, 115, 22, 0.2);
+            transform: translateY(-2px);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid #fb923c;
+        }
+
+        .feature-item h4 {
+            color: #fb923c;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .feature-item p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 0;
+        }
+
+        .model-types {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .model-types {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .model-type-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .model-type-card h4 {
+            color: #64c8ff;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .model-type-card p {
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .model-type-card ul {
+            margin-left: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .architecture-diagram {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+
+        .regime-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        .regime-badge.bull { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .regime-badge.bear { background: rgba(244, 67, 54, 0.2); color: #ef5350; }
+        .regime-badge.sideways { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .regime-badge.volatile { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <span class="service-badge">Port 3014 | Training</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>&#127891; HMM-Training Service</h1>
+        <p class="subtitle">Dedizierter Training-Container fur HMM und LightGBM Scorer Modelle</p>
+
+        <div class="content-card">
+            <h2>&#129504; Beschreibung</h2>
+            <p>
+                Der HMM-Training Service ist ein <strong>dedizierter Training-Container</strong>, der vom
+                HMM Inference Service (Port 3004) getrennt lauft. Er trainiert zwei Arten von Modellen:
+            </p>
+
+            <div class="model-types">
+                <div class="model-type-card">
+                    <h4>&#128200; Hidden Markov Model (HMM)</h4>
+                    <p>Gaussian HMM fur Markt-Regime-Erkennung mit 4 Zustanden:</p>
+                    <ul>
+                        <li><span class="regime-badge bull">Bull Trend</span> Aufwartstrend</li>
+                        <li><span class="regime-badge bear">Bear Trend</span> Abwartstrend</li>
+                        <li><span class="regime-badge sideways">Sideways</span> Seitwartsbewegung</li>
+                        <li><span class="regime-badge volatile">High Vol</span> Hohe Volatilitat</li>
+                    </ul>
+                </div>
+                <div class="model-type-card">
+                    <h4>&#127919; LightGBM Scorer</h4>
+                    <p>Signal-Scoring Modell fur Trading-Signale:</p>
+                    <ul>
+                        <li>Bewertet Trading-Signale von 0-1</li>
+                        <li>Kombiniert technische Features</li>
+                        <li>Symbol-ubergreifendes Training</li>
+                        <li>Gradient Boosting Algorithmus</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Low Priority:</strong> Der Training-Container lauft mit <code>nice -n 19</code>,
+                sodass er CPU-Ressourcen an Inference-Services abgibt, wenn diese benotigt werden.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128736; Architektur</h2>
+            <p>Training-Inference Separation Pattern:</p>
+
+            <div class="architecture-diagram">
+                <pre>
+┌─────────────────────────────────────────────────────────────────┐
+│                    Shared Volume: /app/data/models/hmm          │
+│                  (HMM + LightGBM Scorer Modelle)                │
+└─────────────────────────────────────────────────────────────────┘
+           ▲                                        ▲
+           │ Schreibt                               │ Liest
+           │                                        │
+┌──────────┴──────────┐                 ┌──────────┴──────────┐
+│    HMM-Training     │                 │    HMM Inference    │
+│     Port 3014       │                 │     Port 3004       │
+│   ───────────────   │                 │   ───────────────   │
+│   - HMM Training    │                 │   - Regime Detect   │
+│   - Scorer Training │                 │   - Signal Scoring  │
+│   - Low Priority    │                 │   - Echtzeit-API    │
+└─────────────────────┘                 └─────────────────────┘
+</pre>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128202; Features</h2>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>&#127891; Dual Model Training</h4>
+                    <p>Training von HMM und LightGBM Scorer in einem Service.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128200; Per-Symbol HMM</h4>
+                    <p>Jedes Symbol erhalt sein eigenes optimiertes HMM-Modell.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128203; Cross-Symbol Scorer</h4>
+                    <p>LightGBM Scorer wird uber alle Symbole hinweg trainiert.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128230; Auto-Deploy</h4>
+                    <p>Trainierte Modelle werden automatisch fur Inference bereitgestellt.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#9889; Fast Training</h4>
+                    <p>HMM-Training ist CPU-basiert und dauert nur wenige Sekunden.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128176; Feature Engineering</h4>
+                    <p>Automatische Berechnung von technischen Features fur den Scorer.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128279; API-Endpunkte</h2>
+
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">HMM Training</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/train/hmm</span>
+                    <span class="endpoint-desc">HMM fur ein Symbol trainieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/train/hmm/batch</span>
+                    <span class="endpoint-desc">HMM fur mehrere Symbole trainieren</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Scorer Training</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/train/scorer</span>
+                    <span class="endpoint-desc">LightGBM Scorer trainieren</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Combined Training</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/train/both</span>
+                    <span class="endpoint-desc">HMM + Scorer zusammen trainieren</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Status & Control</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/train/status</span>
+                    <span class="endpoint-desc">Aktueller Training-Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method delete">DEL</span>
+                    <span class="endpoint-path">/api/v1/train/cancel</span>
+                    <span class="endpoint-desc">Training abbrechen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/health</span>
+                    <span class="endpoint-desc">Health Check</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128203; Training-Parameter</h2>
+
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">HMM Parameter</h3>
+            <ul>
+                <li><strong>symbol:</strong> Trading-Symbol (z.B. BTCUSD, EURUSD)</li>
+                <li><strong>timeframe:</strong> Zeitrahmen (Standard: 1h)</li>
+                <li><strong>lookback_days:</strong> Historische Daten (Standard: 365 Tage)</li>
+                <li><strong>n_components:</strong> Anzahl Regimes (Standard: 4)</li>
+                <li><strong>n_iter:</strong> EM-Iterationen (Standard: 100)</li>
+            </ul>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Scorer Parameter</h3>
+            <ul>
+                <li><strong>symbols:</strong> Liste von Symbolen fur Cross-Training</li>
+                <li><strong>num_boost_round:</strong> Boosting-Runden (Standard: 100)</li>
+                <li><strong>learning_rate:</strong> Lernrate (Standard: 0.05)</li>
+                <li><strong>max_depth:</strong> Baum-Tiefe (Standard: 6)</li>
+            </ul>
+
+            <div class="info-box success">
+                <strong>Schnelles Training:</strong> HMM-Training dauert typischerweise nur 2-5 Sekunden
+                pro Symbol. LightGBM Scorer-Training benotigt ca. 10-30 Sekunden, abhangig von der Datenmenge.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128295; Technologie-Stack</h2>
+            <div class="tech-stack">
+                <span class="tech-tag">Python 3.11</span>
+                <span class="tech-tag">hmmlearn</span>
+                <span class="tech-tag">LightGBM</span>
+                <span class="tech-tag">scikit-learn</span>
+                <span class="tech-tag">FastAPI</span>
+                <span class="tech-tag">NumPy</span>
+                <span class="tech-tag">Pandas</span>
+                <span class="tech-tag">joblib</span>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128640; Schnellzugriff</h2>
+            <div class="quick-links">
+                <a href="/hmm-train/docs" target="_blank">&#128196; API Dokumentation</a>
+                <a href="/hmm-train/health" target="_blank">&#128154; Health Check</a>
+                <a href="/hmm-train/api/v1/train/status" target="_blank">&#128203; Training Status</a>
+                <a href="/" class="back-link">&#127968; Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        KI Trading Model - Service Dokumentation | HMM-Training Service (Port 3014)
+    </footer>
+</body>
+</html>

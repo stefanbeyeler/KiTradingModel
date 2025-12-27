@@ -938,7 +938,7 @@
             <h1>KI Trading Model</h1>
             <div class="header-status">
                 <a href="/testing.html" class="header-btn">&#128203; Tests</a>
-                <span id="services-count">Services: -/12</span>
+                <span id="services-count">Services: -/14</span>
                 <span id="endpoints-count">Endpoints: -</span>
                 <span id="last-update">Update: -</span>
             </div>
@@ -1008,6 +1008,22 @@
                                 <div class="node-info">
                                     <span class="node-name">Candle-Train</span>
                                     <span class="node-port">:3016</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                                <span class="node-status loading" id="df-nhits-train-status"></span>
+                                <span class="node-icon">&#127891;</span>
+                                <div class="node-info">
+                                    <span class="node-name">NHITS-Train</span>
+                                    <span class="node-port">:3012</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                                <span class="node-status loading" id="df-hmm-train-status"></span>
+                                <span class="node-icon">&#127891;</span>
+                                <div class="node-info">
+                                    <span class="node-name">HMM-Train</span>
+                                    <span class="node-port">:3014</span>
                                 </div>
                             </div>
                         </div>
@@ -1448,6 +1464,54 @@
                 </div>
             </div>
 
+            <!-- NHITS-Training Service -->
+            <div class="service-card" id="nhits-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
+                <div class="service-header">
+                    <h2>NHITS-Training</h2>
+                    <span class="status-badge status-loading" id="nhits-train-status">Laden...</span>
+                </div>
+                <p>Dedizierter Training-Container - N-HiTS Zeitreihen-Modelle. Background Training.</p>
+                <div class="service-info" id="nhits-train-info">
+                    <div><span class="label">Port</span><span>3012</span></div>
+                    <div><span class="label">Training</span><span id="nhits-train-active">-</span></div>
+                    <div><span class="label">Jobs</span><span id="nhits-train-jobs">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">4 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">16 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-nhits-train.html" target="_blank">Info</a>
+                    <a href="/nhits-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
+                    <a href="/nhits-train/api/v1/train/status" target="_blank">Status</a>
+                </div>
+            </div>
+
+            <!-- HMM-Training Service -->
+            <div class="service-card" id="hmm-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
+                <div class="service-header">
+                    <h2>HMM-Training</h2>
+                    <span class="status-badge status-loading" id="hmm-train-status">Laden...</span>
+                </div>
+                <p>Dedizierter Training-Container - HMM und LightGBM Scorer Modelle.</p>
+                <div class="service-info" id="hmm-train-info">
+                    <div><span class="label">Port</span><span>3014</span></div>
+                    <div><span class="label">Training</span><span id="hmm-train-active">-</span></div>
+                    <div><span class="label">Model</span><span id="hmm-train-model">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-hmm-train.html" target="_blank">Info</a>
+                    <a href="/hmm-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
+                    <a href="/hmm-train/api/v1/train/status" target="_blank">Status</a>
+                </div>
+            </div>
+
             <!-- RAG Service -->
             <div class="service-card" id="rag-card">
                 <div class="service-header">
@@ -1561,6 +1625,8 @@
             'embedder': 'df-embedder-status',
             'candlestick': 'df-candlestick-status',
             'candlestick-train': 'df-candlestick-train-status',
+            'nhits-train': 'df-nhits-train-status',
+            'hmm-train': 'df-hmm-train-status',
             'rag': 'df-rag-status',
             'llm': 'df-llm-status',
             'watchdog': 'df-watchdog-status'
@@ -1758,6 +1824,79 @@
                     }
                 } catch (e) {
                     jobsEl.textContent = '-';
+                }
+            }
+        }
+
+        async function updateNhitsTrainInfo() {
+            const data = await checkHealth('nhits-train', 3012, 'nhits-train-status');
+            if (data) {
+                const activeEl = document.getElementById('nhits-train-active');
+                const jobsEl = document.getElementById('nhits-train-jobs');
+
+                // Get detailed training status with timeout
+                try {
+                    const statusRes = await fetchWithTimeout('/nhits-train/api/v1/train/status', 5000);
+                    if (statusRes.ok) {
+                        const statusData = await statusRes.json();
+
+                        if (statusData.status === 'training') {
+                            activeEl.textContent = 'Training...';
+                            activeEl.style.color = '#ffd54f';
+                        } else if (statusData.status === 'preparing') {
+                            activeEl.textContent = 'Vorbereitung';
+                            activeEl.style.color = '#ffd54f';
+                        } else {
+                            activeEl.textContent = 'Inaktiv';
+                            activeEl.style.color = '';
+                        }
+                    }
+                } catch (e) {
+                    activeEl.textContent = data.training_in_progress ? 'Aktiv' : 'Inaktiv';
+                }
+
+                // Get jobs count
+                try {
+                    const jobsRes = await fetchWithTimeout('/nhits-train/api/v1/train/jobs', 5000);
+                    if (jobsRes.ok) {
+                        const jobsData = await jobsRes.json();
+                        jobsEl.textContent = jobsData.jobs ? jobsData.jobs.length : 0;
+                    }
+                } catch (e) {
+                    jobsEl.textContent = '-';
+                }
+            }
+        }
+
+        async function updateHmmTrainInfo() {
+            const data = await checkHealth('hmm-train', 3014, 'hmm-train-status');
+            if (data) {
+                const activeEl = document.getElementById('hmm-train-active');
+                const modelEl = document.getElementById('hmm-train-model');
+
+                // Get detailed training status with timeout
+                try {
+                    const statusRes = await fetchWithTimeout('/hmm-train/api/v1/train/status', 5000);
+                    if (statusRes.ok) {
+                        const statusData = await statusRes.json();
+
+                        if (statusData.status === 'training') {
+                            activeEl.textContent = 'Training...';
+                            activeEl.style.color = '#ffd54f';
+                            modelEl.textContent = statusData.model_type || 'HMM';
+                        } else if (statusData.status === 'preparing') {
+                            activeEl.textContent = 'Vorbereitung';
+                            activeEl.style.color = '#ffd54f';
+                            modelEl.textContent = '-';
+                        } else {
+                            activeEl.textContent = 'Inaktiv';
+                            activeEl.style.color = '';
+                            modelEl.textContent = '-';
+                        }
+                    }
+                } catch (e) {
+                    activeEl.textContent = data.training_in_progress ? 'Aktiv' : 'Inaktiv';
+                    modelEl.textContent = '-';
                 }
             }
         }
@@ -2019,7 +2158,7 @@
 
         async function countEndpoints() {
             // Count API endpoints from OpenAPI specs of all services
-            const services = ['data', 'nhits', 'tcn', 'tcn-train', 'hmm', 'embedder', 'candlestick', 'candlestick-train', 'rag', 'llm', 'watchdog'];
+            const services = ['data', 'nhits', 'tcn', 'tcn-train', 'hmm', 'embedder', 'candlestick', 'candlestick-train', 'nhits-train', 'hmm-train', 'rag', 'llm', 'watchdog'];
             let count = 0;
 
             for (const service of services) {
@@ -2051,6 +2190,8 @@
                 updateEmbedderInfo(),
                 updateCandlestickInfo(),
                 updateCandlestickTrainInfo(),
+                updateNhitsTrainInfo(),
+                updateHmmTrainInfo(),
                 updateWatchdogInfo(),
                 updateTestsInfo(),
                 updateEasyInsightInfo(),
@@ -2064,7 +2205,7 @@
                 document.getElementById('endpoints-count').textContent = `Endpoints: ${totalEndpoints}`;
             });
 
-            document.getElementById('services-count').textContent = `Services: ${healthyServices}/12`;
+            document.getElementById('services-count').textContent = `Services: ${healthyServices}/14`;
             document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
         }
 

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NHITS-Training Service - Service Dokumentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .service-badge {
+            background: rgba(249, 115, 22, 0.2);
+            color: #fb923c;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .service-badge.training {
+            background: rgba(249, 115, 22, 0.2);
+            color: #fb923c;
+        }
+
+        .subtitle {
+            opacity: 0.7;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .content-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #fb923c;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-card p {
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .content-card ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .content-card li {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tech-tag {
+            background: rgba(249, 115, 22, 0.2);
+            color: #fb923c;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(249, 115, 22, 0.3);
+        }
+
+        .endpoint-list {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .endpoint {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .endpoint:last-child {
+            border-bottom: none;
+        }
+
+        .method {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .method.post {
+            background: rgba(33, 150, 243, 0.2);
+            color: #64b5f6;
+        }
+
+        .method.delete {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ef5350;
+        }
+
+        .endpoint-path {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #ffd54f;
+        }
+
+        .endpoint-desc {
+            opacity: 0.7;
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .info-box {
+            background: rgba(249, 115, 22, 0.1);
+            border-left: 3px solid #fb923c;
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+
+        .info-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+        }
+
+        .info-box.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-left-color: #4caf50;
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .quick-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(249, 115, 22, 0.1);
+            color: #fb923c;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(249, 115, 22, 0.2);
+        }
+
+        .quick-links a:hover {
+            background: rgba(249, 115, 22, 0.2);
+            transform: translateY(-2px);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid #fb923c;
+        }
+
+        .feature-item h4 {
+            color: #fb923c;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .feature-item p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 0;
+        }
+
+        .architecture-diagram {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+
+        .architecture-diagram .box {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            margin: 0.2rem;
+        }
+
+        .architecture-diagram .training {
+            background: rgba(249, 115, 22, 0.3);
+            border: 1px solid #fb923c;
+        }
+
+        .architecture-diagram .inference {
+            background: rgba(139, 92, 246, 0.3);
+            border: 1px solid #a78bfa;
+        }
+
+        .architecture-diagram .storage {
+            background: rgba(6, 182, 212, 0.3);
+            border: 1px solid #22d3ee;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Zuruck zum Dashboard</a>
+            <span class="service-badge training">Port 3012 | Training</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>&#127891; NHITS-Training Service</h1>
+        <p class="subtitle">Dedizierter Training-Container fur N-HiTS Zeitreihen-Prognosemodelle</p>
+
+        <div class="content-card">
+            <h2>&#129504; Beschreibung</h2>
+            <p>
+                Der NHITS-Training Service ist ein <strong>dedizierter Training-Container</strong>, der vom
+                NHITS Inference Service (Port 3002) getrennt lauft. Diese Architektur verhindert, dass
+                ressourcenintensive Trainingsaufgaben die Echtzeit-Prognose-API blockieren.
+            </p>
+            <p>
+                Der Service trainiert N-HiTS (Neural Hierarchical Interpolation for Time Series) Modelle
+                fur verschiedene Symbole und Zeitrahmen. Trainierte Modelle werden in einem gemeinsamen
+                Volume gespeichert und sind sofort fur den Inference Service verfugbar.
+            </p>
+
+            <div class="info-box">
+                <strong>Low Priority:</strong> Der Training-Container lauft mit <code>nice -n 19</code>,
+                sodass er CPU-Ressourcen an Inference-Services abgibt, wenn diese benotigt werden.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128736; Architektur</h2>
+            <p>Training-Inference Separation Pattern:</p>
+
+            <div class="architecture-diagram">
+                <pre>
+┌─────────────────────────────────────────────────────────────────┐
+│                    Shared Volume: /app/data/models/nhits        │
+│                              (Trainierte Modelle)               │
+└─────────────────────────────────────────────────────────────────┘
+           ▲                                        ▲
+           │ Schreibt                               │ Liest
+           │                                        │
+┌──────────┴──────────┐                 ┌──────────┴──────────┐
+│   NHITS-Training    │                 │   NHITS Inference   │
+│     Port 3012       │                 │     Port 3002       │
+│   ───────────────   │                 │   ───────────────   │
+│   - Modell-Training │                 │   - Preis-Prognose  │
+│   - Batch-Training  │                 │   - Echtzeit-API    │
+│   - Low Priority    │                 │   - High Priority   │
+└─────────────────────┘                 └─────────────────────┘
+</pre>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128202; Features</h2>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>&#127891; Async Training</h4>
+                    <p>Training lauft im Hintergrund und blockiert keine API-Anfragen.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128203; Job Queue</h4>
+                    <p>Mehrere Training-Jobs konnen in einer Queue verwaltet werden.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128200; Progress Tracking</h4>
+                    <p>Echtzeit-Fortschritt mit Epoch, Loss und geschatzter Restzeit.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128230; Auto-Deploy</h4>
+                    <p>Trainierte Modelle werden automatisch fur Inference bereitgestellt.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128176; Multi-Symbol</h4>
+                    <p>Batch-Training fur mehrere Symbole in einem Durchlauf.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#9889; Early Stopping</h4>
+                    <p>Automatisches Stoppen bei Konvergenz zur Ressourcenschonung.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128279; API-Endpunkte</h2>
+
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Training</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/train</span>
+                    <span class="endpoint-desc">Training-Job starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/train/batch</span>
+                    <span class="endpoint-desc">Batch-Training fur mehrere Symbole</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/train/status</span>
+                    <span class="endpoint-desc">Aktueller Training-Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method delete">DEL</span>
+                    <span class="endpoint-path">/api/v1/train/cancel</span>
+                    <span class="endpoint-desc">Laufendes Training abbrechen</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Jobs</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/train/jobs</span>
+                    <span class="endpoint-desc">Liste aller Jobs</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/train/jobs/{job_id}</span>
+                    <span class="endpoint-desc">Job-Details abrufen</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/health</span>
+                    <span class="endpoint-desc">Health Check</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/info</span>
+                    <span class="endpoint-desc">Service-Informationen</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128203; Training-Parameter</h2>
+            <p>Konfigurierbare Parameter fur das NHITS-Training:</p>
+            <ul>
+                <li><strong>symbol:</strong> Trading-Symbol (z.B. BTCUSD, EURUSD)</li>
+                <li><strong>timeframe:</strong> Zeitrahmen (M5, M15, H1, H4, D1)</li>
+                <li><strong>lookback_days:</strong> Historische Daten (Standard: 365 Tage)</li>
+                <li><strong>epochs:</strong> Training-Epochen (Standard: 100)</li>
+                <li><strong>batch_size:</strong> Batch-Grosse (Standard: 32)</li>
+                <li><strong>learning_rate:</strong> Lernrate (Standard: 0.001)</li>
+                <li><strong>horizon:</strong> Prognose-Horizont (Standard: 24)</li>
+            </ul>
+
+            <div class="info-box warning">
+                <strong>GPU-Nutzung:</strong> Aktuell lauft das Training auf CPU, da PyTorch 2.5.x
+                den NVIDIA Thor (sm_110) noch nicht unterstutzt. GPU-Beschleunigung wird mit
+                PyTorch 2.6+ erwartet.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128295; Technologie-Stack</h2>
+            <div class="tech-stack">
+                <span class="tech-tag">Python 3.11</span>
+                <span class="tech-tag">PyTorch</span>
+                <span class="tech-tag">NeuralForecast</span>
+                <span class="tech-tag">N-HiTS</span>
+                <span class="tech-tag">FastAPI</span>
+                <span class="tech-tag">AsyncIO</span>
+                <span class="tech-tag">Pandas</span>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128640; Schnellzugriff</h2>
+            <div class="quick-links">
+                <a href="/nhits-train/docs" target="_blank">&#128196; API Dokumentation</a>
+                <a href="/nhits-train/health" target="_blank">&#128154; Health Check</a>
+                <a href="/nhits-train/api/v1/train/status" target="_blank">&#128203; Training Status</a>
+                <a href="/" class="back-link">&#127968; Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        KI Trading Model - Service Dokumentation | NHITS-Training Service (Port 3012)
+    </footer>
+</body>
+</html>

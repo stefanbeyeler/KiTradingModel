@@ -70,6 +70,14 @@ http {
         server trading-hmm:${HMM_SERVICE_PORT};
     }
 
+    upstream nhits-train-backend {
+        server trading-nhits-train:3012;
+    }
+
+    upstream hmm-train-backend {
+        server trading-hmm-train:3014;
+    }
+
     upstream embedder-backend {
         server trading-embedder:${EMBEDDER_SERVICE_PORT};
     }
@@ -203,6 +211,34 @@ http {
         # Candlestick Training Service - Direct Access (Training)
         location /candlestick-train/ {
             proxy_pass http://candlestick-train-backend/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+            proxy_read_timeout 600s;  # Long timeout for training requests
+        }
+
+        # NHITS-Training Service - Direct Access (Training)
+        location /nhits-train/ {
+            proxy_pass http://nhits-train-backend/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+            proxy_read_timeout 600s;  # Long timeout for training requests
+        }
+
+        # HMM-Training Service - Direct Access (Training)
+        location /hmm-train/ {
+            proxy_pass http://hmm-train-backend/;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
