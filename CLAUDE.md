@@ -34,8 +34,10 @@ Externe APIs (EasyInsight, TwelveData, Yahoo Finance)
    - NHITS, RAG und LLM Services greifen auf externe Daten NUR über den Data Service zu
    - Verwende `DataGatewayService` (src/services/data_gateway_service.py) als Singleton
 
-3. **Fallback-Logik nur im Data Service**
-   - TwelveData als Backup für EasyInsight gehört NUR in den Data Service
+3. **Datenquellen-Hierarchie im Data Service**
+   - **TwelveData** (primär): OHLC-Daten für alle Timeframes (M1-MN)
+   - **EasyInsight** (1. Fallback): Zusätzliche Indikatoren und TimescaleDB-Daten
+   - **Yahoo Finance** (2. Fallback): Kostenlose historische Daten
 
 ### Beispiele
 

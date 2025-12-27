@@ -1,8 +1,9 @@
 """Data Gateway Service - Zentraler Zugriffspunkt für externe Daten.
 
 Dieser Service ist das einzige Gateway für den Zugriff auf externe Datenquellen:
-- EasyInsight API (TimescaleDB)
-- TwelveData API (Fallback)
+- TwelveData API (primär für OHLC-Daten aller Timeframes)
+- EasyInsight API (Fallback + zusätzliche Indikatoren)
+- Yahoo Finance (2. Fallback)
 
 Alle anderen Services (NHITS, RAG, LLM, Analysis) MÜSSEN diesen Service
 für externe Datenzugriffe verwenden.
@@ -24,8 +25,9 @@ class DataGatewayService:
     Zentraler Gateway-Service für alle externen Datenzugriffe.
 
     Dieser Service implementiert:
-    - Einheitlichen Zugriff auf EasyInsight API
-    - Fallback zu TwelveData bei Fehlern
+    - TwelveData als primäre Quelle für OHLC-Daten (alle Timeframes)
+    - EasyInsight als Fallback und für zusätzliche Indikatoren
+    - Yahoo Finance als 2. Fallback
     - Caching für häufig abgerufene Daten
     - Retry-Logik und Fehlerbehandlung
     """

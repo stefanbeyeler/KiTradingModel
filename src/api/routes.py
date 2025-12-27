@@ -4389,18 +4389,20 @@ async def get_training_data(
 
     This endpoint is used by the NHITS service to fetch training data.
     Data sources (in order of priority):
-    1. **EasyInsight API** (primär)
-    2. **TwelveData API** (Fallback wenn < 50 Datenpunkte)
-    3. **Yahoo Finance** (2. Fallback)
+    1. **TwelveData API** (primär) - Konsistente OHLC-Daten für alle Timeframes
+    2. **EasyInsight API** (1. Fallback) - Indikatoren und zusätzliche Daten
+    3. **Yahoo Finance** (2. Fallback) - Kostenlose historische Daten
+
+    Supported timeframes: M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
 
     Args:
         symbol: Trading symbol (e.g., BTCUSD, EURUSD)
-        timeframe: Timeframe for data (M15, H1, D1)
+        timeframe: Timeframe for data (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN)
         days: Number of days of data to fetch
         use_cache: Whether to use cached data if available
 
     Returns:
-        Training data with OHLCV and technical indicators
+        Training data with OHLCV data
     """
     from ..services.training_data_cache_service import training_data_cache
     import httpx
@@ -4408,26 +4410,54 @@ async def get_training_data(
 
     tf = timeframe.upper()
 
-    # Calculate limit based on timeframe
-    if tf == "M15":
-        limit = max(days * 96, 500)  # 96 candles/day for M15
-    elif tf == "D1":
-        limit = max(days * 4, 300)  # ~4 snapshots/hour for daily unique days
-    else:  # H1 default
-        limit = max(days * 24, 500)  # 24 candles/day for H1
+    # Calculate limit based on timeframe - all TwelveData supported intervals
+    timeframe_candles_per_day = {
+        "M1": 1440,   # 1440 candles/day for 1min
+        "M5": 288,    # 288 candles/day for 5min
+        "M15": 96,    # 96 candles/day for 15min
+        "M30": 48,    # 48 candles/day for 30min
+        "M45": 32,    # 32 candles/day for 45min
+        "H1": 24,     # 24 candles/day for 1h
+        "H2": 12,     # 12 candles/day for 2h
+        "H4": 6,      # 6 candles/day for 4h
+        "D1": 1,      # 1 candle/day
+        "W1": 0.14,   # ~1 candle/week
+        "MN": 0.033,  # ~1 candle/month
+    }
+    candles_per_day = timeframe_candles_per_day.get(tf, 24)
+    limit = min(max(int(days * candles_per_day), 100), 5000)  # TwelveData max is 5000
 
-    # Try to get data from cache first
+    # Try to get data from cache first (TwelveData cache)
     rows = None
     from_cache = False
     if use_cache:
-        cached_data = training_data_cache.get_cached_data(symbol, tf, "easyinsight")
+        cached_data = training_data_cache.get_cached_data(symbol, tf, "twelvedata")
         if cached_data:
             rows = cached_data
             from_cache = True
-            logger.info(f"Using cached data for {symbol}/{tf}: {len(rows)} rows")
+            logger.info(f"Using cached TwelveData for {symbol}/{tf}: {len(rows)} rows")
 
-    # Fetch from EasyInsight API if no cache
+    # PRIMARY: Fetch from TwelveData API
     if rows is None:
+        try:
+            td_data = await _fetch_twelvedata_training_data(symbol, tf, use_cache)
+            if td_data and len(td_data) >= 50:
+                return {
+                    "symbol": symbol,
+                    "timeframe": tf,
+                    "source": "twelvedata",
+                    "from_cache": False,
+                    "count": len(td_data),
+                    "data": td_data
+                }
+            rows = td_data or []
+        except Exception as e:
+            logger.warning(f"TwelveData API failed for {symbol}: {e}")
+            rows = []
+
+    # FALLBACK 1: If TwelveData has insufficient data, try EasyInsight
+    if len(rows) < 50:
+        logger.info(f"TwelveData insufficient ({len(rows)} rows), trying EasyInsight fallback for {symbol}/{tf}")
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
@@ -4437,37 +4467,32 @@ async def get_training_data(
                 response.raise_for_status()
 
                 data = response.json()
-                rows = data.get('data', [])
+                ei_rows = data.get('data', [])
 
-                # Cache the data for future use
-                if rows and use_cache:
-                    training_data_cache.cache_data(symbol, tf, rows, "easyinsight")
-                    logger.debug(f"Cached {len(rows)} rows for {symbol}/{tf}")
+                if ei_rows and len(ei_rows) >= 50:
+                    # Cache EasyInsight data
+                    if use_cache:
+                        training_data_cache.cache_data(symbol, tf, ei_rows, "easyinsight")
+                        logger.debug(f"Cached {len(ei_rows)} EasyInsight rows for {symbol}/{tf}")
+
+                    return {
+                        "symbol": symbol,
+                        "timeframe": tf,
+                        "source": "easyinsight",
+                        "from_cache": False,
+                        "count": len(ei_rows),
+                        "data": ei_rows
+                    }
 
         except Exception as e:
-            logger.warning(f"EasyInsight API failed for {symbol}: {e}")
-            rows = []
+            logger.warning(f"EasyInsight API fallback failed for {symbol}: {e}")
 
-    # If EasyInsight has insufficient data, try Twelve Data
-    if len(rows) < 50:
-        try:
-            td_data = await _fetch_twelvedata_training_data(symbol, tf, use_cache)
-            if td_data:
-                return {
-                    "symbol": symbol,
-                    "timeframe": tf,
-                    "source": "twelvedata",
-                    "from_cache": from_cache,
-                    "count": len(td_data),
-                    "data": td_data
-                }
-        except Exception as e:
-            logger.warning(f"Twelve Data fallback failed for {symbol}: {e}")
-
+    # Return whatever we have (might be empty or partial)
+    source = "twelvedata" if rows else "none"
     return {
         "symbol": symbol,
         "timeframe": tf,
-        "source": "easyinsight",
+        "source": source,
         "from_cache": from_cache,
         "count": len(rows),
         "data": rows
@@ -4475,7 +4500,11 @@ async def get_training_data(
 
 
 async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache: bool) -> list:
-    """Fetch training data from Twelve Data API as fallback."""
+    """
+    Fetch training data from TwelveData API (primary source for OHLC data).
+
+    Supports all TwelveData timeframes: M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
+    """
     from ..services.training_data_cache_service import training_data_cache
     from ..services.symbol_service import symbol_service
 
@@ -4483,10 +4512,10 @@ async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache
     if use_cache:
         cached_data = training_data_cache.get_cached_data(symbol, timeframe, "twelvedata")
         if cached_data:
-            logger.info(f"Using cached Twelve Data for {symbol}/{timeframe}: {len(cached_data)} rows")
+            logger.info(f"Using cached TwelveData for {symbol}/{timeframe}: {len(cached_data)} rows")
             return cached_data
 
-    # Get Twelve Data symbol format
+    # Get TwelveData symbol format
     td_symbol = None
     try:
         sym = await symbol_service.get_symbol(symbol)
@@ -4495,23 +4524,35 @@ async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache
     except:
         pass
 
-    # Fallback: convert XXXYYY to XXX/YYY
+    # Fallback: convert XXXYYY to XXX/YYY for forex pairs
     if not td_symbol:
         if len(symbol) == 6:
             td_symbol = f"{symbol[:3]}/{symbol[3:]}"
         else:
             td_symbol = symbol
 
-    # Map timeframe to Twelve Data interval
-    interval_map = {"M15": "15min", "H1": "1h", "D1": "1day"}
-    interval = interval_map.get(timeframe, "1h")
+    # Map all timeframes to TwelveData interval format
+    interval_map = {
+        "M1": "1min",
+        "M5": "5min",
+        "M15": "15min",
+        "M30": "30min",
+        "M45": "45min",
+        "H1": "1h",
+        "H2": "2h",
+        "H4": "4h",
+        "D1": "1day",
+        "W1": "1week",
+        "MN": "1month"
+    }
+    interval = interval_map.get(timeframe.upper(), "1h")
 
-    # Fetch from Twelve Data
+    # Fetch from TwelveData - max 5000 data points
     try:
         data = await twelvedata_service.get_time_series(
             symbol=td_symbol,
             interval=interval,
-            outputsize=500
+            outputsize=5000  # Increased to max for better training data
         )
 
         values = data.get("values", [])
@@ -4519,12 +4560,12 @@ async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache
         # Cache the data
         if values and use_cache:
             training_data_cache.cache_data(symbol, timeframe, values, "twelvedata")
-            logger.debug(f"Cached {len(values)} Twelve Data rows for {symbol}/{timeframe}")
+            logger.info(f"Fetched and cached {len(values)} TwelveData rows for {symbol}/{timeframe}")
 
         return values
 
     except Exception as e:
-        logger.error(f"Failed to fetch Twelve Data for {symbol}: {e}")
+        logger.error(f"Failed to fetch TwelveData for {symbol}/{timeframe}: {e}")
         return []
 
 

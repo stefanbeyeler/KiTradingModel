@@ -175,8 +175,8 @@ Zentraler Service für Datenmanagement im KI Trading Model System.
 ### Architektur
 
 Dieser Service fungiert als **Data Gateway** für alle externen Datenquellen:
-- **EasyInsight API** (primär) - TimescaleDB mit Echtzeit-Daten
-- **TwelveData API** (1. Fallback) - Globale Marktdaten & technische Indikatoren
+- **TwelveData API** (primär) - OHLC-Daten für alle Timeframes (M1-MN)
+- **EasyInsight API** (1. Fallback) - Zusätzliche Indikatoren & TimescaleDB
 - **Yahoo Finance** (2. Fallback) - Kostenlose historische Daten
 
 Andere Services (NHITS, RAG, LLM) greifen auf Daten ausschließlich über diesen Service zu.
