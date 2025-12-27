@@ -1239,8 +1239,8 @@
                         <div class="form-group">
                             <label class="form-label">Datenquelle</label>
                             <select class="form-select" id="explorer-source" onchange="updateIndicatorOptions()">
-                                <option value="easyinsight" selected>EasyInsight (Historisch)</option>
-                                <option value="twelvedata">TwelveData (Historisch)</option>
+                                <option value="twelvedata" selected>TwelveData (Historisch)</option>
+                                <option value="easyinsight">EasyInsight (Historisch)</option>
                                 <option value="yfinance">Yahoo Finance (Historisch)</option>
                             </select>
                         </div>
@@ -3367,34 +3367,69 @@
             const select = document.getElementById('explorer-symbol');
             select.innerHTML = '<option value="">Symbol wählen...</option>';
 
-            // Group by category
-            const categories = {};
-            allSymbols.forEach(s => {
-                const cat = s.category || 'other';
-                if (!categories[cat]) categories[cat] = [];
-                categories[cat].push(s);
-            });
-
+            // Category labels
             const catLabels = {
-                'crypto': 'Crypto',
+                'crypto': 'Krypto',
                 'forex': 'Forex',
-                'index': 'Indices',
-                'commodity': 'Commodities',
-                'stock': 'Stocks',
+                'index': 'Indizes',
+                'commodity': 'Rohstoffe',
+                'stock': 'Aktien',
                 'etf': 'ETFs',
                 'other': 'Andere'
             };
 
-            Object.keys(categories).sort().forEach(cat => {
-                const group = document.createElement('optgroup');
-                group.label = catLabels[cat] || cat;
-                categories[cat].sort((a, b) => a.symbol.localeCompare(b.symbol)).forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s.symbol;
-                    opt.textContent = `${s.symbol}${s.display_name ? ' - ' + s.display_name : ''}`;
-                    group.appendChild(opt);
+            // Subcategory labels
+            const subcatLabels = {
+                'major': 'Major', 'minor': 'Minor', 'exotic': 'Exotic',
+                'large_cap': 'Large Cap', 'mid_cap': 'Mid Cap', 'small_cap': 'Small Cap',
+                'defi': 'DeFi', 'meme': 'Meme', 'stablecoin': 'Stablecoin',
+                'tech': 'Tech', 'finance': 'Finance', 'healthcare': 'Healthcare',
+                'energy': 'Energy', 'consumer': 'Consumer', 'industrial': 'Industrial',
+                'global': 'Global', 'regional': 'Regional', 'sector': 'Sektor',
+                'precious_metal': 'Edelmetalle', 'base_metal': 'Basismetalle',
+                'agriculture': 'Agrar', 'energy_commodity': 'Energie',
+                'other': 'Andere'
+            };
+
+            // Category order for display
+            const catOrder = ['forex', 'crypto', 'index', 'commodity', 'stock', 'etf', 'other'];
+
+            // Group by category, then by subcategory
+            const grouped = {};
+            allSymbols.forEach(s => {
+                const cat = s.category || 'other';
+                const subcat = s.subcategory || 'other';
+                if (!grouped[cat]) grouped[cat] = {};
+                if (!grouped[cat][subcat]) grouped[cat][subcat] = [];
+                grouped[cat][subcat].push(s);
+            });
+
+            // Build optgroups - category with subcategory
+            catOrder.forEach(cat => {
+                if (!grouped[cat]) return;
+                const subcats = Object.keys(grouped[cat]).sort();
+
+                subcats.forEach(subcat => {
+                    const symbols = grouped[cat][subcat];
+                    if (!symbols.length) return;
+
+                    const group = document.createElement('optgroup');
+                    const catLabel = catLabels[cat] || cat;
+                    const subcatLabel = subcatLabels[subcat] || subcat;
+                    group.label = subcat === 'other' ? catLabel : `${catLabel} - ${subcatLabel}`;
+
+                    symbols.sort((a, b) => a.symbol.localeCompare(b.symbol)).forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.symbol;
+                        // Store TwelveData symbol as data attribute for direct API access
+                        if (s.twelvedata_symbol) {
+                            opt.dataset.twelvedata = s.twelvedata_symbol;
+                        }
+                        opt.textContent = s.display_name || s.symbol;
+                        group.appendChild(opt);
+                    });
+                    select.appendChild(group);
                 });
-                select.appendChild(group);
             });
         }
 
@@ -4615,8 +4650,11 @@
         loadStrategies();
         loadExports();
 
-        // Populate explorer symbols after loading
-        setTimeout(populateExplorerSymbols, 1000);
+        // Populate explorer symbols after loading and init indicator options for TwelveData
+        setTimeout(() => {
+            populateExplorerSymbols();
+            updateIndicatorOptions();
+        }, 1000);
         // Populate external symbols
         setTimeout(populateExternalSymbols, 1200);
         // Check external sources availability
