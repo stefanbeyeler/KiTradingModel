@@ -3398,12 +3398,16 @@
             });
         }
 
-        // Convert EasyInsight historical data response to explorer format
+        // Convert training data response to explorer format (supports TwelveData and EasyInsight formats)
         function convertEasyInsightHistoricalData(trainingData, indicators, timeframe) {
             const data = trainingData.data || [];
             if (!data.length) return [];
 
-            // Map timeframe to field prefix
+            // Check source - TwelveData uses direct OHLC, EasyInsight uses prefixed fields
+            const source = trainingData.source || 'unknown';
+            const isTwelveData = source === 'twelvedata' || (data[0] && data[0].open !== undefined);
+
+            // Map timeframe to field prefix (for EasyInsight format)
             const tfPrefix = {
                 'M15': 'm15', '15min': 'm15',
                 'H1': 'h1', '1h': 'h1',
@@ -3413,13 +3417,14 @@
             const prefix = tfPrefix[timeframe] || 'h1';
 
             return data.map(row => {
-                // Use timeframe-specific OHLC as main OHLC (fallback to bid for close)
+                // TwelveData format: direct open/high/low/close/datetime fields
+                // EasyInsight format: snapshot_time, h1_open, h1_high, etc.
                 const result = {
-                    datetime: row.snapshot_time || row.timestamp,
-                    open: row[`${prefix}_open`] ? parseFloat(row[`${prefix}_open`]) : null,
-                    high: row[`${prefix}_high`] ? parseFloat(row[`${prefix}_high`]) : null,
-                    low: row[`${prefix}_low`] ? parseFloat(row[`${prefix}_low`]) : null,
-                    close: row[`${prefix}_close`] ? parseFloat(row[`${prefix}_close`]) : (row.bid ? parseFloat(row.bid) : null),
+                    datetime: row.datetime || row.snapshot_time || row.timestamp,
+                    open: isTwelveData ? parseFloat(row.open) : (row[`${prefix}_open`] ? parseFloat(row[`${prefix}_open`]) : null),
+                    high: isTwelveData ? parseFloat(row.high) : (row[`${prefix}_high`] ? parseFloat(row[`${prefix}_high`]) : null),
+                    low: isTwelveData ? parseFloat(row.low) : (row[`${prefix}_low`] ? parseFloat(row[`${prefix}_low`]) : null),
+                    close: isTwelveData ? parseFloat(row.close) : (row[`${prefix}_close`] ? parseFloat(row[`${prefix}_close`]) : (row.bid ? parseFloat(row.bid) : null)),
                     volume: row.volume ? parseFloat(row.volume) : null
                 };
 
