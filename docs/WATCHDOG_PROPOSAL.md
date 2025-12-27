@@ -1317,11 +1317,85 @@ async function loadWatchdogStatus() {
    curl http://localhost:3010/api/v1/status
    ```
 
+---
+
+## Integriertes Testing-System
+
+Der Watchdog Service enthält ein vollständiges Testing-Framework für alle Microservices.
+
+### Test-Architektur
+
+```
+Watchdog Service (Port 3010)
+├── test_definitions.py     # ~90 Test-Definitionen
+├── test_runner.py          # Test-Ausführung & Management
+└── routes.py               # REST API für Tests
+```
+
+### Test-Kategorien
+
+| Kategorie | Beschreibung | Typische Dauer |
+|-----------|--------------|----------------|
+| **smoke** | Health-Checks | < 1s/Test |
+| **api** | Vollständige Endpoint-Tests | < 5s/Test |
+| **contract** | Schema-Validierung | < 2s/Test |
+| **integration** | Service-übergreifende Workflows | < 30s/Test |
+
+### Test-Prioritäten
+
+- **critical**: Grundlegende Funktionen (Health, Data Gateway)
+- **high**: Wichtige Features (OHLCV, Forecasts)
+- **medium**: Standard-Funktionen (Indicators, Patterns)
+- **low**: Optionale Features (Bulk-Operations)
+
+### Test-API-Endpoints
+
+| Methode | Endpoint | Beschreibung |
+|---------|----------|--------------|
+| GET | `/api/v1/tests/modes` | Verfügbare Test-Modi |
+| GET | `/api/v1/tests/definitions` | Alle Test-Definitionen |
+| POST | `/api/v1/tests/run/smoke` | Smoke-Tests starten |
+| POST | `/api/v1/tests/run/critical` | Kritische Tests starten |
+| POST | `/api/v1/tests/run/full` | Alle Tests starten |
+| POST | `/api/v1/tests/run/service/{name}` | Service-spezifische Tests |
+| GET | `/api/v1/tests/status` | Aktueller Test-Status |
+| GET | `/api/v1/tests/stream` | Live-Updates (SSE) |
+| GET | `/api/v1/tests/history` | Test-Historie |
+
+### Test-Ausführung
+
+```bash
+# Via Makefile
+make test-smoke
+make test-full
+make test-service SERVICE=data
+
+# Via curl
+curl -X POST http://10.1.19.101:3010/api/v1/tests/run/smoke
+curl -X POST http://10.1.19.101:3010/api/v1/tests/run/full
+
+# Mit Filtern
+curl -X POST http://10.1.19.101:3010/api/v1/tests/run \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "full", "services": ["data", "nhits"]}'
+```
+
+### Live-Monitoring
+
+```bash
+# Server-Sent Events für Echtzeit-Updates
+curl http://10.1.19.101:3010/api/v1/tests/stream
+```
+
+Vollständige Dokumentation: [TESTING_PROPOSAL.md](TESTING_PROPOSAL.md)
+
+---
+
 ## Zusammenfassung
 
 | Feature                  | Beschreibung                              |
 |--------------------------|-------------------------------------------|
-| **Health Monitoring**    | Alle 8 Services alle 30 Sekunden          |
+| **Health Monitoring**    | Alle 10 Services alle 30 Sekunden         |
 | **Telegram Alerts**      | Kostenlos via Bot API (empfohlen)         |
 | **WhatsApp Alerts**      | Optional via Twilio (kostenpflichtig)     |
 | **Multi-Channel**        | Telegram + WhatsApp gleichzeitig möglich  |
@@ -1329,7 +1403,8 @@ async function loadWatchdogStatus() {
 | **Kritikalitätsstufen**  | Critical, High, Medium                    |
 | **Recovery-Alerts**      | Benachrichtigung bei Wiederherstellung    |
 | **Tägliche Summary**     | Automatischer Report um 08:00             |
-| **API-Endpoints**        | Status, Historie, Test-Alert              |
+| **Testing-Framework**    | ~90 Tests für alle Microservices          |
+| **API-Endpoints**        | Status, Historie, Test-Alert, Tests       |
 | **Docker-Integration**   | Im trading-net Netzwerk                   |
 
 ## Quick Start

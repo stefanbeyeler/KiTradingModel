@@ -367,19 +367,19 @@
 
     <div class="container">
         <h1>&#128065; Watchdog Service</h1>
-        <p class="subtitle">Microservice-Monitoring mit Telegram-Alerts und Health-Check-Uberwachung</p>
+        <p class="subtitle">Microservice-Monitoring, Testing und Telegram-Alerts</p>
 
         <div class="content-card">
             <h2>&#128202; Beschreibung</h2>
             <p>
-                Der Watchdog Service ist das zentrale Monitoring-System des KI Trading Model.
-                Er uberwacht kontinuierlich alle Microservices auf Verfugbarkeit und Gesundheit
-                und sendet bei Problemen sofortige Benachrichtigungen uber Telegram.
+                Der Watchdog Service ist das zentrale Monitoring- und Testing-System des KI Trading Model.
+                Er uberwacht kontinuierlich alle Microservices auf Verfugbarkeit und Gesundheit,
+                fuhrt automatisierte API-Tests durch und sendet bei Problemen sofortige Benachrichtigungen uber Telegram.
             </p>
             <p>
-                Der Service fuhrt regelmasig Health-Checks durch, erkennt Ausfalle und Recovery-Events
-                und implementiert ein intelligentes Alert-System mit Cooldown-Mechanismus, um
-                Alert-Floods zu vermeiden.
+                Der Service fuhrt regelmasig Health-Checks durch, erkennt Ausfalle und Recovery-Events,
+                bietet ein umfangreiches Testing-Framework mit ~90 Tests und implementiert ein
+                intelligentes Alert-System mit Cooldown-Mechanismus.
             </p>
         </div>
 
@@ -411,6 +411,14 @@
                 <div class="feature-item">
                     <h4>&#128260; Auto-Recovery Detection</h4>
                     <p>Automatische Erkennung wenn ein ausgefallener Service wieder verfugbar wird.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#129514; Integriertes Testing</h4>
+                    <p>~90 API-Tests fur alle Services mit Smoke, API, Contract und Integration Tests.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128250; Live Test-Streaming</h4>
+                    <p>Echtzeit-Updates via Server-Sent Events (SSE) wahrend Test-Runs.</p>
                 </div>
             </div>
 
@@ -523,6 +531,120 @@
                     <span class="endpoint-desc">Manuellen Health-Check triggern</span>
                 </div>
             </div>
+
+            <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; color: #f472b6;">Testing-Endpunkte</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/tests/modes</span>
+                    <span class="endpoint-desc">Verfugbare Test-Modi</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/tests/definitions</span>
+                    <span class="endpoint-desc">Alle Test-Definitionen (~90)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/tests/run/smoke</span>
+                    <span class="endpoint-desc">Smoke-Tests starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/tests/run/critical</span>
+                    <span class="endpoint-desc">Kritische Tests starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/tests/run/full</span>
+                    <span class="endpoint-desc">Alle Tests starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/tests/run/service/{name}</span>
+                    <span class="endpoint-desc">Service-spezifische Tests</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/tests/status</span>
+                    <span class="endpoint-desc">Aktueller Test-Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/tests/stream</span>
+                    <span class="endpoint-desc">Live-Updates (SSE)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/tests/history</span>
+                    <span class="endpoint-desc">Test-Historie (50 Runs)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#129514; Testing-System</h2>
+            <p>
+                Der Watchdog enthalt ein vollstandiges Testing-Framework fur alle Microservices.
+                Tests konnen manuell oder automatisiert ausgefuhrt werden.
+            </p>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>&#128165; Smoke Tests</h4>
+                    <p>Schnelle Health-Checks (&lt; 1s/Test) fur alle Services.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128279; API Tests</h4>
+                    <p>Vollstandige Endpoint-Tests mit Request/Response-Validierung.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128220; Contract Tests</h4>
+                    <p>Schema-Validierung der API-Responses.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128257; Integration Tests</h4>
+                    <p>Service-ubergreifende Workflows testen.</p>
+                </div>
+            </div>
+
+            <div class="info-box success">
+                <strong>Makefile-Integration:</strong> Tests konnen einfach via <code>make test-smoke</code>,
+                <code>make test-full</code> oder <code>make test-service SERVICE=data</code> ausgefuhrt werden.
+            </div>
+
+            <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; color: #f472b6;">Test-Prioritaten</h3>
+            <table class="service-table">
+                <thead>
+                    <tr>
+                        <th>Prioritat</th>
+                        <th>Beschreibung</th>
+                        <th>Beispiele</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="alert-level critical">Critical</span></td>
+                        <td>Grundlegende Funktionen</td>
+                        <td>Health-Checks, Data Gateway</td>
+                    </tr>
+                    <tr>
+                        <td><span class="alert-level high">High</span></td>
+                        <td>Wichtige Features</td>
+                        <td>OHLCV-Daten, Forecasts</td>
+                    </tr>
+                    <tr>
+                        <td><span class="alert-level medium">Medium</span></td>
+                        <td>Standard-Funktionen</td>
+                        <td>Indicators, Patterns</td>
+                    </tr>
+                    <tr>
+                        <td><span class="alert-level low">Low</span></td>
+                        <td>Optionale Features</td>
+                        <td>Bulk-Operations</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
         <div class="content-card">
@@ -617,6 +739,8 @@
                 <a href="/watchdog/docs" target="_blank">&#128196; API Dokumentation</a>
                 <a href="/watchdog/health" target="_blank">&#128154; Health Check</a>
                 <a href="/watchdog/api/v1/status" target="_blank">&#128200; System Status</a>
+                <a href="/watchdog/api/v1/tests/definitions" target="_blank">&#129514; Test-Definitionen</a>
+                <a href="/watchdog/api/v1/tests/status" target="_blank">&#128202; Test-Status</a>
                 <a href="/" class="back-link">&#127968; Dashboard</a>
             </div>
         </div>

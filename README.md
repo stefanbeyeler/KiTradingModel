@@ -27,7 +27,7 @@ Microservices-basiertes KI-System für Trading-Analyse und Preisprognosen auf NV
 | Embedder Service | 3005 | Text/FinBERT/TimeSeries Embeddings | CUDA |
 | RAG Service | 3008 | Vector Search & Knowledge Base | CUDA |
 | LLM Service | 3009 | Trading-Analyse mit Llama 3.1 | CUDA |
-| Watchdog Service | 3010 | Service-Monitoring, Telegram-Alerts | - |
+| Watchdog Service | 3010 | Service-Monitoring, Testing, Telegram-Alerts | - |
 
 ```text
                          Frontend (Dashboard)
@@ -152,7 +152,7 @@ curl -X POST "http://10.1.19.101:3000/llm/api/v1/analyze" \
   -d '{"symbol": "EURUSD", "question": "Sollte ich kaufen oder verkaufen?"}'
 ```
 
-### Watchdog Status
+### Watchdog Status & Testing
 
 ```bash
 # Service-Status aller Microservices
@@ -160,6 +160,12 @@ curl "http://10.1.19.101:3000/watchdog/api/v1/status"
 
 # Test-Alert senden
 curl -X POST "http://10.1.19.101:3000/watchdog/api/v1/alerts/test"
+
+# Smoke-Tests ausführen
+curl -X POST "http://10.1.19.101:3000/watchdog/api/v1/tests/run/smoke"
+
+# Alle Tests ausführen
+curl -X POST "http://10.1.19.101:3000/watchdog/api/v1/tests/run/full"
 ```
 
 ## Health Checks
@@ -258,10 +264,27 @@ source venv/bin/activate
 
 # Dependencies
 pip install -r requirements.txt
-
-# Tests
-pytest tests/
 ```
+
+### Testing
+
+Die komplette Test-Funktionalität ist im Watchdog Service integriert:
+
+```bash
+# Tests via Makefile
+make test-smoke          # Schnelle Health-Checks
+make test-full           # Alle Tests (~90)
+make test-service SERVICE=data  # Service-spezifisch
+
+# Tests via curl
+curl -X POST http://10.1.19.101:3010/api/v1/tests/run/smoke
+curl -X POST http://10.1.19.101:3010/api/v1/tests/run/full
+
+# Test-Status
+curl http://10.1.19.101:3010/api/v1/tests/status
+```
+
+Mehr Details: [Testing-Dokumentation](docs/TESTING_PROPOSAL.md)
 
 ### Code-Stil
 
@@ -277,7 +300,8 @@ pytest tests/
 - [Port-Konfiguration](docs/PORT_CONFIGURATION.md)
 - [Event-Based Training](docs/EVENT_BASED_TRAINING.md)
 - [Development Guidelines](docs/DEVELOPMENT_GUIDELINES.md)
-- [Watchdog Proposal](docs/WATCHDOG_PROPOSAL.md)
+- [Testing-System](docs/TESTING_PROPOSAL.md)
+- [Watchdog Service](docs/WATCHDOG_PROPOSAL.md)
 
 ## Lizenz
 

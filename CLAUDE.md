@@ -253,6 +253,39 @@ External APIs (Alternative.me, EasyInsight, etc.)
 
 Der RAG Service nutzt den `DataFetcherProxy` um Daten vom Data Service Gateway abzurufen.
 
+## Testing (Watchdog-integriert)
+
+Die komplette Testing-Funktionalität ist im **Watchdog Service** zentralisiert.
+
+### Test-Ausführung
+
+```bash
+# Via Makefile
+make test-smoke          # Schnelle Health-Checks
+make test-full           # Alle Tests
+make test-service SERVICE=data  # Service-spezifisch
+
+# Via curl
+curl -X POST http://10.1.19.101:3010/api/v1/tests/run/smoke
+```
+
+### Test-Kategorien
+
+| Kategorie | Beschreibung |
+|-----------|--------------|
+| **smoke** | Health-Checks (< 1s) |
+| **api** | Endpoint-Tests (< 5s) |
+| **contract** | Schema-Validierung |
+| **integration** | Service-übergreifend |
+
+### Implementierung
+
+- `src/services/watchdog_app/services/test_definitions.py` - ~90 Test-Definitionen
+- `src/services/watchdog_app/services/test_runner.py` - Test-Runner
+- `src/services/watchdog_app/api/routes.py` - API-Endpoints
+
+Vollständige Dokumentation: `docs/TESTING_PROPOSAL.md`
+
 ## Commit-Konvention
 
 ```text

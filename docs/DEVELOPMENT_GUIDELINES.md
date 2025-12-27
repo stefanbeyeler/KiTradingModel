@@ -624,82 +624,85 @@ LOG_LEVEL=INFO
 
 ## Testing
 
-### Framework: pytest + pytest-asyncio
+### Zentralisierte Tests via Watchdog Service
 
-```bash
-pip install pytest pytest-asyncio pytest-cov httpx
-```
+Die komplette Testing-Funktionalität ist in den **Watchdog Service** integriert. Dieser testet alle Microservice-Endpoints und validiert API-Contracts.
 
-### Struktur
+### Swagger UI
 
 ```
-tests/
-├── conftest.py              # Fixtures
-├── unit/
-│   ├── test_services/
-│   │   ├── test_analysis_service.py
-│   │   └── test_forecast_service.py
-│   └── test_models/
-│       └── test_trading_data.py
-└── integration/
-    └── test_api/
-        └── test_endpoints.py
+http://10.1.19.101:3000/watchdog/docs
 ```
 
-### Beispiele
+### Test-Modi
 
-```python
-# tests/conftest.py
-import pytest
-from httpx import AsyncClient
-from src.api.routes import app
-
-@pytest.fixture
-def anyio_backend():
-    return "asyncio"
-
-@pytest.fixture
-async def client():
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        yield ac
-
-# tests/unit/test_services/test_forecast_service.py
-import pytest
-from src.services.forecast_service import ForecastService
-
-class TestForecastService:
-
-    @pytest.fixture
-    def service(self):
-        return ForecastService()
-
-    @pytest.mark.asyncio
-    async def test_generate_forecast_success(self, service):
-        result = await service.generate_forecast("BTCUSD", horizon=24)
-        assert result is not None
-        assert len(result.predictions) == 24
-
-    @pytest.mark.asyncio
-    async def test_generate_forecast_invalid_symbol(self, service):
-        with pytest.raises(ValueError):
-            await service.generate_forecast("INVALID", horizon=24)
-```
+| Modus | Beschreibung | Endpoint |
+|-------|--------------|----------|
+| **smoke** | Schnelle Health-Checks | `POST /api/v1/tests/run/smoke` |
+| **critical** | Nur kritische Tests | `POST /api/v1/tests/run/critical` |
+| **api** | Alle API-Endpoint Tests | `POST /api/v1/tests/run {"mode": "api"}` |
+| **contract** | Schema-Validierung | `POST /api/v1/tests/run {"mode": "contract"}` |
+| **integration** | Service-übergreifend | `POST /api/v1/tests/run {"mode": "integration"}` |
+| **full** | Alle Tests | `POST /api/v1/tests/run/full` |
 
 ### Test-Ausführung
 
 ```bash
-# Alle Tests
-pytest
+# Smoke-Tests (schnell)
+make test-smoke
 
-# Mit Coverage
-pytest --cov=src --cov-report=html
+# Vollständige Tests
+make test-full
 
-# Nur Unit-Tests
-pytest tests/unit/
+# Tests für bestimmten Service
+make test-service SERVICE=data
 
-# Verbose
-pytest -v
+# Kritische Tests
+make test-critical
+
+# Direkt via curl
+curl -X POST http://10.1.19.101:3010/api/v1/tests/run/smoke
 ```
+
+### Filter-Optionen
+
+```bash
+# Tests mit Filtern
+curl -X POST http://10.1.19.101:3010/api/v1/tests/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "full",
+    "services": ["data", "nhits"],
+    "priorities": ["critical", "high"]
+  }'
+```
+
+### Test-Status und Historie
+
+```bash
+# Aktueller Status
+curl http://10.1.19.101:3010/api/v1/tests/status
+
+# Test-Historie (letzte 50 Runs)
+curl http://10.1.19.101:3010/api/v1/tests/history
+
+# Live-Updates via SSE
+curl http://10.1.19.101:3010/api/v1/tests/stream
+```
+
+### Test-Kategorien
+
+- **smoke**: Health-Checks für alle Services
+- **api**: Vollständige API-Endpoint Tests
+- **contract**: Response-Schema Validierung
+- **integration**: Service-übergreifende Workflows
+
+### Implementierung
+
+Die Test-Logik befindet sich in:
+- `src/services/watchdog_app/services/test_definitions.py` - ~90 Test-Definitionen
+- `src/services/watchdog_app/services/test_runner.py` - Test-Ausführung
+- `src/services/watchdog_app/api/routes.py` - API-Endpoints
 
 ---
 
