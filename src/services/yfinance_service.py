@@ -104,16 +104,31 @@ SYMBOL_MAPPING = {
 
 # Interval mapping from internal format to yfinance format
 INTERVAL_MAPPING = {
+    # TwelveData format
+    "M1": "1m",
+    "M5": "5m",
     "M15": "15m",
+    "M30": "30m",
     "H1": "1h",
+    "H4": "1h",  # Yahoo doesn't have 4h, use 1h as fallback
     "D1": "1d",
+    "W1": "1wk",
+    "MN": "1mo",
+    # Common formats
     "1min": "1m",
     "5min": "5m",
     "15min": "15m",
+    "30min": "30m",
     "1h": "1h",
+    "4h": "1h",  # Yahoo doesn't have 4h, use 1h as fallback
     "1day": "1d",
     "1week": "1wk",
     "1month": "1mo",
+    # Yahoo native format
+    "1m": "1m",
+    "5m": "5m",
+    "15m": "15m",
+    "30m": "30m",
 }
 
 
@@ -168,7 +183,14 @@ class YFinanceService:
 
     def _map_interval(self, interval: str) -> str:
         """Map internal interval to yfinance interval."""
-        return INTERVAL_MAPPING.get(interval.upper(), interval)
+        # Try exact match first, then uppercase, then lowercase
+        if interval in INTERVAL_MAPPING:
+            return INTERVAL_MAPPING[interval]
+        if interval.upper() in INTERVAL_MAPPING:
+            return INTERVAL_MAPPING[interval.upper()]
+        if interval.lower() in INTERVAL_MAPPING:
+            return INTERVAL_MAPPING[interval.lower()]
+        return interval
 
     def _fetch_data_sync(
         self,
@@ -193,16 +215,25 @@ class YFinanceService:
             ticker = yf.Ticker(yf_symbol)
 
             # Determine period/date range
+            # Yahoo Finance limitations:
+            # - 1m data: max 7 days
+            # - 5m/15m/30m: max 60 days
+            # - 1h: max 730 days
+            # - 1d+: max available
             if start and end:
                 df = ticker.history(start=start, end=end, interval=yf_interval)
             elif period:
                 df = ticker.history(period=period, interval=yf_interval)
             else:
-                # Default: max available for daily, 60 days for hourly, 7 days for 15min
-                if yf_interval == "1d":
-                    df = ticker.history(period="1y", interval=yf_interval)
+                # Default periods based on interval
+                if yf_interval == "1m":
+                    df = ticker.history(period="5d", interval=yf_interval)  # Max 7d for 1min
+                elif yf_interval in ("5m", "15m", "30m"):
+                    df = ticker.history(period="60d", interval=yf_interval)
                 elif yf_interval == "1h":
                     df = ticker.history(period="60d", interval=yf_interval)
+                elif yf_interval == "1d":
+                    df = ticker.history(period="1y", interval=yf_interval)
                 else:
                     df = ticker.history(period="7d", interval=yf_interval)
 
@@ -264,14 +295,21 @@ class YFinanceService:
             return {"error": "yfinance not installed"}
 
         # Calculate period based on interval and outputsize
+        # Yahoo Finance limitations:
+        # - 1m data: max 7 days
+        # - 5m/15m/30m: max 60 days
+        # - 1h: max 730 days
+        # - 1d+: max available
         yf_interval = self._map_interval(interval)
         if not start:
-            if yf_interval == "1d":
-                period = f"{max(outputsize * 2, 365)}d"
+            if yf_interval == "1m":
+                period = "5d"   # Max 7 days for 1-minute data
+            elif yf_interval in ("5m", "15m", "30m"):
+                period = "60d"  # Max 60 days for 5-30min data
             elif yf_interval == "1h":
-                period = "60d"  # yfinance limit for hourly
-            elif yf_interval == "15m":
-                period = "7d"   # yfinance limit for 15min
+                period = "60d"  # Max 730 days, but 60d is reasonable
+            elif yf_interval == "1d":
+                period = f"{max(outputsize * 2, 365)}d"
             else:
                 period = "1mo"
         else:
