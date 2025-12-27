@@ -450,6 +450,169 @@ class CacheService:
             "stats": self.get_stats(),
         }
 
+    async def get_detailed_stats(self) -> dict:
+        """
+        Gibt detaillierte Cache-Statistiken pro Kategorie zurück.
+
+        Analysiert alle gecachten Keys und gruppiert sie nach:
+        - Kategorie (OHLCV, INDICATORS, MARKET_DATA, etc.)
+        - Symbol
+        - Timeframe
+
+        Returns:
+            Dictionary mit detaillierten Statistiken
+        """
+        category_stats = {cat.value: {"entries": 0, "keys": [], "symbols": set(), "timeframes": set(), "bytes": 0}
+                         for cat in CacheCategory}
+
+        # Redis-Keys analysieren
+        if self._redis_available and self._redis:
+            try:
+                cursor = 0
+                while True:
+                    cursor, keys = await self._redis.scan(cursor, match=f"{self.prefix}:*", count=1000)
+                    for key in keys:
+                        self._analyze_key(key, category_stats, is_redis=True)
+                    if cursor == 0:
+                        break
+            except Exception as e:
+                logger.warning(f"Redis SCAN Fehler: {e}")
+
+        # In-Memory Cache analysieren
+        for key, (expires, size, _) in self._memory_cache.items():
+            self._analyze_key(key, category_stats, is_redis=False, size=size)
+
+        # Sets in Listen konvertieren und Statistiken berechnen
+        result = {
+            "categories": {},
+            "summary": {
+                "total_entries": 0,
+                "total_symbols": set(),
+                "total_timeframes": set(),
+                "redis_available": self._redis_available,
+            },
+            "by_source": {
+                "twelvedata": {"entries": 0, "symbols": set()},
+                "easyinsight": {"entries": 0, "symbols": set()},
+                "yfinance": {"entries": 0, "symbols": set()},
+            }
+        }
+
+        for cat, stats in category_stats.items():
+            if stats["entries"] > 0:
+                result["categories"][cat] = {
+                    "entries": stats["entries"],
+                    "symbols": sorted(list(stats["symbols"])),
+                    "symbol_count": len(stats["symbols"]),
+                    "timeframes": sorted(list(stats["timeframes"])),
+                    "timeframe_count": len(stats["timeframes"]),
+                    "bytes": stats["bytes"],
+                    "ttl_seconds": DEFAULT_TTL.get(CacheCategory(cat), 300),
+                }
+                result["summary"]["total_entries"] += stats["entries"]
+                result["summary"]["total_symbols"].update(stats["symbols"])
+                result["summary"]["total_timeframes"].update(stats["timeframes"])
+
+        # Summary finalisieren
+        result["summary"]["total_symbols"] = sorted(list(result["summary"]["total_symbols"]))
+        result["summary"]["total_symbol_count"] = len(result["summary"]["total_symbols"])
+        result["summary"]["total_timeframes"] = sorted(list(result["summary"]["total_timeframes"]))
+        result["summary"]["total_timeframe_count"] = len(result["summary"]["total_timeframes"])
+
+        # Datenquellen-Stats konvertieren
+        for source in result["by_source"]:
+            result["by_source"][source]["symbols"] = sorted(list(result["by_source"][source]["symbols"]))
+            result["by_source"][source]["symbol_count"] = len(result["by_source"][source]["symbols"])
+
+        return result
+
+    def _analyze_key(self, key: str, category_stats: dict, is_redis: bool = True, size: int = 0) -> None:
+        """
+        Analysiert einen Cache-Key und extrahiert Metadaten.
+
+        Args:
+            key: Der zu analysierende Cache-Key
+            category_stats: Dictionary zum Sammeln der Statistiken
+            is_redis: True wenn Redis-Key, False wenn In-Memory
+            size: Größe der Daten in Bytes (nur für In-Memory)
+        """
+        parts = key.split(":")
+        if len(parts) < 2:
+            return
+
+        # Key-Format: trading:category:symbol:timeframe:hash oder trading:category:key
+        category = parts[1] if len(parts) > 1 else None
+
+        if category and category in category_stats:
+            category_stats[category]["entries"] += 1
+            category_stats[category]["keys"].append(key)
+            category_stats[category]["bytes"] += size
+
+            # Symbol und Timeframe extrahieren
+            if len(parts) >= 3:
+                potential_symbol = parts[2]
+                # Prüfen ob es ein gültiges Symbol ist (Großbuchstaben, evt. mit Zahlen)
+                if potential_symbol and potential_symbol.isupper() or potential_symbol.replace("USD", "").isalpha():
+                    category_stats[category]["symbols"].add(potential_symbol)
+
+            if len(parts) >= 4:
+                potential_timeframe = parts[3]
+                # Bekannte Timeframe-Formate prüfen
+                valid_timeframes = ["M1", "M5", "M15", "M30", "M45", "H1", "H2", "H4", "D1", "W1", "MN",
+                                   "1min", "5min", "15min", "30min", "45min", "1h", "2h", "4h", "1day", "1week", "1month"]
+                if potential_timeframe in valid_timeframes:
+                    category_stats[category]["timeframes"].add(potential_timeframe)
+
+    async def get_category_entries(self, category: CacheCategory, limit: int = 100) -> list:
+        """
+        Gibt eine Liste aller Einträge einer Kategorie zurück.
+
+        Args:
+            category: Die Cache-Kategorie
+            limit: Maximale Anzahl zurückzugebender Einträge
+
+        Returns:
+            Liste von Einträgen mit Key-Informationen
+        """
+        entries = []
+        pattern = f"{self.prefix}:{category.value}:*"
+
+        if self._redis_available and self._redis:
+            try:
+                cursor = 0
+                while len(entries) < limit:
+                    cursor, keys = await self._redis.scan(cursor, match=pattern, count=100)
+                    for key in keys[:limit - len(entries)]:
+                        ttl = await self._redis.ttl(key)
+                        parts = key.split(":")
+                        entries.append({
+                            "key": key,
+                            "symbol": parts[2] if len(parts) > 2 else None,
+                            "timeframe": parts[3] if len(parts) > 3 else None,
+                            "ttl_remaining": ttl if ttl > 0 else 0,
+                        })
+                    if cursor == 0:
+                        break
+            except Exception as e:
+                logger.warning(f"Redis SCAN Fehler: {e}")
+
+        # In-Memory Fallback
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+        for key, (expires, size, _) in self._memory_cache.items():
+            if key.startswith(f"{self.prefix}:{category.value}:") and len(entries) < limit:
+                parts = key.split(":")
+                ttl_remaining = max(0, int((expires - now).total_seconds()))
+                entries.append({
+                    "key": key,
+                    "symbol": parts[2] if len(parts) > 2 else None,
+                    "timeframe": parts[3] if len(parts) > 3 else None,
+                    "ttl_remaining": ttl_remaining,
+                    "size_bytes": size,
+                })
+
+        return entries
+
 
 # Singleton-Instanz
 cache_service = CacheService()

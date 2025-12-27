@@ -913,6 +913,180 @@ async def get_system_info():
 
 
 # ============================================
+# Cache Management Endpoints
+# ============================================
+
+@system_router.get("/cache/overview", tags=["1. System"])
+async def get_cache_overview():
+    """
+    Get comprehensive cache overview with statistics per category.
+
+    Returns detailed information about:
+    - Cache entries per category (OHLCV, INDICATORS, MARKET_DATA, etc.)
+    - Symbols and timeframes cached per category
+    - TTL configuration per category
+    - Redis connection status and memory usage
+    """
+    from ..services.cache_service import cache_service, CacheCategory, DEFAULT_TTL
+
+    try:
+        # Connect if not connected
+        if not cache_service._redis_available:
+            await cache_service.connect()
+
+        # Get detailed stats
+        detailed_stats = await cache_service.get_detailed_stats()
+        health = await cache_service.health_check()
+        basic_stats = cache_service.get_stats()
+
+        # Add TTL info for all categories
+        ttl_config = {cat.value: {"ttl_seconds": ttl, "ttl_display": _format_ttl(ttl)}
+                      for cat, ttl in DEFAULT_TTL.items()}
+
+        return {
+            "status": "ok",
+            "cache_backend": "redis" if health["redis_connected"] else "memory",
+            "redis": {
+                "connected": health["redis_connected"],
+                "memory_used": health["redis_memory_used"],
+            },
+            "statistics": basic_stats,
+            "categories": detailed_stats["categories"],
+            "summary": detailed_stats["summary"],
+            "ttl_config": ttl_config,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Cache overview failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@system_router.get("/cache/category/{category}", tags=["1. System"])
+async def get_cache_category_entries(category: str, limit: int = 100):
+    """
+    Get entries for a specific cache category.
+
+    Args:
+        category: Cache category (market, ohlcv, indicators, symbols, metadata, sentiment, economic, onchain, training)
+        limit: Maximum number of entries to return (default 100)
+
+    Returns list of cached entries with symbol, timeframe, and TTL information.
+    """
+    from ..services.cache_service import cache_service, CacheCategory
+
+    try:
+        # Validate category
+        try:
+            cat = CacheCategory(category)
+        except ValueError:
+            valid_categories = [c.value for c in CacheCategory]
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid category '{category}'. Valid: {valid_categories}"
+            )
+
+        # Connect if not connected
+        if not cache_service._redis_available:
+            await cache_service.connect()
+
+        entries = await cache_service.get_category_entries(cat, limit=limit)
+
+        return {
+            "category": category,
+            "entry_count": len(entries),
+            "entries": entries,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Cache category entries failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@system_router.delete("/cache/category/{category}", tags=["1. System"])
+async def clear_cache_category(category: str):
+    """
+    Clear all entries for a specific cache category.
+
+    Args:
+        category: Cache category to clear
+
+    Returns number of deleted entries.
+    """
+    from ..services.cache_service import cache_service, CacheCategory
+
+    try:
+        # Validate category
+        try:
+            cat = CacheCategory(category)
+        except ValueError:
+            valid_categories = [c.value for c in CacheCategory]
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid category '{category}'. Valid: {valid_categories}"
+            )
+
+        # Connect if not connected
+        if not cache_service._redis_available:
+            await cache_service.connect()
+
+        deleted = await cache_service.clear_category(cat)
+
+        return {
+            "status": "ok",
+            "category": category,
+            "deleted_entries": deleted,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Cache category clear failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@system_router.delete("/cache/all", tags=["1. System"])
+async def clear_all_cache():
+    """
+    Clear the entire cache (all categories).
+
+    WARNING: This will delete all cached data!
+
+    Returns number of deleted entries.
+    """
+    from ..services.cache_service import cache_service
+
+    try:
+        # Connect if not connected
+        if not cache_service._redis_available:
+            await cache_service.connect()
+
+        deleted = await cache_service.clear_all()
+
+        return {
+            "status": "ok",
+            "deleted_entries": deleted,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Cache clear all failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _format_ttl(seconds: int) -> str:
+    """Format TTL in human-readable format."""
+    if seconds < 60:
+        return f"{seconds}s"
+    elif seconds < 3600:
+        return f"{seconds // 60}m"
+    elif seconds < 86400:
+        return f"{seconds // 3600}h"
+    else:
+        return f"{seconds // 86400}d"
+
+
+# ============================================
 # Trading Strategy Endpoints
 # ============================================
 
@@ -3885,6 +4059,7 @@ async def get_time_series(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     exchange: Optional[str] = None,
+    bypass_cache: bool = False,
 ):
     """
     Get time series (OHLCV) data for a symbol.
@@ -3896,6 +4071,7 @@ async def get_time_series(
         start_date: Start date (format: 'YYYY-MM-DD')
         end_date: End date (format: 'YYYY-MM-DD')
         exchange: Specific exchange (optional)
+        bypass_cache: Skip cache and fetch fresh data (default: False)
     """
     data = await twelvedata_service.get_time_series(
         symbol=symbol,
@@ -3904,6 +4080,7 @@ async def get_time_series(
         start_date=start_date,
         end_date=end_date,
         exchange=exchange,
+        bypass_cache=bypass_cache,
     )
     return data
 

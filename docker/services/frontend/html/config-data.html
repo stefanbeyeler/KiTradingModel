@@ -545,6 +545,128 @@
         .risk-high { color: #e57373; }
         .risk-aggressive { color: #f44336; }
 
+        /* Cache Categories Grid */
+        .cache-categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .cache-category-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            border-left: 3px solid #64c8ff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cache-category-card:hover {
+            background: rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .cache-category-card.empty {
+            border-left-color: #555;
+            opacity: 0.6;
+        }
+
+        .cache-category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .cache-category-name {
+            font-size: 1rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            color: #64c8ff;
+        }
+
+        .cache-category-ttl {
+            font-size: 0.75rem;
+            color: #888;
+            background: rgba(100, 200, 255, 0.1);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .cache-category-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .cache-stat-item {
+            text-align: center;
+        }
+
+        .cache-stat-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #e8e8e8;
+        }
+
+        .cache-stat-label {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .cache-symbols-preview {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+            color: #a0a0a0;
+        }
+
+        .cache-symbols-preview .symbol-tag {
+            display: inline-block;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            margin: 0.1rem;
+            font-size: 0.7rem;
+        }
+
+        .cache-timeframes-row {
+            margin-top: 0.5rem;
+        }
+
+        .cache-timeframes-row .tf-tag {
+            display: inline-block;
+            background: rgba(76, 175, 80, 0.15);
+            color: #81c784;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            margin: 0.1rem;
+            font-size: 0.7rem;
+        }
+
+        /* Cache status indicator */
+        .cache-status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .cache-status-indicator.connected {
+            background: #81c784;
+            box-shadow: 0 0 8px rgba(129, 199, 132, 0.5);
+        }
+
+        .cache-status-indicator.disconnected {
+            background: #e57373;
+            box-shadow: 0 0 8px rgba(229, 115, 115, 0.5);
+        }
+
         footer {
             text-align: center;
             padding: 2rem;
@@ -567,6 +689,7 @@
         <div class="tabs">
             <button class="tab-btn active" data-tab="symbols">Symbole</button>
             <button class="tab-btn" data-tab="explorer">Daten-Explorer</button>
+            <button class="tab-btn" data-tab="cache">Cache</button>
             <button class="tab-btn" data-tab="strategies">Trading-Strategien</button>
             <button class="tab-btn" data-tab="external">External Sources</button>
             <button class="tab-btn" data-tab="mt5logs">MT5 Logs</button>
@@ -688,6 +811,85 @@
 
                 <div id="strategies-list">
                     <div class="loading"><div class="spinner"></div><br>Lade Strategien...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cache Tab -->
+        <div id="cache-tab" class="tab-content">
+            <!-- Cache Status Bar -->
+            <div class="stats-bar" id="cache-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="cache-backend">-</div>
+                    <div class="stat-label">Backend</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="cache-total-entries">-</div>
+                    <div class="stat-label">Einträge</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="cache-total-symbols">-</div>
+                    <div class="stat-label">Symbole</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="cache-hit-rate">-</div>
+                    <div class="stat-label">Hit Rate</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="cache-memory">-</div>
+                    <div class="stat-label">Speicher</div>
+                </div>
+            </div>
+
+            <!-- Cache Overview Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Cache-Übersicht</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-primary" onclick="loadCacheOverview()">Aktualisieren</button>
+                        <button class="btn btn-danger" onclick="confirmClearAllCache()">Cache leeren</button>
+                    </div>
+                </div>
+
+                <div id="cache-overview-content">
+                    <div class="loading"><div class="spinner"></div><br>Lade Cache-Übersicht...</div>
+                </div>
+            </div>
+
+            <!-- Cache Categories Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Cache nach Kategorien</h2>
+                </div>
+
+                <div class="cache-categories-grid" id="cache-categories">
+                    <!-- Categories will be populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Cache Details Card -->
+            <div class="card" id="cache-details-card" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">Kategorie-Details: <span id="cache-detail-category">-</span></h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-danger btn-sm" onclick="clearSelectedCategory()">Kategorie leeren</button>
+                        <button class="btn btn-secondary btn-sm" onclick="hideCacheDetails()">Schließen</button>
+                    </div>
+                </div>
+
+                <div class="table-container" style="max-height: 400px;">
+                    <table id="cache-entries-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Timeframe</th>
+                                <th>TTL verbleibend</th>
+                                <th>Key</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cache-entries-body">
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -4693,6 +4895,275 @@
             }
         }
 
+        // ==================== Cache Management Functions ====================
+
+        // Cache category labels
+        const CACHE_CATEGORY_LABELS = {
+            'market': 'Marktdaten',
+            'ohlcv': 'OHLCV Kerzen',
+            'indicators': 'Indikatoren',
+            'symbols': 'Symbole',
+            'metadata': 'Metadaten',
+            'sentiment': 'Sentiment',
+            'economic': 'Wirtschaft',
+            'onchain': 'On-Chain',
+            'training': 'Training'
+        };
+
+        // Cache category descriptions
+        const CACHE_CATEGORY_DESCRIPTIONS = {
+            'market': 'Echtzeit-Kursdaten und Quotes',
+            'ohlcv': 'Kerzendaten (Open, High, Low, Close, Volume)',
+            'indicators': 'Technische Indikatoren (RSI, MACD, etc.)',
+            'symbols': 'Symbol-Listen und -Konfigurationen',
+            'metadata': 'Service-Metadaten',
+            'sentiment': 'Sentiment-Daten und Fear & Greed',
+            'economic': 'Wirtschaftskalender-Events',
+            'onchain': 'Blockchain und On-Chain Daten',
+            'training': 'ML-Training Daten'
+        };
+
+        let currentCacheData = null;
+        let selectedCacheCategory = null;
+
+        // Load cache overview
+        async function loadCacheOverview() {
+            const overviewContent = document.getElementById('cache-overview-content');
+            overviewContent.innerHTML = '<div class="loading"><div class="spinner"></div><br>Lade Cache-Übersicht...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/cache/overview`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                currentCacheData = await response.json();
+                updateCacheStats(currentCacheData);
+                renderCacheOverview(currentCacheData);
+                renderCacheCategories(currentCacheData);
+            } catch (error) {
+                console.error('Error loading cache overview:', error);
+                overviewContent.innerHTML = `<div class="empty-state">
+                    <div class="empty-state-icon">&#9888;</div>
+                    Fehler beim Laden: ${error.message}
+                </div>`;
+            }
+        }
+
+        // Update cache stats bar
+        function updateCacheStats(data) {
+            const backend = data.cache_backend || 'memory';
+            const isRedis = data.redis?.connected;
+
+            document.getElementById('cache-backend').innerHTML =
+                `<span class="cache-status-indicator ${isRedis ? 'connected' : 'disconnected'}"></span>${backend.toUpperCase()}`;
+            document.getElementById('cache-total-entries').textContent = data.summary?.total_entries || 0;
+            document.getElementById('cache-total-symbols').textContent = data.summary?.total_symbol_count || 0;
+            document.getElementById('cache-hit-rate').textContent =
+                (data.statistics?.hit_rate_percent || 0).toFixed(1) + '%';
+            document.getElementById('cache-memory').textContent = data.redis?.memory_used || 'N/A';
+        }
+
+        // Render cache overview content
+        function renderCacheOverview(data) {
+            const overviewContent = document.getElementById('cache-overview-content');
+            const stats = data.statistics || {};
+
+            overviewContent.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                    <div class="stat-mini">
+                        <div style="font-size: 1.5rem; font-weight: 600; color: #81c784;">${stats.hits || 0}</div>
+                        <div style="font-size: 0.8rem; color: #888;">Cache Hits</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div style="font-size: 1.5rem; font-weight: 600; color: #e57373;">${stats.misses || 0}</div>
+                        <div style="font-size: 0.8rem; color: #888;">Cache Misses</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div style="font-size: 1.5rem; font-weight: 600; color: #64c8ff;">${stats.sets || 0}</div>
+                        <div style="font-size: 0.8rem; color: #888;">Sets</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div style="font-size: 1.5rem; font-weight: 600; color: #ffb74d;">${formatBytes(stats.bytes_saved || 0)}</div>
+                        <div style="font-size: 0.8rem; color: #888;">Bytes gespart</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div style="font-size: 1.5rem; font-weight: 600; color: ${stats.redis_errors > 0 ? '#e57373' : '#81c784'};">${stats.redis_errors || 0}</div>
+                        <div style="font-size: 0.8rem; color: #888;">Redis Fehler</div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <strong style="color: #64c8ff;">Gecachte Timeframes:</strong>
+                    <div style="margin-top: 0.5rem;">
+                        ${(data.summary?.total_timeframes || []).map(tf =>
+                            `<span class="badge" style="background: rgba(76, 175, 80, 0.15); color: #81c784; margin-right: 0.25rem;">${tf}</span>`
+                        ).join('') || '<span style="color: #888;">Keine</span>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render cache categories
+        function renderCacheCategories(data) {
+            const container = document.getElementById('cache-categories');
+            const categories = data.categories || {};
+            const ttlConfig = data.ttl_config || {};
+
+            // Get all possible categories
+            const allCategories = Object.keys(CACHE_CATEGORY_LABELS);
+
+            container.innerHTML = allCategories.map(cat => {
+                const catData = categories[cat] || { entries: 0, symbol_count: 0, timeframe_count: 0, symbols: [], timeframes: [] };
+                const ttl = ttlConfig[cat] || { ttl_display: '?' };
+                const isEmpty = catData.entries === 0;
+
+                return `
+                    <div class="cache-category-card ${isEmpty ? 'empty' : ''}"
+                         onclick="${isEmpty ? '' : `showCategoryDetails('${cat}')`}"
+                         title="${CACHE_CATEGORY_DESCRIPTIONS[cat] || ''}">
+                        <div class="cache-category-header">
+                            <span class="cache-category-name">${CACHE_CATEGORY_LABELS[cat] || cat}</span>
+                            <span class="cache-category-ttl">TTL: ${ttl.ttl_display}</span>
+                        </div>
+                        <div class="cache-category-stats">
+                            <div class="cache-stat-item">
+                                <div class="cache-stat-value">${catData.entries}</div>
+                                <div class="cache-stat-label">Einträge</div>
+                            </div>
+                            <div class="cache-stat-item">
+                                <div class="cache-stat-value">${catData.symbol_count}</div>
+                                <div class="cache-stat-label">Symbole</div>
+                            </div>
+                            <div class="cache-stat-item">
+                                <div class="cache-stat-value">${catData.timeframe_count}</div>
+                                <div class="cache-stat-label">Timeframes</div>
+                            </div>
+                        </div>
+                        ${catData.symbols && catData.symbols.length > 0 ? `
+                            <div class="cache-symbols-preview">
+                                <strong>Symbole:</strong>
+                                ${catData.symbols.slice(0, 8).map(s => `<span class="symbol-tag">${s}</span>`).join('')}
+                                ${catData.symbols.length > 8 ? `<span style="color: #888;">+${catData.symbols.length - 8} weitere</span>` : ''}
+                            </div>
+                        ` : ''}
+                        ${catData.timeframes && catData.timeframes.length > 0 ? `
+                            <div class="cache-timeframes-row">
+                                ${catData.timeframes.map(tf => `<span class="tf-tag">${tf}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Show category details
+        async function showCategoryDetails(category) {
+            selectedCacheCategory = category;
+            document.getElementById('cache-detail-category').textContent =
+                CACHE_CATEGORY_LABELS[category] || category;
+            document.getElementById('cache-details-card').style.display = 'block';
+
+            const tbody = document.getElementById('cache-entries-body');
+            tbody.innerHTML = '<tr><td colspan="4" class="loading"><div class="spinner"></div></td></tr>';
+
+            try {
+                const response = await fetch(`${API_BASE}/cache/category/${category}?limit=100`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                renderCategoryEntries(data.entries || []);
+            } catch (error) {
+                console.error('Error loading category entries:', error);
+                tbody.innerHTML = `<tr><td colspan="4" style="color: #e57373;">Fehler: ${error.message}</td></tr>`;
+            }
+        }
+
+        // Render category entries
+        function renderCategoryEntries(entries) {
+            const tbody = document.getElementById('cache-entries-body');
+
+            if (entries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Keine Einträge</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = entries.map(entry => `
+                <tr>
+                    <td><strong>${entry.symbol || '-'}</strong></td>
+                    <td><span class="badge" style="background: rgba(76, 175, 80, 0.15); color: #81c784;">${entry.timeframe || '-'}</span></td>
+                    <td>${formatTTL(entry.ttl_remaining)}</td>
+                    <td style="font-size: 0.75rem; color: #888; max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${entry.key}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Hide cache details
+        function hideCacheDetails() {
+            document.getElementById('cache-details-card').style.display = 'none';
+            selectedCacheCategory = null;
+        }
+
+        // Clear selected category
+        async function clearSelectedCategory() {
+            if (!selectedCacheCategory) return;
+
+            const categoryName = CACHE_CATEGORY_LABELS[selectedCacheCategory] || selectedCacheCategory;
+            if (!confirm(`Alle ${categoryName} Cache-Einträge löschen?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/cache/category/${selectedCacheCategory}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                showToast(`${data.deleted_entries} Einträge gelöscht`, 'success');
+                hideCacheDetails();
+                loadCacheOverview();
+            } catch (error) {
+                console.error('Error clearing category:', error);
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
+        // Confirm clear all cache
+        async function confirmClearAllCache() {
+            if (!confirm('WARNUNG: Den gesamten Cache leeren? Dies entfernt alle gecachten Daten!')) return;
+            if (!confirm('Sind Sie sicher? Diese Aktion kann nicht rückgängig gemacht werden.')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/cache/all`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                showToast(`Gesamter Cache geleert: ${data.deleted_entries} Einträge gelöscht`, 'success');
+                loadCacheOverview();
+            } catch (error) {
+                console.error('Error clearing all cache:', error);
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
+        // Format bytes
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // Format TTL
+        function formatTTL(seconds) {
+            if (!seconds || seconds <= 0) return '<span style="color: #e57373;">abgelaufen</span>';
+            if (seconds < 60) return `${seconds}s`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+            return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`;
+        }
+
         // Initialize
         loadSymbols();
         loadStrategies();
@@ -4707,6 +5178,16 @@
         setTimeout(populateExternalSymbols, 1200);
         // Check external sources availability
         setTimeout(checkExternalSourcesAvailability, 1500);
+        // Load cache overview when tab is visible
+        setTimeout(() => {
+            // Check if cache tab is active on load
+            const cacheTab = document.querySelector('[data-tab="cache"]');
+            if (cacheTab) {
+                cacheTab.addEventListener('click', () => {
+                    setTimeout(loadCacheOverview, 100);
+                });
+            }
+        }, 500);
     </script>
 </body>
 </html>

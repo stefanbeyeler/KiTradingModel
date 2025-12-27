@@ -1,6 +1,7 @@
 """Twelve Data API Service - Access to real-time and historical market data.
 
 Includes rate limiting to respect API limits (377 credits/min for Grow plan).
+Includes Redis caching to reduce API calls and improve response times.
 
 WICHTIG: Timeframes werden vom Data Gateway Service normalisiert und zum
 TwelveData-Format konvertiert (siehe src/config/timeframes.py).
@@ -22,6 +23,7 @@ except ImportError:
     TDClient = None
 
 from ..config import settings
+from .cache_service import cache_service, CacheCategory
 
 
 class RateLimiter:
@@ -93,17 +95,25 @@ class RateLimiter:
 
 
 class TwelveDataService:
-    """Service for accessing Twelve Data API for market data with rate limiting."""
+    """Service for accessing Twelve Data API for market data with rate limiting and caching."""
 
     def __init__(self):
         self._api_key: str = settings.twelvedata_api_key
         self._client: Optional[TDClient] = None
         self._initialized: bool = False
+        self._cache_initialized: bool = False
         # Rate limiter: 377 credits/minute for Grow plan, configurable via settings
         calls_per_minute = getattr(settings, 'twelvedata_rate_limit', 377)
         self._rate_limiter = RateLimiter(calls_per_minute=calls_per_minute)
         self._total_calls: int = 0
         self._total_wait_time: float = 0.0
+        self._cache_hits: int = 0
+
+    async def _ensure_cache_connected(self):
+        """Ensure cache service is connected."""
+        if not self._cache_initialized:
+            await cache_service.connect()
+            self._cache_initialized = True
 
     def _get_client(self) -> Optional[TDClient]:
         """Get or create Twelve Data client."""
@@ -263,9 +273,10 @@ class TwelveDataService:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         exchange: Optional[str] = None,
+        bypass_cache: bool = False,
     ) -> dict:
         """
-        Get time series (OHLCV) data for a symbol with rate limiting.
+        Get time series (OHLCV) data for a symbol with rate limiting and caching.
 
         Args:
             symbol: The symbol to get data for (e.g., 'AAPL', 'EUR/USD')
@@ -275,10 +286,34 @@ class TwelveDataService:
             start_date: Start date (format: 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS')
             end_date: End date (format: 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS')
             exchange: Specific exchange for the symbol
+            bypass_cache: If True, skip cache and fetch fresh data
 
         Returns:
             Dictionary with 'meta' and 'values' keys containing OHLCV data.
         """
+        await self._ensure_cache_connected()
+
+        # Normalize symbol for cache key (remove slashes)
+        cache_symbol = symbol.upper().replace("/", "")
+
+        # Build cache params (only include if specified)
+        cache_params = {"interval": interval, "outputsize": outputsize}
+        if start_date:
+            cache_params["start_date"] = start_date
+        if end_date:
+            cache_params["end_date"] = end_date
+
+        # Check cache first (unless bypassed)
+        if not bypass_cache and not start_date and not end_date:
+            cached = await cache_service.get(CacheCategory.OHLCV, cache_symbol, interval, params=cache_params)
+            if cached:
+                self._cache_hits += 1
+                # Update from_cache flag
+                if "meta" in cached:
+                    cached["meta"]["from_cache"] = True
+                logger.debug(f"Cache hit for {symbol}/{interval} (hits: {self._cache_hits})")
+                return cached
+
         client = self._get_client()
         if not client:
             return {"meta": {}, "values": [], "error": "Twelve Data client not available"}
@@ -308,16 +343,24 @@ class TwelveDataService:
             ts = client.time_series(**params)
             data = ts.as_json()
 
-            logger.info(f"Retrieved {len(data)} data points for {symbol}")
-            return {
+            result = {
                 "meta": {
                     "symbol": symbol,
                     "interval": interval,
                     "exchange": exchange,
                     "type": "Time Series",
+                    "from_cache": False,
                 },
                 "values": data,
             }
+
+            # Cache the result (only if not using date filters)
+            if not start_date and not end_date and data:
+                await cache_service.set(CacheCategory.OHLCV, result, cache_symbol, interval, params=cache_params)
+                logger.debug(f"Cached {len(data)} OHLCV data points for {symbol}/{interval}")
+
+            logger.info(f"Retrieved {len(data)} data points for {symbol}")
+            return result
         except Exception as e:
             logger.error(f"Failed to get time series for {symbol}: {e}")
             return {"meta": {"symbol": symbol}, "values": [], "error": str(e)}
