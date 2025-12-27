@@ -9,6 +9,10 @@ Symbol mapping:
 - Crypto: BTCUSD -> BTC-USD
 - Indices: GER40 -> ^GDAXI, US500 -> ^GSPC
 - Commodities: XAUUSD -> GC=F (Gold futures)
+
+WICHTIG: Timeframes werden vom Data Gateway Service normalisiert und zum
+Yahoo Finance-Format konvertiert (siehe src/config/timeframes.py).
+Dieser Service verwendet die zentrale Timeframe-Konfiguration für konsistente Mappings.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -24,6 +28,14 @@ try:
 except ImportError:
     YFINANCE_AVAILABLE = False
     logger.warning("yfinance not installed. Yahoo Finance fallback will be unavailable.")
+
+from ..config.timeframes import (
+    Timeframe,
+    normalize_timeframe_safe,
+    to_yfinance,
+    get_yfinance_fallback_warning,
+    TIMEFRAME_TO_YFINANCE,
+)
 
 
 # Symbol mapping from internal format to Yahoo Finance format
@@ -102,19 +114,16 @@ SYMBOL_MAPPING = {
     "XAGAUD": "SI=F",      # Silver (USD base)
 }
 
-# Interval mapping from internal format to yfinance format
+# Interval mapping wird aus der zentralen Konfiguration übernommen
+# Siehe: src/config/timeframes.py -> TIMEFRAME_TO_YFINANCE
+# Legacy-Mapping für Abwärtskompatibilität (wird durch zentrale Funktion ersetzt)
 INTERVAL_MAPPING = {
-    # TwelveData format
-    "M1": "1m",
-    "M5": "5m",
-    "M15": "15m",
-    "M30": "30m",
-    "H1": "1h",
-    "H4": "1h",  # Yahoo doesn't have 4h, use 1h as fallback
-    "D1": "1d",
-    "W1": "1wk",
-    "MN": "1mo",
-    # Common formats
+    # Standard format (von zentraler Konfiguration)
+    tf.value: yf_interval for tf, yf_interval in TIMEFRAME_TO_YFINANCE.items()
+} if YFINANCE_AVAILABLE else {}
+
+# Erweitere mit Common formats für Abwärtskompatibilität
+_LEGACY_INTERVAL_MAPPING = {
     "1min": "1m",
     "5min": "5m",
     "15min": "15m",
@@ -130,6 +139,7 @@ INTERVAL_MAPPING = {
     "15m": "15m",
     "30m": "30m",
 }
+INTERVAL_MAPPING.update(_LEGACY_INTERVAL_MAPPING)
 
 
 class YFinanceService:
@@ -182,15 +192,38 @@ class YFinanceService:
         return None
 
     def _map_interval(self, interval: str) -> str:
-        """Map internal interval to yfinance interval."""
-        # Try exact match first, then uppercase, then lowercase
-        if interval in INTERVAL_MAPPING:
-            return INTERVAL_MAPPING[interval]
-        if interval.upper() in INTERVAL_MAPPING:
-            return INTERVAL_MAPPING[interval.upper()]
-        if interval.lower() in INTERVAL_MAPPING:
-            return INTERVAL_MAPPING[interval.lower()]
-        return interval
+        """
+        Map internal interval to yfinance interval.
+
+        Uses the central timeframe configuration for consistent mapping.
+        Logs a warning if Yahoo Finance uses a fallback interval.
+
+        Args:
+            interval: Timeframe in beliebigem Format
+
+        Returns:
+            Yahoo Finance-kompatibles Intervall
+        """
+        # Use central timeframe normalization
+        try:
+            tf = normalize_timeframe_safe(interval, Timeframe.H1)
+            yf_interval = to_yfinance(tf)
+
+            # Log warning if fallback is used
+            warning = get_yfinance_fallback_warning(tf)
+            if warning:
+                logger.warning(f"Yahoo Finance Fallback: {warning}")
+
+            return yf_interval
+        except Exception:
+            # Fallback to legacy mapping
+            if interval in INTERVAL_MAPPING:
+                return INTERVAL_MAPPING[interval]
+            if interval.upper() in INTERVAL_MAPPING:
+                return INTERVAL_MAPPING[interval.upper()]
+            if interval.lower() in INTERVAL_MAPPING:
+                return INTERVAL_MAPPING[interval.lower()]
+            return interval
 
     def _fetch_data_sync(
         self,

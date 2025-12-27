@@ -12,6 +12,15 @@ from fastapi.responses import PlainTextResponse
 from loguru import logger
 
 from ..config import settings
+from ..config.timeframes import (
+    Timeframe,
+    normalize_timeframe,
+    normalize_timeframe_safe,
+    to_twelvedata,
+    get_candles_per_day,
+    calculate_limit_for_days,
+    is_valid_timeframe,
+)
 from ..version import get_version_info, VERSION, RELEASE_DATE
 from ..models.trading_data import (
     AnalysisRequest,
@@ -4449,24 +4458,17 @@ async def get_training_data(
     import httpx
     from datetime import datetime
 
-    tf = timeframe.upper()
+    # Normalize timeframe using central configuration
+    try:
+        tf_enum = normalize_timeframe(timeframe)
+        tf = tf_enum.value  # Standard format: H1, D1, etc.
+    except ValueError:
+        # Fallback for invalid timeframes
+        tf = timeframe.upper()
+        tf_enum = Timeframe.H1
 
-    # Calculate limit based on timeframe - all TwelveData supported intervals
-    timeframe_candles_per_day = {
-        "M1": 1440,   # 1440 candles/day for 1min
-        "M5": 288,    # 288 candles/day for 5min
-        "M15": 96,    # 96 candles/day for 15min
-        "M30": 48,    # 48 candles/day for 30min
-        "M45": 32,    # 32 candles/day for 45min
-        "H1": 24,     # 24 candles/day for 1h
-        "H2": 12,     # 12 candles/day for 2h
-        "H4": 6,      # 6 candles/day for 4h
-        "D1": 1,      # 1 candle/day
-        "W1": 0.14,   # ~1 candle/week
-        "MN": 0.033,  # ~1 candle/month
-    }
-    candles_per_day = timeframe_candles_per_day.get(tf, 24)
-    limit = min(max(int(days * candles_per_day), 100), 5000)  # TwelveData max is 5000
+    # Calculate limit using central configuration
+    limit = calculate_limit_for_days(tf_enum, days, max_limit=5000)
 
     # Try to get data from cache first (TwelveData cache)
     rows = None
@@ -4544,16 +4546,21 @@ async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache
     """
     Fetch training data from TwelveData API (primary source for OHLC data).
 
-    Supports all TwelveData timeframes: M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
+    Uses central timeframe configuration for consistent mapping.
+    Supports all timeframes: M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
     """
     from ..services.training_data_cache_service import training_data_cache
     from ..services.symbol_service import symbol_service
 
+    # Normalize timeframe using central configuration
+    tf_enum = normalize_timeframe_safe(timeframe, Timeframe.H1)
+    tf = tf_enum.value  # Standard format for cache keys
+
     # Try to get from cache first
     if use_cache:
-        cached_data = training_data_cache.get_cached_data(symbol, timeframe, "twelvedata")
+        cached_data = training_data_cache.get_cached_data(symbol, tf, "twelvedata")
         if cached_data:
-            logger.info(f"Using cached TwelveData for {symbol}/{timeframe}: {len(cached_data)} rows")
+            logger.info(f"Using cached TwelveData for {symbol}/{tf}: {len(cached_data)} rows")
             return cached_data
 
     # Get TwelveData symbol format
@@ -4572,21 +4579,8 @@ async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache
         else:
             td_symbol = symbol
 
-    # Map all timeframes to TwelveData interval format
-    interval_map = {
-        "M1": "1min",
-        "M5": "5min",
-        "M15": "15min",
-        "M30": "30min",
-        "M45": "45min",
-        "H1": "1h",
-        "H2": "2h",
-        "H4": "4h",
-        "D1": "1day",
-        "W1": "1week",
-        "MN": "1month"
-    }
-    interval = interval_map.get(timeframe.upper(), "1h")
+    # Use central timeframe configuration for TwelveData interval
+    interval = to_twelvedata(tf_enum)
 
     # Fetch from TwelveData - max 5000 data points
     try:
@@ -4598,15 +4592,15 @@ async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache
 
         values = data.get("values", [])
 
-        # Cache the data
+        # Cache the data with standardized timeframe
         if values and use_cache:
-            training_data_cache.cache_data(symbol, timeframe, values, "twelvedata")
-            logger.info(f"Fetched and cached {len(values)} TwelveData rows for {symbol}/{timeframe}")
+            training_data_cache.cache_data(symbol, tf, values, "twelvedata")
+            logger.info(f"Fetched and cached {len(values)} TwelveData rows for {symbol}/{tf}")
 
         return values
 
     except Exception as e:
-        logger.error(f"Failed to fetch TwelveData for {symbol}/{timeframe}: {e}")
+        logger.error(f"Failed to fetch TwelveData for {symbol}/{tf}: {e}")
         return []
 
 

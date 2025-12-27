@@ -1,6 +1,10 @@
 """Twelve Data API Service - Access to real-time and historical market data.
 
 Includes rate limiting to respect API limits (377 credits/min for Grow plan).
+
+WICHTIG: Timeframes werden vom Data Gateway Service normalisiert und zum
+TwelveData-Format konvertiert (siehe src/config/timeframes.py).
+Dieser Service empfängt bereits korrekt formatierte Intervalle (1min, 1h, 1day, etc.).
 """
 
 import asyncio

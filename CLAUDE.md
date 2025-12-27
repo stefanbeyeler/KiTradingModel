@@ -151,6 +151,80 @@ Wenn Redis nicht verfügbar ist:
 2. Warnung wird geloggt
 3. System bleibt funktionsfähig (aber ohne verteilten Cache)
 
+## Timeframe-Standardisierung (VERBINDLICH)
+
+### Zentrale Konfiguration
+
+Alle Timeframes werden über die zentrale Konfiguration in `src/config/timeframes.py` standardisiert.
+Der Data Service normalisiert alle Timeframes beim Laden und stellt den nachgelagerten Services immer konsistente Bezeichnungen zur Verfügung.
+
+### Standard-Format
+
+| Timeframe | Standard | Alternativen (automatisch gemappt) |
+|-----------|----------|-----------------------------------|
+| 1 Minute | `M1` | `1m`, `1min`, `1minute` |
+| 5 Minuten | `M5` | `5m`, `5min`, `5minutes` |
+| 15 Minuten | `M15` | `15m`, `15min`, `15minutes` |
+| 30 Minuten | `M30` | `30m`, `30min`, `30minutes` |
+| 45 Minuten | `M45` | `45m`, `45min`, `45minutes` |
+| 1 Stunde | `H1` | `1h`, `1hour`, `60m` |
+| 2 Stunden | `H2` | `2h`, `2hour` |
+| 4 Stunden | `H4` | `4h`, `4hour` |
+| 1 Tag | `D1` | `1d`, `1day`, `daily` |
+| 1 Woche | `W1` | `1wk`, `1week`, `weekly` |
+| 1 Monat | `MN` | `1mo`, `1month`, `monthly` |
+
+### Verwendung
+
+```python
+from src.config.timeframes import (
+    Timeframe,
+    normalize_timeframe,
+    normalize_timeframe_safe,
+    to_twelvedata,
+    to_yfinance,
+    get_candles_per_day,
+    calculate_limit_for_days,
+)
+
+# Normalisieren eines beliebigen Timeframe-Formats
+tf = normalize_timeframe("1h")  # Returns: Timeframe.H1
+tf = normalize_timeframe("daily")  # Returns: Timeframe.D1
+
+# Sicher normalisieren mit Fallback
+tf = normalize_timeframe_safe("invalid", Timeframe.H1)  # Returns: Timeframe.H1
+
+# Konvertieren zu TwelveData-Format
+td_interval = to_twelvedata(Timeframe.H1)  # Returns: "1h"
+
+# Konvertieren zu Yahoo Finance-Format
+yf_interval = to_yfinance(Timeframe.D1)  # Returns: "1d"
+
+# Kerzen pro Tag berechnen
+candles = get_candles_per_day(Timeframe.H1)  # Returns: 24.0
+
+# Limit für Anzahl Tage berechnen
+limit = calculate_limit_for_days(Timeframe.H1, days=30)  # Returns: 720
+```
+
+### Verbindliche Regeln
+
+1. **Niemals Timeframes hardcoden**
+   - ❌ `interval_map = {"H1": "1h", "D1": "1day"}`
+   - ✅ `from src.config.timeframes import to_twelvedata`
+
+2. **Immer normalisieren vor Verarbeitung**
+   - ❌ `timeframe.upper()`
+   - ✅ `normalize_timeframe(timeframe).value`
+
+3. **Cache-Keys immer mit Standard-Format**
+   - ❌ `cache_key = f"{symbol}_{user_input_timeframe}"`
+   - ✅ `cache_key = f"{symbol}_{normalize_timeframe(timeframe).value}"`
+
+4. **API-Responses mit Standard-Timeframe**
+   - Alle Responses enthalten `"timeframe": "H1"` im Standard-Format
+   - Clients können beliebige Formate senden, erhalten aber immer das Standard-Format zurück
+
 ## Swagger UI / OpenAPI Tags (VERBINDLICH)
 
 ### Kurze Tag-Beschreibungen

@@ -13,6 +13,11 @@ Caching:
 - In-Memory Fallback wenn Redis nicht verfügbar
 - Kategorisierte TTL-Werte für verschiedene Datentypen
 
+Timeframes:
+- Alle Timeframes werden beim Laden standardisiert (siehe src/config/timeframes.py)
+- Standard-Format: M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
+- Downstream-Services erhalten immer konsistente Timeframe-Bezeichnungen
+
 Siehe: DEVELOPMENT_GUIDELINES.md - Datenzugriff-Architektur
 """
 
@@ -23,6 +28,14 @@ import httpx
 from loguru import logger
 
 from ..config import settings
+from ..config.timeframes import (
+    Timeframe,
+    normalize_timeframe,
+    normalize_timeframe_safe,
+    to_twelvedata,
+    to_easyinsight,
+    TIMEFRAME_TO_TWELVEDATA,
+)
 from .cache_service import cache_service, CacheCategory
 
 
@@ -158,18 +171,22 @@ class DataGatewayService:
         Args:
             symbol: Trading symbol (e.g., BTCUSD)
             limit: Number of data points to fetch
-            timeframe: Timeframe (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN)
+            timeframe: Timeframe in beliebigem Format (wird automatisch normalisiert)
 
         Returns:
-            List of OHLCV dictionaries
+            List of OHLCV dictionaries with standardized timeframe field
         """
         await self._ensure_cache_connected()
 
+        # Normalize timeframe to standard format
+        tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
+        tf_str = tf.value  # Standard format: H1, D1, etc.
+
         # Check Redis cache first (OHLCV TTL: 300s)
-        cache_params = {"limit": limit, "timeframe": timeframe}
+        cache_params = {"limit": limit, "timeframe": tf_str}
         cached = await cache_service.get(CacheCategory.OHLCV, symbol, params=cache_params)
         if cached:
-            logger.debug(f"Returning {len(cached)} cached OHLCV points for {symbol}")
+            logger.debug(f"Returning {len(cached)} cached OHLCV points for {symbol} {tf_str}")
             return cached
 
         try:
@@ -177,23 +194,57 @@ class DataGatewayService:
             # Use internal training-data endpoint
             response = await client.get(
                 f"{self._data_service_url}/training-data/{symbol}",
-                params={"limit": limit}
+                params={"limit": limit, "timeframe": tf_str}
             )
             response.raise_for_status()
 
             data = response.json()
             rows = data.get('data', [])
 
-            # Cache the result
+            # Standardize timeframe in response data
+            rows = self._standardize_timeframe_in_data(rows, tf)
+
+            # Cache the result with standardized timeframe
             if rows:
                 await cache_service.set(CacheCategory.OHLCV, rows, symbol, params=cache_params)
 
-            logger.debug(f"Fetched {len(rows)} historical data points for {symbol}")
+            logger.debug(f"Fetched {len(rows)} historical data points for {symbol} {tf_str}")
             return rows
 
         except Exception as e:
             logger.error(f"Failed to fetch historical data for {symbol}: {e}")
             return []
+
+    def _standardize_timeframe_in_data(self, rows: list[dict], tf: Timeframe) -> list[dict]:
+        """
+        Standardize timeframe field in data rows.
+
+        Ensures all rows have consistent 'timeframe' field with standard format.
+
+        Args:
+            rows: List of data dictionaries
+            tf: Normalized Timeframe enum
+
+        Returns:
+            List with standardized timeframe field
+        """
+        tf_str = tf.value
+        ei_prefix = to_easyinsight(tf)  # e.g., "h1", "d1"
+
+        for row in rows:
+            # Add/update standardized timeframe field
+            row["timeframe"] = tf_str
+
+            # Ensure OHLC fields use standard naming
+            # Map from EasyInsight prefix format (h1_open) to standard (open)
+            if f"{ei_prefix}_open" in row and "open" not in row:
+                row["open"] = row[f"{ei_prefix}_open"]
+                row["high"] = row.get(f"{ei_prefix}_high", row.get("high", 0))
+                row["low"] = row.get(f"{ei_prefix}_low", row.get("low", 0))
+                row["close"] = row.get(f"{ei_prefix}_close", row.get("close", 0))
+                row["volume"] = row.get(f"{ei_prefix}_volume", row.get("volume", 0))
+
+        return rows
 
     async def get_historical_data_with_fallback(
         self,
@@ -205,37 +256,45 @@ class DataGatewayService:
         Get historical data with TwelveData as primary source.
 
         TwelveData is used exclusively for pattern analysis to ensure consistent
-        OHLC data across all timeframes.
+        OHLC data across all timeframes. Timeframe is automatically normalized
+        to the standard format.
 
-        Supported timeframes:
-            - M1: 1 minute
-            - M5: 5 minutes
-            - M15: 15 minutes
-            - M30: 30 minutes
-            - M45: 45 minutes
-            - H1: 1 hour
-            - H2: 2 hours
-            - H4: 4 hours
-            - D1: 1 day
-            - W1: 1 week
-            - MN: 1 month
+        Supported timeframes (beliebiges Format wird akzeptiert):
+            - M1, 1m, 1min: 1 minute
+            - M5, 5m, 5min: 5 minutes
+            - M15, 15m, 15min: 15 minutes
+            - M30, 30m, 30min: 30 minutes
+            - M45, 45m, 45min: 45 minutes
+            - H1, 1h, 1hour: 1 hour
+            - H2, 2h: 2 hours
+            - H4, 4h: 4 hours
+            - D1, 1d, 1day, daily: 1 day
+            - W1, 1wk, 1week, weekly: 1 week
+            - MN, 1mo, 1month, monthly: 1 month
 
         Args:
             symbol: Trading symbol
             limit: Number of data points
-            timeframe: Timeframe (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN)
+            timeframe: Timeframe in beliebigem Format (wird automatisch normalisiert)
 
         Returns:
             Tuple of (data_list, source) where source is 'twelvedata' or 'easyinsight'
+            Data contains standardized 'timeframe' field in format: M1, H1, D1, etc.
         """
+        # Normalize timeframe to standard format
+        tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
+        tf_str = tf.value
+
         # Use TwelveData as primary source for all timeframes (pattern analysis)
-        td_data = await self._get_twelvedata_candles(symbol, timeframe, limit)
+        td_data = await self._get_twelvedata_candles(symbol, tf_str, limit)
         if td_data:
+            # Ensure standardized timeframe in data
+            td_data = self._standardize_timeframe_in_data(td_data, tf)
             return td_data, "twelvedata"
 
         # Fallback to EasyInsight only if TwelveData fails
-        logger.warning(f"TwelveData failed for {symbol} {timeframe}, trying EasyInsight fallback")
-        data = await self.get_historical_data(symbol, limit, timeframe)
+        logger.warning(f"TwelveData failed for {symbol} {tf_str}, trying EasyInsight fallback")
+        data = await self.get_historical_data(symbol, limit, tf_str)
         return data, "easyinsight"
 
     def _convert_twelvedata_to_easyinsight(
@@ -244,26 +303,49 @@ class DataGatewayService:
         symbol: str,
         timeframe: str
     ) -> list[dict]:
-        """Convert TwelveData format to EasyInsight format."""
+        """
+        Convert TwelveData format to standardized format.
+
+        Args:
+            td_values: Raw TwelveData response values
+            symbol: Trading symbol
+            timeframe: Timeframe (already normalized to standard format)
+
+        Returns:
+            List of standardized OHLCV dictionaries
+        """
         converted = []
-        tf_lower = timeframe.lower()
+
+        # Normalize timeframe to get consistent naming
+        tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
+        tf_str = tf.value  # Standard format: H1, D1, etc.
+        ei_prefix = to_easyinsight(tf)  # e.g., "h1", "d1"
 
         for row in td_values:
             try:
                 # TwelveData format: datetime, open, high, low, close, volume
+                open_val = float(row.get("open", 0))
+                high_val = float(row.get("high", 0))
+                low_val = float(row.get("low", 0))
+                close_val = float(row.get("close", 0))
+                volume_val = float(row.get("volume", 0)) if row.get("volume") else 0
+
                 entry = {
                     "symbol": symbol,
+                    "timeframe": tf_str,  # Standardized timeframe field
                     "snapshot_time": row.get("datetime"),
-                    f"{tf_lower}_open": float(row.get("open", 0)),
-                    f"{tf_lower}_high": float(row.get("high", 0)),
-                    f"{tf_lower}_low": float(row.get("low", 0)),
-                    f"{tf_lower}_close": float(row.get("close", 0)),
+                    # Standard OHLCV fields (for downstream services)
+                    "open": open_val,
+                    "high": high_val,
+                    "low": low_val,
+                    "close": close_val,
+                    "volume": volume_val,
+                    # EasyInsight-compatible prefixed fields
+                    f"{ei_prefix}_open": open_val,
+                    f"{ei_prefix}_high": high_val,
+                    f"{ei_prefix}_low": low_val,
+                    f"{ei_prefix}_close": close_val,
                 }
-                # Also populate standard OHLC fields
-                entry["h1_open"] = entry.get(f"{tf_lower}_open", 0)
-                entry["h1_high"] = entry.get(f"{tf_lower}_high", 0)
-                entry["h1_low"] = entry.get(f"{tf_lower}_low", 0)
-                entry["h1_close"] = entry.get(f"{tf_lower}_close", 0)
                 converted.append(entry)
             except Exception as e:
                 logger.warning(f"Failed to convert TwelveData row: {e}")
@@ -280,16 +362,16 @@ class DataGatewayService:
         """
         Get candle data directly from TwelveData.
 
-        Used as primary source for timeframes not supported by EasyInsight
-        (M1, M5, M30, M45, H2, H4, W1, MN).
+        Used as primary source for all timeframes. Timeframe is automatically
+        normalized to the standard format and converted to TwelveData API format.
 
         Args:
             symbol: Trading symbol (e.g., BTCUSD)
-            timeframe: Timeframe (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN)
+            timeframe: Timeframe in beliebigem Format (wird normalisiert)
             limit: Number of candles to fetch (max 5000)
 
         Returns:
-            List of candle dictionaries in EasyInsight-compatible format
+            List of candle dictionaries with standardized format
         """
         try:
             from .twelvedata_service import twelvedata_service
@@ -311,21 +393,9 @@ class DataGatewayService:
                 logger.warning(f"No TwelveData symbol mapping for {symbol}")
                 return []
 
-            # Map timeframe to TwelveData interval - all supported intervals
-            td_interval_map = {
-                "M1": "1min",
-                "M5": "5min",
-                "M15": "15min",
-                "M30": "30min",
-                "M45": "45min",
-                "H1": "1h",
-                "H2": "2h",
-                "H4": "4h",
-                "D1": "1day",
-                "W1": "1week",
-                "MN": "1month"
-            }
-            td_interval = td_interval_map.get(timeframe.upper(), "1h")
+            # Normalize and convert timeframe to TwelveData format
+            tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
+            td_interval = to_twelvedata(tf)
 
             # TwelveData max outputsize is 5000
             fetch_limit = min(limit, 5000)
@@ -338,13 +408,13 @@ class DataGatewayService:
             )
 
             if td_data and td_data.get("values"):
-                # Convert to EasyInsight format
+                # Convert to standardized format
                 converted = self._convert_twelvedata_to_easyinsight(
                     td_data["values"],
                     symbol,
-                    timeframe
+                    tf.value  # Pass normalized timeframe
                 )
-                logger.info(f"TwelveData returned {len(converted)} {timeframe} candles for {symbol}")
+                logger.info(f"TwelveData returned {len(converted)} {tf.value} candles for {symbol}")
                 return converted
 
         except Exception as e:
@@ -479,18 +549,18 @@ class DataGatewayService:
         Get technical indicator data for a symbol via TwelveData.
 
         This method provides access to TwelveData's technical indicators
-        when EasyInsight data is insufficient or unavailable.
+        when EasyInsight data is insufficient or unavailable. Interval is
+        automatically normalized to the standard format.
 
         Args:
             symbol: Trading symbol (will be converted to TwelveData format)
             indicator: Indicator name (rsi, macd, bbands, stoch, adx, etc.)
-            interval: Time interval (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
-                      or TwelveData format: 1min, 5min, 15min, 1h, 4h, 1day, etc.)
+            interval: Time interval in beliebigem Format (wird normalisiert)
             outputsize: Number of data points
             **kwargs: Additional indicator-specific parameters
 
         Returns:
-            Dictionary with indicator values or error
+            Dictionary with indicator values and standardized timeframe field
         """
         try:
             from .twelvedata_service import twelvedata_service
@@ -511,21 +581,9 @@ class DataGatewayService:
             if not td_symbol:
                 return {"error": f"No TwelveData symbol mapping for {symbol}"}
 
-            # Map interval formats - all TwelveData supported intervals
-            td_interval_map = {
-                "M1": "1min", "1min": "1min",
-                "M5": "5min", "5min": "5min",
-                "M15": "15min", "15min": "15min",
-                "M30": "30min", "30min": "30min",
-                "M45": "45min", "45min": "45min",
-                "H1": "1h", "1h": "1h",
-                "H2": "2h", "2h": "2h",
-                "H4": "4h", "4h": "4h",
-                "D1": "1day", "1day": "1day",
-                "W1": "1week", "1week": "1week",
-                "MN": "1month", "1month": "1month",
-            }
-            td_interval = td_interval_map.get(interval.upper(), interval)
+            # Normalize interval to standard format and convert to TwelveData
+            tf = normalize_timeframe_safe(interval, Timeframe.H1)
+            td_interval = to_twelvedata(tf)
 
             # Fetch indicator from TwelveData
             result = await twelvedata_service.get_technical_indicators(
@@ -536,10 +594,11 @@ class DataGatewayService:
                 **kwargs,
             )
 
-            # Add original symbol to result
+            # Add standardized timeframe and symbol info to result
             if "error" not in result:
                 result["original_symbol"] = symbol
                 result["twelvedata_symbol"] = td_symbol
+                result["timeframe"] = tf.value  # Standardized timeframe
 
             return result
 
@@ -696,15 +755,16 @@ class DataGatewayService:
         Get multiple technical indicators for a symbol via TwelveData.
 
         Note: Each indicator requires a separate API call with rate limiting.
+        Interval is automatically normalized to the standard format.
 
         Args:
             symbol: Trading symbol
             indicators: List of indicator names
-            interval: Time interval
+            interval: Time interval in beliebigem Format (wird normalisiert)
             outputsize: Number of data points
 
         Returns:
-            Dictionary with results for each indicator
+            Dictionary with results for each indicator and standardized timeframe
         """
         try:
             from .twelvedata_service import twelvedata_service
@@ -724,13 +784,9 @@ class DataGatewayService:
             if not td_symbol:
                 return {"error": f"No TwelveData symbol mapping for {symbol}"}
 
-            # Map interval - all TwelveData supported intervals
-            td_interval_map = {
-                "M1": "1min", "M5": "5min", "M15": "15min", "M30": "30min", "M45": "45min",
-                "H1": "1h", "H2": "2h", "H4": "4h",
-                "D1": "1day", "W1": "1week", "MN": "1month"
-            }
-            td_interval = td_interval_map.get(interval.upper(), interval)
+            # Normalize interval to standard format and convert to TwelveData
+            tf = normalize_timeframe_safe(interval, Timeframe.H1)
+            td_interval = to_twelvedata(tf)
 
             result = await twelvedata_service.get_multiple_indicators(
                 symbol=td_symbol,
@@ -741,6 +797,7 @@ class DataGatewayService:
 
             result["original_symbol"] = symbol
             result["twelvedata_symbol"] = td_symbol
+            result["timeframe"] = tf.value  # Standardized timeframe
             return result
 
         except Exception as e:

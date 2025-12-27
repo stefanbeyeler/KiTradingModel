@@ -7,6 +7,9 @@ to reduce API calls during batch NHITS model training.
 Data is cached on disk with TTL per timeframe. Cache entries expire automatically
 and are cleaned up periodically. This is especially important for Twelve Data API
 which has daily request limits.
+
+WICHTIG: Timeframes werden vor dem Caching standardisiert (siehe src/config/timeframes.py).
+Cache-Keys verwenden immer das Standard-Format (M1, H1, D1, etc.).
 """
 
 import json
@@ -18,6 +21,11 @@ from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, asdict
 
 from ..config.settings import settings
+from ..config.timeframes import (
+    Timeframe,
+    normalize_timeframe_safe,
+    TIMEFRAME_ORDER,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +53,19 @@ class TrainingDataCacheService:
 
     # TTL in hours per timeframe - optimized for reducing API calls
     # Especially important for Twelve Data which has daily request limits
+    # Uses standard Timeframe enum values as keys
     DEFAULT_TTL = {
-        "M15": 6,    # 6 hours - reasonable for intraday retraining
-        "H1": 12,    # 12 hours - covers multiple training runs per day
-        "D1": 48,    # 48 hours - D1 data changes slowly (1 new candle/day)
+        Timeframe.M1.value: 1,     # 1 hour - high frequency data
+        Timeframe.M5.value: 2,     # 2 hours
+        Timeframe.M15.value: 6,    # 6 hours - reasonable for intraday retraining
+        Timeframe.M30.value: 8,    # 8 hours
+        Timeframe.M45.value: 8,    # 8 hours
+        Timeframe.H1.value: 12,    # 12 hours - covers multiple training runs per day
+        Timeframe.H2.value: 12,    # 12 hours
+        Timeframe.H4.value: 24,    # 24 hours
+        Timeframe.D1.value: 48,    # 48 hours - D1 data changes slowly (1 new candle/day)
+        Timeframe.W1.value: 168,   # 1 week
+        Timeframe.MN.value: 336,   # 2 weeks
     }
 
     def __init__(self, cache_dir: Optional[Path] = None):
@@ -73,8 +90,16 @@ class TrainingDataCacheService:
         logger.info(f"Training data cache initialized at {self.cache_dir}")
 
     def _get_cache_key(self, symbol: str, timeframe: str, source: str = "easyinsight") -> str:
-        """Generate unique cache key for symbol/timeframe/source combination."""
-        return f"{source}_{symbol}_{timeframe}".replace("/", "_").replace("\\", "_")
+        """
+        Generate unique cache key for symbol/timeframe/source combination.
+
+        Timeframe is normalized to standard format to ensure consistent cache keys.
+        """
+        # Normalize timeframe to standard format
+        tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
+        tf_str = tf.value  # Standard format: H1, D1, etc.
+
+        return f"{source}_{symbol}_{tf_str}".replace("/", "_").replace("\\", "_")
 
     def _get_cache_path(self, cache_key: str) -> Path:
         """Get file path for cache entry."""
@@ -90,8 +115,13 @@ class TrainingDataCacheService:
         return hashlib.md5(data_str.encode()).hexdigest()
 
     def _get_ttl_hours(self, timeframe: str) -> int:
-        """Get TTL in hours for a timeframe."""
-        return self.DEFAULT_TTL.get(timeframe.upper(), 4)
+        """
+        Get TTL in hours for a timeframe.
+
+        Uses central timeframe normalization to ensure consistent lookup.
+        """
+        tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
+        return self.DEFAULT_TTL.get(tf.value, 4)
 
     def is_cached(self, symbol: str, timeframe: str, source: str = "easyinsight") -> bool:
         """Check if valid (non-expired) cache exists for symbol/timeframe."""
@@ -302,9 +332,10 @@ class TrainingDataCacheService:
         """
         removed = 0
         for symbol in symbols:
-            for timeframe in ["M15", "H1", "D1"]:
+            # Use all standard timeframes from central configuration
+            for tf in TIMEFRAME_ORDER:
                 for source in ["easyinsight", "twelvedata"]:
-                    if self.invalidate(symbol, timeframe, source):
+                    if self.invalidate(symbol, tf.value, source):
                         removed += 1
 
         if removed > 0:
@@ -315,7 +346,8 @@ class TrainingDataCacheService:
         """Get cache statistics."""
         total_entries = 0
         total_size = 0
-        by_timeframe = {"M15": 0, "H1": 0, "D1": 0}
+        # Initialize stats for all standard timeframes
+        by_timeframe = {tf.value: 0 for tf in TIMEFRAME_ORDER}
         by_source = {"easyinsight": 0, "twelvedata": 0}
         expired_count = 0
         now = datetime.utcnow()
@@ -377,7 +409,8 @@ class TrainingDataCacheService:
         Returns:
             Dict mapping timeframe to list of cached symbols
         """
-        result = {"M15": [], "H1": [], "D1": []}
+        # Initialize result for all standard timeframes
+        result = {tf.value: [] for tf in TIMEFRAME_ORDER}
         now = datetime.utcnow()
 
         try:
