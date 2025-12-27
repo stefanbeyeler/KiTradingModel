@@ -271,20 +271,19 @@
 
     <div class="container">
         <h1>Data Service</h1>
-        <p class="subtitle">Symbol-Management, Trading-Strategien, Twelve Data API und Daten-Synchronisation</p>
+        <p class="subtitle">Zentrales Daten-Gateway mit Symbol-Management, Pattern Detection und Multi-Source Integration</p>
 
         <div class="content-card">
             <h2>&#128202; Beschreibung</h2>
             <p>
-                Der Data Service ist die zentrale Datenverwaltungskomponente des KI Trading Model Systems.
-                Er fungiert als Vermittler zwischen externen Datenquellen (EasyInsight API, Twelve Data API)
-                und den internen Services (NHITS, RAG, LLM) und stellt eine einheitliche Schnittstelle fur
-                Marktdaten bereit.
+                Der Data Service ist das <strong>zentrale Daten-Gateway</strong> des KI Trading Model Systems.
+                Er fungiert als einziger Vermittler zwischen externen Datenquellen und allen internen Services
+                (NHITS, TCN, HMM, RAG, LLM) und stellt eine einheitliche Schnittstelle fur Marktdaten bereit.
             </p>
             <p>
-                Zusatzlich verwaltet der Service Trading-Strategien und ermöglicht die Synchronisation
-                von Symbolen zwischen verschiedenen Datenquellen. Er bietet CRUD-Operationen fur
-                Managed Symbols und Strategien sowie Zugriff auf globale Marktdaten über die Twelve Data API.
+                Der Service implementiert eine <strong>Multi-Source Fallback-Hierarchie</strong>:
+                TwelveData (primar) → EasyInsight (1. Fallback) → Yahoo Finance (2. Fallback).
+                Zusatzlich bietet er Candlestick Pattern Detection, Symbol-Management und Trading-Strategien.
             </p>
         </div>
 
@@ -317,12 +316,19 @@
                     <h4>&#128202; Technische Analyse</h4>
                     <p>Berechnung von Indikatoren wie SMA, EMA, RSI, MACD, Bollinger Bands über Twelve Data.</p>
                 </div>
+                <div class="feature-item">
+                    <h4>&#128367; Candlestick Patterns</h4>
+                    <p>Multi-Timeframe Pattern Detection: Hammer, Doji, Engulfing, Morning/Evening Star und mehr.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#127760; External Data Sources</h4>
+                    <p>Gateway fur RAG: Economic Calendar, Sentiment, On-Chain, Orderbook, Macro und mehr.</p>
+                </div>
             </div>
 
             <div class="info-box">
-                <strong>Architektur:</strong> Der Data Service ist als FastAPI-Anwendung implementiert und
-                kommuniziert über HTTP mit der EasyInsight API. Er cached häufig abgerufene Daten
-                zur Performance-Optimierung.
+                <strong>Architektur:</strong> Der Data Service ist das einzige Gateway fur externe Daten.
+                Alle anderen Services (NHITS, TCN, RAG, LLM) greifen ausschliesslich uber diesen Service auf Marktdaten zu.
             </div>
         </div>
 
@@ -521,6 +527,113 @@
         </div>
 
         <div class="content-card">
+            <h2>&#128367; Candlestick Pattern Detection</h2>
+            <p>
+                Multi-Timeframe Pattern-Erkennung fur M15, H1, H4 und D1 Zeitrahmen.
+                Unterstutzt Reversal-, Continuation- und Indecision-Patterns.
+            </p>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>Reversal Patterns</h4>
+                    <p>Hammer, Shooting Star, Doji, Engulfing, Morning/Evening Star, Harami</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Continuation Patterns</h4>
+                    <p>Three White Soldiers, Three Black Crows, Rising/Falling Three</p>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Pattern-Endpunkte</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/patterns/scan</span>
+                    <span class="endpoint-desc">Pattern-Scan fur Symbol</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns/types</span>
+                    <span class="endpoint-desc">Liste aller Pattern-Typen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns/history/{symbol}</span>
+                    <span class="endpoint-desc">Pattern-Historie fur Symbol</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#127760; External Data Sources (RAG Gateway)</h2>
+            <p>
+                Gateway fur externe Datenquellen, die vom RAG Service fur Trading Intelligence verwendet werden.
+            </p>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>Economic Calendar</h4>
+                    <p>Fed, ECB, CPI, NFP, GDP Events</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Sentiment</h4>
+                    <p>Fear & Greed, Social Media, VIX</p>
+                </div>
+                <div class="feature-item">
+                    <h4>On-Chain</h4>
+                    <p>Whale Alerts, Exchange Flows</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Macro</h4>
+                    <p>DXY, Bond Yields, Korrelationen</p>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">External Sources Endpunkte</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/external-sources/economic-calendar</span>
+                    <span class="endpoint-desc">Wirtschaftskalender</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/external-sources/sentiment</span>
+                    <span class="endpoint-desc">Markt-Sentiment</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/external-sources/fetch-all</span>
+                    <span class="endpoint-desc">Alle Quellen parallel</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/external-sources/trading-context/{symbol}</span>
+                    <span class="endpoint-desc">Kompletter Trading-Kontext</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#129514; Testing</h2>
+            <p>
+                API-Tests fur den Data Service werden zentral uber den <strong>Watchdog Service</strong> ausgefuhrt.
+            </p>
+
+            <div class="info-box">
+                <strong>Test-Ausfuhrung:</strong> Alle Data Service Tests konnen uber den Watchdog ausgefuhrt werden:
+                <code style="display: block; margin-top: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px;">
+                    curl -X POST http://10.1.19.101:3010/api/v1/tests/run/service/data
+                </code>
+            </div>
+
+            <div class="quick-links" style="margin-top: 1rem;">
+                <a href="/watchdog/api/v1/tests/definitions?service=data" target="_blank">&#128196; Data Service Tests</a>
+                <a href="/watchdog/docs#/Testing" target="_blank">&#129514; Testing API</a>
+            </div>
+        </div>
+
+        <div class="content-card">
             <h2>&#128295; Technologie-Stack</h2>
             <div class="tech-stack">
                 <span class="tech-tag">Python 3.11</span>
@@ -538,6 +651,8 @@
             <div class="quick-links">
                 <a href="/data/docs" target="_blank">&#128196; API Dokumentation</a>
                 <a href="/data/health" target="_blank">&#128154; Health Check</a>
+                <a href="/data/api/v1/symbols" target="_blank">&#128279; Managed Symbols</a>
+                <a href="/watchdog/api/v1/tests/run/service/data" target="_blank">&#129514; Tests ausfuhren</a>
                 <a href="/" class="back-link">&#127968; Dashboard</a>
             </div>
         </div>
