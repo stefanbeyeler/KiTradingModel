@@ -440,6 +440,35 @@
                     <span class="endpoint-desc">Liste verfügbarer Kryptowahrungen</span>
                 </div>
             </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">EasyInsight API</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/easyinsight/status</span>
+                    <span class="endpoint-desc">API-Verbindungsstatus</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/easyinsight/symbols</span>
+                    <span class="endpoint-desc">Alle verfügbaren Symbole</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/easyinsight/ohlcv/{symbol}</span>
+                    <span class="endpoint-desc">OHLCV-Daten aus TimescaleDB</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/easyinsight/mt5-logs</span>
+                    <span class="endpoint-desc">MT5 Trading-Logs</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/easyinsight/nhits-status</span>
+                    <span class="endpoint-desc">NHITS Modell-Status</span>
+                </div>
+            </div>
         </div>
 
         <div class="content-card">
