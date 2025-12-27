@@ -13,6 +13,7 @@ aiohttp>=3.9.0
 
 # Market Data APIs
 twelvedata>=1.2.0
+yfinance>=0.2.0
 
 # ML/Deep Learning
 # Note: Thor GPU (sm_110) not yet supported by PyTorch - runs on CPU

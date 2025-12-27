@@ -132,6 +132,16 @@ class YFinanceService:
         """Check if Yahoo Finance is available."""
         return self._available
 
+    def get_status(self) -> Dict:
+        """Get service status."""
+        return {
+            "service": "yfinance",
+            "available": self._available,
+            "version": yf.__version__ if self._available else None,
+            "supported_symbols": len(SYMBOL_MAPPING),
+            "categories": ["forex", "crypto", "indices", "commodities"]
+        }
+
     def _map_symbol(self, symbol: str) -> Optional[str]:
         """Map internal symbol to Yahoo Finance symbol."""
         # First check direct mapping
