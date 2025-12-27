@@ -2952,6 +2952,28 @@ async def import_selected_symbols(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@symbol_router.post("/managed-symbols/migrate-api-symbols")
+async def migrate_api_symbols():
+    """
+    Migrate all existing symbols to have proper TwelveData and EasyInsight symbol formats.
+
+    This will auto-generate the API-specific symbol formats for all symbols
+    that don't already have them set:
+    - TwelveData: Uses slash format (e.g., BTC/USD, EUR/USD)
+    - EasyInsight: Uses concatenated format (e.g., BTCUSD, EURUSD)
+
+    Returns:
+        Migration result with counts of updated, skipped, and errored symbols.
+    """
+    try:
+        result = await symbol_service.migrate_api_symbols()
+        logger.info(f"API symbols migration completed: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to migrate API symbols: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== Data Statistics ====================
 # NOTE: This route MUST be defined BEFORE the generic {symbol_id:path} routes
 

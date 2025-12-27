@@ -152,6 +152,36 @@ class SymbolService:
 
         return None
 
+    def _generate_easyinsight_symbol(self, symbol: str, category: SymbolCategory) -> str:
+        """
+        Generate the EasyInsight API symbol format.
+
+        EasyInsight uses formats like:
+        - Forex: EURUSD, GBPUSD (no separator)
+        - Crypto: BTCUSD, ETHUSD (no separator)
+        - Commodities: XAUUSD, XAGUSD (no separator)
+        - Indices: US30, GER40 (as-is)
+
+        Args:
+            symbol: Internal symbol (e.g., BTCUSD, EURUSD)
+            category: Symbol category
+
+        Returns:
+            EasyInsight formatted symbol (typically uppercase without separators)
+        """
+        symbol_upper = symbol.upper()
+
+        # Special mappings for symbols with different EasyInsight names
+        special_mappings = {
+            "DOGUSD": "DOGEUSD",   # Dogecoin - EasyInsight may use full name
+        }
+
+        if symbol_upper in special_mappings:
+            return special_mappings[symbol_upper]
+
+        # EasyInsight generally uses the symbol as-is (uppercase, no separator)
+        return symbol_upper
+
     async def get_all_symbols(
         self,
         category: Optional[SymbolCategory] = None,
@@ -221,6 +251,11 @@ class SymbolService:
         if not twelvedata_sym:
             twelvedata_sym = self._generate_twelvedata_symbol(symbol_id, category)
 
+        # Generate EasyInsight symbol if not provided
+        easyinsight_sym = request.easyinsight_symbol
+        if not easyinsight_sym:
+            easyinsight_sym = self._generate_easyinsight_symbol(symbol_id, category)
+
         symbol = ManagedSymbol(
             symbol=symbol_id,
             display_name=request.display_name or symbol_id,
@@ -234,6 +269,7 @@ class SymbolService:
             min_lot_size=request.min_lot_size,
             max_lot_size=request.max_lot_size,
             twelvedata_symbol=twelvedata_sym,
+            easyinsight_symbol=easyinsight_sym,
             notes=request.notes,
             tags=request.tags,
             aliases=request.aliases,
@@ -570,6 +606,57 @@ class SymbolService:
         results.sort(key=lambda x: (-x[0], x[1].symbol))
 
         return [s for _, s in results[:limit]]
+
+    async def migrate_api_symbols(self) -> dict:
+        """
+        Migrate all existing symbols to have proper TwelveData and EasyInsight symbols.
+        This updates symbols that don't have these fields set.
+
+        Returns:
+            Dictionary with migration statistics
+        """
+        updated_count = 0
+        skipped_count = 0
+        errors = []
+
+        for symbol in self._symbols.values():
+            try:
+                changed = False
+
+                # Generate TwelveData symbol if missing
+                if not symbol.twelvedata_symbol:
+                    symbol.twelvedata_symbol = self._generate_twelvedata_symbol(
+                        symbol.symbol, symbol.category
+                    )
+                    changed = True
+
+                # Generate EasyInsight symbol if missing
+                if not symbol.easyinsight_symbol:
+                    symbol.easyinsight_symbol = self._generate_easyinsight_symbol(
+                        symbol.symbol, symbol.category
+                    )
+                    changed = True
+
+                if changed:
+                    symbol.updated_at = datetime.utcnow()
+                    updated_count += 1
+                else:
+                    skipped_count += 1
+
+            except Exception as e:
+                errors.append(f"{symbol.symbol}: {str(e)}")
+                logger.error(f"Error migrating symbol {symbol.symbol}: {e}")
+
+        if updated_count > 0:
+            self._save_symbols()
+            logger.info(f"Migrated {updated_count} symbols with API symbols")
+
+        return {
+            "updated": updated_count,
+            "skipped": skipped_count,
+            "errors": errors,
+            "total": len(self._symbols)
+        }
 
 
 # Global service instance

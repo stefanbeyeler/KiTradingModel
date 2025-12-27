@@ -661,7 +661,7 @@
                             <tr>
                                 <th style="width: 40px;"></th>
                                 <th>Symbol</th>
-                                <th>Aliase</th>
+                                <th>API-Symbole / Aliase</th>
                                 <th>Kategorie</th>
                                 <th>Sub-Kategorie</th>
                                 <th>Beschreibung</th>
@@ -1434,6 +1434,18 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
+                        <label class="form-label">TwelveData Symbol</label>
+                        <input type="text" class="form-input" id="symbol-twelvedata" placeholder="z.B. BTC/USD, EUR/USD">
+                        <small style="color: #888; font-size: 0.8rem;">Format für TwelveData API (mit Slash)</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">EasyInsight Symbol</label>
+                        <input type="text" class="form-input" id="symbol-easyinsight" placeholder="z.B. BTCUSD, EURUSD">
+                        <small style="color: #888; font-size: 0.8rem;">Format für EasyInsight API (ohne Slash)</small>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
                         <label class="form-label">Basiswahrung</label>
                         <input type="text" class="form-input" id="symbol-base-currency" placeholder="z.B. BTC">
                     </div>
@@ -1888,7 +1900,11 @@
             tbody.innerHTML = symbols.map(s => {
                 const aliasesDisplay = (s.aliases && s.aliases.length > 0)
                     ? s.aliases.map(a => `<span class="badge" style="background: rgba(180, 180, 180, 0.15); color: #aaa; margin-right: 3px;">${a}</span>`).join('')
-                    : '-';
+                    : '';
+                const apiSymbols = `
+                    <span class="badge" style="background: rgba(33, 150, 243, 0.15); color: #64b5f6; margin-right: 3px;" title="TwelveData">${s.twelvedata_symbol || s.symbol}</span>
+                    <span class="badge" style="background: rgba(76, 175, 80, 0.15); color: #81c784;" title="EasyInsight">${s.easyinsight_symbol || s.symbol}</span>
+                `;
                 return `
                 <tr data-id="${s.symbol}">
                     <td>
@@ -1898,7 +1914,7 @@
                         </span>
                     </td>
                     <td><strong>${s.symbol}</strong></td>
-                    <td style="max-width: 150px;">${aliasesDisplay}</td>
+                    <td style="max-width: 200px;">${apiSymbols}${aliasesDisplay ? '<br>' + aliasesDisplay : ''}</td>
                     <td><span class="badge badge-${s.category}">${CATEGORY_LABELS[s.category] || s.category}</span></td>
                     <td>${s.subcategory ? `<span class="badge" style="background: rgba(100, 200, 255, 0.15); color: #64c8ff;">${getSubcategoryLabel(s.category, s.subcategory)}</span>` : '-'}</td>
                     <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${s.description || '-'}</td>
@@ -1946,6 +1962,8 @@
             document.getElementById('symbol-subcategory').value = symbolData?.subcategory || '';
             document.getElementById('symbol-status').value = symbolData?.status || 'active';
             document.getElementById('symbol-description').value = symbolData?.description || '';
+            document.getElementById('symbol-twelvedata').value = symbolData?.twelvedata_symbol || '';
+            document.getElementById('symbol-easyinsight').value = symbolData?.easyinsight_symbol || '';
             document.getElementById('symbol-base-currency').value = symbolData?.base_currency || '';
             document.getElementById('symbol-quote-currency').value = symbolData?.quote_currency || '';
             document.getElementById('symbol-aliases').value = (symbolData?.aliases || []).join(', ');
@@ -1979,6 +1997,8 @@
                 subcategory: document.getElementById('symbol-subcategory').value || null,
                 status: document.getElementById('symbol-status').value,
                 description: document.getElementById('symbol-description').value || null,
+                twelvedata_symbol: document.getElementById('symbol-twelvedata').value || null,
+                easyinsight_symbol: document.getElementById('symbol-easyinsight').value || null,
                 base_currency: document.getElementById('symbol-base-currency').value || null,
                 quote_currency: document.getElementById('symbol-quote-currency').value || null,
                 aliases: aliases,

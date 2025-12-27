@@ -90,6 +90,7 @@ class ManagedSymbol(BaseModel):
 
     # External API symbol mappings
     twelvedata_symbol: Optional[str] = Field(None, description="Symbol format for Twelve Data API (e.g., BTC/USD, EUR/USD)")
+    easyinsight_symbol: Optional[str] = Field(None, description="Symbol format for EasyInsight API (e.g., BTCUSD, EURUSD)")
 
     # User preferences
     is_favorite: bool = Field(default=False, description="User marked as favorite")
@@ -115,6 +116,7 @@ class SymbolCreateRequest(BaseModel):
     min_lot_size: Optional[float] = 0.01
     max_lot_size: Optional[float] = 100.0
     twelvedata_symbol: Optional[str] = None
+    easyinsight_symbol: Optional[str] = None
     notes: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
     aliases: list[str] = Field(default_factory=list)
@@ -133,6 +135,7 @@ class SymbolUpdateRequest(BaseModel):
     min_lot_size: Optional[float] = None
     max_lot_size: Optional[float] = None
     twelvedata_symbol: Optional[str] = None
+    easyinsight_symbol: Optional[str] = None
     is_favorite: Optional[bool] = None
     notes: Optional[str] = None
     tags: Optional[list[str]] = None
