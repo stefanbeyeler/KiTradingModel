@@ -24,6 +24,34 @@
 
 services:
   # =========================================================================
+  # INFRASTRUCTURE SERVICES - Redis Cache
+  # =========================================================================
+
+  # Redis Cache - Zentraler Cache für alle Services
+  redis:
+    image: redis:7-alpine
+    container_name: trading-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    networks:
+      - trading-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # =========================================================================
   # HIGH PRIORITY SERVICES - Always responsive for API requests
   # =========================================================================
 
@@ -103,6 +131,9 @@ services:
       - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
       - OLLAMA_HOST=http://host.docker.internal:11434
       - FAISS_PERSIST_DIRECTORY=/app/data/faiss
+      - REDIS_URL=redis://trading-redis:6379
+    depends_on:
+      - redis
     networks:
       - trading-net
     extra_hosts:
@@ -571,6 +602,10 @@ services:
 # VOLUMES
 # =============================================================================
 volumes:
+  # Redis Cache Volume
+  redis-data:
+    driver: local
+
   # NHITS Service Volumes
   nhits-models:
     driver: local

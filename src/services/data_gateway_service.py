@@ -8,6 +8,11 @@ Dieser Service ist das einzige Gateway für den Zugriff auf externe Datenquellen
 Alle anderen Services (NHITS, RAG, LLM, Analysis) MÜSSEN diesen Service
 für externe Datenzugriffe verwenden.
 
+Caching:
+- Redis als primärer Cache (verteilt, persistent)
+- In-Memory Fallback wenn Redis nicht verfügbar
+- Kategorisierte TTL-Werte für verschiedene Datentypen
+
 Siehe: DEVELOPMENT_GUIDELINES.md - Datenzugriff-Architektur
 """
 
@@ -18,6 +23,7 @@ import httpx
 from loguru import logger
 
 from ..config import settings
+from .cache_service import cache_service, CacheCategory
 
 
 class DataGatewayService:
@@ -38,9 +44,8 @@ class DataGatewayService:
         base_url = getattr(settings, 'data_service_url', 'http://trading-data:3001')
         # Ensure /api/v1 suffix
         self._data_service_url = base_url.rstrip('/') + '/api/v1' if not base_url.endswith('/api/v1') else base_url
-        self._cache: dict[str, tuple[datetime, Any]] = {}
-        self._cache_ttl_seconds = 60  # 1 Minute Cache für Marktdaten
-        self._symbols_cache_ttl_seconds = 300  # 5 Minuten Cache für Symbole
+        # Cache Service wird verwendet - kein lokaler Cache mehr nötig
+        self._cache_initialized = False
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client."""
@@ -49,28 +54,17 @@ class DataGatewayService:
         return self._http_client
 
     async def close(self):
-        """Close HTTP client."""
+        """Close HTTP client and cache connection."""
         if self._http_client and not self._http_client.is_closed:
             await self._http_client.aclose()
             self._http_client = None
+        await cache_service.disconnect()
 
-    def _get_cached(self, key: str, ttl_seconds: Optional[int] = None) -> Optional[Any]:
-        """Get cached value if not expired."""
-        if key in self._cache:
-            cached_time, value = self._cache[key]
-            ttl = ttl_seconds if ttl_seconds is not None else self._cache_ttl_seconds
-            if datetime.now() - cached_time < timedelta(seconds=ttl):
-                return value
-            del self._cache[key]
-        return None
-
-    def _set_cached(self, key: str, value: Any):
-        """Set cached value."""
-        self._cache[key] = (datetime.now(), value)
-
-    def _is_symbols_key(self, key: str) -> bool:
-        """Check if cache key is for symbols (longer TTL)."""
-        return key.startswith("symbols")
+    async def _ensure_cache_connected(self):
+        """Ensure cache service is connected."""
+        if not self._cache_initialized:
+            await cache_service.connect()
+            self._cache_initialized = True
 
     # ==================== Symbol Management ====================
 
@@ -81,10 +75,12 @@ class DataGatewayService:
         Returns:
             List of symbol dictionaries with 'symbol', 'category', 'count', etc.
         """
-        cache_key = "symbols_list"
-        cached = self._get_cached(cache_key, ttl_seconds=self._symbols_cache_ttl_seconds)
+        await self._ensure_cache_connected()
+
+        # Check Redis cache first
+        cached = await cache_service.get(CacheCategory.SYMBOLS, "list")
         if cached:
-            logger.debug(f"Returning {len(cached)} symbols from cache")
+            logger.debug(f"Returning {len(cached)} symbols from Redis cache")
             return cached
 
         try:
@@ -93,8 +89,9 @@ class DataGatewayService:
             response.raise_for_status()
 
             data = response.json()
-            self._set_cached(cache_key, data)
-            logger.info(f"Fetched and cached {len(data)} symbols from EasyInsight API (TTL: {self._symbols_cache_ttl_seconds}s)")
+            # Cache with SYMBOLS TTL (3600s)
+            await cache_service.set(CacheCategory.SYMBOLS, data, "list")
+            logger.info(f"Fetched and cached {len(data)} symbols from EasyInsight API")
             return data
 
         except Exception as e:
@@ -123,8 +120,10 @@ class DataGatewayService:
         Returns:
             Dictionary with latest OHLCV, indicators, and price data
         """
-        cache_key = f"latest_{symbol}"
-        cached = self._get_cached(cache_key)
+        await self._ensure_cache_connected()
+
+        # Check Redis cache first (MARKET_DATA TTL: 60s)
+        cached = await cache_service.get(CacheCategory.MARKET_DATA, symbol, "latest")
         if cached:
             return cached
 
@@ -137,7 +136,7 @@ class DataGatewayService:
 
             data = response.json()
             if data:
-                self._set_cached(cache_key, data)
+                await cache_service.set(CacheCategory.MARKET_DATA, data, symbol, "latest")
                 logger.debug(f"Fetched latest market data for {symbol}")
             return data
 
@@ -164,6 +163,15 @@ class DataGatewayService:
         Returns:
             List of OHLCV dictionaries
         """
+        await self._ensure_cache_connected()
+
+        # Check Redis cache first (OHLCV TTL: 300s)
+        cache_params = {"limit": limit, "timeframe": timeframe}
+        cached = await cache_service.get(CacheCategory.OHLCV, symbol, params=cache_params)
+        if cached:
+            logger.debug(f"Returning {len(cached)} cached OHLCV points for {symbol}")
+            return cached
+
         try:
             client = await self._get_client()
             # Use internal training-data endpoint
@@ -175,6 +183,11 @@ class DataGatewayService:
 
             data = response.json()
             rows = data.get('data', [])
+
+            # Cache the result
+            if rows:
+                await cache_service.set(CacheCategory.OHLCV, rows, symbol, params=cache_params)
+
             logger.debug(f"Fetched {len(rows)} historical data points for {symbol}")
             return rows
 
@@ -425,12 +438,32 @@ class DataGatewayService:
 
     def get_status(self) -> dict:
         """Get gateway service status."""
+        cache_stats = cache_service.get_stats()
         return {
             "easyinsight_url": self._easyinsight_url,
-            "cache_entries": len(self._cache),
-            "cache_ttl_seconds": self._cache_ttl_seconds,
-            "client_active": self._http_client is not None and not self._http_client.is_closed
+            "client_active": self._http_client is not None and not self._http_client.is_closed,
+            "cache": cache_stats
         }
+
+    async def get_cache_health(self) -> dict:
+        """Get cache health status."""
+        await self._ensure_cache_connected()
+        return await cache_service.health_check()
+
+    async def clear_cache(self, category: Optional[CacheCategory] = None) -> int:
+        """
+        Clear cache entries.
+
+        Args:
+            category: Optional category to clear. If None, clears all.
+
+        Returns:
+            Number of entries cleared.
+        """
+        await self._ensure_cache_connected()
+        if category:
+            return await cache_service.clear_category(category)
+        return await cache_service.clear_all()
 
     # ==================== TwelveData Indicators ====================
 

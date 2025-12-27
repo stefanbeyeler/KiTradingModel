@@ -15,6 +15,12 @@ Externe APIs (EasyInsight, TwelveData, Yahoo Finance)
               │     (Port 3001)     │
               └──────────┬──────────┘
                          │
+                         ▼
+              ┌─────────────────────┐
+              │    REDIS CACHE      │  ◄── Zentraler Cache für alle Services
+              │     (Port 6379)     │      512MB, LRU-Eviction, Persistenz
+              └──────────┬──────────┘
+                         │
      ┌───────┬───────┬───┴───┬───────┬───────┐
      ▼       ▼       ▼       ▼       ▼       ▼
   NHITS    TCN     HMM   Embedder  RAG     LLM
@@ -39,6 +45,11 @@ Externe APIs (EasyInsight, TwelveData, Yahoo Finance)
    - **EasyInsight** (1. Fallback): Zusätzliche Indikatoren und TimescaleDB-Daten
    - **Yahoo Finance** (2. Fallback): Kostenlose historische Daten
 
+4. **Caching über Redis**
+   - Alle Daten werden im Redis-Cache zwischengespeichert
+   - Verwende `CacheService` (`src/services/cache_service.py`) für Cache-Zugriffe
+   - TTL-Werte sind kategoriebasiert (siehe Caching-Architektur unten)
+
 ### Beispiele
 
 ```python
@@ -56,6 +67,89 @@ class NHITSTrainingService:
     async def get_data(self, symbol: str):
         return await data_gateway.get_historical_data(symbol, limit=1000)
 ```
+
+## Caching-Architektur (VERBINDLICH)
+
+### Architektur-Übersicht
+
+```text
+                    ┌─────────────────────┐
+                    │   Redis Cache       │  ◄── Zentraler Cache (Port 6379)
+                    │  (trading-redis)    │      512MB, LRU-Eviction
+                    └──────────┬──────────┘
+                               │
+              ┌────────────────┼────────────────┐
+              │                │                │
+              ▼                ▼                ▼
+       ┌──────────┐     ┌──────────┐     ┌──────────┐
+       │  Data    │     │  NHITS   │     │   RAG    │
+       │ Service  │     │ Service  │     │ Service  │
+       └──────────┘     └──────────┘     └──────────┘
+```
+
+### Caching-Strategie
+
+**Data Service als Gateway + Cache:**
+- Daten werden beim ersten Abruf von externen APIs geholt
+- Nach Abruf werden Daten in Redis gecacht
+- Nachfolgende Anfragen werden aus dem Cache bedient
+- TTL-basierte automatische Invalidierung
+
+### Cache-Kategorien und TTL
+
+| Kategorie | TTL (Sekunden) | Beschreibung |
+|-----------|----------------|--------------|
+| `MARKET_DATA` | 60 | Echtzeit-Kurse, schnelle Updates |
+| `OHLCV` | 300 | Kerzendaten (5 Minuten) |
+| `INDICATORS` | 300 | Technische Indikatoren |
+| `SYMBOLS` | 3600 | Symbol-Listen (1 Stunde) |
+| `METADATA` | 3600 | Metadaten |
+| `SENTIMENT` | 900 | Sentiment-Daten (15 Minuten) |
+| `ECONOMIC` | 1800 | Wirtschaftskalender (30 Minuten) |
+| `ONCHAIN` | 600 | On-Chain Daten (10 Minuten) |
+| `TRAINING` | 21600 | Training-Daten (6 Stunden) |
+
+### Verwendung
+
+```python
+from src.services.cache_service import cache_service, CacheCategory
+
+# Daten aus Cache holen
+cached_data = await cache_service.get(CacheCategory.OHLCV, symbol, params={"limit": 500})
+
+# Daten in Cache speichern
+await cache_service.set(CacheCategory.OHLCV, data, symbol, params={"limit": 500})
+
+# Cache-Kategorie löschen
+await cache_service.clear_category(CacheCategory.MARKET_DATA)
+
+# Cache-Statistiken
+stats = cache_service.get_stats()
+```
+
+### Redis-Konfiguration
+
+```yaml
+# docker-compose.microservices.yml
+redis:
+  image: redis:7-alpine
+  container_name: trading-redis
+  command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+  ports:
+    - "6379:6379"
+```
+
+**Wichtige Einstellungen:**
+- `maxmemory 512mb`: Maximaler Speicherverbrauch
+- `maxmemory-policy allkeys-lru`: Least Recently Used Eviction
+- `appendonly yes`: Persistenz aktiviert (optional)
+
+### Fallback-Verhalten
+
+Wenn Redis nicht verfügbar ist:
+1. CacheService fällt automatisch auf In-Memory Cache zurück
+2. Warnung wird geloggt
+3. System bleibt funktionsfähig (aber ohne verteilten Cache)
 
 ## Code-Stil
 
@@ -77,6 +171,7 @@ class NHITSTrainingService:
 | HMM-Regime Service | 3004 | /docs | - |
 | Embedder Service | 3005 | /docs | CUDA |
 | Candlestick Service | 3006 | /docs | - |
+| **Redis Cache** | **6379** | - | - |
 | RAG Service | 3008 | /docs | CUDA |
 | LLM Service | 3009 | /docs | CUDA |
 | Watchdog Service | 3010 | /docs | - |
