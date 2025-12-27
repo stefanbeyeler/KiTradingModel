@@ -1207,6 +1207,14 @@
                 <div style="padding: 1rem;">
                     <div class="form-row">
                         <div class="form-group">
+                            <label class="form-label">Datenquelle</label>
+                            <select class="form-select" id="explorer-source" onchange="updateIndicatorOptions()">
+                                <option value="twelvedata" selected>TwelveData (Historisch)</option>
+                                <option value="easyinsight">EasyInsight (Historisch)</option>
+                                <option value="yfinance">Yahoo Finance (Historisch)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">Symbol *</label>
                             <select class="form-select" id="explorer-symbol">
                                 <option value="">Symbol wählen...</option>
@@ -1234,14 +1242,6 @@
                                 <option value="100">100</option>
                                 <option value="200">200</option>
                                 <option value="500">500</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Datenquelle</label>
-                            <select class="form-select" id="explorer-source" onchange="updateIndicatorOptions()">
-                                <option value="twelvedata" selected>TwelveData (Historisch)</option>
-                                <option value="easyinsight">EasyInsight (Historisch)</option>
-                                <option value="yfinance">Yahoo Finance (Historisch)</option>
                             </select>
                         </div>
                         <div class="form-group" style="display: flex; align-items: flex-end;">
@@ -3449,11 +3449,16 @@
             const isTwelveData = source === 'twelvedata' || (data[0] && data[0].open !== undefined);
 
             // Map timeframe to field prefix (for EasyInsight format)
+            // Note: EasyInsight primarily stores H1 data, so M1/M5/M30 will fallback to h1
             const tfPrefix = {
+                'M1': 'h1', '1min': 'h1',     // EasyInsight doesn't have M1, use H1 as fallback
+                'M5': 'h1', '5min': 'h1',     // EasyInsight doesn't have M5, use H1 as fallback
                 'M15': 'm15', '15min': 'm15',
+                'M30': 'h1', '30min': 'h1',   // EasyInsight doesn't have M30, use H1 as fallback
                 'H1': 'h1', '1h': 'h1',
                 'H4': 'h4', '4h': 'h4',
-                'D1': 'd1', '1day': 'd1'
+                'D1': 'd1', '1day': 'd1',
+                'W1': 'd1', '1week': 'd1'     // EasyInsight doesn't have W1, use D1 as fallback
             };
             const prefix = tfPrefix[timeframe] || 'h1';
 
@@ -3696,11 +3701,19 @@
                 let data;
                 if (source === 'easyinsight') {
                     // Map interval to timeframe for EasyInsight API
+                    // Note: EasyInsight primarily provides H1 data with pre-calculated indicators
                     const timeframeMap = {
-                        '15min': 'M15', '1h': 'H1', '4h': 'H4', '1day': 'D1',
-                        'M15': 'M15', 'H1': 'H1', 'H4': 'H4', 'D1': 'D1'
+                        '1min': 'M1', '5min': 'M5', '15min': 'M15', '30min': 'M30',
+                        '1h': 'H1', '4h': 'H4', '1day': 'D1', '1week': 'W1',
+                        'M1': 'M1', 'M5': 'M5', 'M15': 'M15', 'M30': 'M30',
+                        'H1': 'H1', 'H4': 'H4', 'D1': 'D1', 'W1': 'W1'
                     };
                     const timeframe = timeframeMap[interval] || 'H1';
+
+                    // EasyInsight primarily stores H1 data - show warning for other timeframes
+                    if (!['1h', 'H1'].includes(interval)) {
+                        console.warn(`[loadExplorerData] EasyInsight primarily provides H1 data. Selected interval ${interval} may have limited indicator support.`);
+                    }
 
                     // Fetch from EasyInsight indicators endpoint (includes all indicators)
                     const cacheParam = bypassCache ? '&bypass_cache=true' : '';
@@ -3748,12 +3761,18 @@
 
                     const indicatorPromises = indicators.map(ind => {
                         const config = indicatorConfig[ind];
-                        if (!config) return null;
+                        if (!config) {
+                            console.warn(`[loadExplorerData] No config for indicator: ${ind}`);
+                            return null;
+                        }
                         const url = `${API_BASE}/twelvedata/${config.endpoint}/${encodedSymbol}?interval=${interval}&outputsize=${limit}${config.params}`;
                         return fetch(url)
                             .then(r => r.json())
                             .then(d => ({ name: ind, data: d }))
-                            .catch(() => null);
+                            .catch(err => {
+                                console.error(`[loadExplorerData] Indicator ${ind} fetch error:`, err);
+                                return null;
+                            });
                     }).filter(p => p !== null);
 
                     const indicatorResults = await Promise.all(indicatorPromises);
@@ -3791,9 +3810,13 @@
         }
 
         function mergeExplorerData(ohlcv, indicators) {
-            if (!ohlcv.data && !ohlcv.values) return [];
+            if (!ohlcv.data && !ohlcv.values) {
+                console.warn('[mergeExplorerData] No OHLCV data found!');
+                return [];
+            }
 
             const values = ohlcv.data || ohlcv.values || [];
+
             const result = values.map(v => ({
                 datetime: v.datetime,
                 open: parseFloat(v.open),
@@ -3846,18 +3869,28 @@
             indicators.forEach(ind => {
                 if (!ind || !ind.data) return;
                 const rawValues = ind.data.data || ind.data.values || ind.data;
+
                 // Ensure indValues is always an array
                 const indValues = Array.isArray(rawValues) ? rawValues : [];
                 const mapper = indicatorFieldMap[ind.name];
-                if (!mapper || !indValues.length) return;
+                if (!mapper) {
+                    console.warn(`[mergeExplorerData] No mapper for indicator: ${ind.name}`);
+                    return;
+                }
+                if (!indValues.length) {
+                    console.warn(`[mergeExplorerData] Empty values for indicator: ${ind.name}`);
+                    return;
+                }
 
+                let matchCount = 0;
                 indValues.forEach(v => {
                     const idx = dtMap[v.datetime];
                     if (idx !== undefined) {
                         try {
                             Object.assign(result[idx], mapper(v));
+                            matchCount++;
                         } catch (e) {
-                            // Skip invalid values
+                            console.error(`[mergeExplorerData] Error mapping ${ind.name}:`, e.message);
                         }
                     }
                 });
@@ -4156,8 +4189,18 @@
 
         function formatDateTime(dt) {
             if (!dt) return '-';
-            const d = new Date(dt);
-            return d.toLocaleString('de-DE', {
+            // API returns datetime in format "YYYY-MM-DD HH:MM:SS" (UTC)
+            // Convert to Date object, treating input as UTC
+            let d;
+            if (typeof dt === 'string' && !dt.includes('T') && !dt.includes('Z')) {
+                // Format: "2025-12-27 14:30:00" - treat as UTC
+                d = new Date(dt.replace(' ', 'T') + 'Z');
+            } else {
+                d = new Date(dt);
+            }
+            // Format for Swiss timezone (Europe/Zurich)
+            return d.toLocaleString('de-CH', {
+                timeZone: 'Europe/Zurich',
                 day: '2-digit', month: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit'
             });

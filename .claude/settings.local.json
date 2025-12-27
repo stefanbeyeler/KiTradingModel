@@ -198,7 +198,12 @@
       "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/docker/services/frontend/)",
       "Bash(/Users/sbeyeler/GIT/KiTradingModel/docker/services/frontend/nginx.conf.template )",
       "Bash(node --check:*)",
-      "Bash(git -C \"e:/KiTradingModel\" status src/api/routes.py)"
+      "Bash(git -C \"e:/KiTradingModel\" status src/api/routes.py)",
+      "Bash(__NEW_LINE__ echo \"=== 1h RSI ===\")",
+      "Bash(__NEW_LINE__ echo \"=== 1day RSI ===\")",
+      "Bash(__NEW_LINE__ echo \"=== Testing 5min \\(M5\\) ===\")",
+      "Bash(__NEW_LINE__ echo \"=== Testing 1h \\(H1\\) ===\")",
+      "Bash(__NEW_LINE__ echo \"\")"
     ],
     "deny": [],
     "ask": []
