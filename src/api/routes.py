@@ -5,6 +5,7 @@ import json
 import os
 from datetime import datetime, timezone
 from typing import Optional, List
+import httpx
 import torch
 from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Query
 from fastapi.responses import PlainTextResponse
@@ -81,6 +82,7 @@ sync_router = APIRouter()  # TimescaleDB Sync
 system_router = APIRouter()  # System & Monitoring
 query_log_router = APIRouter()  # Query Logs & Analytics
 twelvedata_router = APIRouter()  # Twelve Data API
+easyinsight_router = APIRouter()  # EasyInsight API (TimescaleDB)
 config_router = APIRouter()  # Configuration & Settings
 patterns_router = APIRouter()  # Candlestick Pattern Detection
 yfinance_router = APIRouter()  # Yahoo Finance API
@@ -4693,6 +4695,216 @@ async def list_common_timezones():
                 "UTC",
                 "GMT",
             ]
+        }
+    }
+
+
+# ==================== EasyInsight API (TimescaleDB) ====================
+
+
+@easyinsight_router.get("/easyinsight/status")
+async def get_easyinsight_status():
+    """
+    Get EasyInsight API connection status and statistics.
+
+    Returns connection health, latency, and available symbol count.
+    """
+    import time
+    start = time.time()
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{settings.easyinsight_api_url}/symbols")
+            latency_ms = (time.time() - start) * 1000
+
+            if response.status_code == 200:
+                symbols = response.json()
+                return {
+                    "status": "connected",
+                    "url": settings.easyinsight_api_url,
+                    "latency_ms": round(latency_ms, 2),
+                    "symbols_available": len(symbols),
+                    "api_version": "1.0",
+                }
+            else:
+                return {
+                    "status": "error",
+                    "url": settings.easyinsight_api_url,
+                    "latency_ms": round(latency_ms, 2),
+                    "error": f"HTTP {response.status_code}",
+                }
+    except Exception as e:
+        return {
+            "status": "disconnected",
+            "url": settings.easyinsight_api_url,
+            "error": str(e),
+        }
+
+
+@easyinsight_router.get("/easyinsight/symbols")
+async def get_easyinsight_symbols():
+    """
+    Get list of all available symbols from EasyInsight TimescaleDB.
+
+    Returns symbols with their categories, data counts, and metadata.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(f"{settings.easyinsight_api_url}/symbols")
+            response.raise_for_status()
+            symbols = response.json()
+
+            # Group by category
+            categories = {}
+            for s in symbols:
+                cat = s.get("category", "unknown")
+                if cat not in categories:
+                    categories[cat] = []
+                categories[cat].append(s.get("symbol"))
+
+            return {
+                "total": len(symbols),
+                "categories": {k: len(v) for k, v in categories.items()},
+                "symbols": symbols,
+            }
+    except Exception as e:
+        logger.error(f"Failed to fetch EasyInsight symbols: {e}")
+        raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
+
+
+@easyinsight_router.get("/easyinsight/ohlcv/{symbol}")
+async def get_easyinsight_ohlcv(
+    symbol: str,
+    limit: int = 500,
+):
+    """
+    Get OHLCV data for a symbol from EasyInsight TimescaleDB.
+
+    Args:
+        symbol: Trading symbol (e.g., BTCUSD, EURUSD)
+        limit: Number of data points to fetch (max 5000)
+
+    Returns historical OHLCV data with H1 timeframe indicators.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
+                params={"limit": min(limit, 5000)}
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            rows = data.get("data", [])
+            return {
+                "symbol": symbol.upper(),
+                "source": "easyinsight",
+                "count": len(rows),
+                "data": rows,
+            }
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found in EasyInsight")
+        raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Failed to fetch EasyInsight OHLCV for {symbol}: {e}")
+        raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
+
+
+@easyinsight_router.get("/easyinsight/latest/{symbol}")
+async def get_easyinsight_latest(symbol: str):
+    """
+    Get latest market snapshot for a symbol from EasyInsight.
+
+    Returns the most recent OHLCV data with all available indicators.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                f"{settings.easyinsight_api_url}/symbol-latest-full/{symbol}"
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            return {
+                "symbol": symbol.upper(),
+                "source": "easyinsight",
+                "data": data,
+            }
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found in EasyInsight")
+        raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Failed to fetch EasyInsight latest for {symbol}: {e}")
+        raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
+
+
+@easyinsight_router.get("/easyinsight/indicators/{symbol}")
+async def get_easyinsight_indicators(
+    symbol: str,
+    limit: int = 100,
+):
+    """
+    Get technical indicators for a symbol from EasyInsight.
+
+    EasyInsight provides pre-calculated indicators including:
+    - RSI, MACD, Bollinger Bands
+    - Moving Averages (SMA, EMA)
+    - ATR, ADX, Stochastic
+    - And more...
+
+    Args:
+        symbol: Trading symbol
+        limit: Number of data points
+
+    Returns OHLCV data with all available indicators.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
+                params={"limit": limit}
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            rows = data.get("data", [])
+
+            # Extract indicator columns from first row
+            indicators = []
+            if rows:
+                first_row = rows[0]
+                # Find indicator columns (not basic OHLCV)
+                basic_cols = {"symbol", "snapshot_time", "h1_open", "h1_high", "h1_low", "h1_close"}
+                indicators = [k for k in first_row.keys() if k not in basic_cols and not k.startswith("_")]
+
+            return {
+                "symbol": symbol.upper(),
+                "source": "easyinsight",
+                "count": len(rows),
+                "available_indicators": sorted(indicators),
+                "data": rows,
+            }
+    except Exception as e:
+        logger.error(f"Failed to fetch EasyInsight indicators for {symbol}: {e}")
+        raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
+
+
+@easyinsight_router.get("/easyinsight/timeframes")
+async def get_easyinsight_timeframes():
+    """
+    Get list of supported timeframes in EasyInsight.
+
+    Note: EasyInsight primarily stores H1 (1-hour) data with indicators.
+    For other timeframes, use TwelveData API.
+    """
+    return {
+        "primary_timeframe": "H1",
+        "supported_timeframes": ["H1"],
+        "note": "EasyInsight stores H1 data with pre-calculated indicators. For M1, M5, M15, H4, D1, use TwelveData API.",
+        "indicator_timeframes": {
+            "H1": "Full OHLCV with RSI, MACD, BBands, ATR, ADX, etc.",
         }
     }
 

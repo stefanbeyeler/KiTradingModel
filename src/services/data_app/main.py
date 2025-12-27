@@ -29,6 +29,7 @@ from src.api.routes import (
     system_router,
     query_log_router,
     twelvedata_router,
+    easyinsight_router,
     config_router,
     patterns_router,
     yfinance_router,
@@ -92,7 +93,9 @@ openapi_tags = [
     },
     {
         "name": "5. Twelve Data API",
-        "description": """Access TwelveData market data and technical indicators.
+        "description": """TwelveData API - Primäre Datenquelle für OHLC-Daten aller Timeframes.
+
+**Unterstützte Timeframes:** M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
 
 **Technical Indicators:**
 - **Trend:** SMA, EMA, WMA, DEMA, TEMA, KAMA, Ichimoku, SAR, Supertrend, VWAP
@@ -102,8 +105,20 @@ openapi_tags = [
 - **ML Features:** Linear Regression Slope, Hilbert Trend Mode"""
     },
     {
-        "name": "6. Yahoo Finance",
-        "description": """Yahoo Finance market data integration (2. Fallback nach TwelveData).
+        "name": "6. EasyInsight API",
+        "description": """EasyInsight API - TimescaleDB mit Echtzeit-Marktdaten und vorberechneten Indikatoren.
+
+**Funktionen:**
+- OHLCV-Daten mit H1 Timeframe
+- Vorberechnete technische Indikatoren (RSI, MACD, BBands, ATR, ADX, etc.)
+- Symbol-Informationen und Kategorien
+- Echtzeit-Snapshots
+
+**Hinweis:** Für andere Timeframes (M1-D1) TwelveData API verwenden."""
+    },
+    {
+        "name": "7. Yahoo Finance",
+        "description": """Yahoo Finance market data integration (2. Fallback).
 
 **Funktionen:**
 - Historische OHLCV-Daten (kostenlos, ohne API-Key)
@@ -112,19 +127,19 @@ openapi_tags = [
 - Unterstützt Aktien, ETFs, Indizes, Forex, Crypto"""
     },
     {
-        "name": "7. Candlestick Patterns",
+        "name": "8. Candlestick Patterns",
         "description": "Multi-Timeframe Candlestick Pattern Detection (M15, H1, H4, D1). Reversal: Hammer, Shooting Star, Doji, Engulfing, Morning/Evening Star. Continuation: Three White Soldiers, Three Black Crows. Indecision: Spinning Top, Harami."
     },
     {
-        "name": "8. RAG Sync",
+        "name": "9. RAG Sync",
         "description": "Synchronization of market data to RAG knowledge base (optional, disabled by default)"
     },
     {
-        "name": "9. Query Logs & Analytics",
+        "name": "10. Query Logs & Analytics",
         "description": "Query logging and analytics for monitoring"
     },
     {
-        "name": "10. External Data Sources",
+        "name": "11. External Data Sources",
         "description": """Externe Datenquellen für Trading Intelligence (Gateway für RAG Service).
 
 **Datenquellen:**
@@ -141,7 +156,7 @@ openapi_tags = [
 - **Institutional Flow**: COT Reports, ETF Flows, Whale Tracking"""
     },
     {
-        "name": "11. Testing",
+        "name": "12. Testing",
         "description": """Test Suite Execution für automatisierte Qualitätssicherung.
 
 **Test-Kategorien:**
@@ -201,13 +216,14 @@ app.include_router(symbol_router, prefix="/api/v1", tags=["2. Symbol Management"
 app.include_router(strategy_router, prefix="/api/v1", tags=["3. Trading Strategies"])
 app.include_router(config_router, prefix="/api/v1", tags=["4. Config Export/Import"])
 app.include_router(twelvedata_router, prefix="/api/v1", tags=["5. Twelve Data API"])
-app.include_router(yfinance_router, prefix="/api/v1", tags=["6. Yahoo Finance"])
-app.include_router(patterns_router, prefix="/api/v1", tags=["7. Candlestick Patterns"])
+app.include_router(easyinsight_router, prefix="/api/v1", tags=["6. EasyInsight API"])
+app.include_router(yfinance_router, prefix="/api/v1", tags=["7. Yahoo Finance"])
+app.include_router(patterns_router, prefix="/api/v1", tags=["8. Candlestick Patterns"])
 # Note: NHITS Training endpoints are in the NHITS Service (Port 3002), not here
-app.include_router(sync_router, prefix="/api/v1", tags=["8. RAG Sync"])
-app.include_router(query_log_router, prefix="/api/v1", tags=["9. Query Logs & Analytics"])
-app.include_router(external_sources_router, prefix="/api/v1", tags=["10. External Data Sources"])
-app.include_router(testing_router, prefix="/api/v1/testing", tags=["11. Testing"])
+app.include_router(sync_router, prefix="/api/v1", tags=["9. RAG Sync"])
+app.include_router(query_log_router, prefix="/api/v1", tags=["10. Query Logs & Analytics"])
+app.include_router(external_sources_router, prefix="/api/v1", tags=["11. External Data Sources"])
+app.include_router(testing_router, prefix="/api/v1/testing", tags=["12. Testing"])
 
 
 async def _periodic_cache_cleanup():
