@@ -3622,7 +3622,8 @@
         }
 
         async function loadExplorerData() {
-            const rawSymbol = document.getElementById('explorer-symbol').value;
+            const selectEl = document.getElementById('explorer-symbol');
+            const rawSymbol = selectEl.value;
             const interval = document.getElementById('explorer-interval').value;
             const limit = document.getElementById('explorer-limit').value;
             const source = document.getElementById('explorer-source').value;
@@ -3633,8 +3634,13 @@
                 return;
             }
 
-            // Convert symbol for TwelveData API
-            const symbol = source === 'twelvedata' ? toTwelveDataSymbol(rawSymbol) : rawSymbol;
+            // Get TwelveData symbol from data attribute (set in populateExplorerSymbols)
+            // Falls back to toTwelveDataSymbol() conversion if not available
+            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            const twelvedataSymbol = selectedOption?.dataset?.twelvedata;
+            const symbol = source === 'twelvedata'
+                ? (twelvedataSymbol || toTwelveDataSymbol(rawSymbol))
+                : rawSymbol;
 
             // Get selected indicators based on source
             const indicators = [];
@@ -3719,8 +3725,10 @@
 
                 } else if (source === 'twelvedata') {
                     // Fetch OHLCV data (bypassCache parameter for future cache implementation)
+                    // URL-encode symbol as it may contain slashes (e.g., BTC/USD)
+                    const encodedSymbol = encodeURIComponent(symbol);
                     const cacheParam = bypassCache ? '&bypass_cache=true' : '';
-                    const ohlcvRes = await fetch(`${API_BASE}/twelvedata/time_series/${symbol}?interval=${interval}&outputsize=${limit}${cacheParam}`);
+                    const ohlcvRes = await fetch(`${API_BASE}/twelvedata/time_series/${encodedSymbol}?interval=${interval}&outputsize=${limit}${cacheParam}`);
                     if (!ohlcvRes.ok) throw new Error('Fehler beim Laden der OHLCV-Daten');
                     const ohlcv = await ohlcvRes.json();
 
@@ -3753,7 +3761,7 @@
                     const indicatorPromises = indicators.map(ind => {
                         const config = indicatorConfig[ind];
                         if (!config) return null;
-                        const url = `${API_BASE}/twelvedata/${config.endpoint}/${symbol}?interval=${interval}&outputsize=${limit}${config.params}`;
+                        const url = `${API_BASE}/twelvedata/${config.endpoint}/${encodedSymbol}?interval=${interval}&outputsize=${limit}${config.params}`;
                         return fetch(url)
                             .then(r => r.json())
                             .then(d => ({ name: ind, data: d }))
