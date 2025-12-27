@@ -1,1 +1,0 @@
-# NHITS service unit tests

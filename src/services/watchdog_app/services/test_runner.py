@@ -1,35 +1,69 @@
-"""Test Runner Service für API-Tests via Frontend."""
+"""Test Runner Service für umfassende API-Tests.
+
+Führt alle definierten Tests aus und bietet verschiedene Test-Modi:
+- smoke: Nur kritische Health-Checks
+- api: Alle API-Endpoint Tests
+- contract: Schema-Validierung
+- integration: Service-übergreifende Tests
+- full: Alle Tests
+"""
 
 import asyncio
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Awaitable, Optional
+from typing import Any, Dict, List, Optional, Set
 
 import httpx
 from loguru import logger
 
+from .test_definitions import (
+    TestDefinition,
+    TestCategory,
+    TestPriority,
+    get_all_tests,
+    get_tests_by_category,
+    get_tests_by_service,
+    get_critical_tests,
+)
+
 
 class TestStatus(Enum):
+    """Status eines einzelnen Tests."""
     PENDING = "pending"
     RUNNING = "running"
     PASSED = "passed"
     FAILED = "failed"
     SKIPPED = "skipped"
+    ERROR = "error"
+
+
+class RunMode(str, Enum):
+    """Test-Ausführungs-Modi."""
+    SMOKE = "smoke"          # Nur Health-Checks (schnell)
+    API = "api"              # Alle API-Tests
+    CONTRACT = "contract"    # Schema-Validierung
+    INTEGRATION = "integration"  # Service-übergreifend
+    FULL = "full"            # Alle Tests
+    CRITICAL = "critical"    # Nur kritische Tests
 
 
 @dataclass
 class TestResult:
-    """Einzelnes Testergebnis."""
+    """Ergebnis eines einzelnen Tests."""
     name: str
     status: TestStatus
     service: str
+    category: str
+    priority: str
     endpoint: str = ""
+    method: str = "GET"
     duration_ms: float = 0
     message: str = ""
     error_type: str = ""
-    details: dict = field(default_factory=dict)
+    response_status: Optional[int] = None
+    details: Dict[str, Any] = field(default_factory=dict)
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
@@ -50,37 +84,88 @@ class ServiceHealth:
 class TestRun:
     """Kompletter Test-Lauf."""
     id: str
-    status: str  # running, completed, aborted
+    mode: str
+    status: str  # running, completed, aborted, error
     started_at: str
     completed_at: Optional[str] = None
-    services: list[ServiceHealth] = field(default_factory=list)
-    results: list[TestResult] = field(default_factory=list)
+    services: List[ServiceHealth] = field(default_factory=list)
+    results: List[TestResult] = field(default_factory=list)
     current_test: Optional[str] = None
-    summary: dict = field(default_factory=dict)
+    progress: Dict[str, int] = field(default_factory=dict)
+    summary: Dict[str, Any] = field(default_factory=dict)
+    filters: Dict[str, Any] = field(default_factory=dict)
 
 
 class TestRunnerService:
     """Service zum Ausführen von API-Tests."""
 
+    # Service-Konfiguration für Health-Checks
     SERVICES = {
-        "frontend": {"url": "http://trading-frontend:80", "health": "/health", "name": "Frontend Dashboard"},
-        "data": {"url": "http://trading-data:3001", "health": "/health", "name": "Data Service"},
-        "nhits": {"url": "http://trading-nhits:3002", "health": "/health", "name": "NHITS Service"},
-        "tcn": {"url": "http://trading-tcn:3003", "health": "/health", "name": "TCN-Pattern Service"},
-        "hmm": {"url": "http://trading-hmm:3004", "health": "/health", "name": "HMM-Regime Service"},
-        "embedder": {"url": "http://trading-embedder:3005", "health": "/health", "name": "Embedder Service"},
-        "rag": {"url": "http://trading-rag:3008", "health": "/health", "name": "RAG Service"},
-        "llm": {"url": "http://trading-llm:3009", "health": "/health", "name": "LLM Service"},
-        "watchdog": {"url": "http://localhost:3010", "health": "/health", "name": "Watchdog Service"},
+        "frontend": {
+            "url": "http://trading-frontend:80",
+            "health": "/health",
+            "name": "Frontend Dashboard"
+        },
+        "data": {
+            "url": "http://trading-data:3001",
+            "health": "/health",
+            "name": "Data Service"
+        },
+        "nhits": {
+            "url": "http://trading-nhits:3002",
+            "health": "/health",
+            "name": "NHITS Service"
+        },
+        "tcn": {
+            "url": "http://trading-tcn:3003",
+            "health": "/health",
+            "name": "TCN-Pattern Service"
+        },
+        "tcn_train": {
+            "url": "http://trading-tcn-train:3013",
+            "health": "/health",
+            "name": "TCN-Train Service"
+        },
+        "hmm": {
+            "url": "http://trading-hmm:3004",
+            "health": "/health",
+            "name": "HMM-Regime Service"
+        },
+        "embedder": {
+            "url": "http://trading-embedder:3005",
+            "health": "/health",
+            "name": "Embedder Service"
+        },
+        "rag": {
+            "url": "http://trading-rag:3008",
+            "health": "/health",
+            "name": "RAG Service"
+        },
+        "llm": {
+            "url": "http://trading-llm:3009",
+            "health": "/health",
+            "name": "LLM Service"
+        },
+        "watchdog": {
+            "url": "http://localhost:3010",
+            "health": "/health",
+            "name": "Watchdog Service"
+        },
     }
 
     def __init__(self):
         self.current_run: Optional[TestRun] = None
-        self.history: list[TestRun] = []
+        self.history: List[TestRun] = []
         self._running = False
         self._abort_requested = False
+        self._healthy_services: Set[str] = set()
 
-    async def check_service_health(self, key: str, config: dict, client: httpx.AsyncClient) -> ServiceHealth:
+    async def check_service_health(
+        self,
+        key: str,
+        config: Dict,
+        client: httpx.AsyncClient
+    ) -> ServiceHealth:
         """Prüft den Health-Status eines einzelnen Services."""
         url = f"{config['url']}{config['health']}"
         start = time.time()
@@ -141,369 +226,424 @@ class TestRunnerService:
 
     async def run_single_test(
         self,
-        name: str,
-        service: str,
-        endpoint: str,
-        test_func: Callable[[httpx.AsyncClient], Awaitable[Any]],
+        test_def: TestDefinition,
         client: httpx.AsyncClient,
-        service_health: dict[str, ServiceHealth]
+        passed_tests: Set[str]
     ) -> TestResult:
         """Führt einen einzelnen Test aus."""
 
-        # Check if service is available
-        if service in service_health and not service_health[service].healthy:
+        # Prüfe Abhängigkeiten
+        for dep in test_def.depends_on:
+            if dep not in passed_tests:
+                return TestResult(
+                    name=test_def.name,
+                    status=TestStatus.SKIPPED,
+                    service=test_def.service,
+                    category=test_def.category.value,
+                    priority=test_def.priority.value,
+                    endpoint=test_def.endpoint,
+                    method=test_def.method,
+                    message=f"Abhängigkeit '{dep}' nicht erfüllt"
+                )
+
+        # Prüfe ob Service verfügbar (außer für Integration-Tests)
+        if test_def.service != "integration" and test_def.service not in self._healthy_services:
             return TestResult(
-                name=name,
+                name=test_def.name,
                 status=TestStatus.SKIPPED,
-                service=service,
-                endpoint=endpoint,
-                message=f"Service '{service}' not available"
+                service=test_def.service,
+                category=test_def.category.value,
+                priority=test_def.priority.value,
+                endpoint=test_def.endpoint,
+                method=test_def.method,
+                message=f"Service '{test_def.service}' nicht verfügbar"
             )
 
         if self._abort_requested:
             return TestResult(
-                name=name,
+                name=test_def.name,
                 status=TestStatus.SKIPPED,
-                service=service,
-                endpoint=endpoint,
-                message="Test run aborted"
+                service=test_def.service,
+                category=test_def.category.value,
+                priority=test_def.priority.value,
+                endpoint=test_def.endpoint,
+                method=test_def.method,
+                message="Test-Lauf abgebrochen"
             )
 
         start = time.time()
 
         try:
-            await test_func(client)
+            # Request ausführen
+            if test_def.method.upper() == "GET":
+                response = await client.get(
+                    test_def.endpoint,
+                    params=test_def.params,
+                    timeout=test_def.timeout
+                )
+            elif test_def.method.upper() == "POST":
+                response = await client.post(
+                    test_def.endpoint,
+                    json=test_def.body,
+                    params=test_def.params,
+                    timeout=test_def.timeout
+                )
+            else:
+                response = await client.request(
+                    test_def.method.upper(),
+                    test_def.endpoint,
+                    json=test_def.body,
+                    params=test_def.params,
+                    timeout=test_def.timeout
+                )
+
             elapsed = (time.time() - start) * 1000
 
+            # Status-Code prüfen
+            if response.status_code not in test_def.expected_status:
+                return TestResult(
+                    name=test_def.name,
+                    status=TestStatus.FAILED,
+                    service=test_def.service,
+                    category=test_def.category.value,
+                    priority=test_def.priority.value,
+                    endpoint=test_def.endpoint,
+                    method=test_def.method,
+                    duration_ms=round(elapsed, 1),
+                    response_status=response.status_code,
+                    message=f"Unerwarteter Status: {response.status_code} (erwartet: {test_def.expected_status})",
+                    error_type="UnexpectedStatusCode"
+                )
+
+            # JSON-Validierung
+            data = None
+            if test_def.validate_json and response.status_code == 200:
+                try:
+                    data = response.json()
+                except Exception as e:
+                    return TestResult(
+                        name=test_def.name,
+                        status=TestStatus.FAILED,
+                        service=test_def.service,
+                        category=test_def.category.value,
+                        priority=test_def.priority.value,
+                        endpoint=test_def.endpoint,
+                        method=test_def.method,
+                        duration_ms=round(elapsed, 1),
+                        response_status=response.status_code,
+                        message=f"Invalid JSON: {e}",
+                        error_type="JSONDecodeError"
+                    )
+
+            # Schema-Validierung
+            if test_def.schema_validator and data is not None:
+                try:
+                    if not test_def.schema_validator(data):
+                        return TestResult(
+                            name=test_def.name,
+                            status=TestStatus.FAILED,
+                            service=test_def.service,
+                            category=test_def.category.value,
+                            priority=test_def.priority.value,
+                            endpoint=test_def.endpoint,
+                            method=test_def.method,
+                            duration_ms=round(elapsed, 1),
+                            response_status=response.status_code,
+                            message="Schema-Validierung fehlgeschlagen",
+                            error_type="SchemaValidationError"
+                        )
+                except Exception as e:
+                    return TestResult(
+                        name=test_def.name,
+                        status=TestStatus.FAILED,
+                        service=test_def.service,
+                        category=test_def.category.value,
+                        priority=test_def.priority.value,
+                        endpoint=test_def.endpoint,
+                        method=test_def.method,
+                        duration_ms=round(elapsed, 1),
+                        response_status=response.status_code,
+                        message=f"Schema-Validator Error: {e}",
+                        error_type="SchemaValidatorError"
+                    )
+
+            # Pflichtfelder prüfen
+            if test_def.required_fields and data is not None:
+                missing = [f for f in test_def.required_fields if f not in data]
+                if missing:
+                    return TestResult(
+                        name=test_def.name,
+                        status=TestStatus.FAILED,
+                        service=test_def.service,
+                        category=test_def.category.value,
+                        priority=test_def.priority.value,
+                        endpoint=test_def.endpoint,
+                        method=test_def.method,
+                        duration_ms=round(elapsed, 1),
+                        response_status=response.status_code,
+                        message=f"Fehlende Felder: {missing}",
+                        error_type="MissingRequiredFields"
+                    )
+
+            # Erfolg
             return TestResult(
-                name=name,
+                name=test_def.name,
                 status=TestStatus.PASSED,
-                service=service,
-                endpoint=endpoint,
-                duration_ms=round(elapsed, 1)
-            )
-
-        except AssertionError as e:
-            elapsed = (time.time() - start) * 1000
-            return TestResult(
-                name=name,
-                status=TestStatus.FAILED,
-                service=service,
-                endpoint=endpoint,
+                service=test_def.service,
+                category=test_def.category.value,
+                priority=test_def.priority.value,
+                endpoint=test_def.endpoint,
+                method=test_def.method,
                 duration_ms=round(elapsed, 1),
-                message=str(e),
-                error_type="AssertionError",
-                details={"assertion": str(e)}
+                response_status=response.status_code
             )
 
         except httpx.ConnectError:
             elapsed = (time.time() - start) * 1000
             return TestResult(
-                name=name,
+                name=test_def.name,
                 status=TestStatus.FAILED,
-                service=service,
-                endpoint=endpoint,
+                service=test_def.service,
+                category=test_def.category.value,
+                priority=test_def.priority.value,
+                endpoint=test_def.endpoint,
+                method=test_def.method,
                 duration_ms=round(elapsed, 1),
-                message="Connection refused",
-                error_type="ConnectionError",
-                details={"reason": "Service not running or not reachable"}
+                message="Verbindung abgelehnt",
+                error_type="ConnectionError"
             )
 
         except httpx.TimeoutException:
             elapsed = (time.time() - start) * 1000
             return TestResult(
-                name=name,
+                name=test_def.name,
                 status=TestStatus.FAILED,
-                service=service,
-                endpoint=endpoint,
+                service=test_def.service,
+                category=test_def.category.value,
+                priority=test_def.priority.value,
+                endpoint=test_def.endpoint,
+                method=test_def.method,
                 duration_ms=round(elapsed, 1),
-                message="Request timeout",
-                error_type="TimeoutError",
-                details={"reason": "Service took too long to respond"}
+                message=f"Timeout nach {test_def.timeout}s",
+                error_type="TimeoutError"
             )
 
         except Exception as e:
             elapsed = (time.time() - start) * 1000
             return TestResult(
-                name=name,
+                name=test_def.name,
                 status=TestStatus.FAILED,
-                service=service,
-                endpoint=endpoint,
+                service=test_def.service,
+                category=test_def.category.value,
+                priority=test_def.priority.value,
+                endpoint=test_def.endpoint,
+                method=test_def.method,
                 duration_ms=round(elapsed, 1),
                 message=str(e),
-                error_type=type(e).__name__,
-                details={"error": str(e)}
+                error_type=type(e).__name__
             )
 
-    def _define_tests(self) -> list[dict]:
-        """Definiert alle verfügbaren Tests."""
-        tests = []
+    def _get_tests_for_mode(
+        self,
+        mode: RunMode,
+        services: Optional[List[str]] = None,
+        categories: Optional[List[str]] = None
+    ) -> List[TestDefinition]:
+        """Gibt Tests basierend auf Modus und Filtern zurück."""
 
-        # Data Service Tests
-        data_url = self.SERVICES["data"]["url"]
-        tests.extend([
-            {
-                "name": "Data Service Health",
-                "service": "data",
-                "endpoint": f"{data_url}/health",
-                "func": lambda c, u=data_url: self._test_health(c, u)
-            },
-            {
-                "name": "Get Managed Symbols",
-                "service": "data",
-                "endpoint": f"{data_url}/api/v1/managed-symbols",
-                "func": lambda c, u=data_url: self._test_get_200(c, f"{u}/api/v1/managed-symbols")
-            },
-            {
-                "name": "Get Training Data",
-                "service": "data",
-                "endpoint": f"{data_url}/api/v1/training-data/BTCUSD",
-                "func": lambda c, u=data_url: self._test_get_200_or_404(c, f"{u}/api/v1/training-data/BTCUSD")
-            },
-            {
-                "name": "Get Strategies",
-                "service": "data",
-                "endpoint": f"{data_url}/api/v1/strategies",
-                "func": lambda c, u=data_url: self._test_get_200(c, f"{u}/api/v1/strategies")
-            },
-        ])
+        if mode == RunMode.SMOKE:
+            tests = get_tests_by_category(TestCategory.SMOKE)
+        elif mode == RunMode.API:
+            tests = get_tests_by_category(TestCategory.API)
+        elif mode == RunMode.CONTRACT:
+            tests = get_tests_by_category(TestCategory.CONTRACT)
+        elif mode == RunMode.INTEGRATION:
+            tests = get_tests_by_category(TestCategory.INTEGRATION)
+        elif mode == RunMode.CRITICAL:
+            tests = get_critical_tests()
+        else:  # FULL
+            tests = get_all_tests()
 
-        # NHITS Service Tests
-        nhits_url = self.SERVICES["nhits"]["url"]
-        tests.extend([
-            {
-                "name": "NHITS Service Health",
-                "service": "nhits",
-                "endpoint": f"{nhits_url}/health",
-                "func": lambda c, u=nhits_url: self._test_health(c, u)
-            },
-            {
-                "name": "NHITS Forecast Status",
-                "service": "nhits",
-                "endpoint": f"{nhits_url}/api/v1/forecast/status",
-                "func": lambda c, u=nhits_url: self._test_get_200(c, f"{u}/api/v1/forecast/status")
-            },
-            {
-                "name": "NHITS Models List",
-                "service": "nhits",
-                "endpoint": f"{nhits_url}/api/v1/forecast/models",
-                "func": lambda c, u=nhits_url: self._test_get_200(c, f"{u}/api/v1/forecast/models")
-            },
-            {
-                "name": "Generate Forecast (BTCUSD)",
-                "service": "nhits",
-                "endpoint": f"{nhits_url}/api/v1/forecast/BTCUSD",
-                "func": lambda c, u=nhits_url: self._test_get_200_or_404(c, f"{u}/api/v1/forecast/BTCUSD")
-            },
-        ])
+        # Service-Filter
+        if services:
+            tests = [t for t in tests if t.service in services]
 
-        # TCN Service Tests
-        tcn_url = self.SERVICES["tcn"]["url"]
-        tests.extend([
-            {
-                "name": "TCN Service Health",
-                "service": "tcn",
-                "endpoint": f"{tcn_url}/health",
-                "func": lambda c, u=tcn_url: self._test_health(c, u)
-            },
-            {
-                "name": "Get Pattern Types",
-                "service": "tcn",
-                "endpoint": f"{tcn_url}/api/v1/patterns",
-                "func": lambda c, u=tcn_url: self._test_get_200(c, f"{u}/api/v1/patterns")
-            },
-            {
-                "name": "Get TCN Models",
-                "service": "tcn",
-                "endpoint": f"{tcn_url}/api/v1/models",
-                "func": lambda c, u=tcn_url: self._test_get_200(c, f"{u}/api/v1/models")
-            },
-        ])
-
-        # HMM Service Tests
-        hmm_url = self.SERVICES["hmm"]["url"]
-        tests.extend([
-            {
-                "name": "HMM Service Health",
-                "service": "hmm",
-                "endpoint": f"{hmm_url}/health",
-                "func": lambda c, u=hmm_url: self._test_health(c, u)
-            },
-            {
-                "name": "Get Market Regime",
-                "service": "hmm",
-                "endpoint": f"{hmm_url}/api/v1/regime/BTCUSD",
-                "func": lambda c, u=hmm_url: self._test_get_200_or_404(c, f"{u}/api/v1/regime/BTCUSD")
-            },
-        ])
-
-        # Embedder Service Tests
-        embedder_url = self.SERVICES["embedder"]["url"]
-        tests.extend([
-            {
-                "name": "Embedder Service Health",
-                "service": "embedder",
-                "endpoint": f"{embedder_url}/health",
-                "func": lambda c, u=embedder_url: self._test_health(c, u)
-            },
-            {
-                "name": "Get Embedding Models",
-                "service": "embedder",
-                "endpoint": f"{embedder_url}/api/v1/models",
-                "func": lambda c, u=embedder_url: self._test_get_200(c, f"{u}/api/v1/models")
-            },
-        ])
-
-        # RAG Service Tests
-        rag_url = self.SERVICES["rag"]["url"]
-        tests.extend([
-            {
-                "name": "RAG Service Health",
-                "service": "rag",
-                "endpoint": f"{rag_url}/health",
-                "func": lambda c, u=rag_url: self._test_health(c, u)
-            },
-            {
-                "name": "Get RAG Index Stats",
-                "service": "rag",
-                "endpoint": f"{rag_url}/api/v1/rag/stats",
-                "func": lambda c, u=rag_url: self._test_get_200(c, f"{u}/api/v1/rag/stats")
-            },
-        ])
-
-        # LLM Service Tests
-        llm_url = self.SERVICES["llm"]["url"]
-        tests.extend([
-            {
-                "name": "LLM Service Health",
-                "service": "llm",
-                "endpoint": f"{llm_url}/health",
-                "func": lambda c, u=llm_url: self._test_health(c, u)
-            },
-            {
-                "name": "LLM Model Status",
-                "service": "llm",
-                "endpoint": f"{llm_url}/api/v1/llm/status",
-                "func": lambda c, u=llm_url: self._test_get_200(c, f"{u}/api/v1/llm/status")
-            },
-        ])
-
-        # Watchdog Service Tests
-        watchdog_url = self.SERVICES["watchdog"]["url"]
-        tests.extend([
-            {
-                "name": "Watchdog Service Health",
-                "service": "watchdog",
-                "endpoint": f"{watchdog_url}/health",
-                "func": lambda c, u=watchdog_url: self._test_health(c, u)
-            },
-            {
-                "name": "Watchdog All Services Status",
-                "service": "watchdog",
-                "endpoint": f"{watchdog_url}/api/v1/status",
-                "func": lambda c, u=watchdog_url: self._test_get_200(c, f"{u}/api/v1/status")
-            },
-        ])
+        # Kategorie-Filter (zusätzlich zum Modus)
+        if categories:
+            category_enums = [TestCategory(c) for c in categories if c in [e.value for e in TestCategory]]
+            if category_enums:
+                tests = [t for t in tests if t.category in category_enums]
 
         return tests
 
-    async def _test_health(self, client: httpx.AsyncClient, base_url: str):
-        """Test health endpoint."""
-        response = await client.get(f"{base_url}/health")
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-        data = response.json()
-        assert data.get("status") in ["healthy", "ok", None] or "status" not in data, f"Unexpected status: {data}"
-
-    async def _test_get_200(self, client: httpx.AsyncClient, url: str):
-        """Test GET endpoint returns 200."""
-        response = await client.get(url)
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-
-    async def _test_get_200_or_404(self, client: httpx.AsyncClient, url: str):
-        """Test GET endpoint returns 200 or 404."""
-        response = await client.get(url)
-        assert response.status_code in [200, 404], f"Expected 200 or 404, got {response.status_code}"
-
-    async def start_test_run(self) -> TestRun:
+    async def start_test_run(
+        self,
+        mode: RunMode = RunMode.FULL,
+        services: Optional[List[str]] = None,
+        categories: Optional[List[str]] = None,
+        priorities: Optional[List[str]] = None
+    ) -> TestRun:
         """Startet einen neuen Test-Lauf."""
+
         if self._running:
-            raise RuntimeError("A test run is already in progress")
+            raise RuntimeError("Ein Test-Lauf ist bereits aktiv")
 
         self._running = True
         self._abort_requested = False
+        self._healthy_services = set()
 
         run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         self.current_run = TestRun(
             id=run_id,
+            mode=mode.value,
             status="running",
-            started_at=datetime.now(timezone.utc).isoformat()
+            started_at=datetime.now(timezone.utc).isoformat(),
+            filters={
+                "mode": mode.value,
+                "services": services,
+                "categories": categories,
+                "priorities": priorities
+            }
         )
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                # 1. Check all service health
+                # 1. Health-Check aller Services
                 logger.info("Checking service health...")
-                service_health = {}
                 for key, config in self.SERVICES.items():
                     health = await self.check_service_health(key, config, client)
-                    service_health[key] = health
                     self.current_run.services.append(health)
+                    if health.healthy:
+                        self._healthy_services.add(key)
 
-                healthy_count = sum(1 for s in service_health.values() if s.healthy)
-                logger.info(f"Services: {healthy_count}/{len(service_health)} healthy")
+                healthy_count = len(self._healthy_services)
+                total_services = len(self.SERVICES)
+                logger.info(f"Services: {healthy_count}/{total_services} healthy")
 
-                # 2. Run all tests
-                tests = self._define_tests()
-                logger.info(f"Running {len(tests)} tests...")
+                # 2. Tests ermitteln
+                tests = self._get_tests_for_mode(mode, services, categories)
 
-                for test_def in tests:
+                # Priority-Filter
+                if priorities:
+                    priority_enums = [TestPriority(p) for p in priorities if p in [e.value for e in TestPriority]]
+                    if priority_enums:
+                        tests = [t for t in tests if t.priority in priority_enums]
+
+                total_tests = len(tests)
+                logger.info(f"Running {total_tests} tests in {mode.value} mode...")
+
+                self.current_run.progress = {
+                    "total": total_tests,
+                    "completed": 0,
+                    "passed": 0,
+                    "failed": 0,
+                    "skipped": 0
+                }
+
+                # 3. Tests ausführen
+                passed_tests: Set[str] = set()
+
+                for i, test_def in enumerate(tests):
                     if self._abort_requested:
                         break
 
-                    self.current_run.current_test = test_def["name"]
+                    self.current_run.current_test = test_def.name
+                    self.current_run.progress["completed"] = i
 
-                    result = await self.run_single_test(
-                        name=test_def["name"],
-                        service=test_def["service"],
-                        endpoint=test_def["endpoint"],
-                        test_func=test_def["func"],
-                        client=client,
-                        service_health=service_health
-                    )
+                    result = await self.run_single_test(test_def, client, passed_tests)
                     self.current_run.results.append(result)
 
-                    status_icon = "✓" if result.status == TestStatus.PASSED else "✗" if result.status == TestStatus.FAILED else "○"
-                    logger.info(f"  {status_icon} {test_def['name']}: {result.status.value}")
+                    # Tracking
+                    if result.status == TestStatus.PASSED:
+                        passed_tests.add(result.name)
+                        self.current_run.progress["passed"] += 1
+                    elif result.status == TestStatus.FAILED:
+                        self.current_run.progress["failed"] += 1
+                    else:
+                        self.current_run.progress["skipped"] += 1
 
-                # 3. Calculate summary
+                    # Logging
+                    icon = "✓" if result.status == TestStatus.PASSED else \
+                           "✗" if result.status == TestStatus.FAILED else "○"
+                    logger.info(f"  {icon} [{result.category}] {result.name}: {result.status.value}")
+
+                # 4. Zusammenfassung
+                self.current_run.progress["completed"] = total_tests
+
                 passed = sum(1 for r in self.current_run.results if r.status == TestStatus.PASSED)
                 failed = sum(1 for r in self.current_run.results if r.status == TestStatus.FAILED)
                 skipped = sum(1 for r in self.current_run.results if r.status == TestStatus.SKIPPED)
+                errors = sum(1 for r in self.current_run.results if r.status == TestStatus.ERROR)
+
+                # Statistiken nach Kategorie
+                by_category = {}
+                for cat in TestCategory:
+                    cat_results = [r for r in self.current_run.results if r.category == cat.value]
+                    if cat_results:
+                        by_category[cat.value] = {
+                            "total": len(cat_results),
+                            "passed": sum(1 for r in cat_results if r.status == TestStatus.PASSED),
+                            "failed": sum(1 for r in cat_results if r.status == TestStatus.FAILED),
+                            "skipped": sum(1 for r in cat_results if r.status == TestStatus.SKIPPED)
+                        }
+
+                # Statistiken nach Service
+                by_service = {}
+                services_in_results = set(r.service for r in self.current_run.results)
+                for svc in services_in_results:
+                    svc_results = [r for r in self.current_run.results if r.service == svc]
+                    by_service[svc] = {
+                        "total": len(svc_results),
+                        "passed": sum(1 for r in svc_results if r.status == TestStatus.PASSED),
+                        "failed": sum(1 for r in svc_results if r.status == TestStatus.FAILED),
+                        "skipped": sum(1 for r in svc_results if r.status == TestStatus.SKIPPED)
+                    }
+
+                # Durchschnittliche Response-Zeit
+                durations = [r.duration_ms for r in self.current_run.results if r.duration_ms > 0]
+                avg_duration = sum(durations) / len(durations) if durations else 0
+
+                # Fehlgeschlagene Tests
+                failed_tests = [
+                    {"name": r.name, "service": r.service, "message": r.message, "error_type": r.error_type}
+                    for r in self.current_run.results
+                    if r.status == TestStatus.FAILED
+                ]
 
                 self.current_run.summary = {
                     "passed": passed,
                     "failed": failed,
                     "skipped": skipped,
-                    "total": len(self.current_run.results)
+                    "errors": errors,
+                    "total": len(self.current_run.results),
+                    "success_rate": round(passed / len(self.current_run.results) * 100, 1) if self.current_run.results else 0,
+                    "avg_duration_ms": round(avg_duration, 1),
+                    "by_category": by_category,
+                    "by_service": by_service,
+                    "failed_tests": failed_tests[:20]  # Limitiere auf 20
                 }
 
                 self.current_run.status = "aborted" if self._abort_requested else "completed"
                 self.current_run.completed_at = datetime.now(timezone.utc).isoformat()
                 self.current_run.current_test = None
 
-                logger.info(f"Test run completed: {passed} passed, {failed} failed, {skipped} skipped")
+                logger.info(
+                    f"Test run completed: {passed} passed, {failed} failed, "
+                    f"{skipped} skipped ({self.current_run.summary['success_rate']}% success)"
+                )
 
         except Exception as e:
             logger.error(f"Test run failed: {e}")
             self.current_run.status = "error"
             self.current_run.summary["error"] = str(e)
+            self.current_run.completed_at = datetime.now(timezone.utc).isoformat()
 
         finally:
             self._running = False
-            # Store in history
+            # In Historie speichern
             self.history.append(self.current_run)
-            if len(self.history) > 20:
-                self.history = self.history[-20:]
+            if len(self.history) > 50:  # Mehr Historie behalten
+                self.history = self.history[-50:]
 
         return self.current_run
 
@@ -513,17 +653,24 @@ class TestRunnerService:
             self._abort_requested = True
             logger.info("Test run abort requested")
 
-    def get_current_status(self) -> Optional[dict]:
+    def is_running(self) -> bool:
+        """Gibt zurück ob ein Test läuft."""
+        return self._running
+
+    def get_current_status(self) -> Optional[Dict]:
         """Gibt den aktuellen Test-Status zurück."""
         if not self.current_run:
             return None
 
         return {
             "id": self.current_run.id,
+            "mode": self.current_run.mode,
             "status": self.current_run.status,
             "started_at": self.current_run.started_at,
             "completed_at": self.current_run.completed_at,
             "current_test": self.current_run.current_test,
+            "progress": self.current_run.progress,
+            "filters": self.current_run.filters,
             "services": [
                 {
                     "name": s.name,
@@ -540,8 +687,12 @@ class TestRunnerService:
                     "name": r.name,
                     "status": r.status.value,
                     "service": r.service,
+                    "category": r.category,
+                    "priority": r.priority,
                     "endpoint": r.endpoint,
+                    "method": r.method,
                     "duration_ms": r.duration_ms,
+                    "response_status": r.response_status,
                     "message": r.message,
                     "error_type": r.error_type
                 }
@@ -550,14 +701,16 @@ class TestRunnerService:
             "summary": self.current_run.summary
         }
 
-    def get_history(self, limit: int = 10) -> list[dict]:
-        """Gibt die Test-Historie mit detaillierten Ergebnissen zurück."""
+    def get_history(self, limit: int = 10) -> List[Dict]:
+        """Gibt die Test-Historie zurück."""
         return [
             {
                 "id": run.id,
+                "mode": run.mode,
                 "status": run.status,
                 "started_at": run.started_at,
                 "completed_at": run.completed_at,
+                "filters": run.filters,
                 "summary": run.summary,
                 "services": [
                     {
@@ -575,8 +728,12 @@ class TestRunnerService:
                         "name": r.name,
                         "status": r.status.value,
                         "service": r.service,
+                        "category": r.category,
+                        "priority": r.priority,
                         "endpoint": r.endpoint,
+                        "method": r.method,
                         "duration_ms": r.duration_ms,
+                        "response_status": r.response_status,
                         "message": r.message,
                         "error_type": r.error_type
                     }
@@ -584,6 +741,51 @@ class TestRunnerService:
                 ]
             }
             for run in reversed(self.history[-limit:])
+        ]
+
+    def get_available_modes(self) -> List[Dict]:
+        """Gibt verfügbare Test-Modi zurück."""
+        return [
+            {"mode": "smoke", "description": "Schnelle Health-Checks", "tests": len(get_tests_by_category(TestCategory.SMOKE))},
+            {"mode": "api", "description": "Alle API-Endpoint Tests", "tests": len(get_tests_by_category(TestCategory.API))},
+            {"mode": "contract", "description": "Schema-Validierung", "tests": len(get_tests_by_category(TestCategory.CONTRACT))},
+            {"mode": "integration", "description": "Service-übergreifende Tests", "tests": len(get_tests_by_category(TestCategory.INTEGRATION))},
+            {"mode": "critical", "description": "Nur kritische Tests", "tests": len(get_critical_tests())},
+            {"mode": "full", "description": "Alle Tests", "tests": len(get_all_tests())},
+        ]
+
+    def get_test_definitions(
+        self,
+        category: Optional[str] = None,
+        service: Optional[str] = None
+    ) -> List[Dict]:
+        """Gibt Test-Definitionen zurück."""
+        tests = get_all_tests()
+
+        if category:
+            try:
+                cat_enum = TestCategory(category)
+                tests = [t for t in tests if t.category == cat_enum]
+            except ValueError:
+                pass
+
+        if service:
+            tests = [t for t in tests if t.service == service]
+
+        return [
+            {
+                "name": t.name,
+                "service": t.service,
+                "category": t.category.value,
+                "priority": t.priority.value,
+                "endpoint": t.endpoint,
+                "method": t.method,
+                "description": t.description,
+                "timeout": t.timeout,
+                "expected_status": t.expected_status,
+                "depends_on": t.depends_on
+            }
+            for t in tests
         ]
 
 

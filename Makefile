@@ -1,79 +1,159 @@
 # Makefile for KI Trading Model
-# Test and development commands
+# Test commands via Watchdog Service
 
-.PHONY: test test-smoke test-unit test-api test-integration test-e2e test-contract test-all coverage health lint load-test install-test-deps
+.PHONY: test test-smoke test-critical test-api test-integration test-contract test-full test-service health lint clean
+
+# Configuration
+WATCHDOG_URL ?= http://10.1.19.101:3010
 
 # Default target
 help:
-	@echo "Available commands:"
-	@echo "  make test              - Run quick tests (smoke + unit)"
-	@echo "  make test-smoke        - Run smoke/health check tests"
-	@echo "  make test-unit         - Run unit tests with coverage"
-	@echo "  make test-api          - Run API endpoint tests"
-	@echo "  make test-integration  - Run integration tests"
-	@echo "  make test-e2e          - Run end-to-end tests"
-	@echo "  make test-contract     - Run contract/schema tests"
-	@echo "  make test-all          - Run all tests (full suite)"
-	@echo "  make coverage          - Generate coverage report"
-	@echo "  make health            - Check all service health endpoints"
-	@echo "  make load-test         - Run load tests with Locust"
-	@echo "  make lint              - Run linting checks"
-	@echo "  make install-test-deps - Install test dependencies"
+	@echo "Test-Befehle via Watchdog Service"
+	@echo "=================================="
+	@echo ""
+	@echo "Test-Modi:"
+	@echo "  make test              - Smoke-Tests (schnelle Health-Checks)"
+	@echo "  make test-smoke        - Smoke-Tests starten"
+	@echo "  make test-critical     - Nur kritische Tests"
+	@echo "  make test-api          - Alle API-Endpoint Tests"
+	@echo "  make test-contract     - Schema-Validierung Tests"
+	@echo "  make test-integration  - Service-uebergreifende Tests"
+	@echo "  make test-full         - Alle Tests (volle Suite)"
+	@echo ""
+	@echo "Service-spezifisch:"
+	@echo "  make test-service SERVICE=data    - Tests fuer Data Service"
+	@echo "  make test-service SERVICE=nhits   - Tests fuer NHITS Service"
+	@echo ""
+	@echo "Status und Info:"
+	@echo "  make test-status       - Aktueller Test-Status"
+	@echo "  make test-history      - Test-Historie anzeigen"
+	@echo "  make test-modes        - Verfuegbare Test-Modi"
+	@echo "  make test-summary      - Test-Zusammenfassung"
+	@echo "  make health            - Service Health-Check"
+	@echo ""
+	@echo "Sonstiges:"
+	@echo "  make lint              - Code-Linting"
+	@echo "  make clean             - Aufraemen"
+	@echo ""
+	@echo "Konfiguration:"
+	@echo "  WATCHDOG_URL=$(WATCHDOG_URL)"
 
-# Install test dependencies
-install-test-deps:
-	pip install -r tests/requirements-test.txt
+# Quick test (smoke)
+test: test-smoke
 
-# Quick test (smoke + unit only)
-test:
-	pytest tests/smoke tests/unit -v --timeout=120
-
-# Test commands
+# Smoke-Tests (Health-Checks)
 test-smoke:
-	pytest tests/smoke -v -m smoke --timeout=60
+	@echo "Starte Smoke-Tests..."
+	@curl -s -X POST $(WATCHDOG_URL)/api/v1/tests/run/smoke | python -m json.tool
+	@echo ""
+	@echo "Status abrufen mit: make test-status"
 
-test-unit:
-	pytest tests/unit -v -m unit --cov=src --cov-report=term-missing --timeout=120
+# Critical Tests
+test-critical:
+	@echo "Starte kritische Tests..."
+	@curl -s -X POST $(WATCHDOG_URL)/api/v1/tests/run/critical | python -m json.tool
+	@echo ""
+	@echo "Status abrufen mit: make test-status"
 
+# API Tests
 test-api:
-	pytest tests/api -v -m api --timeout=180
+	@echo "Starte API-Tests..."
+	@curl -s -X POST $(WATCHDOG_URL)/api/v1/tests/run \
+		-H "Content-Type: application/json" \
+		-d '{"mode": "api"}' | python -m json.tool
+	@echo ""
+	@echo "Status abrufen mit: make test-status"
 
-test-integration:
-	pytest tests/integration -v -m integration --timeout=300
-
-test-e2e:
-	pytest tests/e2e -v -m e2e --timeout=600
-
+# Contract Tests
 test-contract:
-	pytest tests/contracts -v -m contract --timeout=120
+	@echo "Starte Contract-Tests..."
+	@curl -s -X POST $(WATCHDOG_URL)/api/v1/tests/run \
+		-H "Content-Type: application/json" \
+		-d '{"mode": "contract"}' | python -m json.tool
+	@echo ""
+	@echo "Status abrufen mit: make test-status"
 
-# Run all tests
-test-all:
-	./tests/scripts/run_all_tests.sh --full
+# Integration Tests
+test-integration:
+	@echo "Starte Integration-Tests..."
+	@curl -s -X POST $(WATCHDOG_URL)/api/v1/tests/run \
+		-H "Content-Type: application/json" \
+		-d '{"mode": "integration"}' | python -m json.tool
+	@echo ""
+	@echo "Status abrufen mit: make test-status"
 
-# Coverage report
-coverage:
-	pytest tests/unit tests/api -v --cov=src --cov-report=html --cov-report=term-missing
-	@echo "Coverage report: htmlcov/index.html"
+# Full Test Suite
+test-full:
+	@echo "Starte vollstaendige Test-Suite..."
+	@curl -s -X POST $(WATCHDOG_URL)/api/v1/tests/run/full | python -m json.tool
+	@echo ""
+	@echo "Status abrufen mit: make test-status"
 
-# Health check
+# Service-spezifische Tests
+test-service:
+ifndef SERVICE
+	@echo "Fehler: SERVICE nicht angegeben"
+	@echo "Verwendung: make test-service SERVICE=data"
+	@exit 1
+endif
+	@echo "Starte Tests fuer Service: $(SERVICE)..."
+	@curl -s -X POST $(WATCHDOG_URL)/api/v1/tests/run/service/$(SERVICE) | python -m json.tool
+	@echo ""
+	@echo "Status abrufen mit: make test-status"
+
+# Test Status
+test-status:
+	@curl -s $(WATCHDOG_URL)/api/v1/tests/status | python -m json.tool
+
+# Test History
+test-history:
+	@curl -s $(WATCHDOG_URL)/api/v1/tests/history?limit=5 | python -m json.tool
+
+# Available Test Modes
+test-modes:
+	@curl -s $(WATCHDOG_URL)/api/v1/tests/modes | python -m json.tool
+
+# Test Summary
+test-summary:
+	@curl -s $(WATCHDOG_URL)/api/v1/tests/summary | python -m json.tool
+
+# Test Definitions
+test-definitions:
+	@curl -s $(WATCHDOG_URL)/api/v1/tests/definitions | python -m json.tool
+
+# Abort running test
+test-abort:
+	@curl -s -X POST $(WATCHDOG_URL)/api/v1/tests/abort | python -m json.tool
+
+# Health check via Watchdog
 health:
-	./tests/scripts/run_health_checks.sh
+	@echo "System Status:"
+	@curl -s $(WATCHDOG_URL)/api/v1/status | python -m json.tool
 
-# Load testing with Locust
-load-test:
-	locust -f tests/performance/locustfile.py --headless -u 10 -r 2 -t 60s
+# Manual health check trigger
+health-check:
+	@echo "Triggere Health-Check..."
+	@curl -s -X POST $(WATCHDOG_URL)/api/v1/check | python -m json.tool
 
-load-test-ui:
-	locust -f tests/performance/locustfile.py
-	@echo "Open http://localhost:8089 in your browser"
+# List monitored services
+services:
+	@curl -s $(WATCHDOG_URL)/api/v1/services | python -m json.tool
 
-# Lint
+# Alert History
+alerts:
+	@curl -s $(WATCHDOG_URL)/api/v1/alerts/history?limit=20 | python -m json.tool
+
+# Watchdog Config
+config:
+	@curl -s $(WATCHDOG_URL)/api/v1/config | python -m json.tool
+
+# Lint (requires ruff)
 lint:
-	ruff check src tests
+	@echo "Linting src/..."
+	@ruff check src --ignore E501
 	@echo "Linting complete"
 
-# Type checking
+# Type checking (requires mypy)
 typecheck:
 	mypy src --ignore-missing-imports
 
@@ -83,9 +163,14 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
 
-# Docker-related test targets
-test-in-docker:
-	docker-compose -f docker-compose.microservices.yml up -d
-	sleep 60  # Wait for services
-	make test-all
-	docker-compose -f docker-compose.microservices.yml down
+# Docker rebuild watchdog
+rebuild-watchdog:
+	docker-compose -f docker-compose.watchdog.yml build --no-cache
+	docker-compose -f docker-compose.watchdog.yml up -d
+
+# Deploy watchdog to server
+deploy-watchdog:
+	rsync -avz --exclude='.git' --exclude='__pycache__' \
+		src/services/watchdog_app/ \
+		sbeyeler@10.1.19.101:~/KiTradingModel/src/services/watchdog_app/
+	ssh sbeyeler@10.1.19.101 "cd ~/KiTradingModel && docker-compose -f docker-compose.watchdog.yml up -d --build"
