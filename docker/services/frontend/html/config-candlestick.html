@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candlestick Pattern Konfiguration - KI Trading Model</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e8e8e8;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(156, 39, 176, 0.2);
+            color: #ce93d8;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-description {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-value.success { color: #81c784; }
+        .stat-value.warning { color: #ffb74d; }
+        .stat-value.error { color: #e57373; }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Pattern Grid */
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .pattern-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.2s;
+        }
+
+        .pattern-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .pattern-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .pattern-name {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .pattern-badges {
+            display: flex;
+            gap: 0.3rem;
+        }
+
+        .pattern-description {
+            font-size: 0.85rem;
+            color: #888;
+            line-height: 1.4;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .badge-bullish { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-bearish { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+        .badge-neutral { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
+        .badge-reversal { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
+        .badge-continuation { background: rgba(33, 150, 243, 0.2); color: #64b5f6; }
+        .badge-indecision { background: rgba(158, 158, 158, 0.2); color: #bdbdbd; }
+
+        /* Category Section */
+        .category-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .category-title {
+            font-size: 1rem;
+            color: #ce93d8;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .category-count {
+            background: rgba(156, 39, 176, 0.2);
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+
+        /* Timeframe Config */
+        .timeframe-list {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .timeframe-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        /* Scan Status */
+        .scan-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .scan-status.running {
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .scan-status.stopped {
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.running {
+            background: #81c784;
+        }
+
+        .status-dot.stopped {
+            background: #e57373;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Info Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .info-label {
+            color: #888;
+        }
+
+        .info-value {
+            color: #64c8ff;
+            font-weight: 500;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            z-index: 2000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success { background: #2e7d32; }
+        .toast-error { background: #c62828; }
+        .toast-info { background: #1565c0; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(100, 200, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #64c8ff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .pattern-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header .container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/index.html" class="back-link">← Dashboard</a>
+            <h1 class="header-title">Candlestick Pattern Konfiguration</h1>
+            <span class="service-badge" id="serviceStatus">Laden...</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Service Status -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="patternCount">-</div>
+                <div class="stat-label">Pattern-Typen</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="timeframeCount">-</div>
+                <div class="stat-label">Timeframes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="historyCount">-</div>
+                <div class="stat-label">History-Eintraege</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value success" id="bullishCount">-</div>
+                <div class="stat-label">Bullish</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value error" id="bearishCount">-</div>
+                <div class="stat-label">Bearish</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value warning" id="neutralCount">-</div>
+                <div class="stat-label">Neutral</div>
+            </div>
+        </div>
+
+        <!-- Scan Controls -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Auto-Scan Steuerung</h2>
+                <div class="scan-status stopped" id="scanStatus">
+                    <span class="status-dot stopped"></span>
+                    <span id="scanStatusText">Gestoppt</span>
+                </div>
+            </div>
+            <p class="card-description">
+                Der Auto-Scan ueberwacht alle Favoriten-Symbole und erkennt Candlestick-Patterns automatisch.
+            </p>
+            <div class="btn-group">
+                <button class="btn btn-success" id="btnStartScan" onclick="startAutoScan()">
+                    Auto-Scan starten
+                </button>
+                <button class="btn btn-danger" id="btnStopScan" onclick="stopAutoScan()" style="display: none;">
+                    Auto-Scan stoppen
+                </button>
+                <button class="btn btn-primary" onclick="triggerManualScan()">
+                    Jetzt scannen
+                </button>
+                <button class="btn btn-warning" onclick="clearHistory()">
+                    History loeschen
+                </button>
+            </div>
+        </div>
+
+        <!-- Service Info -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Service-Informationen</h2>
+            </div>
+            <div class="info-grid" id="serviceInfo">
+                <div class="info-item">
+                    <span class="info-label">Version</span>
+                    <span class="info-value" id="infoVersion">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Gestartet</span>
+                    <span class="info-value" id="infoStarted">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Pattern-Typen</span>
+                    <span class="info-value" id="infoPatterns">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Port</span>
+                    <span class="info-value">3006</span>
+                </div>
+            </div>
+            <div style="margin-top: 1rem;">
+                <h3 style="font-size: 0.9rem; color: #888; margin-bottom: 0.5rem;">Unterstuetzte Timeframes</h3>
+                <div class="timeframe-list" id="timeframeList">
+                    <span class="loading"><span class="spinner"></span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pattern Categories -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Verfuegbare Pattern-Typen</h2>
+            </div>
+
+            <!-- Reversal Patterns -->
+            <div class="category-section" id="reversalSection">
+                <div class="category-title">
+                    <span class="badge badge-reversal">Reversal</span>
+                    Umkehrmuster
+                    <span class="category-count" id="reversalCount">0</span>
+                </div>
+                <div class="pattern-grid" id="reversalPatterns">
+                    <div class="loading"><span class="spinner"></span></div>
+                </div>
+            </div>
+
+            <!-- Continuation Patterns -->
+            <div class="category-section" id="continuationSection">
+                <div class="category-title">
+                    <span class="badge badge-continuation">Continuation</span>
+                    Fortsetzungsmuster
+                    <span class="category-count" id="continuationCount">0</span>
+                </div>
+                <div class="pattern-grid" id="continuationPatterns">
+                    <div class="loading"><span class="spinner"></span></div>
+                </div>
+            </div>
+
+            <!-- Indecision Patterns -->
+            <div class="category-section" id="indecisionSection">
+                <div class="category-title">
+                    <span class="badge badge-indecision">Indecision</span>
+                    Unentschlossenheit
+                    <span class="category-count" id="indecisionCount">0</span>
+                </div>
+                <div class="pattern-grid" id="indecisionPatterns">
+                    <div class="loading"><span class="spinner"></span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Schnellzugriff</h2>
+            </div>
+            <div class="btn-group">
+                <a href="/config-patterns.html" class="btn btn-primary" target="_blank">Pattern-Uebersicht</a>
+                <a href="/candlestick/docs" class="btn btn-primary" target="_blank">API Dokumentation</a>
+                <a href="/candlestick/api/v1/patterns" class="btn btn-primary" target="_blank">Pattern-Liste (JSON)</a>
+                <a href="/candlestick/api/v1/history/statistics" class="btn btn-primary" target="_blank">Statistiken (JSON)</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const CANDLESTICK_API = '/candlestick/api/v1';
+        const DATA_API = '/data/api/v1';
+        let isAutoScanRunning = false;
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Format timestamp
+        function formatTimestamp(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            return date.toLocaleString('de-CH', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Format pattern type for display
+        function formatPatternType(type) {
+            return type
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        // Load service info
+        async function loadServiceInfo() {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/info`);
+                const data = await res.json();
+
+                document.getElementById('serviceStatus').textContent = 'Online';
+                document.getElementById('serviceStatus').style.background = 'rgba(76, 175, 80, 0.2)';
+                document.getElementById('serviceStatus').style.color = '#81c784';
+
+                document.getElementById('infoVersion').textContent = data.version || '-';
+                document.getElementById('infoStarted').textContent = formatTimestamp(data.started_at);
+                document.getElementById('infoPatterns').textContent = data.pattern_types || '-';
+                document.getElementById('patternCount').textContent = data.pattern_types || 0;
+                document.getElementById('timeframeCount').textContent = data.supported_timeframes?.length || 0;
+
+                // Render timeframes
+                const tfList = document.getElementById('timeframeList');
+                if (data.supported_timeframes && data.supported_timeframes.length > 0) {
+                    tfList.innerHTML = data.supported_timeframes.map(tf =>
+                        `<span class="timeframe-badge">${tf}</span>`
+                    ).join('');
+                } else {
+                    tfList.innerHTML = '<span style="color: #888;">Keine Timeframes verfuegbar</span>';
+                }
+
+            } catch (error) {
+                console.error('Failed to load service info:', error);
+                document.getElementById('serviceStatus').textContent = 'Offline';
+                document.getElementById('serviceStatus').style.background = 'rgba(244, 67, 54, 0.2)';
+                document.getElementById('serviceStatus').style.color = '#e57373';
+            }
+        }
+
+        // Load pattern list
+        async function loadPatterns() {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/patterns`);
+                const data = await res.json();
+
+                const categories = data.categories || {};
+
+                // Render reversal patterns
+                renderPatternCategory('reversalPatterns', 'reversalCount', categories.reversal || []);
+
+                // Render continuation patterns
+                renderPatternCategory('continuationPatterns', 'continuationCount', categories.continuation || []);
+
+                // Render indecision patterns
+                renderPatternCategory('indecisionPatterns', 'indecisionCount', categories.indecision || []);
+
+            } catch (error) {
+                console.error('Failed to load patterns:', error);
+            }
+        }
+
+        // Render pattern category
+        function renderPatternCategory(containerId, countId, patterns) {
+            const container = document.getElementById(containerId);
+            document.getElementById(countId).textContent = patterns.length;
+
+            if (patterns.length === 0) {
+                container.innerHTML = '<p style="color: #666;">Keine Patterns in dieser Kategorie</p>';
+                return;
+            }
+
+            container.innerHTML = patterns.map(p => `
+                <div class="pattern-card">
+                    <div class="pattern-header">
+                        <span class="pattern-name">${formatPatternType(p.type)}</span>
+                        <div class="pattern-badges">
+                            <span class="badge badge-${p.direction}">${p.direction}</span>
+                        </div>
+                    </div>
+                    <p class="pattern-description">${p.description}</p>
+                </div>
+            `).join('');
+        }
+
+        // Load statistics
+        async function loadStatistics() {
+            try {
+                // Try candlestick service first
+                const res = await fetch(`${CANDLESTICK_API}/history/statistics`);
+                const stats = await res.json();
+
+                document.getElementById('historyCount').textContent = stats.total_patterns || 0;
+                document.getElementById('bullishCount').textContent = stats.by_direction?.bullish || 0;
+                document.getElementById('bearishCount').textContent = stats.by_direction?.bearish || 0;
+                document.getElementById('neutralCount').textContent = stats.by_direction?.neutral || 0;
+
+                // Update scan status
+                isAutoScanRunning = stats.scan_running || false;
+                updateScanStatus();
+
+            } catch (error) {
+                console.error('Failed to load statistics:', error);
+                // Try data service as fallback
+                try {
+                    const res2 = await fetch(`${DATA_API}/patterns/history/statistics`);
+                    const stats2 = await res2.json();
+                    document.getElementById('historyCount').textContent = stats2.total_patterns || 0;
+                    document.getElementById('bullishCount').textContent = stats2.by_direction?.bullish || 0;
+                    document.getElementById('bearishCount').textContent = stats2.by_direction?.bearish || 0;
+                    document.getElementById('neutralCount').textContent = stats2.by_direction?.neutral || 0;
+                } catch (e2) {
+                    console.error('Fallback also failed:', e2);
+                }
+            }
+        }
+
+        // Update scan status display
+        function updateScanStatus() {
+            const statusEl = document.getElementById('scanStatus');
+            const statusText = document.getElementById('scanStatusText');
+            const statusDot = statusEl.querySelector('.status-dot');
+            const btnStart = document.getElementById('btnStartScan');
+            const btnStop = document.getElementById('btnStopScan');
+
+            if (isAutoScanRunning) {
+                statusEl.classList.remove('stopped');
+                statusEl.classList.add('running');
+                statusDot.classList.remove('stopped');
+                statusDot.classList.add('running');
+                statusText.textContent = 'Laeuft';
+                btnStart.style.display = 'none';
+                btnStop.style.display = 'inline-flex';
+            } else {
+                statusEl.classList.remove('running');
+                statusEl.classList.add('stopped');
+                statusDot.classList.remove('running');
+                statusDot.classList.add('stopped');
+                statusText.textContent = 'Gestoppt';
+                btnStart.style.display = 'inline-flex';
+                btnStop.style.display = 'none';
+            }
+        }
+
+        // Start auto scan
+        async function startAutoScan() {
+            try {
+                // Try candlestick service
+                await fetch(`${CANDLESTICK_API}/scan/start`, { method: 'POST' });
+                isAutoScanRunning = true;
+                updateScanStatus();
+                showToast('Auto-Scan gestartet', 'success');
+            } catch (error) {
+                // Try data service fallback
+                try {
+                    await fetch(`${DATA_API}/patterns/history/start-auto-scan`, { method: 'POST' });
+                    isAutoScanRunning = true;
+                    updateScanStatus();
+                    showToast('Auto-Scan gestartet', 'success');
+                } catch (e2) {
+                    showToast('Fehler beim Starten', 'error');
+                    console.error('Start auto scan failed:', e2);
+                }
+            }
+        }
+
+        // Stop auto scan
+        async function stopAutoScan() {
+            try {
+                // Try candlestick service
+                await fetch(`${CANDLESTICK_API}/scan/stop`, { method: 'POST' });
+                isAutoScanRunning = false;
+                updateScanStatus();
+                showToast('Auto-Scan gestoppt', 'info');
+            } catch (error) {
+                // Try data service fallback
+                try {
+                    await fetch(`${DATA_API}/patterns/history/stop-auto-scan`, { method: 'POST' });
+                    isAutoScanRunning = false;
+                    updateScanStatus();
+                    showToast('Auto-Scan gestoppt', 'info');
+                } catch (e2) {
+                    showToast('Fehler beim Stoppen', 'error');
+                    console.error('Stop auto scan failed:', e2);
+                }
+            }
+        }
+
+        // Trigger manual scan
+        async function triggerManualScan() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Scanne...';
+
+            try {
+                // Try candlestick service
+                const res = await fetch(`${CANDLESTICK_API}/history/scan`, { method: 'POST' });
+                const result = await res.json();
+                showToast(`Scan abgeschlossen: ${result.new_patterns_found || 0} neue Patterns`, 'success');
+                await loadStatistics();
+            } catch (error) {
+                // Try data service fallback
+                try {
+                    const res2 = await fetch(`${DATA_API}/patterns/history/scan`, { method: 'POST' });
+                    const result2 = await res2.json();
+                    showToast(`Scan abgeschlossen: ${result2.new_patterns_found || 0} neue Patterns`, 'success');
+                    await loadStatistics();
+                } catch (e2) {
+                    showToast('Scan fehlgeschlagen', 'error');
+                    console.error('Manual scan failed:', e2);
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Jetzt scannen';
+            }
+        }
+
+        // Clear history
+        async function clearHistory() {
+            if (!confirm('Moechten Sie wirklich die gesamte Pattern-History loeschen?')) {
+                return;
+            }
+
+            try {
+                // Try candlestick service
+                await fetch(`${CANDLESTICK_API}/history/clear`, { method: 'POST' });
+                showToast('History geloescht', 'info');
+                await loadStatistics();
+            } catch (error) {
+                // Try data service fallback
+                try {
+                    await fetch(`${DATA_API}/patterns/history`, { method: 'DELETE' });
+                    showToast('History geloescht', 'info');
+                    await loadStatistics();
+                } catch (e2) {
+                    showToast('Fehler beim Loeschen', 'error');
+                    console.error('Clear history failed:', e2);
+                }
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadServiceInfo();
+            await loadPatterns();
+            await loadStatistics();
+
+            // Auto-refresh every 30 seconds
+            setInterval(async () => {
+                await loadStatistics();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>
