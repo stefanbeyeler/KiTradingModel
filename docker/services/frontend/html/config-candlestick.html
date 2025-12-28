@@ -453,6 +453,181 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+
+        .tab:hover {
+            color: #64c8ff;
+            background: rgba(100, 200, 255, 0.05);
+        }
+
+        .tab.active {
+            color: #64c8ff;
+            border-bottom-color: #64c8ff;
+            background: rgba(100, 200, 255, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Training specific styles */
+        .training-status-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .training-progress {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .training-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #64c8ff, #81c784);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .training-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 0.5rem 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-size: 0.9rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        .job-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .job-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #888;
+        }
+
+        .job-item.completed { border-left-color: #81c784; }
+        .job-item.running { border-left-color: #64c8ff; }
+        .job-item.failed { border-left-color: #e57373; }
+        .job-item.pending { border-left-color: #ffb74d; }
+
+        .job-info {
+            flex: 1;
+        }
+
+        .job-title {
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 0.25rem;
+        }
+
+        .job-meta {
+            font-size: 0.8rem;
+            color: #888;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .job-status {
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .job-status.completed { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .job-status.running { background: rgba(100, 200, 255, 0.2); color: #64c8ff; }
+        .job-status.failed { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+        .job-status.pending { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
+
+        .symbol-chips {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+
+        .symbol-chip {
+            padding: 0.25rem 0.5rem;
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #64c8ff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .symbol-chip:hover {
+            background: rgba(100, 200, 255, 0.2);
+        }
+
+        .symbol-chip.selected {
+            background: rgba(100, 200, 255, 0.3);
+            border-color: #64c8ff;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .pattern-grid {
@@ -462,6 +637,15 @@
             header .container {
                 flex-direction: column;
                 gap: 1rem;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+
+            .tab {
+                flex: 1;
+                text-align: center;
             }
         }
     </style>
@@ -476,6 +660,15 @@
     </header>
 
     <main class="container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('patterns')">Pattern Detection</button>
+            <button class="tab" onclick="switchTab('training')">Model Training</button>
+        </div>
+
+        <!-- Tab: Pattern Detection -->
+        <div id="tab-patterns" class="tab-content active">
+
         <!-- Combined Stats & Service Info -->
         <div class="card" style="margin-bottom: 1.5rem;">
             <div class="stats-grid" style="margin-bottom: 1rem;">
@@ -586,6 +779,132 @@
                 </div>
             </div>
         </div>
+
+        </div><!-- End Tab: Pattern Detection -->
+
+        <!-- Tab: Model Training -->
+        <div id="tab-training" class="tab-content">
+
+            <!-- Training Service Status -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Training Service Status</h2>
+                    <span class="service-badge" id="trainServiceStatus">Laden...</span>
+                </div>
+                <div class="stats-grid" style="margin-bottom: 1rem;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="trainVersion">-</div>
+                        <div class="stat-label">Version</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="trainPyTorch">-</div>
+                        <div class="stat-label">PyTorch</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="trainPatternTypes">-</div>
+                        <div class="stat-label">Pattern-Typen</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="trainJobsTotal">-</div>
+                        <div class="stat-label">Jobs Total</div>
+                    </div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: #888;">
+                        <span>Port: <span style="color: #64c8ff;">3016</span></span>
+                        <span>Gestartet: <span style="color: #64c8ff;" id="trainStarted">-</span></span>
+                    </div>
+                    <div class="timeframe-list" id="trainTimeframes" style="flex: 1; min-width: 200px;">
+                        <span class="loading" style="padding: 0;"><span class="spinner" style="width: 16px; height: 16px;"></span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Training Status -->
+            <div class="card" id="currentTrainingCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">Aktuelles Training</h2>
+                    <span class="job-status running" id="currentJobStatus">Running</span>
+                </div>
+                <div class="training-status-card">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span id="currentJobId">-</span>
+                        <span id="currentJobProgress">0%</span>
+                    </div>
+                    <div class="training-progress">
+                        <div class="training-progress-bar" id="currentProgressBar" style="width: 0%;"></div>
+                    </div>
+                    <div class="job-meta" style="margin-top: 0.5rem;">
+                        <span>Epoch: <span id="currentEpoch">0</span>/<span id="totalEpochs">0</span></span>
+                        <span>Loss: <span id="currentLoss">-</span></span>
+                        <span>Best Loss: <span id="bestLoss">-</span></span>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-danger" onclick="cancelCurrentTraining()">Training abbrechen</button>
+                </div>
+            </div>
+
+            <!-- Start New Training -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Neues Training starten</h2>
+                </div>
+                <p class="card-description">
+                    Trainiere das Candlestick-Pattern-Erkennungsmodell mit ausgewählten Symbolen und Timeframes.
+                </p>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>Symbole auswählen</label>
+                    <div class="symbol-chips" id="symbolChips">
+                        <span class="loading" style="padding: 0;"><span class="spinner" style="width: 16px; height: 16px;"></span></span>
+                    </div>
+                </div>
+
+                <div class="training-form">
+                    <div class="form-group">
+                        <label for="trainTimeframe">Timeframe</label>
+                        <select id="trainTimeframe">
+                            <option value="M5">M5 (5 Min)</option>
+                            <option value="M15">M15 (15 Min)</option>
+                            <option value="H1" selected>H1 (1 Stunde)</option>
+                            <option value="H4">H4 (4 Stunden)</option>
+                            <option value="D1">D1 (Täglich)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="trainEpochs">Epochen</label>
+                        <input type="number" id="trainEpochs" value="50" min="1" max="500">
+                    </div>
+                    <div class="form-group">
+                        <label for="trainBatchSize">Batch Size</label>
+                        <input type="number" id="trainBatchSize" value="32" min="8" max="128">
+                    </div>
+                    <div class="form-group">
+                        <label for="trainLearningRate">Learning Rate</label>
+                        <input type="number" id="trainLearningRate" value="0.001" min="0.0001" max="0.1" step="0.0001">
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-success" id="btnStartTraining" onclick="startTraining()">Training starten</button>
+                    <button class="btn btn-primary" onclick="loadTrainingStatus()">Status aktualisieren</button>
+                </div>
+            </div>
+
+            <!-- Training History -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Training History</h2>
+                    <span class="badge badge-neutral" id="jobHistoryCount">0 Jobs</span>
+                </div>
+                <div class="job-list" id="jobList">
+                    <div class="loading"><span class="spinner"></span></div>
+                </div>
+            </div>
+
+        </div><!-- End Tab: Model Training -->
+
     </main>
 
     <!-- Toast -->
@@ -593,8 +912,11 @@
 
     <script>
         const CANDLESTICK_API = '/candlestick/api/v1';
+        const CANDLESTICK_TRAIN_API = '/candlestick-train/api/v1';
         const DATA_API = '/data/api/v1';
         let isAutoScanRunning = true;  // Default: aktiv
+        let selectedSymbols = [];
+        let trainingRefreshInterval = null;
 
         // Pattern visual examples - each candle: [upperWick, body, lowerWick, type]
         // type: 'bullish', 'bearish', 'doji'
@@ -924,6 +1246,289 @@
                     showToast('Fehler beim Löschen', 'error');
                     console.error('Clear history failed:', e2);
                 }
+            }
+        }
+
+        // === Tab Switching ===
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // Load training data when switching to training tab
+            if (tabName === 'training') {
+                loadTrainingServiceInfo();
+                loadTrainingStatus();
+                loadTrainingJobs();
+                loadAvailableSymbols();
+
+                // Start auto-refresh for training status
+                if (!trainingRefreshInterval) {
+                    trainingRefreshInterval = setInterval(loadTrainingStatus, 5000);
+                }
+            } else {
+                // Stop auto-refresh when leaving training tab
+                if (trainingRefreshInterval) {
+                    clearInterval(trainingRefreshInterval);
+                    trainingRefreshInterval = null;
+                }
+            }
+        }
+
+        // === Training Service Functions ===
+
+        // Load training service info
+        async function loadTrainingServiceInfo() {
+            try {
+                const res = await fetch(`${CANDLESTICK_TRAIN_API}/info`);
+                const data = await res.json();
+
+                document.getElementById('trainServiceStatus').textContent = 'Online';
+                document.getElementById('trainServiceStatus').style.background = 'rgba(76, 175, 80, 0.2)';
+                document.getElementById('trainServiceStatus').style.color = '#81c784';
+
+                document.getElementById('trainVersion').textContent = data.version || '-';
+                document.getElementById('trainPyTorch').textContent = data.pytorch_available ? 'OK' : 'N/A';
+                document.getElementById('trainPatternTypes').textContent = data.capabilities?.pattern_types || '-';
+                document.getElementById('trainStarted').textContent = formatTimestamp(data.started_at);
+
+                // Render timeframes
+                const tfList = document.getElementById('trainTimeframes');
+                if (data.capabilities?.supported_timeframes) {
+                    tfList.innerHTML = data.capabilities.supported_timeframes.map(tf =>
+                        `<span class="timeframe-badge">${tf}</span>`
+                    ).join('');
+                }
+
+            } catch (error) {
+                console.error('Failed to load training service info:', error);
+                document.getElementById('trainServiceStatus').textContent = 'Offline';
+                document.getElementById('trainServiceStatus').style.background = 'rgba(244, 67, 54, 0.2)';
+                document.getElementById('trainServiceStatus').style.color = '#e57373';
+            }
+        }
+
+        // Load training status
+        async function loadTrainingStatus() {
+            try {
+                const res = await fetch(`${CANDLESTICK_TRAIN_API}/train/status`);
+                const data = await res.json();
+
+                const card = document.getElementById('currentTrainingCard');
+                const btn = document.getElementById('btnStartTraining');
+
+                if (data.training && data.last_job) {
+                    // Show current training
+                    card.style.display = 'block';
+                    btn.disabled = true;
+                    btn.textContent = 'Training läuft...';
+
+                    const job = data.last_job;
+                    document.getElementById('currentJobId').textContent = job.job_id;
+                    document.getElementById('currentJobProgress').textContent = `${job.progress?.toFixed(1) || 0}%`;
+                    document.getElementById('currentProgressBar').style.width = `${job.progress || 0}%`;
+                    document.getElementById('currentEpoch').textContent = job.current_epoch || 0;
+                    document.getElementById('totalEpochs').textContent = job.epochs || 0;
+                    document.getElementById('currentLoss').textContent = job.current_loss?.toFixed(4) || '-';
+                    document.getElementById('bestLoss').textContent = job.best_loss?.toFixed(4) || '-';
+
+                    document.getElementById('currentJobStatus').textContent = 'Running';
+                    document.getElementById('currentJobStatus').className = 'job-status running';
+
+                } else if (data.last_job) {
+                    // Show last job result briefly
+                    card.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Training starten';
+
+                    const job = data.last_job;
+                    document.getElementById('currentJobId').textContent = job.job_id;
+                    document.getElementById('currentJobProgress').textContent = `${job.progress?.toFixed(1) || 0}%`;
+                    document.getElementById('currentProgressBar').style.width = `${job.progress || 0}%`;
+                    document.getElementById('currentEpoch').textContent = job.current_epoch || 0;
+                    document.getElementById('totalEpochs').textContent = job.epochs || 0;
+                    document.getElementById('currentLoss').textContent = job.current_loss?.toFixed(4) || '-';
+                    document.getElementById('bestLoss').textContent = job.best_loss?.toFixed(4) || '-';
+
+                    document.getElementById('currentJobStatus').textContent = job.status;
+                    document.getElementById('currentJobStatus').className = `job-status ${job.status}`;
+
+                } else {
+                    card.style.display = 'none';
+                    btn.disabled = false;
+                    btn.textContent = 'Training starten';
+                }
+
+            } catch (error) {
+                console.error('Failed to load training status:', error);
+            }
+        }
+
+        // Load training jobs history
+        async function loadTrainingJobs() {
+            try {
+                const res = await fetch(`${CANDLESTICK_TRAIN_API}/train/jobs`);
+                const data = await res.json();
+
+                const jobs = data.jobs || [];
+                document.getElementById('trainJobsTotal').textContent = jobs.length;
+                document.getElementById('jobHistoryCount').textContent = `${jobs.length} Jobs`;
+
+                const jobList = document.getElementById('jobList');
+
+                if (jobs.length === 0) {
+                    jobList.innerHTML = '<p style="color: #666; text-align: center; padding: 1rem;">Keine Training-Jobs vorhanden</p>';
+                    return;
+                }
+
+                jobList.innerHTML = jobs.map(job => `
+                    <div class="job-item ${job.status}">
+                        <div class="job-info">
+                            <div class="job-title">${job.job_id}</div>
+                            <div class="job-meta">
+                                <span>Symbole: ${job.symbols?.join(', ') || '-'}</span>
+                                <span>TF: ${job.timeframes?.join(', ') || '-'}</span>
+                                <span>Epochen: ${job.epochs || '-'}</span>
+                                ${job.best_loss ? `<span>Best Loss: ${job.best_loss.toFixed(4)}</span>` : ''}
+                                ${job.error_message ? `<span style="color: #e57373;">Fehler: ${job.error_message}</span>` : ''}
+                            </div>
+                            <div class="job-meta" style="margin-top: 0.25rem;">
+                                <span>Erstellt: ${formatTimestamp(job.created_at)}</span>
+                                ${job.completed_at ? `<span>Beendet: ${formatTimestamp(job.completed_at)}</span>` : ''}
+                            </div>
+                        </div>
+                        <span class="job-status ${job.status}">${job.status}</span>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Failed to load training jobs:', error);
+                document.getElementById('jobList').innerHTML = '<p style="color: #e57373; text-align: center; padding: 1rem;">Fehler beim Laden der Jobs</p>';
+            }
+        }
+
+        // Load available symbols for training
+        async function loadAvailableSymbols() {
+            try {
+                const res = await fetch(`${DATA_API}/managed-symbols`);
+                const symbols = await res.json();
+
+                // Filter favorites and limit to reasonable number
+                const favorites = symbols.filter(s => s.is_favorite).slice(0, 20);
+                const defaultSymbols = ['BTCUSD', 'EURUSD', 'XAUUSD', 'GBPUSD', 'USDJPY'];
+
+                const symbolList = favorites.length > 0
+                    ? favorites.map(s => s.symbol)
+                    : defaultSymbols;
+
+                // Pre-select first 3
+                selectedSymbols = symbolList.slice(0, 3);
+
+                const chipsContainer = document.getElementById('symbolChips');
+                chipsContainer.innerHTML = symbolList.map(symbol => `
+                    <span class="symbol-chip ${selectedSymbols.includes(symbol) ? 'selected' : ''}"
+                          onclick="toggleSymbol('${symbol}', this)">${symbol}</span>
+                `).join('');
+
+            } catch (error) {
+                console.error('Failed to load symbols:', error);
+                // Fallback to default symbols
+                const defaultSymbols = ['BTCUSD', 'EURUSD', 'XAUUSD'];
+                selectedSymbols = defaultSymbols.slice(0, 2);
+
+                document.getElementById('symbolChips').innerHTML = defaultSymbols.map(symbol => `
+                    <span class="symbol-chip ${selectedSymbols.includes(symbol) ? 'selected' : ''}"
+                          onclick="toggleSymbol('${symbol}', this)">${symbol}</span>
+                `).join('');
+            }
+        }
+
+        // Toggle symbol selection
+        function toggleSymbol(symbol, element) {
+            if (selectedSymbols.includes(symbol)) {
+                selectedSymbols = selectedSymbols.filter(s => s !== symbol);
+                element.classList.remove('selected');
+            } else {
+                selectedSymbols.push(symbol);
+                element.classList.add('selected');
+            }
+        }
+
+        // Start training
+        async function startTraining() {
+            if (selectedSymbols.length === 0) {
+                showToast('Bitte mindestens ein Symbol auswählen', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnStartTraining');
+            btn.disabled = true;
+            btn.textContent = 'Starte...';
+
+            const timeframe = document.getElementById('trainTimeframe').value;
+            const epochs = parseInt(document.getElementById('trainEpochs').value) || 50;
+            const batchSize = parseInt(document.getElementById('trainBatchSize').value) || 32;
+            const learningRate = parseFloat(document.getElementById('trainLearningRate').value) || 0.001;
+
+            try {
+                const res = await fetch(`${CANDLESTICK_TRAIN_API}/train`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbols: selectedSymbols,
+                        timeframes: [timeframe],
+                        epochs: epochs,
+                        batch_size: batchSize,
+                        learning_rate: learningRate
+                    })
+                });
+
+                const result = await res.json();
+
+                if (result.status === 'started') {
+                    showToast(`Training gestartet: ${result.job?.job_id}`, 'success');
+                    await loadTrainingStatus();
+                    await loadTrainingJobs();
+                } else {
+                    showToast('Training konnte nicht gestartet werden', 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Training starten';
+                }
+
+            } catch (error) {
+                console.error('Failed to start training:', error);
+                showToast('Fehler beim Starten des Trainings', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Training starten';
+            }
+        }
+
+        // Cancel current training
+        async function cancelCurrentTraining() {
+            if (!confirm('Training wirklich abbrechen?')) {
+                return;
+            }
+
+            try {
+                const statusRes = await fetch(`${CANDLESTICK_TRAIN_API}/train/status`);
+                const statusData = await statusRes.json();
+
+                if (statusData.last_job?.job_id) {
+                    await fetch(`${CANDLESTICK_TRAIN_API}/train/${statusData.last_job.job_id}/cancel`, {
+                        method: 'POST'
+                    });
+                    showToast('Training abgebrochen', 'info');
+                    await loadTrainingStatus();
+                    await loadTrainingJobs();
+                }
+
+            } catch (error) {
+                console.error('Failed to cancel training:', error);
+                showToast('Fehler beim Abbrechen', 'error');
             }
         }
 
