@@ -537,17 +537,40 @@
         .form-group input,
         .form-group select {
             padding: 0.5rem 0.75rem;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #1a1a2e;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 6px;
-            color: #e8e8e8;
+            color: #fff;
             font-size: 0.9rem;
+        }
+
+        .form-group select {
+            cursor: pointer;
+        }
+
+        .form-group select option {
+            background: #1a1a2e;
+            color: #fff;
+            padding: 0.5rem;
         }
 
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
             border-color: #64c8ff;
+        }
+
+        /* Filter Dropdowns */
+        .filter-controls select {
+            background: #1a1a2e;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .filter-controls select option {
+            background: #1a1a2e;
+            color: #fff;
+            padding: 8px;
         }
 
         .job-list {
@@ -642,133 +665,308 @@
         .history-filters select,
         .history-filters input {
             padding: 0.5rem 0.75rem;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #252540;
+            border: 1px solid rgba(255, 255, 255, 0.25);
             border-radius: 6px;
-            color: #e8e8e8;
+            color: #fff;
             font-size: 0.85rem;
+            min-width: 120px;
         }
 
-        .pattern-history-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-            gap: 1rem;
+        .history-filters select option {
+            background: #252540;
+            color: #fff;
+            padding: 8px 12px;
         }
 
-        .pattern-history-card {
+        .history-filters select:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        /* Timeline Styles */
+        .timeline-container {
+            position: relative;
+            max-height: 600px;
+            overflow-y: auto;
+            padding: 1rem 0;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 140px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 130px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, rgba(100, 200, 255, 0.3), rgba(100, 200, 255, 0.1));
+        }
+
+        .timeline-date-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .timeline-date-header {
+            position: relative;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #64c8ff;
+            margin-bottom: 0.75rem;
+            padding-left: 25px;
+        }
+
+        .timeline-date-header::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 10px;
+            height: 10px;
+            background: #64c8ff;
+            border-radius: 50%;
+            border: 2px solid #1a1a2e;
+        }
+
+        .timeline-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            margin-bottom: 0.5rem;
             background: rgba(255, 255, 255, 0.03);
-            border-radius: 10px;
+            border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.08);
-            overflow: hidden;
+            cursor: pointer;
             transition: all 0.2s;
         }
 
-        .pattern-history-card:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.15);
+        .timeline-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateX(4px);
         }
 
-        .pattern-history-card.bullish {
-            border-left: 3px solid #81c784;
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 2px solid;
         }
 
-        .pattern-history-card.bearish {
-            border-left: 3px solid #e57373;
+        .timeline-item.bullish::before {
+            background: #81c784;
+            border-color: #4caf50;
         }
 
-        .pattern-history-card.neutral {
-            border-left: 3px solid #ffb74d;
+        .timeline-item.bearish::before {
+            background: #e57373;
+            border-color: #f44336;
         }
 
-        .pattern-chart-container {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.5rem;
-            position: relative;
+        .timeline-item.neutral::before {
+            background: #ffb74d;
+            border-color: #ff9800;
         }
 
-        .pattern-chart {
-            width: 100%;
-            height: 180px;
-            display: block;
+        .timeline-time {
+            position: absolute;
+            left: -130px;
+            width: 95px;
+            text-align: right;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #888;
         }
 
-        .pattern-chart-loading {
+        .timeline-item.bullish .timeline-time { color: #81c784; }
+        .timeline-item.bearish .timeline-time { color: #e57373; }
+        .timeline-item.neutral .timeline-time { color: #ffb74d; }
+
+        .timeline-content {
+            flex: 1;
             display: flex;
             align-items: center;
-            justify-content: center;
-            height: 180px;
-            color: #666;
-            font-size: 0.85rem;
+            gap: 1rem;
         }
 
-        .pattern-history-info {
-            padding: 1rem;
-        }
-
-        .pattern-history-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 0.5rem;
-        }
-
-        .pattern-history-title {
+        .timeline-pattern-name {
             font-weight: 600;
             color: #fff;
-            font-size: 1rem;
+            font-size: 0.95rem;
+            min-width: 150px;
         }
 
-        .pattern-history-symbol {
+        .timeline-symbol {
             font-size: 0.85rem;
             color: #64c8ff;
             font-weight: 500;
+            min-width: 70px;
         }
 
-        .pattern-history-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
+        .timeline-direction {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .timeline-direction.bullish {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .timeline-direction.bearish {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        .timeline-direction.neutral {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        .timeline-confidence {
             font-size: 0.8rem;
             color: #888;
-            margin-bottom: 0.5rem;
+            margin-left: auto;
         }
 
-        .pattern-history-meta span {
+        .timeline-arrow {
+            color: #666;
+            font-size: 1.2rem;
+            margin-left: 0.5rem;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fff;
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.75rem;
         }
 
-        .pattern-history-description {
-            font-size: 0.85rem;
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-chart-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-chart {
+            width: 100%;
+            height: 220px;
+            display: block;
+        }
+
+        .modal-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal-info-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.75rem;
+            border-radius: 6px;
+        }
+
+        .modal-info-label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+
+        .modal-info-value {
+            font-size: 1rem;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .modal-description {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 6px;
             color: #aaa;
-            line-height: 1.4;
+            font-size: 0.9rem;
+            line-height: 1.5;
         }
 
-        .confidence-bar {
-            height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-            margin-top: 0.5rem;
-            overflow: hidden;
-        }
-
-        .confidence-bar-fill {
-            height: 100%;
-            border-radius: 2px;
-            transition: width 0.3s ease;
-        }
-
-        .confidence-bar-fill.high {
-            background: linear-gradient(90deg, #81c784, #4caf50);
-        }
-
-        .confidence-bar-fill.medium {
-            background: linear-gradient(90deg, #ffb74d, #ff9800);
-        }
-
-        .confidence-bar-fill.low {
-            background: linear-gradient(90deg, #e57373, #f44336);
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
         }
 
         .pagination {
@@ -979,6 +1177,7 @@
                 <div class="card-header">
                     <h2 class="card-title">Erkannte Patterns</h2>
                     <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="resetHistoryFilters()" title="Filter zurücksetzen">✕ Filter</button>
                         <button class="btn btn-primary" onclick="loadPatternHistory()">Aktualisieren</button>
                     </div>
                 </div>
@@ -1028,20 +1227,61 @@
                     </div>
                 </div>
 
-                <!-- Pattern Grid -->
-                <div class="pattern-history-grid" id="patternHistoryGrid">
-                    <div class="loading"><span class="spinner"></span> Lade Patterns...</div>
+                <!-- Timeline Container -->
+                <div class="timeline-container" id="patternTimelineContainer">
+                    <div class="timeline" id="patternTimeline">
+                        <div class="loading"><span class="spinner"></span> Lade Patterns...</div>
+                    </div>
                 </div>
 
                 <!-- Pagination -->
                 <div class="pagination" id="historyPagination" style="display: none;">
-                    <button onclick="loadPatternHistory(currentHistoryPage - 1)" id="historyPrevBtn">Zuruck</button>
+                    <button onclick="loadPatternHistory(currentHistoryPage - 1)" id="historyPrevBtn">Zurück</button>
                     <span class="pagination-info" id="historyPageInfo">Seite 1 von 1</span>
                     <button onclick="loadPatternHistory(currentHistoryPage + 1)" id="historyNextBtn">Weiter</button>
                 </div>
             </div>
 
         </div><!-- End Tab: Pattern History -->
+
+        <!-- Pattern Detail Modal -->
+        <div class="modal-overlay" id="patternModal" onclick="closePatternModal(event)">
+            <div class="modal" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span id="modalPatternName">-</span>
+                        <span class="timeline-direction" id="modalDirection">-</span>
+                    </div>
+                    <button class="modal-close" onclick="closePatternModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-chart-container">
+                        <canvas class="modal-chart" id="modalChart"></canvas>
+                    </div>
+                    <div class="modal-info-grid">
+                        <div class="modal-info-item">
+                            <div class="modal-info-label">Symbol</div>
+                            <div class="modal-info-value" id="modalSymbol">-</div>
+                        </div>
+                        <div class="modal-info-item">
+                            <div class="modal-info-label">Timeframe</div>
+                            <div class="modal-info-value" id="modalTimeframe">-</div>
+                        </div>
+                        <div class="modal-info-item">
+                            <div class="modal-info-label">Zeitpunkt</div>
+                            <div class="modal-info-value" id="modalTimestamp">-</div>
+                        </div>
+                        <div class="modal-info-item">
+                            <div class="modal-info-label">Konfidenz</div>
+                            <div class="modal-info-value" id="modalConfidence">-</div>
+                        </div>
+                    </div>
+                    <div class="modal-description" id="modalDescription">
+                        Pattern-Beschreibung wird geladen...
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Tab: Model Training -->
         <div id="tab-training" class="tab-content">
@@ -1561,9 +1801,13 @@
 
         // === Pattern History Functions ===
 
-        // Initialize filter dropdowns
+        // Initialize filter dropdowns (preserves current values)
         async function initHistoryFilters() {
             try {
+                // Save current filter values
+                const currentSymbol = document.getElementById('historyFilterSymbol')?.value || '';
+                const currentPattern = document.getElementById('historyFilterPattern')?.value || '';
+
                 // Load symbols
                 const symbolsRes = await fetch(`${DATA_API}/managed-symbols`);
                 const symbols = await symbolsRes.json();
@@ -1572,6 +1816,9 @@
 
                 symbolSelect.innerHTML = '<option value="">Alle Symbole</option>' +
                     favorites.map(s => `<option value="${s.symbol}">${s.symbol}</option>`).join('');
+
+                // Restore symbol selection
+                if (currentSymbol) symbolSelect.value = currentSymbol;
 
                 // Load pattern types
                 const patternsRes = await fetch(`${CANDLESTICK_API}/patterns`);
@@ -1587,16 +1834,32 @@
                 patternSelect.innerHTML = '<option value="">Alle Patterns</option>' +
                     allPatterns.map(p => `<option value="${p.type}">${formatPatternType(p.type)}</option>`).join('');
 
+                // Restore pattern selection
+                if (currentPattern) patternSelect.value = currentPattern;
+
             } catch (error) {
                 console.error('Failed to init history filters:', error);
             }
         }
 
+        // Reset all history filters to default
+        function resetHistoryFilters() {
+            document.getElementById('historyFilterSymbol').value = '';
+            document.getElementById('historyFilterPattern').value = '';
+            document.getElementById('historyFilterDirection').value = '';
+            document.getElementById('historyFilterTimeframe').value = '';
+            document.getElementById('historyFilterConfidence').value = '0';
+            loadPatternHistory(1);
+        }
+
+        // Store patterns for modal access
+        let loadedPatterns = [];
+
         // Load pattern history with filters
         async function loadPatternHistory(page = 1) {
             currentHistoryPage = page;
-            const grid = document.getElementById('patternHistoryGrid');
-            grid.innerHTML = '<div class="loading"><span class="spinner"></span> Lade Patterns...</div>';
+            const timeline = document.getElementById('patternTimeline');
+            timeline.innerHTML = '<div class="loading"><span class="spinner"></span> Lade Patterns...</div>';
 
             // Get filter values
             const symbol = document.getElementById('historyFilterSymbol')?.value || '';
@@ -1627,18 +1890,24 @@
                     patterns = patterns.filter(p => (p.confidence || 0) >= minConfidence);
                 }
 
+                // Sort by timestamp descending (newest first)
+                patterns.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
                 // Pagination
                 const totalPatterns = patterns.length;
                 const totalPages = Math.ceil(totalPatterns / HISTORY_PAGE_SIZE);
                 const startIdx = (page - 1) * HISTORY_PAGE_SIZE;
                 const pagePatterns = patterns.slice(startIdx, startIdx + HISTORY_PAGE_SIZE);
 
+                // Store for modal access
+                loadedPatterns = pagePatterns;
+
                 // Update pagination
                 updateHistoryPagination(page, totalPages, totalPatterns);
 
                 if (pagePatterns.length === 0) {
-                    grid.innerHTML = `
-                        <div class="empty-state" style="grid-column: 1/-1;">
+                    timeline.innerHTML = `
+                        <div class="empty-state">
                             <div class="empty-state-icon">📊</div>
                             <p>Keine Patterns gefunden</p>
                             <p style="font-size: 0.85rem; margin-top: 0.5rem;">Passe die Filter an oder warte auf neue Erkennungen</p>
@@ -1647,98 +1916,101 @@
                     return;
                 }
 
-                // Render pattern cards
-                grid.innerHTML = pagePatterns.map((p, idx) => renderPatternHistoryCard(p, startIdx + idx)).join('');
+                // Group patterns by date
+                const groupedPatterns = groupPatternsByDate(pagePatterns);
 
-                // Load charts for each pattern
-                pagePatterns.forEach((p, idx) => loadPatternChart(p, startIdx + idx));
+                // Render timeline
+                timeline.innerHTML = renderTimeline(groupedPatterns);
 
             } catch (error) {
                 console.error('Failed to load pattern history:', error);
-                grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p style="color: #e57373;">Fehler beim Laden der History</p></div>';
+                timeline.innerHTML = '<div class="empty-state"><p style="color: #e57373;">Fehler beim Laden der History</p></div>';
             }
         }
 
-        // Update pagination controls
-        function updateHistoryPagination(page, totalPages, totalPatterns) {
-            const pagination = document.getElementById('historyPagination');
-            const prevBtn = document.getElementById('historyPrevBtn');
-            const nextBtn = document.getElementById('historyNextBtn');
-            const pageInfo = document.getElementById('historyPageInfo');
-
-            if (totalPages <= 1) {
-                pagination.style.display = 'none';
-                return;
-            }
-
-            pagination.style.display = 'flex';
-            prevBtn.disabled = page <= 1;
-            nextBtn.disabled = page >= totalPages;
-            pageInfo.textContent = `Seite ${page} von ${totalPages} (${totalPatterns} Patterns)`;
+        // Group patterns by date
+        function groupPatternsByDate(patterns) {
+            const groups = {};
+            patterns.forEach((p, idx) => {
+                const date = new Date(p.timestamp);
+                const dateKey = date.toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+                if (!groups[dateKey]) {
+                    groups[dateKey] = [];
+                }
+                groups[dateKey].push({ ...p, index: idx });
+            });
+            return groups;
         }
 
-        // Render a single pattern history card
-        function renderPatternHistoryCard(pattern, index) {
-            const confidenceClass = pattern.confidence >= 0.7 ? 'high' : pattern.confidence >= 0.5 ? 'medium' : 'low';
+        // Render the full timeline
+        function renderTimeline(groupedPatterns) {
+            let html = '';
+            for (const [dateKey, patterns] of Object.entries(groupedPatterns)) {
+                html += `<div class="timeline-date-group">`;
+                html += `<div class="timeline-date-header">${dateKey}</div>`;
+                patterns.forEach(p => {
+                    html += renderTimelineItem(p);
+                });
+                html += `</div>`;
+            }
+            return html;
+        }
+
+        // Render a single timeline item
+        function renderTimelineItem(pattern) {
+            const time = new Date(pattern.timestamp).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
             const confidencePercent = ((pattern.confidence || 0) * 100).toFixed(0);
+            const directionClass = pattern.direction || 'neutral';
 
             return `
-                <div class="pattern-history-card ${pattern.direction}">
-                    <div class="pattern-chart-container">
-                        <canvas id="chart-${index}" class="pattern-chart"></canvas>
-                        <div id="chart-loading-${index}" class="pattern-chart-loading">
-                            <span class="spinner" style="width: 20px; height: 20px;"></span>
-                        </div>
-                    </div>
-                    <div class="pattern-history-info">
-                        <div class="pattern-history-header">
-                            <div>
-                                <div class="pattern-history-title">${formatPatternType(pattern.pattern_type)}</div>
-                                <span class="pattern-history-symbol">${pattern.symbol}</span>
-                            </div>
-                            <div class="pattern-badges">
-                                <span class="badge badge-${pattern.direction}">${pattern.direction}</span>
-                                <span class="timeframe-badge" style="font-size: 0.7rem; padding: 0.15rem 0.4rem;">${pattern.timeframe}</span>
-                            </div>
-                        </div>
-                        <div class="pattern-history-meta">
-                            <span>📅 ${formatTimestamp(pattern.timestamp)}</span>
-                            <span>💰 ${formatPrice(pattern.price_at_detection)}</span>
-                            <span>🎯 ${confidencePercent}%</span>
-                        </div>
-                        <p class="pattern-history-description">${pattern.description || pattern.trading_implication || ''}</p>
-                        <div class="confidence-bar">
-                            <div class="confidence-bar-fill ${confidenceClass}" style="width: ${confidencePercent}%;"></div>
-                        </div>
+                <div class="timeline-item ${directionClass}" onclick="openPatternModal(${pattern.index})">
+                    <span class="timeline-time">${time}</span>
+                    <div class="timeline-content">
+                        <span class="timeline-pattern-name">${formatPatternType(pattern.pattern_type)}</span>
+                        <span class="timeline-symbol">${pattern.symbol}</span>
+                        <span class="timeline-direction ${directionClass}">${pattern.direction}</span>
+                        <span class="timeline-confidence">${confidencePercent}%</span>
+                        <span class="timeline-arrow">›</span>
                     </div>
                 </div>
             `;
         }
 
-        // Format price with appropriate decimals
-        function formatPrice(price) {
-            if (!price) return '-';
-            if (price < 1) return price.toFixed(5);
-            if (price < 100) return price.toFixed(4);
-            if (price < 10000) return price.toFixed(2);
-            return price.toFixed(0);
+        // Open pattern detail modal
+        async function openPatternModal(index) {
+            const pattern = loadedPatterns[index];
+            if (!pattern) return;
+
+            // Populate modal fields
+            document.getElementById('modalPatternName').textContent = formatPatternType(pattern.pattern_type);
+            const directionEl = document.getElementById('modalDirection');
+            directionEl.textContent = pattern.direction;
+            directionEl.className = `timeline-direction ${pattern.direction}`;
+
+            document.getElementById('modalSymbol').textContent = pattern.symbol;
+            document.getElementById('modalTimeframe').textContent = pattern.timeframe;
+            document.getElementById('modalTimestamp').textContent = formatTimestamp(pattern.timestamp);
+            document.getElementById('modalConfidence').textContent = ((pattern.confidence || 0) * 100).toFixed(0) + '%';
+            document.getElementById('modalDescription').textContent = pattern.description || pattern.trading_implication || 'Keine Beschreibung verfügbar';
+
+            // Show modal
+            document.getElementById('patternModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+
+            // Load chart in modal
+            await loadModalChart(pattern);
         }
 
-        // Convert timeframe to TwelveData interval format
-        function timeframeToInterval(tf) {
-            const map = {
-                'M1': '1min', 'M5': '5min', 'M15': '15min', 'M30': '30min',
-                'H1': '1h', 'H2': '2h', 'H4': '4h',
-                'D1': '1day', 'W1': '1week', 'MN': '1month'
-            };
-            return map[tf] || '1h';
+        // Close pattern detail modal
+        function closePatternModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('patternModal').classList.remove('show');
+            document.body.style.overflow = '';
         }
 
-        // Load OHLC data and render chart for a pattern
-        async function loadPatternChart(pattern, index) {
-            const canvas = document.getElementById(`chart-${index}`);
-            const loading = document.getElementById(`chart-loading-${index}`);
-
+        // Load chart for modal
+        async function loadModalChart(pattern) {
+            const canvas = document.getElementById('modalChart');
             if (!canvas) return;
 
             try {
@@ -1762,19 +2034,54 @@
                     return Math.abs(candleTime - patternTime) < 3600000 * 24;  // Within 24h
                 });
 
-                // Get candles around the pattern (5 before, pattern, 2 after if available)
+                // Get candles around the pattern
                 if (patternIndex === -1) patternIndex = 0;
-                const startIdx = Math.max(0, patternIndex - 2);
-                const endIdx = Math.min(ohlcData.length, patternIndex + 6);
-                const chartCandles = ohlcData.slice(startIdx, endIdx).reverse();  // Reverse for chronological order
+                const startIdx = Math.max(0, patternIndex - 3);
+                const endIdx = Math.min(ohlcData.length, patternIndex + 8);
+                const chartCandles = ohlcData.slice(startIdx, endIdx).reverse();
 
-                if (loading) loading.style.display = 'none';
                 renderCandlestickChart(canvas, chartCandles, chartCandles.length - 1 - (patternIndex - startIdx), pattern.direction, pattern.pattern_type);
 
             } catch (error) {
-                console.error(`Failed to load chart for ${pattern.symbol}:`, error);
-                if (loading) loading.innerHTML = '<span style="color: #666;">Chart nicht verfugbar</span>';
+                console.error(`Failed to load modal chart for ${pattern.symbol}:`, error);
             }
+        }
+
+        // Update pagination controls
+        function updateHistoryPagination(page, totalPages, totalPatterns) {
+            const pagination = document.getElementById('historyPagination');
+            const prevBtn = document.getElementById('historyPrevBtn');
+            const nextBtn = document.getElementById('historyNextBtn');
+            const pageInfo = document.getElementById('historyPageInfo');
+
+            if (totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+
+            pagination.style.display = 'flex';
+            prevBtn.disabled = page <= 1;
+            nextBtn.disabled = page >= totalPages;
+            pageInfo.textContent = `Seite ${page} von ${totalPages} (${totalPatterns} Patterns)`;
+        }
+
+        // Format price with appropriate decimals
+        function formatPrice(price) {
+            if (!price) return '-';
+            if (price < 1) return price.toFixed(5);
+            if (price < 100) return price.toFixed(4);
+            if (price < 10000) return price.toFixed(2);
+            return price.toFixed(0);
+        }
+
+        // Convert timeframe to TwelveData interval format
+        function timeframeToInterval(tf) {
+            const map = {
+                'M1': '1min', 'M5': '5min', 'M15': '15min', 'M30': '30min',
+                'H1': '1h', 'H2': '2h', 'H4': '4h',
+                'D1': '1day', 'W1': '1week', 'MN': '1month'
+            };
+            return map[tf] || '1h';
         }
 
         // Format candle timestamp for display
