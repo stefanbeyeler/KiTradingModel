@@ -628,6 +628,194 @@
             border-color: #64c8ff;
         }
 
+        /* Pattern History Styles */
+        .history-filters {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .history-filters select,
+        .history-filters input {
+            padding: 0.5rem 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-size: 0.85rem;
+        }
+
+        .pattern-history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 1rem;
+        }
+
+        .pattern-history-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .pattern-history-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .pattern-history-card.bullish {
+            border-left: 3px solid #81c784;
+        }
+
+        .pattern-history-card.bearish {
+            border-left: 3px solid #e57373;
+        }
+
+        .pattern-history-card.neutral {
+            border-left: 3px solid #ffb74d;
+        }
+
+        .pattern-chart-container {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            position: relative;
+        }
+
+        .pattern-chart {
+            width: 100%;
+            height: 180px;
+            display: block;
+        }
+
+        .pattern-chart-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 180px;
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .pattern-history-info {
+            padding: 1rem;
+        }
+
+        .pattern-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .pattern-history-title {
+            font-weight: 600;
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        .pattern-history-symbol {
+            font-size: 0.85rem;
+            color: #64c8ff;
+            font-weight: 500;
+        }
+
+        .pattern-history-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+
+        .pattern-history-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .pattern-history-description {
+            font-size: 0.85rem;
+            color: #aaa;
+            line-height: 1.4;
+        }
+
+        .confidence-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .confidence-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .confidence-bar-fill.high {
+            background: linear-gradient(90deg, #81c784, #4caf50);
+        }
+
+        .confidence-bar-fill.medium {
+            background: linear-gradient(90deg, #ffb74d, #ff9800);
+        }
+
+        .confidence-bar-fill.low {
+            background: linear-gradient(90deg, #e57373, #f44336);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding: 1rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 6px;
+            color: #64c8ff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: rgba(100, 200, 255, 0.2);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .pattern-grid {
@@ -663,6 +851,7 @@
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab active" onclick="switchTab('patterns')">Pattern Detection</button>
+            <button class="tab" onclick="switchTab('history')">Pattern History</button>
             <button class="tab" onclick="switchTab('training')">Model Training</button>
         </div>
 
@@ -781,6 +970,78 @@
         </div>
 
         </div><!-- End Tab: Pattern Detection -->
+
+        <!-- Tab: Pattern History -->
+        <div id="tab-history" class="tab-content">
+
+            <!-- Filter Controls -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Erkannte Patterns</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="loadPatternHistory()">Aktualisieren</button>
+                    </div>
+                </div>
+
+                <div class="history-filters">
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.75rem;">Symbol</label>
+                        <select id="historyFilterSymbol" onchange="loadPatternHistory()">
+                            <option value="">Alle Symbole</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.75rem;">Pattern</label>
+                        <select id="historyFilterPattern" onchange="loadPatternHistory()">
+                            <option value="">Alle Patterns</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.75rem;">Richtung</label>
+                        <select id="historyFilterDirection" onchange="loadPatternHistory()">
+                            <option value="">Alle</option>
+                            <option value="bullish">Bullish</option>
+                            <option value="bearish">Bearish</option>
+                            <option value="neutral">Neutral</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.75rem;">Timeframe</label>
+                        <select id="historyFilterTimeframe" onchange="loadPatternHistory()">
+                            <option value="">Alle</option>
+                            <option value="M5">M5</option>
+                            <option value="M15">M15</option>
+                            <option value="H1">H1</option>
+                            <option value="H4">H4</option>
+                            <option value="D1">D1</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.75rem;">Min. Konfidenz</label>
+                        <select id="historyFilterConfidence" onchange="loadPatternHistory()">
+                            <option value="0">Alle</option>
+                            <option value="0.5">50%+</option>
+                            <option value="0.6">60%+</option>
+                            <option value="0.7">70%+</option>
+                            <option value="0.8">80%+</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Pattern Grid -->
+                <div class="pattern-history-grid" id="patternHistoryGrid">
+                    <div class="loading"><span class="spinner"></span> Lade Patterns...</div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination" id="historyPagination" style="display: none;">
+                    <button onclick="loadPatternHistory(currentHistoryPage - 1)" id="historyPrevBtn">Zuruck</button>
+                    <span class="pagination-info" id="historyPageInfo">Seite 1 von 1</span>
+                    <button onclick="loadPatternHistory(currentHistoryPage + 1)" id="historyNextBtn">Weiter</button>
+                </div>
+            </div>
+
+        </div><!-- End Tab: Pattern History -->
 
         <!-- Tab: Model Training -->
         <div id="tab-training" class="tab-content">
@@ -931,6 +1192,9 @@
         const DATA_API = '/data/api/v1';
         let isAutoScanRunning = true;  // Default: aktiv
         let trainingRefreshInterval = null;
+        let currentHistoryPage = 1;
+        const HISTORY_PAGE_SIZE = 12;
+        let ohlcCache = {};  // Cache for OHLC data
 
         // Pattern visual examples - each candle: [upperWick, body, lowerWick, type]
         // type: 'bullish', 'bearish', 'doji'
@@ -1273,8 +1537,11 @@
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
 
-            // Load training data when switching to training tab
-            if (tabName === 'training') {
+            // Load data based on tab
+            if (tabName === 'history') {
+                initHistoryFilters();
+                loadPatternHistory();
+            } else if (tabName === 'training') {
                 loadTrainingServiceInfo();
                 loadTrainingStatus();
                 loadTrainingJobs();
@@ -1290,6 +1557,448 @@
                     trainingRefreshInterval = null;
                 }
             }
+        }
+
+        // === Pattern History Functions ===
+
+        // Initialize filter dropdowns
+        async function initHistoryFilters() {
+            try {
+                // Load symbols
+                const symbolsRes = await fetch(`${DATA_API}/managed-symbols`);
+                const symbols = await symbolsRes.json();
+                const symbolSelect = document.getElementById('historyFilterSymbol');
+                const favorites = symbols.filter(s => s.is_favorite);
+
+                symbolSelect.innerHTML = '<option value="">Alle Symbole</option>' +
+                    favorites.map(s => `<option value="${s.symbol}">${s.symbol}</option>`).join('');
+
+                // Load pattern types
+                const patternsRes = await fetch(`${CANDLESTICK_API}/patterns`);
+                const patternsData = await patternsRes.json();
+                const patternSelect = document.getElementById('historyFilterPattern');
+
+                const allPatterns = [
+                    ...(patternsData.categories?.reversal || []),
+                    ...(patternsData.categories?.continuation || []),
+                    ...(patternsData.categories?.indecision || [])
+                ];
+
+                patternSelect.innerHTML = '<option value="">Alle Patterns</option>' +
+                    allPatterns.map(p => `<option value="${p.type}">${formatPatternType(p.type)}</option>`).join('');
+
+            } catch (error) {
+                console.error('Failed to init history filters:', error);
+            }
+        }
+
+        // Load pattern history with filters
+        async function loadPatternHistory(page = 1) {
+            currentHistoryPage = page;
+            const grid = document.getElementById('patternHistoryGrid');
+            grid.innerHTML = '<div class="loading"><span class="spinner"></span> Lade Patterns...</div>';
+
+            // Get filter values
+            const symbol = document.getElementById('historyFilterSymbol')?.value || '';
+            const pattern = document.getElementById('historyFilterPattern')?.value || '';
+            const direction = document.getElementById('historyFilterDirection')?.value || '';
+            const timeframe = document.getElementById('historyFilterTimeframe')?.value || '';
+            const minConfidence = parseFloat(document.getElementById('historyFilterConfidence')?.value || '0');
+
+            try {
+                // Build query params
+                const params = new URLSearchParams();
+                params.set('limit', '100');  // Get more for client-side filtering
+                if (symbol) params.set('symbol', symbol);
+                if (timeframe) params.set('timeframe', timeframe);
+
+                const res = await fetch(`${CANDLESTICK_API}/history?${params}`);
+                let data = await res.json();
+                let patterns = data.patterns || [];
+
+                // Client-side filtering
+                if (pattern) {
+                    patterns = patterns.filter(p => p.pattern_type === pattern);
+                }
+                if (direction) {
+                    patterns = patterns.filter(p => p.direction === direction);
+                }
+                if (minConfidence > 0) {
+                    patterns = patterns.filter(p => (p.confidence || 0) >= minConfidence);
+                }
+
+                // Pagination
+                const totalPatterns = patterns.length;
+                const totalPages = Math.ceil(totalPatterns / HISTORY_PAGE_SIZE);
+                const startIdx = (page - 1) * HISTORY_PAGE_SIZE;
+                const pagePatterns = patterns.slice(startIdx, startIdx + HISTORY_PAGE_SIZE);
+
+                // Update pagination
+                updateHistoryPagination(page, totalPages, totalPatterns);
+
+                if (pagePatterns.length === 0) {
+                    grid.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1/-1;">
+                            <div class="empty-state-icon">📊</div>
+                            <p>Keine Patterns gefunden</p>
+                            <p style="font-size: 0.85rem; margin-top: 0.5rem;">Passe die Filter an oder warte auf neue Erkennungen</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Render pattern cards
+                grid.innerHTML = pagePatterns.map((p, idx) => renderPatternHistoryCard(p, startIdx + idx)).join('');
+
+                // Load charts for each pattern
+                pagePatterns.forEach((p, idx) => loadPatternChart(p, startIdx + idx));
+
+            } catch (error) {
+                console.error('Failed to load pattern history:', error);
+                grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p style="color: #e57373;">Fehler beim Laden der History</p></div>';
+            }
+        }
+
+        // Update pagination controls
+        function updateHistoryPagination(page, totalPages, totalPatterns) {
+            const pagination = document.getElementById('historyPagination');
+            const prevBtn = document.getElementById('historyPrevBtn');
+            const nextBtn = document.getElementById('historyNextBtn');
+            const pageInfo = document.getElementById('historyPageInfo');
+
+            if (totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+
+            pagination.style.display = 'flex';
+            prevBtn.disabled = page <= 1;
+            nextBtn.disabled = page >= totalPages;
+            pageInfo.textContent = `Seite ${page} von ${totalPages} (${totalPatterns} Patterns)`;
+        }
+
+        // Render a single pattern history card
+        function renderPatternHistoryCard(pattern, index) {
+            const confidenceClass = pattern.confidence >= 0.7 ? 'high' : pattern.confidence >= 0.5 ? 'medium' : 'low';
+            const confidencePercent = ((pattern.confidence || 0) * 100).toFixed(0);
+
+            return `
+                <div class="pattern-history-card ${pattern.direction}">
+                    <div class="pattern-chart-container">
+                        <canvas id="chart-${index}" class="pattern-chart"></canvas>
+                        <div id="chart-loading-${index}" class="pattern-chart-loading">
+                            <span class="spinner" style="width: 20px; height: 20px;"></span>
+                        </div>
+                    </div>
+                    <div class="pattern-history-info">
+                        <div class="pattern-history-header">
+                            <div>
+                                <div class="pattern-history-title">${formatPatternType(pattern.pattern_type)}</div>
+                                <span class="pattern-history-symbol">${pattern.symbol}</span>
+                            </div>
+                            <div class="pattern-badges">
+                                <span class="badge badge-${pattern.direction}">${pattern.direction}</span>
+                                <span class="timeframe-badge" style="font-size: 0.7rem; padding: 0.15rem 0.4rem;">${pattern.timeframe}</span>
+                            </div>
+                        </div>
+                        <div class="pattern-history-meta">
+                            <span>📅 ${formatTimestamp(pattern.timestamp)}</span>
+                            <span>💰 ${formatPrice(pattern.price_at_detection)}</span>
+                            <span>🎯 ${confidencePercent}%</span>
+                        </div>
+                        <p class="pattern-history-description">${pattern.description || pattern.trading_implication || ''}</p>
+                        <div class="confidence-bar">
+                            <div class="confidence-bar-fill ${confidenceClass}" style="width: ${confidencePercent}%;"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Format price with appropriate decimals
+        function formatPrice(price) {
+            if (!price) return '-';
+            if (price < 1) return price.toFixed(5);
+            if (price < 100) return price.toFixed(4);
+            if (price < 10000) return price.toFixed(2);
+            return price.toFixed(0);
+        }
+
+        // Convert timeframe to TwelveData interval format
+        function timeframeToInterval(tf) {
+            const map = {
+                'M1': '1min', 'M5': '5min', 'M15': '15min', 'M30': '30min',
+                'H1': '1h', 'H2': '2h', 'H4': '4h',
+                'D1': '1day', 'W1': '1week', 'MN': '1month'
+            };
+            return map[tf] || '1h';
+        }
+
+        // Load OHLC data and render chart for a pattern
+        async function loadPatternChart(pattern, index) {
+            const canvas = document.getElementById(`chart-${index}`);
+            const loading = document.getElementById(`chart-loading-${index}`);
+
+            if (!canvas) return;
+
+            try {
+                const interval = timeframeToInterval(pattern.timeframe);
+                const cacheKey = `${pattern.symbol}_${interval}`;
+
+                let ohlcData;
+                if (ohlcCache[cacheKey]) {
+                    ohlcData = ohlcCache[cacheKey];
+                } else {
+                    const res = await fetch(`${DATA_API}/twelvedata/time_series/${pattern.symbol}?interval=${interval}&outputsize=30`);
+                    const data = await res.json();
+                    ohlcData = data.values || [];
+                    ohlcCache[cacheKey] = ohlcData;
+                }
+
+                // Find the pattern timestamp in the data
+                const patternTime = new Date(pattern.timestamp);
+                let patternIndex = ohlcData.findIndex(candle => {
+                    const candleTime = new Date(candle.datetime);
+                    return Math.abs(candleTime - patternTime) < 3600000 * 24;  // Within 24h
+                });
+
+                // Get candles around the pattern (5 before, pattern, 2 after if available)
+                if (patternIndex === -1) patternIndex = 0;
+                const startIdx = Math.max(0, patternIndex - 2);
+                const endIdx = Math.min(ohlcData.length, patternIndex + 6);
+                const chartCandles = ohlcData.slice(startIdx, endIdx).reverse();  // Reverse for chronological order
+
+                if (loading) loading.style.display = 'none';
+                renderCandlestickChart(canvas, chartCandles, chartCandles.length - 1 - (patternIndex - startIdx), pattern.direction, pattern.pattern_type);
+
+            } catch (error) {
+                console.error(`Failed to load chart for ${pattern.symbol}:`, error);
+                if (loading) loading.innerHTML = '<span style="color: #666;">Chart nicht verfugbar</span>';
+            }
+        }
+
+        // Format candle timestamp for display
+        function formatCandleTime(datetime, timeframe) {
+            if (!datetime) return '';
+            const date = new Date(datetime);
+            if (isNaN(date.getTime())) {
+                // Try parsing as "YYYY-MM-DD HH:mm:ss" format
+                const parts = datetime.split(' ');
+                if (parts.length === 2) {
+                    const [datePart, timePart] = parts;
+                    const [year, month, day] = datePart.split('-');
+                    const [hour, minute] = timePart.split(':');
+
+                    // For daily timeframes, show date only
+                    if (timeframe === 'D1' || timeframe === 'W1' || timeframe === 'MN') {
+                        return `${day}.${month}`;
+                    }
+                    return `${hour}:${minute}`;
+                }
+                return datetime.substring(11, 16) || '';
+            }
+
+            // For daily timeframes, show date
+            if (timeframe === 'D1' || timeframe === 'W1' || timeframe === 'MN') {
+                return date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
+            }
+            // For intraday, show time
+            return date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Render candlestick chart on canvas
+        function renderCandlestickChart(canvas, candles, highlightIndex, direction, patternType) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.offsetWidth;
+            const height = canvas.offsetHeight;
+
+            // Set canvas resolution for crisp rendering
+            canvas.width = width * 2;
+            canvas.height = height * 2;
+            ctx.scale(2, 2);
+
+            // Clear canvas
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+
+            if (!candles || candles.length === 0) {
+                ctx.fillStyle = '#666';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Keine Daten', width / 2, height / 2);
+                return;
+            }
+
+            // Calculate price range
+            const prices = candles.flatMap(c => [parseFloat(c.high), parseFloat(c.low)]);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const priceRange = maxPrice - minPrice || 1;
+            const padding = priceRange * 0.1;
+
+            // Calculate dimensions with space for timestamps and pattern label
+            const chartPadding = { top: 25, right: 10, bottom: 22, left: 10 };
+            const chartWidth = width - chartPadding.left - chartPadding.right;
+            const chartHeight = height - chartPadding.top - chartPadding.bottom;
+            const candleWidth = Math.min(18, (chartWidth / candles.length) * 0.65);
+            const candleSpacing = chartWidth / candles.length;
+
+            // Price to Y coordinate
+            const priceToY = (price) => {
+                return chartPadding.top + chartHeight - ((price - minPrice + padding) / (priceRange + 2 * padding)) * chartHeight;
+            };
+
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = chartPadding.top + (chartHeight / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(chartPadding.left, y);
+                ctx.lineTo(width - chartPadding.right, y);
+                ctx.stroke();
+            }
+
+            // Determine timeframe from datetime format (rough detection)
+            const firstCandle = candles[0];
+            let timeframe = 'H1';
+            if (firstCandle?.datetime) {
+                const dt = firstCandle.datetime;
+                // Check if it looks like daily data (no significant time variation)
+                if (dt.includes('00:00:00') || !dt.includes(':')) {
+                    timeframe = 'D1';
+                }
+            }
+
+            // Draw candles and timestamps
+            candles.forEach((candle, i) => {
+                const x = chartPadding.left + (i + 0.5) * candleSpacing;
+                const open = parseFloat(candle.open);
+                const close = parseFloat(candle.close);
+                const high = parseFloat(candle.high);
+                const low = parseFloat(candle.low);
+
+                const isBullish = close >= open;
+                const bodyTop = priceToY(Math.max(open, close));
+                const bodyBottom = priceToY(Math.min(open, close));
+                const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+
+                // Check if this candle is part of the pattern (highlight 1-3 candles depending on pattern)
+                const isHighlighted = i >= highlightIndex && i <= highlightIndex + getPatternCandleCount(patternType) - 1;
+
+                if (isHighlighted) {
+                    // Draw highlight background
+                    ctx.fillStyle = direction === 'bullish'
+                        ? 'rgba(76, 175, 80, 0.2)'
+                        : direction === 'bearish'
+                            ? 'rgba(244, 67, 54, 0.2)'
+                            : 'rgba(255, 152, 0, 0.2)';
+                    ctx.fillRect(x - candleSpacing / 2, chartPadding.top, candleSpacing, chartHeight);
+                }
+
+                // Colors
+                const bullColor = isHighlighted ? '#4caf50' : '#81c784';
+                const bearColor = isHighlighted ? '#f44336' : '#e57373';
+                const wickColor = isBullish ? bullColor : bearColor;
+                const bodyColor = isBullish ? bullColor : bearColor;
+
+                // Draw wick
+                ctx.strokeStyle = wickColor;
+                ctx.lineWidth = isHighlighted ? 2 : 1;
+                ctx.beginPath();
+                ctx.moveTo(x, priceToY(high));
+                ctx.lineTo(x, priceToY(low));
+                ctx.stroke();
+
+                // Draw body
+                ctx.fillStyle = isBullish ? 'rgba(0,0,0,0.3)' : bodyColor;
+                ctx.strokeStyle = bodyColor;
+                ctx.lineWidth = isHighlighted ? 2 : 1;
+
+                if (isBullish) {
+                    ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+                    ctx.strokeRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+                } else {
+                    ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+                }
+
+                // Draw timestamp below candle
+                const timeLabel = formatCandleTime(candle.datetime, timeframe);
+                ctx.fillStyle = isHighlighted ? '#fff' : '#666';
+                ctx.font = isHighlighted ? 'bold 9px sans-serif' : '8px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(timeLabel, x, height - 5);
+            });
+
+            // Draw pattern label at the top
+            if (highlightIndex >= 0 && highlightIndex < candles.length && patternType) {
+                const patternCandleCount = getPatternCandleCount(patternType);
+                const labelX = chartPadding.left + (highlightIndex + patternCandleCount / 2) * candleSpacing;
+                const markerColor = direction === 'bullish' ? '#4caf50' : direction === 'bearish' ? '#f44336' : '#ff9800';
+
+                // Draw pattern name label
+                const label = formatPatternType(patternType);
+                ctx.font = 'bold 10px sans-serif';
+                const textWidth = ctx.measureText(label).width;
+
+                // Background for label
+                ctx.fillStyle = markerColor;
+                const labelPadding = 4;
+                const labelHeight = 14;
+                const labelY = 3;
+
+                // Rounded rectangle for label
+                const rectX = labelX - textWidth / 2 - labelPadding;
+                const rectWidth = textWidth + labelPadding * 2;
+                ctx.beginPath();
+                ctx.roundRect(rectX, labelY, rectWidth, labelHeight, 3);
+                ctx.fill();
+
+                // Label text
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(label, labelX, labelY + labelHeight / 2);
+
+                // Draw bracket/lines connecting to candles
+                ctx.strokeStyle = markerColor;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+
+                // Left bracket line
+                const bracketY = labelY + labelHeight + 2;
+                const leftX = chartPadding.left + (highlightIndex + 0.5) * candleSpacing;
+                const rightX = chartPadding.left + (highlightIndex + patternCandleCount - 0.5) * candleSpacing;
+
+                ctx.beginPath();
+                ctx.moveTo(labelX, bracketY);
+                ctx.lineTo(labelX, bracketY + 3);
+                ctx.stroke();
+            }
+        }
+
+        // Get number of candles in a pattern type
+        function getPatternCandleCount(patternType) {
+            const multiCandlePatterns = {
+                'bullish_engulfing': 2,
+                'bearish_engulfing': 2,
+                'morning_star': 3,
+                'evening_star': 3,
+                'three_white_soldiers': 3,
+                'three_black_crows': 3,
+                'piercing_line': 2,
+                'dark_cloud_cover': 2,
+                'tweezer_top': 2,
+                'tweezer_bottom': 2,
+                'rising_three_methods': 5,
+                'falling_three_methods': 5,
+                'harami': 2,
+                'bullish_harami': 2,
+                'bearish_harami': 2,
+                'harami_cross': 2,
+                'inside_bar': 2
+            };
+            return multiCandlePatterns[patternType] || 1;
         }
 
         // === Training Service Functions ===
