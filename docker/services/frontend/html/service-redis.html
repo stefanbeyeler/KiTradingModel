@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redis Cache - Service Dokumentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .service-badge {
+            background: rgba(220, 38, 38, 0.2);
+            color: #f87171;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .subtitle {
+            opacity: 0.7;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .content-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-card p {
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .content-card ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .content-card li {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tech-tag {
+            background: rgba(220, 38, 38, 0.2);
+            color: #f87171;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+
+        .tech-tag.blue {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .info-box {
+            background: rgba(100, 200, 255, 0.1);
+            border-left: 3px solid #64c8ff;
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+
+        .info-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .quick-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        .quick-links a:hover {
+            background: rgba(100, 200, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid #f87171;
+        }
+
+        .feature-item h4 {
+            color: #f87171;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .feature-item p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 0;
+        }
+
+        .config-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .config-table th,
+        .config-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .config-table th {
+            background: rgba(0, 0, 0, 0.2);
+            color: #64c8ff;
+            font-weight: 600;
+        }
+
+        .config-table code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #ffd54f;
+        }
+
+        .ttl-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .ttl-table th,
+        .ttl-table td {
+            padding: 0.6rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ttl-table th {
+            background: rgba(0, 0, 0, 0.2);
+            color: #a78bfa;
+            font-weight: 600;
+        }
+
+        .ttl-badge {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
+            <span class="service-badge">Port 6379</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>Redis Cache</h1>
+        <p class="subtitle">Zentraler In-Memory Cache für alle Microservices mit LRU-Eviction und Persistenz</p>
+
+        <div class="content-card">
+            <h2>&#128202; Beschreibung</h2>
+            <p>
+                Redis ist der <strong>zentrale Cache</strong> des KI Trading Model Systems.
+                Er speichert Marktdaten, API-Antworten und berechnete Indikatoren zwischen,
+                um die Anzahl der externen API-Aufrufe zu minimieren und die Antwortzeiten zu optimieren.
+            </p>
+            <p>
+                Alle Services (Data, NHITS, TCN, HMM, RAG, LLM) nutzen Redis als gemeinsamen Cache.
+                Der CacheService in <code>src/services/cache_service.py</code> bietet eine einheitliche
+                Schnittstelle mit kategoriebasiertem TTL-Management.
+            </p>
+
+            <div class="tech-stack">
+                <span class="tech-tag">Redis 7</span>
+                <span class="tech-tag">Alpine Linux</span>
+                <span class="tech-tag blue">512 MB RAM</span>
+                <span class="tech-tag blue">LRU Eviction</span>
+                <span class="tech-tag blue">AOF Persistenz</span>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#9881;&#65039; Funktionen</h2>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>&#128640; In-Memory Speed</h4>
+                    <p>Mikrosekunden-Zugriffszeiten durch RAM-basierte Datenhaltung.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128203; LRU-Eviction</h4>
+                    <p>Automatisches Entfernen der am längsten ungenutzten Einträge bei Speicherknappheit.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128190; AOF Persistenz</h4>
+                    <p>Append-Only-File für Datenwiederherstellung nach Container-Neustart.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128200; TTL-Management</h4>
+                    <p>Kategoriebasierte Time-To-Live Werte für automatische Cache-Invalidierung.</p>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Fallback:</strong> Wenn Redis nicht erreichbar ist, fällt der CacheService
+                automatisch auf einen In-Memory Cache zurück. Das System bleibt funktionsfähig,
+                verliert aber den verteilten Cache.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128337; Cache-Kategorien & TTL</h2>
+            <p>Jede Datenkategorie hat eine eigene Time-To-Live (TTL) Konfiguration:</p>
+
+            <table class="ttl-table">
+                <thead>
+                    <tr>
+                        <th>Kategorie</th>
+                        <th>TTL</th>
+                        <th>Beschreibung</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="ttl-badge">MARKET_DATA</span></td>
+                        <td>60s</td>
+                        <td>Echtzeit-Kurse, schnelle Updates</td>
+                    </tr>
+                    <tr>
+                        <td><span class="ttl-badge">OHLCV</span></td>
+                        <td>5 min</td>
+                        <td>Kerzendaten (Open, High, Low, Close, Volume)</td>
+                    </tr>
+                    <tr>
+                        <td><span class="ttl-badge">INDICATORS</span></td>
+                        <td>5 min</td>
+                        <td>Technische Indikatoren (RSI, MACD, etc.)</td>
+                    </tr>
+                    <tr>
+                        <td><span class="ttl-badge">SYMBOLS</span></td>
+                        <td>1 h</td>
+                        <td>Symbol-Listen und Metadaten</td>
+                    </tr>
+                    <tr>
+                        <td><span class="ttl-badge">SENTIMENT</span></td>
+                        <td>15 min</td>
+                        <td>Fear & Greed, Social Media Sentiment</td>
+                    </tr>
+                    <tr>
+                        <td><span class="ttl-badge">ECONOMIC</span></td>
+                        <td>30 min</td>
+                        <td>Wirtschaftskalender-Events</td>
+                    </tr>
+                    <tr>
+                        <td><span class="ttl-badge">ONCHAIN</span></td>
+                        <td>10 min</td>
+                        <td>On-Chain Daten (Whale Alerts, Exchange Flows)</td>
+                    </tr>
+                    <tr>
+                        <td><span class="ttl-badge">TRAINING</span></td>
+                        <td>6 h</td>
+                        <td>Training-Daten für ML-Modelle</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128295; Konfiguration</h2>
+            <p>Redis-Konfiguration im Docker-Compose:</p>
+
+            <table class="config-table">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Wert</th>
+                        <th>Beschreibung</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>maxmemory</code></td>
+                        <td>512 MB</td>
+                        <td>Maximaler Speicherverbrauch</td>
+                    </tr>
+                    <tr>
+                        <td><code>maxmemory-policy</code></td>
+                        <td>allkeys-lru</td>
+                        <td>Eviction-Strategie: Least Recently Used</td>
+                    </tr>
+                    <tr>
+                        <td><code>appendonly</code></td>
+                        <td>yes</td>
+                        <td>AOF-Persistenz aktiviert</td>
+                    </tr>
+                    <tr>
+                        <td><code>port</code></td>
+                        <td>6379</td>
+                        <td>Standard Redis-Port</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="info-box warning">
+                <strong>Hinweis:</strong> Redis ist nur intern im Docker-Netzwerk erreichbar.
+                Externer Zugriff ist aus Sicherheitsgründen nicht konfiguriert.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128187; Verwendung im Code</h2>
+            <p>Beispiel für die Cache-Nutzung in Python:</p>
+
+            <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 0.85rem; overflow-x: auto;">
+<pre style="margin: 0; color: #e8e8e8;">
+<span style="color: #c792ea;">from</span> src.services.cache_service <span style="color: #c792ea;">import</span> cache_service, CacheCategory
+
+<span style="color: #6a9955;"># Daten aus Cache holen</span>
+cached = <span style="color: #c792ea;">await</span> cache_service.get(
+    CacheCategory.OHLCV,
+    symbol,
+    params={<span style="color: #ce9178;">"limit"</span>: <span style="color: #b5cea8;">500</span>}
+)
+
+<span style="color: #6a9955;"># Daten in Cache speichern</span>
+<span style="color: #c792ea;">await</span> cache_service.set(
+    CacheCategory.OHLCV,
+    data,
+    symbol,
+    params={<span style="color: #ce9178;">"limit"</span>: <span style="color: #b5cea8;">500</span>}
+)
+
+<span style="color: #6a9955;"># Cache-Kategorie löschen</span>
+<span style="color: #c792ea;">await</span> cache_service.clear_category(CacheCategory.MARKET_DATA)
+
+<span style="color: #6a9955;"># Cache-Statistiken</span>
+stats = cache_service.get_stats()
+</pre>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128279; Architektur</h2>
+            <p>Redis als zentraler Cache im Service-Netzwerk:</p>
+
+            <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 0.8rem; text-align: center;">
+<pre style="margin: 0; color: #e8e8e8;">
+              &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+              &#9474;   <span style="color: #f87171;">Redis Cache</span>       &#9474;
+              &#9474;  (trading-redis)   &#9474;
+              &#9474;     Port 6379      &#9474;
+              &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
+                         &#9474;
+     &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+     &#9474;                &#9474;                &#9474;
+     &#9660;                &#9660;                &#9660;
+&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;  &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;  &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+&#9474;   <span style="color: #60a5fa;">Data</span>    &#9474;  &#9474;  <span style="color: #34d399;">NHITS</span>   &#9474;  &#9474;   <span style="color: #a78bfa;">RAG</span>    &#9474;
+&#9474;  Service  &#9474;  &#9474;  Service &#9474;  &#9474;  Service &#9474;
+&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;  &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;  &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
+</pre>
+            </div>
+        </div>
+
+        <div class="quick-links">
+            <a href="https://redis.io/docs/" target="_blank">&#128214; Redis Dokumentation</a>
+            <a href="https://redis.io/commands/" target="_blank">&#128187; Redis Commands</a>
+            <a href="/" target="_blank">&#127968; Dashboard</a>
+        </div>
+    </div>
+
+    <footer>
+        KI Trading Model - Redis Cache Dokumentation
+    </footer>
+</body>
+</html>

@@ -1585,6 +1585,29 @@
                 </div>
             </div>
 
+            <!-- Redis Cache -->
+            <div class="service-card" id="redis-card">
+                <div class="service-header">
+                    <h2>Redis Cache</h2>
+                    <span class="status-badge status-loading" id="redis-status">Laden...</span>
+                </div>
+                <p>Zentraler In-Memory Cache für alle Services. LRU-Eviction, Persistenz und schnelle Datenzugriffe.</p>
+                <div class="service-info" id="redis-info">
+                    <div><span class="label">Port</span><span>6379</span></div>
+                    <div><span class="label">Memory</span><span id="redis-memory">512 MB</span></div>
+                    <div><span class="label">Policy</span><span id="redis-policy">allkeys-lru</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">1 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">512 MB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">TCP</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-redis.html" target="_blank">Info</a>
+                    <a href="https://redis.io/docs/" target="_blank">Redis Docs</a>
+                </div>
+            </div>
+
             <!-- Candlestick Pattern Service (Inference) -->
             <div class="service-card" id="candlestick-card">
                 <div class="service-header">
@@ -2017,20 +2040,36 @@
                 document.getElementById('data-easyinsight').textContent = data.easyinsight_api ? 'Verbunden' : '-';
                 document.getElementById('data-sync').textContent = data.sync_service_status || '-';
 
-                // Update Redis status in Watchdog Panel
+                // Update Redis status in Watchdog Panel and Redis Card
                 const redisDot = document.getElementById('wp-dot-redis');
+                const redisStatus = document.getElementById('redis-status');
+                const redisHealthy = data.redis_connected !== false;
+
                 if (redisDot) {
                     redisDot.classList.remove('loading', 'healthy', 'unhealthy');
-                    // Check if redis_connected is in health response
-                    const redisHealthy = data.redis_connected !== false;
                     redisDot.classList.add(redisHealthy ? 'healthy' : 'unhealthy');
+                }
+
+                // Update Redis Card status
+                if (redisStatus) {
+                    redisStatus.classList.remove('status-loading', 'status-healthy', 'status-unhealthy');
+                    redisStatus.classList.add(redisHealthy ? 'status-healthy' : 'status-unhealthy');
+                    redisStatus.textContent = redisHealthy ? 'Online' : 'Offline';
                 }
             } else {
                 // Data service offline - Redis status unknown
                 const redisDot = document.getElementById('wp-dot-redis');
+                const redisStatus = document.getElementById('redis-status');
+
                 if (redisDot) {
                     redisDot.classList.remove('loading', 'healthy');
                     redisDot.classList.add('unhealthy');
+                }
+
+                if (redisStatus) {
+                    redisStatus.classList.remove('status-loading', 'status-healthy');
+                    redisStatus.classList.add('status-unhealthy');
+                    redisStatus.textContent = 'Unbekannt';
                 }
             }
         }
