@@ -97,6 +97,28 @@ class RateLimiter:
 class TwelveDataService:
     """Service for accessing Twelve Data API for market data with rate limiting and caching."""
 
+    # Special symbol mappings for non-standard symbols
+    SYMBOL_MAPPINGS = {
+        # Crypto with non-standard abbreviations
+        "AVXUSD": "AVAX/USD",   # Avalanche
+        "DOGUSD": "DOGE/USD",   # Dogecoin
+        "DOGEUSD": "DOGE/USD",  # Dogecoin (alternate)
+        "LNKUSD": "LINK/USD",   # Chainlink
+        "MTCUSD": "MATIC/USD",  # Polygon (MATIC)
+        # Indices
+        "AUS200": "XJO",        # ASX 200
+        "EURO50": "STOXX50E",   # Euro Stoxx 50
+        "FRA40": "FCHI",        # CAC 40
+        "GER40": "GDAXI",       # DAX 40
+        "JP225": "N225",        # Nikkei 225
+        "NAS100": "NDX",        # Nasdaq 100
+        "UK100": "FTSE",        # FTSE 100
+        "US30": "DJI",          # Dow Jones
+        "US500": "SPX",         # S&P 500
+        # Commodities/Oil
+        "XTIUSD": "CL/USD",     # Crude Oil WTI
+    }
+
     def __init__(self):
         self._api_key: str = settings.twelvedata_api_key
         self._client: Optional[TDClient] = None
@@ -108,6 +130,43 @@ class TwelveDataService:
         self._total_calls: int = 0
         self._total_wait_time: float = 0.0
         self._cache_hits: int = 0
+
+    def _to_twelvedata_symbol(self, symbol: str) -> str:
+        """
+        Convert display symbol (BTCUSD) to TwelveData format (BTC/USD).
+
+        Args:
+            symbol: Display symbol like BTCUSD, EURUSD, etc.
+
+        Returns:
+            TwelveData API symbol like BTC/USD, EUR/USD
+        """
+        symbol_upper = symbol.upper().replace("/", "")  # Normalize: remove any slashes
+
+        # Check special mappings first
+        if symbol_upper in self.SYMBOL_MAPPINGS:
+            return self.SYMBOL_MAPPINGS[symbol_upper]
+
+        # Standard 6-character pattern: XXXYYY -> XXX/YYY (forex, crypto, commodities)
+        if len(symbol_upper) == 6:
+            base = symbol_upper[:3]
+            quote = symbol_upper[3:]
+            return f"{base}/{quote}"
+
+        # Already contains slash or unknown format - return as-is
+        return symbol
+
+    def _to_display_symbol(self, symbol: str) -> str:
+        """
+        Convert TwelveData symbol (BTC/USD) to display format (BTCUSD).
+
+        Args:
+            symbol: TwelveData symbol like BTC/USD, EUR/USD
+
+        Returns:
+            Display symbol like BTCUSD, EURUSD
+        """
+        return symbol.upper().replace("/", "")
 
     async def _ensure_cache_connected(self):
         """Ensure cache service is connected."""
@@ -327,8 +386,11 @@ class TwelveDataService:
             if wait_time > 0:
                 logger.debug(f"Rate limiter: waited {wait_time:.1f}s before calling API for {symbol}")
 
+            # Convert display symbol (BTCUSD) to TwelveData format (BTC/USD)
+            td_symbol = self._to_twelvedata_symbol(symbol)
+
             params = {
-                "symbol": symbol,
+                "symbol": td_symbol,
                 "interval": interval,
                 "outputsize": outputsize,
                 "timezone": "UTC",  # Always use UTC to avoid timezone confusion
@@ -343,9 +405,12 @@ class TwelveDataService:
             ts = client.time_series(**params)
             data = ts.as_json()
 
+            # Use display symbol (BTCUSD) in response, not TwelveData format
+            display_symbol = self._to_display_symbol(symbol)
+            
             result = {
                 "meta": {
-                    "symbol": symbol,
+                    "symbol": display_symbol,
                     "interval": interval,
                     "exchange": exchange,
                     "type": "Time Series",
@@ -383,7 +448,10 @@ class TwelveDataService:
             return {"error": "Twelve Data client not available"}
 
         try:
-            params = {"symbol": symbol}
+            # Convert display symbol (BTCUSD) to TwelveData format (BTC/USD)
+            td_symbol = self._to_twelvedata_symbol(symbol)
+            
+            params = {"symbol": td_symbol}
             if exchange:
                 params["exchange"] = exchange
 
@@ -410,7 +478,10 @@ class TwelveDataService:
             return {"error": "Twelve Data client not available"}
 
         try:
-            params = {"symbol": symbol}
+            # Convert display symbol (BTCUSD) to TwelveData format (BTC/USD)
+            td_symbol = self._to_twelvedata_symbol(symbol)
+            
+            params = {"symbol": td_symbol}
             if exchange:
                 params["exchange"] = exchange
 
@@ -508,9 +579,12 @@ class TwelveDataService:
             if wait_time > 0:
                 logger.debug(f"Rate limiter: waited {wait_time:.1f}s before calling {indicator} API for {symbol}")
 
+            # Convert display symbol (BTCUSD) to TwelveData format (BTC/USD)
+            td_symbol = self._to_twelvedata_symbol(symbol)
+
             # Build API request
             params = {
-                "symbol": symbol,
+                "symbol": td_symbol,
                 "interval": interval,
                 "outputsize": outputsize,
                 "apikey": self._api_key,
@@ -537,10 +611,13 @@ class TwelveDataService:
                 # Some endpoints return data directly
                 values = [values] if not isinstance(values, list) else values
 
-            logger.info(f"Retrieved {indicator.upper()} for {symbol} ({len(values) if isinstance(values, list) else 1} values)")
+            # Use display symbol (BTCUSD) in response
+            display_symbol = self._to_display_symbol(symbol)
+            
+            logger.info(f"Retrieved {indicator.upper()} for {display_symbol} ({len(values) if isinstance(values, list) else 1} values)")
             return {
                 "indicator": indicator.upper(),
-                "symbol": symbol,
+                "symbol": display_symbol,
                 "interval": interval,
                 "values": values,
                 "meta": data.get("meta", {}),
@@ -984,8 +1061,11 @@ class TwelveDataService:
         Returns:
             Dictionary with results for each indicator
         """
+        # Use display symbol (BTCUSD) in response
+        display_symbol = self._to_display_symbol(symbol)
+        
         results = {
-            "symbol": symbol,
+            "symbol": display_symbol,
             "interval": interval,
             "indicators": {},
             "errors": [],
