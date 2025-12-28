@@ -1300,6 +1300,100 @@
                 </div>
             </div>
 
+            <!-- Candlestick Pattern Service (Inference) -->
+            <div class="service-card" id="candlestick-card">
+                <div class="service-header">
+                    <h2>Candlestick-Pattern</h2>
+                    <span class="status-badge status-loading" id="candlestick-status">Laden...</span>
+                </div>
+                <p>Candlestick Pattern Detection - Erkennung von 21 Kerzen-Mustern (Hammer, Doji, Engulfing, etc.).</p>
+                <div class="service-info" id="candlestick-info">
+                    <div><span class="label">Port</span><span>3006</span></div>
+                    <div><span class="label">Pattern</span><span id="candlestick-patterns">21 Typen</span></div>
+                    <div><span class="label">Auto-Scan</span><span id="candlestick-autoscan">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">2 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-candlestick.html" target="_blank">Info</a>
+                    <a href="/candlestick/docs" target="_blank">API Docs</a>
+                    <a href="/candlestick/api/v1/patterns" target="_blank">Patterns</a>
+                </div>
+            </div>
+
+            <!-- Candlestick Training Service -->
+            <div class="service-card" id="candlestick-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
+                <div class="service-header">
+                    <h2>Candle-Training</h2>
+                    <span class="status-badge status-loading" id="candlestick-train-status">Laden...</span>
+                </div>
+                <p>Dedizierter Training-Container fuer Candlestick Pattern-Modelle. Low Priority.</p>
+                <div class="service-info" id="candlestick-train-info">
+                    <div><span class="label">Port</span><span>3016</span></div>
+                    <div><span class="label">Training</span><span id="candlestick-train-active">-</span></div>
+                    <div><span class="label">Jobs</span><span id="candlestick-train-jobs">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/candlestick-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
+                    <a href="/candlestick-train/api/v1/model" target="_blank">Model</a>
+                </div>
+            </div>
+
+            <!-- HMM-Regime Service -->
+            <div class="service-card" id="hmm-card">
+                <div class="service-header">
+                    <h2>HMM-Regime</h2>
+                    <span class="status-badge status-loading" id="hmm-status">Laden...</span>
+                </div>
+                <p>Hidden Markov Model + LightGBM - Regime-Erkennung und Signal-Scoring für Trading.</p>
+                <div class="service-info" id="hmm-info">
+                    <div><span class="label">Port</span><span>3004</span></div>
+                    <div><span class="label">Regimes</span><span id="hmm-regimes">4 States</span></div>
+                    <div><span class="label">Scorer</span><span id="hmm-scorer">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-hmm.html" target="_blank">Info</a>
+                    <a href="/hmm/docs" target="_blank">API Docs</a>
+                    <a href="/config-hmm.html" target="_blank">Config</a>
+                </div>
+            </div>
+
+            <!-- HMM-Training Service (neben HMM Inference) -->
+            <div class="service-card" id="hmm-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
+                <div class="service-header">
+                    <h2>HMM-Training</h2>
+                    <span class="status-badge status-loading" id="hmm-train-status">Laden...</span>
+                </div>
+                <p>Dedizierter Training-Container - HMM und LightGBM Scorer Modelle.</p>
+                <div class="service-info" id="hmm-train-info">
+                    <div><span class="label">Port</span><span>3014</span></div>
+                    <div><span class="label">Training</span><span id="hmm-train-active">-</span></div>
+                    <div><span class="label">Model</span><span id="hmm-train-model">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-hmm-train.html" target="_blank">Info</a>
+                    <a href="/hmm-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
+                </div>
+            </div>
+
             <!-- NHITS Service -->
             <div class="service-card" id="nhits-card">
                 <div class="service-header">
@@ -1343,7 +1437,6 @@
                 <div class="service-links">
                     <a href="/service-nhits-train.html" target="_blank">Info</a>
                     <a href="/nhits-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
-                    <a href="/nhits-train/api/v1/train/status" target="_blank">Status</a>
                 </div>
             </div>
 
@@ -1394,54 +1487,6 @@
                 </div>
             </div>
 
-            <!-- HMM-Regime Service -->
-            <div class="service-card" id="hmm-card">
-                <div class="service-header">
-                    <h2>HMM-Regime</h2>
-                    <span class="status-badge status-loading" id="hmm-status">Laden...</span>
-                </div>
-                <p>Hidden Markov Model + LightGBM - Regime-Erkennung und Signal-Scoring für Trading.</p>
-                <div class="service-info" id="hmm-info">
-                    <div><span class="label">Port</span><span>3004</span></div>
-                    <div><span class="label">Regimes</span><span id="hmm-regimes">4 States</span></div>
-                    <div><span class="label">Scorer</span><span id="hmm-scorer">-</span></div>
-                </div>
-                <div class="service-resources">
-                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
-                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
-                    <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
-                </div>
-                <div class="service-links">
-                    <a href="/service-hmm.html" target="_blank">Info</a>
-                    <a href="/hmm/docs" target="_blank">API Docs</a>
-                    <a href="/config-hmm.html" target="_blank">Config</a>
-                </div>
-            </div>
-
-            <!-- HMM-Training Service (neben HMM Inference) -->
-            <div class="service-card" id="hmm-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
-                <div class="service-header">
-                    <h2>HMM-Training</h2>
-                    <span class="status-badge status-loading" id="hmm-train-status">Laden...</span>
-                </div>
-                <p>Dedizierter Training-Container - HMM und LightGBM Scorer Modelle.</p>
-                <div class="service-info" id="hmm-train-info">
-                    <div><span class="label">Port</span><span>3014</span></div>
-                    <div><span class="label">Training</span><span id="hmm-train-active">-</span></div>
-                    <div><span class="label">Model</span><span id="hmm-train-model">-</span></div>
-                </div>
-                <div class="service-resources">
-                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
-                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
-                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
-                </div>
-                <div class="service-links">
-                    <a href="/service-hmm-train.html" target="_blank">Info</a>
-                    <a href="/hmm-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
-                    <a href="/hmm-train/api/v1/train/status" target="_blank">Status</a>
-                </div>
-            </div>
-
             <!-- Embedder Service -->
             <div class="service-card" id="embedder-card">
                 <div class="service-header">
@@ -1462,53 +1507,6 @@
                     <a href="/service-embedder.html" target="_blank">Info</a>
                     <a href="/embedder/docs" target="_blank">API Docs</a>
                     <a href="/config-embedder.html" target="_blank">Config</a>
-                </div>
-            </div>
-
-            <!-- Candlestick Pattern Service (Inference) -->
-            <div class="service-card" id="candlestick-card">
-                <div class="service-header">
-                    <h2>Candlestick</h2>
-                    <span class="status-badge status-loading" id="candlestick-status">Laden...</span>
-                </div>
-                <p>Candlestick Pattern Detection - Erkennung von 21 Kerzen-Mustern (Hammer, Doji, Engulfing, etc.).</p>
-                <div class="service-info" id="candlestick-info">
-                    <div><span class="label">Port</span><span>3006</span></div>
-                    <div><span class="label">Pattern</span><span id="candlestick-patterns">21 Typen</span></div>
-                    <div><span class="label">Auto-Scan</span><span id="candlestick-autoscan">-</span></div>
-                </div>
-                <div class="service-resources">
-                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
-                    <div class="service-resource ram"><span class="value">2 GB</span><span class="label">RAM Limit</span></div>
-                    <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
-                </div>
-                <div class="service-links">
-                    <a href="/service-candlestick.html" target="_blank">Info</a>
-                    <a href="/candlestick/docs" target="_blank">API Docs</a>
-                    <a href="/candlestick/api/v1/patterns" target="_blank">Patterns</a>
-                </div>
-            </div>
-
-            <!-- Candlestick Training Service -->
-            <div class="service-card" id="candlestick-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
-                <div class="service-header">
-                    <h2>Candle-Training</h2>
-                    <span class="status-badge status-loading" id="candlestick-train-status">Laden...</span>
-                </div>
-                <p>Dedizierter Training-Container fuer Candlestick Pattern-Modelle. Low Priority.</p>
-                <div class="service-info" id="candlestick-train-info">
-                    <div><span class="label">Port</span><span>3016</span></div>
-                    <div><span class="label">Training</span><span id="candlestick-train-active">-</span></div>
-                    <div><span class="label">Jobs</span><span id="candlestick-train-jobs">-</span></div>
-                </div>
-                <div class="service-resources">
-                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
-                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
-                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
-                </div>
-                <div class="service-links">
-                    <a href="/candlestick-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
-                    <a href="/candlestick-train/api/v1/model" target="_blank">Model</a>
                 </div>
             </div>
 
@@ -1579,7 +1577,6 @@
                 <div class="service-links">
                     <a href="/service-watchdog.html" target="_blank">Info</a>
                     <a href="/watchdog/docs" target="_blank">API Docs</a>
-                    <a href="/watchdog/health" target="_blank">Health</a>
                 </div>
             </div>
 
