@@ -851,27 +851,42 @@
                     <h2 class="card-title">Neues Training starten</h2>
                 </div>
                 <p class="card-description">
-                    Trainiere das Candlestick-Pattern-Erkennungsmodell mit ausgewählten Symbolen und Timeframes.
+                    Trainiere das Candlestick-Pattern-Erkennungsmodell. Das Training verwendet eine optimierte Auswahl
+                    von Symbolen und Timeframes fur maximale Generalisierung.
                 </p>
 
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label>Symbole auswählen</label>
-                    <div class="symbol-chips" id="symbolChips">
-                        <span class="loading" style="padding: 0;"><span class="spinner" style="width: 16px; height: 16px;"></span></span>
+                <!-- Training Configuration Info -->
+                <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;">Symbole (breit diversifiziert)</div>
+                            <div class="symbol-chips" style="margin: 0;">
+                                <span class="symbol-chip selected" style="cursor: default;">BTCUSD</span>
+                                <span class="symbol-chip selected" style="cursor: default;">EURUSD</span>
+                                <span class="symbol-chip selected" style="cursor: default;">GBPUSD</span>
+                                <span class="symbol-chip selected" style="cursor: default;">XAUUSD</span>
+                                <span class="symbol-chip selected" style="cursor: default;">GER40</span>
+                                <span class="symbol-chip selected" style="cursor: default;">XTIUSD</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
+                                Crypto, Forex, Rohstoff, Index, Energie
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;">Timeframes (multi-timeframe)</div>
+                            <div class="timeframe-list" style="margin: 0;">
+                                <span class="timeframe-badge">H1</span>
+                                <span class="timeframe-badge">H4</span>
+                                <span class="timeframe-badge">D1</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
+                                Patterns sind timeframe-unabhangig
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="training-form">
-                    <div class="form-group">
-                        <label for="trainTimeframe">Timeframe</label>
-                        <select id="trainTimeframe">
-                            <option value="M5">M5 (5 Min)</option>
-                            <option value="M15">M15 (15 Min)</option>
-                            <option value="H1" selected>H1 (1 Stunde)</option>
-                            <option value="H4">H4 (4 Stunden)</option>
-                            <option value="D1">D1 (Täglich)</option>
-                        </select>
-                    </div>
                     <div class="form-group">
                         <label for="trainEpochs">Epochen</label>
                         <input type="number" id="trainEpochs" value="50" min="1" max="500">
@@ -915,7 +930,6 @@
         const CANDLESTICK_TRAIN_API = '/candlestick-train/api/v1';
         const DATA_API = '/data/api/v1';
         let isAutoScanRunning = true;  // Default: aktiv
-        let selectedSymbols = [];
         let trainingRefreshInterval = null;
 
         // Pattern visual examples - each candle: [upperWick, body, lowerWick, type]
@@ -1264,7 +1278,6 @@
                 loadTrainingServiceInfo();
                 loadTrainingStatus();
                 loadTrainingJobs();
-                loadAvailableSymbols();
 
                 // Start auto-refresh for training status
                 if (!trainingRefreshInterval) {
@@ -1411,65 +1424,16 @@
             }
         }
 
-        // Load available symbols for training
-        async function loadAvailableSymbols() {
-            try {
-                const res = await fetch(`${DATA_API}/managed-symbols`);
-                const symbols = await res.json();
-
-                // Filter favorites and limit to reasonable number
-                const favorites = symbols.filter(s => s.is_favorite).slice(0, 20);
-                const defaultSymbols = ['BTCUSD', 'EURUSD', 'XAUUSD', 'GBPUSD', 'USDJPY'];
-
-                const symbolList = favorites.length > 0
-                    ? favorites.map(s => s.symbol)
-                    : defaultSymbols;
-
-                // Pre-select first 3
-                selectedSymbols = symbolList.slice(0, 3);
-
-                const chipsContainer = document.getElementById('symbolChips');
-                chipsContainer.innerHTML = symbolList.map(symbol => `
-                    <span class="symbol-chip ${selectedSymbols.includes(symbol) ? 'selected' : ''}"
-                          onclick="toggleSymbol('${symbol}', this)">${symbol}</span>
-                `).join('');
-
-            } catch (error) {
-                console.error('Failed to load symbols:', error);
-                // Fallback to default symbols
-                const defaultSymbols = ['BTCUSD', 'EURUSD', 'XAUUSD'];
-                selectedSymbols = defaultSymbols.slice(0, 2);
-
-                document.getElementById('symbolChips').innerHTML = defaultSymbols.map(symbol => `
-                    <span class="symbol-chip ${selectedSymbols.includes(symbol) ? 'selected' : ''}"
-                          onclick="toggleSymbol('${symbol}', this)">${symbol}</span>
-                `).join('');
-            }
-        }
-
-        // Toggle symbol selection
-        function toggleSymbol(symbol, element) {
-            if (selectedSymbols.includes(symbol)) {
-                selectedSymbols = selectedSymbols.filter(s => s !== symbol);
-                element.classList.remove('selected');
-            } else {
-                selectedSymbols.push(symbol);
-                element.classList.add('selected');
-            }
-        }
+        // Fixed training configuration for optimal generalization
+        const TRAINING_SYMBOLS = ['BTCUSD', 'EURUSD', 'GBPUSD', 'XAUUSD', 'GER40', 'XTIUSD'];
+        const TRAINING_TIMEFRAMES = ['H1', 'H4', 'D1'];
 
         // Start training
         async function startTraining() {
-            if (selectedSymbols.length === 0) {
-                showToast('Bitte mindestens ein Symbol auswählen', 'error');
-                return;
-            }
-
             const btn = document.getElementById('btnStartTraining');
             btn.disabled = true;
             btn.textContent = 'Starte...';
 
-            const timeframe = document.getElementById('trainTimeframe').value;
             const epochs = parseInt(document.getElementById('trainEpochs').value) || 50;
             const batchSize = parseInt(document.getElementById('trainBatchSize').value) || 32;
             const learningRate = parseFloat(document.getElementById('trainLearningRate').value) || 0.001;
@@ -1479,8 +1443,8 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        symbols: selectedSymbols,
-                        timeframes: [timeframe],
+                        symbols: TRAINING_SYMBOLS,
+                        timeframes: TRAINING_TIMEFRAMES,
                         epochs: epochs,
                         batch_size: batchSize,
                         learning_rate: learningRate
