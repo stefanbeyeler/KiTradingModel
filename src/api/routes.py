@@ -3253,13 +3253,15 @@ async def get_available_twelvedata_symbols(
                 or search_lower in s.get("currency_base", "").lower()
             ]
 
-        # Get already imported symbols
-        existing_symbols = {s.symbol for s in await symbol_service.get_all_symbols()}
+        # Get already imported symbols (normalized to display format without slashes)
+        existing_symbols = {s.symbol.upper().replace("/", "") for s in await symbol_service.get_all_symbols()}
 
         # Prepare result with import status
         result = []
         for s in symbols_data[:500]:  # Limit to 500 symbols for performance
             symbol_id = s.get("symbol", "")
+            # Normalize symbol for comparison (remove slashes)
+            symbol_normalized = symbol_id.upper().replace("/", "")
             result.append({
                 "symbol": symbol_id,
                 "name": s.get("name") or s.get("currency_base", ""),
@@ -3267,7 +3269,7 @@ async def get_available_twelvedata_symbols(
                 "currency": s.get("currency") or s.get("currency_quote", ""),
                 "country": s.get("country", ""),
                 "type": s.get("type", category),
-                "already_imported": symbol_id in existing_symbols
+                "already_imported": symbol_normalized in existing_symbols
             })
 
         return {
