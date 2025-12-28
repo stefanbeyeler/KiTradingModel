@@ -4104,7 +4104,7 @@
                         if (s.twelvedata_symbol) {
                             opt.dataset.twelvedata = s.twelvedata_symbol;
                         }
-                        opt.textContent = s.display_name || s.symbol;
+                        opt.textContent = s.symbol;
                         group.appendChild(opt);
                     });
                     select.appendChild(group);
@@ -4966,7 +4966,7 @@
             activeSymbols.forEach(s => {
                 const opt = document.createElement('option');
                 opt.value = s.symbol;
-                opt.textContent = s.symbol + (s.display_name ? ` (${s.display_name})` : '');
+                opt.textContent = s.symbol;
                 select.appendChild(opt);
             });
 
