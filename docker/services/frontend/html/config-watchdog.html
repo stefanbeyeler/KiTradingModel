@@ -1944,13 +1944,103 @@
                 const data = await res.json();
 
                 if (data.alerts && data.alerts.length > 0) {
-                    container.innerHTML = data.alerts.map(a => `
-                        <div class="test-result-item ${a.type === 'error' || a.type === 'down' ? 'failed' : a.type === 'recovery' ? 'passed' : 'skipped'}">
-                            <span class="test-icon">${a.type === 'error' || a.type === 'down' ? '&#9888;' : a.type === 'recovery' ? '&#10003;' : '&#128276;'}</span>
-                            <span class="test-name">${a.message}</span>
-                            <span class="test-duration">${new Date(a.timestamp).toLocaleString('de-CH')}</span>
-                        </div>
-                    `).join('');
+                    container.innerHTML = `
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="background: rgba(0,0,0,0.3); text-align: left;">
+                                    <th style="padding: 0.6rem 0.75rem; border-radius: 4px 0 0 0;">Zeit</th>
+                                    <th style="padding: 0.6rem 0.75rem;">Service</th>
+                                    <th style="padding: 0.6rem 0.75rem;">Typ</th>
+                                    <th style="padding: 0.6rem 0.75rem;">Auslöser</th>
+                                    <th style="padding: 0.6rem 0.75rem;">Telegram</th>
+                                    <th style="padding: 0.6rem 0.75rem; border-radius: 0 4px 0 0;">Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.alerts.map(a => {
+                                    // Bestimme Farbe und Icon basierend auf Typ
+                                    const isRecovery = a.type === 'RECOVERY';
+                                    const isSuppressed = a.suppressed === true;
+                                    const isUnhealthy = a.type === 'UNHEALTHY';
+
+                                    let rowColor = 'inherit';
+                                    let icon = '&#128276;';
+                                    let typeLabel = a.type;
+
+                                    if (isRecovery) {
+                                        rowColor = 'rgba(129, 199, 132, 0.1)';
+                                        icon = '&#10003;';
+                                        typeLabel = 'Recovery';
+                                    } else if (isSuppressed) {
+                                        rowColor = 'rgba(255, 183, 77, 0.1)';
+                                        icon = '&#128263;';
+                                        typeLabel = a.type + ' (unterdrückt)';
+                                    } else if (isUnhealthy) {
+                                        rowColor = 'rgba(229, 115, 115, 0.1)';
+                                        icon = '&#9888;';
+                                    }
+
+                                    // Kritikalitäts-Badge
+                                    const criticalityColors = {
+                                        'critical': '#e57373',
+                                        'high': '#ffb74d',
+                                        'medium': '#64b5f6'
+                                    };
+                                    const critColor = criticalityColors[a.criticality] || '#888';
+
+                                    // State Change
+                                    const stateChange = a.state_change
+                                        ? a.state_change.from + ' → ' + a.state_change.to
+                                        : '-';
+
+                                    // Telegram Status
+                                    const telegramIcon = a.telegram_sent
+                                        ? '<span style="color: #81c784;">✓ Gesendet</span>'
+                                        : '<span style="color: #888;">- Nicht gesendet</span>';
+
+                                    // Fehler / Message
+                                    const errorText = a.error || a.message || '-';
+                                    const suppressedReason = a.suppressed_reason
+                                        ? (a.suppressed_reason === 'cooldown' ? 'Cooldown aktiv' : 'Kritikalität nicht aktiviert')
+                                        : '';
+
+                                    return \`
+                                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); background: \${rowColor};">
+                                            <td style="padding: 0.5rem 0.75rem; font-family: monospace; font-size: 0.8rem; white-space: nowrap;">
+                                                \${new Date(a.timestamp).toLocaleString('de-CH')}
+                                            </td>
+                                            <td style="padding: 0.5rem 0.75rem; font-weight: 600;">
+                                                \${a.service}
+                                            </td>
+                                            <td style="padding: 0.5rem 0.75rem;">
+                                                <span style="display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                    <span>\${icon}</span>
+                                                    <span style="color: \${isRecovery ? '#81c784' : isUnhealthy ? '#e57373' : '#ffb74d'};">
+                                                        \${typeLabel}
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td style="padding: 0.5rem 0.75rem; font-size: 0.8rem;">
+                                                <div>\${stateChange}</div>
+                                                <div style="margin-top: 0.2rem;">
+                                                    <span style="background: \${critColor}; color: #fff; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.7rem;">
+                                                        \${a.criticality || 'unknown'}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td style="padding: 0.5rem 0.75rem; font-size: 0.8rem;">
+                                                \${telegramIcon}
+                                                \${suppressedReason ? \`<div style="font-size: 0.7rem; opacity: 0.6; margin-top: 0.2rem;">\${suppressedReason}</div>\` : ''}
+                                            </td>
+                                            <td style="padding: 0.5rem 0.75rem; font-size: 0.8rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis;" title="\${errorText}">
+                                                \${errorText.length > 50 ? errorText.substring(0, 50) + '...' : errorText}
+                                            </td>
+                                        </tr>
+                                    \`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    `;
                 } else {
                     container.innerHTML = '<div class="empty-state"><div class="icon">&#128276;</div><div>Keine Alerts in der Historie</div></div>';
                 }

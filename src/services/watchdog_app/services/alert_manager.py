@@ -82,12 +82,21 @@ class AlertManager:
             HealthState.UNHEALTHY, HealthState.DEGRADED
         ]:
             if self.settings.alert_on_recovery:
-                await self._send_alert(
+                sent = await self._send_alert(
                     service_name=service_name,
                     state=new_state.value,
                     recovery=True
                 )
-                self._record_alert(service_name, "RECOVERY")
+                self._record_alert(
+                    service_name=service_name,
+                    alert_type="RECOVERY",
+                    criticality=criticality,
+                    old_state=old_state.value,
+                    new_state=new_state.value,
+                    error=None,
+                    telegram_sent=sent,
+                    message=f"Service {service_name} ist wieder verfügbar"
+                )
             return
 
         # Failure-Alert?
@@ -97,21 +106,55 @@ class AlertManager:
                 logger.debug(
                     f"Alert for {service_name} suppressed (criticality: {criticality})"
                 )
+                # Trotzdem aufzeichnen, aber als suppressed
+                self._record_alert(
+                    service_name=service_name,
+                    alert_type=new_state.value,
+                    criticality=criticality,
+                    old_state=old_state.value,
+                    new_state=new_state.value,
+                    error=new_status.error,
+                    telegram_sent=False,
+                    message=f"Alert unterdrückt (Kritikalität {criticality} nicht aktiviert)",
+                    suppressed=True,
+                    suppressed_reason="criticality"
+                )
                 return
 
             # Cooldown prüfen
             if self._is_in_cooldown(service_name):
                 logger.debug(f"Alert for {service_name} suppressed (cooldown)")
+                self._record_alert(
+                    service_name=service_name,
+                    alert_type=new_state.value,
+                    criticality=criticality,
+                    old_state=old_state.value,
+                    new_state=new_state.value,
+                    error=new_status.error,
+                    telegram_sent=False,
+                    message=f"Alert unterdrückt (Cooldown aktiv)",
+                    suppressed=True,
+                    suppressed_reason="cooldown"
+                )
                 return
 
             # Alert senden
-            await self._send_alert(
+            sent = await self._send_alert(
                 service_name=service_name,
                 state=new_state.value,
                 error=new_status.error,
                 recovery=False
             )
-            self._record_alert(service_name, new_state.value)
+            self._record_alert(
+                service_name=service_name,
+                alert_type=new_state.value,
+                criticality=criticality,
+                old_state=old_state.value,
+                new_state=new_state.value,
+                error=new_status.error,
+                telegram_sent=sent,
+                message=f"Service {service_name} ist {new_state.value}: {new_status.error or 'Keine Details'}"
+            )
 
     async def _send_alert(
         self,
@@ -119,25 +162,73 @@ class AlertManager:
         state: str,
         error: Optional[str] = None,
         recovery: bool = False
-    ):
-        """Sendet Alert über Telegram."""
-        if self.telegram:
-            await self.telegram.send_alert(
+    ) -> bool:
+        """
+        Sendet Alert über Telegram.
+
+        Returns:
+            True wenn Alert erfolgreich gesendet wurde
+        """
+        if self.telegram and self.telegram.enabled:
+            return await self.telegram.send_alert(
                 service_name=service_name,
                 state=state,
                 error=error,
                 recovery=recovery
             )
+        return False
 
-    def _record_alert(self, service_name: str, alert_type: str):
-        """Zeichnet einen Alert auf."""
+    def _record_alert(
+        self,
+        service_name: str,
+        alert_type: str,
+        criticality: str = "unknown",
+        old_state: str = "UNKNOWN",
+        new_state: str = "UNKNOWN",
+        error: Optional[str] = None,
+        telegram_sent: bool = False,
+        message: str = "",
+        suppressed: bool = False,
+        suppressed_reason: Optional[str] = None
+    ):
+        """
+        Zeichnet einen Alert mit allen Details auf.
+
+        Args:
+            service_name: Name des betroffenen Services
+            alert_type: Art des Alerts (UNHEALTHY, DEGRADED, RECOVERY)
+            criticality: Kritikalitätsstufe (critical, high, medium)
+            old_state: Vorheriger Status
+            new_state: Neuer Status
+            error: Fehlermeldung falls vorhanden
+            telegram_sent: Ob Telegram-Nachricht gesendet wurde
+            message: Zusammenfassende Nachricht
+            suppressed: Ob Alert unterdrückt wurde
+            suppressed_reason: Grund für Unterdrückung (cooldown, criticality)
+        """
         now = datetime.now(timezone.utc)
-        self.last_alerts[service_name] = now
-        self.alert_history.append({
+
+        # Cooldown nur bei tatsächlich gesendeten Alerts aktualisieren
+        if not suppressed and telegram_sent:
+            self.last_alerts[service_name] = now
+
+        alert_entry = {
             "service": service_name,
             "type": alert_type,
-            "timestamp": now.isoformat()
-        })
+            "timestamp": now.isoformat(),
+            "criticality": criticality,
+            "state_change": {
+                "from": old_state,
+                "to": new_state
+            },
+            "error": error,
+            "telegram_sent": telegram_sent,
+            "message": message,
+            "suppressed": suppressed,
+            "suppressed_reason": suppressed_reason
+        }
+
+        self.alert_history.append(alert_entry)
 
         # History auf 1000 Einträge begrenzen
         if len(self.alert_history) > 1000:
