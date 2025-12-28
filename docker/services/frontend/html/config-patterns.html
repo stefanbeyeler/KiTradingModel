@@ -938,7 +938,9 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        const API_BASE = '/data/api/v1';
+        // Patterns API moved to Candlestick Service (Port 3006)
+        const API_BASE = '/candlestick/api/v1';
+        const DATA_API_BASE = '/data/api/v1';  // For managed-symbols
         let allPatterns = [];
         let isAutoScanRunning = false;
 
@@ -1110,8 +1112,10 @@
         // Load statistics
         async function loadStatistics() {
             try {
-                const res = await fetch(`${API_BASE}/patterns/history/statistics`);
-                const stats = await res.json();
+                const res = await fetch(`${API_BASE}/stats`);
+                const data = await res.json();
+                // API returns {timestamp, uptime_seconds, history: {...}}
+                const stats = data.history || data;
 
                 document.getElementById('totalPatterns').textContent = stats.total_patterns || 0;
                 document.getElementById('bullishCount').textContent = stats.by_direction?.bullish || 0;
@@ -1157,8 +1161,10 @@
         // Load patterns
         async function loadPatterns() {
             try {
-                const res = await fetch(`${API_BASE}/patterns/history?limit=200`);
-                allPatterns = await res.json();
+                const res = await fetch(`${API_BASE}/history?limit=200`);
+                const data = await res.json();
+                // API returns {count, patterns} - extract patterns array
+                allPatterns = data.patterns || data || [];
                 // No filter - show all patterns, sorted by timestamp
                 renderPatterns(allPatterns);
             } catch (error) {
@@ -1289,7 +1295,7 @@
             btn.textContent = 'Scanne...';
 
             try {
-                const res = await fetch(`${API_BASE}/patterns/history/scan`, { method: 'POST' });
+                const res = await fetch(`${API_BASE}/history/scan`, { method: 'POST' });
                 const result = await res.json();
                 showToast(`Scan abgeschlossen: ${result.new_patterns_found} neue Patterns`, 'success');
                 await loadStatistics();
@@ -1306,7 +1312,7 @@
         // Start auto scan
         async function startAutoScan() {
             try {
-                await fetch(`${API_BASE}/patterns/history/start-auto-scan`, { method: 'POST' });
+                await fetch(`${API_BASE}/scan/start`, { method: 'POST' });
                 isAutoScanRunning = true;
                 updateScanStatus();
                 showToast('Auto-Scan gestartet', 'success');
@@ -1319,7 +1325,7 @@
         // Stop auto scan
         async function stopAutoScan() {
             try {
-                await fetch(`${API_BASE}/patterns/history/stop-auto-scan`, { method: 'POST' });
+                await fetch(`${API_BASE}/scan/stop`, { method: 'POST' });
                 isAutoScanRunning = false;
                 updateScanStatus();
                 showToast('Auto-Scan gestoppt', 'info');
@@ -1336,7 +1342,7 @@
             }
 
             try {
-                await fetch(`${API_BASE}/patterns/history`, { method: 'DELETE' });
+                await fetch(`${API_BASE}/history/clear`, { method: 'POST' });
                 showToast('History gelöscht', 'info');
                 allPatterns = [];
                 renderPatterns([]);
@@ -1507,7 +1513,7 @@
         // Load favorite symbols from API (with category info)
         async function loadFavoriteSymbols() {
             try {
-                const res = await fetch(`${API_BASE}/managed-symbols`);
+                const res = await fetch(`${DATA_API_BASE}/managed-symbols`);
                 const data = await res.json();
                 // Filter favorites and include category
                 return data
@@ -1910,7 +1916,7 @@
                     candles_after: 5
                 });
 
-                const res = await fetch(`${API_BASE}/patterns/chart/${symbol}?${params}`);
+                const res = await fetch(`${API_BASE}/chart/${symbol}?${params}`);
                 const data = await res.json();
 
                 if (data.error || !data.candles || data.candles.length === 0) {

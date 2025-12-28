@@ -441,7 +441,7 @@
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="historyCount">-</div>
-                <div class="stat-label">History-Eintraege</div>
+                <div class="stat-label">History-Einträge</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value success" id="bullishCount">-</div>
@@ -467,7 +467,7 @@
                 </div>
             </div>
             <p class="card-description">
-                Der Auto-Scan ueberwacht alle Favoriten-Symbole und erkennt Candlestick-Patterns automatisch.
+                Der Auto-Scan überwacht alle Favoriten-Symbole und erkennt Candlestick-Patterns automatisch.
             </p>
             <div class="btn-group">
                 <button class="btn btn-success" id="btnStartScan" onclick="startAutoScan()">
@@ -480,7 +480,7 @@
                     Jetzt scannen
                 </button>
                 <button class="btn btn-warning" onclick="clearHistory()">
-                    History loeschen
+                    History löschen
                 </button>
             </div>
         </div>
@@ -509,7 +509,7 @@
                 </div>
             </div>
             <div style="margin-top: 1rem;">
-                <h3 style="font-size: 0.9rem; color: #888; margin-bottom: 0.5rem;">Unterstuetzte Timeframes</h3>
+                <h3 style="font-size: 0.9rem; color: #888; margin-bottom: 0.5rem;">Unterstützte Timeframes</h3>
                 <div class="timeframe-list" id="timeframeList">
                     <span class="loading"><span class="spinner"></span></span>
                 </div>
@@ -519,7 +519,7 @@
         <!-- Pattern Categories -->
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">Verfuegbare Pattern-Typen</h2>
+                <h2 class="card-title">Verfügbare Pattern-Typen</h2>
             </div>
 
             <!-- Reversal Patterns -->
@@ -565,7 +565,7 @@
                 <h2 class="card-title">Schnellzugriff</h2>
             </div>
             <div class="btn-group">
-                <a href="/config-patterns.html" class="btn btn-primary" target="_blank">Pattern-Uebersicht</a>
+                <a href="/config-patterns.html" class="btn btn-primary" target="_blank">Pattern-Übersicht</a>
                 <a href="/candlestick/docs" class="btn btn-primary" target="_blank">API Dokumentation</a>
                 <a href="/candlestick/api/v1/patterns" class="btn btn-primary" target="_blank">Pattern-Liste (JSON)</a>
                 <a href="/candlestick/api/v1/history/statistics" class="btn btn-primary" target="_blank">Statistiken (JSON)</a>
@@ -635,7 +635,7 @@
                         `<span class="timeframe-badge">${tf}</span>`
                     ).join('');
                 } else {
-                    tfList.innerHTML = '<span style="color: #888;">Keine Timeframes verfuegbar</span>';
+                    tfList.innerHTML = '<span style="color: #888;">Keine Timeframes verfügbar</span>';
                 }
 
             } catch (error) {
@@ -736,7 +736,7 @@
                 statusEl.classList.add('running');
                 statusDot.classList.remove('stopped');
                 statusDot.classList.add('running');
-                statusText.textContent = 'Laeuft';
+                statusText.textContent = 'Läuft';
                 btnStart.style.display = 'none';
                 btnStop.style.display = 'inline-flex';
             } else {
@@ -825,23 +825,23 @@
 
         // Clear history
         async function clearHistory() {
-            if (!confirm('Moechten Sie wirklich die gesamte Pattern-History loeschen?')) {
+            if (!confirm('Möchten Sie wirklich die gesamte Pattern-History löschen?')) {
                 return;
             }
 
             try {
                 // Try candlestick service
                 await fetch(`${CANDLESTICK_API}/history/clear`, { method: 'POST' });
-                showToast('History geloescht', 'info');
+                showToast('History gelöscht', 'info');
                 await loadStatistics();
             } catch (error) {
                 // Try data service fallback
                 try {
                     await fetch(`${DATA_API}/patterns/history`, { method: 'DELETE' });
-                    showToast('History geloescht', 'info');
+                    showToast('History gelöscht', 'info');
                     await loadStatistics();
                 } catch (e2) {
-                    showToast('Fehler beim Loeschen', 'error');
+                    showToast('Fehler beim Löschen', 'error');
                     console.error('Clear history failed:', e2);
                 }
             }
