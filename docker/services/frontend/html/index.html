@@ -1208,6 +1208,14 @@
                                     <span class="node-port">:3001</span>
                                 </div>
                             </div>
+                            <div class="dataflow-node gateway" style="border-color: #dc2626; background: rgba(220, 38, 38, 0.1);">
+                                <span class="node-status loading" id="df-redis-status"></span>
+                                <span class="node-icon">&#128451;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Redis Cache</span>
+                                    <span class="node-port">:6379</span>
+                                </div>
+                            </div>
                             <span class="dataflow-stage-label" style="margin-top: 0.3rem;">Training</span>
                             <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
                                 <span class="node-status loading" id="df-tcn-train-status"></span>
@@ -2040,9 +2048,10 @@
                 document.getElementById('data-easyinsight').textContent = data.easyinsight_api ? 'Verbunden' : '-';
                 document.getElementById('data-sync').textContent = data.sync_service_status || '-';
 
-                // Update Redis status in Watchdog Panel and Redis Card
+                // Update Redis status in Watchdog Panel, Redis Card and Dataflow
                 const redisDot = document.getElementById('wp-dot-redis');
                 const redisStatus = document.getElementById('redis-status');
+                const redisDataflow = document.getElementById('df-redis-status');
                 const redisHealthy = data.redis_connected !== false;
 
                 if (redisDot) {
@@ -2056,10 +2065,17 @@
                     redisStatus.classList.add(redisHealthy ? 'status-healthy' : 'status-unhealthy');
                     redisStatus.textContent = redisHealthy ? 'Online' : 'Offline';
                 }
+
+                // Update Redis Dataflow status
+                if (redisDataflow) {
+                    redisDataflow.classList.remove('loading', 'healthy', 'unhealthy');
+                    redisDataflow.classList.add(redisHealthy ? 'healthy' : 'unhealthy');
+                }
             } else {
                 // Data service offline - Redis status unknown
                 const redisDot = document.getElementById('wp-dot-redis');
                 const redisStatus = document.getElementById('redis-status');
+                const redisDataflow = document.getElementById('df-redis-status');
 
                 if (redisDot) {
                     redisDot.classList.remove('loading', 'healthy');
@@ -2070,6 +2086,11 @@
                     redisStatus.classList.remove('status-loading', 'status-healthy');
                     redisStatus.classList.add('status-unhealthy');
                     redisStatus.textContent = 'Unbekannt';
+                }
+
+                if (redisDataflow) {
+                    redisDataflow.classList.remove('loading', 'healthy');
+                    redisDataflow.classList.add('unhealthy');
                 }
             }
         }
