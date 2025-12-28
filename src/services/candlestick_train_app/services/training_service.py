@@ -128,24 +128,58 @@ class TrainingService:
         timeframes: List[str],
         lookback: int = 500
     ) -> Dict[str, Any]:
-        """Fetch training data from Data Service."""
+        """Fetch training data from Data Service.
+
+        Uses TwelveData API via Data Service for OHLCV data.
+        Falls back to EasyInsight if TwelveData fails.
+        """
         client = await self._get_client()
         training_data = {}
+
+        # Map standard timeframes to TwelveData intervals
+        tf_mapping = {
+            "M1": "1min", "M5": "5min", "M15": "15min", "M30": "30min",
+            "H1": "1h", "H2": "2h", "H4": "4h",
+            "D1": "1day", "W1": "1week", "MN": "1month",
+        }
 
         for symbol in symbols:
             symbol_data = {}
             for tf in timeframes:
                 try:
-                    url = f"{DATA_SERVICE_URL}/api/v1/history"
+                    # Try TwelveData first (primary source)
+                    interval = tf_mapping.get(tf, tf.lower())
+                    url = f"{DATA_SERVICE_URL}/api/v1/twelvedata/time_series/{symbol}"
                     params = {
-                        "symbol": symbol,
-                        "limit": lookback,
-                        "interval": tf,
+                        "interval": interval,
+                        "outputsize": lookback,
                     }
                     response = await client.get(url, params=params)
-                    response.raise_for_status()
-                    result = response.json()
-                    symbol_data[tf] = result.get("data", [])
+
+                    if response.status_code == 200:
+                        result = response.json()
+                        # TwelveData returns data in "values" array
+                        values = result.get("values", [])
+                        if values:
+                            symbol_data[tf] = values
+                            logger.debug(f"Fetched {len(values)} candles for {symbol} {tf} from TwelveData")
+                            continue
+
+                    # Fallback to EasyInsight for H1 (only timeframe supported)
+                    if tf == "H1":
+                        url = f"{DATA_SERVICE_URL}/api/v1/easyinsight/ohlcv/{symbol}"
+                        params = {"limit": lookback}
+                        response = await client.get(url, params=params)
+                        if response.status_code == 200:
+                            result = response.json()
+                            data = result.get("data", [])
+                            if data:
+                                symbol_data[tf] = data
+                                logger.debug(f"Fetched {len(data)} candles for {symbol} {tf} from EasyInsight")
+                                continue
+
+                    logger.warning(f"No data available for {symbol} {tf}")
+
                 except Exception as e:
                     logger.warning(f"Failed to fetch data for {symbol} {tf}: {e}")
                     continue
