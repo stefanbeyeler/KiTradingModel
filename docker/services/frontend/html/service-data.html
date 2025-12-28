@@ -283,7 +283,7 @@
             <p>
                 Der Service implementiert eine <strong>Multi-Source Fallback-Hierarchie</strong>:
                 TwelveData (primar) → EasyInsight (1. Fallback) → Yahoo Finance (2. Fallback).
-                Zusatzlich bietet er Candlestick Pattern Detection, Symbol-Management und Trading-Strategien.
+                Zusatzlich bietet er Symbol-Management, Indicator-Berechnungen und Trading-Strategien.
             </p>
         </div>
 
@@ -317,11 +317,6 @@
                     <p>Berechnung von Indikatoren wie SMA, EMA, RSI, MACD, Bollinger Bands über Twelve Data.</p>
                 </div>
                 <div class="feature-item">
-                    <h4>&#128367; Candlestick Patterns</h4>
-                    <p>Multi-Timeframe Pattern Detection: Hammer, Doji, Engulfing, Morning/Evening Star und mehr.</p>
-                </div>
-                <div class="feature-item">
-                    <h4>&#127760; External Data Sources</h4>
                     <p>Gateway fur RAG: Economic Calendar, Sentiment, On-Chain, Orderbook, Macro und mehr.</p>
                 </div>
             </div>
@@ -609,54 +604,6 @@
             </div>
         </div>
 
-        <div class="content-card">
-            <h2>&#128367; Candlestick Pattern Detection</h2>
-            <div class="info-box warning">
-                <strong>Hinweis:</strong> Candlestick Pattern Detection wurde in einen eigenen Service ausgelagert.
-                Nutze den <strong>Candlestick Service (Port 3006)</strong> für Pattern-Erkennung und den
-                <strong>Candlestick-Train Service (Port 3016)</strong> für Training.
-                <div class="quick-links" style="margin-top: 0.75rem;">
-                    <a href="/candlestick/docs" target="_blank">&#128367; Candlestick Service</a>
-                    <a href="/candlestick-train/docs" target="_blank">&#127891; Candlestick Training</a>
-                </div>
-            </div>
-            <p>
-                Multi-Timeframe Pattern-Erkennung fur M15, H1, H4 und D1 Zeitrahmen.
-                Unterstutzt Reversal-, Continuation- und Indecision-Patterns.
-            </p>
-
-            <div class="feature-grid">
-                <div class="feature-item">
-                    <h4>Reversal Patterns</h4>
-                    <p>Hammer, Shooting Star, Doji, Engulfing, Morning/Evening Star, Harami</p>
-                </div>
-                <div class="feature-item">
-                    <h4>Continuation Patterns</h4>
-                    <p>Three White Soldiers, Three Black Crows, Rising/Falling Three</p>
-                </div>
-            </div>
-
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Pattern-Endpunkte (via Candlestick Service)</h3>
-            <div class="endpoint-list">
-                <div class="endpoint">
-                    <span class="method delete">POST</span>
-                    <span class="endpoint-path">/candlestick/api/v1/scan</span>
-                    <span class="endpoint-desc">Pattern-Scan fur Symbol</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/candlestick/api/v1/patterns</span>
-                    <span class="endpoint-desc">Liste aller Pattern-Typen</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/candlestick/api/v1/history/{symbol}</span>
-                    <span class="endpoint-desc">Pattern-Historie fur Symbol</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="content-card">
             <h2>&#127760; External Data Sources (RAG Gateway)</h2>
             <p>
                 Gateway fur externe Datenquellen, die vom RAG Service fur Trading Intelligence verwendet werden.
@@ -703,25 +650,6 @@
                     <span class="endpoint-path">/api/v1/external-sources/trading-context/{symbol}</span>
                     <span class="endpoint-desc">Kompletter Trading-Kontext</span>
                 </div>
-            </div>
-        </div>
-
-        <div class="content-card">
-            <h2>&#129514; Testing</h2>
-            <p>
-                API-Tests fur den Data Service werden zentral uber den <strong>Watchdog Service</strong> ausgefuhrt.
-            </p>
-
-            <div class="info-box">
-                <strong>Test-Ausfuhrung:</strong> Alle Data Service Tests konnen uber den Watchdog ausgefuhrt werden:
-                <code style="display: block; margin-top: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px;">
-                    curl -X POST http://10.1.19.101:3010/api/v1/tests/run/service/data
-                </code>
-            </div>
-
-            <div class="quick-links" style="margin-top: 1rem;">
-                <a href="/watchdog/api/v1/tests/definitions?service=data" target="_blank">&#128196; Data Service Tests</a>
-                <a href="/watchdog/docs#/Testing" target="_blank">&#129514; Testing API</a>
             </div>
         </div>
 
