@@ -849,6 +849,36 @@
             margin-left: 0.5rem;
         }
 
+        /* Feedback Status Badges */
+        .timeline-feedback {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.75rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+
+        .timeline-feedback.confirmed {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .timeline-feedback.corrected {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        .timeline-feedback.rejected {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        .timeline-feedback-icon {
+            font-size: 0.9rem;
+        }
+
         /* Modal Styles */
         .modal-overlay {
             display: none;
@@ -1891,6 +1921,25 @@
         // Store patterns for modal access
         let loadedPatterns = [];
 
+        // Store feedback data for timeline display
+        let patternFeedbackMap = {};
+
+        // Load feedback data for timeline display
+        async function loadFeedbackData() {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/feedback?limit=1000`);
+                const data = await res.json();
+
+                // Create map by pattern_id for quick lookup
+                patternFeedbackMap = {};
+                (data.feedback || []).forEach(fb => {
+                    patternFeedbackMap[fb.id] = fb;
+                });
+            } catch (error) {
+                console.error('Failed to load feedback data:', error);
+            }
+        }
+
         // Load pattern history with filters
         async function loadPatternHistory(page = 1) {
             currentHistoryPage = page;
@@ -1905,6 +1954,9 @@
             const minConfidence = parseFloat(document.getElementById('historyFilterConfidence')?.value || '0');
 
             try {
+                // Load feedback data first (for status display)
+                await loadFeedbackData();
+
                 // Build query params
                 const params = new URLSearchParams();
                 params.set('limit', '100');  // Get more for client-side filtering
@@ -1998,6 +2050,34 @@
             const confidencePercent = ((pattern.confidence || 0) * 100).toFixed(0);
             const directionClass = pattern.direction || 'neutral';
 
+            // Check for feedback status
+            const feedback = patternFeedbackMap[pattern.id];
+            let feedbackBadge = '';
+
+            if (feedback) {
+                const feedbackType = feedback.feedback_type;
+                let icon = '';
+                let label = '';
+
+                if (feedbackType === 'confirmed') {
+                    icon = '✓';
+                    label = 'Bestätigt';
+                } else if (feedbackType === 'corrected') {
+                    icon = '✎';
+                    label = feedback.corrected_pattern ? formatPatternType(feedback.corrected_pattern) : 'Korrigiert';
+                } else if (feedbackType === 'rejected') {
+                    icon = '✗';
+                    label = 'Abgelehnt';
+                }
+
+                feedbackBadge = `
+                    <span class="timeline-feedback ${feedbackType}" title="${label}">
+                        <span class="timeline-feedback-icon">${icon}</span>
+                        <span>${label}</span>
+                    </span>
+                `;
+            }
+
             return `
                 <div class="timeline-item ${directionClass}" onclick="openPatternModal(${pattern.index})">
                     <span class="timeline-time">${time}</span>
@@ -2005,6 +2085,7 @@
                         <span class="timeline-pattern-name">${formatPatternType(pattern.pattern_type)}</span>
                         <span class="timeline-symbol">${pattern.symbol}</span>
                         <span class="timeline-direction ${directionClass}">${pattern.direction}</span>
+                        ${feedbackBadge}
                         <span class="timeline-confidence">${confidencePercent}%</span>
                         <span class="timeline-arrow">›</span>
                     </div>
@@ -2274,6 +2355,17 @@
                                 feedbackType === 'rejected' ? 'Als Fehlererkennung markiert.' :
                                 `Korrektur zu "${formatPatternType(correctedPattern)}" gespeichert.`;
                     showCorrectionFeedback(msg, 'success');
+
+                    // Update feedback map locally for immediate UI update
+                    const patternId = pattern.id || `${pattern.symbol}_${pattern.timestamp}_${pattern.pattern_type}`;
+                    patternFeedbackMap[patternId] = {
+                        id: patternId,
+                        feedback_type: feedbackType,
+                        corrected_pattern: correctedPattern
+                    };
+
+                    // Refresh timeline to show updated status
+                    loadPatternHistory(currentHistoryPage);
                 } else {
                     throw new Error('Server error');
                 }
