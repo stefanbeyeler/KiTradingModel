@@ -1540,6 +1540,52 @@
         <div class="training-section">
             <h3 class="section-title"><span class="section-icon">&#127891;</span> Training Services</h3>
             <div class="services-grid training-grid">
+                <!-- Candlestick Training Service -->
+                <div class="service-card training-card" id="candlestick-train-card">
+                    <div class="service-header">
+                        <h2>Candlestick-Training</h2>
+                        <span class="status-badge status-loading" id="candlestick-train-status">Laden...</span>
+                    </div>
+                    <p>Dedizierter Training-Container fuer Candlestick Pattern-Modelle. Low Priority.</p>
+                    <div class="service-info" id="candlestick-train-info">
+                        <div><span class="label">Port</span><span>3016</span></div>
+                        <div><span class="label">Training</span><span id="candlestick-train-active">-</span></div>
+                        <div><span class="label">Jobs</span><span id="candlestick-train-jobs">-</span></div>
+                    </div>
+                    <div class="service-resources">
+                        <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                        <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                        <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                    </div>
+                    <div class="service-links">
+                        <a href="/service-candlestick-train.html" target="_blank">Info</a>
+                        <a href="/candlestick-train/docs" target="_blank" class="training-link">API Docs</a>
+                    </div>
+                </div>
+
+                <!-- HMM-Training Service -->
+                <div class="service-card training-card" id="hmm-train-card">
+                    <div class="service-header">
+                        <h2>HMM-Training</h2>
+                        <span class="status-badge status-loading" id="hmm-train-status">Laden...</span>
+                    </div>
+                    <p>Dedizierter Training-Container - HMM und LightGBM Scorer Modelle.</p>
+                    <div class="service-info" id="hmm-train-info">
+                        <div><span class="label">Port</span><span>3014</span></div>
+                        <div><span class="label">Training</span><span id="hmm-train-active">-</span></div>
+                        <div><span class="label">Model</span><span id="hmm-train-model">-</span></div>
+                    </div>
+                    <div class="service-resources">
+                        <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                        <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                        <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                    </div>
+                    <div class="service-links">
+                        <a href="/service-hmm-train.html" target="_blank">Info</a>
+                        <a href="/hmm-train/docs" target="_blank" class="training-link">API Docs</a>
+                    </div>
+                </div>
+
                 <!-- NHITS-Training Service -->
                 <div class="service-card training-card" id="nhits-train-card">
                     <div class="service-header">
@@ -1584,52 +1630,6 @@
                         <a href="/service-tcn-train.html" target="_blank">Info</a>
                         <a href="/tcn-train/docs" target="_blank" class="training-link">API Docs</a>
                         <a href="/tcn-train/api/v1/models" target="_blank">Models</a>
-                    </div>
-                </div>
-
-                <!-- HMM-Training Service -->
-                <div class="service-card training-card" id="hmm-train-card">
-                    <div class="service-header">
-                        <h2>HMM-Training</h2>
-                        <span class="status-badge status-loading" id="hmm-train-status">Laden...</span>
-                    </div>
-                    <p>Dedizierter Training-Container - HMM und LightGBM Scorer Modelle.</p>
-                    <div class="service-info" id="hmm-train-info">
-                        <div><span class="label">Port</span><span>3014</span></div>
-                        <div><span class="label">Training</span><span id="hmm-train-active">-</span></div>
-                        <div><span class="label">Model</span><span id="hmm-train-model">-</span></div>
-                    </div>
-                    <div class="service-resources">
-                        <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
-                        <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
-                        <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
-                    </div>
-                    <div class="service-links">
-                        <a href="/service-hmm-train.html" target="_blank">Info</a>
-                        <a href="/hmm-train/docs" target="_blank" class="training-link">API Docs</a>
-                    </div>
-                </div>
-
-                <!-- Candlestick Training Service -->
-                <div class="service-card training-card" id="candlestick-train-card">
-                    <div class="service-header">
-                        <h2>Candle-Training</h2>
-                        <span class="status-badge status-loading" id="candlestick-train-status">Laden...</span>
-                    </div>
-                    <p>Dedizierter Training-Container fuer Candlestick Pattern-Modelle. Low Priority.</p>
-                    <div class="service-info" id="candlestick-train-info">
-                        <div><span class="label">Port</span><span>3016</span></div>
-                        <div><span class="label">Training</span><span id="candlestick-train-active">-</span></div>
-                        <div><span class="label">Jobs</span><span id="candlestick-train-jobs">-</span></div>
-                    </div>
-                    <div class="service-resources">
-                        <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
-                        <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
-                        <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
-                    </div>
-                    <div class="service-links">
-                        <a href="/service-candlestick-train.html" target="_blank">Info</a>
-                        <a href="/candlestick-train/docs" target="_blank" class="training-link">API Docs</a>
                     </div>
                 </div>
             </div>
