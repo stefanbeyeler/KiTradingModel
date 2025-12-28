@@ -1341,7 +1341,17 @@
             if (!dot) return;
 
             try {
-                const endpoint = service.key === 'redis' ? '/data/health' : `/${service.key}/health`;
+                let endpoint;
+                let checkRedisField = false;
+
+                if (service.key === 'redis') {
+                    // Use dedicated cache status endpoint for Redis
+                    endpoint = '/data/api/v1/cache/status';
+                    checkRedisField = true;
+                } else {
+                    endpoint = `/${service.key}/health`;
+                }
+
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -1349,7 +1359,17 @@
                 clearTimeout(timeoutId);
 
                 if (res.ok) {
-                    dot.className = 'status-dot online';
+                    if (checkRedisField) {
+                        // For Redis, check the redis_connected field
+                        const data = await res.json();
+                        if (data.redis_connected) {
+                            dot.className = 'status-dot online';
+                        } else {
+                            dot.className = 'status-dot offline';
+                        }
+                    } else {
+                        dot.className = 'status-dot online';
+                    }
                 } else {
                     throw new Error('Not healthy');
                 }

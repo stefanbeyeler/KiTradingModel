@@ -234,6 +234,41 @@ async def health_check():
         }
 
 
+@system_router.get("/cache/status", tags=["1. System"])
+async def get_cache_status():
+    """
+    Check Redis cache status and statistics.
+
+    Returns connection status, memory usage, and hit/miss statistics.
+    Used by Watchdog for monitoring Redis health.
+    """
+    try:
+        from ..services.cache_service import cache_service
+
+        # Get health check (includes Redis ping)
+        health = await cache_service.health_check()
+
+        # Get statistics
+        stats = cache_service.get_stats()
+
+        return {
+            "status": health.get("status", "unknown"),
+            "redis_connected": health.get("redis_connected", False),
+            "redis_memory_used": health.get("redis_memory_used", "N/A"),
+            "fallback_active": health.get("fallback_active", True),
+            "statistics": stats,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Cache status check failed: {e}")
+        return {
+            "status": "error",
+            "redis_connected": False,
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+
 # ==================== Trading Analysis ====================
 
 @trading_router.post("/analyze", response_model=AnalysisResponse)
