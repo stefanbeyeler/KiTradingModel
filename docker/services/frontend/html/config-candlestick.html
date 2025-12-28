@@ -1246,7 +1246,7 @@
 
         <!-- Pattern Detail Modal -->
         <div class="modal-overlay" id="patternModal" onclick="closePatternModal(event)">
-            <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal" onclick="event.stopPropagation()" style="max-width: 800px;">
                 <div class="modal-header">
                     <div class="modal-title">
                         <span id="modalPatternName">-</span>
@@ -1255,9 +1255,22 @@
                     <button class="modal-close" onclick="closePatternModal()">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div class="modal-chart-container">
-                        <canvas class="modal-chart" id="modalChart"></canvas>
+                    <!-- Chart Comparison -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; text-align: center;">Erkanntes Pattern</div>
+                            <div class="modal-chart-container" style="margin-bottom: 0;">
+                                <canvas class="modal-chart" id="modalChart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; text-align: center;">Referenz-Beispiel</div>
+                            <div class="modal-chart-container" style="margin-bottom: 0;">
+                                <canvas class="modal-chart" id="modalReferenceChart"></canvas>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="modal-info-grid">
                         <div class="modal-info-item">
                             <div class="modal-info-label">Symbol</div>
@@ -1276,8 +1289,31 @@
                             <div class="modal-info-value" id="modalConfidence">-</div>
                         </div>
                     </div>
+
                     <div class="modal-description" id="modalDescription">
                         Pattern-Beschreibung wird geladen...
+                    </div>
+
+                    <!-- Correction Section -->
+                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div style="font-size: 0.9rem; font-weight: 600; color: #64c8ff; margin-bottom: 0.75rem;">
+                            Pattern-Korrektur (für Training)
+                        </div>
+                        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                            <button class="btn btn-success" onclick="confirmPattern()" style="padding: 0.5rem 1rem;">
+                                ✓ Korrekt erkannt
+                            </button>
+                            <select id="correctionPatternSelect" style="padding: 0.5rem; background: #252540; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; min-width: 180px;">
+                                <option value="">-- Korrektes Pattern wählen --</option>
+                            </select>
+                            <button class="btn btn-warning" onclick="submitCorrection()" style="padding: 0.5rem 1rem;">
+                                Korrektur speichern
+                            </button>
+                            <button class="btn btn-secondary" onclick="markAsNoPattern()" style="padding: 0.5rem 1rem;">
+                                ✗ Kein Pattern
+                            </button>
+                        </div>
+                        <div id="correctionFeedback" style="margin-top: 0.5rem; font-size: 0.85rem; display: none;"></div>
                     </div>
                 </div>
             </div>
@@ -1976,10 +2012,61 @@
             `;
         }
 
+        // Current modal pattern for corrections
+        let currentModalPattern = null;
+
+        // Reference pattern examples (synthetic ideal patterns)
+        const PATTERN_REFERENCES = {
+            'hammer': [
+                { open: 100, high: 101, low: 94, close: 100.5 },
+                { open: 99, high: 99.5, low: 92, close: 99 },
+                { open: 93, high: 98, low: 92, close: 97.5 }  // Hammer
+            ],
+            'shooting_star': [
+                { open: 100, high: 101, low: 99, close: 100.5 },
+                { open: 101, high: 102, low: 100, close: 101.5 },
+                { open: 102, high: 108, low: 101.5, close: 102.5 }  // Shooting Star
+            ],
+            'bullish_engulfing': [
+                { open: 102, high: 103, low: 99, close: 100 },  // Red
+                { open: 99, high: 105, low: 98, close: 104 }     // Green engulfing
+            ],
+            'bearish_engulfing': [
+                { open: 100, high: 103, low: 99, close: 102 },  // Green
+                { open: 103, high: 104, low: 98, close: 99 }     // Red engulfing
+            ],
+            'doji': [
+                { open: 100, high: 102, low: 98, close: 100 },
+                { open: 101, high: 104, low: 99, close: 100.5 }  // Doji
+            ],
+            'morning_star': [
+                { open: 105, high: 106, low: 100, close: 101 },  // Long red
+                { open: 100, high: 101, low: 99, close: 100 },    // Small body
+                { open: 101, high: 107, low: 100, close: 106 }    // Long green
+            ],
+            'evening_star': [
+                { open: 100, high: 106, low: 99, close: 105 },   // Long green
+                { open: 106, high: 107, low: 105, close: 106 },   // Small body
+                { open: 105, high: 106, low: 100, close: 101 }    // Long red
+            ],
+            'three_white_soldiers': [
+                { open: 100, high: 103, low: 99, close: 102 },
+                { open: 102, high: 106, low: 101, close: 105 },
+                { open: 105, high: 109, low: 104, close: 108 }
+            ],
+            'three_black_crows': [
+                { open: 108, high: 109, low: 105, close: 106 },
+                { open: 106, high: 107, low: 102, close: 103 },
+                { open: 103, high: 104, low: 99, close: 100 }
+            ]
+        };
+
         // Open pattern detail modal
         async function openPatternModal(index) {
             const pattern = loadedPatterns[index];
             if (!pattern) return;
+
+            currentModalPattern = pattern;
 
             // Populate modal fields
             document.getElementById('modalPatternName').textContent = formatPatternType(pattern.pattern_type);
@@ -1993,12 +2080,80 @@
             document.getElementById('modalConfidence').textContent = ((pattern.confidence || 0) * 100).toFixed(0) + '%';
             document.getElementById('modalDescription').textContent = pattern.description || pattern.trading_implication || 'Keine Beschreibung verfügbar';
 
+            // Populate correction dropdown
+            await populateCorrectionDropdown();
+
+            // Reset feedback
+            document.getElementById('correctionFeedback').style.display = 'none';
+
             // Show modal
             document.getElementById('patternModal').classList.add('show');
             document.body.style.overflow = 'hidden';
 
-            // Load chart in modal
-            await loadModalChart(pattern);
+            // Load charts
+            await Promise.all([
+                loadModalChart(pattern),
+                loadReferenceChart(pattern.pattern_type, pattern.direction)
+            ]);
+        }
+
+        // Populate correction pattern dropdown
+        async function populateCorrectionDropdown() {
+            const select = document.getElementById('correctionPatternSelect');
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/patterns`);
+                const data = await res.json();
+                const patterns = data.patterns || [];
+
+                select.innerHTML = '<option value="">-- Korrektes Pattern wählen --</option>' +
+                    '<option value="no_pattern">Kein Pattern</option>' +
+                    patterns.map(p => `<option value="${p.type}">${formatPatternType(p.type)} (${p.direction})</option>`).join('');
+            } catch (error) {
+                console.error('Failed to load patterns for correction:', error);
+            }
+        }
+
+        // Load reference chart showing ideal pattern
+        function loadReferenceChart(patternType, direction) {
+            const canvas = document.getElementById('modalReferenceChart');
+            if (!canvas) return;
+
+            // Get reference data or generate generic example
+            let refCandles = PATTERN_REFERENCES[patternType];
+
+            if (!refCandles) {
+                // Generate generic reference based on direction
+                if (direction === 'bullish') {
+                    refCandles = [
+                        { open: 100, high: 101, low: 98, close: 99 },
+                        { open: 99, high: 100, low: 97, close: 98 },
+                        { open: 98, high: 103, low: 97, close: 102 }
+                    ];
+                } else if (direction === 'bearish') {
+                    refCandles = [
+                        { open: 100, high: 102, low: 99, close: 101 },
+                        { open: 101, high: 103, low: 100, close: 102 },
+                        { open: 102, high: 103, low: 98, close: 99 }
+                    ];
+                } else {
+                    refCandles = [
+                        { open: 100, high: 102, low: 98, close: 101 },
+                        { open: 101, high: 103, low: 99, close: 100 },
+                        { open: 100, high: 102, low: 98, close: 101 }
+                    ];
+                }
+            }
+
+            // Format for chart rendering
+            const formattedCandles = refCandles.map((c, i) => ({
+                datetime: `Kerze ${i + 1}`,
+                open: c.open.toString(),
+                high: c.high.toString(),
+                low: c.low.toString(),
+                close: c.close.toString()
+            }));
+
+            renderCandlestickChart(canvas, formattedCandles, formattedCandles.length - 1, direction, patternType);
         }
 
         // Close pattern detail modal
@@ -2006,6 +2161,72 @@
             if (event && event.target !== event.currentTarget) return;
             document.getElementById('patternModal').classList.remove('show');
             document.body.style.overflow = '';
+            currentModalPattern = null;
+        }
+
+        // Confirm pattern is correct
+        async function confirmPattern() {
+            if (!currentModalPattern) return;
+            await submitPatternFeedback(currentModalPattern, 'confirmed', currentModalPattern.pattern_type);
+        }
+
+        // Submit correction with different pattern
+        async function submitCorrection() {
+            if (!currentModalPattern) return;
+            const correctedPattern = document.getElementById('correctionPatternSelect').value;
+            if (!correctedPattern) {
+                showCorrectionFeedback('Bitte wählen Sie das korrekte Pattern aus.', 'warning');
+                return;
+            }
+            await submitPatternFeedback(currentModalPattern, 'corrected', correctedPattern);
+        }
+
+        // Mark as no pattern (false positive)
+        async function markAsNoPattern() {
+            if (!currentModalPattern) return;
+            await submitPatternFeedback(currentModalPattern, 'rejected', 'no_pattern');
+        }
+
+        // Submit pattern feedback to backend
+        async function submitPatternFeedback(pattern, feedbackType, correctedPattern) {
+            try {
+                const payload = {
+                    pattern_id: pattern.id || `${pattern.symbol}_${pattern.timestamp}_${pattern.pattern_type}`,
+                    original_pattern: pattern.pattern_type,
+                    feedback_type: feedbackType,
+                    corrected_pattern: correctedPattern,
+                    symbol: pattern.symbol,
+                    timeframe: pattern.timeframe,
+                    timestamp: pattern.timestamp,
+                    ohlc_data: pattern.ohlc_data || null
+                };
+
+                const res = await fetch(`${CANDLESTICK_API}/feedback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const msg = feedbackType === 'confirmed' ? 'Pattern als korrekt bestätigt!' :
+                                feedbackType === 'rejected' ? 'Als Fehlererkennung markiert.' :
+                                `Korrektur zu "${formatPatternType(correctedPattern)}" gespeichert.`;
+                    showCorrectionFeedback(msg, 'success');
+                } else {
+                    throw new Error('Server error');
+                }
+            } catch (error) {
+                console.error('Failed to submit feedback:', error);
+                showCorrectionFeedback('Feedback konnte nicht gespeichert werden.', 'error');
+            }
+        }
+
+        // Show feedback message
+        function showCorrectionFeedback(message, type) {
+            const el = document.getElementById('correctionFeedback');
+            el.textContent = message;
+            el.style.display = 'block';
+            el.style.color = type === 'success' ? '#81c784' : type === 'error' ? '#e57373' : '#ffb74d';
         }
 
         // Load chart for modal

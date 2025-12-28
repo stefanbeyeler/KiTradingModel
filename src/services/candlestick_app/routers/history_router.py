@@ -1,12 +1,31 @@
 """Pattern history endpoints."""
 
+import json
+from datetime import datetime
+from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Query, HTTPException
+from pydantic import BaseModel
 from loguru import logger
 
 from ..services.pattern_history_service import pattern_history_service
 
 router = APIRouter()
+
+# Feedback storage path
+FEEDBACK_FILE = Path("/app/data/pattern_feedback.json")
+
+
+class PatternFeedback(BaseModel):
+    """Pattern correction feedback from user."""
+    pattern_id: str
+    original_pattern: str
+    feedback_type: str  # confirmed, corrected, rejected
+    corrected_pattern: str
+    symbol: str
+    timeframe: str
+    timestamp: str
+    ohlc_data: Optional[list] = None
 
 
 @router.get("/history")
@@ -228,4 +247,145 @@ async def stop_auto_scan():
 
     except Exception as e:
         logger.error(f"Error stopping scan: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Feedback Endpoints ====================
+
+
+@router.post("/feedback")
+async def submit_pattern_feedback(feedback: PatternFeedback):
+    """
+    Submit user feedback for pattern correction.
+
+    Stores feedback for use in model training to improve detection accuracy.
+
+    Feedback types:
+    - **confirmed**: Pattern was correctly identified
+    - **corrected**: Pattern was wrong, user provides correct pattern type
+    - **rejected**: No pattern exists (false positive)
+    """
+    try:
+        # Load existing feedback
+        feedback_data = []
+        if FEEDBACK_FILE.exists():
+            try:
+                with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+                    feedback_data = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                feedback_data = []
+
+        # Add new feedback
+        entry = {
+            "id": feedback.pattern_id,
+            "original_pattern": feedback.original_pattern,
+            "feedback_type": feedback.feedback_type,
+            "corrected_pattern": feedback.corrected_pattern,
+            "symbol": feedback.symbol,
+            "timeframe": feedback.timeframe,
+            "pattern_timestamp": feedback.timestamp,
+            "feedback_timestamp": datetime.utcnow().isoformat(),
+            "ohlc_data": feedback.ohlc_data,
+        }
+        feedback_data.append(entry)
+
+        # Ensure directory exists
+        FEEDBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+        # Save feedback
+        with open(FEEDBACK_FILE, 'w', encoding='utf-8') as f:
+            json.dump(feedback_data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"Pattern feedback saved: {feedback.feedback_type} for {feedback.original_pattern} -> {feedback.corrected_pattern}")
+
+        return {
+            "status": "saved",
+            "message": "Feedback gespeichert",
+            "total_feedback_count": len(feedback_data)
+        }
+
+    except Exception as e:
+        logger.error(f"Error saving feedback: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/feedback")
+async def get_pattern_feedback(
+    limit: int = Query(default=100, ge=1, le=1000)
+):
+    """
+    Get all stored pattern feedback.
+
+    Returns feedback entries for review and training data export.
+    """
+    try:
+        if not FEEDBACK_FILE.exists():
+            return {"count": 0, "feedback": []}
+
+        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+            feedback_data = json.load(f)
+
+        # Return most recent first
+        feedback_data = sorted(
+            feedback_data,
+            key=lambda x: x.get('feedback_timestamp', ''),
+            reverse=True
+        )[:limit]
+
+        return {
+            "count": len(feedback_data),
+            "feedback": feedback_data
+        }
+
+    except Exception as e:
+        logger.error(f"Error loading feedback: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/feedback/statistics")
+async def get_feedback_statistics():
+    """
+    Get statistics about collected feedback.
+
+    Returns counts by feedback type and pattern to assess training data quality.
+    """
+    try:
+        if not FEEDBACK_FILE.exists():
+            return {
+                "total": 0,
+                "by_type": {},
+                "by_pattern": {},
+                "correction_rate": 0.0
+            }
+
+        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+            feedback_data = json.load(f)
+
+        # Aggregate statistics
+        by_type = {}
+        by_pattern = {}
+        corrections = 0
+
+        for entry in feedback_data:
+            ft = entry.get('feedback_type', 'unknown')
+            by_type[ft] = by_type.get(ft, 0) + 1
+
+            pattern = entry.get('original_pattern', 'unknown')
+            by_pattern[pattern] = by_pattern.get(pattern, 0) + 1
+
+            if ft in ('corrected', 'rejected'):
+                corrections += 1
+
+        total = len(feedback_data)
+        correction_rate = (corrections / total * 100) if total > 0 else 0.0
+
+        return {
+            "total": total,
+            "by_type": by_type,
+            "by_pattern": by_pattern,
+            "correction_rate": round(correction_rate, 1)
+        }
+
+    except Exception as e:
+        logger.error(f"Error calculating feedback stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))

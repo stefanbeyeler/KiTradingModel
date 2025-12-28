@@ -95,31 +95,31 @@ class CandlestickPatternService:
         return {
             # Reversal Patterns - Bullish
             PatternType.HAMMER: {
-                "description": "Hammer pattern - kleine Kerze mit langem unteren Schatten",
-                "implication": "Potenzielle bullische Umkehr nach Abwaertstrend",
+                "description": "Hammer Pattern - kleine Kerze mit langem unteren Schatten",
+                "implication": "Potenzielle bullische Umkehr nach Abwärtstrend",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BULLISH,
             },
             PatternType.INVERTED_HAMMER: {
                 "description": "Invertierter Hammer - kleine Kerze mit langem oberen Schatten",
-                "implication": "Potenzielle bullische Umkehr, Bestaetigung erforderlich",
+                "implication": "Potenzielle bullische Umkehr, Bestätigung erforderlich",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BULLISH,
             },
             PatternType.BULLISH_ENGULFING: {
-                "description": "Bullish Engulfing - grosse gruene Kerze umschliesst vorherige rote Kerze",
+                "description": "Bullish Engulfing - große grüne Kerze umschließt vorherige rote Kerze",
                 "implication": "Starkes bullisches Umkehrsignal",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BULLISH,
             },
             PatternType.MORNING_STAR: {
                 "description": "Morning Star - 3-Kerzen-Muster mit Doji/kleiner Kerze in der Mitte",
-                "implication": "Zuverlaessiges bullisches Umkehrsignal am Ende eines Abwaertstrends",
+                "implication": "Zuverlässiges bullisches Umkehrsignal am Ende eines Abwärtstrends",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BULLISH,
             },
             PatternType.PIERCING_LINE: {
-                "description": "Piercing Line - gruene Kerze oeffnet unter und schliesst ueber 50% der vorherigen roten Kerze",
+                "description": "Piercing Line - grüne Kerze öffnet unter und schließt über 50% der vorherigen roten Kerze",
                 "implication": "Bullisches Umkehrsignal, weniger stark als Engulfing",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BULLISH,
@@ -134,37 +134,37 @@ class CandlestickPatternService:
             # Reversal Patterns - Bearish
             PatternType.SHOOTING_STAR: {
                 "description": "Shooting Star - kleine Kerze mit langem oberen Schatten",
-                "implication": "Potenzielle baerische Umkehr nach Aufwaertstrend",
+                "implication": "Potenzielle bärische Umkehr nach Aufwärtstrend",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BEARISH,
             },
             PatternType.HANGING_MAN: {
-                "description": "Hanging Man - Hammer-Form in einem Aufwaertstrend",
-                "implication": "Warnzeichen fuer potenzielle baerische Umkehr",
+                "description": "Hanging Man - Hammer-Form in einem Aufwärtstrend",
+                "implication": "Warnzeichen für potenzielle bärische Umkehr",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BEARISH,
             },
             PatternType.BEARISH_ENGULFING: {
-                "description": "Bearish Engulfing - grosse rote Kerze umschliesst vorherige gruene Kerze",
-                "implication": "Starkes baerisches Umkehrsignal",
+                "description": "Bearish Engulfing - große rote Kerze umschließt vorherige grüne Kerze",
+                "implication": "Starkes bärisches Umkehrsignal",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BEARISH,
             },
             PatternType.EVENING_STAR: {
                 "description": "Evening Star - 3-Kerzen-Muster mit Doji/kleiner Kerze in der Mitte",
-                "implication": "Zuverlaessiges baerisches Umkehrsignal am Ende eines Aufwaertstrends",
+                "implication": "Zuverlässiges bärisches Umkehrsignal am Ende eines Aufwärtstrends",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BEARISH,
             },
             PatternType.DARK_CLOUD_COVER: {
-                "description": "Dark Cloud Cover - rote Kerze oeffnet ueber und schliesst unter 50% der vorherigen gruenen Kerze",
-                "implication": "Baerisches Umkehrsignal, weniger stark als Engulfing",
+                "description": "Dark Cloud Cover - rote Kerze öffnet über und schließt unter 50% der vorherigen grünen Kerze",
+                "implication": "Bärisches Umkehrsignal, weniger stark als Engulfing",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BEARISH,
             },
             PatternType.GRAVESTONE_DOJI: {
                 "description": "Gravestone Doji - Doji mit langem oberen Schatten",
-                "implication": "Potenzielle baerische Umkehr am Widerstand",
+                "implication": "Potenzielle bärische Umkehr am Widerstand",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BEARISH,
             },
@@ -179,14 +179,14 @@ class CandlestickPatternService:
 
             # Continuation Patterns
             PatternType.THREE_WHITE_SOLDIERS: {
-                "description": "Three White Soldiers - drei aufeinanderfolgende lange gruene Kerzen",
+                "description": "Three White Soldiers - drei aufeinanderfolgende lange grüne Kerzen",
                 "implication": "Starkes bullisches Fortsetzungssignal",
                 "category": PatternCategory.CONTINUATION,
                 "direction": PatternDirection.BULLISH,
             },
             PatternType.THREE_BLACK_CROWS: {
                 "description": "Three Black Crows - drei aufeinanderfolgende lange rote Kerzen",
-                "implication": "Starkes baerisches Fortsetzungssignal",
+                "implication": "Starkes bärisches Fortsetzungssignal",
                 "category": PatternCategory.CONTINUATION,
                 "direction": PatternDirection.BEARISH,
             },
@@ -197,8 +197,8 @@ class CandlestickPatternService:
                 "direction": PatternDirection.BULLISH,
             },
             PatternType.FALLING_THREE_METHODS: {
-                "description": "Falling Three Methods - baerische Fortsetzung mit kleinen Korrekturkerzen",
-                "implication": "Baerischer Trend wird wahrscheinlich fortgesetzt",
+                "description": "Falling Three Methods - bärische Fortsetzung mit kleinen Korrekturkerzen",
+                "implication": "Bärischer Trend wird wahrscheinlich fortgesetzt",
                 "category": PatternCategory.CONTINUATION,
                 "direction": PatternDirection.BEARISH,
             },
@@ -206,25 +206,25 @@ class CandlestickPatternService:
             # Indecision Patterns
             PatternType.SPINNING_TOP: {
                 "description": "Spinning Top - kleine Kerze mit langen Schatten beiderseits",
-                "implication": "Marktunentschlossenheit, Konsolidierung moeglich",
+                "implication": "Marktunentschlossenheit, Konsolidierung möglich",
                 "category": PatternCategory.INDECISION,
                 "direction": PatternDirection.NEUTRAL,
             },
             PatternType.BULLISH_HARAMI: {
-                "description": "Bullish Harami - kleine gruene Kerze innerhalb der vorherigen roten Kerze",
-                "implication": "Potenzielle bullische Umkehr, Bestaetigung erforderlich",
+                "description": "Bullish Harami - kleine grüne Kerze innerhalb der vorherigen roten Kerze",
+                "implication": "Potenzielle bullische Umkehr, Bestätigung erforderlich",
                 "category": PatternCategory.INDECISION,
                 "direction": PatternDirection.BULLISH,
             },
             PatternType.BEARISH_HARAMI: {
-                "description": "Bearish Harami - kleine rote Kerze innerhalb der vorherigen gruenen Kerze",
-                "implication": "Potenzielle baerische Umkehr, Bestaetigung erforderlich",
+                "description": "Bearish Harami - kleine rote Kerze innerhalb der vorherigen grünen Kerze",
+                "implication": "Potenzielle bärische Umkehr, Bestätigung erforderlich",
                 "category": PatternCategory.INDECISION,
                 "direction": PatternDirection.BEARISH,
             },
             PatternType.HARAMI_CROSS: {
                 "description": "Harami Cross - Doji innerhalb der vorherigen Kerze",
-                "implication": "Staerkeres Signal als normales Harami",
+                "implication": "Stärkeres Signal als normales Harami",
                 "category": PatternCategory.INDECISION,
                 "direction": PatternDirection.NEUTRAL,
             },
