@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candlestick Pattern Service - Service Dokumentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .subtitle {
+            opacity: 0.7;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .content-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-card p {
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .content-card ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .content-card li {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tech-tag {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(167, 139, 250, 0.3);
+        }
+
+        .endpoint-list {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .endpoint {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .endpoint:last-child {
+            border-bottom: none;
+        }
+
+        .method {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .method.post {
+            background: rgba(33, 150, 243, 0.2);
+            color: #64b5f6;
+        }
+
+        .endpoint-path {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #ffd54f;
+        }
+
+        .endpoint-desc {
+            opacity: 0.7;
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .info-box {
+            background: rgba(100, 200, 255, 0.1);
+            border-left: 3px solid #64c8ff;
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+
+        .info-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+        }
+
+        .info-box.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-left-color: #4caf50;
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .quick-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        .quick-links a:hover {
+            background: rgba(100, 200, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid #a78bfa;
+        }
+
+        .feature-item h4 {
+            color: #a78bfa;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .feature-item p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 0;
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 700px) {
+            .pattern-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .pattern-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .pattern-item .pattern-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+
+        .pattern-item .pattern-desc {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+
+        .pattern-item.bullish {
+            border-left: 3px solid #4caf50;
+        }
+        .pattern-item.bullish .pattern-name {
+            color: #81c784;
+        }
+
+        .pattern-item.bearish {
+            border-left: 3px solid #f44336;
+        }
+        .pattern-item.bearish .pattern-name {
+            color: #e57373;
+        }
+
+        .pattern-item.neutral {
+            border-left: 3px solid #ff9800;
+        }
+        .pattern-item.neutral .pattern-name {
+            color: #ffb74d;
+        }
+
+        .category-section {
+            margin-top: 1.5rem;
+        }
+
+        .category-title {
+            font-size: 1rem;
+            color: #a78bfa;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="index.html" class="back-link">← Zurück zum Dashboard</a>
+            <span class="service-badge" id="serviceStatus">Laden...</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>
+            Candlestick Pattern Service
+        </h1>
+        <p class="subtitle">Automatische Erkennung von Candlestick-Mustern in Echtzeit</p>
+
+        <!-- Übersicht -->
+        <div class="content-card">
+            <h2>Übersicht</h2>
+            <p>
+                Der Candlestick Pattern Service erkennt automatisch klassische Candlestick-Muster in
+                Finanzzeitreihen. Diese Muster werden seit Jahrhunderten in der technischen Analyse
+                verwendet und geben Hinweise auf mögliche Trendwenden oder Fortsetzungen.
+            </p>
+            <p>
+                Der Service analysiert OHLC-Daten (Open, High, Low, Close) und identifiziert über
+                25 verschiedene Candlestick-Patterns in Echtzeit. Die Erkennung erfolgt für alle
+                konfigurierten Symbole und Timeframes.
+            </p>
+
+            <div class="info-box success">
+                <strong>Inference Service:</strong> Dieser Service führt die Pattern-Erkennung durch.
+                Das Training der ML-Modelle erfolgt über den separaten Candlestick-Train Service (Port 3016).
+            </div>
+        </div>
+
+        <!-- Pattern-Kategorien -->
+        <div class="content-card">
+            <h2>Erkannte Pattern-Kategorien</h2>
+
+            <div class="category-section">
+                <h3 class="category-title">Reversal Patterns (Umkehrmuster)</h3>
+                <p>Signalisieren mögliche Trendwenden</p>
+                <div class="pattern-grid">
+                    <div class="pattern-item bullish">
+                        <div class="pattern-name">Hammer</div>
+                        <div class="pattern-desc">Bullish Reversal</div>
+                    </div>
+                    <div class="pattern-item bearish">
+                        <div class="pattern-name">Hanging Man</div>
+                        <div class="pattern-desc">Bearish Reversal</div>
+                    </div>
+                    <div class="pattern-item bullish">
+                        <div class="pattern-name">Morning Star</div>
+                        <div class="pattern-desc">3-Kerzen Bullish</div>
+                    </div>
+                    <div class="pattern-item bearish">
+                        <div class="pattern-name">Evening Star</div>
+                        <div class="pattern-desc">3-Kerzen Bearish</div>
+                    </div>
+                    <div class="pattern-item bullish">
+                        <div class="pattern-name">Bullish Engulfing</div>
+                        <div class="pattern-desc">Starkes Kaufsignal</div>
+                    </div>
+                    <div class="pattern-item bearish">
+                        <div class="pattern-name">Bearish Engulfing</div>
+                        <div class="pattern-desc">Starkes Verkaufssignal</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="category-section">
+                <h3 class="category-title">Continuation Patterns (Fortsetzungsmuster)</h3>
+                <p>Bestätigen den bestehenden Trend</p>
+                <div class="pattern-grid">
+                    <div class="pattern-item bullish">
+                        <div class="pattern-name">Rising Three</div>
+                        <div class="pattern-desc">Bullish Fortsetzung</div>
+                    </div>
+                    <div class="pattern-item bearish">
+                        <div class="pattern-name">Falling Three</div>
+                        <div class="pattern-desc">Bearish Fortsetzung</div>
+                    </div>
+                    <div class="pattern-item bullish">
+                        <div class="pattern-name">Three White Soldiers</div>
+                        <div class="pattern-desc">Starker Aufwärtstrend</div>
+                    </div>
+                    <div class="pattern-item bearish">
+                        <div class="pattern-name">Three Black Crows</div>
+                        <div class="pattern-desc">Starker Abwärtstrend</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="category-section">
+                <h3 class="category-title">Indecision Patterns (Unentschlossenheitsmuster)</h3>
+                <p>Zeigen Marktunsicherheit an</p>
+                <div class="pattern-grid">
+                    <div class="pattern-item neutral">
+                        <div class="pattern-name">Doji</div>
+                        <div class="pattern-desc">Gleichgewicht</div>
+                    </div>
+                    <div class="pattern-item neutral">
+                        <div class="pattern-name">Spinning Top</div>
+                        <div class="pattern-desc">Unentschlossenheit</div>
+                    </div>
+                    <div class="pattern-item neutral">
+                        <div class="pattern-name">Inside Bar</div>
+                        <div class="pattern-desc">Konsolidierung</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="content-card">
+            <h2>Features</h2>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>Echtzeit-Erkennung</h4>
+                    <p>Patterns werden sofort bei neuen Kerzen erkannt und gemeldet</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Multi-Timeframe</h4>
+                    <p>Unterstützt M1 bis MN Timeframes für verschiedene Handelsstile</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Konfidenz-Score</h4>
+                    <p>Jedes Pattern erhält eine Qualitätsbewertung von 0-100%</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Pattern History</h4>
+                    <p>Vollständige Historie aller erkannten Patterns mit Zeitstempel</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Endpoints -->
+        <div class="content-card">
+            <h2>API Endpoints</h2>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/health</span>
+                    <span class="endpoint-desc">Health Check</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/patterns</span>
+                    <span class="endpoint-desc">Alle verfügbaren Pattern-Typen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/detect</span>
+                    <span class="endpoint-desc">Pattern-Erkennung durchführen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/detect/{symbol}</span>
+                    <span class="endpoint-desc">Patterns für Symbol erkennen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/history</span>
+                    <span class="endpoint-desc">Pattern-Historie abrufen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/statistics</span>
+                    <span class="endpoint-desc">Erkennungsstatistiken</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technologie -->
+        <div class="content-card">
+            <h2>Technologie</h2>
+            <p>
+                Der Service kombiniert regelbasierte Erkennung mit maschinellem Lernen für
+                höchste Genauigkeit. Die Basisregeln basieren auf klassischer technischer
+                Analyse, während ML-Modelle die Konfidenz-Scores verfeinern.
+            </p>
+            <div class="tech-stack">
+                <span class="tech-tag">Python 3.11</span>
+                <span class="tech-tag">FastAPI</span>
+                <span class="tech-tag">NumPy</span>
+                <span class="tech-tag">Pandas</span>
+                <span class="tech-tag">PyTorch</span>
+                <span class="tech-tag">Redis Cache</span>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="content-card">
+            <h2>Quick Links</h2>
+            <div class="quick-links">
+                <a href="/candlestick/docs" target="_blank">
+                    📚 Swagger API Docs
+                </a>
+                <a href="config-candlestick.html">
+                    ⚙️ Pattern Konfiguration
+                </a>
+                <a href="service-candlestick-train.html">
+                    🎓 Training Service
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Candlestick Pattern Service · Port 3006 · KI Trading Model</p>
+    </footer>
+
+    <script>
+        async function checkServiceStatus() {
+            const badge = document.getElementById('serviceStatus');
+            try {
+                const response = await fetch('/candlestick/health');
+                if (response.ok) {
+                    badge.textContent = 'Online';
+                    badge.style.background = 'rgba(76, 175, 80, 0.2)';
+                    badge.style.color = '#81c784';
+                } else {
+                    throw new Error('Service unavailable');
+                }
+            } catch (error) {
+                badge.textContent = 'Offline';
+                badge.style.background = 'rgba(244, 67, 54, 0.2)';
+                badge.style.color = '#e57373';
+            }
+        }
+
+        checkServiceStatus();
+        setInterval(checkServiceStatus, 30000);
+    </script>
+</body>
+</html>

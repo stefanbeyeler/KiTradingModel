@@ -1706,7 +1706,7 @@
 
                     container.innerHTML = `
                         <div style="margin-bottom: 0.5rem; color: #888; font-size: 0.85rem;">
-                            ${data.count} Modell${data.count !== 1 ? 'e' : ''} verfugbar
+                            ${data.count} Modell${data.count !== 1 ? 'e' : ''} verfügbar
                         </div>
                         ${sortedModels.map((m, idx) => `
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: ${idx === 0 ? 'rgba(76,175,80,0.1)' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${idx === 0 ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.05)'}; border-radius: 6px; margin-bottom: 0.5rem;">
@@ -2024,7 +2024,7 @@
                     select.lastElementChild.appendChild(option);
                 });
 
-                countSpan.textContent = `(${symbols.length} verfugbar)`;
+                countSpan.textContent = `(${symbols.length} verfügbar)`;
 
             } catch (error) {
                 console.error('Error loading symbols:', error);
