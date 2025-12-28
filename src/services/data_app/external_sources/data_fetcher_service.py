@@ -6,6 +6,48 @@ from typing import Optional
 from loguru import logger
 
 from .base import DataSourceBase, DataSourceResult, DataSourceType, DataPriority
+# Cache imports
+try:
+    from ...cache_service import cache_service, CacheCategory
+    CACHE_AVAILABLE = True
+except ImportError:
+    CACHE_AVAILABLE = False
+    logger.warning("Cache service not available for external sources")
+
+
+# Map data source types to cache categories
+def _get_source_cache_category(source_type):
+    if not CACHE_AVAILABLE:
+        return None
+    mapping = {
+        DataSourceType.ECONOMIC_CALENDAR: CacheCategory.ECONOMIC,
+        DataSourceType.SENTIMENT: CacheCategory.SENTIMENT,
+        DataSourceType.ONCHAIN: CacheCategory.ONCHAIN,
+        DataSourceType.ORDERBOOK: CacheCategory.METADATA,
+        DataSourceType.MACRO_CORRELATION: CacheCategory.METADATA,
+        DataSourceType.HISTORICAL_PATTERN: CacheCategory.METADATA,
+        DataSourceType.TECHNICAL_LEVEL: CacheCategory.INDICATORS,
+        DataSourceType.REGULATORY: CacheCategory.METADATA,
+        DataSourceType.EASYINSIGHT: CacheCategory.METADATA,
+        DataSourceType.CORRELATIONS: CacheCategory.INDICATORS,
+        DataSourceType.VOLATILITY_REGIME: CacheCategory.INDICATORS,
+        DataSourceType.INSTITUTIONAL_FLOW: CacheCategory.METADATA,
+    }
+    return mapping.get(source_type)
+
+
+SOURCE_TTL = {
+    DataSourceType.ORDERBOOK: 60,
+    DataSourceType.MACRO_CORRELATION: 900,
+    DataSourceType.HISTORICAL_PATTERN: 3600,
+    DataSourceType.TECHNICAL_LEVEL: 300,
+    DataSourceType.REGULATORY: 1800,
+    DataSourceType.EASYINSIGHT: 300,
+    DataSourceType.CORRELATIONS: 600,
+    DataSourceType.VOLATILITY_REGIME: 300,
+    DataSourceType.INSTITUTIONAL_FLOW: 1800,
+}
+
 from .economic_calendar import EconomicCalendarSource
 from .onchain_data import OnChainDataSource
 from .sentiment_data import SentimentDataSource
@@ -49,6 +91,59 @@ class DataFetcherService:
             DataSourceType.INSTITUTIONAL_FLOW: InstitutionalFlowDataSource(),
         }
         logger.info(f"DataFetcherService initialized with {len(self._sources)} data sources")
+    async def _get_from_cache(self, source_type, symbol, params):
+        if not CACHE_AVAILABLE:
+            return None
+        category = _get_source_cache_category(source_type)
+        if not category:
+            return None
+        try:
+            cache_key = symbol or "market"
+            cached = await cache_service.get(category, source_type.value, cache_key, params=params)
+            if cached:
+                logger.debug(f"Cache HIT for {source_type.value}/{cache_key}")
+                return cached
+        except Exception as e:
+            logger.warning(f"Cache GET error for {source_type.value}: {e}")
+        return None
+
+    async def _set_to_cache(self, source_type, symbol, params, data):
+        if not CACHE_AVAILABLE:
+            return False
+        category = _get_source_cache_category(source_type)
+        if not category:
+            return False
+        try:
+            cache_key = symbol or "market"
+            ttl = SOURCE_TTL.get(source_type)
+            await cache_service.set(category, data, source_type.value, cache_key, params=params, ttl=ttl)
+            logger.debug(f"Cache SET for {source_type.value}/{cache_key}")
+            return True
+        except Exception as e:
+            logger.warning(f"Cache SET error for {source_type.value}: {e}")
+            return False
+
+    async def _fetch_with_cache(self, source_type, symbol, params, fetch_func):
+        cached = await self._get_from_cache(source_type, symbol, params)
+        if cached is not None:
+            results = []
+            for doc in cached:
+                results.append(DataSourceResult(
+                    source_type=source_type,
+                    content=doc.get("content", ""),
+                    priority=DataPriority(doc.get("priority", "medium")),
+                    timestamp=datetime.fromisoformat(doc["timestamp"]) if doc.get("timestamp") else datetime.utcnow(),
+                    metadata=doc.get("metadata", {}),
+                    symbol=doc.get("symbol"),
+
+                ))
+            return results
+        results = await fetch_func()
+        if results:
+            docs = [r.to_rag_document() for r in results]
+            await self._set_to_cache(source_type, symbol, params, docs)
+        return results
+
 
     async def fetch_all(
         self,
@@ -144,8 +239,10 @@ class DataFetcherService:
         days_back: int = 1
     ) -> list[DataSourceResult]:
         """Fetch economic calendar events."""
-        return await self._sources[DataSourceType.ECONOMIC_CALENDAR].fetch(
-            symbol, days_ahead=days_ahead, days_back=days_back
+        params = {"days_ahead": days_ahead, "days_back": days_back}
+        return await self._fetch_with_cache(
+            DataSourceType.ECONOMIC_CALENDAR, symbol, params,
+            lambda: self._sources[DataSourceType.ECONOMIC_CALENDAR].fetch(symbol, days_ahead=days_ahead, days_back=days_back)
         )
 
     async def fetch_onchain(
@@ -157,12 +254,10 @@ class DataFetcherService:
         include_defi: bool = True
     ) -> list[DataSourceResult]:
         """Fetch on-chain data for a cryptocurrency."""
-        return await self._sources[DataSourceType.ONCHAIN].fetch(
-            symbol,
-            include_whale_alerts=include_whale_alerts,
-            include_exchange_flows=include_exchange_flows,
-            include_mining=include_mining,
-            include_defi=include_defi
+        params = {"whale": include_whale_alerts, "exchange": include_exchange_flows, "mining": include_mining, "defi": include_defi}
+        return await self._fetch_with_cache(
+            DataSourceType.ONCHAIN, symbol, params,
+            lambda: self._sources[DataSourceType.ONCHAIN].fetch(symbol, include_whale_alerts=include_whale_alerts, include_exchange_flows=include_exchange_flows, include_mining=include_mining, include_defi=include_defi)
         )
 
     async def fetch_sentiment(
@@ -174,12 +269,10 @@ class DataFetcherService:
         include_volatility: bool = True
     ) -> list[DataSourceResult]:
         """Fetch sentiment data."""
-        return await self._sources[DataSourceType.SENTIMENT].fetch(
-            symbol,
-            include_fear_greed=include_fear_greed,
-            include_social=include_social,
-            include_options=include_options,
-            include_volatility=include_volatility
+        params = {"fg": include_fear_greed, "social": include_social, "options": include_options, "vol": include_volatility}
+        return await self._fetch_with_cache(
+            DataSourceType.SENTIMENT, symbol, params,
+            lambda: self._sources[DataSourceType.SENTIMENT].fetch(symbol, include_fear_greed=include_fear_greed, include_social=include_social, include_options=include_options, include_volatility=include_volatility)
         )
 
     async def fetch_orderbook(
@@ -190,11 +283,10 @@ class DataFetcherService:
         include_cvd: bool = True
     ) -> list[DataSourceResult]:
         """Fetch orderbook and liquidity data."""
-        return await self._sources[DataSourceType.ORDERBOOK].fetch(
-            symbol,
-            depth=depth,
-            include_liquidations=include_liquidations,
-            include_cvd=include_cvd
+        params = {"depth": depth, "liq": include_liquidations, "cvd": include_cvd}
+        return await self._fetch_with_cache(
+            DataSourceType.ORDERBOOK, symbol, params,
+            lambda: self._sources[DataSourceType.ORDERBOOK].fetch(symbol, depth=depth, include_liquidations=include_liquidations, include_cvd=include_cvd)
         )
 
     async def fetch_macro(
@@ -206,12 +298,10 @@ class DataFetcherService:
         include_sectors: bool = True
     ) -> list[DataSourceResult]:
         """Fetch macro and correlation data."""
-        return await self._sources[DataSourceType.MACRO_CORRELATION].fetch(
-            symbol,
-            include_dxy=include_dxy,
-            include_bonds=include_bonds,
-            include_correlations=include_correlations,
-            include_sectors=include_sectors
+        params = {"dxy": include_dxy, "bonds": include_bonds, "corr": include_correlations, "sectors": include_sectors}
+        return await self._fetch_with_cache(
+            DataSourceType.MACRO_CORRELATION, symbol, params,
+            lambda: self._sources[DataSourceType.MACRO_CORRELATION].fetch(symbol, include_dxy=include_dxy, include_bonds=include_bonds, include_correlations=include_correlations, include_sectors=include_sectors)
         )
 
     async def fetch_historical_patterns(
@@ -223,12 +313,10 @@ class DataFetcherService:
         include_comparable: bool = True
     ) -> list[DataSourceResult]:
         """Fetch historical pattern data."""
-        return await self._sources[DataSourceType.HISTORICAL_PATTERN].fetch(
-            symbol,
-            include_seasonality=include_seasonality,
-            include_drawdowns=include_drawdowns,
-            include_events=include_events,
-            include_comparable=include_comparable
+        params = {"season": include_seasonality, "dd": include_drawdowns, "events": include_events, "comp": include_comparable}
+        return await self._fetch_with_cache(
+            DataSourceType.HISTORICAL_PATTERN, symbol, params,
+            lambda: self._sources[DataSourceType.HISTORICAL_PATTERN].fetch(symbol, include_seasonality=include_seasonality, include_drawdowns=include_drawdowns, include_events=include_events, include_comparable=include_comparable)
         )
 
     async def fetch_technical_levels(
@@ -241,13 +329,10 @@ class DataFetcherService:
         include_ma: bool = True
     ) -> list[DataSourceResult]:
         """Fetch technical price levels."""
-        return await self._sources[DataSourceType.TECHNICAL_LEVEL].fetch(
-            symbol,
-            include_sr=include_sr,
-            include_fib=include_fib,
-            include_pivots=include_pivots,
-            include_vwap=include_vwap,
-            include_ma=include_ma
+        params = {"sr": include_sr, "fib": include_fib, "pivots": include_pivots, "vwap": include_vwap, "ma": include_ma}
+        return await self._fetch_with_cache(
+            DataSourceType.TECHNICAL_LEVEL, symbol, params,
+            lambda: self._sources[DataSourceType.TECHNICAL_LEVEL].fetch(symbol, include_sr=include_sr, include_fib=include_fib, include_pivots=include_pivots, include_vwap=include_vwap, include_ma=include_ma)
         )
 
     async def fetch_regulatory(
@@ -259,12 +344,10 @@ class DataFetcherService:
         include_enforcement: bool = True
     ) -> list[DataSourceResult]:
         """Fetch regulatory updates."""
-        return await self._sources[DataSourceType.REGULATORY].fetch(
-            symbol,
-            include_sec=include_sec,
-            include_etf=include_etf,
-            include_global=include_global,
-            include_enforcement=include_enforcement
+        params = {"sec": include_sec, "etf": include_etf, "global": include_global, "enforcement": include_enforcement}
+        return await self._fetch_with_cache(
+            DataSourceType.REGULATORY, symbol, params,
+            lambda: self._sources[DataSourceType.REGULATORY].fetch(symbol, include_sec=include_sec, include_etf=include_etf, include_global=include_global, include_enforcement=include_enforcement)
         )
 
     async def fetch_easyinsight(
@@ -275,11 +358,10 @@ class DataFetcherService:
         include_mt5_logs: bool = True
     ) -> list[DataSourceResult]:
         """Fetch EasyInsight managed symbols and MT5 logs."""
-        return await self._sources[DataSourceType.EASYINSIGHT].fetch(
-            symbol,
-            include_symbols=include_symbols,
-            include_stats=include_stats,
-            include_mt5_logs=include_mt5_logs
+        params = {"symbols": include_symbols, "stats": include_stats, "mt5_logs": include_mt5_logs}
+        return await self._fetch_with_cache(
+            DataSourceType.EASYINSIGHT, symbol, params,
+            lambda: self._sources[DataSourceType.EASYINSIGHT].fetch(symbol, include_symbols=include_symbols, include_stats=include_stats, include_mt5_logs=include_mt5_logs)
         )
 
     async def fetch_correlations(
@@ -290,11 +372,10 @@ class DataFetcherService:
         include_regime: bool = True
     ) -> list[DataSourceResult]:
         """Fetch asset correlation data."""
-        return await self._sources[DataSourceType.CORRELATIONS].fetch(
-            symbol,
-            timeframe=timeframe,
-            include_matrix=include_matrix,
-            include_regime=include_regime
+        params = {"timeframe": timeframe, "matrix": include_matrix, "regime": include_regime}
+        return await self._fetch_with_cache(
+            DataSourceType.CORRELATIONS, symbol, params,
+            lambda: self._sources[DataSourceType.CORRELATIONS].fetch(symbol, timeframe=timeframe, include_matrix=include_matrix, include_regime=include_regime)
         )
 
     async def fetch_volatility_regime(
@@ -306,12 +387,10 @@ class DataFetcherService:
         include_regime: bool = True
     ) -> list[DataSourceResult]:
         """Fetch volatility regime data."""
-        return await self._sources[DataSourceType.VOLATILITY_REGIME].fetch(
-            symbol,
-            include_vix=include_vix,
-            include_atr=include_atr,
-            include_bollinger=include_bollinger,
-            include_regime=include_regime
+        params = {"vix": include_vix, "atr": include_atr, "bb": include_bollinger, "regime": include_regime}
+        return await self._fetch_with_cache(
+            DataSourceType.VOLATILITY_REGIME, symbol, params,
+            lambda: self._sources[DataSourceType.VOLATILITY_REGIME].fetch(symbol, include_vix=include_vix, include_atr=include_atr, include_bollinger=include_bollinger, include_regime=include_regime)
         )
 
     async def fetch_institutional_flow(
@@ -323,12 +402,10 @@ class DataFetcherService:
         include_13f: bool = False
     ) -> list[DataSourceResult]:
         """Fetch institutional flow data (COT, ETF flows, whale tracking)."""
-        return await self._sources[DataSourceType.INSTITUTIONAL_FLOW].fetch(
-            symbol,
-            include_cot=include_cot,
-            include_etf=include_etf,
-            include_whale=include_whale,
-            include_13f=include_13f
+        params = {"cot": include_cot, "etf": include_etf, "whale": include_whale, "13f": include_13f}
+        return await self._fetch_with_cache(
+            DataSourceType.INSTITUTIONAL_FLOW, symbol, params,
+            lambda: self._sources[DataSourceType.INSTITUTIONAL_FLOW].fetch(symbol, include_cot=include_cot, include_etf=include_etf, include_whale=include_whale, include_13f=include_13f)
         )
 
     async def fetch_trading_context(

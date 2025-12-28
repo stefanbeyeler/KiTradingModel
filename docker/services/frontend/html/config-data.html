@@ -1093,23 +1093,122 @@
                 </div>
             </div>
 
-            <!-- Source Selection -->
+            <!-- Source Overview Cards -->
             <div class="card" style="margin-bottom: 1.5rem;">
                 <div class="card-header">
-                    <h2 class="card-title">External Data Sources</h2>
+                    <h2 class="card-title">Datenquellen-Übersicht</h2>
                     <div style="display: flex; gap: 0.5rem;">
                         <button class="btn btn-success" onclick="fetchAllExternalSources()">Alle abrufen</button>
                         <button class="btn btn-primary" onclick="fetchTradingContext()">Trading Context</button>
                     </div>
                 </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; padding: 1rem;">
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #64c8ff;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #64c8ff;">Economic Calendar</strong>
+                            <span class="badge badge-active" id="status-economic-calendar">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Fed, ECB, CPI, NFP, GDP Events</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('economic-calendar')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ffc107;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #ffc107;">Sentiment</strong>
+                            <span class="badge badge-active" id="status-sentiment">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Fear & Greed, Social Media, VIX</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('sentiment')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #81c784;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #81c784;">On-Chain</strong>
+                            <span class="badge badge-active" id="status-onchain">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Whale Alerts, Exchange Flows</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('onchain')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ce93d8;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #ce93d8;">Orderbook</strong>
+                            <span class="badge badge-active" id="status-orderbook">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Bid/Ask Walls, Liquidations</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('orderbook')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #64b5f6;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #64b5f6;">Macro</strong>
+                            <span class="badge badge-active" id="status-macro">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">DXY, Bond Yields, Korrelationen</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('macro')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ffb74d;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #ffb74d;">Historical Patterns</strong>
+                            <span class="badge badge-active" id="status-historical-patterns">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Saisonalität, Drawdowns</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('historical-patterns')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #4dd0e1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #4dd0e1;">Technical Levels</strong>
+                            <span class="badge badge-active" id="status-technical-levels">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">S/R, Fibonacci, Pivots</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('technical-levels')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #e57373;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #e57373;">Regulatory</strong>
+                            <span class="badge badge-active" id="status-regulatory">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">SEC, ETF News, Regulation</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('regulatory')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #a1887f;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #a1887f;">EasyInsight</strong>
+                            <span class="badge badge-active" id="status-easyinsight">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Managed Symbols, MT5 Logs</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('easyinsight')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #7e57c2;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #7e57c2;">Correlations</strong>
+                            <span class="badge badge-active" id="status-correlations">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Cross-Asset, Divergenzen, Hedge</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('correlations')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ff7043;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #ff7043;">Volatility Regime</strong>
+                            <span class="badge badge-active" id="status-volatility-regime">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">VIX, ATR, Position Sizing</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('volatility-regime')">Abrufen</button>
+                    </div>
+                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #26a69a;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #26a69a;">Institutional Flow</strong>
+                            <span class="badge badge-active" id="status-institutional-flow">-</span>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">COT, ETF Flows, Whale</p>
+                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('institutional-flow')">Abrufen</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Source Selection -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h2 class="card-title">Datenquelle abrufen</h2>
+                </div>
                 <div style="padding: 1rem;">
                     <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Symbol (optional)</label>
-                            <select class="form-select" id="external-symbol">
-                                <option value="">Alle / Kein Symbol</option>
-                            </select>
-                        </div>
                         <div class="form-group">
                             <label class="form-label">Datenquelle</label>
                             <select class="form-select" id="external-source-select" onchange="updateExternalSourceOptions()">
@@ -1127,6 +1226,22 @@
                                 <option value="institutional-flow">Institutional Flow</option>
                             </select>
                         </div>
+                        <div class="form-group" id="days-ahead-group">
+                            <label class="form-label">Tage voraus</label>
+                            <select class="form-select" id="ec-days-ahead">
+                                <option value="1">1 Tag</option>
+                                <option value="3">3 Tage</option>
+                                <option value="7" selected>7 Tage</option>
+                                <option value="14">14 Tage</option>
+                                <option value="30">30 Tage</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="external-symbol-group">
+                            <label class="form-label">Symbol</label>
+                            <select class="form-select" id="external-symbol">
+                                <option value="">Alle / Kein Symbol</option>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Source-specific options -->
@@ -1134,16 +1249,6 @@
                         <!-- Economic Calendar Options -->
                         <div id="options-economic-calendar" class="source-options">
                             <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label">Tage voraus</label>
-                                    <select class="form-select" id="ec-days-ahead">
-                                        <option value="1">1 Tag</option>
-                                        <option value="3">3 Tage</option>
-                                        <option value="7" selected>7 Tage</option>
-                                        <option value="14">14 Tage</option>
-                                        <option value="30">30 Tage</option>
-                                    </select>
-                                </div>
                                 <div class="form-group">
                                     <label class="form-label">Optionen</label>
                                     <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
@@ -1351,111 +1456,6 @@
                 <div style="padding: 2rem; text-align: center; color: #f44336;">
                     <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#9888;</div>
                     <p id="external-error-msg">Fehler beim Laden der Daten</p>
-                </div>
-            </div>
-
-            <!-- Source Overview Cards -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Datenquellen-Übersicht</h2>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; padding: 1rem;">
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #64c8ff;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #64c8ff;">Economic Calendar</strong>
-                            <span class="badge badge-active" id="status-economic-calendar">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Fed, ECB, CPI, NFP, GDP Events</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('economic-calendar')">Abrufen</button>
-                    </div>
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ffc107;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #ffc107;">Sentiment</strong>
-                            <span class="badge badge-active" id="status-sentiment">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Fear & Greed, Social Media, VIX</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('sentiment')">Abrufen</button>
-                    </div>
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #81c784;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #81c784;">On-Chain</strong>
-                            <span class="badge badge-active" id="status-onchain">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Whale Alerts, Exchange Flows</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('onchain')">Abrufen</button>
-                    </div>
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ce93d8;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #ce93d8;">Orderbook</strong>
-                            <span class="badge badge-active" id="status-orderbook">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Bid/Ask Walls, Liquidations</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('orderbook')">Abrufen</button>
-                    </div>
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #64b5f6;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #64b5f6;">Macro</strong>
-                            <span class="badge badge-active" id="status-macro">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">DXY, Bond Yields, Korrelationen</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('macro')">Abrufen</button>
-                    </div>
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ffb74d;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #ffb74d;">Historical Patterns</strong>
-                            <span class="badge badge-active" id="status-historical-patterns">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Saisonalität, Drawdowns</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('historical-patterns')">Abrufen</button>
-                    </div>
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #4dd0e1;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #4dd0e1;">Technical Levels</strong>
-                            <span class="badge badge-active" id="status-technical-levels">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">S/R, Fibonacci, Pivots</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('technical-levels')">Abrufen</button>
-                    </div>
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #e57373;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #e57373;">Regulatory</strong>
-                            <span class="badge badge-active" id="status-regulatory">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">SEC, ETF News, Regulation</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('regulatory')">Abrufen</button>
-                    </div>
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #a1887f;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #a1887f;">EasyInsight</strong>
-                            <span class="badge badge-active" id="status-easyinsight">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Managed Symbols, MT5 Logs</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('easyinsight')">Abrufen</button>
-                    </div>
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #7e57c2;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #7e57c2;">Correlations</strong>
-                            <span class="badge badge-active" id="status-correlations">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">Cross-Asset, Divergenzen, Hedge</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('correlations')">Abrufen</button>
-                    </div>
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #ff7043;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #ff7043;">Volatility Regime</strong>
-                            <span class="badge badge-active" id="status-volatility-regime">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">VIX, ATR, Position Sizing</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('volatility-regime')">Abrufen</button>
-                    </div>
-                    <div class="source-card" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; border-left: 3px solid #26a69a;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <strong style="color: #26a69a;">Institutional Flow</strong>
-                            <span class="badge badge-active" id="status-institutional-flow">-</span>
-                        </div>
-                        <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.5rem;">COT, ETF Flows, Whale</p>
-                        <button class="btn btn-sm btn-primary" onclick="quickFetchSource('institutional-flow')">Abrufen</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -4949,6 +4949,25 @@
         // Update source options visibility
         function updateExternalSourceOptions() {
             const source = document.getElementById('external-source-select').value;
+
+            // Sources that require a symbol
+            const symbolRequired = ['onchain', 'orderbook', 'technical-levels', 'correlations', 'volatility-regime'];
+            // Sources that use "Tage voraus"
+            const useDaysAhead = ['economic-calendar', 'regulatory', 'historical-patterns'];
+
+            // Show/hide Symbol dropdown
+            const symbolGroup = document.getElementById('external-symbol-group');
+            if (symbolGroup) {
+                symbolGroup.style.display = symbolRequired.includes(source) ? 'block' : 'none';
+            }
+
+            // Show/hide "Tage voraus" dropdown
+            const daysGroup = document.getElementById('days-ahead-group');
+            if (daysGroup) {
+                daysGroup.style.display = useDaysAhead.includes(source) ? 'block' : 'none';
+            }
+
+            // Show/hide source-specific options
             document.querySelectorAll('.source-options').forEach(el => el.style.display = 'none');
             const optionsEl = document.getElementById(`options-${source}`);
             if (optionsEl) optionsEl.style.display = 'block';
@@ -5788,8 +5807,11 @@
             populateExplorerSymbols();
             updateIndicatorOptions();
         }, 1000);
-        // Populate external symbols
-        setTimeout(populateExternalSymbols, 1200);
+        // Populate external symbols and init dropdowns visibility
+        setTimeout(() => {
+            populateExternalSymbols();
+            updateExternalSourceOptions();
+        }, 1200);
         // Check external sources availability
         setTimeout(checkExternalSourcesAvailability, 1500);
         // Load cache overview and prefetch status when tab is visible
