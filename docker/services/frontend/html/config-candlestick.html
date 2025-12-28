@@ -361,6 +361,53 @@
             font-weight: 500;
         }
 
+        /* Pattern SVG Example */
+        .pattern-example {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 2px;
+            height: 50px;
+            margin: 0.75rem 0;
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .pattern-example .candle {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .pattern-example .wick {
+            width: 1px;
+            background: #888;
+        }
+
+        .pattern-example .body {
+            width: 8px;
+            min-height: 2px;
+            border-radius: 1px;
+        }
+
+        .pattern-example .body.bullish {
+            background: #81c784;
+            border: 1px solid #4caf50;
+        }
+
+        .pattern-example .body.bearish {
+            background: #e57373;
+            border: 1px solid #f44336;
+        }
+
+        .pattern-example .body.doji {
+            background: #888;
+            border: 1px solid #666;
+            height: 2px !important;
+        }
+
         /* Toast */
         .toast {
             position: fixed;
@@ -581,6 +628,64 @@
         const DATA_API = '/data/api/v1';
         let isAutoScanRunning = false;
 
+        // Pattern visual examples - each candle: [upperWick, body, lowerWick, type]
+        // type: 'bullish', 'bearish', 'doji'
+        const patternExamples = {
+            // Reversal Bullish
+            'hammer': [[2, 8, 22, 'bullish']],
+            'inverted_hammer': [[22, 8, 2, 'bullish']],
+            'bullish_engulfing': [[4, 18, 4, 'bearish'], [2, 28, 2, 'bullish']],
+            'morning_star': [[4, 20, 4, 'bearish'], [8, 4, 8, 'doji'], [2, 22, 4, 'bullish']],
+            'three_white_soldiers': [[2, 14, 2, 'bullish'], [2, 16, 2, 'bullish'], [2, 18, 2, 'bullish']],
+            'piercing_line': [[4, 22, 4, 'bearish'], [4, 18, 2, 'bullish']],
+            'tweezer_bottom': [[4, 16, 12, 'bearish'], [4, 16, 12, 'bullish']],
+            'dragonfly_doji': [[0, 2, 28, 'doji']],
+
+            // Reversal Bearish
+            'hanging_man': [[2, 8, 22, 'bearish']],
+            'shooting_star': [[22, 8, 2, 'bearish']],
+            'bearish_engulfing': [[2, 18, 4, 'bullish'], [2, 28, 2, 'bearish']],
+            'evening_star': [[2, 20, 4, 'bullish'], [8, 4, 8, 'doji'], [4, 22, 2, 'bearish']],
+            'three_black_crows': [[2, 14, 2, 'bearish'], [2, 16, 2, 'bearish'], [2, 18, 2, 'bearish']],
+            'dark_cloud_cover': [[2, 22, 4, 'bullish'], [2, 18, 4, 'bearish']],
+            'tweezer_top': [[12, 16, 4, 'bullish'], [12, 16, 4, 'bearish']],
+            'gravestone_doji': [[28, 2, 0, 'doji']],
+
+            // Continuation
+            'rising_three_methods': [[2, 24, 2, 'bullish'], [4, 8, 2, 'bearish'], [4, 6, 2, 'bearish'], [4, 8, 2, 'bearish'], [2, 26, 2, 'bullish']],
+            'falling_three_methods': [[2, 24, 2, 'bearish'], [2, 8, 4, 'bullish'], [2, 6, 4, 'bullish'], [2, 8, 4, 'bullish'], [2, 26, 2, 'bearish']],
+            'upside_tasuki_gap': [[2, 16, 2, 'bullish'], [2, 16, 2, 'bullish'], [4, 12, 2, 'bearish']],
+            'downside_tasuki_gap': [[2, 16, 2, 'bearish'], [2, 16, 2, 'bearish'], [2, 12, 4, 'bullish']],
+            'mat_hold': [[2, 20, 2, 'bullish'], [4, 8, 2, 'bearish'], [4, 6, 4, 'bearish'], [2, 8, 4, 'bullish'], [2, 22, 2, 'bullish']],
+            'bullish_marubozu': [[0, 30, 0, 'bullish']],
+            'bearish_marubozu': [[0, 30, 0, 'bearish']],
+
+            // Indecision
+            'doji': [[12, 2, 12, 'doji']],
+            'long_legged_doji': [[16, 2, 16, 'doji']],
+            'spinning_top': [[10, 8, 10, 'bullish']],
+            'high_wave': [[14, 6, 14, 'doji']],
+            'harami': [[2, 24, 2, 'bearish'], [6, 10, 6, 'bullish']],
+            'harami_cross': [[2, 24, 2, 'bearish'], [8, 2, 8, 'doji']],
+            'inside_bar': [[4, 20, 4, 'bearish'], [6, 12, 6, 'bullish']],
+
+            // Default fallback
+            'default': [[8, 12, 8, 'doji']]
+        };
+
+        // Generate HTML for pattern candles
+        function renderPatternExample(patternType) {
+            const candles = patternExamples[patternType] || patternExamples['default'];
+
+            return `<div class="pattern-example">${candles.map(([upperWick, body, lowerWick, type]) => `
+                <div class="candle">
+                    <div class="wick" style="height: ${upperWick}px;"></div>
+                    <div class="body ${type}" style="height: ${body}px;"></div>
+                    <div class="wick" style="height: ${lowerWick}px;"></div>
+                </div>
+            `).join('')}</div>`;
+        }
+
         // Show toast notification
         function showToast(message, type = 'info') {
             const toast = document.getElementById('toast');
@@ -686,6 +791,7 @@
                             <span class="badge badge-${p.direction}">${p.direction}</span>
                         </div>
                     </div>
+                    ${renderPatternExample(p.type)}
                     <p class="pattern-description">${p.description}</p>
                 </div>
             `).join('');
