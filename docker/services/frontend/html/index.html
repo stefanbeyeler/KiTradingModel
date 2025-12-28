@@ -500,6 +500,8 @@
         /* Data Flow Diagram Styles - Horizontal Layout */
         .dataflow-section {
             margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
         }
 
         .dataflow-card {
@@ -508,6 +510,174 @@
             border-radius: 12px;
             padding: 1rem 1.5rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            flex: 1;
+        }
+
+        /* Watchdog Panel neben Datenfluss */
+        .watchdog-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            border: 1px solid rgba(236, 72, 153, 0.3);
+            min-width: 280px;
+            max-width: 320px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .watchdog-panel h3 {
+            font-size: 1rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #ec4899;
+        }
+
+        .watchdog-panel .watchdog-status-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .watchdog-panel .watchdog-status-badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .watchdog-panel .watchdog-status-badge.healthy {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .watchdog-panel .watchdog-status-badge.unhealthy {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .watchdog-panel .watchdog-status-badge.loading {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .watchdog-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .watchdog-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.4rem 0.6rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            font-size: 0.75rem;
+        }
+
+        .watchdog-stat .stat-label {
+            opacity: 0.7;
+        }
+
+        .watchdog-stat .stat-value {
+            font-weight: 600;
+        }
+
+        .watchdog-stat .stat-value.healthy {
+            color: #10b981;
+        }
+
+        .watchdog-stat .stat-value.warning {
+            color: #f59e0b;
+        }
+
+        .watchdog-stat .stat-value.error {
+            color: #ef4444;
+        }
+
+        .watchdog-services-mini {
+            margin-top: 0.8rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.3rem;
+        }
+
+        .watchdog-service-dot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.3rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            font-size: 0.55rem;
+        }
+
+        .watchdog-service-dot .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-bottom: 0.2rem;
+        }
+
+        .watchdog-service-dot .dot.healthy {
+            background: #10b981;
+            box-shadow: 0 0 4px rgba(16, 185, 129, 0.6);
+        }
+
+        .watchdog-service-dot .dot.unhealthy {
+            background: #ef4444;
+            box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+        }
+
+        .watchdog-service-dot .dot.loading {
+            background: #f59e0b;
+            animation: pulse-status 1.5s ease-in-out infinite;
+        }
+
+        .watchdog-panel-links {
+            margin-top: 1rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .watchdog-panel-links a {
+            flex: 1;
+            text-align: center;
+            padding: 0.4rem 0.6rem;
+            background: rgba(236, 72, 153, 0.15);
+            border: 1px solid rgba(236, 72, 153, 0.3);
+            border-radius: 6px;
+            color: #ec4899;
+            font-size: 0.7rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .watchdog-panel-links a:hover {
+            background: rgba(236, 72, 153, 0.25);
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 1400px) {
+            .dataflow-section {
+                flex-direction: column;
+            }
+            .watchdog-panel {
+                max-width: none;
+            }
+            .watchdog-services-mini {
+                grid-template-columns: repeat(6, 1fr);
+            }
         }
 
         .dataflow-card h3 {
@@ -1174,6 +1344,75 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Watchdog Panel -->
+            <div class="watchdog-panel">
+                <h3><span class="metric-icon">&#128065;</span> Watchdog</h3>
+                <div class="watchdog-status-header">
+                    <span>Service Status</span>
+                    <span class="watchdog-status-badge loading" id="wp-watchdog-status">Laden...</span>
+                </div>
+                <div class="watchdog-stats">
+                    <div class="watchdog-stat">
+                        <span class="stat-label">Port</span>
+                        <span class="stat-value">3010</span>
+                    </div>
+                    <div class="watchdog-stat">
+                        <span class="stat-label">Services Online</span>
+                        <span class="stat-value" id="wp-services-online">-</span>
+                    </div>
+                    <div class="watchdog-stat">
+                        <span class="stat-label">Telegram</span>
+                        <span class="stat-value" id="wp-telegram-status">-</span>
+                    </div>
+                    <div class="watchdog-stat">
+                        <span class="stat-label">Letzte Pruefung</span>
+                        <span class="stat-value" id="wp-last-check">-</span>
+                    </div>
+                </div>
+                <div class="watchdog-services-mini">
+                    <div class="watchdog-service-dot">
+                        <span class="dot loading" id="wp-dot-data"></span>
+                        <span>Data</span>
+                    </div>
+                    <div class="watchdog-service-dot">
+                        <span class="dot loading" id="wp-dot-nhits"></span>
+                        <span>NHITS</span>
+                    </div>
+                    <div class="watchdog-service-dot">
+                        <span class="dot loading" id="wp-dot-tcn"></span>
+                        <span>TCN</span>
+                    </div>
+                    <div class="watchdog-service-dot">
+                        <span class="dot loading" id="wp-dot-hmm"></span>
+                        <span>HMM</span>
+                    </div>
+                    <div class="watchdog-service-dot">
+                        <span class="dot loading" id="wp-dot-embedder"></span>
+                        <span>Embed</span>
+                    </div>
+                    <div class="watchdog-service-dot">
+                        <span class="dot loading" id="wp-dot-candlestick"></span>
+                        <span>Candle</span>
+                    </div>
+                    <div class="watchdog-service-dot">
+                        <span class="dot loading" id="wp-dot-rag"></span>
+                        <span>RAG</span>
+                    </div>
+                    <div class="watchdog-service-dot">
+                        <span class="dot loading" id="wp-dot-llm"></span>
+                        <span>LLM</span>
+                    </div>
+                    <div class="watchdog-service-dot">
+                        <span class="dot loading" id="wp-dot-redis"></span>
+                        <span>Redis</span>
+                    </div>
+                </div>
+                <div class="watchdog-panel-links">
+                    <a href="/service-watchdog.html" target="_blank">Info</a>
+                    <a href="/watchdog/docs" target="_blank">API Docs</a>
+                </div>
+            </div>
         </div>
 
         <!-- System Resources Section (Combined CPU, GPU, Storage) -->
@@ -1690,6 +1929,29 @@
                     dfStatusEl.classList.add(isHealthy ? 'healthy' : 'unhealthy');
                 }
             }
+            // Update corresponding Watchdog Panel dot
+            updateWatchdogPanelDot(service, isHealthy);
+        }
+
+        function updateWatchdogPanelDot(service, isHealthy) {
+            const dotMapping = {
+                'data': 'wp-dot-data',
+                'nhits': 'wp-dot-nhits',
+                'tcn': 'wp-dot-tcn',
+                'hmm': 'wp-dot-hmm',
+                'embedder': 'wp-dot-embedder',
+                'candlestick': 'wp-dot-candlestick',
+                'rag': 'wp-dot-rag',
+                'llm': 'wp-dot-llm'
+            };
+            const dotId = dotMapping[service];
+            if (dotId) {
+                const dotEl = document.getElementById(dotId);
+                if (dotEl) {
+                    dotEl.classList.remove('loading', 'healthy', 'unhealthy');
+                    dotEl.classList.add(isHealthy ? 'healthy' : 'unhealthy');
+                }
+            }
         }
 
         // Fetch with timeout helper
@@ -1753,6 +2015,22 @@
             if (data) {
                 document.getElementById('data-easyinsight').textContent = data.easyinsight_api ? 'Verbunden' : '-';
                 document.getElementById('data-sync').textContent = data.sync_service_status || '-';
+
+                // Update Redis status in Watchdog Panel
+                const redisDot = document.getElementById('wp-dot-redis');
+                if (redisDot) {
+                    redisDot.classList.remove('loading', 'healthy', 'unhealthy');
+                    // Check if redis_connected is in health response
+                    const redisHealthy = data.redis_connected !== false;
+                    redisDot.classList.add(redisHealthy ? 'healthy' : 'unhealthy');
+                }
+            } else {
+                // Data service offline - Redis status unknown
+                const redisDot = document.getElementById('wp-dot-redis');
+                if (redisDot) {
+                    redisDot.classList.remove('loading', 'healthy');
+                    redisDot.classList.add('unhealthy');
+                }
             }
         }
 
@@ -1964,6 +2242,101 @@
                 }
 
                 telegramEl.textContent = data.telegram_enabled ? 'Aktiv' : 'Inaktiv';
+
+                // Update Watchdog Panel (neben Datenfluss)
+                updateWatchdogPanel(data);
+            } else {
+                // Watchdog offline - Panel aktualisieren
+                updateWatchdogPanelOffline();
+            }
+        }
+
+        function updateWatchdogPanel(data) {
+            // Status Badge
+            const statusBadge = document.getElementById('wp-watchdog-status');
+            if (statusBadge) {
+                statusBadge.textContent = 'Online';
+                statusBadge.classList.remove('loading', 'unhealthy');
+                statusBadge.classList.add('healthy');
+            }
+
+            // Services Online
+            const servicesOnline = document.getElementById('wp-services-online');
+            if (servicesOnline && data.services_monitored !== undefined) {
+                const healthy = data.healthy_count || 0;
+                const total = data.services_monitored;
+                servicesOnline.textContent = `${healthy}/${total}`;
+                servicesOnline.classList.remove('healthy', 'warning', 'error');
+                if (healthy === total) {
+                    servicesOnline.classList.add('healthy');
+                } else if (healthy >= total / 2) {
+                    servicesOnline.classList.add('warning');
+                } else {
+                    servicesOnline.classList.add('error');
+                }
+            }
+
+            // Telegram Status
+            const telegramStatus = document.getElementById('wp-telegram-status');
+            if (telegramStatus) {
+                telegramStatus.textContent = data.telegram_enabled ? 'Aktiv' : 'Inaktiv';
+                telegramStatus.classList.remove('healthy', 'warning');
+                telegramStatus.classList.add(data.telegram_enabled ? 'healthy' : 'warning');
+            }
+
+            // Last Check
+            const lastCheck = document.getElementById('wp-last-check');
+            if (lastCheck) {
+                const now = new Date();
+                lastCheck.textContent = now.toLocaleTimeString('de-CH');
+            }
+        }
+
+        function updateWatchdogPanelOffline() {
+            const statusBadge = document.getElementById('wp-watchdog-status');
+            if (statusBadge) {
+                statusBadge.textContent = 'Offline';
+                statusBadge.classList.remove('loading', 'healthy');
+                statusBadge.classList.add('unhealthy');
+            }
+
+            const servicesOnline = document.getElementById('wp-services-online');
+            if (servicesOnline) {
+                servicesOnline.textContent = '-';
+                servicesOnline.classList.remove('healthy', 'warning');
+                servicesOnline.classList.add('error');
+            }
+        }
+
+        // Update Watchdog Panel mini service dots based on dataflow status
+        function updateWatchdogPanelDots() {
+            const dotMapping = {
+                'data': 'wp-dot-data',
+                'nhits': 'wp-dot-nhits',
+                'tcn': 'wp-dot-tcn',
+                'hmm': 'wp-dot-hmm',
+                'embedder': 'wp-dot-embedder',
+                'candlestick': 'wp-dot-candlestick',
+                'rag': 'wp-dot-rag',
+                'llm': 'wp-dot-llm'
+            };
+
+            for (const [service, dotId] of Object.entries(dotMapping)) {
+                const dfStatusId = dataflowStatusMap[service];
+                if (dfStatusId) {
+                    const dfStatusEl = document.getElementById(dfStatusId);
+                    const dotEl = document.getElementById(dotId);
+                    if (dfStatusEl && dotEl) {
+                        dotEl.classList.remove('loading', 'healthy', 'unhealthy');
+                        if (dfStatusEl.classList.contains('healthy')) {
+                            dotEl.classList.add('healthy');
+                        } else if (dfStatusEl.classList.contains('unhealthy')) {
+                            dotEl.classList.add('unhealthy');
+                        } else {
+                            dotEl.classList.add('loading');
+                        }
+                    }
+                }
             }
         }
 
