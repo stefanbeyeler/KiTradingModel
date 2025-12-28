@@ -343,7 +343,7 @@
                     <span class="endpoint-desc">Liste aller verwalteten Symbole</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method post">POST</span>
+                    <span class="method delete">POST</span>
                     <span class="endpoint-path">/api/v1/managed-symbols</span>
                     <span class="endpoint-desc">Neues Symbol hinzufügen</span>
                 </div>
@@ -353,7 +353,7 @@
                     <span class="endpoint-desc">Symbol entfernen</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method post">POST</span>
+                    <span class="method delete">POST</span>
                     <span class="endpoint-path">/api/v1/managed-symbols/import</span>
                     <span class="endpoint-desc">Symbole von EasyInsight importieren</span>
                 </div>
@@ -367,7 +367,7 @@
                     <span class="endpoint-desc">Liste aller Strategien</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method post">POST</span>
+                    <span class="method delete">POST</span>
                     <span class="endpoint-path">/api/v1/strategies</span>
                     <span class="endpoint-desc">Neue Strategie erstellen</span>
                 </div>
@@ -386,12 +386,12 @@
                     <span class="endpoint-desc">Sync-Status abfragen</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method post">POST</span>
+                    <span class="method delete">POST</span>
                     <span class="endpoint-path">/api/v1/sync/start</span>
                     <span class="endpoint-desc">Synchronisation starten</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method post">POST</span>
+                    <span class="method delete">POST</span>
                     <span class="endpoint-path">/api/v1/sync/stop</span>
                     <span class="endpoint-desc">Synchronisation stoppen</span>
                 </div>
@@ -460,13 +460,13 @@
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/easyinsight/mt5-logs</span>
-                    <span class="endpoint-desc">MT5 Trading-Logs</span>
+                    <span class="endpoint-path">/api/v1/easyinsight/indicators/{symbol}</span>
+                    <span class="endpoint-desc">EasyInsight Indikatoren</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/easyinsight/nhits-status</span>
-                    <span class="endpoint-desc">NHITS Modell-Status</span>
+                    <span class="endpoint-path">/api/v1/easyinsight/latest/{symbol}</span>
+                    <span class="endpoint-desc">Neueste Kursdaten</span>
                 </div>
             </div>
         </div>
@@ -525,13 +525,13 @@
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/cache/stats</span>
-                    <span class="endpoint-desc">Cache-Statistiken (Hits, Misses)</span>
+                    <span class="endpoint-path">/api/v1/cache/overview</span>
+                    <span class="endpoint-desc">Cache-Übersicht mit Statistiken</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/cache/clear</span>
-                    <span class="endpoint-desc">Cache leeren (kategorie-spezifisch)</span>
+                    <span class="method delete">POST</span>
+                    <span class="endpoint-path">/api/v1/cache/category/{category}</span>
+                    <span class="endpoint-desc">Cache-Kategorie löschen</span>
                 </div>
             </div>
 
@@ -639,7 +639,7 @@
             <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Pattern-Endpunkte (via Candlestick Service)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
-                    <span class="method post">POST</span>
+                    <span class="method delete">POST</span>
                     <span class="endpoint-path">/candlestick/api/v1/scan</span>
                     <span class="endpoint-desc">Pattern-Scan fur Symbol</span>
                 </div>
@@ -694,12 +694,12 @@
                     <span class="endpoint-desc">Markt-Sentiment</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method post">POST</span>
+                    <span class="method delete">POST</span>
                     <span class="endpoint-path">/api/v1/external-sources/fetch-all</span>
                     <span class="endpoint-desc">Alle Quellen parallel</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method post">POST</span>
+                    <span class="method delete">POST</span>
                     <span class="endpoint-path">/api/v1/external-sources/trading-context/{symbol}</span>
                     <span class="endpoint-desc">Kompletter Trading-Kontext</span>
                 </div>
@@ -726,6 +726,121 @@
         </div>
 
         <div class="content-card">
+            <h2>&#128640; Prefetch Service</h2>
+            <p>
+                Proaktives Pre-Loading von Marktdaten für optimierte Cache-Performance.
+                Der Prefetch-Service lädt Daten im Hintergrund, bevor sie angefordert werden.
+            </p>
+
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/prefetch/status</span>
+                    <span class="endpoint-desc">Prefetch-Status und Statistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/prefetch/start</span>
+                    <span class="endpoint-desc">Prefetch-Service starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/prefetch/stop</span>
+                    <span class="endpoint-desc">Prefetch-Service stoppen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/prefetch/run</span>
+                    <span class="endpoint-desc">Manueller Prefetch-Durchlauf</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128202; Indicator Management</h2>
+            <p>
+                Verwaltung und Konfiguration aller technischen Indikatoren aus TwelveData und EasyInsight.
+            </p>
+
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/indicators</span>
+                    <span class="endpoint-desc">Alle verfügbaren Indikatoren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/indicators/categories</span>
+                    <span class="endpoint-desc">Indikator-Kategorien</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/indicators/by-category/{category}</span>
+                    <span class="endpoint-desc">Indikatoren nach Kategorie</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/indicators/{id}/toggle</span>
+                    <span class="endpoint-desc">Indikator aktivieren/deaktivieren</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128200; Yahoo Finance API</h2>
+            <p>
+                Kostenlose Fallback-Datenquelle für historische Marktdaten ohne API-Limits.
+            </p>
+
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/yfinance/status</span>
+                    <span class="endpoint-desc">API-Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/yfinance/quote/{symbol}</span>
+                    <span class="endpoint-desc">Aktueller Kurs</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/yfinance/time-series/{symbol}</span>
+                    <span class="endpoint-desc">Historische OHLCV-Daten</span>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Fallback-Hierarchie:</strong> TwelveData → EasyInsight → Yahoo Finance
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#127891; Training Data</h2>
+            <p>
+                Optimierte Daten-Endpunkte für ML-Service Training (NHITS, TCN, HMM).
+            </p>
+
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/training-data/{symbol}</span>
+                    <span class="endpoint-desc">Training-Daten für Symbol</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/training-data/cache/stats</span>
+                    <span class="endpoint-desc">Training-Cache Statistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method delete">DEL</span>
+                    <span class="endpoint-path">/api/v1/training-data/cache/expired</span>
+                    <span class="endpoint-desc">Abgelaufene Einträge löschen</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
             <h2>&#128295; Technologie-Stack</h2>
             <div class="tech-stack">
                 <span class="tech-tag">Python 3.11</span>
@@ -744,7 +859,7 @@
             <div class="quick-links">
                 <a href="/data/docs" target="_blank">&#128196; API Dokumentation</a>
                 <a href="/data/health" target="_blank">&#128154; Health Check</a>
-                <a href="/data/api/v1/symbols" target="_blank">&#128279; Managed Symbols</a>
+                <a href="/data/api/v1/managed-symbols" target="_blank">&#128279; Managed Symbols</a>
                 <a href="/watchdog/api/v1/tests/run/service/data" target="_blank">&#129514; Tests ausfuhren</a>
                 <a href="/" class="back-link">&#127968; Dashboard</a>
             </div>
