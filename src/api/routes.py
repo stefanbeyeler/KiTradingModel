@@ -3057,6 +3057,30 @@ async def get_auto_forecast_full_status():
 
 # ==================== Symbol Management Endpoints ====================
 
+@symbol_router.get("/symbols", response_model=list[str])
+async def get_symbol_names(
+    category: Optional[SymbolCategory] = None,
+    status: Optional[SymbolStatus] = None,
+    with_data_only: bool = False,
+):
+    """
+    Get list of symbol names.
+
+    Returns a simple list of symbol names for quick lookups.
+    Use /managed-symbols for full symbol details.
+    """
+    try:
+        symbols = await symbol_service.get_all_symbols(
+            category=category,
+            status=status,
+            with_data_only=with_data_only,
+        )
+        return [s.symbol for s in symbols]
+    except Exception as e:
+        logger.error(f"Failed to get symbol names: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @symbol_router.get("/managed-symbols", response_model=list[ManagedSymbol])
 async def get_managed_symbols(
     category: Optional[SymbolCategory] = None,

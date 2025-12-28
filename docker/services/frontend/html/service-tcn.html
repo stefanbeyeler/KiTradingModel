@@ -889,6 +889,60 @@
         </div>
 
         <div class="content-card">
+            <h2>&#128200; CRT - Candle Range Theory</h2>
+            <p>
+                Die CRT-Implementierung erkennt <strong>Liquidity Purges</strong> an Key Sessions und generiert 
+                Trading-Signale basierend auf der Candle Range Theory. Key Sessions sind: 1 AM, 5 AM und 9 AM EST.
+            </p>
+
+            <div class="info-box">
+                <strong>CRT State Machine:</strong> RANGE_DEFINED → PURGE_ABOVE/BELOW → SIGNAL_LONG/SHORT
+            </div>
+
+            <h3>Session Endpoints</h3>
+            <table class="endpoint-table">
+                <tr><th>Endpoint</th><th>Methode</th><th>Beschreibung</th></tr>
+                <tr><td><code>/api/v1/crt/session</code></td><td>GET</td><td>Aktuelle Session-Informationen (EST Zeit, H4 Candle)</td></tr>
+                <tr><td><code>/api/v1/crt/status/{symbol}</code></td><td>GET</td><td>CRT-Status fur ein Symbol</td></tr>
+                <tr><td><code>/api/v1/crt/signal/{symbol}</code></td><td>GET</td><td>Aktives CRT-Signal abrufen</td></tr>
+            </table>
+
+            <h3>Range Management</h3>
+            <table class="endpoint-table">
+                <tr><th>Endpoint</th><th>Methode</th><th>Beschreibung</th></tr>
+                <tr><td><code>/api/v1/crt/range/create</code></td><td>POST</td><td>CRT Range manuell erstellen</td></tr>
+                <tr><td><code>/api/v1/crt/ranges</code></td><td>GET</td><td>Alle aktiven Ranges</td></tr>
+                <tr><td><code>/api/v1/crt/range/{symbol}</code></td><td>DELETE</td><td>Range invalidieren</td></tr>
+                <tr><td><code>/api/v1/crt/history/{symbol}</code></td><td>GET</td><td>Historische Ranges</td></tr>
+            </table>
+
+            <h3>Analysis & Scan</h3>
+            <table class="endpoint-table">
+                <tr><th>Endpoint</th><th>Methode</th><th>Beschreibung</th></tr>
+                <tr><td><code>/api/v1/crt/analyze</code></td><td>POST</td><td>Vollstandige CRT-Analyse mit Service-Integration</td></tr>
+                <tr><td><code>/api/v1/crt/scan</code></td><td>GET</td><td>Scan nach CRT-Signalen uber mehrere Symbole</td></tr>
+                <tr><td><code>/api/v1/crt/price/update</code></td><td>POST</td><td>Preis-Update fur State Machine</td></tr>
+                <tr><td><code>/api/v1/crt/config</code></td><td>GET</td><td>CRT-Konfiguration</td></tr>
+            </table>
+
+            <h3>Key Sessions (EST)</h3>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>&#127749; 1 AM EST</h4>
+                    <p>London Pre-Market - Asiatische Liquiditat wird aufgenommen</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#127758; 5 AM EST</h4>
+                    <p>London Open - Europaische Session beginnt</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#127961; 9 AM EST</h4>
+                    <p>New York Open - US-Markt offnet</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
             <h2>&#128640; Schnellzugriff</h2>
             <div class="quick-links">
                 <a href="/tcn/docs" target="_blank">&#128196; API Dokumentation</a>

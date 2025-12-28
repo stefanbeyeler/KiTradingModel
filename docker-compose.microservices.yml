@@ -488,7 +488,7 @@ services:
           cpus: '2'
           memory: 2G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${CANDLESTICK_SERVICE_PORT:-3006}/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3006/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -595,7 +595,7 @@ services:
           cpus: '2'
           memory: 4G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${CANDLESTICK_TRAIN_SERVICE_PORT:-3016}/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3016/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
