@@ -1,6 +1,7 @@
 """Health Checker Service für Microservice-Überwachung."""
 
 import asyncio
+import socket
 from datetime import datetime, timezone
 from typing import Dict
 
@@ -71,6 +72,31 @@ class HealthChecker:
                 "startup_grace": 30,
                 "dependencies": ["data"]
             },
+            "redis": {
+                "url": "http://trading-redis:6379",
+                "criticality": "critical",
+                "startup_grace": 10,
+                "dependencies": [],
+                "check_type": "tcp"
+            },
+            "nhits-train": {
+                "url": "http://trading-nhits-train:3012/health",
+                "criticality": "medium",
+                "startup_grace": 60,
+                "dependencies": ["data"]
+            },
+            "tcn-train": {
+                "url": "http://trading-tcn-train:3013/health",
+                "criticality": "medium",
+                "startup_grace": 60,
+                "dependencies": ["data", "embedder"]
+            },
+            "hmm-train": {
+                "url": "http://trading-hmm-train:3014/health",
+                "criticality": "medium",
+                "startup_grace": 60,
+                "dependencies": ["data"]
+            },
             "candlestick-train": {
                 "url": "http://trading-candlestick-train:3016/health",
                 "criticality": "medium",
@@ -110,6 +136,10 @@ class HealthChecker:
         """
         start_time = datetime.now(timezone.utc)
 
+        # TCP-Check für Redis und andere non-HTTP Services
+        if config.get("check_type") == "tcp":
+            return await self._check_tcp_service(name, config, start_time)
+
         try:
             async with httpx.AsyncClient(timeout=self.settings.timeout_seconds) as client:
                 response = await client.get(config["url"])
@@ -145,6 +175,65 @@ class HealthChecker:
             return self._create_failure_status(name, start_time, "Timeout")
         except httpx.ConnectError:
             return self._create_failure_status(name, start_time, "Connection refused")
+        except Exception as e:
+            return self._create_failure_status(name, start_time, str(e))
+
+    async def _check_tcp_service(
+        self, name: str, config: dict, start_time: datetime
+    ) -> ServiceStatus:
+        """
+        Prüft einen TCP-Service (z.B. Redis) durch Socket-Verbindung.
+
+        Args:
+            name: Service-Name
+            config: Service-Konfiguration
+            start_time: Zeitpunkt des Check-Starts
+
+        Returns:
+            ServiceStatus mit aktuellem Status
+        """
+        try:
+            # Parse host and port from URL
+            url = config["url"]
+            if url.startswith("http://"):
+                url = url[7:]
+            elif url.startswith("https://"):
+                url = url[8:]
+
+            host, port_str = url.split(":")
+            port = int(port_str.split("/")[0])  # Handle paths after port
+
+            # Non-blocking socket check
+            loop = asyncio.get_event_loop()
+
+            def check_socket():
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(self.settings.timeout_seconds)
+                try:
+                    result = sock.connect_ex((host, port))
+                    return result == 0
+                finally:
+                    sock.close()
+
+            is_up = await loop.run_in_executor(None, check_socket)
+            response_time_ms = (
+                datetime.now(timezone.utc) - start_time
+            ).total_seconds() * 1000
+
+            if is_up:
+                return ServiceStatus(
+                    name=name,
+                    state=HealthState.HEALTHY,
+                    response_time_ms=response_time_ms,
+                    last_check=start_time,
+                    details={"type": "tcp", "port": port},
+                    consecutive_failures=0
+                )
+            else:
+                return self._create_failure_status(
+                    name, start_time, f"TCP port {port} not responding"
+                )
+
         except Exception as e:
             return self._create_failure_status(name, start_time, str(e))
 
