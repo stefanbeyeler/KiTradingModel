@@ -647,6 +647,66 @@ formatted = format_for_display(utc_timestamp)  # "20.12.2024, 10:18:00 CET"
 - Interne Felder (`*_utc`): ISO 8601 UTC-Format
 - Anzeige-Felder (`*_display`): Lokalisiertes Format mit Zeitzonenangabe
 
+## API-Dokumentation aktualisieren (VERBINDLICH)
+
+Nach jeder Änderung an API-Endpunkten **müssen** folgende Dateien aktualisiert werden:
+
+### 1. Service Info-Seite
+
+Jeder Service hat eine Info-Seite unter `docker/services/frontend/html/service-{name}.html`:
+
+| Service | Info-Seite |
+|---------|------------|
+| Data Service | `service-data.html` |
+| NHITS Service | `service-nhits.html` |
+| TCN-Pattern Service | `service-tcn.html` |
+| HMM-Regime Service | `service-hmm.html` |
+| Embedder Service | `service-embedder.html` |
+| Candlestick Service | `service-candlestick.html` |
+| RAG Service | `service-rag.html` |
+| LLM Service | `service-llm.html` |
+| Watchdog Service | `service-watchdog.html` |
+
+**Aktualisieren bei:**
+- Neuen Endpoints
+- Geänderten Endpoint-Pfaden
+- Entfernten Endpoints
+- Neuen Features/Funktionen
+
+### 2. OpenAPI/Swagger Dokumentation
+
+Die Swagger-Dokumentation wird automatisch aus den FastAPI-Routern generiert. Achte auf:
+
+- **Aussagekräftige Docstrings** in allen Endpoint-Funktionen
+- **Response-Models** mit Pydantic für korrekte Schema-Dokumentation
+- **Tags** für logische Gruppierung (kurz, max. 60 Zeichen)
+- **Query-Parameter-Beschreibungen** mit `Query(..., description="...")`
+
+```python
+@router.get("/example/{symbol}", response_model=ExampleResponse, tags=["1. Examples"])
+async def get_example(
+    symbol: str,
+    limit: int = Query(default=100, ge=1, le=1000, description="Anzahl der Ergebnisse")
+):
+    """
+    Kurze Beschreibung des Endpoints.
+
+    Gibt Beispieldaten für das angegebene Symbol zurück.
+    """
+    ...
+```
+
+### 3. Checkliste nach API-Änderungen
+
+```text
+[ ] Info-Seite aktualisiert (service-{name}.html)
+[ ] Docstrings in Router-Funktionen vorhanden
+[ ] Response-Model definiert
+[ ] Query-Parameter dokumentiert
+[ ] Container neu gestartet (docker restart trading-{name})
+[ ] Änderungen committed und gepusht
+```
+
 ## Dokumentation
 
 Vollständige Entwicklungsrichtlinien: `DEVELOPMENT_GUIDELINES.md`
