@@ -3816,9 +3816,9 @@
 
             // Helper to create comparison row with 3 data sources
             function compareRow(label, eiValue, tdValue, yfValue, options = {}) {
-                const eiFormatted = options.formatter ? options.formatter(eiValue, 'ei') : formatValue(eiValue, options.decimals);
-                const tdFormatted = options.formatter ? options.formatter(tdValue, 'td') : formatValue(tdValue, options.decimals);
-                const yfFormatted = options.formatter ? options.formatter(yfValue, 'yf') : formatValue(yfValue, options.decimals);
+                const eiFormatted = options.formatter ? options.formatter(eiValue, 'ei') : formatLiveValue(eiValue, options.decimals);
+                const tdFormatted = options.formatter ? options.formatter(tdValue, 'td') : formatLiveValue(tdValue, options.decimals);
+                const yfFormatted = options.formatter ? options.formatter(yfValue, 'yf') : formatLiveValue(yfValue, options.decimals);
                 const eiStyle = options.eiStyle || '';
                 const tdStyle = options.tdStyle || '';
                 const yfStyle = options.yfStyle || '';
@@ -4001,7 +4001,7 @@
             content.innerHTML = html;
         }
 
-        function formatValue(value, decimals = 5) {
+        function formatLiveValue(value, decimals = 5) {
             if (value === null || value === undefined) return '-';
             const num = parseFloat(value);
             if (isNaN(num)) return value;
