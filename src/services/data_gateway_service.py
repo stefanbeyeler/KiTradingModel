@@ -375,23 +375,6 @@ class DataGatewayService:
         """
         try:
             from .twelvedata_service import twelvedata_service
-            from ..services.symbol_service import symbol_service
-
-            # Get TwelveData symbol format
-            managed_symbol = await symbol_service.get_symbol(symbol)
-            td_symbol = None
-            if managed_symbol and managed_symbol.twelvedata_symbol:
-                td_symbol = managed_symbol.twelvedata_symbol
-            else:
-                # Generate TwelveData symbol format
-                td_symbol = symbol_service._generate_twelvedata_symbol(
-                    symbol,
-                    managed_symbol.category if managed_symbol else None
-                )
-
-            if not td_symbol:
-                logger.warning(f"No TwelveData symbol mapping for {symbol}")
-                return []
 
             # Normalize and convert timeframe to TwelveData format
             tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
@@ -400,9 +383,9 @@ class DataGatewayService:
             # TwelveData max outputsize is 5000
             fetch_limit = min(limit, 5000)
 
-            # Fetch from TwelveData
+            # Fetch from TwelveData - symbol conversion happens in TwelveDataService
             td_data = await twelvedata_service.get_time_series(
-                symbol=td_symbol,
+                symbol=symbol,
                 interval=td_interval,
                 outputsize=fetch_limit
             )
@@ -564,40 +547,23 @@ class DataGatewayService:
         """
         try:
             from .twelvedata_service import twelvedata_service
-            from .symbol_service import symbol_service
-
-            # Get TwelveData symbol format
-            managed_symbol = await symbol_service.get_symbol(symbol)
-            td_symbol = None
-            if managed_symbol and managed_symbol.twelvedata_symbol:
-                td_symbol = managed_symbol.twelvedata_symbol
-            else:
-                # Generate TwelveData symbol format
-                td_symbol = symbol_service._generate_twelvedata_symbol(
-                    symbol,
-                    managed_symbol.category if managed_symbol else None
-                )
-
-            if not td_symbol:
-                return {"error": f"No TwelveData symbol mapping for {symbol}"}
 
             # Normalize interval to standard format and convert to TwelveData
             tf = normalize_timeframe_safe(interval, Timeframe.H1)
             td_interval = to_twelvedata(tf)
 
             # Fetch indicator from TwelveData
+            # Symbol conversion (BTCUSD -> BTC/USD) handled internally by TwelveDataService
             result = await twelvedata_service.get_technical_indicators(
-                symbol=td_symbol,
+                symbol=symbol,
                 interval=td_interval,
                 indicator=indicator,
                 outputsize=outputsize,
                 **kwargs,
             )
 
-            # Add standardized timeframe and symbol info to result
+            # Add standardized timeframe to result
             if "error" not in result:
-                result["original_symbol"] = symbol
-                result["twelvedata_symbol"] = td_symbol
                 result["timeframe"] = tf.value  # Standardized timeframe
 
             return result
@@ -768,35 +734,19 @@ class DataGatewayService:
         """
         try:
             from .twelvedata_service import twelvedata_service
-            from .symbol_service import symbol_service
-
-            # Get TwelveData symbol format
-            managed_symbol = await symbol_service.get_symbol(symbol)
-            td_symbol = None
-            if managed_symbol and managed_symbol.twelvedata_symbol:
-                td_symbol = managed_symbol.twelvedata_symbol
-            else:
-                td_symbol = symbol_service._generate_twelvedata_symbol(
-                    symbol,
-                    managed_symbol.category if managed_symbol else None
-                )
-
-            if not td_symbol:
-                return {"error": f"No TwelveData symbol mapping for {symbol}"}
 
             # Normalize interval to standard format and convert to TwelveData
             tf = normalize_timeframe_safe(interval, Timeframe.H1)
             td_interval = to_twelvedata(tf)
 
+            # Symbol conversion (BTCUSD -> BTC/USD) handled internally by TwelveDataService
             result = await twelvedata_service.get_multiple_indicators(
-                symbol=td_symbol,
+                symbol=symbol,
                 indicators=indicators,
                 interval=td_interval,
                 outputsize=outputsize,
             )
 
-            result["original_symbol"] = symbol
-            result["twelvedata_symbol"] = td_symbol
             result["timeframe"] = tf.value  # Standardized timeframe
             return result
 

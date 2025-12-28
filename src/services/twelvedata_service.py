@@ -98,25 +98,30 @@ class TwelveDataService:
     """Service for accessing Twelve Data API for market data with rate limiting and caching."""
 
     # Special symbol mappings for non-standard symbols
+    # Note: Index symbols (GER40, US30, etc.) are NOT supported by TwelveData
+    # and will fall back to EasyInsight via DataGatewayService
     SYMBOL_MAPPINGS = {
         # Crypto with non-standard abbreviations
         "AVXUSD": "AVAX/USD",   # Avalanche
         "DOGUSD": "DOGE/USD",   # Dogecoin
         "DOGEUSD": "DOGE/USD",  # Dogecoin (alternate)
         "LNKUSD": "LINK/USD",   # Chainlink
-        "MTCUSD": "MATIC/USD",  # Polygon (MATIC)
-        # Indices
-        "AUS200": "XJO",        # ASX 200
-        "EURO50": "STOXX50E",   # Euro Stoxx 50
-        "FRA40": "FCHI",        # CAC 40
-        "GER40": "GDAXI",       # DAX 40
-        "JP225": "N225",        # Nikkei 225
-        "NAS100": "NDX",        # Nasdaq 100
-        "UK100": "FTSE",        # FTSE 100
-        "US30": "DJI",          # Dow Jones
-        "US500": "SPX",         # S&P 500
-        # Commodities/Oil
-        "XTIUSD": "CL/USD",     # Crude Oil WTI
+        # Note: MATIC/USD, CL/USD (crude oil) also not supported by TwelveData
+    }
+
+    # Symbols that should skip TwelveData and go directly to fallback
+    # (Indices and commodities not supported by TwelveData)
+    UNSUPPORTED_SYMBOLS = {
+        # Indices - display names
+        "AUS200", "EURO50", "FRA40", "GER40", "JP225",
+        "NAS100", "UK100", "US30", "US500",
+        # Indices - TwelveData symbol names (also not valid)
+        "XJO", "STOXX50E", "FCHI", "GDAXI", "N225",
+        "NDX", "FTSE", "DJI", "SPX",
+        # Commodities not in TwelveData format
+        "XTIUSD", "CLUSD", "CL",
+        # Crypto with non-standard names that don't work
+        "MTCUSD", "MATICUSD", "MATIC",
     }
 
     def __init__(self):
@@ -131,6 +136,11 @@ class TwelveDataService:
         self._total_wait_time: float = 0.0
         self._cache_hits: int = 0
 
+    def _is_unsupported_symbol(self, symbol: str) -> bool:
+        """Check if symbol is not supported by TwelveData API."""
+        symbol_upper = symbol.upper().replace("/", "")
+        return symbol_upper in self.UNSUPPORTED_SYMBOLS
+
     def _to_twelvedata_symbol(self, symbol: str) -> str:
         """
         Convert display symbol (BTCUSD) to TwelveData format (BTC/USD).
@@ -140,8 +150,13 @@ class TwelveDataService:
 
         Returns:
             TwelveData API symbol like BTC/USD, EUR/USD
+            Returns None for unsupported symbols (indices, etc.)
         """
         symbol_upper = symbol.upper().replace("/", "")  # Normalize: remove any slashes
+
+        # Check if symbol is not supported by TwelveData
+        if symbol_upper in self.UNSUPPORTED_SYMBOLS:
+            return None  # Will trigger fallback to EasyInsight
 
         # Check special mappings first
         if symbol_upper in self.SYMBOL_MAPPINGS:
@@ -388,6 +403,14 @@ class TwelveDataService:
 
             # Convert display symbol (BTCUSD) to TwelveData format (BTC/USD)
             td_symbol = self._to_twelvedata_symbol(symbol)
+            if td_symbol is None:
+                display_symbol = self._to_display_symbol(symbol)
+                return {
+                    "meta": {"symbol": display_symbol},
+                    "values": [],
+                    "error": f"Symbol {display_symbol} not supported by TwelveData - use fallback",
+                    "unsupported": True,
+                }
 
             params = {
                 "symbol": td_symbol,
@@ -450,7 +473,9 @@ class TwelveDataService:
         try:
             # Convert display symbol (BTCUSD) to TwelveData format (BTC/USD)
             td_symbol = self._to_twelvedata_symbol(symbol)
-            
+            if td_symbol is None:
+                return {"symbol": symbol, "error": f"Symbol {symbol} not supported by TwelveData", "unsupported": True}
+
             params = {"symbol": td_symbol}
             if exchange:
                 params["exchange"] = exchange
@@ -480,7 +505,9 @@ class TwelveDataService:
         try:
             # Convert display symbol (BTCUSD) to TwelveData format (BTC/USD)
             td_symbol = self._to_twelvedata_symbol(symbol)
-            
+            if td_symbol is None:
+                return {"symbol": symbol, "error": f"Symbol {symbol} not supported by TwelveData", "unsupported": True}
+
             params = {"symbol": td_symbol}
             if exchange:
                 params["exchange"] = exchange
@@ -581,6 +608,14 @@ class TwelveDataService:
 
             # Convert display symbol (BTCUSD) to TwelveData format (BTC/USD)
             td_symbol = self._to_twelvedata_symbol(symbol)
+            if td_symbol is None:
+                display_symbol = self._to_display_symbol(symbol)
+                return {
+                    "indicator": indicator,
+                    "symbol": display_symbol,
+                    "error": f"Symbol {display_symbol} not supported by TwelveData",
+                    "unsupported": True,
+                }
 
             # Build API request
             params = {

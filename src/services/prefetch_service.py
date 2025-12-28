@@ -150,9 +150,8 @@ class PrefetchService:
             # 4. Daten pre-fetchen
             fetched_count = 0
             for symbol_data in symbols:
-                # Verwende twelvedata_symbol falls vorhanden, sonst symbol
+                # Verwende immer display symbol (BTCUSD) - Konvertierung erfolgt im TwelveDataService
                 symbol = (
-                    symbol_data.get("twelvedata_symbol") or
                     symbol_data.get("symbol") or
                     symbol_data.get("name", "")
                 )
