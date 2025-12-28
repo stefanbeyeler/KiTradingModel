@@ -476,31 +476,43 @@
     </header>
 
     <main class="container">
-        <!-- Service Status -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="patternCount">-</div>
-                <div class="stat-label">Pattern-Typen</div>
+        <!-- Combined Stats & Service Info -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="stats-grid" style="margin-bottom: 1rem;">
+                <div class="stat-card">
+                    <div class="stat-value" id="patternCount">-</div>
+                    <div class="stat-label">Pattern-Typen</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="timeframeCount">-</div>
+                    <div class="stat-label">Timeframes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="historyCount">-</div>
+                    <div class="stat-label">History</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value success" id="bullishCount">-</div>
+                    <div class="stat-label">Bullish</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value error" id="bearishCount">-</div>
+                    <div class="stat-label">Bearish</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value warning" id="neutralCount">-</div>
+                    <div class="stat-label">Neutral</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="timeframeCount">-</div>
-                <div class="stat-label">Timeframes</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="historyCount">-</div>
-                <div class="stat-label">History-Einträge</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value success" id="bullishCount">-</div>
-                <div class="stat-label">Bullish</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value error" id="bearishCount">-</div>
-                <div class="stat-label">Bearish</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value warning" id="neutralCount">-</div>
-                <div class="stat-label">Neutral</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: #888;">
+                    <span>Version: <span style="color: #64c8ff;" id="infoVersion">-</span></span>
+                    <span>Port: <span style="color: #64c8ff;">3006</span></span>
+                    <span>Gestartet: <span style="color: #64c8ff;" id="infoStarted">-</span></span>
+                </div>
+                <div class="timeframe-list" id="timeframeList" style="flex: 1; min-width: 200px;">
+                    <span class="loading" style="padding: 0;"><span class="spinner" style="width: 16px; height: 16px;"></span></span>
+                </div>
             </div>
         </div>
 
@@ -508,19 +520,19 @@
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title">Auto-Scan Steuerung</h2>
-                <div class="scan-status stopped" id="scanStatus">
-                    <span class="status-dot stopped"></span>
-                    <span id="scanStatusText">Gestoppt</span>
+                <div class="scan-status running" id="scanStatus">
+                    <span class="status-dot running"></span>
+                    <span id="scanStatusText">Läuft</span>
                 </div>
             </div>
             <p class="card-description">
                 Der Auto-Scan überwacht alle Favoriten-Symbole und erkennt Candlestick-Patterns automatisch.
             </p>
             <div class="btn-group">
-                <button class="btn btn-success" id="btnStartScan" onclick="startAutoScan()">
+                <button class="btn btn-success" id="btnStartScan" onclick="startAutoScan()" style="display: none;">
                     Auto-Scan starten
                 </button>
-                <button class="btn btn-danger" id="btnStopScan" onclick="stopAutoScan()" style="display: none;">
+                <button class="btn btn-danger" id="btnStopScan" onclick="stopAutoScan()">
                     Auto-Scan stoppen
                 </button>
                 <button class="btn btn-primary" onclick="triggerManualScan()">
@@ -529,37 +541,6 @@
                 <button class="btn btn-warning" onclick="clearHistory()">
                     History löschen
                 </button>
-            </div>
-        </div>
-
-        <!-- Service Info -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Service-Informationen</h2>
-            </div>
-            <div class="info-grid" id="serviceInfo">
-                <div class="info-item">
-                    <span class="info-label">Version</span>
-                    <span class="info-value" id="infoVersion">-</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Gestartet</span>
-                    <span class="info-value" id="infoStarted">-</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Pattern-Typen</span>
-                    <span class="info-value" id="infoPatterns">-</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Port</span>
-                    <span class="info-value">3006</span>
-                </div>
-            </div>
-            <div style="margin-top: 1rem;">
-                <h3 style="font-size: 0.9rem; color: #888; margin-bottom: 0.5rem;">Unterstützte Timeframes</h3>
-                <div class="timeframe-list" id="timeframeList">
-                    <span class="loading"><span class="spinner"></span></span>
-                </div>
             </div>
         </div>
 
@@ -605,19 +586,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Quick Actions -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Schnellzugriff</h2>
-            </div>
-            <div class="btn-group">
-                <a href="/config-patterns.html" class="btn btn-primary" target="_blank">Pattern-Übersicht</a>
-                <a href="/candlestick/docs" class="btn btn-primary" target="_blank">API Dokumentation</a>
-                <a href="/candlestick/api/v1/patterns" class="btn btn-primary" target="_blank">Pattern-Liste (JSON)</a>
-                <a href="/candlestick/api/v1/history/statistics" class="btn btn-primary" target="_blank">Statistiken (JSON)</a>
-            </div>
-        </div>
     </main>
 
     <!-- Toast -->
@@ -626,7 +594,7 @@
     <script>
         const CANDLESTICK_API = '/candlestick/api/v1';
         const DATA_API = '/data/api/v1';
-        let isAutoScanRunning = false;
+        let isAutoScanRunning = true;  // Default: aktiv
 
         // Pattern visual examples - each candle: [upperWick, body, lowerWick, type]
         // type: 'bullish', 'bearish', 'doji'
@@ -665,8 +633,15 @@
             'long_legged_doji': [[16, 2, 16, 'doji']],
             'spinning_top': [[10, 8, 10, 'bullish']],
             'high_wave': [[14, 6, 14, 'doji']],
-            'harami': [[2, 24, 2, 'bearish'], [6, 10, 6, 'bullish']],
-            'harami_cross': [[2, 24, 2, 'bearish'], [8, 2, 8, 'doji']],
+            // Bullish Harami: Abwärtstrend (rot) + große rote Kerze + kleine grüne Kerze
+            'harami': [[3, 14, 3, 'bearish'], [2, 16, 2, 'bearish'], [2, 24, 2, 'bearish'], [6, 10, 6, 'bullish']],
+            'bullish_harami': [[3, 14, 3, 'bearish'], [2, 16, 2, 'bearish'], [2, 24, 2, 'bearish'], [6, 10, 6, 'bullish']],
+            // Bearish Harami: Aufwärtstrend (grün) + große grüne Kerze + kleine rote Kerze
+            'bearish_harami': [[3, 14, 3, 'bullish'], [2, 16, 2, 'bullish'], [2, 24, 2, 'bullish'], [6, 10, 6, 'bearish']],
+            // Harami Cross: Abwärtstrend (rot) + große Kerze + Doji
+            'harami_cross': [[3, 14, 3, 'bearish'], [2, 16, 2, 'bearish'], [2, 24, 2, 'bearish'], [8, 2, 8, 'doji']],
+            'bullish_harami_cross': [[3, 14, 3, 'bearish'], [2, 16, 2, 'bearish'], [2, 24, 2, 'bearish'], [8, 2, 8, 'doji']],
+            'bearish_harami_cross': [[3, 14, 3, 'bullish'], [2, 16, 2, 'bullish'], [2, 24, 2, 'bullish'], [8, 2, 8, 'doji']],
             'inside_bar': [[4, 20, 4, 'bearish'], [6, 12, 6, 'bullish']],
 
             // Default fallback
@@ -729,7 +704,6 @@
 
                 document.getElementById('infoVersion').textContent = data.version || '-';
                 document.getElementById('infoStarted').textContent = formatTimestamp(data.started_at);
-                document.getElementById('infoPatterns').textContent = data.pattern_types || '-';
                 document.getElementById('patternCount').textContent = data.pattern_types || 0;
                 document.getElementById('timeframeCount').textContent = data.supported_timeframes?.length || 0;
 
@@ -958,6 +932,19 @@
             await loadServiceInfo();
             await loadPatterns();
             await loadStatistics();
+
+            // Auto-Scan standardmäßig starten (ohne Toast-Nachricht)
+            if (isAutoScanRunning) {
+                try {
+                    await fetch(`${CANDLESTICK_API}/scan/start`, { method: 'POST' });
+                } catch (e) {
+                    try {
+                        await fetch(`${DATA_API}/patterns/history/start-auto-scan`, { method: 'POST' });
+                    } catch (e2) {
+                        console.warn('Auto-Scan konnte nicht gestartet werden:', e2);
+                    }
+                }
+            }
 
             // Auto-refresh every 30 seconds
             setInterval(async () => {
