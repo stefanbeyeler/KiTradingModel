@@ -3704,13 +3704,21 @@ async def get_symbol_live_data(symbol: str):
     except Exception as e:
         result["errors"].append(f"EasyInsight: {str(e)}")
 
-    # Fetch TwelveData quote - try symbol and aliases
+    # Fetch TwelveData quote - use twelvedata_symbol from managed symbol
     td_symbol = symbol
-    # Convert symbol format for TwelveData (e.g., EURUSD -> EUR/USD)
-    for alias in aliases:
-        if "/" in alias:
-            td_symbol = alias
-            break
+    if managed_symbol and managed_symbol.twelvedata_symbol:
+        td_symbol = managed_symbol.twelvedata_symbol
+    else:
+        # Fallback: try aliases or generate from symbol
+        for alias in aliases:
+            if "/" in alias:
+                td_symbol = alias
+                break
+        else:
+            # Generate from symbol pattern (AUDUSD -> AUD/USD)
+            td_symbol = symbol_service._generate_twelvedata_symbol(
+                symbol, managed_symbol.category if managed_symbol else SymbolCategory.FOREX
+            ) or symbol
 
     try:
         import asyncio
