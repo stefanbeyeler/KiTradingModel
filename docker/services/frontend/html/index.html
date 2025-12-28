@@ -930,6 +930,51 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Training Section Styles */
+        .training-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #fb923c;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(249, 115, 22, 0.3);
+        }
+
+        .section-icon {
+            font-size: 1.2rem;
+        }
+
+        .training-grid {
+            margin-bottom: 0;
+        }
+
+        .training-card {
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)) !important;
+            border-color: rgba(249, 115, 22, 0.3) !important;
+        }
+
+        .training-card:hover {
+            border-color: rgba(249, 115, 22, 0.5) !important;
+            box-shadow: 0 10px 40px rgba(249, 115, 22, 0.2) !important;
+        }
+
+        .training-link {
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)) !important;
+            color: #fb923c !important;
+            border-color: rgba(249, 115, 22, 0.4) !important;
+        }
+
+        .training-link:hover {
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.4), rgba(249, 115, 22, 0.25)) !important;
+        }
     </style>
 </head>
 <body>
@@ -1325,29 +1370,6 @@
                 </div>
             </div>
 
-            <!-- Candlestick Training Service -->
-            <div class="service-card" id="candlestick-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
-                <div class="service-header">
-                    <h2>Candle-Training</h2>
-                    <span class="status-badge status-loading" id="candlestick-train-status">Laden...</span>
-                </div>
-                <p>Dedizierter Training-Container fuer Candlestick Pattern-Modelle. Low Priority.</p>
-                <div class="service-info" id="candlestick-train-info">
-                    <div><span class="label">Port</span><span>3016</span></div>
-                    <div><span class="label">Training</span><span id="candlestick-train-active">-</span></div>
-                    <div><span class="label">Jobs</span><span id="candlestick-train-jobs">-</span></div>
-                </div>
-                <div class="service-resources">
-                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
-                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
-                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
-                </div>
-                <div class="service-links">
-                    <a href="/candlestick-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
-                    <a href="/candlestick-train/api/v1/model" target="_blank">Model</a>
-                </div>
-            </div>
-
             <!-- HMM-Regime Service -->
             <div class="service-card" id="hmm-card">
                 <div class="service-header">
@@ -1369,29 +1391,6 @@
                     <a href="/service-hmm.html" target="_blank">Info</a>
                     <a href="/hmm/docs" target="_blank">API Docs</a>
                     <a href="/config-hmm.html" target="_blank">Config</a>
-                </div>
-            </div>
-
-            <!-- HMM-Training Service (neben HMM Inference) -->
-            <div class="service-card" id="hmm-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
-                <div class="service-header">
-                    <h2>HMM-Training</h2>
-                    <span class="status-badge status-loading" id="hmm-train-status">Laden...</span>
-                </div>
-                <p>Dedizierter Training-Container - HMM und LightGBM Scorer Modelle.</p>
-                <div class="service-info" id="hmm-train-info">
-                    <div><span class="label">Port</span><span>3014</span></div>
-                    <div><span class="label">Training</span><span id="hmm-train-active">-</span></div>
-                    <div><span class="label">Model</span><span id="hmm-train-model">-</span></div>
-                </div>
-                <div class="service-resources">
-                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
-                    <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
-                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
-                </div>
-                <div class="service-links">
-                    <a href="/service-hmm-train.html" target="_blank">Info</a>
-                    <a href="/hmm-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
                 </div>
             </div>
 
@@ -1418,29 +1417,6 @@
                 </div>
             </div>
 
-            <!-- NHITS-Training Service (neben NHITS Inference) -->
-            <div class="service-card" id="nhits-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
-                <div class="service-header">
-                    <h2>NHITS-Training</h2>
-                    <span class="status-badge status-loading" id="nhits-train-status">Laden...</span>
-                </div>
-                <p>Dedizierter Training-Container - N-HiTS Zeitreihen-Modelle. Background Training.</p>
-                <div class="service-info" id="nhits-train-info">
-                    <div><span class="label">Port</span><span>3012</span></div>
-                    <div><span class="label">Training</span><span id="nhits-train-active">-</span></div>
-                    <div><span class="label">Jobs</span><span id="nhits-train-jobs">-</span></div>
-                </div>
-                <div class="service-resources">
-                    <div class="service-resource cpu"><span class="value">4 CPU</span><span class="label">CPU Limit</span></div>
-                    <div class="service-resource ram"><span class="value">16 GB</span><span class="label">RAM Limit</span></div>
-                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
-                </div>
-                <div class="service-links">
-                    <a href="/service-nhits-train.html" target="_blank">Info</a>
-                    <a href="/nhits-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
-                </div>
-            </div>
-
             <!-- TCN-Pattern Service (Inference) -->
             <div class="service-card" id="tcn-card">
                 <div class="service-header">
@@ -1462,30 +1438,6 @@
                     <a href="/service-tcn.html" target="_blank">Info</a>
                     <a href="/tcn/docs" target="_blank">API Docs</a>
                     <a href="/config-tcn.html" target="_blank">Config</a>
-                </div>
-            </div>
-
-            <!-- TCN-Training Service -->
-            <div class="service-card" id="tcn-train-card" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05)); border-color: rgba(249, 115, 22, 0.3);">
-                <div class="service-header">
-                    <h2>TCN-Training</h2>
-                    <span class="status-badge status-loading" id="tcn-train-status">Laden...</span>
-                </div>
-                <p>Dedizierter Training-Container - Modell-Training ohne API-Blockierung. Low Priority.</p>
-                <div class="service-info" id="tcn-train-info">
-                    <div><span class="label">Port</span><span>3013</span></div>
-                    <div><span class="label">Training</span><span id="tcn-train-active">-</span></div>
-                    <div><span class="label">Epoch</span><span id="tcn-train-epoch">-</span></div>
-                </div>
-                <div class="service-resources">
-                    <div class="service-resource cpu"><span class="value">4 CPU</span><span class="label">CPU Limit</span></div>
-                    <div class="service-resource ram"><span class="value">8 GB</span><span class="label">RAM Limit</span></div>
-                    <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
-                </div>
-                <div class="service-links">
-                    <a href="/service-tcn-train.html" target="_blank">Info</a>
-                    <a href="/tcn-train/docs" target="_blank" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.15)); color: #fb923c;">API Docs</a>
-                    <a href="/tcn-train/api/v1/models" target="_blank">Models</a>
                 </div>
             </div>
 
@@ -1582,6 +1534,105 @@
                 </div>
             </div>
 
+        </div>
+
+        <!-- Training Services Section -->
+        <div class="training-section">
+            <h3 class="section-title"><span class="section-icon">&#127891;</span> Training Services</h3>
+            <div class="services-grid training-grid">
+                <!-- NHITS-Training Service -->
+                <div class="service-card training-card" id="nhits-train-card">
+                    <div class="service-header">
+                        <h2>NHITS-Training</h2>
+                        <span class="status-badge status-loading" id="nhits-train-status">Laden...</span>
+                    </div>
+                    <p>Dedizierter Training-Container - N-HiTS Zeitreihen-Modelle. Background Training.</p>
+                    <div class="service-info" id="nhits-train-info">
+                        <div><span class="label">Port</span><span>3012</span></div>
+                        <div><span class="label">Training</span><span id="nhits-train-active">-</span></div>
+                        <div><span class="label">Jobs</span><span id="nhits-train-jobs">-</span></div>
+                    </div>
+                    <div class="service-resources">
+                        <div class="service-resource cpu"><span class="value">4 CPU</span><span class="label">CPU Limit</span></div>
+                        <div class="service-resource ram"><span class="value">16 GB</span><span class="label">RAM Limit</span></div>
+                        <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                    </div>
+                    <div class="service-links">
+                        <a href="/service-nhits-train.html" target="_blank">Info</a>
+                        <a href="/nhits-train/docs" target="_blank" class="training-link">API Docs</a>
+                    </div>
+                </div>
+
+                <!-- TCN-Training Service -->
+                <div class="service-card training-card" id="tcn-train-card">
+                    <div class="service-header">
+                        <h2>TCN-Training</h2>
+                        <span class="status-badge status-loading" id="tcn-train-status">Laden...</span>
+                    </div>
+                    <p>Dedizierter Training-Container - Modell-Training ohne API-Blockierung. Low Priority.</p>
+                    <div class="service-info" id="tcn-train-info">
+                        <div><span class="label">Port</span><span>3013</span></div>
+                        <div><span class="label">Training</span><span id="tcn-train-active">-</span></div>
+                        <div><span class="label">Epoch</span><span id="tcn-train-epoch">-</span></div>
+                    </div>
+                    <div class="service-resources">
+                        <div class="service-resource cpu"><span class="value">4 CPU</span><span class="label">CPU Limit</span></div>
+                        <div class="service-resource ram"><span class="value">8 GB</span><span class="label">RAM Limit</span></div>
+                        <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                    </div>
+                    <div class="service-links">
+                        <a href="/service-tcn-train.html" target="_blank">Info</a>
+                        <a href="/tcn-train/docs" target="_blank" class="training-link">API Docs</a>
+                        <a href="/tcn-train/api/v1/models" target="_blank">Models</a>
+                    </div>
+                </div>
+
+                <!-- HMM-Training Service -->
+                <div class="service-card training-card" id="hmm-train-card">
+                    <div class="service-header">
+                        <h2>HMM-Training</h2>
+                        <span class="status-badge status-loading" id="hmm-train-status">Laden...</span>
+                    </div>
+                    <p>Dedizierter Training-Container - HMM und LightGBM Scorer Modelle.</p>
+                    <div class="service-info" id="hmm-train-info">
+                        <div><span class="label">Port</span><span>3014</span></div>
+                        <div><span class="label">Training</span><span id="hmm-train-active">-</span></div>
+                        <div><span class="label">Model</span><span id="hmm-train-model">-</span></div>
+                    </div>
+                    <div class="service-resources">
+                        <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                        <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                        <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                    </div>
+                    <div class="service-links">
+                        <a href="/service-hmm-train.html" target="_blank">Info</a>
+                        <a href="/hmm-train/docs" target="_blank" class="training-link">API Docs</a>
+                    </div>
+                </div>
+
+                <!-- Candlestick Training Service -->
+                <div class="service-card training-card" id="candlestick-train-card">
+                    <div class="service-header">
+                        <h2>Candle-Training</h2>
+                        <span class="status-badge status-loading" id="candlestick-train-status">Laden...</span>
+                    </div>
+                    <p>Dedizierter Training-Container fuer Candlestick Pattern-Modelle. Low Priority.</p>
+                    <div class="service-info" id="candlestick-train-info">
+                        <div><span class="label">Port</span><span>3016</span></div>
+                        <div><span class="label">Training</span><span id="candlestick-train-active">-</span></div>
+                        <div><span class="label">Jobs</span><span id="candlestick-train-jobs">-</span></div>
+                    </div>
+                    <div class="service-resources">
+                        <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                        <div class="service-resource ram"><span class="value">4 GB</span><span class="label">RAM Limit</span></div>
+                        <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                    </div>
+                    <div class="service-links">
+                        <a href="/service-candlestick-train.html" target="_blank">Info</a>
+                        <a href="/candlestick-train/docs" target="_blank" class="training-link">API Docs</a>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
