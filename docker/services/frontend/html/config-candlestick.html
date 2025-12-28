@@ -2016,48 +2016,110 @@
         let currentModalPattern = null;
 
         // Reference pattern examples (synthetic ideal patterns)
+        // Format: OHLC data matching the visual examples from Pattern Detection
         const PATTERN_REFERENCES = {
+            // === Reversal Bullish ===
             'hammer': [
-                { open: 100, high: 101, low: 94, close: 100.5 },
-                { open: 99, high: 99.5, low: 92, close: 99 },
-                { open: 93, high: 98, low: 92, close: 97.5 }  // Hammer
+                { open: 102, high: 103, low: 98, close: 99 },    // Vorherige rote Kerze (Abwärtstrend)
+                { open: 99, high: 100, low: 93, close: 99.5 }    // Hammer: kleiner Body oben, langer unterer Docht
             ],
-            'shooting_star': [
-                { open: 100, high: 101, low: 99, close: 100.5 },
-                { open: 101, high: 102, low: 100, close: 101.5 },
-                { open: 102, high: 108, low: 101.5, close: 102.5 }  // Shooting Star
+            'inverted_hammer': [
+                { open: 102, high: 103, low: 98, close: 99 },    // Vorherige rote Kerze
+                { open: 98, high: 105, low: 97, close: 99 }      // Invertierter Hammer: langer oberer Docht
             ],
             'bullish_engulfing': [
-                { open: 102, high: 103, low: 99, close: 100 },  // Red
-                { open: 99, high: 105, low: 98, close: 104 }     // Green engulfing
-            ],
-            'bearish_engulfing': [
-                { open: 100, high: 103, low: 99, close: 102 },  // Green
-                { open: 103, high: 104, low: 98, close: 99 }     // Red engulfing
-            ],
-            'doji': [
-                { open: 100, high: 102, low: 98, close: 100 },
-                { open: 101, high: 104, low: 99, close: 100.5 }  // Doji
+                { open: 104, high: 105, low: 100, close: 101 },  // Kleine rote Kerze
+                { open: 100, high: 106, low: 99, close: 105 }    // Große grüne Kerze umschließt
             ],
             'morning_star': [
-                { open: 105, high: 106, low: 100, close: 101 },  // Long red
-                { open: 100, high: 101, low: 99, close: 100 },    // Small body
-                { open: 101, high: 107, low: 100, close: 106 }    // Long green
+                { open: 106, high: 107, low: 100, close: 101 },  // Lange rote Kerze
+                { open: 101, high: 102, low: 100, close: 101 },  // Kleiner Body/Doji
+                { open: 101, high: 108, low: 100, close: 107 }   // Lange grüne Kerze
+            ],
+            'piercing_line': [
+                { open: 106, high: 107, low: 100, close: 101 },  // Rote Kerze
+                { open: 99, high: 105, low: 98, close: 104 }     // Grüne Kerze schließt über 50%
+            ],
+            'dragonfly_doji': [
+                { open: 102, high: 103, low: 98, close: 99 },    // Vorherige Kerze
+                { open: 100, high: 100.5, low: 93, close: 100 }  // Dragonfly: Body oben, langer unterer Docht
+            ],
+
+            // === Reversal Bearish ===
+            'hanging_man': [
+                { open: 98, high: 102, low: 97, close: 101 },    // Vorherige grüne Kerze (Aufwärtstrend)
+                { open: 102, high: 103, low: 95, close: 102 }    // Hanging Man: kleiner Body oben, langer unterer Docht
+            ],
+            'shooting_star': [
+                { open: 98, high: 102, low: 97, close: 101 },    // Vorherige grüne Kerze
+                { open: 102, high: 109, low: 101, close: 103 }   // Shooting Star: langer oberer Docht
+            ],
+            'bearish_engulfing': [
+                { open: 100, high: 104, low: 99, close: 103 },   // Kleine grüne Kerze
+                { open: 104, high: 105, low: 98, close: 99 }     // Große rote Kerze umschließt
             ],
             'evening_star': [
-                { open: 100, high: 106, low: 99, close: 105 },   // Long green
-                { open: 106, high: 107, low: 105, close: 106 },   // Small body
-                { open: 105, high: 106, low: 100, close: 101 }    // Long red
+                { open: 100, high: 107, low: 99, close: 106 },   // Lange grüne Kerze
+                { open: 106, high: 107, low: 105, close: 106 },  // Kleiner Body/Doji
+                { open: 106, high: 107, low: 100, close: 101 }   // Lange rote Kerze
             ],
+            'dark_cloud_cover': [
+                { open: 100, high: 106, low: 99, close: 105 },   // Grüne Kerze
+                { open: 107, high: 108, low: 101, close: 102 }   // Rote Kerze öffnet über, schließt unter 50%
+            ],
+            'gravestone_doji': [
+                { open: 98, high: 102, low: 97, close: 101 },    // Vorherige Kerze
+                { open: 102, high: 109, low: 102, close: 102 }   // Gravestone: Body unten, langer oberer Docht
+            ],
+
+            // === Continuation ===
             'three_white_soldiers': [
-                { open: 100, high: 103, low: 99, close: 102 },
-                { open: 102, high: 106, low: 101, close: 105 },
-                { open: 105, high: 109, low: 104, close: 108 }
+                { open: 100, high: 104, low: 99, close: 103 },   // 1. grüne Kerze
+                { open: 103, high: 107, low: 102, close: 106 },  // 2. grüne Kerze
+                { open: 106, high: 110, low: 105, close: 109 }   // 3. grüne Kerze
             ],
             'three_black_crows': [
-                { open: 108, high: 109, low: 105, close: 106 },
-                { open: 106, high: 107, low: 102, close: 103 },
-                { open: 103, high: 104, low: 99, close: 100 }
+                { open: 109, high: 110, low: 105, close: 106 },  // 1. rote Kerze
+                { open: 106, high: 107, low: 102, close: 103 },  // 2. rote Kerze
+                { open: 103, high: 104, low: 99, close: 100 }    // 3. rote Kerze
+            ],
+            'rising_three_methods': [
+                { open: 100, high: 106, low: 99, close: 105 },   // Große grüne
+                { open: 104, high: 105, low: 102, close: 103 },  // Kleine rote
+                { open: 103, high: 104, low: 101, close: 102 },  // Kleine rote
+                { open: 102, high: 108, low: 101, close: 107 }   // Große grüne
+            ],
+            'falling_three_methods': [
+                { open: 107, high: 108, low: 101, close: 102 },  // Große rote
+                { open: 103, high: 105, low: 102, close: 104 },  // Kleine grüne
+                { open: 104, high: 106, low: 103, close: 105 },  // Kleine grüne
+                { open: 105, high: 106, low: 99, close: 100 }    // Große rote
+            ],
+
+            // === Indecision ===
+            'doji': [
+                { open: 101, high: 103, low: 99, close: 100 },   // Vorherige Kerze
+                { open: 100, high: 104, low: 96, close: 100 }    // Doji: Open ≈ Close
+            ],
+            'spinning_top': [
+                { open: 101, high: 103, low: 99, close: 100 },   // Vorherige Kerze
+                { open: 100, high: 105, low: 95, close: 102 }    // Spinning Top: kleiner Body, lange Dochte
+            ],
+            'bullish_harami': [
+                { open: 106, high: 107, low: 99, close: 100 },   // Große rote Kerze
+                { open: 101, high: 103, low: 100, close: 102 }   // Kleine grüne Kerze innerhalb
+            ],
+            'bearish_harami': [
+                { open: 100, high: 107, low: 99, close: 106 },   // Große grüne Kerze
+                { open: 105, high: 106, low: 103, close: 104 }   // Kleine rote Kerze innerhalb
+            ],
+            'harami_cross': [
+                { open: 106, high: 107, low: 99, close: 100 },   // Große Kerze
+                { open: 103, high: 105, low: 101, close: 103 }   // Doji innerhalb
+            ],
+            'inside_bar': [
+                { open: 106, high: 108, low: 98, close: 100 },   // Große Mutterkerze
+                { open: 102, high: 105, low: 100, close: 103 }   // Kleinere Kerze komplett innerhalb
             ]
         };
 
