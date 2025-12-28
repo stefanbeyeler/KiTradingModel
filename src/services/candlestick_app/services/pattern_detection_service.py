@@ -34,6 +34,31 @@ from ..models.schemas import (
     TimeframePatterns,
 )
 
+# Timeframe-Mapping für TwelveData API
+# (Vermeidet Import von src.config.timeframes wegen torch-Abhängigkeit)
+TIMEFRAME_TO_TWELVEDATA = {
+    "M1": "1min",
+    "M5": "5min",
+    "M15": "15min",
+    "M30": "30min",
+    "M45": "45min",
+    "H1": "1h",
+    "H2": "2h",
+    "H4": "4h",
+    "D1": "1day",
+    "W1": "1week",
+    "MN": "1month",
+}
+
+
+def to_twelvedata(timeframe: str) -> str:
+    """Konvertiert Standard-Timeframe zu TwelveData-Format."""
+    tf_upper = timeframe.upper()
+    if tf_upper in TIMEFRAME_TO_TWELVEDATA:
+        return TIMEFRAME_TO_TWELVEDATA[tf_upper]
+    # Fallback: Wenn bereits TwelveData-Format, direkt zurückgeben
+    return timeframe.lower()
+
 
 # Data Service URL
 DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
@@ -990,7 +1015,7 @@ class CandlestickPatternService:
         timeframe: str
     ) -> tuple[list[dict], str]:
         """
-        Fetch historical data from Data Service.
+        Fetch historical data from Data Service via TwelveData endpoint.
 
         Returns:
             Tuple of (data, source)
@@ -998,24 +1023,51 @@ class CandlestickPatternService:
         client = await self._get_client()
 
         try:
-            url = f"{DATA_SERVICE_URL}/api/v1/history"
+            # Konvertiere Timeframe zu TwelveData-Format (z.B. H1 -> 1h)
+            td_interval = to_twelvedata(timeframe)
+
+            url = f"{DATA_SERVICE_URL}/api/v1/twelvedata/time_series/{symbol}"
             params = {
-                "symbol": symbol,
-                "limit": limit,
-                "interval": timeframe,
+                "interval": td_interval,
+                "outputsize": min(limit, 5000),  # TwelveData max limit
             }
 
             response = await client.get(url, params=params)
             response.raise_for_status()
 
             result = response.json()
-            data = result.get("data", [])
-            source = result.get("source", "unknown")
+
+            # TwelveData Response Format:
+            # {"meta": {...}, "values": [{"datetime": "...", "open": "...", ...}]}
+            values = result.get("values", [])
+
+            # Konvertiere zu Standard-Format für Pattern Detection
+            data = []
+            for v in values:
+                try:
+                    data.append({
+                        "timestamp": v.get("datetime"),
+                        "open": float(v.get("open", 0)),
+                        "high": float(v.get("high", 0)),
+                        "low": float(v.get("low", 0)),
+                        "close": float(v.get("close", 0)),
+                        "volume": float(v.get("volume", 0)) if v.get("volume") else 0.0,
+                    })
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to parse candle data: {e}")
+                    continue
+
+            source = "twelvedata"
+            if result.get("meta", {}).get("from_cache"):
+                source = "twelvedata_cached"
 
             return data, source
 
-        except Exception as e:
+        except httpx.HTTPStatusError as e:
             logger.error(f"Failed to fetch historical data: {e}")
+            return [], "error"
+        except Exception as e:
+            logger.error(f"Unexpected error fetching historical data: {e}")
             return [], "error"
 
     async def _get_symbol_names(self) -> list[str]:
