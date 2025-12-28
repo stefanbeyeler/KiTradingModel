@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watchdog Service - Konfiguration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #ec4899;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .service-badge.offline {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        .service-badge.warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+        }
+
+        .tab-btn.active {
+            background: rgba(236, 72, 153, 0.15);
+            color: #ec4899;
+            border-bottom: 2px solid #ec4899;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #ec4899;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #ec4899;
+        }
+
+        .stat-value.warning {
+            color: #ffb74d;
+        }
+
+        .stat-value.success {
+            color: #81c784;
+        }
+
+        .stat-value.danger {
+            color: #e57373;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: rgba(236, 72, 153, 0.2);
+            color: #ec4899;
+            border: 1px solid rgba(236, 72, 153, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(236, 72, 153, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .grid-equal {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1100px) {
+            .grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .grid-2, .grid-3, .grid-equal {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Config Section */
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .config-item .label {
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+
+        .config-item .value {
+            font-weight: 500;
+            color: #ec4899;
+        }
+
+        .config-item .value.warning {
+            color: #ffb74d;
+        }
+
+        .config-item .value.success {
+            color: #81c784;
+        }
+
+        .config-item .value.danger {
+            color: #e57373;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #ec4899;
+        }
+
+        .form-control::placeholder {
+            color: #888;
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #aaa;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: rgba(236, 72, 153, 0.5);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+            background-color: #ec4899;
+        }
+
+        /* Services Grid */
+        .services-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .service-status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border-left: 3px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .service-status-item.healthy {
+            border-left-color: #81c784;
+        }
+
+        .service-status-item.unhealthy {
+            border-left-color: #e57373;
+        }
+
+        .service-status-item .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .service-status-item .status-dot.healthy {
+            background: #81c784;
+            box-shadow: 0 0 6px rgba(129, 199, 132, 0.6);
+        }
+
+        .service-status-item .status-dot.unhealthy {
+            background: #e57373;
+            box-shadow: 0 0 6px rgba(229, 115, 115, 0.6);
+        }
+
+        .service-status-item .status-dot.loading {
+            background: #ffb74d;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .service-status-item .service-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .service-status-item .service-port {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            margin-left: auto;
+        }
+
+        /* Training Schedule Table */
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .schedule-table th,
+        .schedule-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .schedule-table th {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            font-weight: 500;
+        }
+
+        .schedule-table td {
+            font-size: 0.9rem;
+        }
+
+        .schedule-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Test Results */
+        .test-results-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+
+        .test-result-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .test-result-item .test-icon {
+            font-size: 1rem;
+        }
+
+        .test-result-item.passed {
+            border-left: 3px solid #81c784;
+        }
+
+        .test-result-item.failed {
+            border-left: 3px solid #e57373;
+        }
+
+        .test-result-item.skipped {
+            border-left: 3px solid #ffb74d;
+        }
+
+        .test-result-item .test-name {
+            flex: 1;
+        }
+
+        .test-result-item .test-duration {
+            opacity: 0.6;
+            font-size: 0.75rem;
+        }
+
+        /* Alert Config */
+        .alert-config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+        }
+
+        .alert-config-item .alert-info {
+            flex: 1;
+        }
+
+        .alert-config-item .alert-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .alert-config-item .alert-desc {
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .quick-actions .btn {
+            width: 100%;
+            justify-content: center;
+            padding: 0.9rem;
+        }
+
+        /* Training Queue */
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .queue-item .queue-position {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #ec4899;
+            min-width: 30px;
+        }
+
+        .queue-item .queue-info {
+            flex: 1;
+        }
+
+        .queue-item .queue-service {
+            font-weight: 500;
+        }
+
+        .queue-item .queue-symbol {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .queue-item .queue-status {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .queue-item .queue-status.pending {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        .queue-item .queue-status.running {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .queue-item .queue-status.completed {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .badge-warning { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
+        .badge-danger { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+        .badge-info { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            border-left: 4px solid #ec4899;
+            display: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.error {
+            border-left-color: #e57373;
+        }
+
+        .toast.success {
+            border-left-color: #81c784;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(236, 72, 153, 0.3);
+            border-radius: 50%;
+            border-top-color: #ec4899;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.6;
+        }
+
+        .empty-state .icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Dashboard</a>
+            <span class="header-title">Watchdog Service - Konfiguration</span>
+            <span class="service-badge" id="service-status">Laden...</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('overview')">Übersicht</button>
+            <button class="tab-btn" onclick="switchTab('monitoring')">Überwachung</button>
+            <button class="tab-btn" onclick="switchTab('testing')">Testing</button>
+            <button class="tab-btn" onclick="switchTab('training')">Training</button>
+            <button class="tab-btn" onclick="switchTab('alerts')">Alarmierung</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="tab-overview" class="tab-content active">
+            <!-- Stats Bar -->
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-services-healthy">-</div>
+                    <div class="stat-label">Services Online</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-services-total">-</div>
+                    <div class="stat-label">Services Total</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-telegram">-</div>
+                    <div class="stat-label">Telegram</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-training-active">-</div>
+                    <div class="stat-label">Training aktiv</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <!-- Service Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Service-Status</h2>
+                        <button class="btn btn-sm btn-primary" onclick="refreshHealth()">Aktualisieren</button>
+                    </div>
+                    <div class="services-status-grid" id="services-status-grid">
+                        <!-- Services will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Schnellaktionen</h2>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="btn btn-success" onclick="runSmokeTests()">
+                            Smoke-Tests ausführen
+                        </button>
+                        <button class="btn btn-primary" onclick="sendTestAlert()">
+                            Test-Alert senden
+                        </button>
+                        <button class="btn btn-warning" onclick="trainAllServices()">
+                            Alle Services trainieren
+                        </button>
+                        <button class="btn btn-danger" onclick="clearAlertHistory()">
+                            Alert-Historie löschen
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Overview -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Aktuelle Konfiguration</h2>
+                </div>
+                <div class="config-grid" id="config-overview">
+                    <div class="config-item">
+                        <span class="label">Health-Check Intervall</span>
+                        <span class="value" id="cfg-health-interval">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">Alert Cooldown</span>
+                        <span class="value" id="cfg-alert-cooldown">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">Telegram Bot</span>
+                        <span class="value" id="cfg-telegram-bot">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">Training Scheduler</span>
+                        <span class="value" id="cfg-training-scheduler">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monitoring Tab -->
+        <div id="tab-monitoring" class="tab-content">
+            <div class="grid-equal">
+                <!-- Monitoring Settings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Überwachungs-Einstellungen</h2>
+                    </div>
+                    <div class="form-group">
+                        <label>Health-Check Intervall (Sekunden)</label>
+                        <input type="number" class="form-control" id="input-health-interval" value="30" min="10" max="300">
+                    </div>
+                    <div class="form-group">
+                        <label>Timeout für Health-Checks (Sekunden)</label>
+                        <input type="number" class="form-control" id="input-health-timeout" value="10" min="5" max="60">
+                    </div>
+                    <div class="form-group">
+                        <label>Max. aufeinanderfolgende Fehler</label>
+                        <input type="number" class="form-control" id="input-max-failures" value="3" min="1" max="10">
+                    </div>
+                    <button class="btn btn-success" onclick="saveMonitoringConfig()" style="margin-top: 1rem;">
+                        Einstellungen speichern
+                    </button>
+                </div>
+
+                <!-- Monitored Services -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Überwachte Services</h2>
+                    </div>
+                    <div id="monitored-services-list">
+                        <!-- Services will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Health History -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Health-Historie (letzte 24h)</h2>
+                    <button class="btn btn-sm btn-primary" onclick="loadHealthHistory()">Aktualisieren</button>
+                </div>
+                <div id="health-history">
+                    <div class="empty-state">
+                        <div class="icon">&#128202;</div>
+                        <div>Health-Historie wird geladen...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testing Tab -->
+        <div id="tab-testing" class="tab-content">
+            <div class="grid-2">
+                <!-- Test Execution -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Test-Ausführung</h2>
+                    </div>
+                    <div class="form-group">
+                        <label>Test-Kategorie</label>
+                        <select class="form-control" id="select-test-category">
+                            <option value="smoke">Smoke Tests (schnell)</option>
+                            <option value="api">API Tests</option>
+                            <option value="contract">Contract Tests</option>
+                            <option value="integration">Integration Tests</option>
+                            <option value="all">Alle Tests</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Ziel-Service (optional)</label>
+                        <select class="form-control" id="select-test-service">
+                            <option value="">Alle Services</option>
+                            <option value="data">Data Service</option>
+                            <option value="nhits">NHITS Service</option>
+                            <option value="tcn">TCN Service</option>
+                            <option value="hmm">HMM Service</option>
+                            <option value="embedder">Embedder Service</option>
+                            <option value="candlestick">Candlestick Service</option>
+                            <option value="rag">RAG Service</option>
+                            <option value="llm">LLM Service</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success" onclick="runTests()" id="btn-run-tests" style="width: 100%;">
+                        Tests ausführen
+                    </button>
+                </div>
+
+                <!-- Test Results Summary -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Ergebnis-Zusammenfassung</h2>
+                    </div>
+                    <div class="stats-bar" style="margin-bottom: 0;">
+                        <div class="stat-item">
+                            <div class="stat-value success" id="test-passed">-</div>
+                            <div class="stat-label">Bestanden</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value danger" id="test-failed">-</div>
+                            <div class="stat-label">Fehlgeschlagen</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value warning" id="test-skipped">-</div>
+                            <div class="stat-label">Übersprungen</div>
+                        </div>
+                    </div>
+                    <div class="config-item" style="margin-top: 1rem;">
+                        <span class="label">Letzter Lauf</span>
+                        <span class="value" id="test-last-run">-</span>
+                    </div>
+                    <div class="config-item" style="margin-top: 0.5rem;">
+                        <span class="label">Dauer</span>
+                        <span class="value" id="test-duration">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Results Details -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Test-Ergebnisse</h2>
+                    <button class="btn btn-sm btn-primary" onclick="loadTestResults()">Aktualisieren</button>
+                </div>
+                <div class="test-results-list" id="test-results-list">
+                    <div class="empty-state">
+                        <div class="icon">&#128221;</div>
+                        <div>Keine Test-Ergebnisse vorhanden</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Tab -->
+        <div id="tab-training" class="tab-content">
+            <div class="grid-2">
+                <!-- Training Queue -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Training-Warteschlange</h2>
+                        <button class="btn btn-sm btn-primary" onclick="loadTrainingQueue()">Aktualisieren</button>
+                    </div>
+                    <div id="training-queue">
+                        <div class="empty-state">
+                            <div class="icon">&#128203;</div>
+                            <div>Keine Training-Jobs in der Warteschlange</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Start New Training -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Neues Training starten</h2>
+                    </div>
+                    <div class="form-group">
+                        <label>Service</label>
+                        <select class="form-control" id="select-training-service">
+                            <option value="nhits">NHITS (Preisvorhersage)</option>
+                            <option value="tcn">TCN (Chart-Patterns)</option>
+                            <option value="hmm">HMM (Regime-Detection)</option>
+                            <option value="candlestick">Candlestick (Patterns)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Symbole (kommagetrennt)</label>
+                        <input type="text" class="form-control" id="input-training-symbols" placeholder="BTCUSD, EURUSD, XAUUSD">
+                    </div>
+                    <div class="form-group">
+                        <label>Priorität</label>
+                        <select class="form-control" id="select-training-priority">
+                            <option value="low">Niedrig (Background)</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="high">Hoch</option>
+                            <option value="critical">Kritisch</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success" onclick="startTraining()" style="width: 100%;">
+                        Training starten
+                    </button>
+                </div>
+            </div>
+
+            <!-- Training Schedules -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Training-Zeitpläne</h2>
+                    <button class="btn btn-sm btn-success" onclick="showAddScheduleModal()">+ Zeitplan hinzufügen</button>
+                </div>
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Zeitplan</th>
+                            <th>Symbole</th>
+                            <th>Nächste Ausführung</th>
+                            <th>Status</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="training-schedules">
+                        <tr>
+                            <td colspan="6" class="empty-state">Keine Zeitpläne konfiguriert</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Training History -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Training-Historie</h2>
+                </div>
+                <div id="training-history">
+                    <div class="empty-state">
+                        <div class="icon">&#128218;</div>
+                        <div>Keine Training-Historie vorhanden</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Tab -->
+        <div id="tab-alerts" class="tab-content">
+            <div class="grid-equal">
+                <!-- Telegram Configuration -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Telegram-Konfiguration</h2>
+                    </div>
+                    <div class="form-group">
+                        <label>Bot Token</label>
+                        <input type="password" class="form-control" id="input-telegram-token" placeholder="Bot Token eingeben...">
+                    </div>
+                    <div class="form-group">
+                        <label>Chat ID</label>
+                        <input type="text" class="form-control" id="input-telegram-chat-id" placeholder="Chat ID eingeben...">
+                    </div>
+                    <div class="form-group">
+                        <label>Alert Cooldown (Minuten)</label>
+                        <input type="number" class="form-control" id="input-alert-cooldown" value="5" min="1" max="60">
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                        <button class="btn btn-success" onclick="saveTelegramConfig()" style="flex: 1;">
+                            Speichern
+                        </button>
+                        <button class="btn btn-primary" onclick="testTelegramConnection()">
+                            Testen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Alert Types -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Alert-Typen</h2>
+                    </div>
+                    <div class="alert-config-item">
+                        <div class="alert-info">
+                            <div class="alert-name">Service Down</div>
+                            <div class="alert-desc">Benachrichtigung wenn ein Service offline geht</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="alert-service-down" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="alert-config-item">
+                        <div class="alert-info">
+                            <div class="alert-name">Service Recovery</div>
+                            <div class="alert-desc">Benachrichtigung wenn ein Service wieder online ist</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="alert-service-recovery" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="alert-config-item">
+                        <div class="alert-info">
+                            <div class="alert-name">Training Complete</div>
+                            <div class="alert-desc">Benachrichtigung bei abgeschlossenem Training</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="alert-training-complete">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="alert-config-item">
+                        <div class="alert-info">
+                            <div class="alert-name">Training Error</div>
+                            <div class="alert-desc">Benachrichtigung bei Training-Fehlern</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="alert-training-error" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="alert-config-item">
+                        <div class="alert-info">
+                            <div class="alert-name">Test Failures</div>
+                            <div class="alert-desc">Benachrichtigung bei fehlgeschlagenen Tests</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="alert-test-failure">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alert History -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Alert-Historie</h2>
+                    <button class="btn btn-sm btn-danger" onclick="clearAlertHistory()">Historie löschen</button>
+                </div>
+                <div id="alert-history">
+                    <div class="empty-state">
+                        <div class="icon">&#128276;</div>
+                        <div>Keine Alerts in der Historie</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '/watchdog/api/v1';
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // Load data for the selected tab
+            if (tabName === 'testing') loadTestResults();
+            if (tabName === 'training') {
+                loadTrainingQueue();
+                loadTrainingSchedules();
+            }
+            if (tabName === 'monitoring') loadHealthHistory();
+            if (tabName === 'alerts') loadAlertHistory();
+        }
+
+        // Check service health
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${API_BASE.replace('/api/v1', '')}/health`);
+                const data = await res.json();
+                const badge = document.getElementById('service-status');
+
+                if (data.status === 'healthy') {
+                    badge.textContent = 'Online';
+                    badge.classList.remove('offline', 'warning');
+                } else {
+                    badge.textContent = 'Degraded';
+                    badge.classList.remove('offline');
+                    badge.classList.add('warning');
+                }
+
+                // Update stats
+                document.getElementById('stat-services-healthy').textContent = data.healthy_count || 0;
+                document.getElementById('stat-services-total').textContent = data.services_monitored || 0;
+                document.getElementById('stat-telegram').textContent = data.telegram_enabled ? 'Aktiv' : 'Inaktiv';
+                document.getElementById('stat-telegram').className = 'stat-value ' + (data.telegram_enabled ? 'success' : 'warning');
+
+                // Update config overview
+                document.getElementById('cfg-telegram-bot').textContent = data.telegram_enabled ? 'Konfiguriert' : 'Nicht konfiguriert';
+                document.getElementById('cfg-telegram-bot').className = 'value ' + (data.telegram_enabled ? 'success' : 'warning');
+
+                return data;
+            } catch (err) {
+                const badge = document.getElementById('service-status');
+                badge.textContent = 'Offline';
+                badge.classList.add('offline');
+                return null;
+            }
+        }
+
+        // Refresh health status
+        async function refreshHealth() {
+            showToast('Aktualisiere Health-Status...');
+            await checkHealth();
+            await loadServicesStatus();
+            showToast('Health-Status aktualisiert', 'success');
+        }
+
+        // Load services status
+        async function loadServicesStatus() {
+            const grid = document.getElementById('services-status-grid');
+
+            const services = [
+                { name: 'Data Service', port: 3001, key: 'data' },
+                { name: 'NHITS', port: 3002, key: 'nhits' },
+                { name: 'TCN', port: 3003, key: 'tcn' },
+                { name: 'HMM', port: 3004, key: 'hmm' },
+                { name: 'Embedder', port: 3005, key: 'embedder' },
+                { name: 'Candlestick', port: 3006, key: 'candlestick' },
+                { name: 'RAG', port: 3008, key: 'rag' },
+                { name: 'LLM', port: 3009, key: 'llm' },
+                { name: 'Redis', port: 6379, key: 'redis' },
+                { name: 'NHITS-Train', port: 3012, key: 'nhits-train' },
+                { name: 'TCN-Train', port: 3013, key: 'tcn-train' },
+                { name: 'HMM-Train', port: 3014, key: 'hmm-train' },
+                { name: 'Candle-Train', port: 3016, key: 'candlestick-train' }
+            ];
+
+            grid.innerHTML = services.map(s => `
+                <div class="service-status-item" id="svc-${s.key}">
+                    <span class="status-dot loading" id="dot-${s.key}"></span>
+                    <span class="service-name">${s.name}</span>
+                    <span class="service-port">:${s.port}</span>
+                </div>
+            `).join('');
+
+            // Check each service
+            for (const s of services) {
+                checkServiceHealth(s);
+            }
+        }
+
+        async function checkServiceHealth(service) {
+            const dot = document.getElementById(`dot-${service.key}`);
+            const item = document.getElementById(`svc-${service.key}`);
+
+            try {
+                const endpoint = service.key === 'redis' ? '/data/health' : `/${service.key}/health`;
+                const res = await fetch(endpoint, { timeout: 5000 });
+
+                if (res.ok) {
+                    dot.classList.remove('loading', 'unhealthy');
+                    dot.classList.add('healthy');
+                    item.classList.remove('unhealthy');
+                    item.classList.add('healthy');
+                } else {
+                    throw new Error('Not healthy');
+                }
+            } catch (err) {
+                dot.classList.remove('loading', 'healthy');
+                dot.classList.add('unhealthy');
+                item.classList.remove('healthy');
+                item.classList.add('unhealthy');
+            }
+        }
+
+        // Run smoke tests
+        async function runSmokeTests() {
+            showToast('Starte Smoke-Tests...');
+            try {
+                const res = await fetch(`${API_BASE}/tests/run/smoke`, { method: 'POST' });
+                const data = await res.json();
+                showToast('Smoke-Tests gestartet', 'success');
+                setTimeout(loadTestResults, 2000);
+            } catch (err) {
+                showToast('Fehler beim Starten der Tests', 'error');
+            }
+        }
+
+        // Send test alert
+        async function sendTestAlert() {
+            showToast('Sende Test-Alert...');
+            try {
+                const res = await fetch(`${API_BASE}/alerts/test`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Test-Alert gesendet', 'success');
+                } else {
+                    showToast(data.message || 'Alert konnte nicht gesendet werden', 'error');
+                }
+            } catch (err) {
+                showToast('Fehler beim Senden des Alerts', 'error');
+            }
+        }
+
+        // Train all services
+        async function trainAllServices() {
+            if (!confirm('Möchten Sie wirklich alle Services trainieren? Dies kann mehrere Stunden dauern.')) return;
+
+            showToast('Starte Training für alle Services...');
+            try {
+                const res = await fetch(`${API_BASE}/training/train-all`, { method: 'POST' });
+                const data = await res.json();
+                showToast('Training gestartet', 'success');
+                setTimeout(loadTrainingQueue, 1000);
+            } catch (err) {
+                showToast('Fehler beim Starten des Trainings', 'error');
+            }
+        }
+
+        // Run tests
+        async function runTests() {
+            const category = document.getElementById('select-test-category').value;
+            const service = document.getElementById('select-test-service').value;
+            const btn = document.getElementById('btn-run-tests');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Tests laufen...';
+
+            try {
+                let url = `${API_BASE}/tests/run/${category}`;
+                if (service) url += `?service=${service}`;
+
+                const res = await fetch(url, { method: 'POST' });
+                const data = await res.json();
+
+                showToast('Tests gestartet', 'success');
+                setTimeout(loadTestResults, 3000);
+            } catch (err) {
+                showToast('Fehler beim Starten der Tests', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Tests ausführen';
+            }
+        }
+
+        // Load test results
+        async function loadTestResults() {
+            try {
+                const res = await fetch(`${API_BASE}/tests/status`);
+                const data = await res.json();
+
+                // Update summary
+                if (data.summary) {
+                    document.getElementById('test-passed').textContent = data.summary.passed || 0;
+                    document.getElementById('test-failed').textContent = data.summary.failed || 0;
+                    document.getElementById('test-skipped').textContent = data.summary.skipped || 0;
+                }
+
+                if (data.completed_at) {
+                    const date = new Date(data.completed_at);
+                    document.getElementById('test-last-run').textContent = date.toLocaleString('de-CH');
+                }
+
+                if (data.duration) {
+                    document.getElementById('test-duration').textContent = `${data.duration.toFixed(2)}s`;
+                }
+
+                // Update results list
+                const list = document.getElementById('test-results-list');
+                if (data.results && data.results.length > 0) {
+                    list.innerHTML = data.results.map(r => `
+                        <div class="test-result-item ${r.status}">
+                            <span class="test-icon">${r.status === 'passed' ? '&#10003;' : r.status === 'failed' ? '&#10007;' : '&#8943;'}</span>
+                            <span class="test-name">${r.name}</span>
+                            <span class="test-duration">${r.duration ? r.duration.toFixed(2) + 's' : '-'}</span>
+                        </div>
+                    `).join('');
+                } else if (data.status === 'running') {
+                    list.innerHTML = '<div class="empty-state"><span class="loading-spinner"></span> Tests laufen...</div>';
+                }
+            } catch (err) {
+                console.error('Error loading test results:', err);
+            }
+        }
+
+        // Load training queue
+        async function loadTrainingQueue() {
+            try {
+                const res = await fetch(`${API_BASE}/training/status`);
+                const data = await res.json();
+
+                const queue = document.getElementById('training-queue');
+
+                // Update active training stat
+                const activeCount = data.queue?.filter(j => j.status === 'running').length || 0;
+                document.getElementById('stat-training-active').textContent = activeCount;
+
+                if (data.queue && data.queue.length > 0) {
+                    queue.innerHTML = data.queue.map((job, i) => `
+                        <div class="queue-item">
+                            <span class="queue-position">#${i + 1}</span>
+                            <div class="queue-info">
+                                <div class="queue-service">${job.service}</div>
+                                <div class="queue-symbol">${job.symbols?.join(', ') || 'Alle Symbole'}</div>
+                            </div>
+                            <span class="queue-status ${job.status}">${job.status}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    queue.innerHTML = '<div class="empty-state"><div class="icon">&#128203;</div><div>Keine Training-Jobs in der Warteschlange</div></div>';
+                }
+            } catch (err) {
+                console.error('Error loading training queue:', err);
+            }
+        }
+
+        // Load training schedules
+        async function loadTrainingSchedules() {
+            try {
+                const res = await fetch(`${API_BASE}/training/schedules`);
+                const data = await res.json();
+
+                const tbody = document.getElementById('training-schedules');
+
+                if (data.schedules && data.schedules.length > 0) {
+                    tbody.innerHTML = data.schedules.map(s => `
+                        <tr>
+                            <td>${s.service}</td>
+                            <td>${s.schedule}</td>
+                            <td>${s.symbols?.join(', ') || 'Alle'}</td>
+                            <td>${s.next_run ? new Date(s.next_run).toLocaleString('de-CH') : '-'}</td>
+                            <td><span class="badge ${s.enabled ? 'badge-success' : 'badge-warning'}">${s.enabled ? 'Aktiv' : 'Inaktiv'}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="deleteSchedule('${s.id}')">Löschen</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Keine Zeitpläne konfiguriert</td></tr>';
+                }
+            } catch (err) {
+                console.error('Error loading schedules:', err);
+            }
+        }
+
+        // Start training
+        async function startTraining() {
+            const service = document.getElementById('select-training-service').value;
+            const symbolsInput = document.getElementById('input-training-symbols').value;
+            const priority = document.getElementById('select-training-priority').value;
+
+            const symbols = symbolsInput ? symbolsInput.split(',').map(s => s.trim()).filter(s => s) : [];
+
+            try {
+                const res = await fetch(`${API_BASE}/training/queue`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ service, symbols, priority })
+                });
+                const data = await res.json();
+
+                if (data.success || data.job_id) {
+                    showToast('Training zur Warteschlange hinzugefügt', 'success');
+                    loadTrainingQueue();
+                } else {
+                    showToast(data.message || 'Fehler beim Hinzufügen', 'error');
+                }
+            } catch (err) {
+                showToast('Fehler beim Starten des Trainings', 'error');
+            }
+        }
+
+        // Load health history
+        async function loadHealthHistory() {
+            const container = document.getElementById('health-history');
+            container.innerHTML = '<div class="empty-state"><span class="loading-spinner"></span> Lade Historie...</div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/health/history`);
+                const data = await res.json();
+
+                if (data.history && data.history.length > 0) {
+                    container.innerHTML = `
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem;">
+                            ${data.history.map(h => `
+                                <div style="padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 0.75rem; opacity: 0.6;">${new Date(h.timestamp).toLocaleTimeString('de-CH')}</div>
+                                    <div style="font-size: 1.2rem; font-weight: 600; color: ${h.healthy ? '#81c784' : '#e57373'};">${h.healthy_count}/${h.total}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = '<div class="empty-state"><div class="icon">&#128202;</div><div>Keine Historie verfügbar</div></div>';
+                }
+            } catch (err) {
+                container.innerHTML = '<div class="empty-state">Fehler beim Laden der Historie</div>';
+            }
+        }
+
+        // Load alert history
+        async function loadAlertHistory() {
+            const container = document.getElementById('alert-history');
+
+            try {
+                const res = await fetch(`${API_BASE}/alerts/history`);
+                const data = await res.json();
+
+                if (data.alerts && data.alerts.length > 0) {
+                    container.innerHTML = data.alerts.map(a => `
+                        <div class="test-result-item ${a.type === 'error' || a.type === 'down' ? 'failed' : a.type === 'recovery' ? 'passed' : 'skipped'}">
+                            <span class="test-icon">${a.type === 'error' || a.type === 'down' ? '&#9888;' : a.type === 'recovery' ? '&#10003;' : '&#128276;'}</span>
+                            <span class="test-name">${a.message}</span>
+                            <span class="test-duration">${new Date(a.timestamp).toLocaleString('de-CH')}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="empty-state"><div class="icon">&#128276;</div><div>Keine Alerts in der Historie</div></div>';
+                }
+            } catch (err) {
+                console.error('Error loading alert history:', err);
+            }
+        }
+
+        // Clear alert history
+        async function clearAlertHistory() {
+            if (!confirm('Möchten Sie wirklich die Alert-Historie löschen?')) return;
+
+            try {
+                await fetch(`${API_BASE}/alerts/history`, { method: 'DELETE' });
+                showToast('Alert-Historie gelöscht', 'success');
+                loadAlertHistory();
+            } catch (err) {
+                showToast('Fehler beim Löschen', 'error');
+            }
+        }
+
+        // Save monitoring config
+        async function saveMonitoringConfig() {
+            const config = {
+                health_interval: parseInt(document.getElementById('input-health-interval').value),
+                health_timeout: parseInt(document.getElementById('input-health-timeout').value),
+                max_failures: parseInt(document.getElementById('input-max-failures').value)
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/config/monitoring`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                showToast('Konfiguration gespeichert', 'success');
+            } catch (err) {
+                showToast('Fehler beim Speichern', 'error');
+            }
+        }
+
+        // Save Telegram config
+        async function saveTelegramConfig() {
+            const config = {
+                token: document.getElementById('input-telegram-token').value,
+                chat_id: document.getElementById('input-telegram-chat-id').value,
+                cooldown: parseInt(document.getElementById('input-alert-cooldown').value)
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/config/telegram`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                showToast('Telegram-Konfiguration gespeichert', 'success');
+                checkHealth();
+            } catch (err) {
+                showToast('Fehler beim Speichern', 'error');
+            }
+        }
+
+        // Test Telegram connection
+        async function testTelegramConnection() {
+            showToast('Teste Telegram-Verbindung...');
+            try {
+                const res = await fetch(`${API_BASE}/alerts/test`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Test-Nachricht gesendet!', 'success');
+                } else {
+                    showToast(data.message || 'Verbindung fehlgeschlagen', 'error');
+                }
+            } catch (err) {
+                showToast('Verbindungstest fehlgeschlagen', 'error');
+            }
+        }
+
+        // Toast notification
+        let toastTimeout = null;
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show' + (type === 'error' ? ' error' : type === 'success' ? ' success' : '');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Initial load
+        async function init() {
+            await checkHealth();
+            await loadServicesStatus();
+
+            // Set default config values
+            document.getElementById('cfg-health-interval').textContent = '30s';
+            document.getElementById('cfg-alert-cooldown').textContent = '5 min';
+            document.getElementById('cfg-training-scheduler').textContent = 'Aktiv';
+        }
+
+        init();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            checkHealth();
+        }, 30000);
+    </script>
+</body>
+</html>
