@@ -100,6 +100,86 @@ async def get_alert_history(limit: int = 50):
     }
 
 
+# ============ Health History API ============
+
+def _get_health_history():
+    """Lazy import für Health History Service."""
+    from ..services.health_history import health_history
+    return health_history
+
+
+@router.get("/health/history", tags=["Health History"])
+async def get_health_history(
+    hours: int = Query(default=24, ge=1, le=24, description="Zeitraum in Stunden (max 24)"),
+    limit: Optional[int] = Query(default=100, ge=1, le=500, description="Max. Einträge"),
+    aggregation: str = Query(default="raw", description="raw oder hourly")
+):
+    """
+    Gibt die Health-Check-Historie der letzten Stunden zurück.
+
+    Die Historie wird persistent gespeichert und überlebt Container-Neustarts.
+
+    ## Aggregation
+    - **raw**: Alle einzelnen Health-Checks
+    - **hourly**: Stündlich aggregierte Daten mit Uptime-Prozent
+    """
+    history_service = _get_health_history()
+
+    history = history_service.get_history(
+        hours=hours,
+        limit=limit,
+        aggregation=aggregation
+    )
+
+    return {
+        "period_hours": hours,
+        "aggregation": aggregation,
+        "count": len(history),
+        "history": history
+    }
+
+
+@router.get("/health/history/statistics", tags=["Health History"])
+async def get_health_statistics(
+    hours: int = Query(default=24, ge=1, le=24, description="Zeitraum in Stunden")
+):
+    """
+    Gibt Statistiken über die Health-Historie zurück.
+
+    Enthält:
+    - Uptime-Prozent
+    - Durchschnittliche Anzahl healthy Services
+    - Durchschnittliche Response-Zeit
+    """
+    history_service = _get_health_history()
+    return history_service.get_statistics(hours=hours)
+
+
+@router.get("/health/history/service/{service_name}", tags=["Health History"])
+async def get_service_health_history(
+    service_name: str,
+    hours: int = Query(default=24, ge=1, le=24, description="Zeitraum in Stunden")
+):
+    """
+    Gibt die Health-Historie für einen bestimmten Service zurück.
+    """
+    history_service = _get_health_history()
+    history = history_service.get_service_history(service_name, hours=hours)
+
+    if not history:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Keine Historie für Service '{service_name}' gefunden"
+        )
+
+    return {
+        "service": service_name,
+        "period_hours": hours,
+        "count": len(history),
+        "history": history
+    }
+
+
 @router.post("/alerts/test")
 async def send_test_alert():
     """Sendet einen Test-Alert über Telegram."""

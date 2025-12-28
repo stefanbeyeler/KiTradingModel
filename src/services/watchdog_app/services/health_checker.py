@@ -192,6 +192,15 @@ class HealthChecker:
         self._running = True
         logger.info("Health monitoring loop started")
 
+        # Import Health History Service
+        try:
+            from .health_history import health_history
+            self._health_history = health_history
+            logger.info("Health History Service aktiviert")
+        except Exception as e:
+            logger.warning(f"Health History Service nicht verfügbar: {e}")
+            self._health_history = None
+
         while self._running:
             try:
                 await self.check_all_services()
@@ -202,6 +211,14 @@ class HealthChecker:
                 logger.debug(
                     f"Health check completed: {healthy}/{len(self.status)} healthy"
                 )
+
+                # Speichere in Historie
+                if self._health_history and self.status:
+                    try:
+                        self._health_history.add_check_result(self.status)
+                    except Exception as e:
+                        logger.warning(f"Fehler beim Speichern der Historie: {e}")
+
             except Exception as e:
                 logger.error(f"Error in monitoring loop: {e}")
 

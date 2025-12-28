@@ -33,6 +33,15 @@ async def run_monitoring_with_alerts():
     """Kombiniert Health-Checks mit Alert-Verarbeitung."""
     global health_checker, alert_manager
 
+    # Health History Service initialisieren
+    health_history = None
+    try:
+        from .services.health_history import health_history as hh_service
+        health_history = hh_service
+        logger.info("Health History Service für Monitoring aktiviert")
+    except Exception as e:
+        logger.warning(f"Health History Service nicht verfügbar: {e}")
+
     while True:
         try:
             # Alle Services prüfen
@@ -46,6 +55,13 @@ async def run_monitoring_with_alerts():
                     new_status=status,
                     criticality=config.get("criticality", "medium")
                 )
+
+            # Health-Check in Historie speichern
+            if health_history and health_checker.status:
+                try:
+                    health_history.add_check_result(health_checker.status)
+                except Exception as e:
+                    logger.warning(f"Fehler beim Speichern der Health-Historie: {e}")
 
         except Exception as e:
             logger.error(f"Error in monitoring loop: {e}")

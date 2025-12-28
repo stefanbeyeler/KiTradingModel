@@ -1608,7 +1608,8 @@
             container.innerHTML = '<div class="empty-state"><span class="loading-spinner"></span> Lade Historie...</div>';
 
             try {
-                const res = await fetch(`${API_BASE}/health/history`);
+                // Lade stündliche Aggregation für 24h Übersicht
+                const res = await fetch(`${API_BASE}/health/history?hours=24&aggregation=hourly`);
 
                 if (!res.ok) {
                     throw new Error('API nicht verfügbar');
@@ -1616,30 +1617,78 @@
 
                 const data = await res.json();
 
+                // Lade auch Statistiken
+                let stats = null;
+                try {
+                    const statsRes = await fetch(`${API_BASE}/health/history/statistics?hours=24`);
+                    if (statsRes.ok) {
+                        stats = await statsRes.json();
+                    }
+                } catch (e) {}
+
                 if (data.history && data.history.length > 0) {
-                    container.innerHTML = `
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem;">
-                            ${data.history.map(h => `
-                                <div style="padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 6px; text-align: center;">
-                                    <div style="font-size: 0.75rem; opacity: 0.6;">${new Date(h.timestamp).toLocaleTimeString('de-CH')}</div>
-                                    <div style="font-size: 1.2rem; font-weight: 600; color: ${h.healthy ? '#81c784' : '#e57373'};">${h.healthy_count}/${h.total}</div>
+                    // Statistik-Header
+                    const statsHtml = stats ? `
+                        <div style="display: flex; gap: 2rem; margin-bottom: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; flex-wrap: wrap;">
+                            <div>
+                                <div style="font-size: 1.5rem; font-weight: 600; color: ${stats.uptime_percent >= 99 ? '#81c784' : stats.uptime_percent >= 90 ? '#ffb74d' : '#e57373'};">
+                                    ${stats.uptime_percent.toFixed(1)}%
                                 </div>
-                            `).join('')}
+                                <div style="font-size: 0.75rem; opacity: 0.6;">Uptime (24h)</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 1.5rem; font-weight: 600; color: #64b5f6;">
+                                    ${stats.total_checks}
+                                </div>
+                                <div style="font-size: 0.75rem; opacity: 0.6;">Health-Checks</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 1.5rem; font-weight: 600; color: #ba68c8;">
+                                    ${stats.avg_response_time_ms.toFixed(0)}ms
+                                </div>
+                                <div style="font-size: 0.75rem; opacity: 0.6;">Ø Response-Zeit</div>
+                            </div>
+                        </div>
+                    ` : '';
+
+                    // Stündliche Übersicht
+                    container.innerHTML = `
+                        ${statsHtml}
+                        <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.5rem;">Stündliche Übersicht (letzte 24h)</div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.4rem;">
+                            ${data.history.map(h => {
+                                const time = new Date(h.timestamp).toLocaleTimeString('de-CH', {hour: '2-digit', minute: '2-digit'});
+                                const uptime = h.uptime_percent || 0;
+                                const color = uptime >= 99 ? '#81c784' : uptime >= 90 ? '#ffb74d' : '#e57373';
+                                return `
+                                    <div style="padding: 0.4rem; background: rgba(0,0,0,0.2); border-radius: 4px; text-align: center; border-left: 3px solid ${color};" title="Checks: ${h.checks}, Uptime: ${uptime.toFixed(0)}%">
+                                        <div style="font-size: 0.65rem; opacity: 0.5;">${time}</div>
+                                        <div style="font-size: 0.9rem; font-weight: 600; color: ${color};">${uptime.toFixed(0)}%</div>
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     `;
                 } else {
-                    container.innerHTML = '<div class="empty-state"><div class="icon">&#128202;</div><div>Keine Historie verfügbar</div></div>';
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">&#128202;</div>
+                            <div>Noch keine Historie verfügbar</div>
+                            <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem;">
+                                Die Historie wird automatisch alle 30 Sekunden aktualisiert.
+                            </div>
+                        </div>
+                    `;
                 }
             } catch (err) {
-                // Fallback: Zeige aktuellen Status statt Historie
+                console.error('Error loading health history:', err);
                 container.innerHTML = `
                     <div style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                        <p style="opacity: 0.7; margin-bottom: 1rem;">
-                            Health-Historie API nicht verfügbar. Aktueller Status wird in Echtzeit oben angezeigt.
+                        <p style="opacity: 0.7; margin-bottom: 0.5rem;">
+                            Health-Historie wird geladen...
                         </p>
                         <p style="font-size: 0.85rem; opacity: 0.5;">
-                            Die Health-Historie wird im Watchdog Service gespeichert und ist über den Endpoint
-                            <code>/api/v1/health/history</code> abrufbar, sobald implementiert.
+                            Die Historie wird persistent im Watchdog-Volume gespeichert und ist nach dem ersten Health-Check verfügbar.
                         </p>
                     </div>
                 `;
