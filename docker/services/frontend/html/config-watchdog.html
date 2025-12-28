@@ -867,6 +867,26 @@
                         <label>Max. aufeinanderfolgende Fehler</label>
                         <input type="number" class="form-control" id="input-max-failures" value="3" min="1" max="10">
                     </div>
+                    <div class="form-group" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <label>Historie Retention-Zeit</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <select class="form-control" id="select-retention-hours" style="flex: 1;">
+                                <option value="1">1 Stunde</option>
+                                <option value="6">6 Stunden</option>
+                                <option value="12">12 Stunden</option>
+                                <option value="24" selected>24 Stunden (1 Tag)</option>
+                                <option value="48">48 Stunden (2 Tage)</option>
+                                <option value="72">72 Stunden (3 Tage)</option>
+                                <option value="168">168 Stunden (1 Woche)</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" onclick="saveRetentionConfig()" title="Retention speichern">
+                                Speichern
+                            </button>
+                        </div>
+                        <div style="font-size: 0.75rem; opacity: 0.6; margin-top: 0.3rem;">
+                            Aktuell: <span id="retention-current">-</span> Stunden (<span id="retention-entries">-</span> Einträge)
+                        </div>
+                    </div>
                     <button class="btn btn-success" onclick="saveMonitoringConfig()" style="margin-top: 1rem;">
                         Einstellungen speichern
                     </button>
@@ -886,8 +906,11 @@
             <!-- Service Health History -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Health-Historie (letzte 24h)</h2>
-                    <button class="btn btn-sm btn-primary" onclick="loadHealthHistory()">Aktualisieren</button>
+                    <h2 class="card-title">Health-Historie <span id="history-retention-label" style="font-weight: 400; font-size: 0.85rem; opacity: 0.7;">(letzte 24h)</span></h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-sm btn-danger" onclick="clearHealthHistory()" title="Historie löschen">Löschen</button>
+                        <button class="btn btn-sm btn-primary" onclick="loadHealthHistory()">Aktualisieren</button>
+                    </div>
                 </div>
                 <div id="health-history">
                     <div class="empty-state">
@@ -1195,6 +1218,7 @@
             if (tabName === 'monitoring') {
                 loadMonitoredServices();
                 loadHealthHistory();
+                loadRetentionConfig();
             }
             if (tabName === 'alerts') loadAlertHistory();
         }
@@ -1602,16 +1626,114 @@
             }
         }
 
+        // Load retention configuration
+        async function loadRetentionConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/health/history/config`);
+                if (!res.ok) return;
+
+                const data = await res.json();
+
+                // Update select value
+                const select = document.getElementById('select-retention-hours');
+                if (select) {
+                    // Find closest option or set custom
+                    const options = Array.from(select.options).map(o => parseInt(o.value));
+                    const closest = options.reduce((prev, curr) =>
+                        Math.abs(curr - data.retention_hours) < Math.abs(prev - data.retention_hours) ? curr : prev
+                    );
+                    select.value = closest.toString();
+                }
+
+                // Update info display
+                document.getElementById('retention-current').textContent = data.retention_hours;
+                document.getElementById('retention-entries').textContent = data.current_entries;
+
+                // Update header label
+                const label = document.getElementById('history-retention-label');
+                if (label) {
+                    const hours = data.retention_hours;
+                    if (hours <= 24) {
+                        label.textContent = `(letzte ${hours}h)`;
+                    } else if (hours <= 48) {
+                        label.textContent = `(letzte ${Math.round(hours / 24)} Tage)`;
+                    } else {
+                        label.textContent = `(letzte ${Math.round(hours / 24)} Tage)`;
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading retention config:', err);
+            }
+        }
+
+        // Save retention configuration
+        async function saveRetentionConfig() {
+            const hours = parseInt(document.getElementById('select-retention-hours').value);
+
+            try {
+                const res = await fetch(`${API_BASE}/health/history/config?retention_hours=${hours}`, {
+                    method: 'PUT'
+                });
+
+                if (!res.ok) throw new Error('Failed to save');
+
+                const data = await res.json();
+                showToast(`Retention auf ${hours} Stunden gesetzt`, 'success');
+
+                // Reload config and history
+                loadRetentionConfig();
+                loadHealthHistory();
+            } catch (err) {
+                console.error('Error saving retention config:', err);
+                showToast('Fehler beim Speichern der Retention', 'error');
+            }
+        }
+
+        // Clear health history
+        async function clearHealthHistory() {
+            if (!confirm('Möchten Sie wirklich die gesamte Health-Historie löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/health/history`, {
+                    method: 'DELETE'
+                });
+
+                if (!res.ok) throw new Error('Failed to delete');
+
+                const data = await res.json();
+                showToast(data.message || 'Historie gelöscht', 'success');
+
+                // Reload
+                loadHealthHistory();
+                loadRetentionConfig();
+            } catch (err) {
+                console.error('Error clearing health history:', err);
+                showToast('Fehler beim Löschen der Historie', 'error');
+            }
+        }
+
         // Load health history
         async function loadHealthHistory() {
             const container = document.getElementById('health-history');
             container.innerHTML = '<div class="empty-state"><span class="loading-spinner"></span> Lade Historie...</div>';
 
             try {
+                // Hole zuerst die Retention-Konfiguration
+                let retentionHours = 24;
+                try {
+                    const configRes = await fetch(`${API_BASE}/health/history/config`);
+                    if (configRes.ok) {
+                        const config = await configRes.json();
+                        retentionHours = config.retention_hours || 24;
+                    }
+                } catch (e) {}
+
                 // Lade Statistiken, stündliche Aggregation und letzten Raw-Eintrag parallel
                 const [statsRes, hourlyRes, rawRes] = await Promise.all([
-                    fetch(`${API_BASE}/health/history/statistics?hours=24`),
-                    fetch(`${API_BASE}/health/history?hours=24&aggregation=hourly`),
+                    fetch(`${API_BASE}/health/history/statistics?hours=${retentionHours}`),
+                    fetch(`${API_BASE}/health/history?hours=${retentionHours}&aggregation=hourly`),
                     fetch(`${API_BASE}/health/history?hours=1&limit=1&aggregation=raw`)
                 ]);
 

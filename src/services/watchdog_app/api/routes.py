@@ -110,20 +110,25 @@ def _get_health_history():
 
 @router.get("/health/history", tags=["Health History"])
 async def get_health_history(
-    hours: int = Query(default=24, ge=1, le=24, description="Zeitraum in Stunden (max 24)"),
-    limit: Optional[int] = Query(default=100, ge=1, le=500, description="Max. Einträge"),
+    hours: int = Query(default=24, ge=1, le=168, description="Zeitraum in Stunden (max 168 / 1 Woche)"),
+    limit: Optional[int] = Query(default=100, ge=1, le=5000, description="Max. Einträge"),
     aggregation: str = Query(default="raw", description="raw oder hourly")
 ):
     """
     Gibt die Health-Check-Historie der letzten Stunden zurück.
 
     Die Historie wird persistent gespeichert und überlebt Container-Neustarts.
+    Der maximale Zeitraum entspricht der konfigurierten Retention-Zeit.
 
     ## Aggregation
     - **raw**: Alle einzelnen Health-Checks
     - **hourly**: Stündlich aggregierte Daten mit Uptime-Prozent
     """
     history_service = _get_health_history()
+
+    # Begrenze auf konfigurierte Retention
+    max_hours = history_service.get_retention_hours()
+    hours = min(hours, max_hours)
 
     history = history_service.get_history(
         hours=hours,
@@ -133,6 +138,7 @@ async def get_health_history(
 
     return {
         "period_hours": hours,
+        "max_retention_hours": max_hours,
         "aggregation": aggregation,
         "count": len(history),
         "history": history
@@ -141,7 +147,7 @@ async def get_health_history(
 
 @router.get("/health/history/statistics", tags=["Health History"])
 async def get_health_statistics(
-    hours: int = Query(default=24, ge=1, le=24, description="Zeitraum in Stunden")
+    hours: int = Query(default=24, ge=1, le=168, description="Zeitraum in Stunden")
 ):
     """
     Gibt Statistiken über die Health-Historie zurück.
@@ -152,13 +158,18 @@ async def get_health_statistics(
     - Durchschnittliche Response-Zeit
     """
     history_service = _get_health_history()
+
+    # Begrenze auf konfigurierte Retention
+    max_hours = history_service.get_retention_hours()
+    hours = min(hours, max_hours)
+
     return history_service.get_statistics(hours=hours)
 
 
 @router.get("/health/history/service/{service_name}", tags=["Health History"])
 async def get_service_health_history(
     service_name: str,
-    hours: int = Query(default=24, ge=1, le=24, description="Zeitraum in Stunden")
+    hours: int = Query(default=24, ge=1, le=168, description="Zeitraum in Stunden")
 ):
     """
     Gibt die Health-Historie für einen bestimmten Service zurück.
@@ -177,6 +188,62 @@ async def get_service_health_history(
         "period_hours": hours,
         "count": len(history),
         "history": history
+    }
+
+
+@router.get("/health/history/config", tags=["Health History"])
+async def get_health_history_config():
+    """
+    Gibt die aktuelle Konfiguration der Health-Historie zurück.
+
+    Enthält:
+    - retention_hours: Wie lange Daten gespeichert werden
+    - max_entries: Maximale Anzahl Einträge
+    - current_entries: Aktuelle Anzahl Einträge
+    """
+    history_service = _get_health_history()
+    return history_service.get_config()
+
+
+@router.put("/health/history/config", tags=["Health History"])
+async def update_health_history_config(
+    retention_hours: int = Query(..., ge=1, le=168, description="Retention-Zeit in Stunden (1-168, max 1 Woche)")
+):
+    """
+    Aktualisiert die Retention-Zeit der Health-Historie.
+
+    Die Retention-Zeit bestimmt, wie lange Health-Checks gespeichert werden.
+    Gültige Werte: 1-168 Stunden (1 Stunde bis 1 Woche).
+
+    **Hinweis**: Bei Reduzierung der Retention werden ältere Einträge sofort gelöscht.
+    """
+    history_service = _get_health_history()
+    result = history_service.set_retention_hours(retention_hours)
+    return {
+        "success": True,
+        "message": f"Retention auf {retention_hours} Stunden gesetzt",
+        **result
+    }
+
+
+@router.delete("/health/history", tags=["Health History"])
+async def clear_health_history():
+    """
+    Löscht die gesamte Health-Historie.
+
+    **Achtung**: Diese Aktion kann nicht rückgängig gemacht werden!
+    """
+    history_service = _get_health_history()
+
+    # Wir müssen eine clear-Methode hinzufügen
+    with history_service._lock:
+        old_count = len(history_service._history)
+        history_service._history = []
+        history_service._save_history()
+
+    return {
+        "success": True,
+        "message": f"{old_count} Einträge gelöscht"
     }
 
 

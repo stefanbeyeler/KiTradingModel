@@ -30,6 +30,10 @@ class WatchdogSettings(BaseSettings):
     daily_summary_enabled: bool = True
     daily_summary_hour: int = 8  # 08:00 Uhr
 
+    # Health History Konfiguration
+    history_retention_hours: int = 24  # Wie lange Historie gespeichert wird (1-168h / 1 Woche max)
+    history_max_entries: int = 2880  # Max Einträge (24h * 60min / 0.5min bei 30s Intervall)
+
     model_config = {
         "env_file": ".env.watchdog",
         "env_prefix": "WATCHDOG_",

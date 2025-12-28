@@ -1,6 +1,6 @@
 """Health History Service für persistente Speicherung der Service-Health-Historie.
 
-Speichert Health-Checks der letzten 24 Stunden in einer JSON-Datei.
+Speichert Health-Checks mit konfigurierbarer Retention-Zeit in einer JSON-Datei.
 Das Volume /app/data ist persistent gemountet.
 """
 
@@ -27,14 +27,94 @@ class HealthHistoryService:
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.history_file = self.data_dir / "health_history.json"
+        self.config_file = self.data_dir / "health_history_config.json"
         self._lock = Lock()
         self._history: List[Dict] = []
-        self._max_age_hours = 24
-        self._max_entries = 2880  # 24h * 60min / 0.5min = max 2880 bei 30s Intervall
+
+        # Lade Konfiguration (mit Fallback auf Settings)
+        self._load_config()
 
         # Lade existierende Historie
         self._load_history()
-        logger.info(f"Health History Service initialisiert. {len(self._history)} Einträge geladen.")
+        logger.info(f"Health History Service initialisiert. {len(self._history)} Einträge geladen. Retention: {self._max_age_hours}h")
+
+    def _load_config(self):
+        """Lädt die Konfiguration aus Datei oder Settings."""
+        try:
+            if self.config_file.exists():
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    self._max_age_hours = config.get("retention_hours", 24)
+                    self._max_entries = config.get("max_entries", 2880)
+                    logger.debug(f"Konfiguration geladen: retention={self._max_age_hours}h, max_entries={self._max_entries}")
+                    return
+        except Exception as e:
+            logger.warning(f"Fehler beim Laden der Konfiguration: {e}")
+
+        # Fallback auf Settings
+        try:
+            from ..config import settings
+            self._max_age_hours = settings.history_retention_hours
+            self._max_entries = settings.history_max_entries
+        except Exception:
+            self._max_age_hours = 24
+            self._max_entries = 2880
+
+    def _save_config(self):
+        """Speichert die Konfiguration in eine Datei."""
+        try:
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump({
+                    "retention_hours": self._max_age_hours,
+                    "max_entries": self._max_entries,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }, f, indent=2)
+        except Exception as e:
+            logger.error(f"Fehler beim Speichern der Konfiguration: {e}")
+
+    def get_retention_hours(self) -> int:
+        """Gibt die aktuelle Retention-Zeit in Stunden zurück."""
+        return self._max_age_hours
+
+    def set_retention_hours(self, hours: int) -> Dict:
+        """
+        Setzt die Retention-Zeit.
+
+        Args:
+            hours: Retention-Zeit in Stunden (1-168)
+
+        Returns:
+            Dict mit neuer Konfiguration
+        """
+        # Validierung: 1 Stunde bis 1 Woche
+        hours = max(1, min(168, hours))
+
+        with self._lock:
+            self._max_age_hours = hours
+            # Berechne max_entries basierend auf 30s Intervall
+            self._max_entries = hours * 120  # 2 Checks pro Minute * 60 Minuten * hours
+            self._save_config()
+
+            # Bereinige alte Einträge mit neuer Retention
+            self._cleanup_old_entries()
+            self._save_history()
+
+        logger.info(f"Retention geändert auf {hours}h (max {self._max_entries} Einträge)")
+
+        return {
+            "retention_hours": self._max_age_hours,
+            "max_entries": self._max_entries,
+            "current_entries": len(self._history)
+        }
+
+    def get_config(self) -> Dict:
+        """Gibt die aktuelle Konfiguration zurück."""
+        return {
+            "retention_hours": self._max_age_hours,
+            "max_entries": self._max_entries,
+            "current_entries": len(self._history),
+            "storage_file": str(self.history_file)
+        }
 
     def _load_history(self):
         """Lädt die Historie aus der Datei."""
