@@ -1242,27 +1242,34 @@
             showToast('Health-Status aktualisiert', 'success');
         }
 
+        // All monitored services (central list)
+        const ALL_SERVICES = [
+            { name: 'Data Service', port: 3001, key: 'data' },
+            { name: 'NHITS', port: 3002, key: 'nhits' },
+            { name: 'TCN', port: 3003, key: 'tcn' },
+            { name: 'HMM', port: 3004, key: 'hmm' },
+            { name: 'Embedder', port: 3005, key: 'embedder' },
+            { name: 'Candlestick', port: 3006, key: 'candlestick' },
+            { name: 'RAG', port: 3008, key: 'rag' },
+            { name: 'LLM', port: 3009, key: 'llm' },
+            { name: 'Redis', port: 6379, key: 'redis' },
+            { name: 'NHITS-Train', port: 3012, key: 'nhits-train' },
+            { name: 'TCN-Train', port: 3013, key: 'tcn-train' },
+            { name: 'HMM-Train', port: 3014, key: 'hmm-train' },
+            { name: 'Candle-Train', port: 3016, key: 'candlestick-train' }
+        ];
+
+        // Track service health status
+        let serviceHealthStatus = {};
+
         // Load services status
         async function loadServicesStatus() {
             const grid = document.getElementById('services-status-grid');
 
-            const services = [
-                { name: 'Data Service', port: 3001, key: 'data' },
-                { name: 'NHITS', port: 3002, key: 'nhits' },
-                { name: 'TCN', port: 3003, key: 'tcn' },
-                { name: 'HMM', port: 3004, key: 'hmm' },
-                { name: 'Embedder', port: 3005, key: 'embedder' },
-                { name: 'Candlestick', port: 3006, key: 'candlestick' },
-                { name: 'RAG', port: 3008, key: 'rag' },
-                { name: 'LLM', port: 3009, key: 'llm' },
-                { name: 'Redis', port: 6379, key: 'redis' },
-                { name: 'NHITS-Train', port: 3012, key: 'nhits-train' },
-                { name: 'TCN-Train', port: 3013, key: 'tcn-train' },
-                { name: 'HMM-Train', port: 3014, key: 'hmm-train' },
-                { name: 'Candle-Train', port: 3016, key: 'candlestick-train' }
-            ];
+            // Update total count immediately
+            document.getElementById('stat-services-total').textContent = ALL_SERVICES.length;
 
-            grid.innerHTML = services.map(s => `
+            grid.innerHTML = ALL_SERVICES.map(s => `
                 <div class="service-status-item" id="svc-${s.key}">
                     <span class="status-dot loading" id="dot-${s.key}"></span>
                     <span class="service-name">${s.name}</span>
@@ -1270,8 +1277,11 @@
                 </div>
             `).join('');
 
+            // Reset health status tracking
+            serviceHealthStatus = {};
+
             // Check each service
-            for (const s of services) {
+            for (const s of ALL_SERVICES) {
                 checkServiceHealth(s);
             }
         }
@@ -1281,14 +1291,38 @@
             const item = document.getElementById(`svc-${service.key}`);
 
             try {
-                const endpoint = service.key === 'redis' ? '/data/health' : `/${service.key}/health`;
-                const res = await fetch(endpoint, { timeout: 5000 });
+                let endpoint;
+                let checkRedisField = false;
 
+                if (service.key === 'redis') {
+                    endpoint = '/data/api/v1/cache/status';
+                    checkRedisField = true;
+                } else {
+                    endpoint = `/${service.key}/health`;
+                }
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                const res = await fetch(endpoint, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                let isHealthy = false;
                 if (res.ok) {
+                    if (checkRedisField) {
+                        const data = await res.json();
+                        isHealthy = data.redis_connected === true;
+                    } else {
+                        isHealthy = true;
+                    }
+                }
+
+                if (isHealthy) {
                     dot.classList.remove('loading', 'unhealthy');
                     dot.classList.add('healthy');
                     item.classList.remove('unhealthy');
                     item.classList.add('healthy');
+                    serviceHealthStatus[service.key] = true;
                 } else {
                     throw new Error('Not healthy');
                 }
@@ -1297,31 +1331,24 @@
                 dot.classList.add('unhealthy');
                 item.classList.remove('healthy');
                 item.classList.add('unhealthy');
+                serviceHealthStatus[service.key] = false;
             }
+
+            // Update online count
+            updateOnlineCount();
+        }
+
+        function updateOnlineCount() {
+            const onlineCount = Object.values(serviceHealthStatus).filter(v => v === true).length;
+            document.getElementById('stat-services-healthy').textContent = onlineCount;
         }
 
         // Load monitored services for the Monitoring tab
         async function loadMonitoredServices() {
             const container = document.getElementById('monitored-services-list');
 
-            const services = [
-                { name: 'Data', port: 3001, key: 'data' },
-                { name: 'NHITS', port: 3002, key: 'nhits' },
-                { name: 'TCN', port: 3003, key: 'tcn' },
-                { name: 'HMM', port: 3004, key: 'hmm' },
-                { name: 'Embedder', port: 3005, key: 'embedder' },
-                { name: 'Candlestick', port: 3006, key: 'candlestick' },
-                { name: 'RAG', port: 3008, key: 'rag' },
-                { name: 'LLM', port: 3009, key: 'llm' },
-                { name: 'Redis', port: 6379, key: 'redis' },
-                { name: 'NHITS-Train', port: 3012, key: 'nhits-train' },
-                { name: 'TCN-Train', port: 3013, key: 'tcn-train' },
-                { name: 'HMM-Train', port: 3014, key: 'hmm-train' },
-                { name: 'Candle-Train', port: 3016, key: 'candlestick-train' }
-            ];
-
             container.innerHTML = `<div class="services-grid-compact">
-                ${services.map(s => `
+                ${ALL_SERVICES.map(s => `
                     <div class="service-item-compact" id="mon-${s.key}" title="${s.name} (Port ${s.port})">
                         <span class="status-dot checking" id="mon-dot-${s.key}"></span>
                         <span class="service-name">${s.name}</span>
@@ -1331,7 +1358,7 @@
             </div>`;
 
             // Check each service status
-            for (const s of services) {
+            for (const s of ALL_SERVICES) {
                 checkMonitoredServiceHealth(s);
             }
         }
