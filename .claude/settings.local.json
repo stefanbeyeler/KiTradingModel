@@ -209,7 +209,9 @@
       "Bash(/e/KiTradingModel/venv/Scripts/python.exe:*)",
       "Bash(e:/KiTradingModel/venv/Scripts/python.exe:*)",
       "Bash(/e/KiTradingModel/venv/Scripts/python.exe -m py_compile src/utils/session_utils.py)",
-      "Bash(/e/KiTradingModel/venv/Scripts/python.exe -m py_compile:*)"
+      "Bash(/e/KiTradingModel/venv/Scripts/python.exe -m py_compile:*)",
+      "Bash(/e/KiTradingModel/src/services/watchdog_app/ )",
+      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/src/services/watchdog_app/ )"
     ],
     "deny": [],
     "ask": []

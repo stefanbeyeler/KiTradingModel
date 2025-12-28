@@ -1120,84 +1120,97 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Telegram-Konfiguration</h2>
+                        <span class="service-badge" id="telegram-status">Laden...</span>
                     </div>
                     <div class="form-group">
-                        <label>Bot Token</label>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <label style="margin: 0;">Telegram aktiviert</label>
+                            <label class="toggle-switch" style="margin-left: auto;">
+                                <input type="checkbox" id="toggle-telegram-enabled" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Bot Token <span style="font-size: 0.75rem; opacity: 0.6;">(von @BotFather)</span></label>
                         <input type="password" class="form-control" id="input-telegram-token" placeholder="Bot Token eingeben...">
+                        <div style="font-size: 0.75rem; opacity: 0.6; margin-top: 0.25rem;" id="telegram-token-status"></div>
                     </div>
                     <div class="form-group">
-                        <label>Chat ID</label>
-                        <input type="text" class="form-control" id="input-telegram-chat-id" placeholder="Chat ID eingeben...">
-                    </div>
-                    <div class="form-group">
-                        <label>Alert Cooldown (Minuten)</label>
-                        <input type="number" class="form-control" id="input-alert-cooldown" value="5" min="1" max="60">
+                        <label>Chat IDs <span style="font-size: 0.75rem; opacity: 0.6;">(kommagetrennt)</span></label>
+                        <input type="text" class="form-control" id="input-telegram-chat-id" placeholder="123456789, -100987654321">
+                        <div style="font-size: 0.75rem; opacity: 0.6; margin-top: 0.25rem;">
+                            Einzelne User: 123456789 | Gruppen: -100987654321
+                        </div>
                     </div>
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                         <button class="btn btn-success" onclick="saveTelegramConfig()" style="flex: 1;">
                             Speichern
                         </button>
                         <button class="btn btn-primary" onclick="testTelegramConnection()">
-                            Testen
+                            Test senden
                         </button>
                     </div>
                 </div>
 
-                <!-- Alert Types -->
+                <!-- Alert Configuration -->
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">Alert-Typen</h2>
+                        <h2 class="card-title">Alert-Konfiguration</h2>
+                    </div>
+                    <div class="form-group">
+                        <label>Alert Cooldown (Minuten)</label>
+                        <input type="number" class="form-control" id="input-alert-cooldown" value="15" min="1" max="1440">
+                        <div style="font-size: 0.75rem; opacity: 0.6; margin-top: 0.25rem;">
+                            Minimale Zeit zwischen wiederholten Alerts für denselben Service
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div style="font-weight: 600; margin-bottom: 0.75rem;">Alert nach Kritikalität</div>
                     </div>
                     <div class="alert-config-item">
                         <div class="alert-info">
-                            <div class="alert-name">Service Down</div>
-                            <div class="alert-desc">Benachrichtigung wenn ein Service offline geht</div>
+                            <div class="alert-name">Kritische Services</div>
+                            <div class="alert-desc">Data Service, Redis (Kern-Infrastruktur)</div>
                         </div>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="alert-service-down" checked>
+                            <input type="checkbox" id="alert-on-critical" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="alert-config-item">
+                        <div class="alert-info">
+                            <div class="alert-name">High-Priority Services</div>
+                            <div class="alert-desc">NHITS, TCN, HMM (ML-Inference)</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="alert-on-high" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="alert-config-item">
+                        <div class="alert-info">
+                            <div class="alert-name">Medium-Priority Services</div>
+                            <div class="alert-desc">RAG, LLM, Embedder, Candlestick</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="alert-on-medium">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
                     <div class="alert-config-item">
                         <div class="alert-info">
                             <div class="alert-name">Service Recovery</div>
-                            <div class="alert-desc">Benachrichtigung wenn ein Service wieder online ist</div>
+                            <div class="alert-desc">Benachrichtigung wenn Service wieder online</div>
                         </div>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="alert-service-recovery" checked>
+                            <input type="checkbox" id="alert-on-recovery" checked>
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <div class="alert-config-item">
-                        <div class="alert-info">
-                            <div class="alert-name">Training Complete</div>
-                            <div class="alert-desc">Benachrichtigung bei abgeschlossenem Training</div>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="alert-training-complete">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="alert-config-item">
-                        <div class="alert-info">
-                            <div class="alert-name">Training Error</div>
-                            <div class="alert-desc">Benachrichtigung bei Training-Fehlern</div>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="alert-training-error" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="alert-config-item">
-                        <div class="alert-info">
-                            <div class="alert-name">Test Failures</div>
-                            <div class="alert-desc">Benachrichtigung bei fehlgeschlagenen Tests</div>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="alert-test-failure">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
+                    <button class="btn btn-success" onclick="saveAlertConfig()" style="width: 100%; margin-top: 1rem;">
+                        Alert-Konfiguration speichern
+                    </button>
                 </div>
             </div>
 
@@ -1241,7 +1254,11 @@
                 loadHealthHistory();
                 loadRetentionConfig();
             }
-            if (tabName === 'alerts') loadAlertHistory();
+            if (tabName === 'alerts') {
+                loadAlertHistory();
+                loadTelegramConfig();
+                loadAlertConfig();
+            }
         }
 
         // Check service health
@@ -1975,21 +1992,76 @@
             }
         }
 
+        // Load Telegram config
+        async function loadTelegramConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/config/telegram`);
+                if (!res.ok) return;
+
+                const data = await res.json();
+
+                // Update status badge
+                const statusBadge = document.getElementById('telegram-status');
+                if (data.configured && data.enabled) {
+                    statusBadge.textContent = 'Aktiv';
+                    statusBadge.className = 'service-badge';
+                } else if (data.configured) {
+                    statusBadge.textContent = 'Deaktiviert';
+                    statusBadge.className = 'service-badge warning';
+                } else {
+                    statusBadge.textContent = 'Nicht konfiguriert';
+                    statusBadge.className = 'service-badge offline';
+                }
+
+                // Update form
+                document.getElementById('toggle-telegram-enabled').checked = data.enabled;
+                document.getElementById('input-telegram-chat-id').value = data.chat_ids || '';
+
+                // Token status
+                const tokenStatus = document.getElementById('telegram-token-status');
+                if (data.bot_token_display) {
+                    tokenStatus.textContent = `Aktuell: ${data.bot_token_display}`;
+                } else {
+                    tokenStatus.textContent = 'Kein Token konfiguriert';
+                }
+
+            } catch (err) {
+                console.error('Error loading Telegram config:', err);
+            }
+        }
+
         // Save Telegram config
         async function saveTelegramConfig() {
-            const config = {
-                token: document.getElementById('input-telegram-token').value,
-                chat_id: document.getElementById('input-telegram-chat-id').value,
-                cooldown: parseInt(document.getElementById('input-alert-cooldown').value)
-            };
+            const enabled = document.getElementById('toggle-telegram-enabled').checked;
+            const token = document.getElementById('input-telegram-token').value;
+            const chatIds = document.getElementById('input-telegram-chat-id').value;
+
+            // Build query params
+            const params = new URLSearchParams();
+            params.append('enabled', enabled);
+            if (token) params.append('bot_token', token);
+            if (chatIds) params.append('chat_ids', chatIds);
 
             try {
-                const res = await fetch(`${API_BASE}/config/telegram`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config)
+                const res = await fetch(`${API_BASE}/config/telegram?${params.toString()}`, {
+                    method: 'PUT'
                 });
-                showToast('Telegram-Konfiguration gespeichert', 'success');
+
+                if (!res.ok) throw new Error('Failed to save');
+
+                const data = await res.json();
+
+                if (data.restart_required) {
+                    showToast('Gespeichert - Neustart für volle Aktivierung erforderlich', 'success');
+                } else {
+                    showToast('Telegram-Konfiguration gespeichert', 'success');
+                }
+
+                // Clear token field after save
+                document.getElementById('input-telegram-token').value = '';
+
+                // Reload config
+                loadTelegramConfig();
                 checkHealth();
             } catch (err) {
                 showToast('Fehler beim Speichern', 'error');
@@ -1998,17 +2070,66 @@
 
         // Test Telegram connection
         async function testTelegramConnection() {
-            showToast('Teste Telegram-Verbindung...');
+            showToast('Sende Test-Nachricht...');
             try {
                 const res = await fetch(`${API_BASE}/alerts/test`, { method: 'POST' });
                 const data = await res.json();
                 if (data.success) {
-                    showToast('Test-Nachricht gesendet!', 'success');
+                    const successCount = data.telegram?.success?.length || 0;
+                    showToast(`Test-Nachricht an ${successCount} Empfänger gesendet!`, 'success');
                 } else {
-                    showToast(data.message || 'Verbindung fehlgeschlagen', 'error');
+                    const error = data.telegram?.error || 'Nicht konfiguriert';
+                    showToast(`Fehler: ${error}`, 'error');
                 }
             } catch (err) {
                 showToast('Verbindungstest fehlgeschlagen', 'error');
+            }
+        }
+
+        // Load Alert config
+        async function loadAlertConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/config/alerts`);
+                if (!res.ok) return;
+
+                const data = await res.json();
+
+                document.getElementById('input-alert-cooldown').value = data.cooldown_minutes || 15;
+                document.getElementById('alert-on-critical').checked = data.on_critical !== false;
+                document.getElementById('alert-on-high').checked = data.on_high !== false;
+                document.getElementById('alert-on-medium').checked = data.on_medium === true;
+                document.getElementById('alert-on-recovery').checked = data.on_recovery !== false;
+
+            } catch (err) {
+                console.error('Error loading alert config:', err);
+            }
+        }
+
+        // Save Alert config
+        async function saveAlertConfig() {
+            const cooldown = parseInt(document.getElementById('input-alert-cooldown').value);
+            const onCritical = document.getElementById('alert-on-critical').checked;
+            const onHigh = document.getElementById('alert-on-high').checked;
+            const onMedium = document.getElementById('alert-on-medium').checked;
+            const onRecovery = document.getElementById('alert-on-recovery').checked;
+
+            const params = new URLSearchParams();
+            params.append('cooldown_minutes', cooldown);
+            params.append('on_critical', onCritical);
+            params.append('on_high', onHigh);
+            params.append('on_medium', onMedium);
+            params.append('on_recovery', onRecovery);
+
+            try {
+                const res = await fetch(`${API_BASE}/config/alerts?${params.toString()}`, {
+                    method: 'PUT'
+                });
+
+                if (!res.ok) throw new Error('Failed to save');
+
+                showToast('Alert-Konfiguration gespeichert', 'success');
+            } catch (err) {
+                showToast('Fehler beim Speichern', 'error');
             }
         }
 

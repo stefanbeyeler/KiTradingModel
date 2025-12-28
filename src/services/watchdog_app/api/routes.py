@@ -263,23 +263,200 @@ async def send_test_alert():
     }
 
 
-@router.get("/config")
+def _get_config_service():
+    """Lazy import für Config Service."""
+    from ..services.config_service import config_service
+    return config_service
+
+
+@router.get("/config", tags=["Konfiguration"])
 async def get_config():
     """Gibt die aktuelle Konfiguration zurück (ohne sensible Daten)."""
-    from ..config import settings
+    config_service = _get_config_service()
+    config = config_service.get_config(include_sensitive=False)
+
+    # Füge telegram_configured hinzu
+    config["telegram_configured"] = bool(config_service.get("telegram_bot_token"))
+
+    return config
+
+
+@router.get("/config/telegram", tags=["Konfiguration"])
+async def get_telegram_config():
+    """
+    Gibt die Telegram-Konfiguration zurück.
+
+    Das Bot-Token wird maskiert angezeigt.
+    """
+    config_service = _get_config_service()
+    telegram_config = config_service.get_telegram_config()
+
+    # Maskiere Token für Anzeige
+    if telegram_config.get("bot_token"):
+        token = telegram_config["bot_token"]
+        if len(token) > 10:
+            telegram_config["bot_token_display"] = f"{token[:4]}...{token[-4:]}"
+        else:
+            telegram_config["bot_token_display"] = "***"
+        del telegram_config["bot_token"]
+    else:
+        telegram_config["bot_token_display"] = ""
+
+    return telegram_config
+
+
+@router.put("/config/telegram", tags=["Konfiguration"])
+async def update_telegram_config(
+    enabled: Optional[bool] = Query(None, description="Telegram aktivieren/deaktivieren"),
+    bot_token: Optional[str] = Query(None, description="Bot-Token von @BotFather"),
+    chat_ids: Optional[str] = Query(None, description="Kommagetrennte Chat-IDs")
+):
+    """
+    Aktualisiert die Telegram-Konfiguration.
+
+    **Hinweis**: Nach Änderung des Tokens muss der Service neu gestartet werden,
+    damit die Änderungen wirksam werden.
+
+    ## Bot einrichten
+
+    1. Erstelle einen Bot bei @BotFather auf Telegram
+    2. Kopiere den Bot-Token
+    3. Starte eine Konversation mit dem Bot
+    4. Finde deine Chat-ID über @userinfobot
+
+    ## Chat-IDs Format
+
+    Mehrere Chat-IDs können kommagetrennt angegeben werden:
+    - Einzelner User: `123456789`
+    - Gruppe: `-100987654321`
+    - Mehrere: `123456789,-100987654321`
+    """
+    config_service = _get_config_service()
+
+    result = config_service.set_telegram_config(
+        enabled=enabled,
+        bot_token=bot_token,
+        chat_ids=chat_ids
+    )
+
+    # Aktualisiere TelegramNotifier falls möglich
+    if bot_token is not None or chat_ids is not None:
+        try:
+            from ..main import telegram_notifier
+            if telegram_notifier:
+                # Notifier muss neu initialisiert werden
+                result["restart_required"] = True
+                result["message"] = "Konfiguration gespeichert. Bitte Service neu starten für volle Aktivierung."
+        except Exception:
+            pass
+
+    result["success"] = True
+    return result
+
+
+@router.get("/config/alerts", tags=["Konfiguration"])
+async def get_alert_config():
+    """Gibt die Alert-Konfiguration zurück."""
+    config_service = _get_config_service()
+    return config_service.get_alert_config()
+
+
+@router.put("/config/alerts", tags=["Konfiguration"])
+async def update_alert_config(
+    cooldown_minutes: Optional[int] = Query(None, ge=1, le=1440, description="Cooldown zwischen Alerts in Minuten (1-1440)"),
+    on_recovery: Optional[bool] = Query(None, description="Alert bei Service-Wiederherstellung"),
+    on_critical: Optional[bool] = Query(None, description="Alert bei kritischen Services"),
+    on_high: Optional[bool] = Query(None, description="Alert bei High-Priority Services"),
+    on_medium: Optional[bool] = Query(None, description="Alert bei Medium-Priority Services")
+):
+    """
+    Aktualisiert die Alert-Konfiguration.
+
+    ## Kritikalitätsstufen
+
+    - **critical**: Kern-Services (Data, Redis)
+    - **high**: ML-Services (NHITS, TCN, HMM)
+    - **medium**: Unterstützende Services (RAG, LLM, Embedder)
+
+    Die Änderungen werden sofort wirksam und persistent gespeichert.
+    """
+    config_service = _get_config_service()
+
+    result = config_service.set_alert_config(
+        cooldown_minutes=cooldown_minutes,
+        on_recovery=on_recovery,
+        on_critical=on_critical,
+        on_high=on_high,
+        on_medium=on_medium
+    )
 
     return {
-        "check_interval_seconds": settings.check_interval_seconds,
-        "timeout_seconds": settings.timeout_seconds,
-        "alert_cooldown_minutes": settings.alert_cooldown_minutes,
-        "alert_on_recovery": settings.alert_on_recovery,
-        "alert_on_critical": settings.alert_on_critical,
-        "alert_on_high": settings.alert_on_high,
-        "alert_on_medium": settings.alert_on_medium,
-        "telegram_enabled": settings.telegram_enabled,
-        "telegram_configured": bool(settings.telegram_bot_token),
-        "daily_summary_enabled": settings.daily_summary_enabled,
-        "daily_summary_hour": settings.daily_summary_hour
+        "success": True,
+        "message": "Alert-Konfiguration aktualisiert",
+        **result
+    }
+
+
+@router.get("/config/monitoring", tags=["Konfiguration"])
+async def get_monitoring_config():
+    """Gibt die Monitoring-Konfiguration zurück."""
+    config_service = _get_config_service()
+    return config_service.get_monitoring_config()
+
+
+@router.put("/config/monitoring", tags=["Konfiguration"])
+async def update_monitoring_config(
+    check_interval_seconds: Optional[int] = Query(None, ge=10, le=300, description="Health-Check Intervall in Sekunden (10-300)"),
+    timeout_seconds: Optional[int] = Query(None, ge=5, le=60, description="Timeout für Health-Checks in Sekunden (5-60)"),
+    max_retries: Optional[int] = Query(None, ge=1, le=10, description="Max. aufeinanderfolgende Fehler (1-10)")
+):
+    """
+    Aktualisiert die Monitoring-Konfiguration.
+
+    **Hinweis**: Änderungen am Intervall werden erst nach Neustart wirksam.
+    """
+    config_service = _get_config_service()
+
+    result = config_service.set_monitoring_config(
+        check_interval_seconds=check_interval_seconds,
+        timeout_seconds=timeout_seconds,
+        max_retries=max_retries
+    )
+
+    return {
+        "success": True,
+        "message": "Monitoring-Konfiguration aktualisiert",
+        "restart_required": check_interval_seconds is not None,
+        **result
+    }
+
+
+@router.get("/config/daily-summary", tags=["Konfiguration"])
+async def get_daily_summary_config():
+    """Gibt die Konfiguration für die tägliche Zusammenfassung zurück."""
+    config_service = _get_config_service()
+    return config_service.get_daily_summary_config()
+
+
+@router.put("/config/daily-summary", tags=["Konfiguration"])
+async def update_daily_summary_config(
+    enabled: Optional[bool] = Query(None, description="Tägliche Zusammenfassung aktivieren/deaktivieren"),
+    hour: Optional[int] = Query(None, ge=0, le=23, description="Stunde für Zusammenfassung (0-23, UTC)")
+):
+    """
+    Aktualisiert die Konfiguration für die tägliche Zusammenfassung.
+    """
+    config_service = _get_config_service()
+
+    result = config_service.set_daily_summary_config(
+        enabled=enabled,
+        hour=hour
+    )
+
+    return {
+        "success": True,
+        "message": "Daily Summary Konfiguration aktualisiert",
+        **result
     }
 
 

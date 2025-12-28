@@ -77,11 +77,22 @@ async def lifespan(app: FastAPI):
     setup_logging("watchdog")
     log_startup_info("watchdog", VERSION, settings.watchdog_port, gpu_available=False)
 
+    # Lade persistente Konfiguration
+    try:
+        from .services.config_service import config_service
+        telegram_token = config_service.get("telegram_bot_token") or settings.telegram_bot_token
+        telegram_chat_ids = config_service.get("telegram_chat_ids") or settings.telegram_chat_ids
+        logger.info("Persistente Konfiguration geladen")
+    except Exception as e:
+        logger.warning(f"Konnte persistente Konfiguration nicht laden: {e}")
+        telegram_token = settings.telegram_bot_token
+        telegram_chat_ids = settings.telegram_chat_ids
+
     # Services initialisieren
     health_checker = HealthChecker(settings)
     telegram_notifier = TelegramNotifier(
-        bot_token=settings.telegram_bot_token,
-        chat_ids=settings.telegram_chat_ids
+        bot_token=telegram_token,
+        chat_ids=telegram_chat_ids
     )
     alert_manager = AlertManager(settings, telegram_notifier)
 
