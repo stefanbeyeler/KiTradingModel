@@ -1608,67 +1608,147 @@
             container.innerHTML = '<div class="empty-state"><span class="loading-spinner"></span> Lade Historie...</div>';
 
             try {
-                // Lade stündliche Aggregation für 24h Übersicht
-                const res = await fetch(`${API_BASE}/health/history?hours=24&aggregation=hourly`);
+                // Lade Statistiken, stündliche Aggregation und letzten Raw-Eintrag parallel
+                const [statsRes, hourlyRes, rawRes] = await Promise.all([
+                    fetch(`${API_BASE}/health/history/statistics?hours=24`),
+                    fetch(`${API_BASE}/health/history?hours=24&aggregation=hourly`),
+                    fetch(`${API_BASE}/health/history?hours=1&limit=1&aggregation=raw`)
+                ]);
 
-                if (!res.ok) {
-                    throw new Error('API nicht verfügbar');
-                }
+                const stats = statsRes.ok ? await statsRes.json() : null;
+                const hourlyData = hourlyRes.ok ? await hourlyRes.json() : { history: [] };
+                const rawData = rawRes.ok ? await rawRes.json() : { history: [] };
 
-                const data = await res.json();
+                // Aktueller Service-Status aus dem letzten Check
+                const latestCheck = rawData.history && rawData.history.length > 0 ? rawData.history[rawData.history.length - 1] : null;
 
-                // Lade auch Statistiken
-                let stats = null;
-                try {
-                    const statsRes = await fetch(`${API_BASE}/health/history/statistics?hours=24`);
-                    if (statsRes.ok) {
-                        stats = await statsRes.json();
-                    }
-                } catch (e) {}
-
-                if (data.history && data.history.length > 0) {
-                    // Statistik-Header
-                    const statsHtml = stats ? `
-                        <div style="display: flex; gap: 2rem; margin-bottom: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; flex-wrap: wrap;">
-                            <div>
-                                <div style="font-size: 1.5rem; font-weight: 600; color: ${stats.uptime_percent >= 99 ? '#81c784' : stats.uptime_percent >= 90 ? '#ffb74d' : '#e57373'};">
-                                    ${stats.uptime_percent.toFixed(1)}%
-                                </div>
-                                <div style="font-size: 0.75rem; opacity: 0.6;">Uptime (24h)</div>
+                // Statistik-Header
+                const statsHtml = stats && stats.total_checks > 0 ? `
+                    <div style="display: flex; gap: 2rem; margin-bottom: 1.5rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; flex-wrap: wrap;">
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: 600; color: ${stats.uptime_percent >= 99 ? '#81c784' : stats.uptime_percent >= 90 ? '#ffb74d' : '#e57373'};">
+                                ${stats.uptime_percent.toFixed(1)}%
                             </div>
-                            <div>
-                                <div style="font-size: 1.5rem; font-weight: 600; color: #64b5f6;">
-                                    ${stats.total_checks}
-                                </div>
-                                <div style="font-size: 0.75rem; opacity: 0.6;">Health-Checks</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 1.5rem; font-weight: 600; color: #ba68c8;">
-                                    ${stats.avg_response_time_ms.toFixed(0)}ms
-                                </div>
-                                <div style="font-size: 0.75rem; opacity: 0.6;">Ø Response-Zeit</div>
-                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.6;">Uptime (24h)</div>
                         </div>
-                    ` : '';
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: 600; color: #64b5f6;">
+                                ${stats.total_checks}
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.6;">Health-Checks</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: 600; color: #ba68c8;">
+                                ${stats.avg_response_time_ms.toFixed(0)}ms
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.6;">Ø Response-Zeit</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: 600; color: #81c784;">
+                                ${stats.avg_healthy_services.toFixed(0)}
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.6;">Ø Services Online</div>
+                        </div>
+                    </div>
+                ` : '';
 
-                    // Stündliche Übersicht
-                    container.innerHTML = `
-                        ${statsHtml}
-                        <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.5rem;">Stündliche Übersicht (letzte 24h)</div>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.4rem;">
-                            ${data.history.map(h => {
-                                const time = new Date(h.timestamp).toLocaleTimeString('de-CH', {hour: '2-digit', minute: '2-digit'});
-                                const uptime = h.uptime_percent || 0;
-                                const color = uptime >= 99 ? '#81c784' : uptime >= 90 ? '#ffb74d' : '#e57373';
-                                return `
-                                    <div style="padding: 0.4rem; background: rgba(0,0,0,0.2); border-radius: 4px; text-align: center; border-left: 3px solid ${color};" title="Checks: ${h.checks}, Uptime: ${uptime.toFixed(0)}%">
-                                        <div style="font-size: 0.65rem; opacity: 0.5;">${time}</div>
-                                        <div style="font-size: 0.9rem; font-weight: 600; color: ${color};">${uptime.toFixed(0)}%</div>
-                                    </div>
-                                `;
-                            }).join('')}
+                // Service-Details Tabelle
+                let serviceTableHtml = '';
+                if (latestCheck && latestCheck.services) {
+                    const services = latestCheck.services;
+                    const lastCheckTime = new Date(latestCheck.timestamp).toLocaleString('de-CH');
+
+                    // Sortiere Services: Unhealthy zuerst, dann alphabetisch
+                    const sortedServices = Object.entries(services).sort((a, b) => {
+                        if (a[1].state !== 'HEALTHY' && b[1].state === 'HEALTHY') return -1;
+                        if (a[1].state === 'HEALTHY' && b[1].state !== 'HEALTHY') return 1;
+                        return a[0].localeCompare(b[0]);
+                    });
+
+                    const healthyCount = sortedServices.filter(([_, s]) => s.state === 'HEALTHY').length;
+                    const unhealthyCount = sortedServices.length - healthyCount;
+
+                    serviceTableHtml = `
+                        <div style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <div style="font-size: 0.9rem; font-weight: 600;">
+                                    Aktueller Service-Status
+                                    <span style="font-weight: 400; opacity: 0.6; font-size: 0.8rem; margin-left: 0.5rem;">
+                                        (${lastCheckTime})
+                                    </span>
+                                </div>
+                                <div style="display: flex; gap: 1rem; font-size: 0.8rem;">
+                                    <span style="color: #81c784;">● ${healthyCount} Online</span>
+                                    <span style="color: #e57373;">● ${unhealthyCount} Offline</span>
+                                </div>
+                            </div>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                <thead>
+                                    <tr style="background: rgba(0,0,0,0.3); text-align: left;">
+                                        <th style="padding: 0.6rem 0.75rem; border-radius: 4px 0 0 0;">Service</th>
+                                        <th style="padding: 0.6rem 0.75rem;">Status</th>
+                                        <th style="padding: 0.6rem 0.75rem;">Response-Zeit</th>
+                                        <th style="padding: 0.6rem 0.75rem; border-radius: 0 4px 0 0;">Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${sortedServices.map(([name, svc]) => {
+                                        const isHealthy = svc.state === 'HEALTHY';
+                                        const statusColor = isHealthy ? '#81c784' : '#e57373';
+                                        const statusIcon = isHealthy ? '●' : '○';
+                                        const statusText = isHealthy ? 'Online' : 'Offline';
+                                        const responseTime = svc.response_time_ms ? `${svc.response_time_ms.toFixed(0)}ms` : '-';
+                                        const responseColor = svc.response_time_ms ? (svc.response_time_ms < 100 ? '#81c784' : svc.response_time_ms < 500 ? '#ffb74d' : '#e57373') : 'inherit';
+                                        const errorText = svc.error || '-';
+
+                                        return `
+                                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                                <td style="padding: 0.5rem 0.75rem; font-weight: 500;">${name}</td>
+                                                <td style="padding: 0.5rem 0.75rem;">
+                                                    <span style="color: ${statusColor}; font-weight: 600;">
+                                                        ${statusIcon} ${statusText}
+                                                    </span>
+                                                </td>
+                                                <td style="padding: 0.5rem 0.75rem; color: ${responseColor}; font-family: monospace;">
+                                                    ${responseTime}
+                                                </td>
+                                                <td style="padding: 0.5rem 0.75rem; font-size: 0.8rem; opacity: ${svc.error ? 1 : 0.5}; color: ${svc.error ? '#e57373' : 'inherit'};">
+                                                    ${errorText}
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
                         </div>
                     `;
+                }
+
+                // Stündliche Übersicht
+                let hourlyHtml = '';
+                if (hourlyData.history && hourlyData.history.length > 0) {
+                    hourlyHtml = `
+                        <div style="margin-top: 1rem;">
+                            <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">Stündliche Übersicht (letzte 24h)</div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 0.3rem;">
+                                ${hourlyData.history.map(h => {
+                                    const time = new Date(h.timestamp).toLocaleTimeString('de-CH', {hour: '2-digit', minute: '2-digit'});
+                                    const uptime = h.uptime_percent || 0;
+                                    const color = uptime >= 99 ? '#81c784' : uptime >= 90 ? '#ffb74d' : '#e57373';
+                                    return `
+                                        <div style="padding: 0.35rem; background: rgba(0,0,0,0.2); border-radius: 4px; text-align: center; border-left: 3px solid ${color};" title="Checks: ${h.checks}, Avg Healthy: ${h.avg_healthy?.toFixed(1) || '-'}">
+                                            <div style="font-size: 0.6rem; opacity: 0.5;">${time}</div>
+                                            <div style="font-size: 0.85rem; font-weight: 600; color: ${color};">${uptime.toFixed(0)}%</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (statsHtml || serviceTableHtml || hourlyHtml) {
+                    container.innerHTML = statsHtml + serviceTableHtml + hourlyHtml;
                 } else {
                     container.innerHTML = `
                         <div class="empty-state">
