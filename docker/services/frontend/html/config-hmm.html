@@ -509,7 +509,7 @@
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Ubersicht</button>
+            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Übersicht</button>
             <button class="tab-btn" onclick="showTab('detection')">&#128269; Regime-Erkennung</button>
             <button class="tab-btn" onclick="showTab('scoring')">&#127919; Trade Scoring</button>
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
@@ -538,22 +538,22 @@
                         <div class="regime-card bull_trend">
                             <div class="regime-icon">&#128200;</div>
                             <div class="regime-name">Bull Trend</div>
-                            <div style="color: #888; font-size: 0.8rem;">Aufwartstrend</div>
+                            <div style="color: #888; font-size: 0.8rem;">Aufwärtstrend</div>
                         </div>
                         <div class="regime-card bear_trend">
                             <div class="regime-icon">&#128201;</div>
                             <div class="regime-name">Bear Trend</div>
-                            <div style="color: #888; font-size: 0.8rem;">Abwartstrend</div>
+                            <div style="color: #888; font-size: 0.8rem;">Abwärtstrend</div>
                         </div>
                         <div class="regime-card sideways">
                             <div class="regime-icon">&#8596;</div>
                             <div class="regime-name">Sideways</div>
-                            <div style="color: #888; font-size: 0.8rem;">Seitwartsbewegung</div>
+                            <div style="color: #888; font-size: 0.8rem;">Seitwärtsbewegung</div>
                         </div>
                         <div class="regime-card high_volatility">
                             <div class="regime-icon">&#9889;</div>
                             <div class="regime-name">High Volatility</div>
-                            <div style="color: #888; font-size: 0.8rem;">Hohe Volatilitat</div>
+                            <div style="color: #888; font-size: 0.8rem;">Hohe Volatilität</div>
                         </div>
                     </div>
                 </div>
@@ -609,7 +609,7 @@
                         <h3 class="card-title">&#128640; Multi-Symbol Scan</h3>
                     </div>
                     <div class="info-box" style="margin-bottom: 1rem;">
-                        Erkennt das aktuelle Marktregime fur alle aktiven Symbole.
+                        Erkennt das aktuelle Marktregime für alle aktiven Symbole.
                     </div>
                     <button class="btn btn-primary" id="btn-scan" onclick="scanAll()">&#128640; Alle Symbole scannen</button>
                     <div id="scan-results" style="margin-top: 1rem;"></div>
@@ -941,7 +941,7 @@
                     </div>
                 `;
 
-                showToast(`Regime fur ${symbol} erkannt: ${regime.name}`);
+                showToast(`Regime für ${symbol} erkannt: ${regime.name}`);
             } catch (error) {
                 showToast('Fehler bei der Regime-Erkennung', 'error');
                 console.error(error);
@@ -1018,7 +1018,7 @@
                         </table>
                     `;
                 } else {
-                    container.innerHTML = '<div class="info-box">Keine Historie fur dieses Symbol.</div>';
+                    container.innerHTML = '<div class="info-box">Keine Historie für dieses Symbol.</div>';
                 }
             } catch (error) {
                 container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler beim Laden.</div>';
@@ -1121,11 +1121,11 @@
                 const data = await response.json();
                 document.getElementById('hmm-training-result').innerHTML = `
                     <div class="info-box" style="border-color: rgba(76,175,80,0.3); color: #81c784;">
-                        HMM-Modell fur ${symbol} erfolgreich trainiert!
+                        HMM-Modell für ${symbol} erfolgreich trainiert!
                     </div>
                 `;
 
-                showToast(`HMM fur ${symbol} trainiert`);
+                showToast(`HMM für ${symbol} trainiert`);
                 loadInfo();
             } catch (error) {
                 document.getElementById('hmm-training-result').innerHTML = `

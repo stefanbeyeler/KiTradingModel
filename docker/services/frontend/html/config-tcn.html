@@ -1255,7 +1255,7 @@
                     result.innerHTML = '<div class="detection-result" style="color: #888; text-align: center;">Keine Pattern erkannt</div>';
                 }
 
-                showToast(`Pattern-Erkennung fur ${symbol} abgeschlossen`);
+                showToast(`Pattern-Erkennung für ${symbol} abgeschlossen`);
             } catch (error) {
                 showToast('Fehler bei der Pattern-Erkennung', 'error');
                 console.error(error);
@@ -2187,7 +2187,7 @@
                     throw new Error(errData.detail || 'Failed to start auto-training');
                 }
 
-                showToast('Auto-Training fur alle Symbole gestartet');
+                showToast('Auto-Training für alle Symbole gestartet');
                 loadAutoTrainingStatus();
                 loadTrainingStatus();
 

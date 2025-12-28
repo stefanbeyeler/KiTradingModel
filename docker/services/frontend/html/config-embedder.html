@@ -531,16 +531,16 @@
             </div>
             <div class="stat-item">
                 <div class="stat-value" id="stat-size">-</div>
-                <div class="stat-label">Cache Grosse</div>
+                <div class="stat-label">Cache Größe</div>
             </div>
         </div>
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Ubersicht</button>
+            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Übersicht</button>
             <button class="tab-btn" onclick="showTab('text')">&#128221; Text Embedding</button>
             <button class="tab-btn" onclick="showTab('timeseries')">&#128200; Zeitreihen</button>
-            <button class="tab-btn" onclick="showTab('similarity')">&#128269; Ahnlichkeit</button>
+            <button class="tab-btn" onclick="showTab('similarity')">&#128269; Ähnlichkeit</button>
             <button class="tab-btn" onclick="showTab('cache')">&#128230; Cache</button>
         </div>
 
@@ -550,7 +550,7 @@
                 <!-- Models -->
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">&#129302; Verfugbare Modelle</h3>
+                        <h3 class="card-title">&#129302; Verfügbare Modelle</h3>
                         <button class="btn btn-primary btn-sm" onclick="loadModels()">&#8635; Aktualisieren</button>
                     </div>
                     <div id="models-list">
@@ -575,7 +575,7 @@
                     <h3 class="card-title">&#128293; Modell Warmup</h3>
                 </div>
                 <div class="info-box" style="margin-bottom: 1rem;">
-                    Ladt alle Modelle in den Speicher vor fur schnellere Inferenz. Empfohlen nach einem Neustart.
+                    Lädt alle Modelle in den Speicher vor für schnellere Inferenz. Empfohlen nach einem Neustart.
                 </div>
                 <button class="btn btn-warning" id="btn-warmup" onclick="warmupModels()">&#128293; Warmup starten</button>
                 <div id="warmup-result" style="margin-top: 1rem;"></div>
@@ -761,7 +761,7 @@ Bitcoin bearish Signal</textarea>
                     <h3 class="card-title">&#128465; Cache-Verwaltung</h3>
                 </div>
                 <div class="info-box" style="margin-bottom: 1rem;">
-                    Der Embedder-Cache speichert berechnete Embeddings fur schnelleren Zugriff. Ein Leeren des Caches kann bei Speicherproblemen helfen.
+                    Der Embedder-Cache speichert berechnete Embeddings für schnelleren Zugriff. Ein Leeren des Caches kann bei Speicherproblemen helfen.
                 </div>
                 <button class="btn btn-danger" id="btn-clear-cache" onclick="clearCache()">&#128465; Cache leeren</button>
             </div>

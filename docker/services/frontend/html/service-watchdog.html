@@ -373,11 +373,11 @@
             <h2>&#128202; Beschreibung</h2>
             <p>
                 Der Watchdog Service ist das zentrale Monitoring- und Testing-System des KI Trading Model.
-                Er uberwacht kontinuierlich alle Microservices auf Verfugbarkeit und Gesundheit,
-                fuhrt automatisierte API-Tests durch und sendet bei Problemen sofortige Benachrichtigungen uber Telegram.
+                Er überwacht kontinuierlich alle Microservices auf Verfügbarkeit und Gesundheit,
+                führt automatisierte API-Tests durch und sendet bei Problemen sofortige Benachrichtigungen über Telegram.
             </p>
             <p>
-                Der Service fuhrt regelmasig Health-Checks durch, erkennt Ausfalle und Recovery-Events,
+                Der Service führt regelmäßig Health-Checks durch, erkennt Ausfälle und Recovery-Events,
                 bietet ein umfangreiches Testing-Framework mit ~90 Tests und implementiert ein
                 intelligentes Alert-System mit Cooldown-Mechanismus.
             </p>
@@ -390,35 +390,35 @@
             <div class="feature-grid">
                 <div class="feature-item">
                     <h4>&#128308; Health Monitoring</h4>
-                    <p>Regelmasige Health-Checks aller Services uber deren /health Endpoints mit konfigurierbarem Intervall.</p>
+                    <p>Regelmäßige Health-Checks aller Services über deren /health Endpoints mit konfigurierbarem Intervall.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128233; Telegram Alerts</h4>
-                    <p>Sofortige Benachrichtigungen bei Service-Ausfallen und Recovery-Events an konfigurierte Chat-IDs.</p>
+                    <p>Sofortige Benachrichtigungen bei Service-Ausfällen und Recovery-Events an konfigurierte Chat-IDs.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#9200; Alert Cooldown</h4>
-                    <p>Intelligenter Cooldown-Mechanismus verhindert wiederholte Alerts fur denselben Service.</p>
+                    <p>Intelligenter Cooldown-Mechanismus verhindert wiederholte Alerts für denselben Service.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128200; Status Dashboard</h4>
-                    <p>API-Endpoints fur Echtzeit-Status aller uberwachten Services und Alert-Historie.</p>
+                    <p>API-Endpoints für Echtzeit-Status aller überwachten Services und Alert-Historie.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#127919; Criticality Levels</h4>
-                    <p>Services werden nach Kritikalitat (critical, high, medium, low) klassifiziert fur priorisierte Alerts.</p>
+                    <p>Services werden nach Kritikalität (critical, high, medium, low) klassifiziert für priorisierte Alerts.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128260; Auto-Recovery Detection</h4>
-                    <p>Automatische Erkennung wenn ein ausgefallener Service wieder verfugbar wird.</p>
+                    <p>Automatische Erkennung wenn ein ausgefallener Service wieder verfügbar wird.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#129514; Integriertes Testing</h4>
-                    <p>~90 API-Tests fur alle Services mit Smoke, API, Contract und Integration Tests.</p>
+                    <p>~90 API-Tests für alle Services mit Smoke, API, Contract und Integration Tests.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128250; Live Test-Streaming</h4>
-                    <p>Echtzeit-Updates via Server-Sent Events (SSE) wahrend Test-Runs.</p>
+                    <p>Echtzeit-Updates via Server-Sent Events (SSE) während Test-Runs.</p>
                 </div>
             </div>
 
@@ -430,15 +430,15 @@
         </div>
 
         <div class="content-card">
-            <h2>&#128279; Uberwachte Services</h2>
-            <p>Der Watchdog uberwacht folgende Microservices:</p>
+            <h2>&#128279; Überwachte Services</h2>
+            <p>Der Watchdog überwacht folgende Microservices:</p>
 
             <table class="service-table">
                 <thead>
                     <tr>
                         <th>Service</th>
                         <th>URL</th>
-                        <th>Kritikalitat</th>
+                        <th>Kritikalität</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -503,12 +503,12 @@
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/status</span>
-                    <span class="endpoint-desc">Aktueller Status aller uberwachten Services</span>
+                    <span class="endpoint-desc">Aktueller Status aller überwachten Services</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/services</span>
-                    <span class="endpoint-desc">Liste aller uberwachten Services mit Konfiguration</span>
+                    <span class="endpoint-desc">Liste aller überwachten Services mit Konfiguration</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -585,18 +585,18 @@
         <div class="content-card">
             <h2>&#129514; Testing-System</h2>
             <p>
-                Der Watchdog enthalt ein vollstandiges Testing-Framework fur alle Microservices.
-                Tests konnen manuell oder automatisiert ausgefuhrt werden.
+                Der Watchdog enthält ein vollständiges Testing-Framework für alle Microservices.
+                Tests können manuell oder automatisiert ausgeführt werden.
             </p>
 
             <div class="feature-grid">
                 <div class="feature-item">
                     <h4>&#128165; Smoke Tests</h4>
-                    <p>Schnelle Health-Checks (&lt; 1s/Test) fur alle Services.</p>
+                    <p>Schnelle Health-Checks (&lt; 1s/Test) für alle Services.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128279; API Tests</h4>
-                    <p>Vollstandige Endpoint-Tests mit Request/Response-Validierung.</p>
+                    <p>Vollständige Endpoint-Tests mit Request/Response-Validierung.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128220; Contract Tests</h4>
@@ -604,7 +604,7 @@
                 </div>
                 <div class="feature-item">
                     <h4>&#128257; Integration Tests</h4>
-                    <p>Service-ubergreifende Workflows testen.</p>
+                    <p>Service-übergreifende Workflows testen.</p>
                 </div>
             </div>
 
@@ -650,9 +650,9 @@
         <div class="content-card">
             <h2>&#128233; Telegram Integration</h2>
             <p>
-                Der Watchdog verwendet die Telegram Bot API fur Benachrichtigungen.
-                Alerts werden mit Emoji-Icons und formatiertem Text gesendet fur
-                optimale Lesbarkeit auf mobilen Geraten.
+                Der Watchdog verwendet die Telegram Bot API für Benachrichtigungen.
+                Alerts werden mit Emoji-Icons und formatiertem Text gesendet für
+                optimale Lesbarkeit auf mobilen Geräten.
             </p>
 
             <div class="feature-grid">
@@ -662,12 +662,12 @@
                 </div>
                 <div class="feature-item">
                     <h4>&#128994; Service Recovery</h4>
-                    <p>Bestatigung wenn ein ausgefallener Service wieder online ist.</p>
+                    <p>Bestätigung wenn ein ausgefallener Service wieder online ist.</p>
                 </div>
             </div>
 
             <div class="info-box success">
-                <strong>Telegram Setup:</strong> Um Alerts zu erhalten, erstellen Sie einen Bot uber
+                <strong>Telegram Setup:</strong> Um Alerts zu erhalten, erstellen Sie einen Bot über
                 @BotFather und konfigurieren Sie TELEGRAM_BOT_TOKEN und TELEGRAM_CHAT_IDS in der
                 .env.watchdog Datei.
             </div>
@@ -675,7 +675,7 @@
 
         <div class="content-card">
             <h2>&#128295; Konfiguration</h2>
-            <p>Der Watchdog wird uber Umgebungsvariablen konfiguriert:</p>
+            <p>Der Watchdog wird über Umgebungsvariablen konfiguriert:</p>
 
             <table class="service-table">
                 <thead>
@@ -698,7 +698,7 @@
                     </tr>
                     <tr>
                         <td><code>ALERT_COOLDOWN_MINUTES</code></td>
-                        <td>Mindestzeit zwischen Alerts fur denselben Service</td>
+                        <td>Mindestzeit zwischen Alerts für denselben Service</td>
                         <td>15</td>
                     </tr>
                     <tr>

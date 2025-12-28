@@ -668,7 +668,7 @@
                     <option value="1000">Letzte 1000</option>
                 </select>
                 <button class="btn btn-warning" onclick="resetFilters()">
-                    Filter zurucksetzen
+                    Filter zurücksetzen
                 </button>
             </div>
 
@@ -801,7 +801,7 @@
                 updateStatistics();
                 populateIndicatorFilter();
                 renderSymbolSummary();
-                renderLogs(allLogs);
+                filterLogs();  // Apply current filters instead of rendering all
 
                 document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('de-CH');
 
@@ -1188,6 +1188,8 @@
             setupModal();
             loadFiltersFromStorage();
             loadLogs();
+            // Enable auto-refresh by default
+            toggleAutoRefresh();
         });
     </script>
 </body>

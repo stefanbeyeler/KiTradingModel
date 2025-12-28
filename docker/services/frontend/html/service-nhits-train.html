@@ -309,24 +309,24 @@
 
     <div class="container">
         <h1>&#127891; NHITS-Training Service</h1>
-        <p class="subtitle">Dedizierter Training-Container fur N-HiTS Zeitreihen-Prognosemodelle</p>
+        <p class="subtitle">Dedizierter Training-Container für N-HiTS Zeitreihen-Prognosemodelle</p>
 
         <div class="content-card">
             <h2>&#129504; Beschreibung</h2>
             <p>
                 Der NHITS-Training Service ist ein <strong>dedizierter Training-Container</strong>, der vom
-                NHITS Inference Service (Port 3002) getrennt lauft. Diese Architektur verhindert, dass
+                NHITS Inference Service (Port 3002) getrennt läuft. Diese Architektur verhindert, dass
                 ressourcenintensive Trainingsaufgaben die Echtzeit-Prognose-API blockieren.
             </p>
             <p>
                 Der Service trainiert N-HiTS (Neural Hierarchical Interpolation for Time Series) Modelle
-                fur verschiedene Symbole und Zeitrahmen. Trainierte Modelle werden in einem gemeinsamen
-                Volume gespeichert und sind sofort fur den Inference Service verfugbar.
+                für verschiedene Symbole und Zeitrahmen. Trainierte Modelle werden in einem gemeinsamen
+                Volume gespeichert und sind sofort für den Inference Service verfügbar.
             </p>
 
             <div class="info-box">
-                <strong>Low Priority:</strong> Der Training-Container lauft mit <code>nice -n 19</code>,
-                sodass er CPU-Ressourcen an Inference-Services abgibt, wenn diese benotigt werden.
+                <strong>Low Priority:</strong> Der Training-Container läuft mit <code>nice -n 19</code>,
+                sodass er CPU-Ressourcen an Inference-Services abgibt, wenn diese benötigt werden.
             </div>
         </div>
 
@@ -361,23 +361,23 @@
             <div class="feature-grid">
                 <div class="feature-item">
                     <h4>&#127891; Async Training</h4>
-                    <p>Training lauft im Hintergrund und blockiert keine API-Anfragen.</p>
+                    <p>Training läuft im Hintergrund und blockiert keine API-Anfragen.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128203; Job Queue</h4>
-                    <p>Mehrere Training-Jobs konnen in einer Queue verwaltet werden.</p>
+                    <p>Mehrere Training-Jobs können in einer Queue verwaltet werden.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128200; Progress Tracking</h4>
-                    <p>Echtzeit-Fortschritt mit Epoch, Loss und geschatzter Restzeit.</p>
+                    <p>Echtzeit-Fortschritt mit Epoch, Loss und geschätzter Restzeit.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128230; Auto-Deploy</h4>
-                    <p>Trainierte Modelle werden automatisch fur Inference bereitgestellt.</p>
+                    <p>Trainierte Modelle werden automatisch für Inference bereitgestellt.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128176; Multi-Symbol</h4>
-                    <p>Batch-Training fur mehrere Symbole in einem Durchlauf.</p>
+                    <p>Batch-Training für mehrere Symbole in einem Durchlauf.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#9889; Early Stopping</h4>
@@ -399,7 +399,7 @@
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/train/batch</span>
-                    <span class="endpoint-desc">Batch-Training fur mehrere Symbole</span>
+                    <span class="endpoint-desc">Batch-Training für mehrere Symbole</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -444,20 +444,20 @@
 
         <div class="content-card">
             <h2>&#128203; Training-Parameter</h2>
-            <p>Konfigurierbare Parameter fur das NHITS-Training:</p>
+            <p>Konfigurierbare Parameter für das NHITS-Training:</p>
             <ul>
                 <li><strong>symbol:</strong> Trading-Symbol (z.B. BTCUSD, EURUSD)</li>
                 <li><strong>timeframe:</strong> Zeitrahmen (M5, M15, H1, H4, D1)</li>
                 <li><strong>lookback_days:</strong> Historische Daten (Standard: 365 Tage)</li>
                 <li><strong>epochs:</strong> Training-Epochen (Standard: 100)</li>
-                <li><strong>batch_size:</strong> Batch-Grosse (Standard: 32)</li>
+                <li><strong>batch_size:</strong> Batch-Größe (Standard: 32)</li>
                 <li><strong>learning_rate:</strong> Lernrate (Standard: 0.001)</li>
                 <li><strong>horizon:</strong> Prognose-Horizont (Standard: 24)</li>
             </ul>
 
             <div class="info-box warning">
-                <strong>GPU-Nutzung:</strong> Aktuell lauft das Training auf CPU, da PyTorch 2.5.x
-                den NVIDIA Thor (sm_110) noch nicht unterstutzt. GPU-Beschleunigung wird mit
+                <strong>GPU-Nutzung:</strong> Aktuell läuft das Training auf CPU, da PyTorch 2.5.x
+                den NVIDIA Thor (sm_110) noch nicht unterstützt. GPU-Beschleunigung wird mit
                 PyTorch 2.6+ erwartet.
             </div>
         </div>

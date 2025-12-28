@@ -274,6 +274,21 @@ openapi_tags = [
 - **Zeilenlänge**: Max 120 Zeichen
 - **Imports**: Standard → Third-Party → Lokal (getrennt durch Leerzeilen)
 
+### Deutsche Schreibweisen (UI-Texte)
+
+In allen HTML-Dateien und UI-Texten sind deutsche Umlaute korrekt zu verwenden:
+
+| Korrekt | Falsch |
+|---------|--------|
+| `zurücksetzen` | `zurucksetzen` |
+| `Übersicht` | `Ubersicht` |
+| `für` | `fur` |
+| `Größe` | `Grosse` |
+
+**Beispiele:**
+- `Filter zurücksetzen` (nicht `Filter zurucksetzen`)
+- `Datenquellen-Übersicht` (nicht `Datenquellen-Ubersicht`)
+
 ## Microservices Ports
 
 ### Inference Services (High Priority)

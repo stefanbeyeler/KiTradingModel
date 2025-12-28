@@ -335,41 +335,41 @@
 
     <div class="container">
         <h1>&#127891; HMM-Training Service</h1>
-        <p class="subtitle">Dedizierter Training-Container fur HMM und LightGBM Scorer Modelle</p>
+        <p class="subtitle">Dedizierter Training-Container für HMM und LightGBM Scorer Modelle</p>
 
         <div class="content-card">
             <h2>&#129504; Beschreibung</h2>
             <p>
                 Der HMM-Training Service ist ein <strong>dedizierter Training-Container</strong>, der vom
-                HMM Inference Service (Port 3004) getrennt lauft. Er trainiert zwei Arten von Modellen:
+                HMM Inference Service (Port 3004) getrennt läuft. Er trainiert zwei Arten von Modellen:
             </p>
 
             <div class="model-types">
                 <div class="model-type-card">
                     <h4>&#128200; Hidden Markov Model (HMM)</h4>
-                    <p>Gaussian HMM fur Markt-Regime-Erkennung mit 4 Zustanden:</p>
+                    <p>Gaussian HMM für Markt-Regime-Erkennung mit 4 Zuständen:</p>
                     <ul>
-                        <li><span class="regime-badge bull">Bull Trend</span> Aufwartstrend</li>
-                        <li><span class="regime-badge bear">Bear Trend</span> Abwartstrend</li>
-                        <li><span class="regime-badge sideways">Sideways</span> Seitwartsbewegung</li>
-                        <li><span class="regime-badge volatile">High Vol</span> Hohe Volatilitat</li>
+                        <li><span class="regime-badge bull">Bull Trend</span> Aufwärtstrend</li>
+                        <li><span class="regime-badge bear">Bear Trend</span> Abwärtstrend</li>
+                        <li><span class="regime-badge sideways">Sideways</span> Seitwärtsbewegung</li>
+                        <li><span class="regime-badge volatile">High Vol</span> Hohe Volatilität</li>
                     </ul>
                 </div>
                 <div class="model-type-card">
                     <h4>&#127919; LightGBM Scorer</h4>
-                    <p>Signal-Scoring Modell fur Trading-Signale:</p>
+                    <p>Signal-Scoring Modell für Trading-Signale:</p>
                     <ul>
                         <li>Bewertet Trading-Signale von 0-1</li>
                         <li>Kombiniert technische Features</li>
-                        <li>Symbol-ubergreifendes Training</li>
+                        <li>Symbol-übergreifendes Training</li>
                         <li>Gradient Boosting Algorithmus</li>
                     </ul>
                 </div>
             </div>
 
             <div class="info-box">
-                <strong>Low Priority:</strong> Der Training-Container lauft mit <code>nice -n 19</code>,
-                sodass er CPU-Ressourcen an Inference-Services abgibt, wenn diese benotigt werden.
+                <strong>Low Priority:</strong> Der Training-Container läuft mit <code>nice -n 19</code>,
+                sodass er CPU-Ressourcen an Inference-Services abgibt, wenn diese benötigt werden.
             </div>
         </div>
 
@@ -408,15 +408,15 @@
                 </div>
                 <div class="feature-item">
                     <h4>&#128200; Per-Symbol HMM</h4>
-                    <p>Jedes Symbol erhalt sein eigenes optimiertes HMM-Modell.</p>
+                    <p>Jedes Symbol erhält sein eigenes optimiertes HMM-Modell.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128203; Cross-Symbol Scorer</h4>
-                    <p>LightGBM Scorer wird uber alle Symbole hinweg trainiert.</p>
+                    <p>LightGBM Scorer wird über alle Symbole hinweg trainiert.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#128230; Auto-Deploy</h4>
-                    <p>Trainierte Modelle werden automatisch fur Inference bereitgestellt.</p>
+                    <p>Trainierte Modelle werden automatisch für Inference bereitgestellt.</p>
                 </div>
                 <div class="feature-item">
                     <h4>&#9889; Fast Training</h4>
@@ -424,7 +424,7 @@
                 </div>
                 <div class="feature-item">
                     <h4>&#128176; Feature Engineering</h4>
-                    <p>Automatische Berechnung von technischen Features fur den Scorer.</p>
+                    <p>Automatische Berechnung von technischen Features für den Scorer.</p>
                 </div>
             </div>
         </div>
@@ -437,12 +437,12 @@
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/train/hmm</span>
-                    <span class="endpoint-desc">HMM fur ein Symbol trainieren</span>
+                    <span class="endpoint-desc">HMM für ein Symbol trainieren</span>
                 </div>
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/train/hmm/batch</span>
-                    <span class="endpoint-desc">HMM fur mehrere Symbole trainieren</span>
+                    <span class="endpoint-desc">HMM für mehrere Symbole trainieren</span>
                 </div>
             </div>
 
@@ -498,7 +498,7 @@
 
             <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Scorer Parameter</h3>
             <ul>
-                <li><strong>symbols:</strong> Liste von Symbolen fur Cross-Training</li>
+                <li><strong>symbols:</strong> Liste von Symbolen für Cross-Training</li>
                 <li><strong>num_boost_round:</strong> Boosting-Runden (Standard: 100)</li>
                 <li><strong>learning_rate:</strong> Lernrate (Standard: 0.05)</li>
                 <li><strong>max_depth:</strong> Baum-Tiefe (Standard: 6)</li>
@@ -506,7 +506,7 @@
 
             <div class="info-box success">
                 <strong>Schnelles Training:</strong> HMM-Training dauert typischerweise nur 2-5 Sekunden
-                pro Symbol. LightGBM Scorer-Training benotigt ca. 10-30 Sekunden, abhangig von der Datenmenge.
+                pro Symbol. LightGBM Scorer-Training benötigt ca. 10-30 Sekunden, abhängig von der Datenmenge.
             </div>
         </div>
 
