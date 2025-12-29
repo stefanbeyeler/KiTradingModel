@@ -399,6 +399,7 @@ class RevalidationRequest(BaseModel):
     feedback_id: str
     validation_result: str  # "correct", "still_wrong", "now_correct"
     notes: Optional[str] = None
+    corrected_pattern: Optional[str] = None  # New corrected pattern if still_wrong
 
 
 @router.get("/feedback/pending-revalidation")
@@ -488,6 +489,14 @@ async def mark_as_revalidated(request: RevalidationRequest):
                 entry["revalidation_timestamp"] = datetime.utcnow().isoformat()
                 if request.notes:
                     entry["revalidation_notes"] = request.notes
+                # Store new correction if provided (when still_wrong)
+                if request.corrected_pattern:
+                    entry["revalidation_corrected_pattern"] = request.corrected_pattern
+                    # Also update the main corrected_pattern for future training
+                    entry["corrected_pattern"] = request.corrected_pattern
+                    # Change feedback type to corrected if it was rejected
+                    if entry.get("feedback_type") == "rejected":
+                        entry["feedback_type"] = "corrected"
                 found = True
                 break
 

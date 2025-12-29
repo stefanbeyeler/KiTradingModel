@@ -584,6 +584,50 @@
             margin: 0.75rem 0;
         }
 
+        .revalidation-correction-panel {
+            background: rgba(255, 152, 0, 0.1);
+            border: 1px solid rgba(255, 152, 0, 0.3);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .revalidation-correction-panel .correction-header {
+            font-weight: 500;
+            color: #ffb74d;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .revalidation-correction-panel .correction-options {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .revalidation-correction-panel .pattern-select {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 0.85rem;
+        }
+
+        .revalidation-correction-panel .pattern-select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .revalidation-correction-panel .pattern-select optgroup {
+            background: #1a1a2e;
+            color: #888;
+            font-style: normal;
+        }
+
         /* Training specific styles */
         .training-status-card {
             background: rgba(0, 0, 0, 0.2);
@@ -3661,12 +3705,52 @@
                         <button class="btn btn-success" onclick="markRevalidation('${item.id}', '${successResult}')" title="Modell erkennt jetzt korrekt">
                             ${successLabel}
                         </button>
-                        <button class="btn btn-danger" onclick="markRevalidation('${item.id}', '${failResult}')" title="Modell erkennt immer noch falsch">
-                            ${failLabel}
+                        <button class="btn btn-danger" onclick="showRevalidationCorrectionDialog('${item.id}', '${item.original_pattern}', '${item.symbol}', '${item.timeframe}')" title="Pattern korrigieren">
+                            ✗ Falsch erkannt - korrigieren
                         </button>
                         <button class="btn btn-primary" onclick="scanForRevalidation('${item.symbol}', '${item.timeframe}')" title="Aktuellen Scan starten">
                             🔍 Neu scannen
                         </button>
+                    </div>
+                    <div id="reval-correction-${item.id}" class="revalidation-correction-panel" style="display: none;">
+                        <div class="correction-header">Welches Pattern ist korrekt?</div>
+                        <div class="correction-options">
+                            <select id="reval-select-${item.id}" class="pattern-select">
+                                <option value="">-- Pattern auswählen --</option>
+                                <option value="no_pattern">❌ Kein Pattern (False Positive)</option>
+                                <optgroup label="Reversal Bullish">
+                                    <option value="hammer">Hammer</option>
+                                    <option value="inverted_hammer">Inverted Hammer</option>
+                                    <option value="bullish_engulfing">Bullish Engulfing</option>
+                                    <option value="morning_star">Morning Star</option>
+                                    <option value="piercing_line">Piercing Line</option>
+                                    <option value="dragonfly_doji">Dragonfly Doji</option>
+                                    <option value="three_white_soldiers">Three White Soldiers</option>
+                                </optgroup>
+                                <optgroup label="Reversal Bearish">
+                                    <option value="shooting_star">Shooting Star</option>
+                                    <option value="hanging_man">Hanging Man</option>
+                                    <option value="bearish_engulfing">Bearish Engulfing</option>
+                                    <option value="evening_star">Evening Star</option>
+                                    <option value="dark_cloud_cover">Dark Cloud Cover</option>
+                                    <option value="gravestone_doji">Gravestone Doji</option>
+                                    <option value="three_black_crows">Three Black Crows</option>
+                                </optgroup>
+                                <optgroup label="Indecision">
+                                    <option value="doji">Doji</option>
+                                    <option value="spinning_top">Spinning Top</option>
+                                    <option value="bullish_harami">Bullish Harami</option>
+                                    <option value="bearish_harami">Bearish Harami</option>
+                                    <option value="harami_cross">Harami Cross</option>
+                                </optgroup>
+                            </select>
+                            <button class="btn btn-warning" onclick="submitRevalidationCorrection('${item.id}')">
+                                Korrektur speichern
+                            </button>
+                            <button class="btn btn-secondary" onclick="hideRevalidationCorrectionDialog('${item.id}')">
+                                Abbrechen
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -3685,22 +3769,32 @@
         }
 
         // Mark an item as revalidated
-        async function markRevalidation(feedbackId, result) {
+        async function markRevalidation(feedbackId, result, correctedPattern = null) {
             try {
+                const body = {
+                    feedback_id: feedbackId,
+                    validation_result: result
+                };
+
+                // Add correction info if provided
+                if (correctedPattern) {
+                    body.notes = `Korrigiert zu: ${correctedPattern}`;
+                    body.corrected_pattern = correctedPattern;
+                }
+
                 const res = await fetch(`${CANDLESTICK_API}/feedback/revalidate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        feedback_id: feedbackId,
-                        validation_result: result
-                    })
+                    body: JSON.stringify(body)
                 });
 
                 if (res.ok) {
                     const resultMessages = {
                         'correct': 'Als jetzt korrekt markiert',
                         'now_correct': 'Als nicht mehr erkannt markiert',
-                        'still_wrong': 'Als weiterhin falsch markiert'
+                        'still_wrong': correctedPattern
+                            ? `Korrigiert zu: ${formatPatternType(correctedPattern)}`
+                            : 'Als weiterhin falsch markiert'
                     };
                     showToast(resultMessages[result] || 'Gespeichert', 'success');
                     loadRevalidationData();
@@ -3711,6 +3805,50 @@
                 console.error('Failed to mark revalidation:', error);
                 showToast('Fehler beim Speichern', 'error');
             }
+        }
+
+        // Show correction dialog for revalidation
+        function showRevalidationCorrectionDialog(feedbackId, originalPattern, symbol, timeframe) {
+            const panel = document.getElementById(`reval-correction-${feedbackId}`);
+            if (panel) {
+                panel.style.display = 'block';
+                // Pre-select original pattern as disabled option
+                const select = document.getElementById(`reval-select-${feedbackId}`);
+                if (select) {
+                    // Mark the original pattern in the dropdown
+                    Array.from(select.options).forEach(opt => {
+                        if (opt.value === originalPattern) {
+                            opt.text = `${opt.text} (aktuell erkannt)`;
+                            opt.disabled = true;
+                        }
+                    });
+                }
+            }
+        }
+
+        // Hide correction dialog
+        function hideRevalidationCorrectionDialog(feedbackId) {
+            const panel = document.getElementById(`reval-correction-${feedbackId}`);
+            if (panel) {
+                panel.style.display = 'none';
+            }
+        }
+
+        // Submit correction from revalidation
+        async function submitRevalidationCorrection(feedbackId) {
+            const select = document.getElementById(`reval-select-${feedbackId}`);
+            if (!select || !select.value) {
+                showToast('Bitte ein Pattern auswählen', 'warning');
+                return;
+            }
+
+            const correctedPattern = select.value;
+
+            // Mark as still_wrong with the correction info
+            await markRevalidation(feedbackId, 'still_wrong', correctedPattern);
+
+            // Hide the dialog
+            hideRevalidationCorrectionDialog(feedbackId);
         }
 
         // Reset all revalidation status (after new training)
