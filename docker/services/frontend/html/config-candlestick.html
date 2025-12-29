@@ -3220,8 +3220,8 @@
                 document.getElementById('bearishCount').textContent = stats.by_direction?.bearish || 0;
                 document.getElementById('neutralCount').textContent = stats.by_direction?.neutral || 0;
 
-                // Update scan status
-                isAutoScanRunning = stats.scan_running || false;
+                // Update scan status (check both root and history object)
+                isAutoScanRunning = stats.history?.scan_running || stats.scan_running || false;
                 updateScanStatus();
 
             } catch (error) {

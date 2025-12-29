@@ -199,6 +199,52 @@ async def get_pattern_history(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# WICHTIG: Spezifische Routen MÜSSEN vor der generischen {symbol} Route kommen!
+# FastAPI matched Routen in der Reihenfolge der Definition.
+
+
+@router.get("/history/statistics")
+async def get_history_statistics():
+    """
+    Get statistics about detected patterns.
+
+    Returns aggregated statistics including:
+    - Total patterns
+    - Patterns by direction
+    - Patterns by category
+    - Patterns by timeframe
+    - Scan status
+    """
+    try:
+        stats = pattern_history_service.get_statistics()
+        return stats
+
+    except Exception as e:
+        logger.error(f"Error getting statistics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/history/by-symbol")
+async def get_history_by_symbol():
+    """
+    Get latest patterns grouped by symbol.
+
+    Returns up to 5 most recent patterns per symbol.
+    """
+    try:
+        by_symbol = pattern_history_service.get_latest_by_symbol()
+
+        return {
+            "symbols_count": len(by_symbol),
+            "by_symbol": by_symbol
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting history by symbol: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Generische {symbol} Route MUSS nach den spezifischen Routen kommen!
 @router.get("/history/{symbol}")
 async def get_symbol_history(
     symbol: str,
@@ -223,47 +269,6 @@ async def get_symbol_history(
 
     except Exception as e:
         logger.error(f"Error getting symbol history: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/history/by-symbol")
-async def get_history_by_symbol():
-    """
-    Get latest patterns grouped by symbol.
-
-    Returns up to 5 most recent patterns per symbol.
-    """
-    try:
-        by_symbol = pattern_history_service.get_latest_by_symbol()
-
-        return {
-            "symbols_count": len(by_symbol),
-            "by_symbol": by_symbol
-        }
-
-    except Exception as e:
-        logger.error(f"Error getting history by symbol: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/history/statistics")
-async def get_history_statistics():
-    """
-    Get statistics about detected patterns.
-
-    Returns aggregated statistics including:
-    - Total patterns
-    - Patterns by direction
-    - Patterns by category
-    - Patterns by timeframe
-    - Scan status
-    """
-    try:
-        stats = pattern_history_service.get_statistics()
-        return stats
-
-    except Exception as e:
-        logger.error(f"Error getting statistics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
