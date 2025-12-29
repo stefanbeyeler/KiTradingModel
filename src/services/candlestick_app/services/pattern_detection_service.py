@@ -238,21 +238,20 @@ class CandlestickPatternService:
         Check if candle is a Doji (very small body relative to range).
 
         A Doji is detected when:
-        - Body is less than configured % of the candle's total range, OR
-        - Body is less than configured % of the average body size
+        - Body is less than configured % of the candle's total range (PRIMARY criterion)
 
-        This dual check ensures Dojis are detected in both volatile and calm markets.
+        The body_to_range check is the primary criterion because a true Doji must
+        have an extremely small body regardless of market volatility.
         Parameters are configurable via rule_config_service.
         """
-        # Get configurable thresholds (default to 0.05 = 5%)
+        # Get configurable threshold (default to 0.05 = 5%)
         body_to_range_threshold = rule_config_service.get_param("doji", "body_to_range_ratio") or 0.05
-        body_to_avg_threshold = rule_config_service.get_param("doji", "body_to_avg_ratio") or 0.05
 
         body_to_range_ratio = candle.body_size / candle.total_range if candle.total_range > 0 else 0
-        body_to_avg_ratio = candle.body_size / avg_body if avg_body > 0 else 0
 
-        # A Doji if body is small relative to either the range or the average
-        return body_to_range_ratio < body_to_range_threshold or (avg_body > 0 and body_to_avg_ratio < body_to_avg_threshold)
+        # A Doji MUST have a very small body relative to its range
+        # This is the definitive criterion for a Doji
+        return body_to_range_ratio < body_to_range_threshold
 
     def _is_dragonfly_doji(self, candle: CandleData, avg_body: float) -> bool:
         """Check for Dragonfly Doji (long lower shadow, no upper shadow)."""
