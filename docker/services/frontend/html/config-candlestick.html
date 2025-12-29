@@ -3256,9 +3256,9 @@
                 // First candle of pattern is (patternCandleCount - 1) positions BEFORE the last candle
                 const firstCandleIdx = lastCandleIdx - (patternCandleCount - 1);
 
-                // Get slice: more candles before pattern, pattern candles, some after for better context
-                const contextBefore = 12;
-                const contextAfter = 8;
+                // Get slice: balanced context - enough to see trend but still readable timestamps
+                const contextBefore = 6;
+                const contextAfter = 3;
                 const startIdx = Math.max(0, firstCandleIdx - contextBefore);
                 const endIdx = Math.min(chronoData.length, lastCandleIdx + contextAfter + 1);
                 const chartCandles = chronoData.slice(startIdx, endIdx);
