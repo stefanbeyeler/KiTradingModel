@@ -4821,13 +4821,17 @@
             if (!item) return;
 
             try {
-                const res = await fetch(`${CANDLESTICK_API}/feedback/record-revalidation`, {
+                // Map result to validation_result values expected by API
+                // API expects: 'correct', 'still_wrong', 'now_correct'
+                const validationResult = result === 'not_detected' ? 'now_correct' : result;
+
+                const res = await fetch(`${CANDLESTICK_API}/feedback/revalidate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         feedback_id: item.id,
-                        result: result,
-                        notes: ''
+                        validation_result: validationResult,
+                        notes: null
                     })
                 });
 
