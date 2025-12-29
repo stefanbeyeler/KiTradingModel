@@ -21,9 +21,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from .routers import detection_router, system_router, history_router
+from .routers import detection_router, system_router, history_router, claude_validator_router
 from .services.pattern_detection_service import candlestick_pattern_service
 from .services.pattern_history_service import pattern_history_service
+from .services.claude_validator_service import claude_validator_service
 
 # Configuration
 VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
@@ -85,6 +86,10 @@ openapi_tags = [
         "name": "3. Pattern History",
         "description": "Pattern-Historie, Auto-Scan und Statistiken"
     },
+    {
+        "name": "4. Claude QA",
+        "description": "Externe Pattern-Validierung mit Claude Vision AI"
+    },
 ]
 
 
@@ -141,6 +146,7 @@ app.add_middleware(
 app.include_router(system_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(detection_router, prefix="/api/v1", tags=["2. Pattern Detection"])
 app.include_router(history_router, prefix="/api/v1", tags=["3. Pattern History"])
+app.include_router(claude_validator_router, prefix="/api/v1/claude", tags=["4. Claude QA"])
 
 
 @app.get("/")

@@ -16,3 +16,6 @@ loguru>=0.7.0
 
 # Optional: NumPy for numerical operations
 numpy>=1.24.0
+
+# Chart rendering for Claude Vision validation
+matplotlib>=3.7.0

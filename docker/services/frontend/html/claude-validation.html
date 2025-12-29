@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Pattern Validierung - KI Trading Model</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e8e8e8;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(156, 39, 176, 0.2);
+            color: #ce93d8;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-description {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        /* Status Indicator */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .status-enabled {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .status-disabled {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        /* Stats */
+        .stat-box {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 0.3rem;
+        }
+
+        .stat-value.green { color: #81c784; }
+        .stat-value.red { color: #e57373; }
+        .stat-value.yellow { color: #ffd54f; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e8e8e8;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.2);
+            font-weight: 500;
+            color: #64c8ff;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-agreed {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .badge-rejected {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        .badge-error {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffd54f;
+        }
+
+        .badge-pending {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+        }
+
+        /* Chart Preview */
+        .chart-preview {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .chart-preview img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        /* Confidence Bar */
+        .confidence-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.3rem;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        .confidence-high { background: #81c784; }
+        .confidence-medium { background: #ffd54f; }
+        .confidence-low { background: #e57373; }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #64c8ff;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-info {
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64c8ff;
+        }
+
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            color: #ffd54f;
+        }
+
+        /* Progress Ring */
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        /* Pattern History */
+        .pattern-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .pattern-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.8rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pattern-item:hover {
+            background: rgba(100, 200, 255, 0.1);
+        }
+
+        .pattern-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .pattern-type {
+            font-weight: 500;
+            min-width: 150px;
+        }
+
+        .pattern-meta {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        /* Reasoning Box */
+        .reasoning-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border-left: 3px solid #64c8ff;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="config-candlestick.html" class="back-link">
+                <span>&larr;</span> Candlestick Konfiguration
+            </a>
+            <h1 class="header-title">Claude Vision Validierung</h1>
+            <span class="service-badge">QA Service</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Status Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Service Status</h2>
+                <span id="serviceStatus" class="status-indicator status-disabled">Wird geladen...</span>
+            </div>
+
+            <div id="statusAlert" class="alert alert-warning" style="display: none;">
+                <strong>Hinweis:</strong> ANTHROPIC_API_KEY ist nicht konfiguriert. Die Claude-Validierung ist deaktiviert.
+            </div>
+
+            <div class="grid-3">
+                <div class="stat-box">
+                    <div id="totalValidations" class="stat-value">-</div>
+                    <div class="stat-label">Validierungen</div>
+                </div>
+                <div class="stat-box">
+                    <div id="agreementRate" class="stat-value green">-</div>
+                    <div class="stat-label">Zustimmungsrate</div>
+                </div>
+                <div class="stat-box">
+                    <div id="avgConfidence" class="stat-value yellow">-</div>
+                    <div class="stat-label">Durchschn. Konfidenz</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validate Patterns Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Pattern validieren</h2>
+                <div>
+                    <button id="validateBatchBtn" class="btn btn-primary" onclick="validateBatch()">
+                        <span class="spinner" style="display:none;" id="validateSpinner"></span>
+                        Batch validieren (10 Patterns)
+                    </button>
+                </div>
+            </div>
+            <p class="card-description">
+                Waehle Patterns aus der Historie und lasse sie von Claude Vision analysieren.
+                Claude bewertet, ob das erkannte Pattern visuell korrekt ist.
+            </p>
+
+            <!-- Pending Patterns for Validation -->
+            <h3 style="color: #64c8ff; margin-bottom: 1rem;">Ausstehende Patterns</h3>
+            <div id="pendingPatterns" class="pattern-list">
+                <div style="text-align: center; color: #888; padding: 2rem;">
+                    Wird geladen...
+                </div>
+            </div>
+        </div>
+
+        <!-- Validation History Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Validierungshistorie</h2>
+                <button class="btn btn-secondary" onclick="loadHistory()">Aktualisieren</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Pattern</th>
+                            <th>Symbol</th>
+                            <th>Timeframe</th>
+                            <th>Claude Urteil</th>
+                            <th>Konfidenz</th>
+                            <th>Qualitaet</th>
+                            <th>Zeitpunkt</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable">
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: #888;">Wird geladen...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Problematic Patterns Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Problematische Patterns</h2>
+            </div>
+            <p class="card-description">
+                Patterns, die von Claude haeufig abgelehnt werden. Diese koennten Regelanpassungen benoetigen.
+            </p>
+
+            <div id="problematicPatterns" class="grid-3">
+                <div style="text-align: center; color: #888; padding: 2rem;">
+                    Wird geladen...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Validierungsdetails</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalBody">
+                <!-- Content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/candlestick/api/v1';
+
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStatus();
+            loadStatistics();
+            loadPendingPatterns();
+            loadHistory();
+            loadProblematicPatterns();
+        });
+
+        async function loadStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/claude/status`);
+                const data = await response.json();
+
+                const statusEl = document.getElementById('serviceStatus');
+                const alertEl = document.getElementById('statusAlert');
+
+                if (data.enabled && data.api_configured) {
+                    statusEl.className = 'status-indicator status-enabled';
+                    statusEl.textContent = 'Aktiv (' + data.model + ')';
+                    alertEl.style.display = 'none';
+                } else {
+                    statusEl.className = 'status-indicator status-disabled';
+                    statusEl.textContent = 'Nicht konfiguriert';
+                    alertEl.style.display = 'block';
+                }
+            } catch (e) {
+                console.error('Error loading status:', e);
+            }
+        }
+
+        async function loadStatistics() {
+            try {
+                const response = await fetch(`${API_BASE}/claude/statistics`);
+                const data = await response.json();
+
+                document.getElementById('totalValidations').textContent = data.total_validations || 0;
+                document.getElementById('agreementRate').textContent =
+                    (data.agreement_rate || 0).toFixed(1) + '%';
+                document.getElementById('avgConfidence').textContent =
+                    ((data.avg_confidence || 0) * 100).toFixed(0) + '%';
+            } catch (e) {
+                console.error('Error loading statistics:', e);
+            }
+        }
+
+        async function loadPendingPatterns() {
+            try {
+                // Load recent patterns that haven't been validated
+                const response = await fetch(`${API_BASE}/history?limit=20`);
+                const data = await response.json();
+
+                const container = document.getElementById('pendingPatterns');
+                const patterns = data.patterns || [];
+
+                if (patterns.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #888; padding: 2rem;">Keine Patterns gefunden</div>';
+                    return;
+                }
+
+                container.innerHTML = patterns.slice(0, 10).map(p => `
+                    <div class="pattern-item" onclick="validateSingle('${p.id}')">
+                        <div class="pattern-info">
+                            <span class="pattern-type">${formatPatternType(p.pattern_type)}</span>
+                            <span class="pattern-meta">${p.symbol} / ${p.timeframe}</span>
+                        </div>
+                        <button class="btn btn-secondary" onclick="event.stopPropagation(); previewChart('${p.id}')">
+                            Chart
+                        </button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Error loading pending patterns:', e);
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch(`${API_BASE}/claude/history?limit=20`);
+                const data = await response.json();
+
+                const tbody = document.getElementById('historyTable');
+                const history = data.history || [];
+
+                if (history.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #888;">Keine Validierungen vorhanden</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = history.map(h => `
+                    <tr>
+                        <td>${formatPatternType(h.pattern_type)}</td>
+                        <td>${h.symbol}</td>
+                        <td>${h.timeframe}</td>
+                        <td>
+                            <span class="badge ${h.claude_agrees ? 'badge-agreed' : 'badge-rejected'}">
+                                ${h.claude_agrees ? 'Bestaetigt' : 'Abgelehnt'}
+                            </span>
+                        </td>
+                        <td>
+                            <div>${(h.claude_confidence * 100).toFixed(0)}%</div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill ${getConfidenceClass(h.claude_confidence)}"
+                                     style="width: ${h.claude_confidence * 100}%"></div>
+                            </div>
+                        </td>
+                        <td>${(h.visual_quality_score * 100).toFixed(0)}%</td>
+                        <td>${formatTimestamp(h.validation_timestamp)}</td>
+                        <td>
+                            <button class="btn btn-secondary" onclick="showDetails('${encodeURIComponent(JSON.stringify(h))}')">
+                                Details
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Error loading history:', e);
+            }
+        }
+
+        async function loadProblematicPatterns() {
+            try {
+                const response = await fetch(`${API_BASE}/claude/problematic-patterns?min_rejections=1`);
+                const data = await response.json();
+
+                const container = document.getElementById('problematicPatterns');
+                const patterns = data.patterns || [];
+
+                if (patterns.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #888; padding: 2rem;">Keine problematischen Patterns gefunden</div>';
+                    return;
+                }
+
+                container.innerHTML = patterns.map(p => `
+                    <div class="stat-box">
+                        <div class="stat-value red">${p.rejection_rate}%</div>
+                        <div class="stat-label">${formatPatternType(p.pattern_type)}</div>
+                        <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #888;">
+                            ${p.rejected}/${p.total_validations} abgelehnt
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Error loading problematic patterns:', e);
+            }
+        }
+
+        async function validateSingle(patternId) {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Validiere...';
+
+            try {
+                const response = await fetch(`${API_BASE}/claude/validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pattern_id: patternId, force: false })
+                });
+
+                const data = await response.json();
+
+                if (data.validation) {
+                    showDetails(encodeURIComponent(JSON.stringify(data.validation)));
+                    loadHistory();
+                    loadStatistics();
+                }
+            } catch (e) {
+                console.error('Validation error:', e);
+                alert('Validierung fehlgeschlagen: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Validieren';
+            }
+        }
+
+        async function validateBatch() {
+            const btn = document.getElementById('validateBatchBtn');
+            const spinner = document.getElementById('validateSpinner');
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+
+            try {
+                const response = await fetch(`${API_BASE}/claude/validate-batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ max_patterns: 10 })
+                });
+
+                const data = await response.json();
+
+                alert(`Validierung abgeschlossen:\n${data.summary.agreed} bestaetigt\n${data.summary.rejected} abgelehnt\n${data.summary.errors} Fehler`);
+
+                loadHistory();
+                loadStatistics();
+                loadProblematicPatterns();
+            } catch (e) {
+                console.error('Batch validation error:', e);
+                alert('Batch-Validierung fehlgeschlagen: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        }
+
+        async function previewChart(patternId) {
+            try {
+                const response = await fetch(`${API_BASE}/claude/chart-preview/${patternId}`);
+                const data = await response.json();
+
+                const modal = document.getElementById('detailModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalBody = document.getElementById('modalBody');
+
+                modalTitle.textContent = `Chart Preview: ${formatPatternType(data.pattern_type)}`;
+                modalBody.innerHTML = `
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Symbol:</strong> ${data.symbol} |
+                        <strong>Timeframe:</strong> ${data.timeframe} |
+                        <strong>Kerzen:</strong> ${data.candles_shown}
+                    </div>
+                    <div class="chart-preview">
+                        <img src="${data.chart_image}" alt="Pattern Chart">
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn btn-primary" onclick="validateSingle('${patternId}'); closeModal();">
+                            Mit Claude validieren
+                        </button>
+                    </div>
+                `;
+
+                modal.classList.add('active');
+            } catch (e) {
+                console.error('Error loading chart preview:', e);
+                alert('Chart-Vorschau fehlgeschlagen: ' + e.message);
+            }
+        }
+
+        function showDetails(encodedData) {
+            const data = JSON.parse(decodeURIComponent(encodedData));
+
+            const modal = document.getElementById('detailModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modalTitle.textContent = `Validierung: ${formatPatternType(data.pattern_type)}`;
+
+            modalBody.innerHTML = `
+                <div class="grid-2" style="margin-bottom: 1.5rem;">
+                    <div>
+                        <p><strong>Symbol:</strong> ${data.symbol}</p>
+                        <p><strong>Timeframe:</strong> ${data.timeframe}</p>
+                        <p><strong>Pattern:</strong> ${formatPatternType(data.pattern_type)}</p>
+                    </div>
+                    <div>
+                        <p><strong>Claude Urteil:</strong>
+                            <span class="badge ${data.claude_agrees ? 'badge-agreed' : 'badge-rejected'}">
+                                ${data.claude_agrees ? 'Bestaetigt' : 'Abgelehnt'}
+                            </span>
+                        </p>
+                        <p><strong>Konfidenz:</strong> ${(data.claude_confidence * 100).toFixed(0)}%</p>
+                        ${data.claude_pattern_type ? `<p><strong>Claude sieht:</strong> ${formatPatternType(data.claude_pattern_type)}</p>` : ''}
+                    </div>
+                </div>
+
+                <div class="grid-3" style="margin-bottom: 1.5rem;">
+                    <div class="stat-box">
+                        <div class="stat-value ${data.claude_agrees ? 'green' : 'red'}">${(data.claude_confidence * 100).toFixed(0)}%</div>
+                        <div class="stat-label">Konfidenz</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${(data.visual_quality_score * 100).toFixed(0)}%</div>
+                        <div class="stat-label">Visuelle Qualitaet</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${(data.market_context_score * 100).toFixed(0)}%</div>
+                        <div class="stat-label">Markt-Kontext</div>
+                    </div>
+                </div>
+
+                <h3 style="color: #64c8ff; margin-bottom: 0.5rem;">Claude's Begruendung</h3>
+                <div class="reasoning-box">
+                    ${data.claude_reasoning || 'Keine Begruendung verfuegbar'}
+                </div>
+
+                ${data.chart_image_base64 ? `
+                    <h3 style="color: #64c8ff; margin: 1.5rem 0 0.5rem;">Chart</h3>
+                    <div class="chart-preview">
+                        <img src="data:image/png;base64,${data.chart_image_base64}" alt="Pattern Chart">
+                    </div>
+                ` : ''}
+
+                <div style="margin-top: 1.5rem; color: #888; font-size: 0.85rem;">
+                    Validiert am ${formatTimestamp(data.validation_timestamp)} mit ${data.model_used}
+                </div>
+            `;
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        // Helpers
+        function formatPatternType(type) {
+            if (!type) return '-';
+            return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+
+        function formatTimestamp(ts) {
+            if (!ts) return '-';
+            const date = new Date(ts);
+            return date.toLocaleString('de-CH');
+        }
+
+        function getConfidenceClass(confidence) {
+            if (confidence >= 0.7) return 'confidence-high';
+            if (confidence >= 0.4) return 'confidence-medium';
+            return 'confidence-low';
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Close modal on backdrop click
+        document.getElementById('detailModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) closeModal();
+        });
+    </script>
+</body>
+</html>

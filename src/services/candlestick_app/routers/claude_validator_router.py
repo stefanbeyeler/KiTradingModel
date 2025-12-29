@@ -1,0 +1,404 @@
+"""Claude Vision Validator API Endpoints.
+
+Provides endpoints for external pattern validation using Claude AI.
+"""
+
+import os
+from typing import Optional, List
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+from pydantic import BaseModel, Field
+from loguru import logger
+import httpx
+
+from ..services.claude_validator_service import (
+    claude_validator_service,
+    ValidationStatus,
+    ClaudeValidationResult
+)
+from ..services.pattern_history_service import pattern_history_service
+
+router = APIRouter()
+
+# Data Service URL for fetching OHLCV data
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+
+# Timeframe mapping for Data Service
+TIMEFRAME_TO_INTERVAL = {
+    "M1": "1min", "M5": "5min", "M15": "15min", "M30": "30min",
+    "H1": "1h", "H4": "4h", "D1": "1day", "W1": "1week", "MN": "1month"
+}
+
+
+class ValidationRequest(BaseModel):
+    """Request to validate a specific pattern."""
+    pattern_id: str = Field(..., description="ID of the pattern to validate")
+    force: bool = Field(default=False, description="Force re-validation even if cached")
+
+
+class BatchValidationRequest(BaseModel):
+    """Request to validate multiple patterns."""
+    pattern_ids: Optional[List[str]] = Field(
+        default=None,
+        description="List of pattern IDs to validate (if None, validates recent pending patterns)"
+    )
+    max_patterns: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Maximum number of patterns to validate"
+    )
+    symbol: Optional[str] = Field(default=None, description="Filter by symbol")
+    timeframe: Optional[str] = Field(default=None, description="Filter by timeframe")
+
+
+class ValidationResponse(BaseModel):
+    """Response for a validation request."""
+    pattern_id: str
+    pattern_type: str
+    symbol: str
+    timeframe: str
+    claude_agrees: bool
+    claude_confidence: float
+    claude_pattern_type: Optional[str]
+    claude_reasoning: str
+    visual_quality_score: float
+    market_context_score: float
+    status: str
+    validation_timestamp: str
+
+
+@router.get("/status")
+async def get_claude_validator_status():
+    """
+    Get Claude validator service status.
+
+    Returns information about the validator configuration and availability.
+    """
+    return claude_validator_service.get_status()
+
+
+async def fetch_ohlcv_data(symbol: str, timeframe: str, limit: int = 50) -> List[dict]:
+    """Fetch OHLCV data from Data Service."""
+    try:
+        interval = TIMEFRAME_TO_INTERVAL.get(timeframe.upper(), "1h")
+        url = f"{DATA_SERVICE_URL}/api/v1/twelvedata/time_series/{symbol}"
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, params={
+                "interval": interval,
+                "outputsize": limit
+            })
+
+            if response.status_code == 200:
+                data = response.json()
+                candles = data.get("values", data.get("data", []))
+                # Ensure newest last for chart rendering
+                if candles and len(candles) > 1:
+                    # Check if data is in descending order (newest first)
+                    first_ts = candles[0].get("datetime", candles[0].get("timestamp", ""))
+                    last_ts = candles[-1].get("datetime", candles[-1].get("timestamp", ""))
+                    if first_ts > last_ts:
+                        candles = list(reversed(candles))
+                return candles
+            else:
+                logger.warning(f"Failed to fetch OHLCV: {response.status_code}")
+                return []
+
+    except Exception as e:
+        logger.error(f"Error fetching OHLCV: {e}")
+        return []
+
+
+@router.post("/validate")
+async def validate_pattern(request: ValidationRequest):
+    """
+    Validate a single pattern using Claude Vision API.
+
+    This endpoint renders a chart image of the pattern and sends it to
+    Claude for visual analysis. Claude will assess whether the pattern
+    is correctly identified.
+
+    **Note**: Requires ANTHROPIC_API_KEY environment variable to be set.
+    """
+    try:
+        # Get pattern from history
+        history = pattern_history_service.get_history(limit=1000)
+        pattern = next((p for p in history if p.get("id") == request.pattern_id), None)
+
+        if not pattern:
+            raise HTTPException(status_code=404, detail=f"Pattern {request.pattern_id} not found")
+
+        # Get OHLCV data for this pattern
+        ohlcv_data = pattern.get("ohlc_data", [])
+        if not ohlcv_data:
+            # Fetch from Data Service
+            symbol = pattern.get("symbol", "")
+            timeframe = pattern.get("timeframe", "H1")
+            ohlcv_data = await fetch_ohlcv_data(symbol, timeframe, limit=50)
+
+            if not ohlcv_data:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Could not fetch OHLCV data for {symbol}/{timeframe}"
+                )
+
+        # Validate with Claude
+        result = await claude_validator_service.validate_pattern(
+            pattern_id=request.pattern_id,
+            pattern_type=pattern.get("pattern_type", "unknown"),
+            symbol=pattern.get("symbol", ""),
+            timeframe=pattern.get("timeframe", ""),
+            ohlcv_data=ohlcv_data,
+            force=request.force
+        )
+
+        return {
+            "status": "success",
+            "validation": result.to_dict()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Validation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/validate-batch")
+async def validate_patterns_batch(
+    request: BatchValidationRequest,
+    background_tasks: BackgroundTasks
+):
+    """
+    Validate multiple patterns using Claude Vision API.
+
+    Patterns are validated sequentially with rate limiting to respect
+    API constraints. For large batches, consider using the background
+    validation endpoint.
+
+    Parameters:
+    - **pattern_ids**: Specific pattern IDs to validate
+    - **max_patterns**: Maximum number to validate (default: 10)
+    - **symbol**: Optional symbol filter
+    - **timeframe**: Optional timeframe filter
+    """
+    try:
+        # Get patterns to validate
+        if request.pattern_ids:
+            history = pattern_history_service.get_history(limit=1000)
+            patterns = [p for p in history if p.get("id") in request.pattern_ids]
+        else:
+            # Get recent patterns without Claude validation
+            patterns = pattern_history_service.get_history(
+                symbol=request.symbol.upper() if request.symbol else None,
+                timeframe=request.timeframe.upper() if request.timeframe else None,
+                limit=request.max_patterns
+            )
+
+        if not patterns:
+            return {
+                "status": "no_patterns",
+                "message": "No patterns found matching criteria",
+                "validated": 0
+            }
+
+        # Build OHLCV data map
+        ohlcv_data_map = {}
+        for p in patterns:
+            if p.get("ohlc_data"):
+                ohlcv_data_map[p.get("id")] = p.get("ohlc_data")
+
+        # Validate batch
+        results = await claude_validator_service.validate_patterns_batch(
+            patterns=patterns,
+            ohlcv_data_map=ohlcv_data_map,
+            max_validations=request.max_patterns
+        )
+
+        return {
+            "status": "success",
+            "validated": len(results),
+            "results": [r.to_dict() for r in results],
+            "summary": {
+                "total": len(results),
+                "agreed": sum(1 for r in results if r.claude_agrees),
+                "rejected": sum(1 for r in results if not r.claude_agrees),
+                "errors": sum(1 for r in results if r.status == ValidationStatus.ERROR)
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Batch validation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/history")
+async def get_validation_history(
+    limit: int = Query(default=50, ge=1, le=200, description="Maximum results"),
+    symbol: Optional[str] = Query(default=None, description="Filter by symbol"),
+    pattern_type: Optional[str] = Query(default=None, description="Filter by pattern type"),
+    status: Optional[str] = Query(
+        default=None,
+        description="Filter by status (validated, rejected, error, skipped)"
+    )
+):
+    """
+    Get Claude validation history.
+
+    Returns historical validation results with optional filtering.
+    """
+    try:
+        status_filter = None
+        if status:
+            try:
+                status_filter = ValidationStatus(status.lower())
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+
+        history = claude_validator_service.get_validation_history(
+            limit=limit,
+            symbol=symbol,
+            pattern_type=pattern_type,
+            status=status_filter
+        )
+
+        return {
+            "count": len(history),
+            "history": history
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/statistics")
+async def get_validation_statistics():
+    """
+    Get Claude validation statistics.
+
+    Returns aggregated statistics about pattern validations including:
+    - Total validations performed
+    - Agreement/rejection rates
+    - Average quality scores
+    - Breakdown by pattern type and symbol
+    """
+    try:
+        stats = claude_validator_service.get_validation_statistics()
+        return stats
+
+    except Exception as e:
+        logger.error(f"Error getting statistics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/chart-preview/{pattern_id}")
+async def get_chart_preview(pattern_id: str):
+    """
+    Get a chart preview for a pattern without running validation.
+
+    Returns the base64-encoded chart image that would be sent to Claude.
+    Useful for debugging and previewing the chart rendering.
+    """
+    try:
+        # Get pattern from history
+        history = pattern_history_service.get_history(limit=1000)
+        pattern = next((p for p in history if p.get("id") == pattern_id), None)
+
+        if not pattern:
+            raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
+
+        ohlcv_data = pattern.get("ohlc_data", [])
+        if not ohlcv_data:
+            # Fetch from Data Service
+            symbol = pattern.get("symbol", "")
+            timeframe = pattern.get("timeframe", "H1")
+            ohlcv_data = await fetch_ohlcv_data(symbol, timeframe, limit=50)
+
+            if not ohlcv_data:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Could not fetch OHLCV data for {symbol}/{timeframe}"
+                )
+
+        # Render chart
+        pattern_type = pattern.get("pattern_type", "unknown")
+        chart_renderer = claude_validator_service.chart_renderer
+
+        # Determine candle count
+        pattern_candles = claude_validator_service._get_pattern_candle_count(pattern_type)
+
+        chart_base64 = chart_renderer.render_pattern_chart(
+            ohlcv_data=ohlcv_data,
+            pattern_type=pattern_type,
+            pattern_candles=pattern_candles,
+            context_candles=15
+        )
+
+        if not chart_base64:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to render chart (matplotlib may not be available)"
+            )
+
+        return {
+            "pattern_id": pattern_id,
+            "pattern_type": pattern_type,
+            "symbol": pattern.get("symbol"),
+            "timeframe": pattern.get("timeframe"),
+            "chart_image": f"data:image/png;base64,{chart_base64}",
+            "candles_shown": len(ohlcv_data[-20:]) if ohlcv_data else 0
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating chart preview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/problematic-patterns")
+async def get_problematic_patterns(
+    min_rejections: int = Query(default=2, ge=1, description="Minimum rejections to include"),
+    limit: int = Query(default=20, ge=1, le=100, description="Maximum results")
+):
+    """
+    Get patterns that Claude frequently rejects.
+
+    Identifies patterns that may need rule adjustments based on
+    Claude's assessments. Useful for improving detection accuracy.
+    """
+    try:
+        stats = claude_validator_service.get_validation_statistics()
+        by_pattern = stats.get("by_pattern", {})
+
+        problematic = []
+        for pattern_type, data in by_pattern.items():
+            total = data.get("total", 0)
+            agreed = data.get("agreed", 0)
+            rejected = total - agreed
+
+            if rejected >= min_rejections:
+                rejection_rate = (rejected / total * 100) if total > 0 else 0
+                problematic.append({
+                    "pattern_type": pattern_type,
+                    "total_validations": total,
+                    "agreed": agreed,
+                    "rejected": rejected,
+                    "rejection_rate": round(rejection_rate, 1)
+                })
+
+        # Sort by rejection rate
+        problematic.sort(key=lambda x: x["rejection_rate"], reverse=True)
+
+        return {
+            "count": len(problematic[:limit]),
+            "patterns": problematic[:limit],
+            "message": f"{len(problematic)} patterns with >= {min_rejections} rejections"
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting problematic patterns: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -548,25 +548,57 @@ class CandlestickPatternService:
     ) -> bool:
         """
         Check for Morning Star pattern (3 candles).
-        1. Large bearish candle
-        2. Small body candle (gap down)
-        3. Large bullish candle (closes above midpoint of first)
+
+        A valid Morning Star requires:
+        1. First candle: LARGE bearish candle (significant selling pressure)
+        2. Second candle: SMALL body candle that GAPS DOWN from first close
+           - The gap is essential - shows exhaustion of selling
+        3. Third candle: LARGE bullish candle that closes above midpoint of first
+           - Confirms reversal with strong buying
+
+        Key criteria for a valid Morning Star:
+        - First candle must have substantial body (>= 80% of average)
+        - Second candle must be very small (< 30% of average) - ideally a Doji
+        - Gap down between first close and second high is REQUIRED
+        - Third candle must be substantial (>= 80% of average)
+        - Third must close above 50% of first candle's body
         """
-        # First candle: large bearish
-        if not first.is_bearish or first.body_size < avg_body * 0.8:
+        # Get configurable thresholds
+        first_body_min = rule_config_service.get_param("morning_star", "first_body_min_avg") or 0.8
+        second_body_max = rule_config_service.get_param("morning_star", "second_body_max_avg") or 0.3
+        third_body_min = rule_config_service.get_param("morning_star", "third_body_min_avg") or 0.8
+
+        # First candle: MUST be bearish with LARGE body
+        if not first.is_bearish:
+            return False
+        if first.body_size < avg_body * first_body_min:
+            return False
+        # First candle should also have significant range (not just a small red candle)
+        if first.total_range < avg_body * 0.5:
             return False
 
-        # Second candle: small body, gaps down
-        if second.body_size > avg_body * 0.5:
-            return False
-        if max(second.open, second.close) > first.close:
+        # Second candle: MUST have SMALL body (ideally Doji-like)
+        if second.body_size > avg_body * second_body_max:
             return False
 
-        # Third candle: large bullish, closes above midpoint of first
-        if not third.is_bullish or third.body_size < avg_body * 0.6:
+        # CRITICAL: Gap down required - second candle's HIGH must be below first candle's CLOSE
+        # This gap shows exhaustion of the downtrend
+        if second.high > first.close:
             return False
+
+        # Third candle: MUST be bullish with LARGE body
+        if not third.is_bullish:
+            return False
+        if third.body_size < avg_body * third_body_min:
+            return False
+
+        # Third candle MUST close above the midpoint of the first candle's body
         first_midpoint = (first.open + first.close) / 2
         if third.close < first_midpoint:
+            return False
+
+        # Additional: Third candle should show strength (significant range)
+        if third.total_range < avg_body * 0.5:
             return False
 
         return True
@@ -580,25 +612,57 @@ class CandlestickPatternService:
     ) -> bool:
         """
         Check for Evening Star pattern (3 candles).
-        1. Large bullish candle
-        2. Small body candle (gap up)
-        3. Large bearish candle (closes below midpoint of first)
+
+        A valid Evening Star requires:
+        1. First candle: LARGE bullish candle (significant buying pressure)
+        2. Second candle: SMALL body candle that GAPS UP from first close
+           - The gap is essential - shows exhaustion of buying
+        3. Third candle: LARGE bearish candle that closes below midpoint of first
+           - Confirms reversal with strong selling
+
+        Key criteria for a valid Evening Star:
+        - First candle must have substantial body (>= 80% of average)
+        - Second candle must be very small (< 30% of average) - ideally a Doji
+        - Gap up between first close and second low is REQUIRED
+        - Third candle must be substantial (>= 80% of average)
+        - Third must close below 50% of first candle's body
         """
-        # First candle: large bullish
-        if not first.is_bullish or first.body_size < avg_body * 0.8:
+        # Get configurable thresholds
+        first_body_min = rule_config_service.get_param("evening_star", "first_body_min_avg") or 0.8
+        second_body_max = rule_config_service.get_param("evening_star", "second_body_max_avg") or 0.3
+        third_body_min = rule_config_service.get_param("evening_star", "third_body_min_avg") or 0.8
+
+        # First candle: MUST be bullish with LARGE body
+        if not first.is_bullish:
+            return False
+        if first.body_size < avg_body * first_body_min:
+            return False
+        # First candle should also have significant range
+        if first.total_range < avg_body * 0.5:
             return False
 
-        # Second candle: small body, gaps up
-        if second.body_size > avg_body * 0.5:
-            return False
-        if min(second.open, second.close) < first.close:
+        # Second candle: MUST have SMALL body (ideally Doji-like)
+        if second.body_size > avg_body * second_body_max:
             return False
 
-        # Third candle: large bearish, closes below midpoint of first
-        if not third.is_bearish or third.body_size < avg_body * 0.6:
+        # CRITICAL: Gap up required - second candle's LOW must be above first candle's CLOSE
+        # This gap shows exhaustion of the uptrend
+        if second.low < first.close:
             return False
+
+        # Third candle: MUST be bearish with LARGE body
+        if not third.is_bearish:
+            return False
+        if third.body_size < avg_body * third_body_min:
+            return False
+
+        # Third candle MUST close below the midpoint of the first candle's body
         first_midpoint = (first.open + first.close) / 2
         if third.close > first_midpoint:
+            return False
+
+        # Additional: Third candle should show strength (significant range)
+        if third.total_range < avg_body * 0.5:
             return False
 
         return True

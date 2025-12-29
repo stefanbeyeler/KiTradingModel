@@ -85,16 +85,16 @@ DEFAULT_RULE_PARAMS = {
     "harami_cross": {
         "prev_body_min_avg": 0.8,  # Previous body >= 80% of average
     },
-    # Morning Star / Evening Star
+    # Morning Star / Evening Star (strict rules for valid patterns)
     "morning_star": {
-        "first_body_min_avg": 0.8,   # First candle >= 80% of average
-        "second_body_max_avg": 0.5,  # Second (middle) candle <= 50% of average
-        "third_body_min_avg": 0.6,   # Third candle >= 60% of average
+        "first_body_min_avg": 0.8,   # First candle >= 80% of average (large bearish)
+        "second_body_max_avg": 0.3,  # Second candle <= 30% of average (small/Doji)
+        "third_body_min_avg": 0.8,   # Third candle >= 80% of average (large bullish)
     },
     "evening_star": {
-        "first_body_min_avg": 0.8,
-        "second_body_max_avg": 0.5,
-        "third_body_min_avg": 0.6,
+        "first_body_min_avg": 0.8,   # First candle >= 80% of average (large bullish)
+        "second_body_max_avg": 0.3,  # Second candle <= 30% of average (small/Doji)
+        "third_body_min_avg": 0.8,   # Third candle >= 80% of average (large bearish)
     },
     # Three White Soldiers / Three Black Crows
     "three_white_soldiers": {
