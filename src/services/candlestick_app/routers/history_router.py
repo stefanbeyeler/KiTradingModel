@@ -389,3 +389,237 @@ async def get_feedback_statistics():
     except Exception as e:
         logger.error(f"Error calculating feedback stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Re-Validation Endpoints ====================
+
+
+class RevalidationRequest(BaseModel):
+    """Request to mark a feedback entry as revalidated."""
+    feedback_id: str
+    validation_result: str  # "correct", "still_wrong", "now_correct"
+    notes: Optional[str] = None
+
+
+@router.get("/feedback/pending-revalidation")
+async def get_pending_revalidation():
+    """
+    Get corrected/rejected patterns that haven't been revalidated after training.
+
+    Returns patterns that were marked as incorrect by users and should be
+    checked again after model retraining to verify improvement.
+
+    Use this after training a new model to review previously problematic patterns.
+    """
+    try:
+        if not FEEDBACK_FILE.exists():
+            return {
+                "count": 0,
+                "pending": [],
+                "message": "Keine Feedback-Daten vorhanden"
+            }
+
+        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+            feedback_data = json.load(f)
+
+        # Filter for corrected/rejected patterns that haven't been revalidated
+        pending = []
+        for entry in feedback_data:
+            feedback_type = entry.get('feedback_type', '')
+            # Only include corrections and rejections (not confirmations)
+            if feedback_type in ('corrected', 'rejected'):
+                # Check if already revalidated
+                if not entry.get('revalidated', False):
+                    pending.append({
+                        "id": entry.get("id", ""),
+                        "original_pattern": entry.get("original_pattern", ""),
+                        "corrected_pattern": entry.get("corrected_pattern", ""),
+                        "feedback_type": feedback_type,
+                        "symbol": entry.get("symbol", ""),
+                        "timeframe": entry.get("timeframe", ""),
+                        "pattern_timestamp": entry.get("pattern_timestamp", ""),
+                        "feedback_timestamp": entry.get("feedback_timestamp", ""),
+                        "ohlc_data": entry.get("ohlc_data"),
+                    })
+
+        # Sort by feedback timestamp (most recent first)
+        pending = sorted(
+            pending,
+            key=lambda x: x.get('feedback_timestamp', ''),
+            reverse=True
+        )
+
+        return {
+            "count": len(pending),
+            "pending": pending,
+            "message": f"{len(pending)} Patterns zur Re-Validierung verfügbar"
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting pending revalidation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/feedback/revalidate")
+async def mark_as_revalidated(request: RevalidationRequest):
+    """
+    Mark a feedback entry as revalidated after model retraining.
+
+    Validation results:
+    - **correct**: The new model now correctly identifies this pattern
+    - **still_wrong**: The model still misidentifies this pattern
+    - **now_correct**: Previously rejected pattern is now correctly not detected
+
+    This helps track model improvement over time.
+    """
+    try:
+        if not FEEDBACK_FILE.exists():
+            raise HTTPException(status_code=404, detail="Keine Feedback-Daten vorhanden")
+
+        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+            feedback_data = json.load(f)
+
+        # Find and update the entry
+        found = False
+        for entry in feedback_data:
+            if entry.get("id") == request.feedback_id:
+                entry["revalidated"] = True
+                entry["revalidation_result"] = request.validation_result
+                entry["revalidation_timestamp"] = datetime.utcnow().isoformat()
+                if request.notes:
+                    entry["revalidation_notes"] = request.notes
+                found = True
+                break
+
+        if not found:
+            raise HTTPException(status_code=404, detail=f"Feedback-Eintrag {request.feedback_id} nicht gefunden")
+
+        # Save updated feedback
+        with open(FEEDBACK_FILE, 'w', encoding='utf-8') as f:
+            json.dump(feedback_data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"Revalidation marked: {request.feedback_id} -> {request.validation_result}")
+
+        return {
+            "status": "success",
+            "message": f"Re-Validierung gespeichert: {request.validation_result}",
+            "feedback_id": request.feedback_id
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error marking revalidation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/feedback/reset-revalidation")
+async def reset_revalidation_status():
+    """
+    Reset revalidation status for all feedback entries.
+
+    Call this after training a new model to make all previously
+    corrected/rejected patterns available for re-checking.
+    """
+    try:
+        if not FEEDBACK_FILE.exists():
+            return {
+                "status": "success",
+                "reset_count": 0,
+                "message": "Keine Feedback-Daten vorhanden"
+            }
+
+        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+            feedback_data = json.load(f)
+
+        reset_count = 0
+        for entry in feedback_data:
+            if entry.get('revalidated', False):
+                entry['revalidated'] = False
+                # Keep historical revalidation data
+                if 'revalidation_history' not in entry:
+                    entry['revalidation_history'] = []
+                if entry.get('revalidation_result'):
+                    entry['revalidation_history'].append({
+                        "result": entry.get('revalidation_result'),
+                        "timestamp": entry.get('revalidation_timestamp'),
+                        "notes": entry.get('revalidation_notes'),
+                    })
+                # Clear current revalidation
+                entry.pop('revalidation_result', None)
+                entry.pop('revalidation_timestamp', None)
+                entry.pop('revalidation_notes', None)
+                reset_count += 1
+
+        # Save updated feedback
+        with open(FEEDBACK_FILE, 'w', encoding='utf-8') as f:
+            json.dump(feedback_data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"Reset revalidation status for {reset_count} entries")
+
+        return {
+            "status": "success",
+            "reset_count": reset_count,
+            "message": f"{reset_count} Einträge für Re-Validierung zurückgesetzt"
+        }
+
+    except Exception as e:
+        logger.error(f"Error resetting revalidation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/feedback/revalidation-statistics")
+async def get_revalidation_statistics():
+    """
+    Get statistics about revalidation results.
+
+    Shows how many corrected patterns are now correctly identified
+    after model retraining - useful for tracking model improvement.
+    """
+    try:
+        if not FEEDBACK_FILE.exists():
+            return {
+                "total_feedback": 0,
+                "pending_revalidation": 0,
+                "revalidated": 0,
+                "results": {},
+                "improvement_rate": 0.0
+            }
+
+        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+            feedback_data = json.load(f)
+
+        # Count statistics
+        total_corrections = 0  # corrected + rejected
+        pending = 0
+        revalidated = 0
+        results = {}
+
+        for entry in feedback_data:
+            feedback_type = entry.get('feedback_type', '')
+            if feedback_type in ('corrected', 'rejected'):
+                total_corrections += 1
+                if entry.get('revalidated', False):
+                    revalidated += 1
+                    result = entry.get('revalidation_result', 'unknown')
+                    results[result] = results.get(result, 0) + 1
+                else:
+                    pending += 1
+
+        # Calculate improvement rate (patterns now correctly identified)
+        improved = results.get('correct', 0) + results.get('now_correct', 0)
+        improvement_rate = (improved / revalidated * 100) if revalidated > 0 else 0.0
+
+        return {
+            "total_feedback": len(feedback_data),
+            "total_corrections": total_corrections,
+            "pending_revalidation": pending,
+            "revalidated": revalidated,
+            "results": results,
+            "improvement_rate": round(improvement_rate, 1),
+            "message": f"Verbesserungsrate: {improvement_rate:.1f}% ({improved}/{revalidated} Patterns)"
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting revalidation stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

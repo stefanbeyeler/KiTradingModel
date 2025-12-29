@@ -492,6 +492,84 @@
             display: block;
         }
 
+        .tab-badge {
+            background: #f44336;
+            color: white;
+            padding: 0.1rem 0.4rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 0.3rem;
+            vertical-align: middle;
+        }
+
+        /* Revalidation specific styles */
+        .revalidation-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 3px solid #ffb74d;
+        }
+
+        .revalidation-item.rejected {
+            border-left-color: #e57373;
+        }
+
+        .revalidation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .revalidation-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 0.75rem;
+        }
+
+        .revalidation-correction {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .revalidation-correction .original {
+            color: #e57373;
+            text-decoration: line-through;
+        }
+
+        .revalidation-correction .arrow {
+            color: #888;
+        }
+
+        .revalidation-correction .corrected {
+            color: #81c784;
+            font-weight: 500;
+        }
+
+        .revalidation-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .revalidation-actions .btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        .revalidation-chart {
+            max-width: 300px;
+            margin: 0.75rem 0;
+        }
+
         /* Training specific styles */
         .training-status-card {
             background: rgba(0, 0, 0, 0.2);
@@ -1135,6 +1213,7 @@
             <button class="tab active" onclick="switchTab('patterns')">Pattern Detection</button>
             <button class="tab" onclick="switchTab('history')">Pattern History</button>
             <button class="tab" onclick="switchTab('training')">Model Training</button>
+            <button class="tab" onclick="switchTab('revalidation')">Re-Validierung <span id="revalidationBadge" class="tab-badge" style="display: none;">0</span></button>
         </div>
 
         <!-- Tab: Pattern Detection -->
@@ -1580,6 +1659,83 @@
 
         </div><!-- End Tab: Model Training -->
 
+        <!-- Tab: Re-Validierung -->
+        <div id="tab-revalidation" class="tab-content">
+
+            <!-- Revalidation Statistics -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔄 Re-Validierung nach Training</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-warning" onclick="resetRevalidation()" title="Nach neuem Training zurücksetzen">Zurücksetzen</button>
+                        <button class="btn btn-primary" onclick="loadRevalidationData()">Aktualisieren</button>
+                    </div>
+                </div>
+                <p class="card-description">
+                    Überprüfe zuvor korrigierte oder abgelehnte Patterns nach dem Neu-Training des Modells,
+                    um zu verifizieren, dass die Verbesserungen wirksam sind.
+                </p>
+                <div class="stats-grid" style="margin-top: 1rem;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="revalTotal">-</div>
+                        <div class="stat-label">Korrekturen gesamt</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(255, 152, 0, 0.3);">
+                        <div class="stat-value" id="revalPending" style="color: #ffb74d;">-</div>
+                        <div class="stat-label">⏳ Ausstehend</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(76, 175, 80, 0.3);">
+                        <div class="stat-value" id="revalDone" style="color: #81c784;">-</div>
+                        <div class="stat-label">✓ Überprüft</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(100, 200, 255, 0.3);">
+                        <div class="stat-value" id="revalImprovement" style="color: #64c8ff;">-</div>
+                        <div class="stat-label">📈 Verbesserungsrate</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Revalidation List -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Ausstehende Überprüfungen</h2>
+                    <span class="badge badge-neutral" id="pendingCount">0</span>
+                </div>
+                <div id="revalidationList">
+                    <div class="loading"><span class="spinner"></span></div>
+                </div>
+                <div id="noRevalidations" style="display: none; text-align: center; padding: 2rem; color: #888;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">✓</div>
+                    <div>Alle Korrekturen wurden überprüft!</div>
+                    <div style="font-size: 0.85rem; margin-top: 0.5rem;">
+                        Nach einem neuen Training kannst du die Überprüfung mit "Zurücksetzen" erneut starten.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revalidation Results Summary -->
+            <div class="card" id="revalResultsCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">Überprüfungsergebnisse</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card" style="border-color: rgba(76, 175, 80, 0.3);">
+                        <div class="stat-value" id="revalCorrect" style="color: #81c784;">0</div>
+                        <div class="stat-label">✓ Jetzt korrekt</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(76, 175, 80, 0.3);">
+                        <div class="stat-value" id="revalNowCorrect" style="color: #81c784;">0</div>
+                        <div class="stat-label">✓ Nicht mehr erkannt</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(244, 67, 54, 0.3);">
+                        <div class="stat-value" id="revalStillWrong" style="color: #e57373;">0</div>
+                        <div class="stat-label">✗ Weiterhin falsch</div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- End Tab: Re-Validierung -->
+
     </main>
 
     <!-- Toast -->
@@ -1949,6 +2105,14 @@
                 // Start auto-refresh for training status
                 if (!trainingRefreshInterval) {
                     trainingRefreshInterval = setInterval(loadTrainingStatus, 5000);
+                }
+            } else if (tabName === 'revalidation') {
+                loadRevalidationData();
+
+                // Stop training auto-refresh
+                if (trainingRefreshInterval) {
+                    clearInterval(trainingRefreshInterval);
+                    trainingRefreshInterval = null;
                 }
             } else {
                 // Stop auto-refresh when leaving training tab
@@ -3144,11 +3308,233 @@
             }
         }
 
+        // === Re-Validierung Functions ===
+
+        // Load all revalidation data
+        async function loadRevalidationData() {
+            await Promise.all([
+                loadRevalidationStats(),
+                loadPendingRevalidations()
+            ]);
+        }
+
+        // Load revalidation statistics
+        async function loadRevalidationStats() {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/feedback/revalidation-statistics`);
+                const data = await res.json();
+
+                document.getElementById('revalTotal').textContent = data.total_corrections || 0;
+                document.getElementById('revalPending').textContent = data.pending_revalidation || 0;
+                document.getElementById('revalDone').textContent = data.revalidated || 0;
+                document.getElementById('revalImprovement').textContent =
+                    data.revalidated > 0 ? `${data.improvement_rate}%` : '-';
+
+                // Update tab badge
+                const badge = document.getElementById('revalidationBadge');
+                if (data.pending_revalidation > 0) {
+                    badge.textContent = data.pending_revalidation;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+
+                // Show results card if there are completed validations
+                const resultsCard = document.getElementById('revalResultsCard');
+                if (data.revalidated > 0) {
+                    resultsCard.style.display = 'block';
+                    document.getElementById('revalCorrect').textContent = data.results?.correct || 0;
+                    document.getElementById('revalNowCorrect').textContent = data.results?.now_correct || 0;
+                    document.getElementById('revalStillWrong').textContent = data.results?.still_wrong || 0;
+                } else {
+                    resultsCard.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('Failed to load revalidation stats:', error);
+            }
+        }
+
+        // Load pending revalidation items
+        async function loadPendingRevalidations() {
+            const container = document.getElementById('revalidationList');
+            const noItemsMsg = document.getElementById('noRevalidations');
+            const countBadge = document.getElementById('pendingCount');
+
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/feedback/pending-revalidation`);
+                const data = await res.json();
+
+                countBadge.textContent = data.count || 0;
+
+                if (!data.pending || data.pending.length === 0) {
+                    container.innerHTML = '';
+                    noItemsMsg.style.display = 'block';
+                    return;
+                }
+
+                noItemsMsg.style.display = 'none';
+                container.innerHTML = data.pending.map(item => renderRevalidationItem(item)).join('');
+
+            } catch (error) {
+                console.error('Failed to load pending revalidations:', error);
+                container.innerHTML = '<div style="color: #e57373; padding: 1rem;">Fehler beim Laden</div>';
+            }
+        }
+
+        // Render a single revalidation item
+        function renderRevalidationItem(item) {
+            const isRejected = item.feedback_type === 'rejected';
+            const correctionDisplay = isRejected
+                ? `<span class="original">${formatPatternType(item.original_pattern)}</span>
+                   <span class="arrow">→</span>
+                   <span class="corrected">Kein Pattern</span>`
+                : `<span class="original">${formatPatternType(item.original_pattern)}</span>
+                   <span class="arrow">→</span>
+                   <span class="corrected">${formatPatternType(item.corrected_pattern)}</span>`;
+
+            return `
+                <div class="revalidation-item ${isRejected ? 'rejected' : ''}">
+                    <div class="revalidation-header">
+                        <div>
+                            <strong>${item.symbol}</strong>
+                            <span class="timeframe-badge" style="margin-left: 0.5rem;">${item.timeframe}</span>
+                        </div>
+                        <span class="badge badge-${isRejected ? 'bearish' : 'neutral'}">
+                            ${isRejected ? 'Abgelehnt' : 'Korrigiert'}
+                        </span>
+                    </div>
+                    <div class="revalidation-correction">
+                        ${correctionDisplay}
+                    </div>
+                    <div class="revalidation-meta">
+                        <span>Pattern: ${formatTimestamp(item.pattern_timestamp)}</span>
+                        <span>Feedback: ${formatTimestamp(item.feedback_timestamp)}</span>
+                    </div>
+                    <div class="revalidation-actions">
+                        <button class="btn btn-success" onclick="markRevalidation('${item.id}', 'correct')">
+                            ✓ Jetzt korrekt
+                        </button>
+                        <button class="btn btn-secondary" onclick="markRevalidation('${item.id}', 'now_correct')">
+                            ✓ Nicht mehr erkannt
+                        </button>
+                        <button class="btn btn-danger" onclick="markRevalidation('${item.id}', 'still_wrong')">
+                            ✗ Weiterhin falsch
+                        </button>
+                        <button class="btn btn-primary" onclick="scanForRevalidation('${item.symbol}', '${item.timeframe}')">
+                            🔍 Neu scannen
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Mark an item as revalidated
+        async function markRevalidation(feedbackId, result) {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/feedback/revalidate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        feedback_id: feedbackId,
+                        validation_result: result
+                    })
+                });
+
+                if (res.ok) {
+                    const resultMessages = {
+                        'correct': 'Als jetzt korrekt markiert',
+                        'now_correct': 'Als nicht mehr erkannt markiert',
+                        'still_wrong': 'Als weiterhin falsch markiert'
+                    };
+                    showToast(resultMessages[result] || 'Gespeichert', 'success');
+                    loadRevalidationData();
+                } else {
+                    throw new Error('Speichern fehlgeschlagen');
+                }
+            } catch (error) {
+                console.error('Failed to mark revalidation:', error);
+                showToast('Fehler beim Speichern', 'error');
+            }
+        }
+
+        // Reset all revalidation status (after new training)
+        async function resetRevalidation() {
+            if (!confirm('Sollen alle Re-Validierungen zurückgesetzt werden?\n\nDies macht alle zuvor überprüften Korrekturen wieder verfügbar für eine erneute Überprüfung.')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/feedback/reset-revalidation`, {
+                    method: 'POST'
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast(`${data.reset_count} Einträge zurückgesetzt`, 'success');
+                    loadRevalidationData();
+                } else {
+                    throw new Error('Zurücksetzen fehlgeschlagen');
+                }
+            } catch (error) {
+                console.error('Failed to reset revalidation:', error);
+                showToast('Fehler beim Zurücksetzen', 'error');
+            }
+        }
+
+        // Trigger a scan for a specific symbol/timeframe to check current detection
+        async function scanForRevalidation(symbol, timeframe) {
+            try {
+                showToast(`Scanne ${symbol} ${timeframe}...`, 'info');
+
+                const res = await fetch(`${CANDLESTICK_API}/patterns/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbol: symbol,
+                        timeframes: [timeframe],
+                        lookback_candles: 100,
+                        min_confidence: 0.5
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const patterns = data.result?.total_patterns_found || 0;
+                    showToast(`${patterns} Patterns gefunden für ${symbol} ${timeframe}`, 'success');
+                } else {
+                    throw new Error('Scan fehlgeschlagen');
+                }
+            } catch (error) {
+                console.error('Failed to scan for revalidation:', error);
+                showToast('Scan fehlgeschlagen', 'error');
+            }
+        }
+
+        // Update revalidation badge on page load
+        async function updateRevalidationBadge() {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/feedback/revalidation-statistics`);
+                const data = await res.json();
+
+                const badge = document.getElementById('revalidationBadge');
+                if (data.pending_revalidation > 0) {
+                    badge.textContent = data.pending_revalidation;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (error) {
+                console.warn('Could not update revalidation badge:', error);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             await loadServiceInfo();
             await loadPatterns();
             await loadStatistics();
+            await updateRevalidationBadge();
 
             // Auto-Scan standardmäßig starten (ohne Toast-Nachricht)
             if (isAutoScanRunning) {
