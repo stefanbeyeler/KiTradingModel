@@ -1432,6 +1432,35 @@
                 </div>
             </div>
 
+            <!-- User Feedback Statistics -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📝 Benutzer-Feedback für Training</h2>
+                    <button class="btn btn-secondary" onclick="loadFeedbackStats()" style="font-size: 0.8rem;">Aktualisieren</button>
+                </div>
+                <div class="stats-grid" style="margin-bottom: 1rem;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="feedbackTotal">-</div>
+                        <div class="stat-label">Gesamt</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(76, 175, 80, 0.3);">
+                        <div class="stat-value" id="feedbackConfirmed" style="color: #81c784;">-</div>
+                        <div class="stat-label">✓ Bestätigt</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(255, 152, 0, 0.3);">
+                        <div class="stat-value" id="feedbackCorrected" style="color: #ffb74d;">-</div>
+                        <div class="stat-label">✎ Korrigiert</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(244, 67, 54, 0.3);">
+                        <div class="stat-value" id="feedbackRejected" style="color: #e57373;">-</div>
+                        <div class="stat-label">✗ Abgelehnt</div>
+                    </div>
+                </div>
+                <div style="font-size: 0.85rem; color: #888; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <span id="feedbackInfo">Das gesammelte Feedback wird beim nächsten Training automatisch berücksichtigt.</span>
+                </div>
+            </div>
+
             <!-- Current Training Status -->
             <div class="card" id="currentTrainingCard" style="display: none;">
                 <div class="card-header">
@@ -1894,6 +1923,7 @@
                 loadPatternHistory();
             } else if (tabName === 'training') {
                 loadTrainingServiceInfo();
+                loadFeedbackStats();
                 loadTrainingStatus();
                 loadTrainingJobs();
 
@@ -2787,6 +2817,37 @@
         }
 
         // === Training Service Functions ===
+
+        // Load feedback statistics for training
+        async function loadFeedbackStats() {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/feedback/statistics`);
+                const data = await res.json();
+
+                document.getElementById('feedbackTotal').textContent = data.total || 0;
+                document.getElementById('feedbackConfirmed').textContent = data.by_type?.confirmed || 0;
+                document.getElementById('feedbackCorrected').textContent = data.by_type?.corrected || 0;
+                document.getElementById('feedbackRejected').textContent = data.by_type?.rejected || 0;
+
+                if (data.total > 0) {
+                    const correctionRate = data.correction_rate || 0;
+                    document.getElementById('feedbackInfo').innerHTML =
+                        `<span style="color: #64c8ff;">${data.total}</span> Feedback-Einträge gesammelt. ` +
+                        `Korrekturrate: <span style="color: ${correctionRate > 30 ? '#e57373' : '#81c784'};">${correctionRate}%</span>. ` +
+                        `Das Feedback wird beim nächsten Training automatisch berücksichtigt.`;
+                } else {
+                    document.getElementById('feedbackInfo').textContent =
+                        'Noch kein Feedback gesammelt. Überprüfe Patterns in der "Pattern History" und markiere sie als korrekt/falsch.';
+                }
+
+            } catch (error) {
+                console.error('Failed to load feedback stats:', error);
+                document.getElementById('feedbackTotal').textContent = '-';
+                document.getElementById('feedbackConfirmed').textContent = '-';
+                document.getElementById('feedbackCorrected').textContent = '-';
+                document.getElementById('feedbackRejected').textContent = '-';
+            }
+        }
 
         // Load training service info
         async function loadTrainingServiceInfo() {

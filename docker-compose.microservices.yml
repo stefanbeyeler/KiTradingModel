@@ -573,6 +573,7 @@ services:
       - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
       - CANDLESTICK_SERVICE_URL=http://trading-candlestick:${CANDLESTICK_SERVICE_PORT:-3006}
       - MODEL_DIR=/app/models
+      - DATA_DIR=/app/data
       - SCHEDULED_TRAINING_ENABLED=false
       - TRAINING_INTERVAL_HOURS=24
       - TRAINING_HOUR_UTC=2

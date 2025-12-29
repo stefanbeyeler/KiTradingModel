@@ -64,6 +64,10 @@ DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
 CANDLESTICK_SERVICE_URL = os.getenv("CANDLESTICK_SERVICE_URL", "http://trading-candlestick:3006")
 MODEL_DIR = os.getenv("MODEL_DIR", "/app/models")
 
+# Shared data directory (mounted from candlestick service)
+DATA_DIR = Path(os.getenv("DATA_DIR", "/app/data"))
+FEEDBACK_FILE = DATA_DIR / "pattern_feedback.json"
+
 
 class TrainingService:
     """
@@ -189,6 +193,149 @@ class TrainingService:
 
         return training_data
 
+    def _load_user_feedback(self) -> Dict[str, Any]:
+        """Load user feedback for pattern corrections.
+
+        Returns a dictionary with:
+        - corrections: Map of pattern_id -> corrected pattern info
+        - rejected_ids: Set of pattern IDs marked as false positives
+        - confirmed_ids: Set of pattern IDs confirmed as correct
+        - statistics: Summary of feedback data
+        """
+        feedback_data = {
+            "corrections": {},
+            "rejected_ids": set(),
+            "confirmed_ids": set(),
+            "statistics": {
+                "total": 0,
+                "confirmed": 0,
+                "corrected": 0,
+                "rejected": 0,
+            }
+        }
+
+        if not FEEDBACK_FILE.exists():
+            logger.info("No user feedback file found - training without corrections")
+            return feedback_data
+
+        try:
+            with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+                raw_feedback = json.load(f)
+
+            for entry in raw_feedback:
+                pattern_id = entry.get("id", "")
+                feedback_type = entry.get("feedback_type", "")
+
+                if feedback_type == "confirmed":
+                    feedback_data["confirmed_ids"].add(pattern_id)
+                    feedback_data["statistics"]["confirmed"] += 1
+
+                elif feedback_type == "corrected":
+                    feedback_data["corrections"][pattern_id] = {
+                        "original": entry.get("original_pattern"),
+                        "corrected": entry.get("corrected_pattern"),
+                        "symbol": entry.get("symbol"),
+                        "timeframe": entry.get("timeframe"),
+                        "ohlc_data": entry.get("ohlc_data"),
+                    }
+                    feedback_data["statistics"]["corrected"] += 1
+
+                elif feedback_type == "rejected":
+                    feedback_data["rejected_ids"].add(pattern_id)
+                    feedback_data["statistics"]["rejected"] += 1
+
+                feedback_data["statistics"]["total"] += 1
+
+            logger.info(
+                f"Loaded user feedback: {feedback_data['statistics']['total']} total, "
+                f"{feedback_data['statistics']['confirmed']} confirmed, "
+                f"{feedback_data['statistics']['corrected']} corrected, "
+                f"{feedback_data['statistics']['rejected']} rejected"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to load user feedback: {e}")
+
+        return feedback_data
+
+    def _apply_feedback_to_labels(
+        self,
+        pattern_history: List[Dict],
+        feedback: Dict[str, Any]
+    ) -> List[Dict]:
+        """Apply user feedback corrections to pattern labels.
+
+        - Rejected patterns are excluded from training
+        - Corrected patterns have their labels updated
+        - Confirmed patterns are kept with boosted weight
+        """
+        corrected_patterns = []
+        excluded_count = 0
+        corrected_count = 0
+
+        for pattern in pattern_history:
+            pattern_id = pattern.get("id", "")
+
+            # Skip rejected patterns (false positives)
+            if pattern_id in feedback["rejected_ids"]:
+                excluded_count += 1
+                continue
+
+            # Apply corrections
+            if pattern_id in feedback["corrections"]:
+                correction = feedback["corrections"][pattern_id]
+                original_type = pattern.get("pattern_type")
+                corrected_type = correction.get("corrected")
+
+                if corrected_type and corrected_type != "no_pattern":
+                    # Update pattern type to corrected value
+                    pattern = pattern.copy()
+                    pattern["pattern_type"] = corrected_type
+                    pattern["original_pattern_type"] = original_type
+                    pattern["is_corrected"] = True
+                    pattern["training_weight"] = 2.0  # Higher weight for corrected samples
+                    corrected_count += 1
+                    corrected_patterns.append(pattern)
+                # If corrected to "no_pattern", skip it
+                continue
+
+            # Boost weight for confirmed patterns
+            if pattern_id in feedback["confirmed_ids"]:
+                pattern = pattern.copy()
+                pattern["is_confirmed"] = True
+                pattern["training_weight"] = 1.5  # Slightly higher weight
+
+            corrected_patterns.append(pattern)
+
+        logger.info(
+            f"Applied feedback: {excluded_count} excluded, "
+            f"{corrected_count} corrected, "
+            f"{len(corrected_patterns)} patterns for training"
+        )
+
+        return corrected_patterns
+
+    async def _fetch_pattern_history(self, limit: int = 1000) -> List[Dict]:
+        """Fetch pattern history from Candlestick Service for training labels."""
+        try:
+            client = await self._get_client()
+            url = f"{CANDLESTICK_SERVICE_URL}/api/v1/history"
+            params = {"limit": limit}
+
+            response = await client.get(url, params=params)
+            if response.status_code == 200:
+                data = response.json()
+                patterns = data.get("patterns", [])
+                logger.info(f"Fetched {len(patterns)} patterns from history")
+                return patterns
+            else:
+                logger.warning(f"Failed to fetch pattern history: {response.status_code}")
+                return []
+
+        except Exception as e:
+            logger.error(f"Error fetching pattern history: {e}")
+            return []
+
     async def _run_training(self, job: TrainingJob):
         """Execute the training job."""
         try:
@@ -213,6 +360,31 @@ class TrainingService:
                 raise RuntimeError("No training data available")
 
             logger.info(f"Fetched data for {len(training_data)} symbols")
+
+            # Load user feedback for pattern corrections
+            logger.info("Loading user feedback for training corrections...")
+            user_feedback = self._load_user_feedback()
+
+            # Fetch pattern history from Candlestick Service
+            pattern_history = await self._fetch_pattern_history()
+
+            # Apply user feedback corrections to pattern labels
+            if pattern_history:
+                corrected_patterns = self._apply_feedback_to_labels(
+                    pattern_history, user_feedback
+                )
+                logger.info(f"Training with {len(corrected_patterns)} patterns "
+                           f"(feedback applied: {user_feedback['statistics']['total']} entries)")
+            else:
+                corrected_patterns = []
+                logger.warning("No pattern history available for supervised training")
+
+            # TODO: Actual TCN training implementation
+            # The corrected_patterns list contains:
+            # - pattern_type: The (possibly corrected) pattern label
+            # - training_weight: Higher weight for confirmed/corrected patterns
+            # - is_corrected: True if user corrected the label
+            # - is_confirmed: True if user confirmed the pattern
 
             # Simulate training progress (placeholder for actual TCN training)
             # In production, this would be replaced with actual model training
@@ -242,7 +414,7 @@ class TrainingService:
             model_filename = f"candlestick_model_{job.job_id}.pt"
             job.model_path = str(self._model_path / model_filename)
 
-            # Create placeholder model file
+            # Create placeholder model file with feedback statistics
             model_info = {
                 "job_id": job.job_id,
                 "created_at": datetime.now(timezone.utc).isoformat(),
@@ -250,6 +422,13 @@ class TrainingService:
                 "timeframes": job.timeframes,
                 "epochs": job.epochs,
                 "final_loss": job.current_loss,
+                "training_patterns": len(corrected_patterns),
+                "feedback_applied": {
+                    "total": user_feedback["statistics"]["total"],
+                    "confirmed": user_feedback["statistics"]["confirmed"],
+                    "corrected": user_feedback["statistics"]["corrected"],
+                    "rejected": user_feedback["statistics"]["rejected"],
+                },
             }
             with open(job.model_path + ".json", 'w') as f:
                 json.dump(model_info, f, indent=2)
