@@ -4726,6 +4726,9 @@
                 const direction = getPatternDirection(item.original_pattern);
                 const patternCandleCount = getPatternCandleCount(item.original_pattern);
 
+                // Save _patternIdx before mapping (map creates new array without custom properties)
+                const patternIdx = ohlcData._patternIdx;
+
                 const formattedCandles = ohlcData.map(c => ({
                     datetime: c.datetime || c.timestamp,
                     open: parseFloat(c.open),
@@ -4734,10 +4737,35 @@
                     close: parseFloat(c.close)
                 }));
 
+                // Calculate highlight index - pattern should be in the middle of the chart
                 let highlightIdx = 0;
-                if (ohlcData._patternIdx !== undefined) {
-                    highlightIdx = Math.max(0, ohlcData._patternIdx - (patternCandleCount - 1));
+                if (patternIdx !== undefined && patternIdx >= 0) {
+                    // patternIdx points to the LAST candle of the pattern
+                    // Highlight starts (candleCount - 1) positions before
+                    highlightIdx = Math.max(0, patternIdx - (patternCandleCount - 1));
+                } else {
+                    // Fallback: try to find pattern by timestamp in the formatted data
+                    const patternTime = new Date(item.pattern_timestamp).getTime();
+                    const msPerCandle = {
+                        'M5': 5 * 60 * 1000,
+                        'M15': 15 * 60 * 1000,
+                        'M30': 30 * 60 * 1000,
+                        'H1': 60 * 60 * 1000,
+                        'H4': 4 * 60 * 60 * 1000,
+                        'D1': 24 * 60 * 60 * 1000
+                    };
+                    const candleMs = msPerCandle[item.timeframe] || 60 * 60 * 1000;
+
+                    for (let i = 0; i < formattedCandles.length; i++) {
+                        const candleTime = new Date(formattedCandles[i].datetime).getTime();
+                        if (Math.abs(candleTime - patternTime) < candleMs) {
+                            highlightIdx = Math.max(0, i - (patternCandleCount - 1));
+                            break;
+                        }
+                    }
                 }
+
+                console.log(`Detail chart: ${formattedCandles.length} candles, patternIdx=${patternIdx}, highlightIdx=${highlightIdx}`);
 
                 renderCandlestickChart(canvas, formattedCandles, highlightIdx, direction, item.original_pattern);
 
@@ -4904,6 +4932,9 @@
                 const direction = getPatternDirection(item.original_pattern);
                 const patternCandleCount = getPatternCandleCount(item.original_pattern);
 
+                // Save _patternIdx before mapping (map creates new array without custom properties)
+                const patternIdx = ohlcData._patternIdx;
+
                 // Format candles for rendering
                 const formattedCandles = ohlcData.map(c => ({
                     datetime: c.datetime || c.timestamp,
@@ -4916,18 +4947,27 @@
                 // Use pre-calculated pattern index if available (from centered fetch)
                 let highlightIdx = 0;
 
-                if (ohlcData._patternIdx !== undefined) {
+                if (patternIdx !== undefined && patternIdx >= 0) {
                     // Pattern index was pre-calculated during fetch
                     // The pattern timestamp points to the LAST candle of the pattern
                     // Highlight starts (candleCount - 1) positions before
-                    highlightIdx = Math.max(0, ohlcData._patternIdx - (patternCandleCount - 1));
+                    highlightIdx = Math.max(0, patternIdx - (patternCandleCount - 1));
                 } else {
                     // Fallback: Find the pattern timestamp in the data
-                    const patternTime = new Date(item.pattern_timestamp);
+                    const patternTime = new Date(item.pattern_timestamp).getTime();
+                    const msPerCandle = {
+                        'M5': 5 * 60 * 1000,
+                        'M15': 15 * 60 * 1000,
+                        'M30': 30 * 60 * 1000,
+                        'H1': 60 * 60 * 1000,
+                        'H4': 4 * 60 * 60 * 1000,
+                        'D1': 24 * 60 * 60 * 1000
+                    };
+                    const candleMs = msPerCandle[item.timeframe] || 60 * 60 * 1000;
 
                     for (let i = 0; i < formattedCandles.length; i++) {
-                        const candleTime = new Date(formattedCandles[i].datetime);
-                        if (Math.abs(candleTime - patternTime) < 3600000 * 4) { // Within 4 hours
+                        const candleTime = new Date(formattedCandles[i].datetime).getTime();
+                        if (Math.abs(candleTime - patternTime) < candleMs) {
                             // This is the last candle of the pattern
                             // Highlight starts (candleCount - 1) positions before
                             highlightIdx = Math.max(0, i - (patternCandleCount - 1));
@@ -5023,9 +5063,9 @@
                     return allCandles.slice(-30);
                 }
 
-                // Extract window centered around pattern (15 before, pattern, 14 after = 30 total)
-                const candlesBefore = 15;
-                const candlesAfter = 14;
+                // Extract window centered around pattern (5 before, pattern, 5 after)
+                const candlesBefore = 5;
+                const candlesAfter = 5;
                 const startIdx = Math.max(0, patternIdx - candlesBefore);
                 const endIdx = Math.min(allCandles.length, patternIdx + candlesAfter + 1);
 
