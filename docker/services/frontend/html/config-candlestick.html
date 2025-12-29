@@ -2454,6 +2454,22 @@
                                 ✗ Kein Pattern
                             </button>
                         </div>
+
+                        <!-- Begründung für Korrektur/Ablehnung -->
+                        <div id="reasonSection" style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px; display: none;">
+                            <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.5rem;">
+                                Begründung (optional, für Regelwerk-Verbesserung):
+                            </div>
+                            <div style="display: flex; gap: 0.75rem; align-items: flex-start; flex-wrap: wrap;">
+                                <select id="reasonCategorySelect" style="padding: 0.5rem; background: #252540; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; min-width: 200px;" onchange="onReasonCategoryChange()">
+                                    <option value="">-- Grund wählen --</option>
+                                </select>
+                                <input type="text" id="reasonTextInput" placeholder="Zusätzliche Details (z.B. 'Körper ist 15% statt max. 10%')"
+                                       style="flex: 1; min-width: 200px; padding: 0.5rem; background: #252540; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;">
+                            </div>
+                            <div id="reasonDescription" style="margin-top: 0.5rem; font-size: 0.8rem; color: #888; font-style: italic;"></div>
+                        </div>
+
                         <div id="correctionFeedback" style="margin-top: 0.5rem; font-size: 0.85rem; display: none;"></div>
                     </div>
                 </div>
@@ -2683,6 +2699,13 @@
                         <div class="reval-detail-info-item">
                             <label>Zeitpunkt</label>
                             <span id="revalDetailTimestamp">-</span>
+                        </div>
+                    </div>
+                    <!-- Begründungszeile -->
+                    <div class="reval-detail-info-row" id="revalReasonRow" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div class="reval-detail-info-item" style="flex: 1;">
+                            <label>Begründung</label>
+                            <span id="revalDetailReason" style="color: #ffb74d;">-</span>
                         </div>
                     </div>
                 </div>
@@ -4073,6 +4096,9 @@
             }
         });
 
+        // Cache for reason categories
+        let reasonCategoriesCache = null;
+
         // Populate correction pattern dropdown
         async function populateCorrectionDropdown() {
             const select = document.getElementById('correctionPatternSelect');
@@ -4084,8 +4110,61 @@
                 select.innerHTML = '<option value="">-- Korrektes Pattern wählen --</option>' +
                     '<option value="no_pattern">Kein Pattern</option>' +
                     patterns.map(p => `<option value="${p.type}">${formatPatternType(p.type)} (${p.direction})</option>`).join('');
+
+                // Also populate reason categories for this pattern
+                await populateReasonCategories(currentModalPattern?.pattern_type);
             } catch (error) {
                 console.error('Failed to load patterns for correction:', error);
+            }
+        }
+
+        // Populate reason categories dropdown based on pattern type
+        async function populateReasonCategories(patternType) {
+            const select = document.getElementById('reasonCategorySelect');
+            if (!select) return;
+
+            try {
+                // Fetch categories filtered for this pattern type
+                const url = patternType
+                    ? `${CANDLESTICK_API}/feedback/reason-categories?pattern=${patternType}`
+                    : `${CANDLESTICK_API}/feedback/reason-categories`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                reasonCategoriesCache = data.categories || {};
+
+                select.innerHTML = '<option value="">-- Grund wählen --</option>' +
+                    Object.entries(reasonCategoriesCache)
+                        .map(([key, info]) => `<option value="${key}">${info.label}</option>`)
+                        .join('');
+
+                // Reset description
+                document.getElementById('reasonDescription').textContent = '';
+                document.getElementById('reasonTextInput').value = '';
+            } catch (error) {
+                console.error('Failed to load reason categories:', error);
+                select.innerHTML = '<option value="">-- Fehler beim Laden --</option>';
+            }
+        }
+
+        // Handle reason category change - show description
+        function onReasonCategoryChange() {
+            const select = document.getElementById('reasonCategorySelect');
+            const descEl = document.getElementById('reasonDescription');
+            const category = select.value;
+
+            if (category && reasonCategoriesCache && reasonCategoriesCache[category]) {
+                descEl.textContent = reasonCategoriesCache[category].description || '';
+            } else {
+                descEl.textContent = '';
+            }
+        }
+
+        // Show/hide reason section based on feedback type
+        function showReasonSection(show) {
+            const section = document.getElementById('reasonSection');
+            if (section) {
+                section.style.display = show ? 'block' : 'none';
             }
         }
 
@@ -4148,6 +4227,8 @@
         // Confirm pattern is correct
         async function confirmPattern() {
             if (!currentModalPattern) return;
+            // Hide reason section for confirmations
+            showReasonSection(false);
             await submitPatternFeedback(currentModalPattern, 'confirmed', currentModalPattern.pattern_type);
         }
 
@@ -4157,6 +4238,8 @@
             const correctedPattern = document.getElementById('correctionPatternSelect').value;
             if (!correctedPattern) {
                 showCorrectionFeedback('Bitte wählen Sie das korrekte Pattern aus.', 'warning');
+                // Show reason section for corrections
+                showReasonSection(true);
                 return;
             }
             await submitPatternFeedback(currentModalPattern, 'corrected', correctedPattern);
@@ -4165,12 +4248,27 @@
         // Mark as no pattern (false positive)
         async function markAsNoPattern() {
             if (!currentModalPattern) return;
+            // Show reason section for rejections
+            showReasonSection(true);
             await submitPatternFeedback(currentModalPattern, 'rejected', 'no_pattern');
+        }
+
+        // Get reason data from UI
+        function getReasonData() {
+            const categorySelect = document.getElementById('reasonCategorySelect');
+            const textInput = document.getElementById('reasonTextInput');
+            return {
+                reason_category: categorySelect?.value || null,
+                reason_text: textInput?.value?.trim() || null
+            };
         }
 
         // Submit pattern feedback to backend
         async function submitPatternFeedback(pattern, feedbackType, correctedPattern) {
             try {
+                // Get reason data for corrections and rejections
+                const reasonData = (feedbackType !== 'confirmed') ? getReasonData() : {};
+
                 const payload = {
                     pattern_id: pattern.id || `${pattern.symbol}_${pattern.timestamp}_${pattern.pattern_type}`,
                     original_pattern: pattern.pattern_type,
@@ -4179,7 +4277,10 @@
                     symbol: pattern.symbol,
                     timeframe: pattern.timeframe,
                     timestamp: pattern.timestamp,
-                    ohlc_data: pattern.ohlc_data || null
+                    ohlc_data: pattern.ohlc_data || null,
+                    // Begründungsfelder
+                    reason_category: reasonData.reason_category,
+                    reason_text: reasonData.reason_text
                 };
 
                 const res = await fetch(`${CANDLESTICK_API}/feedback`, {
@@ -4189,17 +4290,32 @@
                 });
 
                 if (res.ok) {
-                    const msg = feedbackType === 'confirmed' ? 'Pattern als korrekt bestätigt!' :
+                    let msg = feedbackType === 'confirmed' ? 'Pattern als korrekt bestätigt!' :
                                 feedbackType === 'rejected' ? 'Als Fehlererkennung markiert.' :
                                 `Korrektur zu "${formatPatternType(correctedPattern)}" gespeichert.`;
+
+                    // Add note about reason if provided
+                    if (reasonData.reason_category) {
+                        const reasonLabel = reasonCategoriesCache?.[reasonData.reason_category]?.label || reasonData.reason_category;
+                        msg += ` (Grund: ${reasonLabel})`;
+                    }
+
                     showCorrectionFeedback(msg, 'success');
+
+                    // Hide reason section and reset fields
+                    showReasonSection(false);
+                    document.getElementById('reasonCategorySelect').value = '';
+                    document.getElementById('reasonTextInput').value = '';
+                    document.getElementById('reasonDescription').textContent = '';
 
                     // Update feedback map locally for immediate UI update
                     const patternId = pattern.id || `${pattern.symbol}_${pattern.timestamp}_${pattern.pattern_type}`;
                     patternFeedbackMap[patternId] = {
                         id: patternId,
                         feedback_type: feedbackType,
-                        corrected_pattern: correctedPattern
+                        corrected_pattern: correctedPattern,
+                        reason_category: reasonData.reason_category,
+                        reason_text: reasonData.reason_text
                     };
 
                     // Refresh timeline to show updated status
@@ -5073,6 +5189,25 @@
 
             const timestamp = new Date(item.pattern_timestamp);
             document.getElementById('revalDetailTimestamp').textContent = timestamp.toLocaleString('de-CH');
+
+            // Update reason if available
+            const reasonRow = document.getElementById('revalReasonRow');
+            const reasonSpan = document.getElementById('revalDetailReason');
+            if (item.reason_category || item.reason_text) {
+                reasonRow.style.display = 'flex';
+                let reasonDisplay = '';
+                if (item.reason_category && reasonCategoriesCache && reasonCategoriesCache[item.reason_category]) {
+                    reasonDisplay = reasonCategoriesCache[item.reason_category].label;
+                } else if (item.reason_category) {
+                    reasonDisplay = item.reason_category;
+                }
+                if (item.reason_text) {
+                    reasonDisplay += reasonDisplay ? ` - ${item.reason_text}` : item.reason_text;
+                }
+                reasonSpan.textContent = reasonDisplay || '-';
+            } else {
+                reasonRow.style.display = 'none';
+            }
 
             // Render feedback history
             const historyContainer = document.getElementById('revalDetailFeedbackHistory');
@@ -5962,12 +6097,24 @@
             }
         }
 
+        // Load reason categories (for feedback and revalidation display)
+        async function loadReasonCategories() {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/feedback/reason-categories`);
+                const data = await res.json();
+                reasonCategoriesCache = data.categories || {};
+            } catch (error) {
+                console.warn('Could not load reason categories:', error);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             await loadServiceInfo();
             await loadPatterns();
             await loadStatistics();
             await updateRevalidationBadge();
+            await loadReasonCategories();
 
             // Status-Tab Daten laden (da Status-Tab standardmäßig aktiv ist)
             await loadTrainingServiceInfo();

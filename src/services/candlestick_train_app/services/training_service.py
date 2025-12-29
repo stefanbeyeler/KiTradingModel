@@ -450,6 +450,7 @@ class TrainingService:
         - rejected_ids: Set of pattern IDs marked as false positives
         - confirmed_ids: Set of pattern IDs confirmed as correct
         - statistics: Summary of feedback data
+        - reason_analysis: Analysis of feedback reasons for training insights
         """
         feedback_data = {
             "corrections": {},
@@ -460,6 +461,12 @@ class TrainingService:
                 "confirmed": 0,
                 "corrected": 0,
                 "rejected": 0,
+            },
+            # New: Reason-based analysis for smarter training
+            "reason_analysis": {
+                "by_pattern_and_reason": {},  # pattern:reason -> count
+                "problematic_patterns": [],    # Patterns with many corrections
+                "training_recommendations": [] # Specific training adjustments
             }
         }
 
@@ -471,9 +478,16 @@ class TrainingService:
             with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
                 raw_feedback = json.load(f)
 
+            # Count reasons by pattern
+            pattern_reason_counts = {}
+            pattern_correction_counts = {}
+
             for entry in raw_feedback:
                 pattern_id = entry.get("id", "")
                 feedback_type = entry.get("feedback_type", "")
+                original_pattern = entry.get("original_pattern", "unknown")
+                reason_category = entry.get("reason_category")
+                reason_text = entry.get("reason_text")
 
                 if feedback_type == "confirmed":
                     feedback_data["confirmed_ids"].add(pattern_id)
@@ -481,31 +495,142 @@ class TrainingService:
 
                 elif feedback_type == "corrected":
                     feedback_data["corrections"][pattern_id] = {
-                        "original": entry.get("original_pattern"),
+                        "original": original_pattern,
                         "corrected": entry.get("corrected_pattern"),
                         "symbol": entry.get("symbol"),
                         "timeframe": entry.get("timeframe"),
                         "ohlc_data": entry.get("ohlc_data"),
+                        "reason_category": reason_category,
+                        "reason_text": reason_text,
                     }
                     feedback_data["statistics"]["corrected"] += 1
+
+                    # Track correction counts by pattern
+                    pattern_correction_counts[original_pattern] = \
+                        pattern_correction_counts.get(original_pattern, 0) + 1
 
                 elif feedback_type == "rejected":
                     feedback_data["rejected_ids"].add(pattern_id)
                     feedback_data["statistics"]["rejected"] += 1
 
+                    # Track rejection counts by pattern
+                    pattern_correction_counts[original_pattern] = \
+                        pattern_correction_counts.get(original_pattern, 0) + 1
+
+                # Track reason categories
+                if reason_category:
+                    key = f"{original_pattern}:{reason_category}"
+                    pattern_reason_counts[key] = pattern_reason_counts.get(key, 0) + 1
+
                 feedback_data["statistics"]["total"] += 1
+
+            # Store reason analysis
+            feedback_data["reason_analysis"]["by_pattern_and_reason"] = pattern_reason_counts
+
+            # Identify problematic patterns (high correction rate)
+            problematic = [
+                {"pattern": p, "corrections": c}
+                for p, c in sorted(pattern_correction_counts.items(), key=lambda x: -x[1])
+                if c >= 3
+            ]
+            feedback_data["reason_analysis"]["problematic_patterns"] = problematic
+
+            # Generate training recommendations based on feedback reasons
+            recommendations = self._generate_training_recommendations(pattern_reason_counts)
+            feedback_data["reason_analysis"]["training_recommendations"] = recommendations
 
             logger.info(
                 f"Loaded user feedback: {feedback_data['statistics']['total']} total, "
                 f"{feedback_data['statistics']['confirmed']} confirmed, "
                 f"{feedback_data['statistics']['corrected']} corrected, "
-                f"{feedback_data['statistics']['rejected']} rejected"
+                f"{feedback_data['statistics']['rejected']} rejected, "
+                f"{len(pattern_reason_counts)} reason entries"
             )
+
+            if recommendations:
+                logger.info(f"Generated {len(recommendations)} training recommendations from feedback")
 
         except Exception as e:
             logger.error(f"Failed to load user feedback: {e}")
 
         return feedback_data
+
+    def _generate_training_recommendations(
+        self,
+        pattern_reason_counts: Dict[str, int]
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate training recommendations based on feedback reason patterns.
+
+        Analyzes common feedback reasons to suggest:
+        - Sample weighting adjustments
+        - Data augmentation strategies
+        - Feature importance hints
+        """
+        recommendations = []
+
+        # Mapping from reason categories to training adjustments
+        REASON_ADJUSTMENTS = {
+            "body_too_large": {
+                "action": "augment_body_variations",
+                "description": "Füge Samples mit unterschiedlichen Körpergrössen hinzu",
+                "weight_adjustment": 1.5,
+            },
+            "body_too_small": {
+                "action": "augment_body_variations",
+                "description": "Trainiere mehr auf minimale Körpergrössen",
+                "weight_adjustment": 1.5,
+            },
+            "upper_shadow_too_short": {
+                "action": "augment_shadow_variations",
+                "description": "Erweitere Shadow-Längen-Variationen",
+                "weight_adjustment": 1.3,
+            },
+            "lower_shadow_too_short": {
+                "action": "augment_shadow_variations",
+                "description": "Erweitere Shadow-Längen-Variationen",
+                "weight_adjustment": 1.3,
+            },
+            "wrong_trend_context": {
+                "action": "include_trend_context",
+                "description": "Erhöhe Gewichtung von Trend-Kontext-Features",
+                "weight_adjustment": 2.0,
+            },
+            "not_fully_engulfing": {
+                "action": "strict_engulfing_samples",
+                "description": "Trainiere nur auf klare Engulfing-Beispiele",
+                "weight_adjustment": 1.5,
+            },
+            "false_positive": {
+                "action": "add_negative_samples",
+                "description": "Füge mehr Negativ-Beispiele für dieses Pattern hinzu",
+                "weight_adjustment": 0.5,  # Reduce weight of positive samples
+            },
+        }
+
+        for key, count in sorted(pattern_reason_counts.items(), key=lambda x: -x[1]):
+            if count < 3:  # Minimum threshold
+                continue
+
+            parts = key.split(":", 1)
+            if len(parts) != 2:
+                continue
+
+            pattern, reason = parts
+
+            if reason in REASON_ADJUSTMENTS:
+                adjustment = REASON_ADJUSTMENTS[reason]
+                recommendations.append({
+                    "pattern": pattern,
+                    "reason": reason,
+                    "count": count,
+                    "action": adjustment["action"],
+                    "description": adjustment["description"],
+                    "weight_adjustment": adjustment["weight_adjustment"],
+                    "priority": "high" if count >= 5 else "medium"
+                })
+
+        return recommendations[:10]  # Top 10 recommendations
 
     def _apply_feedback_to_labels(
         self,

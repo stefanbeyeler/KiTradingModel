@@ -271,3 +271,40 @@ async def stop_scheduler():
         "status": "stopped",
         "config": training_scheduler.get_config()
     }
+
+
+@router.get("/feedback-analysis")
+async def get_feedback_analysis():
+    """
+    Get feedback analysis for training insights.
+
+    Analyzes user feedback reasons to identify:
+    - Problematic patterns with high correction rates
+    - Recommended training adjustments based on feedback reasons
+    - Weight adjustments for better model performance
+
+    This endpoint helps understand which patterns need more attention
+    during training and suggests concrete improvements.
+    """
+    feedback_data = training_service._load_user_feedback()
+
+    reason_analysis = feedback_data.get("reason_analysis", {})
+    statistics = feedback_data.get("statistics", {})
+
+    return {
+        "statistics": {
+            "total_feedback": statistics.get("total", 0),
+            "confirmed": statistics.get("confirmed", 0),
+            "corrected": statistics.get("corrected", 0),
+            "rejected": statistics.get("rejected", 0),
+        },
+        "reason_analysis": {
+            "by_pattern_and_reason": reason_analysis.get("by_pattern_and_reason", {}),
+            "problematic_patterns": reason_analysis.get("problematic_patterns", []),
+        },
+        "training_recommendations": reason_analysis.get("training_recommendations", []),
+        "message": (
+            f"{len(reason_analysis.get('training_recommendations', []))} "
+            "Training-Empfehlungen basierend auf Feedback-Analyse"
+        )
+    }
