@@ -565,6 +565,20 @@
             font-size: 0.8rem;
         }
 
+        .revalidation-help {
+            background: rgba(100, 200, 255, 0.1);
+            border-left: 3px solid #64c8ff;
+            padding: 0.5rem 0.75rem;
+            margin: 0.5rem 0;
+            font-size: 0.85rem;
+            color: #b0bec5;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .revalidation-help strong {
+            color: #64c8ff;
+        }
+
         .revalidation-chart {
             max-width: 300px;
             margin: 0.75rem 0;
@@ -3516,6 +3530,38 @@
             const direction = getPatternDirection(item.original_pattern);
             const canvasId = `reval-chart-${index}`;
 
+            // Context-aware button labels based on feedback type
+            // For rejected: Pattern should NOT be detected anymore
+            // For corrected: Pattern should be detected as the corrected type
+            let successLabel, failLabel, successResult, failResult;
+
+            if (isRejected) {
+                // User said: "This is NOT a pattern" (false positive)
+                // Success = Model no longer detects any pattern here
+                // Fail = Model still detects the wrong pattern
+                successLabel = `✓ Wird nicht mehr erkannt`;
+                failLabel = `✗ "${formatPatternType(item.original_pattern)}" wird noch erkannt`;
+                successResult = 'now_correct';
+                failResult = 'still_wrong';
+            } else {
+                // User said: "This should be X instead of Y"
+                // Success = Model now detects the correct pattern
+                // Fail = Model still detects wrong pattern or nothing
+                successLabel = `✓ "${formatPatternType(item.corrected_pattern)}" wird erkannt`;
+                failLabel = `✗ Noch falsch erkannt`;
+                successResult = 'correct';
+                failResult = 'still_wrong';
+            }
+
+            // Help text explaining what to check
+            const helpText = isRejected
+                ? `<div class="revalidation-help">
+                       <strong>Prüfung:</strong> Erkennt das Modell hier noch fälschlicherweise ein "${formatPatternType(item.original_pattern)}"?
+                   </div>`
+                : `<div class="revalidation-help">
+                       <strong>Prüfung:</strong> Erkennt das Modell jetzt "${formatPatternType(item.corrected_pattern)}" statt "${formatPatternType(item.original_pattern)}"?
+                   </div>`;
+
             return `
                 <div class="revalidation-item ${isRejected ? 'rejected' : ''}" data-item-id="${item.id}">
                     <div class="revalidation-header">
@@ -3530,6 +3576,7 @@
                     <div class="revalidation-correction">
                         ${correctionDisplay}
                     </div>
+                    ${helpText}
                     <div class="revalidation-chart-container" style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 0.75rem 0;">
                         <div style="flex: 1; min-width: 280px;">
                             <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.3rem;">Chart zum Zeitpunkt des Patterns:</div>
@@ -3541,16 +3588,13 @@
                         <span>Feedback: ${formatTimestamp(item.feedback_timestamp)}</span>
                     </div>
                     <div class="revalidation-actions">
-                        <button class="btn btn-success" onclick="markRevalidation('${item.id}', 'correct')">
-                            ✓ Jetzt korrekt
+                        <button class="btn btn-success" onclick="markRevalidation('${item.id}', '${successResult}')" title="Modell erkennt jetzt korrekt">
+                            ${successLabel}
                         </button>
-                        <button class="btn btn-secondary" onclick="markRevalidation('${item.id}', 'now_correct')">
-                            ✓ Nicht mehr erkannt
+                        <button class="btn btn-danger" onclick="markRevalidation('${item.id}', '${failResult}')" title="Modell erkennt immer noch falsch">
+                            ${failLabel}
                         </button>
-                        <button class="btn btn-danger" onclick="markRevalidation('${item.id}', 'still_wrong')">
-                            ✗ Weiterhin falsch
-                        </button>
-                        <button class="btn btn-primary" onclick="scanForRevalidation('${item.symbol}', '${item.timeframe}')">
+                        <button class="btn btn-primary" onclick="scanForRevalidation('${item.symbol}', '${item.timeframe}')" title="Aktuellen Scan starten">
                             🔍 Neu scannen
                         </button>
                     </div>
