@@ -3456,19 +3456,26 @@
                     close: parseFloat(c.close)
                 }));
 
-                // Find the pattern timestamp in the data
-                const patternTime = new Date(item.pattern_timestamp);
+                // Use pre-calculated pattern index if available (from centered fetch)
                 let highlightIdx = 0;
 
-                // The pattern timestamp points to the LAST candle of the pattern
-                // We need to find it and highlight from (lastIdx - candleCount + 1) to lastIdx
-                for (let i = 0; i < formattedCandles.length; i++) {
-                    const candleTime = new Date(formattedCandles[i].datetime);
-                    if (Math.abs(candleTime - patternTime) < 3600000 * 4) { // Within 4 hours
-                        // This is the last candle of the pattern
-                        // Highlight starts (candleCount - 1) positions before
-                        highlightIdx = Math.max(0, i - (patternCandleCount - 1));
-                        break;
+                if (ohlcData._patternIdx !== undefined) {
+                    // Pattern index was pre-calculated during fetch
+                    // The pattern timestamp points to the LAST candle of the pattern
+                    // Highlight starts (candleCount - 1) positions before
+                    highlightIdx = Math.max(0, ohlcData._patternIdx - (patternCandleCount - 1));
+                } else {
+                    // Fallback: Find the pattern timestamp in the data
+                    const patternTime = new Date(item.pattern_timestamp);
+
+                    for (let i = 0; i < formattedCandles.length; i++) {
+                        const candleTime = new Date(formattedCandles[i].datetime);
+                        if (Math.abs(candleTime - patternTime) < 3600000 * 4) { // Within 4 hours
+                            // This is the last candle of the pattern
+                            // Highlight starts (candleCount - 1) positions before
+                            highlightIdx = Math.max(0, i - (patternCandleCount - 1));
+                            break;
+                        }
                     }
                 }
 
@@ -3489,7 +3496,7 @@
             }
         }
 
-        // Fetch OHLC data for revalidation chart
+        // Fetch OHLC data for revalidation chart - centered around pattern timestamp
         async function fetchOhlcForRevalidation(symbol, timeframe, patternTimestamp) {
             try {
                 // Convert timeframe to TwelveData format
@@ -3499,15 +3506,78 @@
                 };
                 const interval = intervalMap[timeframe] || '1h';
 
-                // Fetch data around the pattern timestamp
-                const res = await fetch(`${DATA_API}/twelvedata/time_series/${symbol}?interval=${interval}&outputsize=30`);
+                // Calculate how old the pattern is to fetch enough data
+                const patternDate = new Date(patternTimestamp);
+                const now = new Date();
+                const ageInMs = now - patternDate;
+
+                // Calculate how many candles we need based on timeframe
+                const msPerCandle = {
+                    'M5': 5 * 60 * 1000,
+                    'M15': 15 * 60 * 1000,
+                    'M30': 30 * 60 * 1000,
+                    'H1': 60 * 60 * 1000,
+                    'H4': 4 * 60 * 60 * 1000,
+                    'D1': 24 * 60 * 60 * 1000
+                };
+                const candleMs = msPerCandle[timeframe] || 60 * 60 * 1000;
+
+                // Calculate how many candles back the pattern is, plus buffer for display
+                const candlesBack = Math.ceil(ageInMs / candleMs);
+                // We want ~15 candles before and ~15 after the pattern = 30 total displayed
+                // But we need to fetch enough to include the pattern + buffer after it
+                const outputsize = Math.min(500, Math.max(50, candlesBack + 20));
+
+                // Fetch data
+                const res = await fetch(`${DATA_API}/twelvedata/time_series/${symbol}?interval=${interval}&outputsize=${outputsize}`);
                 if (!res.ok) return null;
 
                 const data = await res.json();
                 if (!data.values || data.values.length === 0) return null;
 
                 // TwelveData returns newest first, reverse to chronological order
-                return data.values.slice().reverse();
+                const allCandles = data.values.slice().reverse();
+
+                // Find the pattern candle in the data
+                let patternIdx = -1;
+                for (let i = 0; i < allCandles.length; i++) {
+                    const candleTime = new Date(allCandles[i].datetime);
+                    // Match within half the candle timeframe
+                    if (Math.abs(candleTime - patternDate) < candleMs / 2) {
+                        patternIdx = i;
+                        break;
+                    }
+                }
+
+                // If pattern not found, try a wider match
+                if (patternIdx === -1) {
+                    for (let i = 0; i < allCandles.length; i++) {
+                        const candleTime = new Date(allCandles[i].datetime);
+                        if (Math.abs(candleTime - patternDate) < candleMs * 2) {
+                            patternIdx = i;
+                            break;
+                        }
+                    }
+                }
+
+                // If still not found, return all data (fallback)
+                if (patternIdx === -1) {
+                    console.warn(`Pattern timestamp ${patternTimestamp} not found in data, showing latest candles`);
+                    return allCandles.slice(-30);
+                }
+
+                // Extract window centered around pattern (15 before, pattern, 14 after = 30 total)
+                const candlesBefore = 15;
+                const candlesAfter = 14;
+                const startIdx = Math.max(0, patternIdx - candlesBefore);
+                const endIdx = Math.min(allCandles.length, patternIdx + candlesAfter + 1);
+
+                const windowCandles = allCandles.slice(startIdx, endIdx);
+
+                // Recalculate pattern position within the window for highlighting
+                windowCandles._patternIdx = patternIdx - startIdx;
+
+                return windowCandles;
 
             } catch (error) {
                 console.error('Failed to fetch OHLC for revalidation:', error);
