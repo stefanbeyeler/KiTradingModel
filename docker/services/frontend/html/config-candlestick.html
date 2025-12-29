@@ -242,6 +242,82 @@
             line-height: 1.4;
         }
 
+        /* Pattern Rules */
+        .pattern-rules {
+            margin-top: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 0.5rem;
+        }
+
+        .pattern-rules-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.4rem 0;
+            font-size: 0.8rem;
+            color: #64c8ff;
+            transition: color 0.2s;
+        }
+
+        .pattern-rules-header:hover {
+            color: #fff;
+        }
+
+        .pattern-rules-toggle {
+            font-size: 0.7rem;
+            transition: transform 0.2s;
+        }
+
+        .pattern-rules-content {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .pattern-rules-meta {
+            margin-bottom: 0.5rem;
+        }
+
+        .pattern-candles-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            background: rgba(100, 200, 255, 0.15);
+            color: #64c8ff;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .pattern-rules-list {
+            margin: 0;
+            padding-left: 1.2rem;
+            font-size: 0.75rem;
+            color: #bbb;
+            line-height: 1.6;
+        }
+
+        .pattern-rules-list li {
+            margin-bottom: 0.25rem;
+        }
+
+        .pattern-rules-list li::marker {
+            color: #64c8ff;
+        }
+
+        .pattern-rules-confidence {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .pattern-rules-confidence strong {
+            color: #ffb74d;
+        }
+
         /* Badges */
         .badge {
             padding: 0.2rem 0.5rem;
@@ -2007,11 +2083,116 @@
     <main class="container">
         <!-- Tabs -->
         <div class="tabs">
+            <button class="tab" onclick="switchTab('status')">Status</button>
             <button class="tab active" onclick="switchTab('patterns')">Pattern Detection</button>
             <button class="tab" onclick="switchTab('history')">Pattern History</button>
-            <button class="tab" onclick="switchTab('training')">Model Training</button>
             <button class="tab" onclick="switchTab('revalidation')">Re-Validierung <span id="revalidationBadge" class="tab-badge" style="display: none;">0</span></button>
         </div>
+
+        <!-- Tab: Status -->
+        <div id="tab-status" class="tab-content">
+
+            <!-- Training Service Status -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔧 Training Service Status</h2>
+                    <span class="service-badge" id="trainServiceStatus">Laden...</span>
+                </div>
+                <div class="stats-grid" style="margin-bottom: 1rem;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="trainVersion">-</div>
+                        <div class="stat-label">Version</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="trainPyTorch">-</div>
+                        <div class="stat-label">PyTorch</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="trainPatternTypes">-</div>
+                        <div class="stat-label">Pattern-Typen</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="trainJobsTotal">-</div>
+                        <div class="stat-label">Jobs Total</div>
+                    </div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: #888;">
+                        <span>Port: <span style="color: #64c8ff;">3016</span></span>
+                        <span>Gestartet: <span style="color: #64c8ff;" id="trainStarted">-</span></span>
+                    </div>
+                    <div class="timeframe-list" id="trainTimeframes" style="flex: 1; min-width: 200px;">
+                        <span class="loading" style="padding: 0;"><span class="spinner" style="width: 16px; height: 16px;"></span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Feedback Statistics -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📝 Benutzer-Feedback für Training</h2>
+                    <button class="btn btn-secondary" onclick="loadFeedbackStats()" style="font-size: 0.8rem;">Aktualisieren</button>
+                </div>
+                <div class="stats-grid" style="margin-bottom: 1rem;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="feedbackTotal">-</div>
+                        <div class="stat-label">Gesamt</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(76, 175, 80, 0.3);">
+                        <div class="stat-value" id="feedbackConfirmed" style="color: #81c784;">-</div>
+                        <div class="stat-label">✓ Bestätigt</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(255, 152, 0, 0.3);">
+                        <div class="stat-value" id="feedbackCorrected" style="color: #ffb74d;">-</div>
+                        <div class="stat-label">✎ Korrigiert</div>
+                    </div>
+                    <div class="stat-card" style="border-color: rgba(244, 67, 54, 0.3);">
+                        <div class="stat-value" id="feedbackRejected" style="color: #e57373;">-</div>
+                        <div class="stat-label">✗ Abgelehnt</div>
+                    </div>
+                </div>
+                <div style="font-size: 0.85rem; color: #888; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <span id="feedbackInfo">Das gesammelte Feedback wird beim nächsten Training automatisch berücksichtigt.</span>
+                </div>
+            </div>
+
+            <!-- Current Training Status -->
+            <div class="card" id="currentTrainingCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">⏳ Aktuelles Training</h2>
+                    <span class="job-status running" id="currentJobStatus">Running</span>
+                </div>
+                <div class="training-status-card">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span id="currentJobId">-</span>
+                        <span id="currentJobProgress">0%</span>
+                    </div>
+                    <div class="training-progress">
+                        <div class="training-progress-bar" id="currentProgressBar" style="width: 0%;"></div>
+                    </div>
+                    <div class="job-meta" style="margin-top: 0.5rem;">
+                        <span>Epoch: <span id="currentEpoch">0</span>/<span id="totalEpochs">0</span></span>
+                        <span>Loss: <span id="currentLoss">-</span></span>
+                        <span>Best Loss: <span id="bestLoss">-</span></span>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-danger" onclick="cancelCurrentTraining()">Training abbrechen</button>
+                </div>
+            </div>
+
+            <!-- Training History -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📚 Training History</h2>
+                    <span class="badge badge-neutral" id="jobHistoryCount">0 Jobs</span>
+                </div>
+                <div class="job-list" id="jobList">
+                    <div class="loading"><span class="spinner"></span></div>
+                </div>
+            </div>
+
+        </div><!-- End Tab: Status -->
 
         <!-- Tab: Pattern Detection -->
         <div id="tab-patterns" class="tab-content active">
@@ -2289,173 +2470,6 @@
             </div>
         </div>
 
-        <!-- Tab: Model Training -->
-        <div id="tab-training" class="tab-content">
-
-            <!-- Training Service Status -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Training Service Status</h2>
-                    <span class="service-badge" id="trainServiceStatus">Laden...</span>
-                </div>
-                <div class="stats-grid" style="margin-bottom: 1rem;">
-                    <div class="stat-card">
-                        <div class="stat-value" id="trainVersion">-</div>
-                        <div class="stat-label">Version</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="trainPyTorch">-</div>
-                        <div class="stat-label">PyTorch</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="trainPatternTypes">-</div>
-                        <div class="stat-label">Pattern-Typen</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="trainJobsTotal">-</div>
-                        <div class="stat-label">Jobs Total</div>
-                    </div>
-                </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: #888;">
-                        <span>Port: <span style="color: #64c8ff;">3016</span></span>
-                        <span>Gestartet: <span style="color: #64c8ff;" id="trainStarted">-</span></span>
-                    </div>
-                    <div class="timeframe-list" id="trainTimeframes" style="flex: 1; min-width: 200px;">
-                        <span class="loading" style="padding: 0;"><span class="spinner" style="width: 16px; height: 16px;"></span></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- User Feedback Statistics -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">📝 Benutzer-Feedback für Training</h2>
-                    <button class="btn btn-secondary" onclick="loadFeedbackStats()" style="font-size: 0.8rem;">Aktualisieren</button>
-                </div>
-                <div class="stats-grid" style="margin-bottom: 1rem;">
-                    <div class="stat-card">
-                        <div class="stat-value" id="feedbackTotal">-</div>
-                        <div class="stat-label">Gesamt</div>
-                    </div>
-                    <div class="stat-card" style="border-color: rgba(76, 175, 80, 0.3);">
-                        <div class="stat-value" id="feedbackConfirmed" style="color: #81c784;">-</div>
-                        <div class="stat-label">✓ Bestätigt</div>
-                    </div>
-                    <div class="stat-card" style="border-color: rgba(255, 152, 0, 0.3);">
-                        <div class="stat-value" id="feedbackCorrected" style="color: #ffb74d;">-</div>
-                        <div class="stat-label">✎ Korrigiert</div>
-                    </div>
-                    <div class="stat-card" style="border-color: rgba(244, 67, 54, 0.3);">
-                        <div class="stat-value" id="feedbackRejected" style="color: #e57373;">-</div>
-                        <div class="stat-label">✗ Abgelehnt</div>
-                    </div>
-                </div>
-                <div style="font-size: 0.85rem; color: #888; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <span id="feedbackInfo">Das gesammelte Feedback wird beim nächsten Training automatisch berücksichtigt.</span>
-                </div>
-            </div>
-
-            <!-- Current Training Status -->
-            <div class="card" id="currentTrainingCard" style="display: none;">
-                <div class="card-header">
-                    <h2 class="card-title">Aktuelles Training</h2>
-                    <span class="job-status running" id="currentJobStatus">Running</span>
-                </div>
-                <div class="training-status-card">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span id="currentJobId">-</span>
-                        <span id="currentJobProgress">0%</span>
-                    </div>
-                    <div class="training-progress">
-                        <div class="training-progress-bar" id="currentProgressBar" style="width: 0%;"></div>
-                    </div>
-                    <div class="job-meta" style="margin-top: 0.5rem;">
-                        <span>Epoch: <span id="currentEpoch">0</span>/<span id="totalEpochs">0</span></span>
-                        <span>Loss: <span id="currentLoss">-</span></span>
-                        <span>Best Loss: <span id="bestLoss">-</span></span>
-                    </div>
-                </div>
-                <div class="btn-group">
-                    <button class="btn btn-danger" onclick="cancelCurrentTraining()">Training abbrechen</button>
-                </div>
-            </div>
-
-            <!-- Start New Training -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Neues Training starten</h2>
-                </div>
-                <p class="card-description">
-                    Trainiere das Candlestick-Pattern-Erkennungsmodell. Das Training verwendet eine optimierte Auswahl
-                    von Symbolen und Timeframes für maximale Generalisierung.
-                </p>
-
-                <!-- Training Configuration Info -->
-                <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div>
-                            <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;">Symbole (breit diversifiziert)</div>
-                            <div class="symbol-chips" style="margin: 0;">
-                                <span class="symbol-chip selected" style="cursor: default;">BTCUSD</span>
-                                <span class="symbol-chip selected" style="cursor: default;">EURUSD</span>
-                                <span class="symbol-chip selected" style="cursor: default;">GBPUSD</span>
-                                <span class="symbol-chip selected" style="cursor: default;">XAUUSD</span>
-                                <span class="symbol-chip selected" style="cursor: default;">GER40</span>
-                                <span class="symbol-chip selected" style="cursor: default;">XTIUSD</span>
-                            </div>
-                            <div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
-                                Crypto, Forex, Rohstoff, Index, Energie
-                            </div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;">Timeframes (multi-timeframe)</div>
-                            <div class="timeframe-list" style="margin: 0;">
-                                <span class="timeframe-badge">H1</span>
-                                <span class="timeframe-badge">H4</span>
-                                <span class="timeframe-badge">D1</span>
-                            </div>
-                            <div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
-                                Patterns sind timeframe-unabhangig
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="training-form">
-                    <div class="form-group">
-                        <label for="trainEpochs">Epochen</label>
-                        <input type="number" id="trainEpochs" value="50" min="1" max="500">
-                    </div>
-                    <div class="form-group">
-                        <label for="trainBatchSize">Batch Size</label>
-                        <input type="number" id="trainBatchSize" value="32" min="8" max="128">
-                    </div>
-                    <div class="form-group">
-                        <label for="trainLearningRate">Learning Rate</label>
-                        <input type="number" id="trainLearningRate" value="0.001" min="0.0001" max="0.1" step="0.0001">
-                    </div>
-                </div>
-
-                <div class="btn-group">
-                    <button class="btn btn-success" id="btnStartTraining" onclick="startTraining()">Training starten</button>
-                    <button class="btn btn-primary" onclick="loadTrainingStatus()">Status aktualisieren</button>
-                </div>
-            </div>
-
-            <!-- Training History -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Training History</h2>
-                    <span class="badge badge-neutral" id="jobHistoryCount">0 Jobs</span>
-                </div>
-                <div class="job-list" id="jobList">
-                    <div class="loading"><span class="spinner"></span></div>
-                </div>
-            </div>
-
-        </div><!-- End Tab: Model Training -->
-
         <!-- Tab: Re-Validierung -->
         <div id="tab-revalidation" class="tab-content">
 
@@ -2488,6 +2502,38 @@
                     <div class="stat-card" style="border-color: rgba(100, 200, 255, 0.3);">
                         <div class="stat-value" id="revalImprovement" style="color: #64c8ff;">-</div>
                         <div class="stat-label">📈 Verbesserungsrate</div>
+                    </div>
+                </div>
+
+                <!-- Training Section integrated -->
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                        <div style="flex: 1; min-width: 300px;">
+                            <h3 style="font-size: 1rem; color: #64c8ff; margin-bottom: 0.5rem;">🚀 Neues Training starten</h3>
+                            <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.75rem;">
+                                Trainiere das Modell mit den gesammelten Korrekturen, um die Pattern-Erkennung zu verbessern.
+                            </p>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <label style="font-size: 0.8rem; color: #888;">Epochen:</label>
+                                    <input type="number" id="trainEpochs" value="50" min="1" max="500" style="width: 70px; padding: 0.3rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <label style="font-size: 0.8rem; color: #888;">Batch:</label>
+                                    <input type="number" id="trainBatchSize" value="32" min="8" max="128" style="width: 60px; padding: 0.3rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <label style="font-size: 0.8rem; color: #888;">LR:</label>
+                                    <input type="number" id="trainLearningRate" value="0.001" min="0.0001" max="0.1" step="0.0001" style="width: 80px; padding: 0.3rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
+                            <button class="btn btn-success" id="btnStartTraining" onclick="startTraining()" style="padding: 0.6rem 1.5rem;">
+                                ▶ Training starten
+                            </button>
+                            <span style="font-size: 0.75rem; color: #666;">Symbole: BTCUSD, EURUSD, GBPUSD, XAUUSD, GER40, XTIUSD</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2747,6 +2793,238 @@
             'default': [[8, 12, 8, 'doji']]
         };
 
+        // Detaillierte Erkennungsregeln pro Pattern-Typ
+        const PATTERN_RULES = {
+            // === REVERSAL BULLISH ===
+            'hammer': {
+                candles: 1,
+                rules: [
+                    'Kleiner Body (< 30% der Gesamtrange)',
+                    'Langer unterer Schatten (≥ 2x Body-Größe)',
+                    'Kurzer oder kein oberer Schatten (< 10% der Range)',
+                    'Body im oberen Drittel der Kerze',
+                    'Erscheint idealerweise nach Abwärtstrend'
+                ],
+                confidence: 'Höher wenn: Volumen erhöht, nach klarem Abwärtstrend'
+            },
+            'inverted_hammer': {
+                candles: 1,
+                rules: [
+                    'Kleiner Body (< 30% der Gesamtrange)',
+                    'Langer oberer Schatten (≥ 2x Body-Größe)',
+                    'Kurzer oder kein unterer Schatten (< 10% der Range)',
+                    'Body im unteren Drittel der Kerze',
+                    'Erscheint idealerweise nach Abwärtstrend'
+                ],
+                confidence: 'Bestätigung durch folgende bullische Kerze empfohlen'
+            },
+            'bullish_engulfing': {
+                candles: 2,
+                rules: [
+                    'Erste Kerze: bearish (rot) mit signifikantem Body',
+                    'Zweite Kerze: bullish (grün)',
+                    'Body der zweiten Kerze umschließt den Body der ersten vollständig',
+                    'Zweite Kerze ≥ 1.5x größer als erste Kerze',
+                    'Preisbewegung der zweiten Kerze ≥ 0.25% (filtert Noise)',
+                    'Body-Anteil erste Kerze ≥ 25% ihrer Range (kein Doji)',
+                    'Body-Anteil zweite Kerze ≥ 40% ihrer Range'
+                ],
+                confidence: 'Höher nach Abwärtstrend, bei Unterstützung'
+            },
+            'morning_star': {
+                candles: 3,
+                rules: [
+                    'Erste Kerze: große bearish Kerze',
+                    'Zweite Kerze: kleiner Body (Stern), Gap nach unten möglich',
+                    'Dritte Kerze: große bullish Kerze, schließt über 50% der ersten',
+                    'Stern kann Doji oder Spinning Top sein'
+                ],
+                confidence: 'Stärkstes Signal mit Gap zwischen Kerzen'
+            },
+            'piercing_line': {
+                candles: 2,
+                rules: [
+                    'Erste Kerze: große bearish Kerze',
+                    'Zweite Kerze: eröffnet unter dem Close der ersten',
+                    'Zweite Kerze: schließt über 50% des Bodies der ersten',
+                    'Zweite Kerze: bullish mit signifikantem Body'
+                ],
+                confidence: 'Tiefere Eröffnung = stärkeres Signal'
+            },
+            'dragonfly_doji': {
+                candles: 1,
+                rules: [
+                    'Open ≈ High ≈ Close (Doji-Bedingung)',
+                    'Langer unterer Schatten (≥ 3x Body)',
+                    'Kein oder minimaler oberer Schatten',
+                    'Body < 5% der Gesamtrange'
+                ],
+                confidence: 'Bullish nach Abwärtstrend, bearish nach Aufwärtstrend'
+            },
+
+            // === REVERSAL BEARISH ===
+            'hanging_man': {
+                candles: 1,
+                rules: [
+                    'Identische Form wie Hammer',
+                    'Erscheint nach Aufwärtstrend (entscheidender Unterschied)',
+                    'Kleiner Body oben, langer unterer Schatten',
+                    'Warnsignal für Trendumkehr'
+                ],
+                confidence: 'Bestätigung durch folgende bearische Kerze empfohlen'
+            },
+            'shooting_star': {
+                candles: 1,
+                rules: [
+                    'Kleiner Body (< 30% der Gesamtrange)',
+                    'Langer oberer Schatten (≥ 2x Body-Größe)',
+                    'Kurzer oder kein unterer Schatten (< 10% der Range)',
+                    'Body im unteren Drittel der Kerze',
+                    'Erscheint nach Aufwärtstrend'
+                ],
+                confidence: 'Höher bei Widerstandsniveau'
+            },
+            'bearish_engulfing': {
+                candles: 2,
+                rules: [
+                    'Erste Kerze: bullish (grün) mit signifikantem Body',
+                    'Zweite Kerze: bearish (rot)',
+                    'Body der zweiten Kerze umschließt den Body der ersten vollständig',
+                    'Zweite Kerze ≥ 1.5x größer als erste Kerze',
+                    'Preisbewegung der zweiten Kerze ≥ 0.25% (filtert Noise)',
+                    'Body-Anteil erste Kerze ≥ 25% ihrer Range (kein Doji)',
+                    'Body-Anteil zweite Kerze ≥ 40% ihrer Range'
+                ],
+                confidence: 'Höher nach Aufwärtstrend, bei Widerstand'
+            },
+            'evening_star': {
+                candles: 3,
+                rules: [
+                    'Erste Kerze: große bullish Kerze',
+                    'Zweite Kerze: kleiner Body (Stern), Gap nach oben möglich',
+                    'Dritte Kerze: große bearish Kerze, schließt unter 50% der ersten',
+                    'Stern kann Doji oder Spinning Top sein'
+                ],
+                confidence: 'Stärkstes Signal mit Gap zwischen Kerzen'
+            },
+            'dark_cloud_cover': {
+                candles: 2,
+                rules: [
+                    'Erste Kerze: große bullish Kerze',
+                    'Zweite Kerze: eröffnet über dem Close der ersten',
+                    'Zweite Kerze: schließt unter 50% des Bodies der ersten',
+                    'Zweite Kerze: bearish mit signifikantem Body'
+                ],
+                confidence: 'Höhere Eröffnung = stärkeres Signal'
+            },
+            'gravestone_doji': {
+                candles: 1,
+                rules: [
+                    'Open ≈ Low ≈ Close (Doji-Bedingung)',
+                    'Langer oberer Schatten (≥ 3x Body)',
+                    'Kein oder minimaler unterer Schatten',
+                    'Body < 5% der Gesamtrange'
+                ],
+                confidence: 'Bearish nach Aufwärtstrend'
+            },
+
+            // === CONTINUATION ===
+            'three_white_soldiers': {
+                candles: 3,
+                rules: [
+                    'Drei aufeinanderfolgende bullish Kerzen',
+                    'Jede Kerze eröffnet innerhalb des Bodies der vorherigen',
+                    'Jede Kerze schließt nahe am High',
+                    'Progressiv höhere Closes',
+                    'Keine langen oberen Schatten'
+                ],
+                confidence: 'Starkes Fortsetzungssignal im Aufwärtstrend'
+            },
+            'three_black_crows': {
+                candles: 3,
+                rules: [
+                    'Drei aufeinanderfolgende bearish Kerzen',
+                    'Jede Kerze eröffnet innerhalb des Bodies der vorherigen',
+                    'Jede Kerze schließt nahe am Low',
+                    'Progressiv tiefere Closes',
+                    'Keine langen unteren Schatten'
+                ],
+                confidence: 'Starkes Fortsetzungssignal im Abwärtstrend'
+            },
+            'rising_three_methods': {
+                candles: 5,
+                rules: [
+                    'Erste Kerze: große bullish Kerze',
+                    '2-4. Kerze: kleine bearish Kerzen innerhalb der Range der ersten',
+                    'Fünfte Kerze: große bullish Kerze, schließt über High der ersten',
+                    'Kleine Kerzen zeigen Konsolidierung, kein Trendwechsel'
+                ],
+                confidence: 'Klassisches bullish Fortsetzungsmuster'
+            },
+            'falling_three_methods': {
+                candles: 5,
+                rules: [
+                    'Erste Kerze: große bearish Kerze',
+                    '2-4. Kerze: kleine bullish Kerzen innerhalb der Range der ersten',
+                    'Fünfte Kerze: große bearish Kerze, schließt unter Low der ersten',
+                    'Kleine Kerzen zeigen Konsolidierung, kein Trendwechsel'
+                ],
+                confidence: 'Klassisches bearish Fortsetzungsmuster'
+            },
+
+            // === INDECISION ===
+            'doji': {
+                candles: 1,
+                rules: [
+                    'Open ≈ Close (Body < 10% der Gesamtrange)',
+                    'Ober- und Unterschatten vorhanden',
+                    'Signalisiert Marktunentschlossenheit',
+                    'Kontext entscheidet über Bedeutung'
+                ],
+                confidence: 'Wichtiger nach starkem Trend'
+            },
+            'spinning_top': {
+                candles: 1,
+                rules: [
+                    'Kleiner Body (< 30% der Gesamtrange)',
+                    'Signifikante Schatten auf beiden Seiten (≥ 25% jeweils)',
+                    'Schatten ungefähr gleich lang (Differenz < 20%)',
+                    'Zeigt Unentschlossenheit zwischen Käufern und Verkäufern'
+                ],
+                confidence: 'Signal für mögliche Trendwende oder Konsolidierung'
+            },
+            'bullish_harami': {
+                candles: 2,
+                rules: [
+                    'Erste Kerze: große bearish Kerze',
+                    'Zweite Kerze: kleine bullish Kerze',
+                    'Body der zweiten liegt vollständig innerhalb der ersten',
+                    'Zeigt nachlassenden Verkaufsdruck'
+                ],
+                confidence: 'Bestätigung durch folgende bullische Kerze empfohlen'
+            },
+            'bearish_harami': {
+                candles: 2,
+                rules: [
+                    'Erste Kerze: große bullish Kerze',
+                    'Zweite Kerze: kleine bearish Kerze',
+                    'Body der zweiten liegt vollständig innerhalb der ersten',
+                    'Zeigt nachlassenden Kaufdruck'
+                ],
+                confidence: 'Bestätigung durch folgende bearische Kerze empfohlen'
+            },
+            'harami_cross': {
+                candles: 2,
+                rules: [
+                    'Erste Kerze: große Kerze (bullish oder bearish)',
+                    'Zweite Kerze: Doji innerhalb des Bodies der ersten',
+                    'Stärker als normales Harami',
+                    'Doji verstärkt die Unentschlossenheit'
+                ],
+                confidence: 'Starkes Umkehrsignal, Bestätigung empfohlen'
+            }
+        };
+
         // Generate HTML for pattern candles
         function renderPatternExample(patternType) {
             const candles = patternExamples[patternType] || patternExamples['default'];
@@ -2856,18 +3134,55 @@
                 return;
             }
 
-            container.innerHTML = patterns.map(p => `
-                <div class="pattern-card">
-                    <div class="pattern-header">
-                        <span class="pattern-name">${formatPatternType(p.type)}</span>
-                        <div class="pattern-badges">
-                            <span class="badge badge-${p.direction}">${p.direction}</span>
+            container.innerHTML = patterns.map(p => {
+                const rules = PATTERN_RULES[p.type];
+                const rulesHtml = rules ? `
+                    <div class="pattern-rules">
+                        <div class="pattern-rules-header" onclick="togglePatternRules('${p.type}')">
+                            <span>📋 Erkennungsregeln</span>
+                            <span class="pattern-rules-toggle" id="toggle-${p.type}">▼</span>
+                        </div>
+                        <div class="pattern-rules-content" id="rules-${p.type}" style="display: none;">
+                            <div class="pattern-rules-meta">
+                                <span class="pattern-candles-badge">${rules.candles} Kerze${rules.candles > 1 ? 'n' : ''}</span>
+                            </div>
+                            <ul class="pattern-rules-list">
+                                ${rules.rules.map(r => `<li>${r}</li>`).join('')}
+                            </ul>
+                            <div class="pattern-rules-confidence">
+                                <strong>💡 Konfidenz:</strong> ${rules.confidence}
+                            </div>
                         </div>
                     </div>
-                    ${renderPatternExample(p.type)}
-                    <p class="pattern-description">${p.description}</p>
-                </div>
-            `).join('');
+                ` : '';
+
+                return `
+                    <div class="pattern-card">
+                        <div class="pattern-header">
+                            <span class="pattern-name">${formatPatternType(p.type)}</span>
+                            <div class="pattern-badges">
+                                <span class="badge badge-${p.direction}">${p.direction}</span>
+                            </div>
+                        </div>
+                        ${renderPatternExample(p.type)}
+                        <p class="pattern-description">${p.description}</p>
+                        ${rulesHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle pattern rules visibility
+        function togglePatternRules(patternType) {
+            const content = document.getElementById(`rules-${patternType}`);
+            const toggle = document.getElementById(`toggle-${patternType}`);
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▼';
+            }
         }
 
         // Load statistics
