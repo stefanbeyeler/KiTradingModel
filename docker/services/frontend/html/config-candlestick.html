@@ -3374,7 +3374,12 @@
                 }
 
                 noItemsMsg.style.display = 'none';
-                container.innerHTML = data.pending.map(item => renderRevalidationItem(item)).join('');
+                container.innerHTML = data.pending.map((item, index) => renderRevalidationItem(item, index)).join('');
+
+                // Load charts for each item after rendering
+                data.pending.forEach((item, index) => {
+                    loadRevalidationChart(item, index);
+                });
 
             } catch (error) {
                 console.error('Failed to load pending revalidations:', error);
@@ -3382,8 +3387,122 @@
             }
         }
 
+        // Load and render chart for a revalidation item
+        async function loadRevalidationChart(item, index) {
+            const canvasId = `reval-chart-${index}`;
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+
+            // Show loading state
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+            ctx.fillStyle = '#888';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Lade Chart...', canvas.offsetWidth / 2, canvas.offsetHeight / 2);
+
+            try {
+                // First check if we have cached OHLC data in the item
+                let ohlcData = item.ohlc_data;
+
+                // If no cached data, fetch from API
+                if (!ohlcData || ohlcData.length === 0) {
+                    ohlcData = await fetchOhlcForRevalidation(item.symbol, item.timeframe, item.pattern_timestamp);
+                }
+
+                if (!ohlcData || ohlcData.length === 0) {
+                    // No data available
+                    canvas.width = canvas.offsetWidth * 2;
+                    canvas.height = canvas.offsetHeight * 2;
+                    ctx.scale(2, 2);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+                    ctx.fillStyle = '#888';
+                    ctx.font = '11px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Keine Daten verfügbar', canvas.offsetWidth / 2, canvas.offsetHeight / 2);
+                    return;
+                }
+
+                // Find pattern position and render chart
+                const direction = getPatternDirection(item.original_pattern);
+                const patternCandleCount = getPatternCandleCount(item.original_pattern);
+
+                // Format candles for rendering
+                const formattedCandles = ohlcData.map(c => ({
+                    datetime: c.datetime || c.timestamp,
+                    open: parseFloat(c.open),
+                    high: parseFloat(c.high),
+                    low: parseFloat(c.low),
+                    close: parseFloat(c.close)
+                }));
+
+                // Find the pattern timestamp in the data
+                const patternTime = new Date(item.pattern_timestamp);
+                let highlightIdx = 0;
+
+                // The pattern timestamp points to the LAST candle of the pattern
+                // We need to find it and highlight from (lastIdx - candleCount + 1) to lastIdx
+                for (let i = 0; i < formattedCandles.length; i++) {
+                    const candleTime = new Date(formattedCandles[i].datetime);
+                    if (Math.abs(candleTime - patternTime) < 3600000 * 4) { // Within 4 hours
+                        // This is the last candle of the pattern
+                        // Highlight starts (candleCount - 1) positions before
+                        highlightIdx = Math.max(0, i - (patternCandleCount - 1));
+                        break;
+                    }
+                }
+
+                // Render the chart
+                renderCandlestickChart(canvas, formattedCandles, highlightIdx, direction, item.original_pattern);
+
+            } catch (error) {
+                console.error(`Failed to load chart for ${item.id}:`, error);
+                canvas.width = canvas.offsetWidth * 2;
+                canvas.height = canvas.offsetHeight * 2;
+                ctx.scale(2, 2);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+                ctx.fillStyle = '#e57373';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Fehler beim Laden', canvas.offsetWidth / 2, canvas.offsetHeight / 2);
+            }
+        }
+
+        // Fetch OHLC data for revalidation chart
+        async function fetchOhlcForRevalidation(symbol, timeframe, patternTimestamp) {
+            try {
+                // Convert timeframe to TwelveData format
+                const intervalMap = {
+                    'M5': '5min', 'M15': '15min', 'M30': '30min',
+                    'H1': '1h', 'H4': '4h', 'D1': '1day'
+                };
+                const interval = intervalMap[timeframe] || '1h';
+
+                // Fetch data around the pattern timestamp
+                const res = await fetch(`${DATA_API}/twelvedata/time_series/${symbol}?interval=${interval}&outputsize=30`);
+                if (!res.ok) return null;
+
+                const data = await res.json();
+                if (!data.values || data.values.length === 0) return null;
+
+                // TwelveData returns newest first, reverse to chronological order
+                return data.values.slice().reverse();
+
+            } catch (error) {
+                console.error('Failed to fetch OHLC for revalidation:', error);
+                return null;
+            }
+        }
+
         // Render a single revalidation item
-        function renderRevalidationItem(item) {
+        function renderRevalidationItem(item, index) {
             const isRejected = item.feedback_type === 'rejected';
             const correctionDisplay = isRejected
                 ? `<span class="original">${formatPatternType(item.original_pattern)}</span>
@@ -3393,8 +3512,12 @@
                    <span class="arrow">→</span>
                    <span class="corrected">${formatPatternType(item.corrected_pattern)}</span>`;
 
+            // Determine direction from original pattern for highlighting
+            const direction = getPatternDirection(item.original_pattern);
+            const canvasId = `reval-chart-${index}`;
+
             return `
-                <div class="revalidation-item ${isRejected ? 'rejected' : ''}">
+                <div class="revalidation-item ${isRejected ? 'rejected' : ''}" data-item-id="${item.id}">
                     <div class="revalidation-header">
                         <div>
                             <strong>${item.symbol}</strong>
@@ -3406,6 +3529,12 @@
                     </div>
                     <div class="revalidation-correction">
                         ${correctionDisplay}
+                    </div>
+                    <div class="revalidation-chart-container" style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 0.75rem 0;">
+                        <div style="flex: 1; min-width: 280px;">
+                            <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.3rem;">Chart zum Zeitpunkt des Patterns:</div>
+                            <canvas id="${canvasId}" class="revalidation-canvas" style="width: 100%; height: 140px; border-radius: 6px; background: rgba(0,0,0,0.2);"></canvas>
+                        </div>
                     </div>
                     <div class="revalidation-meta">
                         <span>Pattern: ${formatTimestamp(item.pattern_timestamp)}</span>
@@ -3427,6 +3556,18 @@
                     </div>
                 </div>
             `;
+        }
+
+        // Get pattern direction for highlighting
+        function getPatternDirection(patternType) {
+            const bullishPatterns = ['hammer', 'inverted_hammer', 'bullish_engulfing', 'morning_star',
+                'piercing_line', 'dragonfly_doji', 'three_white_soldiers', 'bullish_harami'];
+            const bearishPatterns = ['shooting_star', 'hanging_man', 'bearish_engulfing', 'evening_star',
+                'dark_cloud_cover', 'gravestone_doji', 'three_black_crows', 'bearish_harami'];
+
+            if (bullishPatterns.includes(patternType)) return 'bullish';
+            if (bearishPatterns.includes(patternType)) return 'bearish';
+            return 'neutral';
         }
 
         // Mark an item as revalidated
