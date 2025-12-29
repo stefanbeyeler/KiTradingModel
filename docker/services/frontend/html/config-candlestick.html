@@ -637,7 +637,7 @@
 
         .reval-list-item {
             display: grid;
-            grid-template-columns: 100px 1fr 120px 100px 80px 40px;
+            grid-template-columns: 100px 1fr 80px 100px 90px 100px 50px;
             align-items: center;
             gap: 0.75rem;
             padding: 0.75rem 1rem;
@@ -708,7 +708,7 @@
 
         .reval-list-header {
             display: grid;
-            grid-template-columns: 100px 1fr 120px 100px 80px 40px;
+            grid-template-columns: 100px 1fr 80px 100px 90px 100px 50px;
             gap: 0.75rem;
             padding: 0.5rem 1rem;
             font-size: 0.75rem;
@@ -1412,6 +1412,17 @@
             color: #ffb74d;
         }
 
+        .timeline-timeframe {
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: rgba(100, 200, 255, 0.15);
+            color: #64c8ff;
+            min-width: 30px;
+            text-align: center;
+        }
+
         .timeline-confidence {
             font-size: 0.8rem;
             color: #888;
@@ -1738,6 +1749,34 @@
         .reval-type-badge.corrected {
             background: rgba(255, 183, 77, 0.2);
             color: #ffb74d;
+        }
+
+        .reval-list-status {
+            text-align: center;
+        }
+
+        .reval-status-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .reval-status-badge.pending {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+        }
+
+        .reval-status-badge.validated {
+            background: rgba(129, 199, 132, 0.2);
+            color: #81c784;
+        }
+
+        .reval-status-badge.re-corrected {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
         }
 
         .btn-sm {
@@ -2488,6 +2527,15 @@
                         </select>
                     </div>
                     <div class="reval-filter-group">
+                        <label>Status</label>
+                        <select id="revalFilterStatus" onchange="filterRevalidationList()">
+                            <option value="">Alle</option>
+                            <option value="pending">⏳ Ausstehend</option>
+                            <option value="validated">✓ Überprüft</option>
+                            <option value="re_corrected">🔄 Korrigiert</option>
+                        </select>
+                    </div>
+                    <div class="reval-filter-group">
                         <label>Pattern</label>
                         <select id="revalFilterPattern" onchange="filterRevalidationList()">
                             <option value="">Alle Patterns</option>
@@ -2507,6 +2555,7 @@
                     <div>Timeframe</div>
                     <div>Datum</div>
                     <div>Typ</div>
+                    <div>Status</div>
                     <div></div>
                 </div>
 
@@ -3275,6 +3324,18 @@
                     patterns = patterns.filter(p => (p.confidence || 0) >= minConfidence);
                 }
 
+                // Remove duplicates (same pattern_type, symbol, timestamp)
+                // Keep the one with highest confidence
+                const uniqueMap = new Map();
+                patterns.forEach(p => {
+                    const key = `${p.pattern_type}|${p.symbol}|${p.timestamp}`;
+                    const existing = uniqueMap.get(key);
+                    if (!existing || (p.confidence || 0) > (existing.confidence || 0)) {
+                        uniqueMap.set(key, p);
+                    }
+                });
+                patterns = Array.from(uniqueMap.values());
+
                 // Sort by timestamp descending (newest first)
                 patterns.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
@@ -3441,6 +3502,7 @@
                         <span class="timeline-pattern-name">${formatPatternType(pattern.pattern_type)}</span>
                         <span class="timeline-symbol">${pattern.symbol}</span>
                         <span class="timeline-direction ${directionClass}">${pattern.direction}</span>
+                        <span class="timeline-timeframe">${pattern.timeframe || '-'}</span>
                         ${feedbackBadge}
                         <span class="timeline-confidence">${confidencePercent}%</span>
                         <span class="timeline-arrow">›</span>
@@ -4513,11 +4575,26 @@
                 patterns.map(p => `<option value="${p}">${formatPatternType(p)}</option>`).join('');
         }
 
+        // Get the revalidation status of an item
+        function getRevalidationStatus(item) {
+            // Check if item has been re-corrected during revalidation
+            if (item.revalidation_corrected) {
+                return 're_corrected';  // Needs re-training, then back to pending
+            }
+            // Check if item has been validated (any revalidation result)
+            if (item.revalidated || item.validation_result) {
+                return 'validated';
+            }
+            // Default: pending (awaiting validation)
+            return 'pending';
+        }
+
         // Filter revalidation list based on selected filters
         function filterRevalidationList() {
             const symbolFilter = document.getElementById('revalFilterSymbol').value;
             const timeframeFilter = document.getElementById('revalFilterTimeframe').value;
             const typeFilter = document.getElementById('revalFilterType').value;
+            const statusFilter = document.getElementById('revalFilterStatus').value;
             const patternFilter = document.getElementById('revalFilterPattern').value;
 
             filteredRevalidationItems = allRevalidationItems.filter(item => {
@@ -4526,6 +4603,10 @@
                 if (typeFilter) {
                     if (typeFilter === 'rejected' && item.feedback_type !== 'rejected') return false;
                     if (typeFilter === 'corrected' && item.feedback_type !== 'corrected') return false;
+                }
+                if (statusFilter) {
+                    const itemStatus = getRevalidationStatus(item);
+                    if (itemStatus !== statusFilter) return false;
                 }
                 if (patternFilter) {
                     if (item.original_pattern !== patternFilter && item.corrected_pattern !== patternFilter) return false;
@@ -4541,6 +4622,7 @@
             document.getElementById('revalFilterSymbol').value = '';
             document.getElementById('revalFilterTimeframe').value = '';
             document.getElementById('revalFilterType').value = '';
+            document.getElementById('revalFilterStatus').value = '';
             document.getElementById('revalFilterPattern').value = '';
             filterRevalidationList();
         }
@@ -4570,6 +4652,23 @@
                 const typeClass = isRejected ? 'rejected' : 'corrected';
                 const typeLabel = isRejected ? 'Abgelehnt' : 'Korrigiert';
 
+                // Status bestimmen
+                const status = getRevalidationStatus(item);
+                let statusClass, statusLabel;
+                switch (status) {
+                    case 'validated':
+                        statusClass = 'validated';
+                        statusLabel = '✓ Überprüft';
+                        break;
+                    case 're_corrected':
+                        statusClass = 're-corrected';
+                        statusLabel = '🔄 Korrigiert';
+                        break;
+                    default:
+                        statusClass = 'pending';
+                        statusLabel = '⏳ Ausstehend';
+                }
+
                 const patternDisplay = isRejected
                     ? `${formatPatternType(item.original_pattern)} → ✗`
                     : `${formatPatternType(item.original_pattern)} → ${formatPatternType(item.corrected_pattern)}`;
@@ -4588,6 +4687,9 @@
                         <div class="reval-list-date">${dateStr} ${timeStr}</div>
                         <div class="reval-list-type">
                             <span class="reval-type-badge ${typeClass}">${typeLabel}</span>
+                        </div>
+                        <div class="reval-list-status">
+                            <span class="reval-status-badge ${statusClass}">${statusLabel}</span>
                         </div>
                         <div class="reval-list-action">
                             <button class="btn btn-sm" onclick="event.stopPropagation(); openRevalDetail(${index})">Details</button>
