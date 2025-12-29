@@ -2781,18 +2781,18 @@
                     Diese könnten Anpassungen in der Erkennungslogik erfordern.
                 </p>
                 <div id="problematicPatternsTable" style="overflow-x: auto; margin-top: 1rem;">
-                    <table class="data-table">
+                    <table class="data-table" style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr>
-                                <th>Pattern-Typ</th>
-                                <th>Validierungen</th>
-                                <th>Bestätigt</th>
-                                <th>Abgelehnt</th>
-                                <th>Ablehnungsrate</th>
+                                <th style="text-align: left; padding: 0.75rem; width: 25%;">Pattern-Typ</th>
+                                <th style="text-align: center; padding: 0.75rem; width: 12%;">Gesamt</th>
+                                <th style="text-align: center; padding: 0.75rem; width: 12%;">✓ OK</th>
+                                <th style="text-align: center; padding: 0.75rem; width: 12%;">✗ Abgelehnt</th>
+                                <th style="text-align: left; padding: 0.75rem; width: 39%;">Ablehnungsrate</th>
                             </tr>
                         </thead>
                         <tbody id="problematicPatternsBody">
-                            <tr><td colspan="5" style="text-align: center; color: #888;">Klicke "Analysieren" für die Auswertung</td></tr>
+                            <tr><td colspan="5" style="text-align: center; color: #888; padding: 1.5rem;">Klicke "Analysieren" für die Auswertung</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2802,13 +2802,22 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">🔍 Chart-Vorschau</h2>
+                    <button class="btn btn-secondary" onclick="loadRecentPatternsForPreview()">Patterns laden</button>
                 </div>
                 <p class="card-description">
-                    Zeige die Chart-Vorschau für ein bestimmtes Pattern an, wie sie an Claude gesendet wird.
+                    Zeige die Chart-Vorschau für ein Pattern an, wie sie an Claude gesendet wird.
+                    Wähle ein kürzlich erkanntes Pattern aus oder gib die Pattern-ID manuell ein.
                 </p>
-                <div style="display: flex; gap: 1rem; align-items: flex-end; margin-top: 1rem;">
-                    <div style="flex: 1;">
-                        <label style="display: block; margin-bottom: 0.5rem; color: #888;">Pattern-ID</label>
+                <div style="display: flex; gap: 1rem; align-items: flex-end; margin-top: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 2; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 0.5rem; color: #888;">Pattern auswählen</label>
+                        <select id="chartPreviewSelect" onchange="selectPatternForPreview()"
+                                style="width: 100%; padding: 0.5rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
+                            <option value="">-- Klicke "Patterns laden" --</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="display: block; margin-bottom: 0.5rem; color: #888;">oder Pattern-ID</label>
                         <input type="text" id="chartPreviewPatternId" placeholder="z.B. abc123..."
                                style="width: 100%; padding: 0.5rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
                     </div>
@@ -6438,7 +6447,7 @@
         async function loadClaudeStatus() {
             try {
                 const response = await fetch(`${CANDLESTICK_API}/claude/status`);
-                if (!response.ok) throw new Error('Status nicht verfügbar');
+                if (!response.ok) throw new Error(`Status: HTTP ${response.status}`);
                 const data = await response.json();
 
                 document.getElementById('claudeEnabled').textContent = data.enabled ? '✓ Aktiv' : '✗ Inaktiv';
@@ -6532,7 +6541,7 @@
 
             try {
                 const response = await fetch(`${CANDLESTICK_API}/claude/history?limit=50`);
-                if (!response.ok) throw new Error('Historie nicht verfügbar');
+                if (!response.ok) throw new Error(`Historie: HTTP ${response.status}`);
                 const data = await response.json();
 
                 if (!data.history || data.history.length === 0) {
@@ -6565,41 +6574,115 @@
 
         async function loadProblematicPatterns() {
             const tbody = document.getElementById('problematicPatternsBody');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;"><span class="spinner"></span> Analysiere...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1.5rem;"><span class="spinner"></span> Analysiere...</td></tr>';
 
             try {
                 const response = await fetch(`${CANDLESTICK_API}/claude/problematic-patterns?min_rejections=1&limit=20`);
-                if (!response.ok) throw new Error('Analyse nicht verfügbar');
+                if (!response.ok) throw new Error(`Analyse: HTTP ${response.status}`);
                 const data = await response.json();
 
                 if (!data.patterns || data.patterns.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">Keine problematischen Patterns gefunden</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888; padding: 1.5rem;">Keine problematischen Patterns gefunden</td></tr>';
                     return;
                 }
 
-                tbody.innerHTML = data.patterns.map(p => `
-                    <tr>
-                        <td><strong>${formatPatternType(p.pattern_type)}</strong></td>
-                        <td>${p.total_validations}</td>
-                        <td style="color: #81c784;">${p.agreed}</td>
-                        <td style="color: #e57373;">${p.rejected}</td>
-                        <td>
-                            <span style="color: ${p.rejection_rate > 50 ? '#e57373' : p.rejection_rate > 25 ? '#ffb74d' : '#81c784'};">
-                                ${p.rejection_rate}%
-                            </span>
-                        </td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = data.patterns.map(p => {
+                    // Determine color based on rejection rate
+                    const rateColor = p.rejection_rate >= 70 ? '#e57373' :
+                                      p.rejection_rate >= 50 ? '#ffb74d' :
+                                      p.rejection_rate >= 30 ? '#fff176' : '#81c784';
+                    const statusIcon = p.rejection_rate >= 70 ? '🔴' :
+                                       p.rejection_rate >= 50 ? '🟠' :
+                                       p.rejection_rate >= 30 ? '🟡' : '🟢';
+
+                    // Create visual progress bar
+                    const barWidth = Math.min(p.rejection_rate, 100);
+                    const barColor = p.rejection_rate >= 70 ? 'linear-gradient(90deg, #e57373, #ef5350)' :
+                                     p.rejection_rate >= 50 ? 'linear-gradient(90deg, #ffb74d, #ffa726)' :
+                                     p.rejection_rate >= 30 ? 'linear-gradient(90deg, #fff176, #ffee58)' :
+                                     'linear-gradient(90deg, #81c784, #66bb6a)';
+
+                    return `
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 0.75rem; vertical-align: middle;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="font-size: 1.1rem;">${statusIcon}</span>
+                                    <strong style="color: #e8e8e8;">${formatPatternType(p.pattern_type)}</strong>
+                                </div>
+                            </td>
+                            <td style="text-align: center; padding: 0.75rem; color: #b0b0b0; font-weight: 500;">
+                                ${p.total_validations}
+                            </td>
+                            <td style="text-align: center; padding: 0.75rem;">
+                                <span style="background: rgba(129, 199, 132, 0.2); color: #81c784; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600;">
+                                    ${p.agreed}
+                                </span>
+                            </td>
+                            <td style="text-align: center; padding: 0.75rem;">
+                                <span style="background: rgba(229, 115, 115, 0.2); color: #e57373; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600;">
+                                    ${p.rejected}
+                                </span>
+                            </td>
+                            <td style="padding: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div style="flex: 1; background: rgba(255,255,255,0.1); border-radius: 4px; height: 20px; overflow: hidden; min-width: 100px;">
+                                        <div style="width: ${barWidth}%; height: 100%; background: ${barColor}; transition: width 0.3s ease;"></div>
+                                    </div>
+                                    <span style="color: ${rateColor}; font-weight: 600; min-width: 50px; text-align: right;">
+                                        ${p.rejection_rate.toFixed(1)}%
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             } catch (e) {
                 console.error('Problematic patterns error:', e);
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #e57373;">Fehler: ${e.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #e57373; padding: 1.5rem;">Fehler: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function loadRecentPatternsForPreview() {
+            const select = document.getElementById('chartPreviewSelect');
+            select.innerHTML = '<option value="">Laden...</option>';
+
+            try {
+                // Load recent patterns from history
+                const response = await fetch(`${CANDLESTICK_API}/history?limit=50`);
+                if (!response.ok) throw new Error('Patterns nicht verfügbar');
+                const data = await response.json();
+
+                if (!data.patterns || data.patterns.length === 0) {
+                    select.innerHTML = '<option value="">Keine Patterns vorhanden</option>';
+                    return;
+                }
+
+                select.innerHTML = '<option value="">-- Pattern auswählen --</option>' +
+                    data.patterns.map(p => {
+                        const time = p.timestamp ? new Date(p.timestamp).toLocaleTimeString('de-CH', {hour: '2-digit', minute: '2-digit'}) : '';
+                        return `<option value="${p.id}">${formatPatternType(p.pattern_type)} | ${p.symbol} | ${p.timeframe} | ${time}</option>`;
+                    }).join('');
+
+                showToast(`${data.patterns.length} Patterns geladen`, 'success');
+            } catch (e) {
+                console.error('Load patterns error:', e);
+                select.innerHTML = '<option value="">Fehler beim Laden</option>';
+                showToast('Fehler: ' + e.message, 'error');
+            }
+        }
+
+        function selectPatternForPreview() {
+            const select = document.getElementById('chartPreviewSelect');
+            const input = document.getElementById('chartPreviewPatternId');
+            if (select.value) {
+                input.value = select.value;
             }
         }
 
         async function loadChartPreview() {
             const patternId = document.getElementById('chartPreviewPatternId').value.trim();
             if (!patternId) {
-                showToast('Bitte eine Pattern-ID eingeben', 'warning');
+                showToast('Bitte ein Pattern auswählen oder eine Pattern-ID eingeben', 'warning');
                 return;
             }
 
@@ -6641,7 +6724,7 @@
 
             try {
                 const response = await fetch(`${CANDLESTICK_API}/claude/recommendations`);
-                if (!response.ok) throw new Error('Empfehlungen nicht verfügbar');
+                if (!response.ok) throw new Error(`Empfehlungen: HTTP ${response.status}`);
                 const data = await response.json();
 
                 if (!data.recommendations || data.recommendations.length === 0) {
@@ -6747,7 +6830,7 @@
 
             try {
                 const response = await fetch(`${CANDLESTICK_API}/claude/current-rules`);
-                if (!response.ok) throw new Error('Regeln nicht verfügbar');
+                if (!response.ok) throw new Error(`Regeln: HTTP ${response.status}`);
                 const data = await response.json();
                 currentRulesData = data;
 
@@ -6835,7 +6918,10 @@
 
             try {
                 const response = await fetch(`${CANDLESTICK_API}/claude/impact-analysis`);
-                if (!response.ok) throw new Error('Analyse nicht verfügbar');
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+                }
                 const data = await response.json();
 
                 document.getElementById('impactTotalAdj').textContent = data.total_adjustments || 0;
