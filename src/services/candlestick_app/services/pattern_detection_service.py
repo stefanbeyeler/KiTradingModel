@@ -357,35 +357,103 @@ class CandlestickPatternService:
             abs(upper_shadow_ratio - lower_shadow_ratio) < 0.2  # Roughly equal shadows
         )
 
-    def _is_bullish_engulfing(self, current: CandleData, prev: CandleData) -> bool:
+    def _is_bullish_engulfing(self, current: CandleData, prev: CandleData, avg_body: float = 0) -> bool:
         """
         Check for Bullish Engulfing pattern.
-        - Previous candle is bearish
-        - Current candle is bullish
+        - Previous candle is bearish (red)
+        - Current candle is bullish (green)
         - Current body completely engulfs previous body
+        - Both candles must have significant bodies (not dojis)
+
+        A valid Bullish Engulfing requires:
+        1. Previous candle: bearish with meaningful body
+        2. Current candle: bullish with body larger than previous
+        3. Current open below previous close (gap down or at same level)
+        4. Current close above previous open (completely engulfs)
         """
-        return (
-            prev.is_bearish and
-            current.is_bullish and
-            current.open < prev.close and
-            current.close > prev.open and
-            current.body_size > prev.body_size
+        # Basic direction checks - MUST be correct colors
+        if not prev.is_bearish or not current.is_bullish:
+            return False
+
+        # Minimum body size check - prevent false positives with tiny candles
+        # Previous candle must have a meaningful body (at least 20% of its range)
+        if prev.total_range > 0:
+            prev_body_ratio = prev.body_size / prev.total_range
+            if prev_body_ratio < 0.2:
+                return False  # Previous candle is too small (almost doji)
+
+        # Current candle must have a meaningful body
+        if current.total_range > 0:
+            current_body_ratio = current.body_size / current.total_range
+            if current_body_ratio < 0.3:
+                return False  # Current candle body too small
+
+        # If avg_body is provided, ensure candles are significant
+        if avg_body > 0:
+            if prev.body_size < avg_body * 0.3:
+                return False  # Previous candle too small compared to average
+            if current.body_size < avg_body * 0.5:
+                return False  # Current candle too small compared to average
+
+        # Engulfing conditions:
+        # For bearish prev candle: open is high, close is low
+        # Current bullish must: open below prev close, close above prev open
+        engulfs_body = (
+            current.open <= prev.close and  # Opens at or below prev close
+            current.close >= prev.open and  # Closes at or above prev open
+            current.body_size > prev.body_size  # Body is larger
         )
 
-    def _is_bearish_engulfing(self, current: CandleData, prev: CandleData) -> bool:
+        return engulfs_body
+
+    def _is_bearish_engulfing(self, current: CandleData, prev: CandleData, avg_body: float = 0) -> bool:
         """
         Check for Bearish Engulfing pattern.
-        - Previous candle is bullish
-        - Current candle is bearish
+        - Previous candle is bullish (green)
+        - Current candle is bearish (red)
         - Current body completely engulfs previous body
+        - Both candles must have significant bodies (not dojis)
+
+        A valid Bearish Engulfing requires:
+        1. Previous candle: bullish with meaningful body
+        2. Current candle: bearish with body larger than previous
+        3. Current open above previous close (gap up or at same level)
+        4. Current close below previous open (completely engulfs)
         """
-        return (
-            prev.is_bullish and
-            current.is_bearish and
-            current.open > prev.close and
-            current.close < prev.open and
-            current.body_size > prev.body_size
+        # Basic direction checks - MUST be correct colors
+        if not prev.is_bullish or not current.is_bearish:
+            return False
+
+        # Minimum body size check - prevent false positives with tiny candles
+        # Previous candle must have a meaningful body (at least 20% of its range)
+        if prev.total_range > 0:
+            prev_body_ratio = prev.body_size / prev.total_range
+            if prev_body_ratio < 0.2:
+                return False  # Previous candle is too small (almost doji)
+
+        # Current candle must have a meaningful body
+        if current.total_range > 0:
+            current_body_ratio = current.body_size / current.total_range
+            if current_body_ratio < 0.3:
+                return False  # Current candle body too small
+
+        # If avg_body is provided, ensure candles are significant
+        if avg_body > 0:
+            if prev.body_size < avg_body * 0.3:
+                return False  # Previous candle too small compared to average
+            if current.body_size < avg_body * 0.5:
+                return False  # Current candle too small compared to average
+
+        # Engulfing conditions:
+        # For bullish prev candle: open is low, close is high
+        # Current bearish must: open above prev close, close below prev open
+        engulfs_body = (
+            current.open >= prev.close and  # Opens at or above prev close
+            current.close <= prev.open and  # Closes at or below prev open
+            current.body_size > prev.body_size  # Body is larger
         )
+
+        return engulfs_body
 
     def _is_bullish_harami(self, current: CandleData, prev: CandleData) -> bool:
         """
@@ -736,11 +804,11 @@ class CandlestickPatternService:
 
             # === Two Candle Patterns ===
 
-            # Engulfing
-            if self._is_bullish_engulfing(current, prev):
+            # Engulfing - pass avg_body for better validation
+            if self._is_bullish_engulfing(current, prev, avg_body):
                 confidence = 0.8 if trend == "downtrend" else 0.6
                 detected.append((PatternType.BULLISH_ENGULFING, confidence, 2))
-            elif self._is_bearish_engulfing(current, prev):
+            elif self._is_bearish_engulfing(current, prev, avg_body):
                 confidence = 0.8 if trend == "uptrend" else 0.6
                 detected.append((PatternType.BEARISH_ENGULFING, confidence, 2))
 

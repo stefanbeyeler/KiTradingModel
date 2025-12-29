@@ -940,30 +940,37 @@
             color: #fff;
         }
 
-        .modal-nav {
+        .modal-footer {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.5rem;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 0 0 12px 12px;
         }
 
         .modal-nav-btn {
             background: rgba(100, 200, 255, 0.1);
             border: 1px solid rgba(100, 200, 255, 0.3);
             color: #64c8ff;
-            width: 36px;
-            height: 36px;
+            padding: 0.75rem 1.5rem;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 1.2rem;
+            font-size: 1rem;
+            font-weight: 500;
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 0.5rem;
             transition: all 0.2s;
+            min-width: 120px;
         }
 
         .modal-nav-btn:hover:not(:disabled) {
-            background: rgba(100, 200, 255, 0.2);
+            background: rgba(100, 200, 255, 0.25);
             border-color: #64c8ff;
+            transform: translateY(-1px);
         }
 
         .modal-nav-btn:disabled {
@@ -971,10 +978,19 @@
             cursor: not-allowed;
         }
 
+        .modal-nav-prev {
+            justify-content: flex-start;
+        }
+
+        .modal-nav-next {
+            justify-content: flex-end;
+        }
+
         .modal-nav-counter {
-            font-size: 0.85rem;
-            color: #888;
-            min-width: 60px;
+            font-size: 1rem;
+            color: #64c8ff;
+            font-weight: 600;
+            min-width: 100px;
             text-align: center;
         }
 
@@ -1320,14 +1336,7 @@
                         <span id="modalPatternName">-</span>
                         <span class="timeline-direction" id="modalDirection">-</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <div class="modal-nav">
-                            <button class="modal-nav-btn" id="modalPrevBtn" onclick="navigatePattern(-1)" title="Vorheriges Pattern">‹</button>
-                            <span class="modal-nav-counter" id="modalNavCounter">1 / 10</span>
-                            <button class="modal-nav-btn" id="modalNextBtn" onclick="navigatePattern(1)" title="Nächstes Pattern">›</button>
-                        </div>
-                        <button class="modal-close" onclick="closePatternModal()">&times;</button>
-                    </div>
+                    <button class="modal-close" onclick="closePatternModal()">&times;</button>
                 </div>
                 <div class="modal-body">
                     <!-- Chart Comparison -->
@@ -1390,6 +1399,16 @@
                         </div>
                         <div id="correctionFeedback" style="margin-top: 0.5rem; font-size: 0.85rem; display: none;"></div>
                     </div>
+                </div>
+                <!-- Navigation Footer -->
+                <div class="modal-footer">
+                    <button class="modal-nav-btn modal-nav-prev" id="modalPrevBtn" onclick="navigatePattern(-1)" title="Vorheriges Pattern (←)">
+                        ‹ Zurück
+                    </button>
+                    <span class="modal-nav-counter" id="modalNavCounter">1 / 100</span>
+                    <button class="modal-nav-btn modal-nav-next" id="modalNextBtn" onclick="navigatePattern(1)" title="Nächstes Pattern (→)">
+                        Weiter ›
+                    </button>
                 </div>
             </div>
         </div>
@@ -1993,7 +2012,10 @@
             loadPatternHistory(1);
         }
 
-        // Store patterns for modal access
+        // Store ALL filtered patterns for modal navigation (not just current page)
+        let allFilteredPatterns = [];
+
+        // Store patterns for current page display
         let loadedPatterns = [];
 
         // Store feedback data for timeline display
@@ -2032,9 +2054,9 @@
                 // Load feedback data first (for status display)
                 await loadFeedbackData();
 
-                // Build query params
+                // Build query params - load all patterns for navigation
                 const params = new URLSearchParams();
-                params.set('limit', '100');  // Get more for client-side filtering
+                params.set('limit', '1000');  // Load more for complete navigation
                 if (symbol) params.set('symbol', symbol);
                 if (timeframe) params.set('timeframe', timeframe);
 
@@ -2056,14 +2078,17 @@
                 // Sort by timestamp descending (newest first)
                 patterns.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                // Pagination
+                // Store ALL filtered patterns for modal navigation
+                allFilteredPatterns = patterns.map((p, idx) => ({ ...p, globalIndex: idx }));
+
+                // Pagination for display
                 const totalPatterns = patterns.length;
                 const totalPages = Math.ceil(totalPatterns / HISTORY_PAGE_SIZE);
                 const startIdx = (page - 1) * HISTORY_PAGE_SIZE;
                 const pagePatterns = patterns.slice(startIdx, startIdx + HISTORY_PAGE_SIZE);
 
-                // Store for modal access
-                loadedPatterns = pagePatterns;
+                // Store page patterns with global index for modal access
+                loadedPatterns = pagePatterns.map((p, idx) => ({ ...p, globalIndex: startIdx + idx }));
 
                 // Update pagination
                 updateHistoryPagination(page, totalPages, totalPatterns);
@@ -2280,15 +2305,59 @@
         };
 
         // Open pattern detail modal
-        // Current modal index for navigation
+        // Current modal index for navigation (global index across all patterns)
         let currentModalIndex = 0;
 
         async function openPatternModal(index) {
+            // Use globalIndex if provided (from timeline click), otherwise use index directly
             const pattern = loadedPatterns[index];
             if (!pattern) return;
 
+            // Use the global index for navigation across all patterns
+            const globalIdx = pattern.globalIndex !== undefined ? pattern.globalIndex : index;
+            currentModalIndex = globalIdx;
+
+            currentModalPattern = allFilteredPatterns[globalIdx] || pattern;
+
+            // Populate modal fields
+            document.getElementById('modalPatternName').textContent = formatPatternType(currentModalPattern.pattern_type);
+            const directionEl = document.getElementById('modalDirection');
+            directionEl.textContent = currentModalPattern.direction;
+            directionEl.className = `timeline-direction ${currentModalPattern.direction}`;
+
+            document.getElementById('modalSymbol').textContent = currentModalPattern.symbol;
+            document.getElementById('modalTimeframe').textContent = currentModalPattern.timeframe;
+            document.getElementById('modalTimestamp').textContent = formatTimestamp(currentModalPattern.timestamp);
+            document.getElementById('modalConfidence').textContent = ((currentModalPattern.confidence || 0) * 100).toFixed(0) + '%';
+            document.getElementById('modalDescription').textContent = currentModalPattern.description || currentModalPattern.trading_implication || 'Keine Beschreibung verfügbar';
+
+            // Update navigation counter and buttons
+            updateModalNavigation();
+
+            // Populate correction dropdown
+            await populateCorrectionDropdown();
+
+            // Reset feedback
+            document.getElementById('correctionFeedback').style.display = 'none';
+
+            // Show modal
+            document.getElementById('patternModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+
+            // Load charts
+            await Promise.all([
+                loadModalChart(currentModalPattern),
+                loadReferenceChart(currentModalPattern.pattern_type, currentModalPattern.direction)
+            ]);
+        }
+
+        // Open modal directly by global index (for navigation)
+        async function openPatternModalByGlobalIndex(globalIndex) {
+            const pattern = allFilteredPatterns[globalIndex];
+            if (!pattern) return;
+
+            currentModalIndex = globalIndex;
             currentModalPattern = pattern;
-            currentModalIndex = index;
 
             // Populate modal fields
             document.getElementById('modalPatternName').textContent = formatPatternType(pattern.pattern_type);
@@ -2311,10 +2380,6 @@
             // Reset feedback
             document.getElementById('correctionFeedback').style.display = 'none';
 
-            // Show modal
-            document.getElementById('patternModal').classList.add('show');
-            document.body.style.overflow = 'hidden';
-
             // Load charts
             await Promise.all([
                 loadModalChart(pattern),
@@ -2324,7 +2389,7 @@
 
         // Update navigation buttons and counter
         function updateModalNavigation() {
-            const total = loadedPatterns.length;
+            const total = allFilteredPatterns.length;
             const current = currentModalIndex + 1;
 
             // Update counter
@@ -2335,12 +2400,12 @@
             document.getElementById('modalNextBtn').disabled = currentModalIndex >= total - 1;
         }
 
-        // Navigate to previous/next pattern
+        // Navigate to previous/next pattern (using global index)
         function navigatePattern(direction) {
             const newIndex = currentModalIndex + direction;
 
-            if (newIndex >= 0 && newIndex < loadedPatterns.length) {
-                openPatternModal(newIndex);
+            if (newIndex >= 0 && newIndex < allFilteredPatterns.length) {
+                openPatternModalByGlobalIndex(newIndex);
             }
         }
 
