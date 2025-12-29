@@ -33,6 +33,7 @@ from ..models.schemas import (
     Timeframe,
     TimeframePatterns,
 )
+from .rule_config_service import rule_config_service
 
 # Timeframe-Mapping für TwelveData API
 # (Vermeidet Import von src.config.timeframes wegen torch-Abhängigkeit)
@@ -237,33 +238,44 @@ class CandlestickPatternService:
         Check if candle is a Doji (very small body relative to range).
 
         A Doji is detected when:
-        - Body is less than 10% of the candle's total range, OR
-        - Body is less than 10% of the average body size
+        - Body is less than configured % of the candle's total range, OR
+        - Body is less than configured % of the average body size
 
         This dual check ensures Dojis are detected in both volatile and calm markets.
+        Parameters are configurable via rule_config_service.
         """
+        # Get configurable thresholds (default to 0.05 = 5%)
+        body_to_range_threshold = rule_config_service.get_param("doji", "body_to_range_ratio") or 0.05
+        body_to_avg_threshold = rule_config_service.get_param("doji", "body_to_avg_ratio") or 0.05
+
         body_to_range_ratio = candle.body_size / candle.total_range if candle.total_range > 0 else 0
         body_to_avg_ratio = candle.body_size / avg_body if avg_body > 0 else 0
 
         # A Doji if body is small relative to either the range or the average
-        return body_to_range_ratio < 0.1 or (avg_body > 0 and body_to_avg_ratio < 0.1)
+        return body_to_range_ratio < body_to_range_threshold or (avg_body > 0 and body_to_avg_ratio < body_to_avg_threshold)
 
     def _is_dragonfly_doji(self, candle: CandleData, avg_body: float) -> bool:
         """Check for Dragonfly Doji (long lower shadow, no upper shadow)."""
         if not self._is_doji(candle, avg_body):
             return False
+        # Get configurable thresholds
+        lower_shadow_min = rule_config_service.get_param("dragonfly_doji", "lower_shadow_min_ratio") or 0.6
+        upper_shadow_max = rule_config_service.get_param("dragonfly_doji", "upper_shadow_max_ratio") or 0.1
         return (
-            candle.lower_shadow > candle.total_range * 0.6 and
-            candle.upper_shadow < candle.total_range * 0.1
+            candle.lower_shadow > candle.total_range * lower_shadow_min and
+            candle.upper_shadow < candle.total_range * upper_shadow_max
         )
 
     def _is_gravestone_doji(self, candle: CandleData, avg_body: float) -> bool:
         """Check for Gravestone Doji (long upper shadow, no lower shadow)."""
         if not self._is_doji(candle, avg_body):
             return False
+        # Get configurable thresholds
+        upper_shadow_min = rule_config_service.get_param("gravestone_doji", "upper_shadow_min_ratio") or 0.6
+        lower_shadow_max = rule_config_service.get_param("gravestone_doji", "lower_shadow_max_ratio") or 0.1
         return (
-            candle.upper_shadow > candle.total_range * 0.6 and
-            candle.lower_shadow < candle.total_range * 0.1
+            candle.upper_shadow > candle.total_range * upper_shadow_min and
+            candle.lower_shadow < candle.total_range * lower_shadow_max
         )
 
     def _is_hammer(self, candle: CandleData, avg_body: float) -> bool:

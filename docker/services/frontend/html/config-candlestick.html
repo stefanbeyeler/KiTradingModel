@@ -2591,6 +2591,12 @@
                         </select>
                     </div>
                     <div class="reval-filter-group">
+                        <label>Pattern</label>
+                        <select id="revalFilterPattern" onchange="filterRevalidationList()">
+                            <option value="">Alle Patterns</option>
+                        </select>
+                    </div>
+                    <div class="reval-filter-group">
                         <label>Timeframe</label>
                         <select id="revalFilterTimeframe" onchange="filterRevalidationList()">
                             <option value="">Alle</option>
@@ -2616,12 +2622,6 @@
                             <option value="pending">⏳ Ausstehend</option>
                             <option value="validated">✓ Überprüft</option>
                             <option value="re_corrected">🔄 Korrigiert</option>
-                        </select>
-                    </div>
-                    <div class="reval-filter-group">
-                        <label>Pattern</label>
-                        <select id="revalFilterPattern" onchange="filterRevalidationList()">
-                            <option value="">Alle Patterns</option>
                         </select>
                     </div>
                     <div class="reval-filter-group" style="align-self: flex-end;">
