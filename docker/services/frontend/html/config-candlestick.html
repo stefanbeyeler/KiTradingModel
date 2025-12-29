@@ -628,6 +628,90 @@
             font-style: normal;
         }
 
+        /* Scan suggestions styles */
+        .scan-suggestions {
+            margin-bottom: 0.75rem;
+        }
+
+        .scan-suggestions-header {
+            font-size: 0.85rem;
+            color: #64c8ff;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .scan-suggestions-header .scan-icon {
+            font-size: 1rem;
+        }
+
+        .scan-suggestions-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .scan-suggestion-btn {
+            padding: 0.5rem 0.8rem;
+            border-radius: 6px;
+            border: 1px solid rgba(129, 199, 132, 0.5);
+            background: rgba(129, 199, 132, 0.15);
+            color: #81c784;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .scan-suggestion-btn:hover {
+            background: rgba(129, 199, 132, 0.3);
+            border-color: #81c784;
+        }
+
+        .scan-suggestion-btn.original {
+            border-color: rgba(255, 152, 0, 0.5);
+            background: rgba(255, 152, 0, 0.15);
+            color: #ffb74d;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .scan-suggestion-btn.no-pattern {
+            border-color: rgba(239, 83, 80, 0.5);
+            background: rgba(239, 83, 80, 0.15);
+            color: #ef9a9a;
+        }
+
+        .scan-suggestion-btn.no-pattern:hover {
+            background: rgba(239, 83, 80, 0.3);
+            border-color: #ef5350;
+        }
+
+        .correction-divider {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.75rem 0;
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .correction-divider::before,
+        .correction-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .no-patterns-found {
+            padding: 0.5rem;
+            color: #888;
+            font-size: 0.85rem;
+            font-style: italic;
+            width: 100%;
+        }
+
         /* Training specific styles */
         .training-status-card {
             background: rgba(0, 0, 0, 0.2);
@@ -3708,12 +3792,25 @@
                         <button class="btn btn-danger" onclick="showRevalidationCorrectionDialog('${item.id}', '${item.original_pattern}', '${item.symbol}', '${item.timeframe}')" title="Pattern korrigieren">
                             ✗ Falsch erkannt - korrigieren
                         </button>
-                        <button class="btn btn-primary" onclick="scanForRevalidation('${item.symbol}', '${item.timeframe}')" title="Aktuellen Scan starten">
+                        <button class="btn btn-primary" onclick="scanForRevalidation('${item.id}', '${item.symbol}', '${item.timeframe}', '${item.original_pattern}')" title="Aktuellen Scan starten und Vorschläge anzeigen">
                             🔍 Neu scannen
                         </button>
                     </div>
                     <div id="reval-correction-${item.id}" class="revalidation-correction-panel" style="display: none;">
                         <div class="correction-header">Welches Pattern ist korrekt?</div>
+
+                        <!-- Scan-Vorschläge werden hier dynamisch eingefügt -->
+                        <div id="reval-scan-suggestions-${item.id}" class="scan-suggestions" style="display: none;">
+                            <div class="scan-suggestions-header">
+                                <span class="scan-icon">🔍</span> Erkannte Patterns (Vorschläge):
+                            </div>
+                            <div class="scan-suggestions-buttons"></div>
+                        </div>
+
+                        <div class="correction-divider" id="reval-divider-${item.id}" style="display: none;">
+                            <span>oder manuell auswählen:</span>
+                        </div>
+
                         <div class="correction-options">
                             <select id="reval-select-${item.id}" class="pattern-select">
                                 <option value="">-- Pattern auswählen --</option>
@@ -3769,7 +3866,8 @@
         }
 
         // Mark an item as revalidated
-        async function markRevalidation(feedbackId, result, correctedPattern = null) {
+        // fromScanSuggestion: if true, show enhanced message about training
+        async function markRevalidation(feedbackId, result, correctedPattern = null, fromScanSuggestion = false) {
             try {
                 const body = {
                     feedback_id: feedbackId,
@@ -3789,14 +3887,24 @@
                 });
 
                 if (res.ok) {
-                    const resultMessages = {
-                        'correct': 'Als jetzt korrekt markiert',
-                        'now_correct': 'Als nicht mehr erkannt markiert',
-                        'still_wrong': correctedPattern
-                            ? `Korrigiert zu: ${formatPatternType(correctedPattern)}`
-                            : 'Als weiterhin falsch markiert'
-                    };
-                    showToast(resultMessages[result] || 'Gespeichert', 'success');
+                    let message;
+                    if (fromScanSuggestion && correctedPattern) {
+                        // Enhanced message for scan suggestions with correction
+                        message = `✓ Korrektur gespeichert: ${formatPatternType(correctedPattern)} (für nächstes Training)`;
+                    } else if (fromScanSuggestion && result === 'now_correct') {
+                        message = '✓ Pattern wird nicht mehr erkannt - Modell hat gelernt!';
+                    } else {
+                        // Standard messages
+                        const resultMessages = {
+                            'correct': 'Als jetzt korrekt markiert',
+                            'now_correct': 'Als nicht mehr erkannt markiert',
+                            'still_wrong': correctedPattern
+                                ? `Korrigiert zu: ${formatPatternType(correctedPattern)}`
+                                : 'Als weiterhin falsch markiert'
+                        };
+                        message = resultMessages[result] || 'Gespeichert';
+                    }
+                    showToast(message, 'success');
                     loadRevalidationData();
                 } else {
                     throw new Error('Speichern fehlgeschlagen');
@@ -3876,7 +3984,8 @@
         }
 
         // Trigger a scan for a specific symbol/timeframe to check current detection
-        async function scanForRevalidation(symbol, timeframe) {
+        // Shows results as selectable suggestions in the correction panel
+        async function scanForRevalidation(feedbackId, symbol, timeframe, originalPattern) {
             try {
                 showToast(`Scanne ${symbol} ${timeframe}...`, 'info');
 
@@ -3891,12 +4000,58 @@
                     const tfPatterns = data.result?.[tfKey]?.patterns || [];
                     const patternCount = tfPatterns.length;
 
-                    if (patternCount > 0) {
-                        // Show detected patterns
-                        const patternNames = tfPatterns.map(p => formatPatternType(p.pattern_type)).join(', ');
-                        showToast(`${patternCount} Pattern(s) erkannt: ${patternNames}`, 'success');
-                    } else {
-                        showToast(`Keine Patterns erkannt für ${symbol} ${timeframe}`, 'info');
+                    // Show the correction panel with suggestions
+                    const panel = document.getElementById(`reval-correction-${feedbackId}`);
+                    const suggestionsContainer = document.getElementById(`reval-scan-suggestions-${feedbackId}`);
+                    const divider = document.getElementById(`reval-divider-${feedbackId}`);
+
+                    if (panel && suggestionsContainer) {
+                        panel.style.display = 'block';
+
+                        if (patternCount > 0) {
+                            // Create clickable buttons for each detected pattern
+                            const buttonsHtml = tfPatterns.map(p => {
+                                const patternType = p.pattern_type;
+                                const patternName = formatPatternType(patternType);
+                                const confidence = (p.confidence * 100).toFixed(0);
+                                const isOriginal = patternType === originalPattern;
+
+                                // Different styling for the originally detected pattern
+                                if (isOriginal) {
+                                    return `<button class="scan-suggestion-btn original" disabled title="Ursprünglich erkanntes Pattern">
+                                        ${patternName} (${confidence}%) - aktuell erkannt
+                                    </button>`;
+                                }
+
+                                return `<button class="scan-suggestion-btn" onclick="selectScanSuggestion('${feedbackId}', '${patternType}')" title="Dieses Pattern als korrekt markieren">
+                                    ✓ ${patternName} (${confidence}%)
+                                </button>`;
+                            }).join('');
+
+                            // Add "Kein Pattern" option
+                            const noPatternBtn = `<button class="scan-suggestion-btn no-pattern" onclick="selectScanSuggestion('${feedbackId}', 'no_pattern')" title="Kein Pattern ist korrekt">
+                                ❌ Kein Pattern erkannt
+                            </button>`;
+
+                            suggestionsContainer.querySelector('.scan-suggestions-buttons').innerHTML = buttonsHtml + noPatternBtn;
+                            suggestionsContainer.style.display = 'block';
+                            divider.style.display = 'flex';
+
+                            showToast(`${patternCount} Pattern(s) erkannt - Vorschläge angezeigt`, 'success');
+                        } else {
+                            // No patterns detected - show only "Kein Pattern" suggestion
+                            suggestionsContainer.querySelector('.scan-suggestions-buttons').innerHTML = `
+                                <div class="no-patterns-found">
+                                    <span>Keine Patterns erkannt bei diesem Scan.</span>
+                                </div>
+                                <button class="scan-suggestion-btn no-pattern" onclick="selectScanSuggestion('${feedbackId}', 'no_pattern')" title="Bestätigen: Kein Pattern">
+                                    ✓ Kein Pattern bestätigen
+                                </button>`;
+                            suggestionsContainer.style.display = 'block';
+                            divider.style.display = 'flex';
+
+                            showToast(`Keine Patterns erkannt - Pattern möglicherweise korrigiert`, 'info');
+                        }
                     }
                 } else {
                     const errorData = await res.json().catch(() => ({}));
@@ -3906,6 +4061,19 @@
                 console.error('Failed to scan for revalidation:', error);
                 showToast(`Scan fehlgeschlagen: ${error.message}`, 'error');
             }
+        }
+
+        // Select a pattern from scan suggestions
+        async function selectScanSuggestion(feedbackId, patternType) {
+            if (patternType === 'no_pattern') {
+                // Mark as correct (pattern no longer detected)
+                await markRevalidation(feedbackId, 'now_correct', null, true);
+            } else {
+                // Mark as still wrong with the new pattern as correction
+                // This saves the correction for future training
+                await markRevalidation(feedbackId, 'still_wrong', patternType, true);
+            }
+            hideRevalidationCorrectionDialog(feedbackId);
         }
 
         // Update revalidation badge on page load
