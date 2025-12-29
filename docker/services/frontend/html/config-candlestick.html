@@ -3742,27 +3742,31 @@
             try {
                 showToast(`Scanne ${symbol} ${timeframe}...`, 'info');
 
-                const res = await fetch(`${CANDLESTICK_API}/patterns/scan`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        symbol: symbol,
-                        timeframes: [timeframe],
-                        lookback_candles: 100,
-                        min_confidence: 0.5
-                    })
-                });
+                // Use GET endpoint /scan/{symbol} with timeframe parameter
+                const res = await fetch(`${CANDLESTICK_API}/scan/${symbol}?timeframe=${timeframe}&lookback=50&min_confidence=0.5`);
 
                 if (res.ok) {
                     const data = await res.json();
-                    const patterns = data.result?.total_patterns_found || 0;
-                    showToast(`${patterns} Patterns gefunden für ${symbol} ${timeframe}`, 'success');
+
+                    // Get patterns for the specific timeframe
+                    const tfKey = timeframe.toLowerCase();
+                    const tfPatterns = data.result?.[tfKey]?.patterns || [];
+                    const patternCount = tfPatterns.length;
+
+                    if (patternCount > 0) {
+                        // Show detected patterns
+                        const patternNames = tfPatterns.map(p => formatPatternType(p.pattern_type)).join(', ');
+                        showToast(`${patternCount} Pattern(s) erkannt: ${patternNames}`, 'success');
+                    } else {
+                        showToast(`Keine Patterns erkannt für ${symbol} ${timeframe}`, 'info');
+                    }
                 } else {
-                    throw new Error('Scan fehlgeschlagen');
+                    const errorData = await res.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Scan fehlgeschlagen');
                 }
             } catch (error) {
                 console.error('Failed to scan for revalidation:', error);
-                showToast('Scan fehlgeschlagen', 'error');
+                showToast(`Scan fehlgeschlagen: ${error.message}`, 'error');
             }
         }
 
