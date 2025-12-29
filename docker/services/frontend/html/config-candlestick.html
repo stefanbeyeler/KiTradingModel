@@ -712,6 +712,129 @@
             width: 100%;
         }
 
+        /* Feedback History Styles */
+        .feedback-history {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            border-left: 3px solid #64c8ff;
+        }
+
+        .feedback-history-title {
+            font-size: 0.8rem;
+            color: #64c8ff;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .feedback-history-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .feedback-history-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .feedback-history-item.confirmed {
+            border-left: 2px solid #81c784;
+        }
+
+        .feedback-history-item.corrected {
+            border-left: 2px solid #ffb74d;
+        }
+
+        .feedback-history-item.rejected {
+            border-left: 2px solid #e57373;
+        }
+
+        .feedback-history-item.revalidated {
+            border-left: 2px solid #64c8ff;
+        }
+
+        .feedback-history-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .feedback-history-type {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .feedback-history-type.confirmed { color: #81c784; }
+        .feedback-history-type.corrected { color: #ffb74d; }
+        .feedback-history-type.rejected { color: #e57373; }
+        .feedback-history-type.revalidated { color: #64c8ff; }
+
+        .feedback-history-time {
+            color: #888;
+            font-size: 0.75rem;
+        }
+
+        .feedback-history-detail {
+            color: #aaa;
+            font-size: 0.75rem;
+        }
+
+        .feedback-history-arrow {
+            color: #888;
+            margin: 0 0.3rem;
+        }
+
+        .feedback-badge-detailed {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .feedback-badge-detailed.confirmed {
+            background: rgba(129, 199, 132, 0.2);
+            color: #81c784;
+        }
+
+        .feedback-badge-detailed.corrected {
+            background: rgba(255, 183, 77, 0.2);
+            color: #ffb74d;
+        }
+
+        .feedback-badge-detailed.rejected {
+            background: rgba(229, 115, 115, 0.2);
+            color: #e57373;
+        }
+
+        .feedback-badge-detailed:hover {
+            filter: brightness(1.2);
+        }
+
+        .feedback-count-badge {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            margin-left: 0.2rem;
+        }
+
         /* Training specific styles */
         .training-status-card {
             background: rgba(0, 0, 0, 0.2);
@@ -2324,7 +2447,8 @@
         // Store patterns for current page display
         let loadedPatterns = [];
 
-        // Store feedback data for timeline display
+        // Store feedback data for timeline display - grouped by pattern ID
+        // Each entry can have multiple feedbacks (initial + revalidations)
         let patternFeedbackMap = {};
 
         // Load feedback data for timeline display
@@ -2333,14 +2457,154 @@
                 const res = await fetch(`${CANDLESTICK_API}/feedback?limit=1000`);
                 const data = await res.json();
 
-                // Create map by pattern_id for quick lookup
+                // Create map by pattern_id - group all feedbacks for the same pattern
                 patternFeedbackMap = {};
                 (data.feedback || []).forEach(fb => {
-                    patternFeedbackMap[fb.id] = fb;
+                    const id = fb.id;
+                    if (!patternFeedbackMap[id]) {
+                        // First feedback for this pattern
+                        patternFeedbackMap[id] = {
+                            ...fb,
+                            feedbackHistory: []
+                        };
+                    }
+
+                    // Build feedback history entry
+                    const historyEntry = {
+                        type: fb.feedback_type,
+                        timestamp: fb.feedback_timestamp,
+                        originalPattern: fb.original_pattern,
+                        correctedPattern: fb.corrected_pattern
+                    };
+
+                    // Add revalidation info if present
+                    if (fb.revalidated) {
+                        historyEntry.revalidated = true;
+                        historyEntry.revalidationResult = fb.revalidation_result;
+                        historyEntry.revalidationTimestamp = fb.revalidation_timestamp;
+                        historyEntry.revalidationNotes = fb.revalidation_notes;
+                        historyEntry.revalidationCorrectedPattern = fb.revalidation_corrected_pattern;
+                    }
+
+                    // Add historical revalidations if present
+                    if (fb.revalidation_history && fb.revalidation_history.length > 0) {
+                        historyEntry.previousRevalidations = fb.revalidation_history;
+                    }
+
+                    patternFeedbackMap[id].feedbackHistory.push(historyEntry);
+
+                    // Update the main entry with latest data
+                    patternFeedbackMap[id].feedback_type = fb.feedback_type;
+                    patternFeedbackMap[id].corrected_pattern = fb.corrected_pattern;
+                    patternFeedbackMap[id].revalidated = fb.revalidated;
+                    patternFeedbackMap[id].revalidation_result = fb.revalidation_result;
                 });
             } catch (error) {
                 console.error('Failed to load feedback data:', error);
             }
+        }
+
+        // Format feedback type for display
+        function formatFeedbackType(type) {
+            const typeMap = {
+                'confirmed': { icon: '✓', label: 'Bestätigt', class: 'confirmed' },
+                'corrected': { icon: '✎', label: 'Korrigiert', class: 'corrected' },
+                'rejected': { icon: '✗', label: 'Abgelehnt', class: 'rejected' }
+            };
+            return typeMap[type] || { icon: '?', label: type, class: '' };
+        }
+
+        // Format revalidation result for display
+        function formatRevalidationResult(result) {
+            const resultMap = {
+                'correct': { icon: '✓', label: 'Jetzt korrekt', class: 'confirmed' },
+                'now_correct': { icon: '✓', label: 'Nicht mehr erkannt', class: 'confirmed' },
+                'still_wrong': { icon: '✗', label: 'Noch falsch', class: 'rejected' }
+            };
+            return resultMap[result] || { icon: '?', label: result, class: '' };
+        }
+
+        // Render detailed feedback history HTML
+        function renderFeedbackHistory(feedback) {
+            if (!feedback || !feedback.feedbackHistory || feedback.feedbackHistory.length === 0) {
+                return '';
+            }
+
+            const historyItems = [];
+
+            feedback.feedbackHistory.forEach(entry => {
+                // Initial feedback
+                const ft = formatFeedbackType(entry.type);
+                const feedbackTime = entry.timestamp ? formatTimestamp(entry.timestamp) : '';
+
+                let detail = '';
+                if (entry.type === 'corrected' && entry.correctedPattern) {
+                    detail = `${formatPatternType(entry.originalPattern)} <span class="feedback-history-arrow">→</span> ${formatPatternType(entry.correctedPattern)}`;
+                } else if (entry.type === 'rejected') {
+                    detail = `${formatPatternType(entry.originalPattern)} <span class="feedback-history-arrow">→</span> Kein Pattern`;
+                }
+
+                historyItems.push(`
+                    <div class="feedback-history-item ${entry.type}">
+                        <div class="feedback-history-row">
+                            <span class="feedback-history-type ${ft.class}">${ft.icon} ${ft.label}</span>
+                            <span class="feedback-history-time">${feedbackTime}</span>
+                        </div>
+                        ${detail ? `<div class="feedback-history-detail">${detail}</div>` : ''}
+                    </div>
+                `);
+
+                // Add revalidation if present
+                if (entry.revalidated) {
+                    const rv = formatRevalidationResult(entry.revalidationResult);
+                    const revalTime = entry.revalidationTimestamp ? formatTimestamp(entry.revalidationTimestamp) : '';
+
+                    let revalDetail = '';
+                    if (entry.revalidationCorrectedPattern) {
+                        revalDetail = `Neue Korrektur: ${formatPatternType(entry.revalidationCorrectedPattern)}`;
+                    }
+                    if (entry.revalidationNotes) {
+                        revalDetail = entry.revalidationNotes;
+                    }
+
+                    historyItems.push(`
+                        <div class="feedback-history-item revalidated">
+                            <div class="feedback-history-row">
+                                <span class="feedback-history-type revalidated">🔄 Re-Validierung: ${rv.label}</span>
+                                <span class="feedback-history-time">${revalTime}</span>
+                            </div>
+                            ${revalDetail ? `<div class="feedback-history-detail">${revalDetail}</div>` : ''}
+                        </div>
+                    `);
+                }
+
+                // Add historical revalidations
+                if (entry.previousRevalidations) {
+                    entry.previousRevalidations.forEach(prevReval => {
+                        const prevRv = formatRevalidationResult(prevReval.result);
+                        const prevTime = prevReval.timestamp ? formatTimestamp(prevReval.timestamp) : '';
+
+                        historyItems.push(`
+                            <div class="feedback-history-item revalidated" style="opacity: 0.7;">
+                                <div class="feedback-history-row">
+                                    <span class="feedback-history-type revalidated">🔄 Re-Validierung: ${prevRv.label}</span>
+                                    <span class="feedback-history-time">${prevTime}</span>
+                                </div>
+                                ${prevReval.notes ? `<div class="feedback-history-detail">${prevReval.notes}</div>` : ''}
+                            </div>
+                        `);
+                    });
+                }
+            });
+
+            return `
+                <div class="feedback-history">
+                    <div class="feedback-history-title">
+                        <span>📋</span> Feedback-Verlauf (${historyItems.length} Einträge)
+                    </div>
+                    ${historyItems.join('')}
+                </div>
+            `;
         }
 
         // Load pattern history with filters
@@ -2450,7 +2714,7 @@
             return html;
         }
 
-        // Render a single timeline item
+        // Render a single timeline item with detailed feedback info
         function renderTimelineItem(pattern) {
             const time = new Date(pattern.timestamp).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
             const confidencePercent = ((pattern.confidence || 0) * 100).toFixed(0);
@@ -2459,35 +2723,91 @@
             // Check for feedback status
             const feedback = patternFeedbackMap[pattern.id];
             let feedbackBadge = '';
+            let feedbackSummary = '';
 
             if (feedback) {
                 const feedbackType = feedback.feedback_type;
-                let icon = '';
-                let label = '';
+                const ft = formatFeedbackType(feedbackType);
 
-                if (feedbackType === 'confirmed') {
-                    icon = '✓';
-                    label = 'Bestätigt';
-                } else if (feedbackType === 'corrected') {
-                    icon = '✎';
-                    label = feedback.corrected_pattern ? formatPatternType(feedback.corrected_pattern) : 'Korrigiert';
-                } else if (feedbackType === 'rejected') {
-                    icon = '✗';
-                    label = 'Abgelehnt';
+                // Count total feedback entries (initial + revalidations)
+                let totalEntries = 1;
+                if (feedback.feedbackHistory) {
+                    feedback.feedbackHistory.forEach(h => {
+                        if (h.revalidated) totalEntries++;
+                        if (h.previousRevalidations) totalEntries += h.previousRevalidations.length;
+                    });
                 }
 
+                // Show revalidation status if applicable
+                let revalIcon = '';
+                if (feedback.revalidated) {
+                    const rv = formatRevalidationResult(feedback.revalidation_result);
+                    revalIcon = `<span title="Re-Validierung: ${rv.label}" style="margin-left: 3px;">🔄</span>`;
+                }
+
+                // Build detailed label
+                let label = ft.label;
+                if (feedbackType === 'corrected' && feedback.corrected_pattern) {
+                    label = `→ ${formatPatternType(feedback.corrected_pattern)}`;
+                }
+
+                // Badge with entry count if multiple
+                const countBadge = totalEntries > 1 ? `<span class="feedback-count-badge">${totalEntries}</span>` : '';
+
                 feedbackBadge = `
-                    <span class="timeline-feedback ${feedbackType}" title="${label}">
-                        <span class="timeline-feedback-icon">${icon}</span>
+                    <span class="feedback-badge-detailed ${feedbackType}"
+                          title="Klicken für Details"
+                          onclick="event.stopPropagation(); toggleFeedbackDetails('${pattern.id}')">
+                        <span>${ft.icon}</span>
                         <span>${label}</span>
+                        ${revalIcon}
+                        ${countBadge}
                     </span>
+                `;
+
+                // Build detailed feedback summary (hidden by default)
+                const feedbackTime = feedback.feedback_timestamp ? formatTimestamp(feedback.feedback_timestamp) : '';
+                feedbackSummary = `
+                    <div id="feedback-details-${pattern.id}" class="feedback-history" style="display: none; margin-top: 0.5rem;">
+                        <div class="feedback-history-title">
+                            <span>📋</span> Feedback-Verlauf
+                        </div>
+                        <div class="feedback-history-item ${feedbackType}">
+                            <div class="feedback-history-row">
+                                <span class="feedback-history-type ${ft.class}">${ft.icon} ${ft.label}</span>
+                                <span class="feedback-history-time">${feedbackTime}</span>
+                            </div>
+                            ${feedbackType === 'corrected' && feedback.corrected_pattern ?
+                                `<div class="feedback-history-detail">${formatPatternType(feedback.original_pattern)} <span class="feedback-history-arrow">→</span> ${formatPatternType(feedback.corrected_pattern)}</div>` : ''}
+                            ${feedbackType === 'rejected' ?
+                                `<div class="feedback-history-detail">${formatPatternType(feedback.original_pattern)} <span class="feedback-history-arrow">→</span> Kein Pattern</div>` : ''}
+                        </div>
+                        ${feedback.revalidated ? `
+                            <div class="feedback-history-item revalidated">
+                                <div class="feedback-history-row">
+                                    <span class="feedback-history-type revalidated">🔄 Re-Validierung: ${formatRevalidationResult(feedback.revalidation_result).label}</span>
+                                    <span class="feedback-history-time">${feedback.revalidation_timestamp ? formatTimestamp(feedback.revalidation_timestamp) : ''}</span>
+                                </div>
+                                ${feedback.revalidation_notes ? `<div class="feedback-history-detail">${feedback.revalidation_notes}</div>` : ''}
+                            </div>
+                        ` : ''}
+                        ${feedback.revalidation_history ? feedback.revalidation_history.map(h => `
+                            <div class="feedback-history-item revalidated" style="opacity: 0.7;">
+                                <div class="feedback-history-row">
+                                    <span class="feedback-history-type revalidated">🔄 ${formatRevalidationResult(h.result).label}</span>
+                                    <span class="feedback-history-time">${h.timestamp ? formatTimestamp(h.timestamp) : ''}</span>
+                                </div>
+                                ${h.notes ? `<div class="feedback-history-detail">${h.notes}</div>` : ''}
+                            </div>
+                        `).join('') : ''}
+                    </div>
                 `;
             }
 
             return `
-                <div class="timeline-item ${directionClass}" onclick="openPatternModal(${pattern.index})">
+                <div class="timeline-item ${directionClass}">
                     <span class="timeline-time">${time}</span>
-                    <div class="timeline-content">
+                    <div class="timeline-content" onclick="openPatternModal(${pattern.index})">
                         <span class="timeline-pattern-name">${formatPatternType(pattern.pattern_type)}</span>
                         <span class="timeline-symbol">${pattern.symbol}</span>
                         <span class="timeline-direction ${directionClass}">${pattern.direction}</span>
@@ -2495,8 +2815,17 @@
                         <span class="timeline-confidence">${confidencePercent}%</span>
                         <span class="timeline-arrow">›</span>
                     </div>
+                    ${feedbackSummary}
                 </div>
             `;
+        }
+
+        // Toggle feedback details visibility
+        function toggleFeedbackDetails(patternId) {
+            const detailsEl = document.getElementById(`feedback-details-${patternId}`);
+            if (detailsEl) {
+                detailsEl.style.display = detailsEl.style.display === 'none' ? 'block' : 'none';
+            }
         }
 
         // Current modal pattern for corrections
@@ -2892,7 +3221,7 @@
                 if (ohlcCache[cacheKey]) {
                     ohlcData = ohlcCache[cacheKey];
                 } else {
-                    const res = await fetch(`${DATA_API}/twelvedata/time_series/${pattern.symbol}?interval=${interval}&outputsize=30`);
+                    const res = await fetch(`${DATA_API}/twelvedata/time_series/${pattern.symbol}?interval=${interval}&outputsize=50`);
                     const data = await res.json();
                     ohlcData = data.values || [];
                     ohlcCache[cacheKey] = ohlcData;
@@ -2927,9 +3256,9 @@
                 // First candle of pattern is (patternCandleCount - 1) positions BEFORE the last candle
                 const firstCandleIdx = lastCandleIdx - (patternCandleCount - 1);
 
-                // Get slice: some candles before pattern, pattern candles, some after
-                const contextBefore = 5;
-                const contextAfter = 3;
+                // Get slice: more candles before pattern, pattern candles, some after for better context
+                const contextBefore = 12;
+                const contextAfter = 8;
                 const startIdx = Math.max(0, firstCandleIdx - contextBefore);
                 const endIdx = Math.min(chronoData.length, lastCandleIdx + contextAfter + 1);
                 const chartCandles = chronoData.slice(startIdx, endIdx);
@@ -3549,12 +3878,13 @@
             ctx.fillText('Lade Chart...', canvas.offsetWidth / 2, canvas.offsetHeight / 2);
 
             try {
-                // First check if we have cached OHLC data in the item
-                let ohlcData = item.ohlc_data;
+                // Always fetch fresh data from API for better context (15 candles before, 14 after)
+                // The cached ohlc_data in item often only contains the pattern candles without context
+                let ohlcData = await fetchOhlcForRevalidation(item.symbol, item.timeframe, item.pattern_timestamp);
 
-                // If no cached data, fetch from API
+                // Fallback to cached data only if API fails
                 if (!ohlcData || ohlcData.length === 0) {
-                    ohlcData = await fetchOhlcForRevalidation(item.symbol, item.timeframe, item.pattern_timestamp);
+                    ohlcData = item.ohlc_data;
                 }
 
                 if (!ohlcData || ohlcData.length === 0) {
@@ -3760,6 +4090,9 @@
                        <strong>Prüfung:</strong> Erkennt das Modell jetzt "${formatPatternType(item.corrected_pattern)}" statt "${formatPatternType(item.original_pattern)}"?
                    </div>`;
 
+            // Build feedback history section for revalidation view
+            const feedbackHistoryHtml = renderRevalidationFeedbackHistory(item);
+
             return `
                 <div class="revalidation-item ${isRejected ? 'rejected' : ''}" data-item-id="${item.id}">
                     <div class="revalidation-header">
@@ -3781,10 +4114,7 @@
                             <canvas id="${canvasId}" class="revalidation-canvas" style="width: 100%; height: 140px; border-radius: 6px; background: rgba(0,0,0,0.2);"></canvas>
                         </div>
                     </div>
-                    <div class="revalidation-meta">
-                        <span>Pattern: ${formatTimestamp(item.pattern_timestamp)}</span>
-                        <span>Feedback: ${formatTimestamp(item.feedback_timestamp)}</span>
-                    </div>
+                    ${feedbackHistoryHtml}
                     <div class="revalidation-actions">
                         <button class="btn btn-success" onclick="markRevalidation('${item.id}', '${successResult}')" title="Modell erkennt jetzt korrekt">
                             ${successLabel}
@@ -3863,6 +4193,82 @@
             if (bullishPatterns.includes(patternType)) return 'bullish';
             if (bearishPatterns.includes(patternType)) return 'bearish';
             return 'neutral';
+        }
+
+        // Render feedback history for revalidation item
+        function renderRevalidationFeedbackHistory(item) {
+            const historyItems = [];
+
+            // Initial feedback
+            const ft = formatFeedbackType(item.feedback_type);
+            const feedbackTime = item.feedback_timestamp ? formatTimestamp(item.feedback_timestamp) : '';
+            const patternTime = item.pattern_timestamp ? formatTimestamp(item.pattern_timestamp) : '';
+
+            // Pattern timestamp row
+            historyItems.push(`
+                <div class="feedback-history-item" style="border-left-color: #666;">
+                    <div class="feedback-history-row">
+                        <span class="feedback-history-type" style="color: #888;">📊 Pattern erkannt</span>
+                        <span class="feedback-history-time">${patternTime}</span>
+                    </div>
+                    <div class="feedback-history-detail">${formatPatternType(item.original_pattern)}</div>
+                </div>
+            `);
+
+            // Feedback entry
+            let feedbackDetail = '';
+            if (item.feedback_type === 'corrected' && item.corrected_pattern) {
+                feedbackDetail = `${formatPatternType(item.original_pattern)} <span class="feedback-history-arrow">→</span> ${formatPatternType(item.corrected_pattern)}`;
+            } else if (item.feedback_type === 'rejected') {
+                feedbackDetail = `${formatPatternType(item.original_pattern)} <span class="feedback-history-arrow">→</span> Kein Pattern`;
+            }
+
+            historyItems.push(`
+                <div class="feedback-history-item ${item.feedback_type}">
+                    <div class="feedback-history-row">
+                        <span class="feedback-history-type ${ft.class}">${ft.icon} ${ft.label}</span>
+                        <span class="feedback-history-time">${feedbackTime}</span>
+                    </div>
+                    ${feedbackDetail ? `<div class="feedback-history-detail">${feedbackDetail}</div>` : ''}
+                </div>
+            `);
+
+            // Previous revalidations from history
+            if (item.revalidation_history && item.revalidation_history.length > 0) {
+                item.revalidation_history.forEach(prevReval => {
+                    const rv = formatRevalidationResult(prevReval.result);
+                    const revalTime = prevReval.timestamp ? formatTimestamp(prevReval.timestamp) : '';
+
+                    historyItems.push(`
+                        <div class="feedback-history-item revalidated" style="opacity: 0.8;">
+                            <div class="feedback-history-row">
+                                <span class="feedback-history-type revalidated">🔄 Re-Validierung: ${rv.label}</span>
+                                <span class="feedback-history-time">${revalTime}</span>
+                            </div>
+                            ${prevReval.notes ? `<div class="feedback-history-detail">${prevReval.notes}</div>` : ''}
+                        </div>
+                    `);
+                });
+            }
+
+            // Pending indicator
+            historyItems.push(`
+                <div class="feedback-history-item" style="border-left-color: #64c8ff; background: rgba(100, 200, 255, 0.1);">
+                    <div class="feedback-history-row">
+                        <span class="feedback-history-type" style="color: #64c8ff;">⏳ Ausstehende Re-Validierung</span>
+                        <span class="feedback-history-time">jetzt</span>
+                    </div>
+                </div>
+            `);
+
+            return `
+                <div class="feedback-history" style="margin: 0.75rem 0;">
+                    <div class="feedback-history-title">
+                        <span>📋</span> Feedback-Verlauf (${historyItems.length} Einträge)
+                    </div>
+                    ${historyItems.join('')}
+                </div>
+            `;
         }
 
         // Mark an item as revalidated
