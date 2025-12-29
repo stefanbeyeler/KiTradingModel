@@ -540,11 +540,13 @@ async def apply_recommendation(request: ApplyRecommendationRequest):
             )
 
         # Safety check - don't allow extreme changes
+        # For small values, allow larger percentage changes (up to 75%)
         change_pct = abs(request.new_value - current_value) / max(current_value, 0.01)
-        if change_pct > 0.5:  # Max 50% change
+        max_change = 0.75  # Allow up to 75% change
+        if change_pct > max_change:
             raise HTTPException(
                 status_code=400,
-                detail=f"Change too large ({change_pct*100:.0f}%). Max 50% change allowed per adjustment."
+                detail=f"Change too large ({change_pct*100:.0f}%). Max {max_change*100:.0f}% change allowed per adjustment."
             )
 
         # Apply the change
