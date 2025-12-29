@@ -157,12 +157,38 @@ class PatternFeedback(BaseModel):
     reason_text: Optional[str] = None  # Freitext für zusätzliche Details
 
 
+def _load_feedback_status_map() -> dict:
+    """Load feedback data and create a lookup map by pattern_id."""
+    feedback_map = {}
+    try:
+        if FEEDBACK_FILE.exists():
+            with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+                feedback_data = json.load(f)
+                for entry in feedback_data:
+                    pattern_id = entry.get("id") or entry.get("pattern_id")
+                    if pattern_id:
+                        feedback_map[pattern_id] = {
+                            "feedback_status": entry.get("feedback_type", "unknown"),
+                            "corrected_pattern": entry.get("corrected_pattern"),
+                            "reason_category": entry.get("reason_category"),
+                            "reason_text": entry.get("reason_text"),
+                            "feedback_timestamp": entry.get("feedback_timestamp"),
+                        }
+    except Exception as e:
+        logger.warning(f"Failed to load feedback map: {e}")
+    return feedback_map
+
+
 @router.get("/history")
 async def get_pattern_history(
     symbol: Optional[str] = Query(default=None, description="Filter by symbol"),
     direction: Optional[str] = Query(default=None, description="Filter by direction (bullish, bearish, neutral)"),
     category: Optional[str] = Query(default=None, description="Filter by category (reversal, continuation, indecision)"),
     timeframe: Optional[str] = Query(default=None, description="Filter by timeframe (M5, M15, H1, H4, D1)"),
+    feedback_status: Optional[str] = Query(
+        default=None,
+        description="Filter by feedback status (pending, confirmed, corrected, rejected)"
+    ),
     min_confidence: float = Query(default=0.0, ge=0.0, le=1.0, description="Minimum confidence"),
     limit: int = Query(default=100, ge=1, le=1000, description="Maximum results")
 ):
@@ -170,28 +196,58 @@ async def get_pattern_history(
     Get pattern history with optional filters.
 
     Returns detected patterns from the history, sorted by most recent first.
+    Each pattern is enriched with its feedback status if available.
 
     Parameters:
     - **symbol**: Filter by trading symbol
     - **direction**: Filter by signal direction (bullish, bearish, neutral)
     - **category**: Filter by pattern category (reversal, continuation, indecision)
     - **timeframe**: Filter by timeframe (M5, M15, H1, H4, D1)
+    - **feedback_status**: Filter by feedback status (pending, confirmed, corrected, rejected)
     - **min_confidence**: Minimum confidence threshold
     - **limit**: Maximum number of results
     """
     try:
+        # Get base history
+        # When filtering by feedback_status, we need to fetch all patterns first
+        # because feedback status is stored separately
+        fetch_limit = 1000 if feedback_status else limit
         history = pattern_history_service.get_history(
             symbol=symbol.upper() if symbol else None,
             direction=direction.lower() if direction else None,
             category=category.lower() if category else None,
             timeframe=timeframe.upper() if timeframe else None,
             min_confidence=min_confidence,
-            limit=limit,
+            limit=fetch_limit,
         )
 
+        # Load feedback status map
+        feedback_map = _load_feedback_status_map()
+
+        # Enrich patterns with feedback status
+        enriched_history = []
+        for pattern in history:
+            pattern_id = pattern.get("id")
+            if pattern_id and pattern_id in feedback_map:
+                pattern["feedback_status"] = feedback_map[pattern_id]["feedback_status"]
+                pattern["feedback_details"] = feedback_map[pattern_id]
+            else:
+                pattern["feedback_status"] = "pending"
+                pattern["feedback_details"] = None
+
+            # Apply feedback_status filter if specified
+            if feedback_status:
+                if pattern["feedback_status"] != feedback_status.lower():
+                    continue
+
+            enriched_history.append(pattern)
+
+            if len(enriched_history) >= limit:
+                break
+
         return {
-            "count": len(history),
-            "patterns": history
+            "count": len(enriched_history),
+            "patterns": enriched_history
         }
 
     except Exception as e:

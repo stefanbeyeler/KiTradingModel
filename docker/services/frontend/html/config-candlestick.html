@@ -2366,6 +2366,16 @@
                             <option value="0.8">80%+</option>
                         </select>
                     </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.75rem;">Status</label>
+                        <select id="historyFilterStatus" onchange="loadPatternHistory()">
+                            <option value="">Alle</option>
+                            <option value="pending">Ausstehend</option>
+                            <option value="confirmed">Bestätigt</option>
+                            <option value="corrected">Korrigiert</option>
+                            <option value="rejected">Abgelehnt</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Timeline Container -->
@@ -3472,6 +3482,7 @@
             document.getElementById('historyFilterDirection').value = '';
             document.getElementById('historyFilterTimeframe').value = '';
             document.getElementById('historyFilterConfidence').value = '0';
+            document.getElementById('historyFilterStatus').value = '';
             loadPatternHistory(1);
         }
 
@@ -3653,6 +3664,7 @@
             const direction = document.getElementById('historyFilterDirection')?.value || '';
             const timeframe = document.getElementById('historyFilterTimeframe')?.value || '';
             const minConfidence = parseFloat(document.getElementById('historyFilterConfidence')?.value || '0');
+            const feedbackStatus = document.getElementById('historyFilterStatus')?.value || '';
 
             try {
                 // Load feedback data first (for status display)
@@ -3663,6 +3675,7 @@
                 params.set('limit', '1000');  // Load more for complete navigation
                 if (symbol) params.set('symbol', symbol);
                 if (timeframe) params.set('timeframe', timeframe);
+                if (feedbackStatus) params.set('feedback_status', feedbackStatus);
 
                 const res = await fetch(`${CANDLESTICK_API}/history?${params}`);
                 let data = await res.json();
