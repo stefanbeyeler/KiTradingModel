@@ -16,6 +16,8 @@ from ..services.claude_validator_service import (
     ClaudeValidationResult
 )
 from ..services.pattern_history_service import pattern_history_service
+from ..services.feedback_analyzer_service import feedback_analyzer_service
+from ..services.rule_config_service import rule_config_service
 
 router = APIRouter()
 
@@ -412,4 +414,245 @@ async def get_problematic_patterns(
 
     except Exception as e:
         logger.error(f"Error getting problematic patterns: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# FEEDBACK ANALYSIS ENDPOINTS
+# ============================================================================
+
+class ApplyRecommendationRequest(BaseModel):
+    """Request to apply a parameter recommendation."""
+    pattern: str = Field(..., description="Pattern type (e.g., 'hammer')")
+    parameter: str = Field(..., description="Parameter name (e.g., 'body_max_ratio')")
+    new_value: float = Field(..., description="New value to set")
+    reason: str = Field(..., description="Feedback reason category")
+    feedback_count: int = Field(default=1, ge=1, description="Number of feedback items")
+
+
+@router.get("/feedback-analysis")
+async def get_feedback_analysis():
+    """
+    Analyze Claude validation feedback to identify improvement opportunities.
+
+    This endpoint:
+    1. Analyzes all rejection reasoning from Claude validations
+    2. Extracts structured feedback categories (e.g., "body_too_large", "wrong_trend_context")
+    3. Aggregates statistics by pattern type and reason
+
+    Use the results to understand why patterns are being rejected.
+    """
+    try:
+        # Get validation history
+        history = claude_validator_service.get_validation_history(limit=500)
+
+        # Analyze feedback
+        analysis = feedback_analyzer_service.analyze_validation_history(history)
+
+        return {
+            "status": "success",
+            "analysis": analysis,
+            "summary": feedback_analyzer_service.get_feedback_summary()
+        }
+
+    except Exception as e:
+        logger.error(f"Error analyzing feedback: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/recommendations")
+async def get_recommendations():
+    """
+    Generate parameter adjustment recommendations based on Claude feedback.
+
+    This endpoint analyzes rejection patterns and generates specific
+    recommendations for adjusting detection parameters to reduce
+    false positives.
+
+    **Example Response:**
+    ```json
+    {
+        "recommendations": [
+            {
+                "pattern": "hammer",
+                "parameter": "body_max_ratio",
+                "current_value": 0.35,
+                "recommended_value": 0.28,
+                "reason": "body_too_large",
+                "feedback_count": 5,
+                "confidence": 0.9,
+                "priority": "high",
+                "impact_estimate": "Strengerer Body-Check führt zu weniger False Positives"
+            }
+        ]
+    }
+    ```
+    """
+    try:
+        # Get validation history
+        history = claude_validator_service.get_validation_history(limit=500)
+
+        # Analyze feedback
+        feedback_stats = feedback_analyzer_service.analyze_validation_history(history)
+
+        # Generate recommendations
+        recommendations = feedback_analyzer_service.generate_recommendations(
+            feedback_stats=feedback_stats,
+            rule_config_service=rule_config_service
+        )
+
+        return {
+            "status": "success",
+            "count": len(recommendations),
+            "recommendations": [r.to_dict() for r in recommendations],
+            "feedback_summary": {
+                "total_rejections": feedback_stats.get("total_rejections", 0),
+                "patterns_analyzed": len(feedback_stats.get("by_pattern", {})),
+                "reason_categories": len(feedback_stats.get("by_reason", {}))
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error generating recommendations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/apply-recommendation")
+async def apply_recommendation(request: ApplyRecommendationRequest):
+    """
+    Apply a single parameter recommendation.
+
+    This adjusts the detection parameters based on Claude's feedback
+    to improve pattern recognition accuracy.
+
+    **Safety:**
+    - Changes are logged with reason and feedback count
+    - Original values can be restored via /rules/reset endpoint
+    """
+    try:
+        # Get current value
+        current_value = rule_config_service.get_param(request.pattern, request.parameter)
+
+        if current_value is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Parameter {request.parameter} not found for pattern {request.pattern}"
+            )
+
+        # Safety check - don't allow extreme changes
+        change_pct = abs(request.new_value - current_value) / max(current_value, 0.01)
+        if change_pct > 0.5:  # Max 50% change
+            raise HTTPException(
+                status_code=400,
+                detail=f"Change too large ({change_pct*100:.0f}%). Max 50% change allowed per adjustment."
+            )
+
+        # Apply the change
+        success = rule_config_service.set_param(
+            pattern=request.pattern,
+            param_name=request.parameter,
+            value=request.new_value,
+            reason=f"claude_feedback:{request.reason}",
+            feedback_count=request.feedback_count
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to apply recommendation")
+
+        # Track for impact analysis
+        feedback_analyzer_service.track_adjustment(
+            pattern=request.pattern,
+            parameter=request.parameter,
+            old_value=current_value,
+            new_value=request.new_value,
+            reason=request.reason,
+            feedback_count=request.feedback_count
+        )
+
+        logger.info(
+            f"Applied recommendation: {request.pattern}.{request.parameter} "
+            f"{current_value} -> {request.new_value} (reason: {request.reason})"
+        )
+
+        return {
+            "status": "success",
+            "pattern": request.pattern,
+            "parameter": request.parameter,
+            "old_value": current_value,
+            "new_value": request.new_value,
+            "reason": request.reason,
+            "message": f"Parameter adjusted successfully. New patterns will use the updated value."
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error applying recommendation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/current-rules")
+async def get_current_rules():
+    """
+    Get all current detection rule parameters.
+
+    Returns the current configuration for all pattern types,
+    including any adjustments made via feedback recommendations.
+    """
+    try:
+        params = rule_config_service.get_all_params()
+        history = rule_config_service.get_adjustment_history(limit=20)
+
+        return {
+            "params": params,
+            "recent_adjustments": history,
+            "total_patterns": len(params)
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting current rules: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/impact-analysis")
+async def get_impact_analysis():
+    """
+    Analyze the impact of parameter adjustments.
+
+    Compares rejection rates before and after adjustments
+    to measure improvement.
+    """
+    try:
+        # Get all adjustments
+        adjustments = rule_config_service.get_adjustment_history(limit=50)
+        validation_history = claude_validator_service.get_validation_history(limit=1000)
+
+        impacts = []
+        for adj in adjustments:
+            if not adj.get("timestamp"):
+                continue
+
+            impact = feedback_analyzer_service.measure_impact(
+                validation_history=validation_history,
+                adjustment_timestamp=adj.get("timestamp", "")
+            )
+
+            impacts.append({
+                "adjustment": adj,
+                "impact": impact
+            })
+
+        # Calculate overall improvement
+        total_improvements = sum(1 for i in impacts if i["impact"].get("improved", False))
+
+        return {
+            "status": "success",
+            "total_adjustments": len(adjustments),
+            "improvements": total_improvements,
+            "success_rate": round(total_improvements / len(adjustments) * 100, 1) if adjustments else 0,
+            "details": impacts[-10:]  # Last 10
+        }
+
+    except Exception as e:
+        logger.error(f"Error analyzing impact: {e}")
         raise HTTPException(status_code=500, detail=str(e))

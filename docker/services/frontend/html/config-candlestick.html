@@ -2819,6 +2819,74 @@
                     <div id="chartPreviewInfo" style="margin-top: 0.5rem; color: #888;"></div>
                 </div>
             </div>
+
+            <!-- Feedback Loop - Parameter Recommendations -->
+            <div class="card" style="border: 1px solid rgba(100, 200, 255, 0.3);">
+                <div class="card-header">
+                    <h2 class="card-title">🔄 Feedback-Loop: Empfehlungen</h2>
+                    <button class="btn btn-primary" onclick="loadRecommendations()">Empfehlungen laden</button>
+                </div>
+                <p class="card-description">
+                    Basierend auf Claude's Ablehnungsgründen werden Parameter-Anpassungen empfohlen,
+                    um die Erkennungsgenauigkeit zu verbessern. Ein Klick auf "Anwenden" passt den Parameter an.
+                </p>
+                <div id="recommendationsContainer" style="margin-top: 1rem;">
+                    <div style="text-align: center; color: #888; padding: 1rem;">
+                        Klicke "Empfehlungen laden" um Verbesserungsvorschläge zu erhalten.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Rules -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⚙️ Aktuelle Regel-Parameter</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="loadCurrentRules()">Laden</button>
+                        <button class="btn btn-warning" onclick="resetAllRules()">Alle zurücksetzen</button>
+                    </div>
+                </div>
+                <p class="card-description">
+                    Zeigt die aktuellen Erkennungsparameter und kürzliche Anpassungen.
+                </p>
+                <div id="currentRulesContainer" style="display: none; margin-top: 1rem;">
+                    <h4 style="margin-bottom: 0.5rem;">Kürzliche Anpassungen</h4>
+                    <div id="recentAdjustments" style="max-height: 200px; overflow-y: auto;"></div>
+                    <h4 style="margin: 1rem 0 0.5rem;">Parameter nach Pattern-Typ</h4>
+                    <select id="rulePatternSelect" onchange="showPatternParams()" style="padding: 0.5rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; margin-bottom: 0.5rem;">
+                        <option value="">-- Pattern auswählen --</option>
+                    </select>
+                    <div id="patternParamsTable"></div>
+                </div>
+            </div>
+
+            <!-- Impact Analysis -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📊 Impact-Analyse</h2>
+                    <button class="btn btn-secondary" onclick="loadImpactAnalysis()">Analysieren</button>
+                </div>
+                <p class="card-description">
+                    Misst die Wirksamkeit der Anpassungen durch Vergleich der Ablehnungsraten vor und nach Änderungen.
+                </p>
+                <div id="impactContainer" style="display: none; margin-top: 1rem;">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="impactTotalAdj">-</div>
+                            <div class="stat-label">Anpassungen gesamt</div>
+                        </div>
+                        <div class="stat-card" style="border-color: rgba(76, 175, 80, 0.3);">
+                            <div class="stat-value" id="impactImprovements" style="color: #81c784;">-</div>
+                            <div class="stat-label">Verbesserungen</div>
+                        </div>
+                        <div class="stat-card" style="border-color: rgba(100, 200, 255, 0.3);">
+                            <div class="stat-value" id="impactSuccessRate" style="color: #64c8ff;">-</div>
+                            <div class="stat-label">Erfolgsrate</div>
+                        </div>
+                    </div>
+                    <div id="impactDetails" style="margin-top: 1rem;"></div>
+                </div>
+            </div>
         </div><!-- End Tab: Claude QA -->
 
     </main>
@@ -6561,6 +6629,244 @@
                 console.error('Chart preview error:', e);
                 container.style.display = 'none';
                 showToast('Chart-Vorschau fehlgeschlagen: ' + e.message, 'error');
+            }
+        }
+
+        // === Feedback Loop Functions ===
+        let currentRulesData = null;
+
+        async function loadRecommendations() {
+            const container = document.getElementById('recommendationsContainer');
+            container.innerHTML = '<div style="text-align: center;"><span class="spinner"></span> Analysiere Feedback...</div>';
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/claude/recommendations`);
+                if (!response.ok) throw new Error('Empfehlungen nicht verfügbar');
+                const data = await response.json();
+
+                if (!data.recommendations || data.recommendations.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; color: #888; padding: 1rem;">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">✓</div>
+                            Keine Empfehlungen verfügbar. Führe mehr Claude-Validierungen durch,
+                            um Verbesserungsvorschläge zu erhalten.
+                            <br><small>(${data.feedback_summary?.total_rejections || 0} Ablehnungen analysiert)</small>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = `
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(100, 200, 255, 0.1); border-radius: 8px;">
+                        <strong>${data.count} Empfehlungen</strong> basierend auf
+                        <strong>${data.feedback_summary?.total_rejections || 0}</strong> Ablehnungen
+                        in <strong>${data.feedback_summary?.patterns_analyzed || 0}</strong> Pattern-Typen
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        ${data.recommendations.map((r, idx) => `
+                            <div class="recommendation-item" style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; border-left: 3px solid ${r.priority === 'high' ? '#e57373' : r.priority === 'medium' ? '#ffb74d' : '#81c784'};">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
+                                    <div>
+                                        <span style="font-weight: bold; color: #64c8ff;">${formatPatternType(r.pattern)}</span>
+                                        <span style="color: #888;">.</span>
+                                        <span style="color: #aaa;">${r.parameter}</span>
+                                        <span class="badge ${r.priority === 'high' ? 'badge-danger' : r.priority === 'medium' ? 'badge-warning' : 'badge-success'}" style="margin-left: 0.5rem; font-size: 0.7rem;">
+                                            ${r.priority.toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <button class="btn btn-success" style="padding: 0.3rem 0.75rem; font-size: 0.85rem;"
+                                            onclick="applyRecommendation('${r.pattern}', '${r.parameter}', ${r.recommended_value}, '${r.reason}', ${r.feedback_count})"
+                                            id="applyBtn${idx}">
+                                        Anwenden
+                                    </button>
+                                </div>
+                                <div style="margin-top: 0.5rem; display: flex; gap: 2rem; flex-wrap: wrap;">
+                                    <div>
+                                        <span style="color: #888;">Aktuell:</span>
+                                        <span style="color: #e57373; font-family: monospace;">${r.current_value}</span>
+                                    </div>
+                                    <div>
+                                        <span style="color: #888;">→ Empfohlen:</span>
+                                        <span style="color: #81c784; font-family: monospace;">${r.recommended_value}</span>
+                                    </div>
+                                    <div>
+                                        <span style="color: #888;">Grund:</span>
+                                        <span style="color: #ffb74d;">${r.reason.replace(/_/g, ' ')}</span>
+                                        <span style="color: #666;">(${r.feedback_count}x)</span>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #888;">
+                                    💡 ${r.impact_estimate}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (e) {
+                console.error('Recommendations error:', e);
+                container.innerHTML = `<div style="color: #e57373; text-align: center;">Fehler: ${e.message}</div>`;
+            }
+        }
+
+        async function applyRecommendation(pattern, parameter, newValue, reason, feedbackCount) {
+            if (!confirm(`Parameter anpassen?\n\n${pattern}.${parameter}\n→ ${newValue}\n\nGrund: ${reason}`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/claude/apply-recommendation`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pattern: pattern,
+                        parameter: parameter,
+                        new_value: newValue,
+                        reason: reason,
+                        feedback_count: feedbackCount
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    showToast(`Parameter angepasst: ${pattern}.${parameter} = ${newValue}`, 'success');
+                    // Reload recommendations
+                    loadRecommendations();
+                } else {
+                    throw new Error(data.detail || 'Anpassung fehlgeschlagen');
+                }
+            } catch (e) {
+                console.error('Apply recommendation error:', e);
+                showToast('Fehler: ' + e.message, 'error');
+            }
+        }
+
+        async function loadCurrentRules() {
+            const container = document.getElementById('currentRulesContainer');
+            container.style.display = 'block';
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/claude/current-rules`);
+                if (!response.ok) throw new Error('Regeln nicht verfügbar');
+                const data = await response.json();
+                currentRulesData = data;
+
+                // Recent adjustments
+                const adjContainer = document.getElementById('recentAdjustments');
+                if (data.recent_adjustments && data.recent_adjustments.length > 0) {
+                    adjContainer.innerHTML = data.recent_adjustments.map(a => `
+                        <div style="padding: 0.5rem; margin-bottom: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 0.85rem;">
+                            <div>
+                                <span style="color: #64c8ff;">${formatPatternType(a.pattern)}</span>.<span style="color: #aaa;">${a.parameter}</span>
+                            </div>
+                            <div style="color: #888;">
+                                ${a.old_value} → ${a.new_value}
+                                <span style="margin-left: 0.5rem; color: #666;">(${a.reason})</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: #666;">${new Date(a.timestamp).toLocaleString('de-CH')}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    adjContainer.innerHTML = '<div style="color: #888;">Keine Anpassungen vorhanden</div>';
+                }
+
+                // Pattern select
+                const select = document.getElementById('rulePatternSelect');
+                select.innerHTML = '<option value="">-- Pattern auswählen --</option>';
+                Object.keys(data.params).sort().forEach(pattern => {
+                    select.innerHTML += `<option value="${pattern}">${formatPatternType(pattern)}</option>`;
+                });
+
+            } catch (e) {
+                console.error('Current rules error:', e);
+                showToast('Fehler beim Laden der Regeln: ' + e.message, 'error');
+            }
+        }
+
+        function showPatternParams() {
+            const pattern = document.getElementById('rulePatternSelect').value;
+            const container = document.getElementById('patternParamsTable');
+
+            if (!pattern || !currentRulesData) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const params = currentRulesData.params[pattern] || {};
+            container.innerHTML = `
+                <table class="data-table" style="font-size: 0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Wert</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${Object.entries(params).map(([key, val]) => `
+                            <tr>
+                                <td style="color: #aaa;">${key}</td>
+                                <td style="font-family: monospace;">${val}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function resetAllRules() {
+            if (!confirm('Alle Regel-Parameter auf Standardwerte zurücksetzen?\n\nDies macht alle Anpassungen rückgängig.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/rules/reset`, { method: 'POST' });
+                if (!response.ok) throw new Error('Reset fehlgeschlagen');
+                showToast('Alle Parameter zurückgesetzt', 'success');
+                loadCurrentRules();
+            } catch (e) {
+                console.error('Reset rules error:', e);
+                showToast('Fehler: ' + e.message, 'error');
+            }
+        }
+
+        async function loadImpactAnalysis() {
+            const container = document.getElementById('impactContainer');
+            container.style.display = 'block';
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/claude/impact-analysis`);
+                if (!response.ok) throw new Error('Analyse nicht verfügbar');
+                const data = await response.json();
+
+                document.getElementById('impactTotalAdj').textContent = data.total_adjustments || 0;
+                document.getElementById('impactImprovements').textContent = data.improvements || 0;
+                document.getElementById('impactSuccessRate').textContent = `${data.success_rate || 0}%`;
+
+                const details = document.getElementById('impactDetails');
+                if (data.details && data.details.length > 0) {
+                    details.innerHTML = `
+                        <h4 style="margin-bottom: 0.5rem;">Letzte Anpassungen</h4>
+                        ${data.details.map(d => `
+                            <div style="padding: 0.5rem; margin-bottom: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: #64c8ff;">${formatPatternType(d.adjustment?.pattern || '')}.${d.adjustment?.parameter || ''}</span>
+                                    <span style="color: ${d.impact?.improved ? '#81c784' : '#e57373'};">
+                                        ${d.impact?.improved ? '↓' : '↑'} ${Math.abs(d.impact?.improvement_pct || 0)}%
+                                    </span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: #888;">
+                                    Vorher: ${d.impact?.before?.rejection_rate || 0}% →
+                                    Nachher: ${d.impact?.after?.rejection_rate || 0}%
+                                </div>
+                            </div>
+                        `).join('')}
+                    `;
+                } else {
+                    details.innerHTML = '<div style="color: #888;">Noch keine Impact-Daten verfügbar. Führe Validierungen vor und nach Anpassungen durch.</div>';
+                }
+            } catch (e) {
+                console.error('Impact analysis error:', e);
+                showToast('Fehler: ' + e.message, 'error');
             }
         }
     </script>
