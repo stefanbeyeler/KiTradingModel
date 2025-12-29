@@ -126,6 +126,255 @@ class TrainingService:
         """Generate unique job ID."""
         return f"train_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
 
+    # Pattern type mapping (must match inference service)
+    PATTERN_TYPES = [
+        "hammer", "inverted_hammer", "shooting_star", "hanging_man",
+        "doji", "dragonfly_doji", "gravestone_doji",
+        "bullish_engulfing", "bearish_engulfing",
+        "morning_star", "evening_star",
+        "piercing_line", "dark_cloud_cover",
+        "three_white_soldiers", "three_black_crows",
+        "rising_three_methods", "falling_three_methods",
+        "spinning_top", "bullish_harami", "bearish_harami", "harami_cross",
+        "no_pattern"
+    ]
+
+    def _build_tcn_model(self, num_classes: int = None):
+        """Build the TCN model for pattern classification."""
+        if not TORCH_AVAILABLE:
+            raise RuntimeError("PyTorch not available")
+
+        if num_classes is None:
+            num_classes = len(self.PATTERN_TYPES)
+
+        class TemporalBlock(nn.Module):
+            """Temporal block with dilated causal convolution."""
+
+            def __init__(self, in_channels, out_channels, kernel_size, dilation, dropout=0.2):
+                super().__init__()
+                padding = (kernel_size - 1) * dilation
+
+                self.conv1 = nn.Conv1d(
+                    in_channels, out_channels, kernel_size,
+                    padding=padding, dilation=dilation
+                )
+                self.conv2 = nn.Conv1d(
+                    out_channels, out_channels, kernel_size,
+                    padding=padding, dilation=dilation
+                )
+                self.dropout = nn.Dropout(dropout)
+                self.relu = nn.ReLU()
+
+                self.downsample = nn.Conv1d(in_channels, out_channels, 1) \
+                    if in_channels != out_channels else None
+
+            def forward(self, x):
+                out = self.conv1(x)
+                out = out[:, :, :x.size(2)]
+                out = self.relu(out)
+                out = self.dropout(out)
+
+                out = self.conv2(out)
+                out = out[:, :, :x.size(2)]
+                out = self.relu(out)
+                out = self.dropout(out)
+
+                res = x if self.downsample is None else self.downsample(x)
+                return self.relu(out + res)
+
+        class TCN(nn.Module):
+            """Temporal Convolutional Network."""
+
+            def __init__(self, input_channels=5, num_classes=num_classes,
+                         num_channels=[32, 64, 64], kernel_size=3, dropout=0.2):
+                super().__init__()
+
+                layers = []
+                for i, out_channels in enumerate(num_channels):
+                    in_channels = input_channels if i == 0 else num_channels[i-1]
+                    dilation = 2 ** i
+                    layers.append(
+                        TemporalBlock(in_channels, out_channels, kernel_size, dilation, dropout)
+                    )
+
+                self.tcn = nn.Sequential(*layers)
+                self.global_pool = nn.AdaptiveAvgPool1d(1)
+                self.fc = nn.Linear(num_channels[-1], num_classes)
+
+            def forward(self, x):
+                out = self.tcn(x)
+                out = self.global_pool(out)
+                out = out.squeeze(-1)
+                out = self.fc(out)
+                return out
+
+        return TCN(num_classes=num_classes)
+
+    def _prepare_training_dataset(
+        self,
+        training_data: Dict[str, Any],
+        patterns: List[Dict]
+    ) -> List[Dict]:
+        """
+        Prepare training dataset from OHLCV data and pattern labels.
+
+        Args:
+            training_data: Dict of symbol -> timeframe -> candle data
+            patterns: List of pattern history entries with labels
+
+        Returns:
+            List of training samples with features and labels
+        """
+        if not TORCH_AVAILABLE:
+            return []
+
+        import numpy as np
+
+        dataset = []
+        pattern_to_idx = {p: i for i, p in enumerate(self.PATTERN_TYPES)}
+        sequence_length = 20  # Lookback for each sample
+
+        for pattern in patterns:
+            symbol = pattern.get("symbol", "")
+            timeframe = pattern.get("timeframe", "H1")
+            pattern_type = pattern.get("pattern_type", "no_pattern")
+            weight = pattern.get("training_weight", 1.0)
+
+            # Get OHLCV data for this symbol/timeframe
+            symbol_data = training_data.get(symbol, {})
+            candles = symbol_data.get(timeframe, [])
+
+            if len(candles) < sequence_length:
+                continue
+
+            # Find pattern timestamp in candle data
+            pattern_ts = pattern.get("timestamp", "")
+            candle_idx = self._find_candle_index(candles, pattern_ts)
+
+            if candle_idx < sequence_length:
+                continue
+
+            # Extract features for the sequence ending at pattern
+            features = self._extract_features(candles[candle_idx - sequence_length:candle_idx])
+
+            if features is None:
+                continue
+
+            # Get label
+            label = pattern_to_idx.get(pattern_type, pattern_to_idx["no_pattern"])
+
+            dataset.append({
+                "features": torch.tensor(features, dtype=torch.float32),
+                "label": label,
+                "weight": weight,
+                "symbol": symbol,
+                "pattern_type": pattern_type
+            })
+
+        logger.info(f"Prepared {len(dataset)} training samples from pattern history")
+        return dataset
+
+    def _generate_synthetic_training_data(
+        self,
+        training_data: Dict[str, Any],
+        samples_per_symbol: int = 50
+    ) -> List[Dict]:
+        """
+        Generate synthetic training data from OHLCV when pattern history is insufficient.
+
+        Uses sliding window approach to create training samples.
+        """
+        if not TORCH_AVAILABLE:
+            return []
+
+        import numpy as np
+
+        dataset = []
+        sequence_length = 20
+        no_pattern_idx = self.PATTERN_TYPES.index("no_pattern")
+
+        for symbol, timeframe_data in training_data.items():
+            for timeframe, candles in timeframe_data.items():
+                if len(candles) < sequence_length + samples_per_symbol:
+                    continue
+
+                # Create sliding window samples
+                for i in range(samples_per_symbol):
+                    start_idx = sequence_length + i
+                    if start_idx >= len(candles):
+                        break
+
+                    features = self._extract_features(
+                        candles[start_idx - sequence_length:start_idx]
+                    )
+
+                    if features is None:
+                        continue
+
+                    # For synthetic data, use "no_pattern" label
+                    # The model learns base patterns, and confirmed patterns
+                    # will be weighted higher during actual training
+                    dataset.append({
+                        "features": torch.tensor(features, dtype=torch.float32),
+                        "label": no_pattern_idx,
+                        "weight": 0.5,  # Lower weight for synthetic data
+                        "symbol": symbol,
+                        "pattern_type": "no_pattern"
+                    })
+
+        logger.info(f"Generated {len(dataset)} synthetic training samples")
+        return dataset
+
+    def _extract_features(self, candles: List[Dict]) -> Optional[Any]:
+        """Extract normalized OHLCV features from candles."""
+        import numpy as np
+
+        try:
+            features = np.array([
+                [
+                    float(c.get("open", c.get("o", 0))),
+                    float(c.get("high", c.get("h", 0))),
+                    float(c.get("low", c.get("l", 0))),
+                    float(c.get("close", c.get("c", 0))),
+                    float(c.get("volume", c.get("v", 0)))
+                ]
+                for c in candles
+            ], dtype=np.float32)
+
+            # Normalize per-column
+            for i in range(features.shape[1]):
+                col = features[:, i]
+                col_min, col_max = col.min(), col.max()
+                if col_max > col_min:
+                    features[:, i] = (col - col_min) / (col_max - col_min)
+                else:
+                    features[:, i] = 0.5
+
+            # Transpose for Conv1d: (channels, sequence_length)
+            return features.T
+
+        except Exception as e:
+            logger.warning(f"Feature extraction failed: {e}")
+            return None
+
+    def _find_candle_index(self, candles: List[Dict], timestamp: str) -> int:
+        """Find index of candle matching timestamp."""
+        from dateutil import parser as date_parser
+
+        try:
+            target_ts = date_parser.isoparse(timestamp)
+
+            for i, candle in enumerate(candles):
+                candle_ts_str = candle.get("datetime") or candle.get("timestamp") or candle.get("snapshot_time")
+                if candle_ts_str:
+                    candle_ts = date_parser.isoparse(candle_ts_str)
+                    if abs((candle_ts - target_ts).total_seconds()) < 3600:  # Within 1 hour
+                        return i
+        except Exception:
+            pass
+
+        return -1
+
     async def _fetch_training_data(
         self,
         symbols: List[str],
@@ -379,49 +628,110 @@ class TrainingService:
                 corrected_patterns = []
                 logger.warning("No pattern history available for supervised training")
 
-            # TODO: Actual TCN training implementation
+            # Build and train TCN model
             # The corrected_patterns list contains:
             # - pattern_type: The (possibly corrected) pattern label
             # - training_weight: Higher weight for confirmed/corrected patterns
             # - is_corrected: True if user corrected the label
             # - is_confirmed: True if user confirmed the pattern
 
-            # Simulate training progress (placeholder for actual TCN training)
-            # In production, this would be replaced with actual model training
+            # Prepare training data
+            train_dataset = self._prepare_training_dataset(
+                training_data, corrected_patterns
+            )
+
+            if len(train_dataset) < 10:
+                logger.warning("Insufficient training data, using fallback mode")
+                # Fallback: simple training with synthetic data
+                train_dataset = self._generate_synthetic_training_data(training_data)
+
+            logger.info(f"Training dataset size: {len(train_dataset)} samples")
+
+            # Build TCN model
+            model = self._build_tcn_model()
+            optimizer = torch.optim.Adam(model.parameters(), lr=job.learning_rate)
+            criterion = nn.CrossEntropyLoss(reduction='none')  # For weighted loss
+
+            # Training loop
+            model.train()
+            best_model_state = None
+
             for epoch in range(job.epochs):
                 if job.status == TrainingStatus.CANCELLED:
                     logger.info(f"Training job {job.job_id} cancelled")
                     return
 
-                # Simulate epoch training
-                await asyncio.sleep(0.1)  # Placeholder for actual training
+                epoch_loss = 0.0
+                num_batches = 0
 
-                # Update progress
+                # Mini-batch training
+                for batch_start in range(0, len(train_dataset), job.batch_size):
+                    batch = train_dataset[batch_start:batch_start + job.batch_size]
+
+                    if len(batch) == 0:
+                        continue
+
+                    # Prepare batch tensors
+                    features = torch.stack([item['features'] for item in batch])
+                    labels = torch.tensor([item['label'] for item in batch], dtype=torch.long)
+                    weights = torch.tensor([item.get('weight', 1.0) for item in batch], dtype=torch.float32)
+
+                    # Forward pass
+                    optimizer.zero_grad()
+                    outputs = model(features)
+                    loss = criterion(outputs, labels)
+
+                    # Apply sample weights
+                    weighted_loss = (loss * weights).mean()
+                    weighted_loss.backward()
+                    optimizer.step()
+
+                    epoch_loss += weighted_loss.item()
+                    num_batches += 1
+
+                # Calculate average loss
+                avg_loss = epoch_loss / max(num_batches, 1)
+
+                # Update job progress
                 job.current_epoch = epoch + 1
                 job.progress = (epoch + 1) / job.epochs * 100
-                job.current_loss = 1.0 / (epoch + 1)  # Simulated decreasing loss
+                job.current_loss = avg_loss
 
-                if job.best_loss is None or job.current_loss < job.best_loss:
-                    job.best_loss = job.current_loss
+                if job.best_loss is None or avg_loss < job.best_loss:
+                    job.best_loss = avg_loss
+                    best_model_state = model.state_dict().copy()
 
                 if (epoch + 1) % 10 == 0:
                     logger.info(
                         f"Job {job.job_id}: Epoch {epoch + 1}/{job.epochs}, "
-                        f"Loss: {job.current_loss:.4f}"
+                        f"Loss: {avg_loss:.4f}, Best: {job.best_loss:.4f}"
                     )
 
-            # Save model (placeholder)
+                # Allow other tasks to run
+                await asyncio.sleep(0.01)
+
+            # Save the best model
             model_filename = f"candlestick_model_{job.job_id}.pt"
             job.model_path = str(self._model_path / model_filename)
 
-            # Create placeholder model file with feedback statistics
+            if best_model_state is not None:
+                model.load_state_dict(best_model_state)
+
+            torch.save(model.state_dict(), job.model_path)
+            logger.info(f"Model saved to {job.model_path}")
+
+            # Save model metadata
             model_info = {
                 "job_id": job.job_id,
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "symbols": job.symbols,
                 "timeframes": job.timeframes,
                 "epochs": job.epochs,
+                "batch_size": job.batch_size,
+                "learning_rate": job.learning_rate,
                 "final_loss": job.current_loss,
+                "best_loss": job.best_loss,
+                "training_samples": len(train_dataset),
                 "training_patterns": len(corrected_patterns),
                 "feedback_applied": {
                     "total": user_feedback["statistics"]["total"],

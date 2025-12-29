@@ -731,7 +731,12 @@ class CandlestickPatternService:
         timeframe: Timeframe,
         confidence: float,
         candles_involved: int = 1,
-        trend_context: Optional[str] = None
+        trend_context: Optional[str] = None,
+        rule_confidence: Optional[float] = None,
+        ai_confidence: Optional[float] = None,
+        ai_prediction: Optional[str] = None,
+        ai_agreement: Optional[bool] = None,
+        validation_method: str = "rule"
     ) -> DetectedPattern:
         """Create a DetectedPattern object."""
         info = self._pattern_descriptions.get(pattern_type, {})
@@ -744,6 +749,11 @@ class CandlestickPatternService:
             timestamp=candle.timestamp,
             timeframe=timeframe,
             confidence=confidence,
+            rule_confidence=rule_confidence,
+            ai_confidence=ai_confidence,
+            ai_prediction=ai_prediction,
+            ai_agreement=ai_agreement,
+            validation_method=validation_method,
             price_at_detection=candle.close,
             candles_involved=candles_involved,
             trend_context=trend_context,
@@ -891,6 +901,162 @@ class CandlestickPatternService:
                             confidence=confidence,
                             candles_involved=candles_count,
                             trend_context=trend,
+                        ))
+
+        return patterns
+
+    def detect_patterns_with_ai(
+        self,
+        candles: list[CandleData],
+        timeframe: Timeframe,
+        min_confidence: float = 0.5,
+        include_weak: bool = False
+    ) -> list[DetectedPattern]:
+        """
+        Detect candlestick patterns with AI validation.
+
+        Two-stage process:
+        1. Rule-based detection - identify pattern candidates
+        2. AI validation - validate and adjust confidence scores
+
+        Args:
+            candles: List of CandleData objects (oldest first)
+            timeframe: Timeframe of the data
+            min_confidence: Minimum confidence threshold (applied to final confidence)
+            include_weak: Include weak strength patterns
+
+        Returns:
+            List of detected patterns with AI-validated confidence scores
+        """
+        if len(candles) < 3:
+            return []
+
+        # Import AI validator here to avoid circular imports
+        from .ai_validator_service import ai_validator_service
+
+        patterns: list[DetectedPattern] = []
+        avg_body = self._calculate_avg_body(candles)
+        trend = self._determine_trend(candles)
+
+        # Prepare OHLCV data for AI validator
+        ohlcv_data = [
+            {
+                "open": c.open,
+                "high": c.high,
+                "low": c.low,
+                "close": c.close,
+                "volume": c.volume or 0
+            }
+            for c in candles
+        ]
+
+        # Scan last N candles for patterns (focus on recent)
+        scan_depth = min(10, len(candles) - 2)
+
+        for i in range(len(candles) - scan_depth, len(candles)):
+            if i < 2:
+                continue
+
+            current = candles[i]
+            prev = candles[i - 1]
+            prev2 = candles[i - 2] if i >= 2 else None
+
+            detected = []
+
+            # === Single Candle Patterns ===
+            if self._is_dragonfly_doji(current, avg_body):
+                confidence = 0.7 if trend == "downtrend" else 0.5
+                detected.append((PatternType.DRAGONFLY_DOJI, confidence, 1))
+            elif self._is_gravestone_doji(current, avg_body):
+                confidence = 0.7 if trend == "uptrend" else 0.5
+                detected.append((PatternType.GRAVESTONE_DOJI, confidence, 1))
+            elif self._is_doji(current, avg_body):
+                detected.append((PatternType.DOJI, 0.6, 1))
+
+            if self._is_hammer(current, avg_body):
+                if trend == "downtrend":
+                    detected.append((PatternType.HAMMER, 0.75, 1))
+                elif self._is_hanging_man(current, prev, avg_body):
+                    detected.append((PatternType.HANGING_MAN, 0.65, 1))
+
+            if self._is_inverted_hammer(current, avg_body):
+                if trend == "downtrend":
+                    detected.append((PatternType.INVERTED_HAMMER, 0.6, 1))
+                elif self._is_shooting_star(current, prev, avg_body):
+                    detected.append((PatternType.SHOOTING_STAR, 0.7, 1))
+
+            if self._is_spinning_top(current, avg_body):
+                detected.append((PatternType.SPINNING_TOP, 0.55, 1))
+
+            # === Two Candle Patterns ===
+            if self._is_bullish_engulfing(current, prev, avg_body):
+                confidence = 0.8 if trend == "downtrend" else 0.6
+                detected.append((PatternType.BULLISH_ENGULFING, confidence, 2))
+            elif self._is_bearish_engulfing(current, prev, avg_body):
+                confidence = 0.8 if trend == "uptrend" else 0.6
+                detected.append((PatternType.BEARISH_ENGULFING, confidence, 2))
+
+            if self._is_harami_cross(current, prev, avg_body):
+                detected.append((PatternType.HARAMI_CROSS, 0.65, 2))
+            elif self._is_bullish_harami(current, prev):
+                confidence = 0.55 if trend == "downtrend" else 0.45
+                detected.append((PatternType.BULLISH_HARAMI, confidence, 2))
+            elif self._is_bearish_harami(current, prev):
+                confidence = 0.55 if trend == "uptrend" else 0.45
+                detected.append((PatternType.BEARISH_HARAMI, confidence, 2))
+
+            if self._is_piercing_line(current, prev):
+                confidence = 0.65 if trend == "downtrend" else 0.5
+                detected.append((PatternType.PIERCING_LINE, confidence, 2))
+            elif self._is_dark_cloud_cover(current, prev):
+                confidence = 0.65 if trend == "uptrend" else 0.5
+                detected.append((PatternType.DARK_CLOUD_COVER, confidence, 2))
+
+            # === Three Candle Patterns ===
+            if prev2 is not None:
+                if self._is_morning_star(prev2, prev, current, avg_body):
+                    confidence = 0.85 if trend == "downtrend" else 0.65
+                    detected.append((PatternType.MORNING_STAR, confidence, 3))
+                elif self._is_evening_star(prev2, prev, current, avg_body):
+                    confidence = 0.85 if trend == "uptrend" else 0.65
+                    detected.append((PatternType.EVENING_STAR, confidence, 3))
+
+                if self._is_three_white_soldiers(prev2, prev, current, avg_body):
+                    detected.append((PatternType.THREE_WHITE_SOLDIERS, 0.8, 3))
+                elif self._is_three_black_crows(prev2, prev, current, avg_body):
+                    detected.append((PatternType.THREE_BLACK_CROWS, 0.8, 3))
+
+            # Validate with AI and create pattern objects
+            for pattern_type, rule_confidence, candles_count in detected:
+                # Get OHLCV context for this specific pattern
+                pattern_ohlcv = ohlcv_data[:i + 1]  # Up to current candle
+
+                # AI validation
+                validation = ai_validator_service.validate_pattern(
+                    pattern_type=pattern_type.value,
+                    rule_confidence=rule_confidence,
+                    ohlcv_data=pattern_ohlcv,
+                    lookback=20
+                )
+
+                final_confidence = validation.final_confidence
+
+                # Apply confidence threshold to final (AI-adjusted) confidence
+                if final_confidence >= min_confidence:
+                    strength = self._get_strength(final_confidence)
+                    if include_weak or strength != PatternStrength.WEAK:
+                        patterns.append(self._create_pattern(
+                            pattern_type=pattern_type,
+                            candle=current,
+                            timeframe=timeframe,
+                            confidence=final_confidence,
+                            candles_involved=candles_count,
+                            trend_context=trend,
+                            rule_confidence=validation.rule_confidence,
+                            ai_confidence=validation.ai_confidence,
+                            ai_prediction=validation.ai_prediction,
+                            ai_agreement=validation.ai_agreement,
+                            validation_method=validation.validation_method,
                         ))
 
         return patterns
@@ -1263,8 +1429,8 @@ class CandlestickPatternService:
                     logger.warning(f"[{request_id}] Insufficient candles for {request.symbol} {tf.value}")
                     continue
 
-                # Detect patterns
-                patterns = self.detect_patterns(
+                # Detect patterns (with AI validation if model is available)
+                patterns = self.detect_patterns_with_ai(
                     candles=candles,
                     timeframe=tf,
                     min_confidence=request.min_confidence,

@@ -113,7 +113,7 @@ class DetectedPattern(BaseModel):
 
     Each pattern includes:
     - Type, category, and direction classification
-    - Confidence score (0.0-1.0)
+    - Confidence scores (rule-based, AI-based, final combined)
     - Trading implication and description
     - Price and trend context
     """
@@ -141,11 +141,39 @@ class DetectedPattern(BaseModel):
         ...,
         description="Timeframe where pattern was detected"
     )
+
+    # Confidence scores - now with rule/AI breakdown
     confidence: float = Field(
         ...,
         ge=0.0,
         le=1.0,
-        description="Confidence score (0.0-1.0). Higher = more reliable signal"
+        description="Final combined confidence score (0.0-1.0)"
+    )
+    rule_confidence: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Confidence from rule-based detection (0.0-1.0)"
+    )
+    ai_confidence: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Confidence from AI model validation (0.0-1.0)"
+    )
+
+    # AI validation details
+    ai_prediction: Optional[str] = Field(
+        default=None,
+        description="Pattern type predicted by AI model (may differ from rule-based)"
+    )
+    ai_agreement: Optional[bool] = Field(
+        default=None,
+        description="Whether AI agrees with rule-based detection"
+    )
+    validation_method: str = Field(
+        default="rule",
+        description="Validation method used: 'rule', 'model', or 'fallback'"
     )
 
     # Price context
