@@ -202,11 +202,22 @@ async def validate_patterns_batch(
                 "validated": 0
             }
 
-        # Build OHLCV data map
+        # Build OHLCV data map - fetch from Data Service if not present
         ohlcv_data_map = {}
         for p in patterns:
+            pattern_id = p.get("id", "")
             if p.get("ohlc_data"):
-                ohlcv_data_map[p.get("id")] = p.get("ohlc_data")
+                ohlcv_data_map[pattern_id] = p.get("ohlc_data")
+            else:
+                # Fetch from Data Service
+                symbol = p.get("symbol", "")
+                timeframe = p.get("timeframe", "H1")
+                if symbol:
+                    ohlcv_data = await fetch_ohlcv_data(symbol, timeframe, limit=50)
+                    if ohlcv_data:
+                        ohlcv_data_map[pattern_id] = ohlcv_data
+                    else:
+                        logger.warning(f"Could not fetch OHLCV for {symbol}/{timeframe}")
 
         # Validate batch
         results = await claude_validator_service.validate_patterns_batch(

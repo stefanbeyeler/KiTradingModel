@@ -2087,6 +2087,7 @@
             <button class="tab" onclick="switchTab('patterns')">Pattern Detection</button>
             <button class="tab" onclick="switchTab('history')">Pattern History</button>
             <button class="tab" onclick="switchTab('revalidation')">Re-Validierung <span id="revalidationBadge" class="tab-badge" style="display: none;">0</span></button>
+            <button class="tab" onclick="switchTab('claudeqa')">🤖 Claude QA</button>
         </div>
 
         <!-- Tab: Status -->
@@ -2678,6 +2679,147 @@
             </div>
 
         </div><!-- End Tab: Re-Validierung -->
+
+        <!-- Tab: Claude QA -->
+        <div id="tab-claudeqa" class="tab-content">
+            <!-- Claude Validator Status -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🤖 Claude Vision Validator</h2>
+                    <button class="btn btn-primary" onclick="loadClaudeStatus()">Aktualisieren</button>
+                </div>
+                <p class="card-description">
+                    Qualitätssicherung der Pattern-Erkennung durch Claude Vision AI.
+                    Claude analysiert Chart-Bilder und validiert die erkannten Patterns.
+                </p>
+                <div class="stats-grid" style="margin-top: 1rem;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="claudeEnabled">-</div>
+                        <div class="stat-label">Status</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="claudeModel">-</div>
+                        <div class="stat-label">Modell</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="claudeCached">-</div>
+                        <div class="stat-label">Im Cache</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="claudeTotal">-</div>
+                        <div class="stat-label">Validierungen</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch Validation -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📋 Batch-Validierung</h2>
+                </div>
+                <p class="card-description">
+                    Validiere mehrere Patterns auf einmal. Claude analysiert jedes Pattern
+                    und gibt Feedback zur Erkennungsqualität.
+                </p>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="runBatchValidation(5)" id="btnBatch5">
+                        5 Patterns validieren
+                    </button>
+                    <button class="btn btn-primary" onclick="runBatchValidation(10)" id="btnBatch10">
+                        10 Patterns validieren
+                    </button>
+                    <button class="btn btn-warning" onclick="runBatchValidation(20)" id="btnBatch20">
+                        20 Patterns validieren
+                    </button>
+                </div>
+                <div id="batchProgress" style="display: none; margin-top: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="spinner"></span>
+                        <span id="batchProgressText">Validierung läuft...</span>
+                    </div>
+                </div>
+                <div id="batchResult" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                    <h4 style="margin-bottom: 0.5rem;">Ergebnis</h4>
+                    <div id="batchResultContent"></div>
+                </div>
+            </div>
+
+            <!-- Validation History -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📜 Validierungs-Historie</h2>
+                    <button class="btn btn-secondary" onclick="loadClaudeHistory()">Laden</button>
+                </div>
+                <div id="claudeHistoryTable" style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Zeit</th>
+                                <th>Symbol</th>
+                                <th>Timeframe</th>
+                                <th>Pattern</th>
+                                <th>Claude sagt</th>
+                                <th>Konfidenz</th>
+                                <th>Begründung</th>
+                            </tr>
+                        </thead>
+                        <tbody id="claudeHistoryBody">
+                            <tr><td colspan="7" style="text-align: center; color: #888;">Klicke "Laden" um die Historie anzuzeigen</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Problematic Patterns -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⚠️ Problematische Patterns</h2>
+                    <button class="btn btn-secondary" onclick="loadProblematicPatterns()">Analysieren</button>
+                </div>
+                <p class="card-description">
+                    Patterns, die von Claude häufig abgelehnt werden.
+                    Diese könnten Anpassungen in der Erkennungslogik erfordern.
+                </p>
+                <div id="problematicPatternsTable" style="overflow-x: auto; margin-top: 1rem;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Pattern-Typ</th>
+                                <th>Validierungen</th>
+                                <th>Bestätigt</th>
+                                <th>Abgelehnt</th>
+                                <th>Ablehnungsrate</th>
+                            </tr>
+                        </thead>
+                        <tbody id="problematicPatternsBody">
+                            <tr><td colspan="5" style="text-align: center; color: #888;">Klicke "Analysieren" für die Auswertung</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Chart Preview -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔍 Chart-Vorschau</h2>
+                </div>
+                <p class="card-description">
+                    Zeige die Chart-Vorschau für ein bestimmtes Pattern an, wie sie an Claude gesendet wird.
+                </p>
+                <div style="display: flex; gap: 1rem; align-items: flex-end; margin-top: 1rem;">
+                    <div style="flex: 1;">
+                        <label style="display: block; margin-bottom: 0.5rem; color: #888;">Pattern-ID</label>
+                        <input type="text" id="chartPreviewPatternId" placeholder="z.B. abc123..."
+                               style="width: 100%; padding: 0.5rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
+                    </div>
+                    <button class="btn btn-primary" onclick="loadChartPreview()">Vorschau laden</button>
+                </div>
+                <div id="chartPreviewContainer" style="display: none; margin-top: 1rem; text-align: center;">
+                    <img id="chartPreviewImage" style="max-width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);" />
+                    <div id="chartPreviewInfo" style="margin-top: 0.5rem; color: #888;"></div>
+                </div>
+            </div>
+        </div><!-- End Tab: Claude QA -->
 
     </main>
 
@@ -3417,6 +3559,14 @@
                 }
             } else if (tabName === 'revalidation') {
                 loadRevalidationData();
+
+                // Stop training auto-refresh
+                if (trainingRefreshInterval) {
+                    clearInterval(trainingRefreshInterval);
+                    trainingRefreshInterval = null;
+                }
+            } else if (tabName === 'claudeqa') {
+                loadClaudeStatus();
 
                 // Stop training auto-refresh
                 if (trainingRefreshInterval) {
@@ -6215,6 +6365,204 @@
                 await loadStatistics();
             }, 30000);
         });
+
+        // === Claude QA Functions ===
+        async function loadClaudeStatus() {
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/claude/status`);
+                if (!response.ok) throw new Error('Status nicht verfügbar');
+                const data = await response.json();
+
+                document.getElementById('claudeEnabled').textContent = data.enabled ? '✓ Aktiv' : '✗ Inaktiv';
+                document.getElementById('claudeEnabled').style.color = data.enabled ? '#81c784' : '#e57373';
+                document.getElementById('claudeModel').textContent = data.model || '-';
+                document.getElementById('claudeCached').textContent = data.cache_size || '0';
+                document.getElementById('claudeTotal').textContent = data.total_validations || '0';
+            } catch (e) {
+                console.error('Claude status error:', e);
+                document.getElementById('claudeEnabled').textContent = '✗ Fehler';
+                document.getElementById('claudeEnabled').style.color = '#e57373';
+            }
+        }
+
+        async function runBatchValidation(maxPatterns) {
+            const progressDiv = document.getElementById('batchProgress');
+            const resultDiv = document.getElementById('batchResult');
+            const progressText = document.getElementById('batchProgressText');
+
+            // Disable buttons
+            document.getElementById('btnBatch5').disabled = true;
+            document.getElementById('btnBatch10').disabled = true;
+            document.getElementById('btnBatch20').disabled = true;
+
+            progressDiv.style.display = 'block';
+            resultDiv.style.display = 'none';
+            progressText.textContent = `Validiere ${maxPatterns} Patterns mit Claude...`;
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/claude/validate-batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ max_patterns: maxPatterns })
+                });
+
+                const data = await response.json();
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+
+                if (data.status === 'success') {
+                    const summary = data.summary || {};
+                    document.getElementById('batchResultContent').innerHTML = `
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center;">
+                            <div>
+                                <div style="font-size: 1.5rem; font-weight: bold;">${summary.total || 0}</div>
+                                <div style="color: #888; font-size: 0.85rem;">Validiert</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 1.5rem; font-weight: bold; color: #81c784;">${summary.agreed || 0}</div>
+                                <div style="color: #888; font-size: 0.85rem;">Bestätigt</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 1.5rem; font-weight: bold; color: #e57373;">${summary.rejected || 0}</div>
+                                <div style="color: #888; font-size: 0.85rem;">Abgelehnt</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 1.5rem; font-weight: bold; color: #ffb74d;">${summary.errors || 0}</div>
+                                <div style="color: #888; font-size: 0.85rem;">Fehler</div>
+                            </div>
+                        </div>
+                    `;
+                    showToast(`${summary.total} Patterns validiert: ${summary.agreed} bestätigt, ${summary.rejected} abgelehnt`, 'success');
+                    loadClaudeStatus();
+                } else if (data.status === 'no_patterns') {
+                    document.getElementById('batchResultContent').innerHTML = `
+                        <div style="color: #888; text-align: center;">
+                            Keine Patterns zur Validierung gefunden. Führe zuerst einen Scan durch.
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.detail || 'Unbekannter Fehler');
+                }
+            } catch (e) {
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                document.getElementById('batchResultContent').innerHTML = `
+                    <div style="color: #e57373;">Fehler: ${e.message}</div>
+                `;
+                showToast('Batch-Validierung fehlgeschlagen: ' + e.message, 'error');
+            } finally {
+                // Re-enable buttons
+                document.getElementById('btnBatch5').disabled = false;
+                document.getElementById('btnBatch10').disabled = false;
+                document.getElementById('btnBatch20').disabled = false;
+            }
+        }
+
+        async function loadClaudeHistory() {
+            const tbody = document.getElementById('claudeHistoryBody');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;"><span class="spinner"></span> Laden...</td></tr>';
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/claude/history?limit=50`);
+                if (!response.ok) throw new Error('Historie nicht verfügbar');
+                const data = await response.json();
+
+                if (!data.history || data.history.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #888;">Keine Validierungen vorhanden</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.history.map(v => `
+                    <tr>
+                        <td>${new Date(v.validation_timestamp).toLocaleString('de-CH')}</td>
+                        <td><strong>${v.symbol}</strong></td>
+                        <td>${v.timeframe}</td>
+                        <td>${formatPatternType(v.pattern_type)}</td>
+                        <td style="color: ${v.claude_agrees ? '#81c784' : '#e57373'};">
+                            ${v.claude_agrees ? '✓ Bestätigt' : '✗ Abgelehnt'}
+                            ${v.claude_pattern_type && v.claude_pattern_type !== v.pattern_type ?
+                                `<br><small>(→ ${formatPatternType(v.claude_pattern_type)})</small>` : ''}
+                        </td>
+                        <td>${(v.claude_confidence * 100).toFixed(0)}%</td>
+                        <td style="max-width: 300px; font-size: 0.85rem; color: #aaa;">
+                            ${v.claude_reasoning ? v.claude_reasoning.substring(0, 150) + (v.claude_reasoning.length > 150 ? '...' : '') : '-'}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Claude history error:', e);
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #e57373;">Fehler: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function loadProblematicPatterns() {
+            const tbody = document.getElementById('problematicPatternsBody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;"><span class="spinner"></span> Analysiere...</td></tr>';
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/claude/problematic-patterns?min_rejections=1&limit=20`);
+                if (!response.ok) throw new Error('Analyse nicht verfügbar');
+                const data = await response.json();
+
+                if (!data.patterns || data.patterns.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">Keine problematischen Patterns gefunden</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.patterns.map(p => `
+                    <tr>
+                        <td><strong>${formatPatternType(p.pattern_type)}</strong></td>
+                        <td>${p.total_validations}</td>
+                        <td style="color: #81c784;">${p.agreed}</td>
+                        <td style="color: #e57373;">${p.rejected}</td>
+                        <td>
+                            <span style="color: ${p.rejection_rate > 50 ? '#e57373' : p.rejection_rate > 25 ? '#ffb74d' : '#81c784'};">
+                                ${p.rejection_rate}%
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Problematic patterns error:', e);
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #e57373;">Fehler: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function loadChartPreview() {
+            const patternId = document.getElementById('chartPreviewPatternId').value.trim();
+            if (!patternId) {
+                showToast('Bitte eine Pattern-ID eingeben', 'warning');
+                return;
+            }
+
+            const container = document.getElementById('chartPreviewContainer');
+            const image = document.getElementById('chartPreviewImage');
+            const info = document.getElementById('chartPreviewInfo');
+
+            container.style.display = 'block';
+            info.textContent = 'Laden...';
+            image.src = '';
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/claude/chart-preview/${patternId}`);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Vorschau nicht verfügbar');
+                }
+                const data = await response.json();
+
+                image.src = data.chart_image;
+                info.innerHTML = `
+                    <strong>${data.symbol}</strong> | ${data.timeframe} |
+                    ${formatPatternType(data.pattern_type)} |
+                    ${data.candles_shown} Kerzen
+                `;
+            } catch (e) {
+                console.error('Chart preview error:', e);
+                container.style.display = 'none';
+                showToast('Chart-Vorschau fehlgeschlagen: ' + e.message, 'error');
+            }
+        }
     </script>
 </body>
 </html>
