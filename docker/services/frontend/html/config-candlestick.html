@@ -940,6 +940,44 @@
             color: #fff;
         }
 
+        .modal-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-nav-btn {
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64c8ff;
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-nav-btn:hover:not(:disabled) {
+            background: rgba(100, 200, 255, 0.2);
+            border-color: #64c8ff;
+        }
+
+        .modal-nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .modal-nav-counter {
+            font-size: 0.85rem;
+            color: #888;
+            min-width: 60px;
+            text-align: center;
+        }
+
         .modal-body {
             padding: 1.5rem;
         }
@@ -1282,7 +1320,14 @@
                         <span id="modalPatternName">-</span>
                         <span class="timeline-direction" id="modalDirection">-</span>
                     </div>
-                    <button class="modal-close" onclick="closePatternModal()">&times;</button>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div class="modal-nav">
+                            <button class="modal-nav-btn" id="modalPrevBtn" onclick="navigatePattern(-1)" title="Vorheriges Pattern">‹</button>
+                            <span class="modal-nav-counter" id="modalNavCounter">1 / 10</span>
+                            <button class="modal-nav-btn" id="modalNextBtn" onclick="navigatePattern(1)" title="Nächstes Pattern">›</button>
+                        </div>
+                        <button class="modal-close" onclick="closePatternModal()">&times;</button>
+                    </div>
                 </div>
                 <div class="modal-body">
                     <!-- Chart Comparison -->
@@ -2205,11 +2250,15 @@
         };
 
         // Open pattern detail modal
+        // Current modal index for navigation
+        let currentModalIndex = 0;
+
         async function openPatternModal(index) {
             const pattern = loadedPatterns[index];
             if (!pattern) return;
 
             currentModalPattern = pattern;
+            currentModalIndex = index;
 
             // Populate modal fields
             document.getElementById('modalPatternName').textContent = formatPatternType(pattern.pattern_type);
@@ -2222,6 +2271,9 @@
             document.getElementById('modalTimestamp').textContent = formatTimestamp(pattern.timestamp);
             document.getElementById('modalConfidence').textContent = ((pattern.confidence || 0) * 100).toFixed(0) + '%';
             document.getElementById('modalDescription').textContent = pattern.description || pattern.trading_implication || 'Keine Beschreibung verfügbar';
+
+            // Update navigation counter and buttons
+            updateModalNavigation();
 
             // Populate correction dropdown
             await populateCorrectionDropdown();
@@ -2239,6 +2291,44 @@
                 loadReferenceChart(pattern.pattern_type, pattern.direction)
             ]);
         }
+
+        // Update navigation buttons and counter
+        function updateModalNavigation() {
+            const total = loadedPatterns.length;
+            const current = currentModalIndex + 1;
+
+            // Update counter
+            document.getElementById('modalNavCounter').textContent = `${current} / ${total}`;
+
+            // Update button states
+            document.getElementById('modalPrevBtn').disabled = currentModalIndex <= 0;
+            document.getElementById('modalNextBtn').disabled = currentModalIndex >= total - 1;
+        }
+
+        // Navigate to previous/next pattern
+        function navigatePattern(direction) {
+            const newIndex = currentModalIndex + direction;
+
+            if (newIndex >= 0 && newIndex < loadedPatterns.length) {
+                openPatternModal(newIndex);
+            }
+        }
+
+        // Keyboard navigation for modal
+        document.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('patternModal');
+            if (!modal.classList.contains('show')) return;
+
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                navigatePattern(-1);
+            } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                navigatePattern(1);
+            } else if (e.key === 'Escape') {
+                closePatternModal();
+            }
+        });
 
         // Populate correction pattern dropdown
         async function populateCorrectionDropdown() {
