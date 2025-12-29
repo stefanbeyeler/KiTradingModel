@@ -628,6 +628,238 @@
             font-style: normal;
         }
 
+        /* Revalidation List View */
+        .reval-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .reval-list-item {
+            display: grid;
+            grid-template-columns: 100px 1fr 120px 100px 80px 40px;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .reval-list-item:hover {
+            background: rgba(100, 200, 255, 0.1);
+            border-left-color: #64c8ff;
+        }
+
+        .reval-list-item.rejected {
+            border-left-color: #e57373;
+        }
+
+        .reval-list-item.corrected {
+            border-left-color: #ffb74d;
+        }
+
+        .reval-list-item .symbol-col {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .reval-list-item .pattern-col {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .reval-list-item .pattern-col .arrow {
+            color: #888;
+        }
+
+        .reval-list-item .pattern-col .original {
+            color: #e57373;
+            text-decoration: line-through;
+            opacity: 0.8;
+        }
+
+        .reval-list-item .pattern-col .corrected {
+            color: #81c784;
+        }
+
+        .reval-list-item .timeframe-col {
+            text-align: center;
+        }
+
+        .reval-list-item .date-col {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .reval-list-item .type-col {
+            text-align: center;
+        }
+
+        .reval-list-item .arrow-col {
+            color: #666;
+            text-align: right;
+            font-size: 1.2rem;
+        }
+
+        .reval-list-header {
+            display: grid;
+            grid-template-columns: 100px 1fr 120px 100px 80px 40px;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 0.5rem;
+        }
+
+        .reval-filters {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .reval-filters select,
+        .reval-filters input {
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 0.85rem;
+            min-width: 130px;
+            cursor: pointer;
+        }
+
+        .reval-filters select:hover,
+        .reval-filters input:hover {
+            border-color: rgba(255, 255, 255, 0.35);
+        }
+
+        .reval-filters select:focus,
+        .reval-filters input:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        .reval-filters select option {
+            background: #1a1a2e;
+            color: #fff;
+            padding: 8px;
+        }
+
+        .reval-filters select optgroup {
+            background: #1a1a2e;
+            color: #888;
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        .reval-filters label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+
+        .reval-filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Revalidation Detail Modal */
+        .reval-detail-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .reval-detail-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .reval-detail-modal {
+            background: #1a1a2e;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .reval-detail-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            line-height: 1;
+        }
+
+        .reval-detail-close:hover {
+            color: #fff;
+        }
+
+        .reval-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            padding-right: 2rem;
+        }
+
+        .reval-detail-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .reval-detail-nav {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .reval-detail-nav button {
+            padding: 0.5rem 1rem;
+        }
+
+        .reval-detail-nav .nav-counter {
+            color: #888;
+            font-size: 0.9rem;
+            margin: 0 1rem;
+        }
+
         /* Scan suggestions styles */
         .scan-suggestions {
             margin-bottom: 0.75rem;
@@ -1461,6 +1693,267 @@
                 text-align: center;
             }
         }
+
+        /* Additional Revalidation List Styles */
+        .reval-list-symbol {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .reval-list-pattern {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        .reval-list-timeframe {
+            text-align: center;
+        }
+
+        .reval-list-date {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .reval-list-type {
+            text-align: center;
+        }
+
+        .reval-list-action {
+            text-align: right;
+        }
+
+        .reval-type-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .reval-type-badge.rejected {
+            background: rgba(229, 115, 115, 0.2);
+            color: #e57373;
+        }
+
+        .reval-type-badge.corrected {
+            background: rgba(255, 183, 77, 0.2);
+            color: #ffb74d;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        /* Detail Modal Active State */
+        .reval-detail-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .reval-detail-badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-left: 0.75rem;
+        }
+
+        .reval-detail-badge.rejected {
+            background: rgba(229, 115, 115, 0.2);
+            color: #e57373;
+        }
+
+        .reval-detail-badge.corrected {
+            background: rgba(255, 183, 77, 0.2);
+            color: #ffb74d;
+        }
+
+        .reval-detail-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .reval-detail-info {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .reval-detail-info-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .reval-detail-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .reval-detail-info-item label {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .reval-detail-info-item span {
+            font-size: 0.95rem;
+            color: #fff;
+        }
+
+        .reval-detail-chart {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .reval-detail-history {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .reval-detail-history h4 {
+            margin: 0 0 0.75rem 0;
+            font-size: 0.9rem;
+            color: #64c8ff;
+        }
+
+        .reval-history-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+
+        .reval-history-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .reval-history-date {
+            font-size: 0.8rem;
+            color: #888;
+            min-width: 150px;
+        }
+
+        .reval-history-action {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .reval-history-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .reval-history-badge.initial {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+        }
+
+        .reval-history-badge.success {
+            background: rgba(129, 199, 132, 0.2);
+            color: #81c784;
+        }
+
+        .reval-history-badge.failed {
+            background: rgba(229, 115, 115, 0.2);
+            color: #e57373;
+        }
+
+        .reval-history-text {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .reval-detail-current {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .reval-detail-current h4 {
+            margin: 0 0 0.75rem 0;
+            font-size: 0.9rem;
+            color: #64c8ff;
+        }
+
+        .detection-results {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .detection-result {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .detection-result.detection-success {
+            background: rgba(129, 199, 132, 0.15);
+            color: #81c784;
+        }
+
+        .detection-result.detection-wrong {
+            background: rgba(229, 115, 115, 0.15);
+            color: #e57373;
+        }
+
+        .detection-result.detection-other {
+            background: rgba(255, 255, 255, 0.05);
+            color: #aaa;
+        }
+
+        .detection-result.detection-none {
+            background: rgba(255, 255, 255, 0.05);
+            color: #888;
+        }
+
+        .detection-icon {
+            font-size: 1.1rem;
+        }
+
+        .reval-detail-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .reval-list-item {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem;
+            }
+
+            .reval-list-header {
+                display: none;
+            }
+
+            .reval-detail-info-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .reval-detail-actions {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1966,9 +2459,62 @@
                     <h2 class="card-title">Ausstehende Überprüfungen</h2>
                     <span class="badge badge-neutral" id="pendingCount">0</span>
                 </div>
-                <div id="revalidationList">
+
+                <!-- Filter Section -->
+                <div class="reval-filters">
+                    <div class="reval-filter-group">
+                        <label>Symbol</label>
+                        <select id="revalFilterSymbol" onchange="filterRevalidationList()">
+                            <option value="">Alle Symbole</option>
+                        </select>
+                    </div>
+                    <div class="reval-filter-group">
+                        <label>Timeframe</label>
+                        <select id="revalFilterTimeframe" onchange="filterRevalidationList()">
+                            <option value="">Alle</option>
+                            <option value="M5">M5</option>
+                            <option value="M15">M15</option>
+                            <option value="H1">H1</option>
+                            <option value="H4">H4</option>
+                            <option value="D1">D1</option>
+                        </select>
+                    </div>
+                    <div class="reval-filter-group">
+                        <label>Typ</label>
+                        <select id="revalFilterType" onchange="filterRevalidationList()">
+                            <option value="">Alle</option>
+                            <option value="rejected">Abgelehnt</option>
+                            <option value="corrected">Korrigiert</option>
+                        </select>
+                    </div>
+                    <div class="reval-filter-group">
+                        <label>Pattern</label>
+                        <select id="revalFilterPattern" onchange="filterRevalidationList()">
+                            <option value="">Alle Patterns</option>
+                        </select>
+                    </div>
+                    <div class="reval-filter-group" style="align-self: flex-end;">
+                        <button class="btn btn-secondary" onclick="resetRevalidationFilters()" style="padding: 0.4rem 0.8rem;">
+                            Filter zurücksetzen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- List Header -->
+                <div class="reval-list-header">
+                    <div>Symbol</div>
+                    <div>Pattern-Korrektur</div>
+                    <div>Timeframe</div>
+                    <div>Datum</div>
+                    <div>Typ</div>
+                    <div></div>
+                </div>
+
+                <!-- List Content -->
+                <div id="revalidationList" class="reval-list-container">
                     <div class="loading"><span class="spinner"></span></div>
                 </div>
+
                 <div id="noRevalidations" style="display: none; text-align: center; padding: 2rem; color: #888;">
                     <div style="font-size: 2rem; margin-bottom: 0.5rem;">✓</div>
                     <div>Alle Korrekturen wurden überprüft!</div>
@@ -2003,6 +2549,84 @@
 
     </main>
 
+    <!-- Revalidation Detail Modal -->
+    <div id="revalDetailOverlay" class="reval-detail-overlay" onclick="closeRevalDetail(event)">
+        <div class="reval-detail-modal" onclick="event.stopPropagation()">
+            <div class="reval-detail-header">
+                <div class="reval-detail-title">
+                    <span id="revalDetailSymbol">BTCUSD</span>
+                    <span class="reval-detail-badge" id="revalDetailType">Korrigiert</span>
+                </div>
+                <div class="reval-detail-nav">
+                    <button class="btn btn-secondary" onclick="navigateRevalDetail(-1)" id="revalPrevBtn" title="Vorheriger">
+                        ← Zurück
+                    </button>
+                    <span id="revalDetailPosition">1 / 10</span>
+                    <button class="btn btn-secondary" onclick="navigateRevalDetail(1)" id="revalNextBtn" title="Nächster">
+                        Weiter →
+                    </button>
+                </div>
+                <button class="close-btn" onclick="closeRevalDetail()">&times;</button>
+            </div>
+
+            <div class="reval-detail-content">
+                <!-- Pattern Info -->
+                <div class="reval-detail-info">
+                    <div class="reval-detail-info-row">
+                        <div class="reval-detail-info-item">
+                            <label>Original erkannt</label>
+                            <span id="revalDetailOriginal">-</span>
+                        </div>
+                        <div class="reval-detail-info-item">
+                            <label>Korrigiert zu</label>
+                            <span id="revalDetailCorrected">-</span>
+                        </div>
+                        <div class="reval-detail-info-item">
+                            <label>Timeframe</label>
+                            <span id="revalDetailTimeframe">-</span>
+                        </div>
+                        <div class="reval-detail-info-item">
+                            <label>Zeitpunkt</label>
+                            <span id="revalDetailTimestamp">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="reval-detail-chart">
+                    <div id="revalDetailChartContainer" style="width: 100%; height: 300px;"></div>
+                </div>
+
+                <!-- Feedback History -->
+                <div class="reval-detail-history">
+                    <h4>Feedback-Verlauf</h4>
+                    <div id="revalDetailFeedbackHistory"></div>
+                </div>
+
+                <!-- Current Detection -->
+                <div class="reval-detail-current">
+                    <h4>Aktuelle Erkennung nach Training</h4>
+                    <div id="revalDetailCurrentDetection">
+                        <div class="loading"><span class="spinner"></span> Prüfe aktuelle Erkennung...</div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="reval-detail-actions">
+                    <button class="btn btn-success" onclick="submitRevalFeedback('correct')" id="revalBtnCorrect">
+                        ✓ Jetzt korrekt erkannt
+                    </button>
+                    <button class="btn btn-primary" onclick="submitRevalFeedback('not_detected')" id="revalBtnNotDetected">
+                        ✓ Nicht mehr erkannt (gut)
+                    </button>
+                    <button class="btn btn-danger" onclick="submitRevalFeedback('still_wrong')" id="revalBtnStillWrong">
+                        ✗ Weiterhin falsch
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
@@ -2015,6 +2639,12 @@
         let currentHistoryPage = 1;
         const HISTORY_PAGE_SIZE = 12;
         let ohlcCache = {};  // Cache for OHLC data
+
+        // Revalidation list state
+        let allRevalidationItems = [];  // All pending revalidation items
+        let filteredRevalidationItems = [];  // Filtered items based on user selection
+        let currentRevalDetailIndex = 0;  // Current index in detail view
+        let revalDetailChart = null;  // Current chart instance in detail modal
 
         // Pattern visual examples - each candle: [upperWick, body, lowerWick, type]
         // type: 'bullish', 'bearish', 'doji'
@@ -3839,22 +4469,387 @@
                 countBadge.textContent = data.count || 0;
 
                 if (!data.pending || data.pending.length === 0) {
+                    allRevalidationItems = [];
+                    filteredRevalidationItems = [];
                     container.innerHTML = '';
                     noItemsMsg.style.display = 'block';
                     return;
                 }
 
-                noItemsMsg.style.display = 'none';
-                container.innerHTML = data.pending.map((item, index) => renderRevalidationItem(item, index)).join('');
+                // Store all items globally
+                allRevalidationItems = data.pending;
 
-                // Load charts for each item after rendering
-                data.pending.forEach((item, index) => {
-                    loadRevalidationChart(item, index);
-                });
+                // Populate filter dropdowns
+                populateRevalidationFilters(data.pending);
+
+                // Apply filters and render list
+                filterRevalidationList();
+
+                noItemsMsg.style.display = 'none';
 
             } catch (error) {
                 console.error('Failed to load pending revalidations:', error);
                 container.innerHTML = '<div style="color: #e57373; padding: 1rem;">Fehler beim Laden</div>';
+            }
+        }
+
+        // Populate filter dropdowns with unique values from data
+        function populateRevalidationFilters(items) {
+            const symbolSelect = document.getElementById('revalFilterSymbol');
+            const patternSelect = document.getElementById('revalFilterPattern');
+
+            // Get unique symbols
+            const symbols = [...new Set(items.map(item => item.symbol))].sort();
+            symbolSelect.innerHTML = '<option value="">Alle Symbole</option>' +
+                symbols.map(s => `<option value="${s}">${s}</option>`).join('');
+
+            // Get unique patterns (both original and corrected)
+            const patterns = [...new Set([
+                ...items.map(item => item.original_pattern),
+                ...items.filter(item => item.corrected_pattern).map(item => item.corrected_pattern)
+            ])].filter(p => p).sort();
+
+            patternSelect.innerHTML = '<option value="">Alle Patterns</option>' +
+                patterns.map(p => `<option value="${p}">${formatPatternType(p)}</option>`).join('');
+        }
+
+        // Filter revalidation list based on selected filters
+        function filterRevalidationList() {
+            const symbolFilter = document.getElementById('revalFilterSymbol').value;
+            const timeframeFilter = document.getElementById('revalFilterTimeframe').value;
+            const typeFilter = document.getElementById('revalFilterType').value;
+            const patternFilter = document.getElementById('revalFilterPattern').value;
+
+            filteredRevalidationItems = allRevalidationItems.filter(item => {
+                if (symbolFilter && item.symbol !== symbolFilter) return false;
+                if (timeframeFilter && item.timeframe !== timeframeFilter) return false;
+                if (typeFilter) {
+                    if (typeFilter === 'rejected' && item.feedback_type !== 'rejected') return false;
+                    if (typeFilter === 'corrected' && item.feedback_type !== 'corrected') return false;
+                }
+                if (patternFilter) {
+                    if (item.original_pattern !== patternFilter && item.corrected_pattern !== patternFilter) return false;
+                }
+                return true;
+            });
+
+            renderRevalidationList();
+        }
+
+        // Reset all revalidation filters
+        function resetRevalidationFilters() {
+            document.getElementById('revalFilterSymbol').value = '';
+            document.getElementById('revalFilterTimeframe').value = '';
+            document.getElementById('revalFilterType').value = '';
+            document.getElementById('revalFilterPattern').value = '';
+            filterRevalidationList();
+        }
+
+        // Render the revalidation list in compact format
+        function renderRevalidationList() {
+            const container = document.getElementById('revalidationList');
+            const noItemsMsg = document.getElementById('noRevalidations');
+            const countBadge = document.getElementById('pendingCount');
+
+            if (filteredRevalidationItems.length === 0) {
+                if (allRevalidationItems.length === 0) {
+                    container.innerHTML = '';
+                    noItemsMsg.style.display = 'block';
+                } else {
+                    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #888;">Keine Einträge für diese Filter</div>';
+                    noItemsMsg.style.display = 'none';
+                }
+                return;
+            }
+
+            noItemsMsg.style.display = 'none';
+            countBadge.textContent = `${filteredRevalidationItems.length} / ${allRevalidationItems.length}`;
+
+            container.innerHTML = filteredRevalidationItems.map((item, index) => {
+                const isRejected = item.feedback_type === 'rejected';
+                const typeClass = isRejected ? 'rejected' : 'corrected';
+                const typeLabel = isRejected ? 'Abgelehnt' : 'Korrigiert';
+
+                const patternDisplay = isRejected
+                    ? `${formatPatternType(item.original_pattern)} → ✗`
+                    : `${formatPatternType(item.original_pattern)} → ${formatPatternType(item.corrected_pattern)}`;
+
+                const timestamp = new Date(item.pattern_timestamp);
+                const dateStr = timestamp.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                const timeStr = timestamp.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+
+                return `
+                    <div class="reval-list-item" onclick="openRevalDetail(${index})">
+                        <div class="reval-list-symbol">${item.symbol}</div>
+                        <div class="reval-list-pattern">${patternDisplay}</div>
+                        <div class="reval-list-timeframe">
+                            <span class="timeframe-badge">${item.timeframe}</span>
+                        </div>
+                        <div class="reval-list-date">${dateStr} ${timeStr}</div>
+                        <div class="reval-list-type">
+                            <span class="reval-type-badge ${typeClass}">${typeLabel}</span>
+                        </div>
+                        <div class="reval-list-action">
+                            <button class="btn btn-sm" onclick="event.stopPropagation(); openRevalDetail(${index})">Details</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Open revalidation detail modal
+        function openRevalDetail(index) {
+            currentRevalDetailIndex = index;
+            const item = filteredRevalidationItems[index];
+            if (!item) return;
+
+            const overlay = document.getElementById('revalDetailOverlay');
+            overlay.classList.add('active');
+
+            updateRevalDetailContent(item, index);
+        }
+
+        // Close revalidation detail modal
+        function closeRevalDetail(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const overlay = document.getElementById('revalDetailOverlay');
+            overlay.classList.remove('active');
+        }
+
+        // Navigate to previous/next item in detail view
+        function navigateRevalDetail(direction) {
+            const newIndex = currentRevalDetailIndex + direction;
+            if (newIndex < 0 || newIndex >= filteredRevalidationItems.length) return;
+
+            currentRevalDetailIndex = newIndex;
+            const item = filteredRevalidationItems[newIndex];
+            updateRevalDetailContent(item, newIndex);
+        }
+
+        // Update the detail modal content
+        async function updateRevalDetailContent(item, index) {
+            const isRejected = item.feedback_type === 'rejected';
+
+            // Update header
+            document.getElementById('revalDetailSymbol').textContent = item.symbol;
+            const typeBadge = document.getElementById('revalDetailType');
+            typeBadge.textContent = isRejected ? 'Abgelehnt' : 'Korrigiert';
+            typeBadge.className = `reval-detail-badge ${isRejected ? 'rejected' : 'corrected'}`;
+
+            // Update position
+            document.getElementById('revalDetailPosition').textContent = `${index + 1} / ${filteredRevalidationItems.length}`;
+
+            // Update navigation buttons
+            document.getElementById('revalPrevBtn').disabled = index === 0;
+            document.getElementById('revalNextBtn').disabled = index === filteredRevalidationItems.length - 1;
+
+            // Update info
+            document.getElementById('revalDetailOriginal').textContent = formatPatternType(item.original_pattern);
+            document.getElementById('revalDetailCorrected').textContent = isRejected ? 'Kein Pattern' : formatPatternType(item.corrected_pattern);
+            document.getElementById('revalDetailTimeframe').textContent = item.timeframe;
+
+            const timestamp = new Date(item.pattern_timestamp);
+            document.getElementById('revalDetailTimestamp').textContent = timestamp.toLocaleString('de-CH');
+
+            // Render feedback history
+            const historyContainer = document.getElementById('revalDetailFeedbackHistory');
+            historyContainer.innerHTML = renderRevalDetailFeedbackHistory(item);
+
+            // Load chart
+            await loadRevalDetailChart(item);
+
+            // Check current detection
+            checkCurrentDetection(item);
+        }
+
+        // Render feedback history for detail modal
+        function renderRevalDetailFeedbackHistory(item) {
+            const feedbackDate = new Date(item.feedback_timestamp || item.created_at);
+            const feedbackType = item.feedback_type === 'rejected' ? 'Abgelehnt' : 'Korrigiert';
+
+            let html = `
+                <div class="reval-history-entry">
+                    <div class="reval-history-date">${feedbackDate.toLocaleString('de-CH')}</div>
+                    <div class="reval-history-action">
+                        <span class="reval-history-badge initial">${feedbackType}</span>
+                        <span class="reval-history-text">
+                            ${item.feedback_type === 'rejected'
+                                ? `"${formatPatternType(item.original_pattern)}" als False Positive markiert`
+                                : `"${formatPatternType(item.original_pattern)}" zu "${formatPatternType(item.corrected_pattern)}" korrigiert`
+                            }
+                        </span>
+                    </div>
+                </div>
+            `;
+
+            // Add revalidation history if available
+            if (item.revalidation_history && item.revalidation_history.length > 0) {
+                item.revalidation_history.forEach(reval => {
+                    const revalDate = new Date(reval.timestamp);
+                    const resultClass = reval.result === 'still_wrong' ? 'failed' : 'success';
+                    const resultText = reval.result === 'still_wrong' ? 'Weiterhin falsch'
+                        : reval.result === 'correct' ? 'Jetzt korrekt'
+                        : 'Nicht mehr erkannt';
+
+                    html += `
+                        <div class="reval-history-entry">
+                            <div class="reval-history-date">${revalDate.toLocaleString('de-CH')}</div>
+                            <div class="reval-history-action">
+                                <span class="reval-history-badge ${resultClass}">${resultText}</span>
+                                ${reval.notes ? `<span class="reval-history-text">${reval.notes}</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            return html;
+        }
+
+        // Load chart for detail modal
+        async function loadRevalDetailChart(item) {
+            const container = document.getElementById('revalDetailChartContainer');
+            container.innerHTML = '<div class="loading"><span class="spinner"></span> Lade Chart...</div>';
+
+            try {
+                const ohlcData = await fetchOhlcForRevalidation(item.symbol, item.timeframe, item.pattern_timestamp);
+
+                if (!ohlcData || ohlcData.length === 0) {
+                    container.innerHTML = '<div style="color: #888; text-align: center; padding: 2rem;">Keine Chart-Daten verfügbar</div>';
+                    return;
+                }
+
+                // Create canvas for chart
+                container.innerHTML = '<canvas id="revalDetailCanvas" style="width: 100%; height: 280px;"></canvas>';
+                const canvas = document.getElementById('revalDetailCanvas');
+
+                const direction = getPatternDirection(item.original_pattern);
+                const patternCandleCount = getPatternCandleCount(item.original_pattern);
+
+                const formattedCandles = ohlcData.map(c => ({
+                    datetime: c.datetime || c.timestamp,
+                    open: parseFloat(c.open),
+                    high: parseFloat(c.high),
+                    low: parseFloat(c.low),
+                    close: parseFloat(c.close)
+                }));
+
+                let highlightIdx = 0;
+                if (ohlcData._patternIdx !== undefined) {
+                    highlightIdx = Math.max(0, ohlcData._patternIdx - (patternCandleCount - 1));
+                }
+
+                renderCandlestickChart(canvas, formattedCandles, highlightIdx, direction, item.original_pattern);
+
+            } catch (error) {
+                console.error('Failed to load detail chart:', error);
+                container.innerHTML = '<div style="color: #e57373; text-align: center; padding: 2rem;">Fehler beim Laden des Charts</div>';
+            }
+        }
+
+        // Check current detection for the pattern
+        async function checkCurrentDetection(item) {
+            const container = document.getElementById('revalDetailCurrentDetection');
+            container.innerHTML = '<div class="loading"><span class="spinner"></span> Prüfe aktuelle Erkennung...</div>';
+
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/patterns/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbol: item.symbol,
+                        timeframes: [item.timeframe],
+                        lookback_candles: 50,
+                        min_confidence: 0.3
+                    })
+                });
+
+                const data = await res.json();
+
+                // Check if original pattern is still detected at the same timestamp
+                const patternTime = new Date(item.pattern_timestamp).getTime();
+                let foundPatterns = [];
+
+                const timeframeKey = item.timeframe.toLowerCase();
+                const tfPatterns = data.result?.[timeframeKey]?.patterns || [];
+
+                tfPatterns.forEach(p => {
+                    const pTime = new Date(p.timestamp).getTime();
+                    // Match if within 1 hour (for H1) or proportional for other timeframes
+                    if (Math.abs(pTime - patternTime) < 3600000 * 4) {
+                        foundPatterns.push(p);
+                    }
+                });
+
+                if (foundPatterns.length === 0) {
+                    container.innerHTML = `
+                        <div class="detection-result detection-none">
+                            <span class="detection-icon">○</span>
+                            <span>Kein Pattern mehr an dieser Stelle erkannt</span>
+                        </div>
+                    `;
+                } else {
+                    const isOriginalStillDetected = foundPatterns.some(p => p.pattern_type === item.original_pattern);
+                    const isCorrectedNowDetected = item.corrected_pattern && foundPatterns.some(p => p.pattern_type === item.corrected_pattern);
+
+                    let html = '<div class="detection-results">';
+                    foundPatterns.forEach(p => {
+                        const isOriginal = p.pattern_type === item.original_pattern;
+                        const isCorrected = p.pattern_type === item.corrected_pattern;
+                        const resultClass = isCorrected ? 'detection-success' : (isOriginal ? 'detection-wrong' : 'detection-other');
+
+                        html += `
+                            <div class="detection-result ${resultClass}">
+                                <span class="detection-icon">${isCorrected ? '✓' : (isOriginal ? '✗' : '•')}</span>
+                                <span>${formatPatternType(p.pattern_type)} (${Math.round(p.confidence * 100)}%)</span>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+                }
+
+            } catch (error) {
+                console.error('Failed to check current detection:', error);
+                container.innerHTML = '<div style="color: #e57373;">Fehler beim Prüfen der aktuellen Erkennung</div>';
+            }
+        }
+
+        // Submit revalidation feedback from detail modal
+        async function submitRevalFeedback(result) {
+            const item = filteredRevalidationItems[currentRevalDetailIndex];
+            if (!item) return;
+
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/feedback/record-revalidation`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        feedback_id: item.id,
+                        result: result,
+                        notes: ''
+                    })
+                });
+
+                if (res.ok) {
+                    showToast('Überprüfung gespeichert', 'success');
+
+                    // Move to next item or close if last
+                    if (currentRevalDetailIndex < filteredRevalidationItems.length - 1) {
+                        navigateRevalDetail(1);
+                    } else {
+                        closeRevalDetail();
+                    }
+
+                    // Reload data
+                    loadRevalidationData();
+                } else {
+                    const error = await res.json();
+                    showToast('Fehler: ' + (error.detail || 'Unbekannter Fehler'), 'error');
+                }
+            } catch (error) {
+                console.error('Failed to submit revalidation:', error);
+                showToast('Netzwerkfehler', 'error');
             }
         }
 
