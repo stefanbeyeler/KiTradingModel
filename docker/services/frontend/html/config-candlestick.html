@@ -2592,28 +2592,56 @@
                     ohlcCache[cacheKey] = ohlcData;
                 }
 
-                // Find the pattern timestamp in the data (timestamp points to the LAST candle of the pattern)
-                const patternTime = new Date(pattern.timestamp);
-                let patternIndex = ohlcData.findIndex(candle => {
-                    const candleTime = new Date(candle.datetime);
-                    return Math.abs(candleTime - patternTime) < 3600000 * 24;  // Within 24h
-                });
+                // TwelveData returns data in REVERSE order: index 0 = newest, last index = oldest
+                // Pattern timestamp points to the LAST candle of the pattern
+                // For 2-candle patterns: timestamp = second candle, first candle is OLDER (higher index in TwelveData)
 
-                // Get number of candles in this pattern type
+                const patternTime = new Date(pattern.timestamp);
                 const patternCandleCount = getPatternCandleCount(pattern.pattern_type);
 
-                // Get candles around the pattern (include enough candles before for multi-candle patterns)
-                if (patternIndex === -1) patternIndex = 0;
-                const startIdx = Math.max(0, patternIndex - 3 - patternCandleCount);
-                const endIdx = Math.min(ohlcData.length, patternIndex + 8);
-                const chartCandles = ohlcData.slice(startIdx, endIdx).reverse();
+                // First, reverse the data to get chronological order (oldest first)
+                const chronoData = [...ohlcData].reverse();
 
-                // Calculate the highlight start index (first candle of the pattern)
-                // Pattern timestamp points to the last candle, so we need to go back (patternCandleCount - 1) candles
-                const lastCandleChartIndex = chartCandles.length - 1 - (patternIndex - startIdx);
-                const firstCandleChartIndex = lastCandleChartIndex - (patternCandleCount - 1);
+                // Find pattern's last candle in chronological array
+                let lastCandleIdx = chronoData.findIndex(candle => {
+                    const candleTime = new Date(candle.datetime);
+                    return Math.abs(candleTime - patternTime) < 3600000 * 4;  // Within 4h for better precision
+                });
 
-                renderCandlestickChart(canvas, chartCandles, firstCandleChartIndex, pattern.direction, pattern.pattern_type);
+                if (lastCandleIdx === -1) {
+                    // Fallback: try 24h window
+                    lastCandleIdx = chronoData.findIndex(candle => {
+                        const candleTime = new Date(candle.datetime);
+                        return Math.abs(candleTime - patternTime) < 3600000 * 24;
+                    });
+                }
+
+                if (lastCandleIdx === -1) lastCandleIdx = chronoData.length - 1;
+
+                // First candle of pattern is (patternCandleCount - 1) positions BEFORE the last candle
+                const firstCandleIdx = lastCandleIdx - (patternCandleCount - 1);
+
+                // Get slice: some candles before pattern, pattern candles, some after
+                const contextBefore = 5;
+                const contextAfter = 3;
+                const startIdx = Math.max(0, firstCandleIdx - contextBefore);
+                const endIdx = Math.min(chronoData.length, lastCandleIdx + contextAfter + 1);
+                const chartCandles = chronoData.slice(startIdx, endIdx);
+
+                // Calculate highlight index relative to the slice
+                // firstCandleIdx in original array -> position in slice = firstCandleIdx - startIdx
+                const highlightStartIdx = firstCandleIdx - startIdx;
+
+                // Format for rendering
+                const formattedCandles = chartCandles.map(c => ({
+                    datetime: c.datetime,
+                    open: c.open,
+                    high: c.high,
+                    low: c.low,
+                    close: c.close
+                }));
+
+                renderCandlestickChart(canvas, formattedCandles, highlightStartIdx, pattern.direction, pattern.pattern_type);
 
             } catch (error) {
                 console.error(`Failed to load modal chart for ${pattern.symbol}:`, error);

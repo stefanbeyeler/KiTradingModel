@@ -364,44 +364,59 @@ class CandlestickPatternService:
         - Current candle is bullish (green)
         - Current body completely engulfs previous body
         - Both candles must have significant bodies (not dojis)
+        - Engulfing candle must be significantly larger than the previous
 
         A valid Bullish Engulfing requires:
         1. Previous candle: bearish with meaningful body
-        2. Current candle: bullish with body larger than previous
+        2. Current candle: bullish with body SIGNIFICANTLY larger than previous
         3. Current open below previous close (gap down or at same level)
         4. Current close above previous open (completely engulfs)
+        5. The engulfing candle must represent a significant price move (>= 0.25%)
         """
         # Basic direction checks - MUST be correct colors
         if not prev.is_bearish or not current.is_bullish:
             return False
 
+        # Minimum percentage move check - engulfing candle must be significant
+        # Body must be at least 0.25% of the price to filter out noise
+        price_reference = max(current.open, current.close, prev.open, prev.close)
+        if price_reference > 0:
+            current_pct_move = (current.body_size / price_reference) * 100
+            if current_pct_move < 0.25:
+                return False  # Move too small (< 0.25% of price)
+
         # Minimum body size check - prevent false positives with tiny candles
-        # Previous candle must have a meaningful body (at least 20% of its range)
+        # Previous candle must have a meaningful body (at least 25% of its range)
         if prev.total_range > 0:
             prev_body_ratio = prev.body_size / prev.total_range
-            if prev_body_ratio < 0.2:
+            if prev_body_ratio < 0.25:
                 return False  # Previous candle is too small (almost doji)
 
-        # Current candle must have a meaningful body
+        # Current candle must have a meaningful body (at least 40% of its range)
         if current.total_range > 0:
             current_body_ratio = current.body_size / current.total_range
-            if current_body_ratio < 0.3:
+            if current_body_ratio < 0.4:
                 return False  # Current candle body too small
 
         # If avg_body is provided, ensure candles are significant
         if avg_body > 0:
-            if prev.body_size < avg_body * 0.3:
+            # Previous candle must be at least 50% of average
+            if prev.body_size < avg_body * 0.5:
                 return False  # Previous candle too small compared to average
-            if current.body_size < avg_body * 0.5:
+            # Engulfing candle must be at least 100% of average (full size)
+            if current.body_size < avg_body:
                 return False  # Current candle too small compared to average
+
+        # Engulfing candle must be at least 1.5x the size of the previous candle
+        if current.body_size < prev.body_size * 1.5:
+            return False  # Not a significant engulfing
 
         # Engulfing conditions:
         # For bearish prev candle: open is high, close is low
         # Current bullish must: open below prev close, close above prev open
         engulfs_body = (
             current.open <= prev.close and  # Opens at or below prev close
-            current.close >= prev.open and  # Closes at or above prev open
-            current.body_size > prev.body_size  # Body is larger
+            current.close >= prev.open      # Closes at or above prev open
         )
 
         return engulfs_body
@@ -413,44 +428,59 @@ class CandlestickPatternService:
         - Current candle is bearish (red)
         - Current body completely engulfs previous body
         - Both candles must have significant bodies (not dojis)
+        - Engulfing candle must be significantly larger than the previous
 
         A valid Bearish Engulfing requires:
         1. Previous candle: bullish with meaningful body
-        2. Current candle: bearish with body larger than previous
+        2. Current candle: bearish with body SIGNIFICANTLY larger than previous
         3. Current open above previous close (gap up or at same level)
         4. Current close below previous open (completely engulfs)
+        5. The engulfing candle must represent a significant price move (>= 0.25%)
         """
         # Basic direction checks - MUST be correct colors
         if not prev.is_bullish or not current.is_bearish:
             return False
 
+        # Minimum percentage move check - engulfing candle must be significant
+        # Body must be at least 0.25% of the price to filter out noise
+        price_reference = max(current.open, current.close, prev.open, prev.close)
+        if price_reference > 0:
+            current_pct_move = (current.body_size / price_reference) * 100
+            if current_pct_move < 0.25:
+                return False  # Move too small (< 0.25% of price)
+
         # Minimum body size check - prevent false positives with tiny candles
-        # Previous candle must have a meaningful body (at least 20% of its range)
+        # Previous candle must have a meaningful body (at least 25% of its range)
         if prev.total_range > 0:
             prev_body_ratio = prev.body_size / prev.total_range
-            if prev_body_ratio < 0.2:
+            if prev_body_ratio < 0.25:
                 return False  # Previous candle is too small (almost doji)
 
-        # Current candle must have a meaningful body
+        # Current candle must have a meaningful body (at least 40% of its range)
         if current.total_range > 0:
             current_body_ratio = current.body_size / current.total_range
-            if current_body_ratio < 0.3:
+            if current_body_ratio < 0.4:
                 return False  # Current candle body too small
 
         # If avg_body is provided, ensure candles are significant
         if avg_body > 0:
-            if prev.body_size < avg_body * 0.3:
+            # Previous candle must be at least 50% of average
+            if prev.body_size < avg_body * 0.5:
                 return False  # Previous candle too small compared to average
-            if current.body_size < avg_body * 0.5:
+            # Engulfing candle must be at least 100% of average (full size)
+            if current.body_size < avg_body:
                 return False  # Current candle too small compared to average
+
+        # Engulfing candle must be at least 1.5x the size of the previous candle
+        if current.body_size < prev.body_size * 1.5:
+            return False  # Not a significant engulfing
 
         # Engulfing conditions:
         # For bullish prev candle: open is low, close is high
         # Current bearish must: open above prev close, close below prev open
         engulfs_body = (
             current.open >= prev.close and  # Opens at or above prev close
-            current.close <= prev.open and  # Closes at or below prev open
-            current.body_size > prev.body_size  # Body is larger
+            current.close <= prev.open      # Closes at or below prev open
         )
 
         return engulfs_body
