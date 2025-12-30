@@ -935,6 +935,27 @@ async def get_revalidation_statistics():
         improved = results.get('correct', 0) + results.get('now_correct', 0)
         improvement_rate = (improved / revalidated * 100) if revalidated > 0 else 0.0
 
+        # Find last training and revalidation timestamps
+        last_training = None
+        last_revalidation = None
+
+        for entry in feedback_data:
+            # Check for revalidation timestamp
+            reval_ts = entry.get('revalidation_timestamp')
+            if reval_ts:
+                if not last_revalidation or reval_ts > last_revalidation:
+                    last_revalidation = reval_ts
+
+        # Check for last training from training service (if available)
+        try:
+            from ..services.pattern_detection_service import candlestick_pattern_service
+            # Try to get model info which may contain last training date
+            model_info = getattr(candlestick_pattern_service, '_last_model_load', None)
+            if model_info:
+                last_training = model_info
+        except Exception:
+            pass
+
         return {
             "total_feedback": len(feedback_data),
             "total_corrections": total_corrections,
@@ -942,7 +963,9 @@ async def get_revalidation_statistics():
             "revalidated": revalidated,
             "results": results,
             "improvement_rate": round(improvement_rate, 1),
-            "message": f"Verbesserungsrate: {improvement_rate:.1f}% ({improved}/{revalidated} Patterns)"
+            "message": f"Verbesserungsrate: {improvement_rate:.1f}% ({improved}/{revalidated} Patterns)",
+            "last_training": last_training,
+            "last_revalidation": last_revalidation
         }
 
     except Exception as e:

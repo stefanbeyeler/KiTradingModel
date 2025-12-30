@@ -2545,6 +2545,31 @@
 
                 <!-- Training Section integrated -->
                 <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <!-- Last Training Info -->
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.85rem;">
+                            Letztes Training: <span id="revalLastTraining" style="color: #64c8ff;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.85rem;">
+                            Letzte Re-Validierung: <span id="revalLastRevalidation" style="color: #81c784;">-</span>
+                        </span>
+                    </div>
+
+                    <!-- Training Progress (hidden by default) -->
+                    <div id="revalTrainingProgress" style="display: none; margin-bottom: 1rem; padding: 1rem; background: rgba(100, 200, 255, 0.1); border-radius: 8px; border: 1px solid rgba(100, 200, 255, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-weight: 500; color: #64c8ff;">⏳ Training läuft...</span>
+                            <span id="revalTrainingPercent" style="color: #fff;">0%</span>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); border-radius: 4px; height: 8px; overflow: hidden;">
+                            <div id="revalTrainingBar" style="background: linear-gradient(90deg, #64c8ff, #81c784); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.8rem; color: #888;">
+                            <span>Epoch: <span id="revalTrainingEpoch">0</span> / <span id="revalTrainingTotalEpochs">0</span></span>
+                            <span>Loss: <span id="revalTrainingLoss">-</span></span>
+                        </div>
+                    </div>
+
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
                         <div style="flex: 1; min-width: 300px;">
                             <h3 style="font-size: 1rem; color: #64c8ff; margin-bottom: 0.5rem;">🚀 Neues Training starten</h3>
@@ -2567,7 +2592,7 @@
                             </div>
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
-                            <button class="btn btn-success" id="btnStartTraining" onclick="startTraining()" style="padding: 0.6rem 1.5rem;">
+                            <button class="btn btn-success" id="btnStartRevalTraining" onclick="startRevalTraining()" style="padding: 0.6rem 1.5rem;">
                                 ▶ Training starten
                             </button>
                             <span style="font-size: 0.75rem; color: #666;">Symbole: BTCUSD, EURUSD, GBPUSD, XAUUSD, GER40, XTIUSD</span>
@@ -5262,6 +5287,12 @@
                 document.getElementById('revalImprovement').textContent =
                     data.revalidated > 0 ? `${data.improvement_rate}%` : '-';
 
+                // Update last training/revalidation timestamps
+                document.getElementById('revalLastTraining').textContent =
+                    data.last_training ? formatTimestamp(data.last_training) : 'Nie';
+                document.getElementById('revalLastRevalidation').textContent =
+                    data.last_revalidation ? formatTimestamp(data.last_revalidation) : 'Nie';
+
                 // Update tab badge
                 const badge = document.getElementById('revalidationBadge');
                 if (data.pending_revalidation > 0) {
@@ -6315,6 +6346,106 @@
             } catch (error) {
                 console.error('Failed to reset revalidation:', error);
                 showToast('Fehler beim Zurücksetzen', 'error');
+            }
+        }
+
+        // Revalidation Training
+        let revalTrainingInterval = null;
+
+        async function startRevalTraining() {
+            const epochs = parseInt(document.getElementById('trainEpochs').value) || 50;
+            const batchSize = parseInt(document.getElementById('trainBatchSize').value) || 32;
+            const learningRate = parseFloat(document.getElementById('trainLearningRate').value) || 0.001;
+
+            const btn = document.getElementById('btnStartRevalTraining');
+            btn.disabled = true;
+            btn.textContent = '⏳ Starte...';
+
+            try {
+                const res = await fetch(`${CANDLESTICK_TRAIN_API}/train/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbols: ['BTCUSD', 'EURUSD', 'GBPUSD', 'XAUUSD', 'GER40', 'XTIUSD'],
+                        epochs: epochs,
+                        batch_size: batchSize,
+                        learning_rate: learningRate
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast(`Training gestartet: ${data.job?.job_id || 'OK'}`, 'success');
+
+                    // Show progress bar
+                    document.getElementById('revalTrainingProgress').style.display = 'block';
+                    document.getElementById('revalTrainingTotalEpochs').textContent = epochs;
+
+                    // Start polling for progress
+                    revalTrainingInterval = setInterval(pollRevalTrainingProgress, 2000);
+                } else {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Training start failed');
+                }
+            } catch (error) {
+                console.error('Failed to start training:', error);
+                showToast('Fehler: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = '▶ Training starten';
+            }
+        }
+
+        async function pollRevalTrainingProgress() {
+            try {
+                const res = await fetch(`${CANDLESTICK_TRAIN_API}/train/status`);
+                const data = await res.json();
+
+                if (data.current_job) {
+                    const job = data.current_job;
+                    const epoch = job.current_epoch || 0;
+                    const totalEpochs = job.total_epochs || 1;
+                    const percent = Math.round((epoch / totalEpochs) * 100);
+
+                    document.getElementById('revalTrainingEpoch').textContent = epoch;
+                    document.getElementById('revalTrainingTotalEpochs').textContent = totalEpochs;
+                    document.getElementById('revalTrainingPercent').textContent = `${percent}%`;
+                    document.getElementById('revalTrainingBar').style.width = `${percent}%`;
+                    document.getElementById('revalTrainingLoss').textContent =
+                        job.current_loss ? job.current_loss.toFixed(4) : '-';
+
+                } else if (data.last_job) {
+                    // Training completed
+                    clearInterval(revalTrainingInterval);
+                    revalTrainingInterval = null;
+
+                    const job = data.last_job;
+                    document.getElementById('revalTrainingPercent').textContent = '100%';
+                    document.getElementById('revalTrainingBar').style.width = '100%';
+
+                    if (job.status === 'completed') {
+                        showToast('Training abgeschlossen!', 'success');
+                    } else if (job.status === 'failed') {
+                        showToast('Training fehlgeschlagen: ' + (job.error || 'Unbekannter Fehler'), 'error');
+                    }
+
+                    // Hide progress after 3 seconds
+                    setTimeout(() => {
+                        document.getElementById('revalTrainingProgress').style.display = 'none';
+                        document.getElementById('btnStartRevalTraining').disabled = false;
+                        document.getElementById('btnStartRevalTraining').textContent = '▶ Training starten';
+                        loadRevalidationStats();
+                    }, 3000);
+
+                } else {
+                    // No active job, training may have failed to start
+                    clearInterval(revalTrainingInterval);
+                    revalTrainingInterval = null;
+                    document.getElementById('revalTrainingProgress').style.display = 'none';
+                    document.getElementById('btnStartRevalTraining').disabled = false;
+                    document.getElementById('btnStartRevalTraining').textContent = '▶ Training starten';
+                }
+            } catch (error) {
+                console.error('Failed to poll training status:', error);
             }
         }
 
