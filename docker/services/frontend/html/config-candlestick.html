@@ -1502,7 +1502,45 @@
         .timeline-confidence {
             font-size: 0.8rem;
             color: #888;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .timeline-status {
             margin-left: auto;
+            min-width: 100px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .timeline-status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .timeline-status-badge.pending {
+            background: rgba(136, 136, 136, 0.2);
+            color: #888;
+        }
+
+        .timeline-status-badge.confirmed {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .timeline-status-badge.corrected {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        .timeline-status-badge.rejected {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
         }
 
         .timeline-arrow {
@@ -2084,7 +2122,6 @@
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab active" onclick="switchTab('status')">Status</button>
-            <button class="tab" onclick="switchTab('patterntypes')">Pattern-Typen</button>
             <button class="tab" onclick="switchTab('detection')">Detection & History</button>
             <button class="tab" onclick="switchTab('training')">Training</button>
             <button class="tab" onclick="switchTab('revalidation')">Re-Validierung <span id="revalidationBadge" class="tab-badge" style="display: none;">0</span></button>
@@ -2194,24 +2231,46 @@
                 </div>
             </div>
 
-            <!-- Quick Actions -->
+            <!-- Pattern Categories -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">⚡ Schnellaktionen</h2>
+                    <h2 class="card-title">Verfügbare Pattern-Typen</h2>
                 </div>
-                <div class="btn-group" style="flex-wrap: wrap;">
-                    <button class="btn btn-primary" onclick="switchTab('detection'); triggerManualScan();">
-                        🔍 Pattern-Scan starten
-                    </button>
-                    <button class="btn btn-secondary" onclick="switchTab('training');">
-                        🔧 Training öffnen
-                    </button>
-                    <button class="btn btn-secondary" onclick="switchTab('revalidation');">
-                        🔄 Re-Validierung öffnen
-                    </button>
-                    <button class="btn btn-secondary" onclick="switchTab('claudeqa');">
-                        🤖 Claude QA öffnen
-                    </button>
+
+                <!-- Reversal Patterns -->
+                <div class="category-section" id="reversalSection">
+                    <div class="category-title">
+                        <span class="badge badge-reversal">Reversal</span>
+                        Umkehrmuster
+                        <span class="category-count" id="reversalCount">0</span>
+                    </div>
+                    <div class="pattern-grid" id="reversalPatterns">
+                        <div class="loading"><span class="spinner"></span></div>
+                    </div>
+                </div>
+
+                <!-- Continuation Patterns -->
+                <div class="category-section" id="continuationSection">
+                    <div class="category-title">
+                        <span class="badge badge-continuation">Continuation</span>
+                        Fortsetzungsmuster
+                        <span class="category-count" id="continuationCount">0</span>
+                    </div>
+                    <div class="pattern-grid" id="continuationPatterns">
+                        <div class="loading"><span class="spinner"></span></div>
+                    </div>
+                </div>
+
+                <!-- Indecision Patterns -->
+                <div class="category-section" id="indecisionSection">
+                    <div class="category-title">
+                        <span class="badge badge-indecision">Indecision</span>
+                        Unentschlossenheit
+                        <span class="category-count" id="indecisionCount">0</span>
+                    </div>
+                    <div class="pattern-grid" id="indecisionPatterns">
+                        <div class="loading"><span class="spinner"></span></div>
+                    </div>
                 </div>
             </div>
 
@@ -2315,54 +2374,6 @@
 
         </div><!-- End Tab: Training -->
 
-        <!-- Tab: Pattern-Typen -->
-        <div id="tab-patterntypes" class="tab-content">
-
-            <!-- Pattern Categories -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Verfügbare Pattern-Typen</h2>
-                </div>
-
-                <!-- Reversal Patterns -->
-                <div class="category-section" id="reversalSection">
-                    <div class="category-title">
-                        <span class="badge badge-reversal">Reversal</span>
-                        Umkehrmuster
-                        <span class="category-count" id="reversalCount">0</span>
-                    </div>
-                    <div class="pattern-grid" id="reversalPatterns">
-                        <div class="loading"><span class="spinner"></span></div>
-                    </div>
-                </div>
-
-                <!-- Continuation Patterns -->
-                <div class="category-section" id="continuationSection">
-                    <div class="category-title">
-                        <span class="badge badge-continuation">Continuation</span>
-                        Fortsetzungsmuster
-                        <span class="category-count" id="continuationCount">0</span>
-                    </div>
-                    <div class="pattern-grid" id="continuationPatterns">
-                        <div class="loading"><span class="spinner"></span></div>
-                    </div>
-                </div>
-
-                <!-- Indecision Patterns -->
-                <div class="category-section" id="indecisionSection">
-                    <div class="category-title">
-                        <span class="badge badge-indecision">Indecision</span>
-                        Unentschlossenheit
-                        <span class="category-count" id="indecisionCount">0</span>
-                    </div>
-                    <div class="pattern-grid" id="indecisionPatterns">
-                        <div class="loading"><span class="spinner"></span></div>
-                    </div>
-                </div>
-            </div>
-
-        </div><!-- End Tab: Pattern-Typen -->
-
         <!-- Tab: Detection & History -->
         <div id="tab-detection" class="tab-content">
 
@@ -2446,15 +2457,15 @@
 
                 <div class="history-filters">
                     <div class="form-group" style="margin: 0;">
-                        <label style="font-size: 0.75rem;">Symbol</label>
-                        <select id="historyFilterSymbol" onchange="loadPatternHistory()">
-                            <option value="">Alle Symbole</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
                         <label style="font-size: 0.75rem;">Pattern</label>
                         <select id="historyFilterPattern" onchange="loadPatternHistory()">
                             <option value="">Alle Patterns</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.75rem;">Symbol</label>
+                        <select id="historyFilterSymbol" onchange="loadPatternHistory()">
+                            <option value="">Alle Symbole</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin: 0;">
@@ -2478,13 +2489,13 @@
                         </select>
                     </div>
                     <div class="form-group" style="margin: 0;">
-                        <label style="font-size: 0.75rem;">Min. Konfidenz</label>
+                        <label style="font-size: 0.75rem;">Konfidenz</label>
                         <select id="historyFilterConfidence" onchange="loadPatternHistory()">
                             <option value="0">Alle</option>
-                            <option value="0.5">50%+</option>
-                            <option value="0.6">60%+</option>
-                            <option value="0.7">70%+</option>
-                            <option value="0.8">80%+</option>
+                            <option value="0.5">≥50%</option>
+                            <option value="0.6">≥60%</option>
+                            <option value="0.7">≥70%</option>
+                            <option value="0.8">≥80%</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin: 0;">
@@ -3871,13 +3882,6 @@
             // Load data based on tab
             if (tabName === 'status') {
                 loadStatusDashboard();
-
-                // Stop auto-refresh
-                if (trainingRefreshInterval) {
-                    clearInterval(trainingRefreshInterval);
-                    trainingRefreshInterval = null;
-                }
-            } else if (tabName === 'patterntypes') {
                 loadPatternTypes();
 
                 // Stop auto-refresh
@@ -4366,6 +4370,14 @@
                 `;
             }
 
+            // Build status display (simplified version for timeline row)
+            let statusBadge = '<span class="timeline-status-badge pending">—</span>';
+            if (feedback) {
+                const feedbackType = feedback.feedback_type;
+                const ft = formatFeedbackType(feedbackType);
+                statusBadge = `<span class="timeline-status-badge ${feedbackType}" title="${ft.label}">${ft.icon}</span>`;
+            }
+
             return `
                 <div class="timeline-item ${directionClass}">
                     <span class="timeline-time">${time}</span>
@@ -4374,8 +4386,8 @@
                         <span class="timeline-symbol">${pattern.symbol}</span>
                         <span class="timeline-direction ${directionClass}">${pattern.direction}</span>
                         <span class="timeline-timeframe">${pattern.timeframe || '-'}</span>
-                        ${feedbackBadge}
                         <span class="timeline-confidence">${confidencePercent}%</span>
+                        <span class="timeline-status">${feedbackBadge || statusBadge}</span>
                         <span class="timeline-arrow">›</span>
                     </div>
                     ${feedbackSummary}
@@ -6802,6 +6814,7 @@
 
             // Status Dashboard laden (da Status standardmäßig aktiv ist)
             await loadStatusDashboard();
+            await loadPatternTypes();
 
             // Auto-Scan standardmäßig starten (ohne Toast-Nachricht)
             if (isAutoScanRunning) {
