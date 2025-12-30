@@ -2720,49 +2720,59 @@
                 </div>
             </div>
 
-            <!-- Two-Column Layout for History and Problems -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <!-- Validation History -->
+            <!-- Two-Column Layout for History (2/3) and Problems (1/3) -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                <!-- Validation History (2/3) -->
                 <div class="card" style="margin-bottom: 0;">
                     <div class="card-header">
                         <h2 class="card-title" style="font-size: 1rem;">📜 Historie</h2>
-                        <button class="btn btn-secondary btn-sm" onclick="loadClaudeHistory()">Laden</button>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label style="font-size: 0.8rem; color: #888;">Limit:</label>
+                            <select id="claudeHistoryLimit" onchange="loadClaudeHistory()"
+                                    style="padding: 0.2rem 0.4rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.8rem;">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <button class="btn btn-secondary btn-sm" onclick="loadClaudeHistory()">Refresh</button>
+                        </div>
                     </div>
                     <div id="claudeHistoryTable" style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
-                        <table class="data-table" style="font-size: 0.8rem;">
+                        <table class="data-table" style="font-size: 0.8rem; width: 100%;">
                             <thead>
                                 <tr>
-                                    <th>Symbol/TF</th>
-                                    <th>Pattern</th>
-                                    <th>Result</th>
+                                    <th style="width: 90px;">Symbol/TF</th>
+                                    <th style="min-width: 120px;">Pattern</th>
+                                    <th style="width: 70px; text-align: center;">Result</th>
                                     <th>Begründung</th>
                                 </tr>
                             </thead>
                             <tbody id="claudeHistoryBody">
-                                <tr><td colspan="4" style="text-align: center; color: #888; padding: 1rem;">Klicke "Laden"</td></tr>
+                                <tr><td colspan="4" style="text-align: center; color: #888; padding: 1rem;"><span class="spinner"></span> Laden...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- Problematic Patterns -->
+                <!-- Problematic Patterns (1/3) -->
                 <div class="card" style="margin-bottom: 0;">
                     <div class="card-header">
-                        <h2 class="card-title" style="font-size: 1rem;">⚠️ Problematische Patterns</h2>
-                        <button class="btn btn-secondary btn-sm" onclick="loadProblematicPatterns()">Analyse</button>
+                        <h2 class="card-title" style="font-size: 1rem;">⚠️ Problematisch</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="loadProblematicPatterns()">Refresh</button>
                     </div>
                     <div id="problematicPatternsTable" style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
                         <table class="data-table" style="width: 100%; font-size: 0.8rem;">
                             <thead>
                                 <tr>
                                     <th style="text-align: left; padding: 0.5rem;">Pattern</th>
-                                    <th style="text-align: center; padding: 0.5rem; width: 50px;">✓</th>
-                                    <th style="text-align: center; padding: 0.5rem; width: 50px;">✗</th>
-                                    <th style="text-align: left; padding: 0.5rem;">Rate</th>
+                                    <th style="text-align: center; padding: 0.5rem; width: 40px;">✓</th>
+                                    <th style="text-align: center; padding: 0.5rem; width: 40px;">✗</th>
+                                    <th style="text-align: left; padding: 0.5rem; min-width: 80px;">Rate</th>
                                 </tr>
                             </thead>
                             <tbody id="problematicPatternsBody">
-                                <tr><td colspan="4" style="text-align: center; color: #888; padding: 1rem;">Klicke "Analyse"</td></tr>
+                                <tr><td colspan="4" style="text-align: center; color: #888; padding: 1rem;"><span class="spinner"></span> Laden...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -6578,10 +6588,12 @@
 
         async function loadClaudeHistory() {
             const tbody = document.getElementById('claudeHistoryBody');
+            const limitSelect = document.getElementById('claudeHistoryLimit');
+            const limit = limitSelect ? limitSelect.value : 10;
             tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><span class="spinner"></span></td></tr>';
 
             try {
-                const response = await fetch(`${CANDLESTICK_API}/claude/history?limit=50`);
+                const response = await fetch(`${CANDLESTICK_API}/claude/history?limit=${limit}`);
                 if (!response.ok) throw new Error(`Historie: HTTP ${response.status}`);
                 const data = await response.json();
 
@@ -6592,13 +6604,13 @@
 
                 tbody.innerHTML = data.history.map(v => `
                     <tr>
-                        <td style="white-space: nowrap;"><strong>${v.symbol}</strong><br><span style="color:#888;">${v.timeframe}</span></td>
-                        <td>${formatPatternType(v.pattern_type)}</td>
-                        <td style="color: ${v.claude_agrees ? '#81c784' : '#e57373'}; text-align: center;">
+                        <td style="white-space: nowrap;"><strong>${v.symbol}</strong><br><span style="color:#888; font-size: 0.75rem;">${v.timeframe}</span></td>
+                        <td style="font-size: 0.85rem;">${formatPatternType(v.pattern_type)}</td>
+                        <td style="color: ${v.claude_agrees ? '#81c784' : '#e57373'}; text-align: center; white-space: nowrap;">
                             ${v.claude_agrees ? '✓' : '✗'} ${(v.claude_confidence * 100).toFixed(0)}%
                         </td>
-                        <td style="max-width: 150px; color: #aaa; font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis;" title="${v.claude_reasoning || ''}">
-                            ${v.claude_reasoning ? v.claude_reasoning.substring(0, 60) + (v.claude_reasoning.length > 60 ? '...' : '') : '-'}
+                        <td style="color: #aaa; font-size: 0.75rem;" title="${v.claude_reasoning || ''}">
+                            ${v.claude_reasoning ? v.claude_reasoning.substring(0, 100) + (v.claude_reasoning.length > 100 ? '...' : '') : '-'}
                         </td>
                     </tr>
                 `).join('');
@@ -7123,13 +7135,24 @@
             }
         }
 
-        // Load auto-opt status when Claude QA tab is shown
+        // Load data when Claude QA tab is shown
         document.querySelectorAll('[data-tab]').forEach(tab => {
             tab.addEventListener('click', () => {
                 if (tab.dataset.tab === 'claudeqa') {
                     loadAutoOptStatus();
+                    loadClaudeHistory();
+                    loadProblematicPatterns();
                 }
             });
+        });
+
+        // Auto-load Claude QA data if tab is already active on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const claudeTab = document.getElementById('tab-claudeqa');
+            if (claudeTab && claudeTab.style.display !== 'none' && claudeTab.classList.contains('active')) {
+                loadClaudeHistory();
+                loadProblematicPatterns();
+            }
         });
     </script>
 </body>
