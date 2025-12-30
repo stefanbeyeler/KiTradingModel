@@ -6362,7 +6362,7 @@
             btn.textContent = '⏳ Starte...';
 
             try {
-                const res = await fetch(`${CANDLESTICK_TRAIN_API}/train/start`, {
+                const res = await fetch(`${CANDLESTICK_TRAIN_API}/train`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -6400,11 +6400,13 @@
                 const res = await fetch(`${CANDLESTICK_TRAIN_API}/train/status`);
                 const data = await res.json();
 
-                if (data.current_job) {
-                    const job = data.current_job;
+                // Check if training is currently running (training: true and last_job.status === 'running')
+                if (data.training && data.last_job && data.last_job.status === 'running') {
+                    const job = data.last_job;
                     const epoch = job.current_epoch || 0;
-                    const totalEpochs = job.total_epochs || 1;
-                    const percent = Math.round((epoch / totalEpochs) * 100);
+                    const totalEpochs = job.epochs || 50;
+                    // Use progress field if available, otherwise calculate from epochs
+                    const percent = job.progress !== undefined ? Math.min(Math.round(job.progress), 100) : Math.round((epoch / totalEpochs) * 100);
 
                     document.getElementById('revalTrainingEpoch').textContent = epoch;
                     document.getElementById('revalTrainingTotalEpochs').textContent = totalEpochs;
@@ -6413,19 +6415,21 @@
                     document.getElementById('revalTrainingLoss').textContent =
                         job.current_loss ? job.current_loss.toFixed(4) : '-';
 
-                } else if (data.last_job) {
-                    // Training completed
+                } else if (!data.training && data.last_job) {
+                    // Training completed or failed
                     clearInterval(revalTrainingInterval);
                     revalTrainingInterval = null;
 
                     const job = data.last_job;
                     document.getElementById('revalTrainingPercent').textContent = '100%';
                     document.getElementById('revalTrainingBar').style.width = '100%';
+                    document.getElementById('revalTrainingEpoch').textContent = job.current_epoch || job.epochs || '-';
+                    document.getElementById('revalTrainingTotalEpochs').textContent = job.epochs || '-';
 
                     if (job.status === 'completed') {
                         showToast('Training abgeschlossen!', 'success');
                     } else if (job.status === 'failed') {
-                        showToast('Training fehlgeschlagen: ' + (job.error || 'Unbekannter Fehler'), 'error');
+                        showToast('Training fehlgeschlagen: ' + (job.error_message || 'Unbekannter Fehler'), 'error');
                     }
 
                     // Hide progress after 3 seconds
@@ -6437,7 +6441,7 @@
                     }, 3000);
 
                 } else {
-                    // No active job, training may have failed to start
+                    // No job at all
                     clearInterval(revalTrainingInterval);
                     revalTrainingInterval = null;
                     document.getElementById('revalTrainingProgress').style.display = 'none';
