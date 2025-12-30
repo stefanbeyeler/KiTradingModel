@@ -1,0 +1,1 @@
+- Erstelle grafische Chart-Darstellungenfür jedes empfohlene Setup

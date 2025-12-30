@@ -2720,6 +2720,80 @@
                 </div>
             </div>
 
+            <!-- Auto-Optimization Controls -->
+            <div class="card" style="border: 1px solid rgba(76, 175, 80, 0.3);">
+                <div class="card-header">
+                    <h2 class="card-title" style="font-size: 1rem;">⚡ Auto-Optimierung</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary btn-sm" onclick="loadAutoOptStatus()">Status</button>
+                        <button class="btn btn-success btn-sm" onclick="toggleAutoOptimization(true)" id="autoOptEnableBtn">Aktivieren</button>
+                        <button class="btn btn-danger btn-sm" onclick="toggleAutoOptimization(false)" id="autoOptDisableBtn" style="display: none;">Deaktivieren</button>
+                    </div>
+                </div>
+                <div id="autoOptStatusSection">
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Status: <span id="autoOptRunning" style="color: #888;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Warteschlange: <span id="autoOptPending" style="color: #ffb74d;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Auto-Anpassungen/h: <span id="autoOptAdjustments" style="color: #64c8ff;">-</span>
+                        </span>
+                    </div>
+
+                    <!-- Konfiguration -->
+                    <div style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 6px; margin-bottom: 0.75rem;">
+                        <h4 style="font-size: 0.85rem; margin-bottom: 0.5rem; color: #64c8ff;">Konfiguration</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                <input type="checkbox" id="autoOptValidateNew" onchange="updateAutoOptConfig()">
+                                Neue Patterns validieren
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                <input type="checkbox" id="autoOptAutoApply" onchange="updateAutoOptConfig()">
+                                Empfehlungen auto-anwenden
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                <span>Sample-Rate:</span>
+                                <input type="number" id="autoOptSampleRate" min="0.1" max="1.0" step="0.1" value="0.3"
+                                       style="width: 60px; padding: 0.2rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;"
+                                       onchange="updateAutoOptConfig()">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                <span>Min. Konfidenz:</span>
+                                <input type="number" id="autoOptMinConfidence" min="0.5" max="1.0" step="0.05" value="0.85"
+                                       style="width: 60px; padding: 0.2rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;"
+                                       onchange="updateAutoOptConfig()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aktionen -->
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-primary btn-sm" onclick="runOptimizationCycle()">Zyklus ausführen</button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadAutoOptHistory()">Historie</button>
+                        <button class="btn btn-warning btn-sm" onclick="clearValidationQueue()">Queue leeren</button>
+                    </div>
+
+                    <!-- Historie -->
+                    <div id="autoOptHistoryContainer" style="display: none; margin-top: 0.75rem; max-height: 150px; overflow-y: auto;">
+                        <table class="data-table" style="font-size: 0.8rem;">
+                            <thead>
+                                <tr>
+                                    <th>Zeit</th>
+                                    <th>Pattern</th>
+                                    <th>Parameter</th>
+                                    <th>Änderung</th>
+                                </tr>
+                            </thead>
+                            <tbody id="autoOptHistoryBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Two-Column Layout for History (2/3) and Problems (1/3) -->
             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
                 <!-- Validation History (2/3) -->
@@ -2798,80 +2872,6 @@
                     <div id="chartPreviewContainer" style="display: none; margin-top: 0.75rem; text-align: center;">
                         <img id="chartPreviewImage" style="max-width: 100%; max-height: 250px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);" />
                         <div id="chartPreviewInfo" style="margin-top: 0.3rem; color: #888; font-size: 0.8rem;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Auto-Optimization Controls -->
-            <div class="card" style="border: 1px solid rgba(76, 175, 80, 0.3);">
-                <div class="card-header">
-                    <h2 class="card-title" style="font-size: 1rem;">⚡ Auto-Optimierung</h2>
-                    <div class="btn-group">
-                        <button class="btn btn-secondary btn-sm" onclick="loadAutoOptStatus()">Status</button>
-                        <button class="btn btn-success btn-sm" onclick="toggleAutoOptimization(true)" id="autoOptEnableBtn">Aktivieren</button>
-                        <button class="btn btn-danger btn-sm" onclick="toggleAutoOptimization(false)" id="autoOptDisableBtn" style="display: none;">Deaktivieren</button>
-                    </div>
-                </div>
-                <div id="autoOptStatusSection">
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
-                            Status: <span id="autoOptRunning" style="color: #888;">-</span>
-                        </span>
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
-                            Warteschlange: <span id="autoOptPending" style="color: #ffb74d;">-</span>
-                        </span>
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
-                            Auto-Anpassungen/h: <span id="autoOptAdjustments" style="color: #64c8ff;">-</span>
-                        </span>
-                    </div>
-
-                    <!-- Konfiguration -->
-                    <div style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 6px; margin-bottom: 0.75rem;">
-                        <h4 style="font-size: 0.85rem; margin-bottom: 0.5rem; color: #64c8ff;">Konfiguration</h4>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
-                                <input type="checkbox" id="autoOptValidateNew" onchange="updateAutoOptConfig()">
-                                Neue Patterns validieren
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
-                                <input type="checkbox" id="autoOptAutoApply" onchange="updateAutoOptConfig()">
-                                Empfehlungen auto-anwenden
-                            </label>
-                            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
-                                <span>Sample-Rate:</span>
-                                <input type="number" id="autoOptSampleRate" min="0.1" max="1.0" step="0.1" value="0.3"
-                                       style="width: 60px; padding: 0.2rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;"
-                                       onchange="updateAutoOptConfig()">
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
-                                <span>Min. Konfidenz:</span>
-                                <input type="number" id="autoOptMinConfidence" min="0.5" max="1.0" step="0.05" value="0.85"
-                                       style="width: 60px; padding: 0.2rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;"
-                                       onchange="updateAutoOptConfig()">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Aktionen -->
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <button class="btn btn-primary btn-sm" onclick="runOptimizationCycle()">Zyklus ausführen</button>
-                        <button class="btn btn-secondary btn-sm" onclick="loadAutoOptHistory()">Historie</button>
-                        <button class="btn btn-warning btn-sm" onclick="clearValidationQueue()">Queue leeren</button>
-                    </div>
-
-                    <!-- Historie -->
-                    <div id="autoOptHistoryContainer" style="display: none; margin-top: 0.75rem; max-height: 150px; overflow-y: auto;">
-                        <table class="data-table" style="font-size: 0.8rem;">
-                            <thead>
-                                <tr>
-                                    <th>Zeit</th>
-                                    <th>Pattern</th>
-                                    <th>Parameter</th>
-                                    <th>Änderung</th>
-                                </tr>
-                            </thead>
-                            <tbody id="autoOptHistoryBody"></tbody>
-                        </table>
                     </div>
                 </div>
             </div>
