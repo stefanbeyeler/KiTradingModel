@@ -12,12 +12,17 @@ Features:
 """
 
 import os
+import json
 import asyncio
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 
 from loguru import logger
+
+# Data directory for persistent storage
+DATA_DIR = os.getenv("DATA_DIR", "/app/data")
 
 from .claude_validator_service import claude_validator_service, ValidationStatus
 from .feedback_analyzer_service import feedback_analyzer_service
@@ -76,11 +81,35 @@ class AutoOptimizationService:
         self._last_hour_reset: datetime = datetime.now(timezone.utc)
         self._optimization_history: List[Dict] = []
 
+        # Persistent storage
+        self._queue_file = Path(DATA_DIR) / "pending_validations.json"
+        self._load_pending_validations()
+
         # Background task
         self._running = False
         self._validation_task: Optional[asyncio.Task] = None
 
-        logger.info(f"AutoOptimizationService initialized - enabled: {self.config.enabled}")
+        logger.info(f"AutoOptimizationService initialized - enabled: {self.config.enabled}, pending: {len(self._pending_validations)}")
+
+    def _load_pending_validations(self):
+        """Load pending validations from persistent storage."""
+        try:
+            if self._queue_file.exists():
+                with open(self._queue_file, 'r') as f:
+                    self._pending_validations = json.load(f)
+                logger.info(f"Loaded {len(self._pending_validations)} pending validations from storage")
+        except Exception as e:
+            logger.error(f"Failed to load pending validations: {e}")
+            self._pending_validations = []
+
+    def _save_pending_validations(self):
+        """Save pending validations to persistent storage."""
+        try:
+            self._queue_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self._queue_file, 'w') as f:
+                json.dump(self._pending_validations, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save pending validations: {e}")
 
     def _reset_hourly_counter_if_needed(self):
         """Reset the hourly adjustment counter if an hour has passed."""
@@ -119,6 +148,7 @@ class AutoOptimizationService:
             queued += 1
 
         if queued > 0:
+            self._save_pending_validations()
             logger.debug(f"Queued {queued} patterns for automatic validation")
 
         return queued
@@ -136,6 +166,7 @@ class AutoOptimizationService:
         # Get batch
         batch = self._pending_validations[:self.config.batch_size]
         self._pending_validations = self._pending_validations[self.config.batch_size:]
+        self._save_pending_validations()  # Save after removing batch
 
         validated = 0
         for pattern in batch:
@@ -172,10 +203,10 @@ class AutoOptimizationService:
             pattern_type = pattern.get("pattern_type", "")
 
             # Get OHLCV data for this pattern
-            ohlcv_data = await candlestick_pattern_service._fetch_ohlcv_data(
+            ohlcv_data, source = await candlestick_pattern_service._fetch_historical_data(
                 symbol=symbol,
-                timeframe=timeframe,
-                limit=30
+                limit=30,
+                timeframe=timeframe
             )
 
             if not ohlcv_data:

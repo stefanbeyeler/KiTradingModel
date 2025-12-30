@@ -187,6 +187,7 @@ async def clear_validation_queue():
     """
     count = len(auto_optimization_service._pending_validations)
     auto_optimization_service._pending_validations.clear()
+    auto_optimization_service._save_pending_validations()
 
     return {
         "status": "cleared",
