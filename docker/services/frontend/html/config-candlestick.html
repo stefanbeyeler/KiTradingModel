@@ -2093,21 +2093,31 @@
         <!-- Tab: Status -->
         <div id="tab-status" class="tab-content active">
 
-            <!-- Training Service Status -->
+            <!-- Combined Training Status Card -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">🔧 Training Service Status</h2>
-                    <span class="service-badge" id="trainServiceStatus">Laden...</span>
+                    <h2 class="card-title">🔧 Training Service</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span class="service-badge" id="trainServiceStatus">Laden...</span>
+                        <button class="btn btn-secondary" onclick="loadTrainingServiceInfo(); loadFeedbackStats(); loadTrainingStatus();" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">↻</button>
+                    </div>
                 </div>
+
+                <!-- Service Info Row -->
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: #888;">
+                        <span>Version: <span style="color: #64c8ff;" id="trainVersion">-</span></span>
+                        <span>PyTorch: <span style="color: #64c8ff;" id="trainPyTorch">-</span></span>
+                        <span>Port: <span style="color: #64c8ff;">3016</span></span>
+                        <span>Gestartet: <span style="color: #64c8ff;" id="trainStarted">-</span></span>
+                    </div>
+                    <div class="timeframe-list" id="trainTimeframes" style="flex: 1; min-width: 200px;">
+                        <span class="loading" style="padding: 0;"><span class="spinner" style="width: 16px; height: 16px;"></span></span>
+                    </div>
+                </div>
+
+                <!-- Stats Grid: Training + Feedback combined -->
                 <div class="stats-grid" style="margin-bottom: 1rem;">
-                    <div class="stat-card">
-                        <div class="stat-value" id="trainVersion">-</div>
-                        <div class="stat-label">Version</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="trainPyTorch">-</div>
-                        <div class="stat-label">PyTorch</div>
-                    </div>
                     <div class="stat-card">
                         <div class="stat-value" id="trainPatternTypes">-</div>
                         <div class="stat-label">Pattern-Typen</div>
@@ -2116,28 +2126,9 @@
                         <div class="stat-value" id="trainJobsTotal">-</div>
                         <div class="stat-label">Jobs Total</div>
                     </div>
-                </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: #888;">
-                        <span>Port: <span style="color: #64c8ff;">3016</span></span>
-                        <span>Gestartet: <span style="color: #64c8ff;" id="trainStarted">-</span></span>
-                    </div>
-                    <div class="timeframe-list" id="trainTimeframes" style="flex: 1; min-width: 200px;">
-                        <span class="loading" style="padding: 0;"><span class="spinner" style="width: 16px; height: 16px;"></span></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- User Feedback Statistics -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">📝 Benutzer-Feedback für Training</h2>
-                    <button class="btn btn-secondary" onclick="loadFeedbackStats()" style="font-size: 0.8rem;">Aktualisieren</button>
-                </div>
-                <div class="stats-grid" style="margin-bottom: 1rem;">
                     <div class="stat-card">
                         <div class="stat-value" id="feedbackTotal">-</div>
-                        <div class="stat-label">Gesamt</div>
+                        <div class="stat-label">Feedback</div>
                     </div>
                     <div class="stat-card" style="border-color: rgba(76, 175, 80, 0.3);">
                         <div class="stat-value" id="feedbackConfirmed" style="color: #81c784;">-</div>
@@ -2152,33 +2143,35 @@
                         <div class="stat-label">✗ Abgelehnt</div>
                     </div>
                 </div>
-                <div style="font-size: 0.85rem; color: #888; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <span id="feedbackInfo">Das gesammelte Feedback wird beim nächsten Training automatisch berücksichtigt.</span>
-                </div>
-            </div>
 
-            <!-- Current Training Status -->
-            <div class="card" id="currentTrainingCard" style="display: none;">
-                <div class="card-header">
-                    <h2 class="card-title">⏳ Aktuelles Training</h2>
-                    <span class="job-status running" id="currentJobStatus">Running</span>
+                <!-- Current Training Section (shown only when training is active) -->
+                <div id="currentTrainingSection" style="display: none; padding: 1rem; background: rgba(100, 200, 255, 0.08); border: 1px solid rgba(100, 200, 255, 0.2); border-radius: 8px; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-weight: 600; color: #64c8ff;">⏳ Aktuelles Training</span>
+                            <span class="job-status running" id="currentJobStatus">Running</span>
+                        </div>
+                        <button class="btn btn-danger" onclick="cancelCurrentTraining()" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">Abbrechen</button>
+                    </div>
+                    <div class="training-status-card" style="background: transparent; padding: 0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                            <span id="currentJobId">-</span>
+                            <span id="currentJobProgress">0%</span>
+                        </div>
+                        <div class="training-progress">
+                            <div class="training-progress-bar" id="currentProgressBar" style="width: 0%;"></div>
+                        </div>
+                        <div class="job-meta" style="margin-top: 0.5rem; font-size: 0.8rem;">
+                            <span>Epoch: <span id="currentEpoch">0</span>/<span id="totalEpochs">0</span></span>
+                            <span>Loss: <span id="currentLoss">-</span></span>
+                            <span>Best Loss: <span id="bestLoss">-</span></span>
+                        </div>
+                    </div>
                 </div>
-                <div class="training-status-card">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span id="currentJobId">-</span>
-                        <span id="currentJobProgress">0%</span>
-                    </div>
-                    <div class="training-progress">
-                        <div class="training-progress-bar" id="currentProgressBar" style="width: 0%;"></div>
-                    </div>
-                    <div class="job-meta" style="margin-top: 0.5rem;">
-                        <span>Epoch: <span id="currentEpoch">0</span>/<span id="totalEpochs">0</span></span>
-                        <span>Loss: <span id="currentLoss">-</span></span>
-                        <span>Best Loss: <span id="bestLoss">-</span></span>
-                    </div>
-                </div>
-                <div class="btn-group">
-                    <button class="btn btn-danger" onclick="cancelCurrentTraining()">Training abbrechen</button>
+
+                <!-- Info Footer -->
+                <div style="font-size: 0.8rem; color: #888;">
+                    <span id="feedbackInfo">Das gesammelte Feedback wird beim nächsten Training automatisch berücksichtigt.</span>
                 </div>
             </div>
 
@@ -5107,7 +5100,7 @@
                 const res = await fetch(`${CANDLESTICK_TRAIN_API}/train/status`);
                 const data = await res.json();
 
-                const card = document.getElementById('currentTrainingCard');
+                const card = document.getElementById('currentTrainingSection');
                 const btn = document.getElementById('btnStartTraining');
 
                 if (data.training && data.last_job) {
