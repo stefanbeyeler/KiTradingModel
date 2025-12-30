@@ -102,16 +102,18 @@ class ChartRenderer:
         ohlcv_data: List[Dict],
         pattern_type: str,
         pattern_candles: int = 3,
-        context_candles: int = 10
+        context_before: int = 5,
+        context_after: int = 5
     ) -> Optional[str]:
         """
-        Render a candlestick chart highlighting the pattern.
+        Render a candlestick chart with the pattern centered.
 
         Args:
-            ohlcv_data: List of OHLCV dictionaries
+            ohlcv_data: List of OHLCV dictionaries (pattern at end of data)
             pattern_type: Name of the pattern
             pattern_candles: Number of candles in the pattern
-            context_candles: Number of context candles before pattern
+            context_before: Number of context candles before pattern
+            context_after: Number of context candles after pattern (empty space)
 
         Returns:
             Base64 encoded PNG image, or None if rendering fails
@@ -121,9 +123,21 @@ class ChartRenderer:
             return None
 
         try:
-            # Calculate how many candles to show
-            total_candles = pattern_candles + context_candles
-            data = ohlcv_data[-total_candles:] if len(ohlcv_data) >= total_candles else ohlcv_data
+            # Pattern is at the end of ohlcv_data
+            # We take: context_before + pattern_candles from the end
+            candles_needed = context_before + pattern_candles
+
+            if len(ohlcv_data) >= candles_needed:
+                data = ohlcv_data[-candles_needed:]
+            else:
+                data = ohlcv_data
+
+            # Pattern starts at index: context_before (0-indexed)
+            # Pattern ends at: len(data) - 1
+            pattern_start_idx = len(data) - pattern_candles
+
+            # Total display width: data + empty space after
+            total_display = len(data) + context_after
 
             # Create figure
             fig, ax = plt.subplots(figsize=self.figure_size, facecolor=self.colors["background"])
@@ -140,7 +154,7 @@ class ChartRenderer:
                 color = self.colors["bullish"] if is_bullish else self.colors["bearish"]
 
                 # Highlight pattern candles
-                is_pattern_candle = i >= len(data) - pattern_candles
+                is_pattern_candle = i >= pattern_start_idx
                 if is_pattern_candle:
                     # Add highlight background
                     ax.axvspan(
@@ -168,15 +182,33 @@ class ChartRenderer:
                 )
                 ax.add_patch(rect)
 
+            # Draw empty placeholder candles after pattern (gray outlines)
+            if context_after > 0:
+                # Get average candle size for placeholder
+                all_ranges = [float(c.get("high", c.get("h", 0))) - float(c.get("low", c.get("l", 0))) for c in data]
+                avg_range = sum(all_ranges) / len(all_ranges) if all_ranges else 0
+                last_close = float(data[-1].get("close", data[-1].get("c", 0)))
+
+                for j in range(context_after):
+                    x_pos = len(data) + j
+                    # Draw a subtle placeholder line
+                    ax.plot(
+                        [x_pos, x_pos],
+                        [last_close - avg_range * 0.3, last_close + avg_range * 0.3],
+                        color=self.colors["grid"],
+                        linewidth=1,
+                        linestyle=':'
+                    )
+
             # Style the chart
-            ax.set_xlim(-0.5, len(data) - 0.5)
+            ax.set_xlim(-0.5, total_display - 0.5)
 
             # Calculate y-axis limits with padding
             all_highs = [float(c.get("high", c.get("h", 0))) for c in data]
             all_lows = [float(c.get("low", c.get("l", 0))) for c in data]
             y_min = min(all_lows)
             y_max = max(all_highs)
-            y_padding = (y_max - y_min) * 0.1
+            y_padding = (y_max - y_min) * 0.15
             ax.set_ylim(y_min - y_padding, y_max + y_padding)
 
             # Grid
@@ -192,10 +224,11 @@ class ChartRenderer:
             )
 
             # Add annotation for pattern area
+            pattern_center = pattern_start_idx + pattern_candles / 2 - 0.5
             ax.annotate(
                 "Pattern",
-                xy=(len(data) - pattern_candles/2 - 0.5, y_max),
-                xytext=(len(data) - pattern_candles/2 - 0.5, y_max + y_padding * 0.5),
+                xy=(pattern_center, y_max),
+                xytext=(pattern_center, y_max + y_padding * 0.4),
                 color=self.colors["highlight"],
                 fontsize=10,
                 ha="center",
@@ -398,7 +431,8 @@ Be strict but fair in your assessment. Only confirm patterns that clearly meet t
                 ohlcv_data=ohlcv_data,
                 pattern_type=pattern_type,
                 pattern_candles=pattern_candles,
-                context_candles=15
+                context_before=5,
+                context_after=5
             )
 
             if not chart_base64:

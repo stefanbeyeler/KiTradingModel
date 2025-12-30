@@ -347,7 +347,8 @@ async def get_chart_preview(pattern_id: str):
             ohlcv_data=ohlcv_data,
             pattern_type=pattern_type,
             pattern_candles=pattern_candles,
-            context_candles=15
+            context_before=5,
+            context_after=5
         )
 
         if not chart_base64:
