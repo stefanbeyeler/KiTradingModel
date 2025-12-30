@@ -2083,12 +2083,139 @@
     <main class="container">
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('patterntypes')">Pattern-Typen</button>
+            <button class="tab active" onclick="switchTab('status')">Status</button>
+            <button class="tab" onclick="switchTab('patterntypes')">Pattern-Typen</button>
             <button class="tab" onclick="switchTab('detection')">Detection & History</button>
             <button class="tab" onclick="switchTab('training')">Training</button>
             <button class="tab" onclick="switchTab('revalidation')">Re-Validierung <span id="revalidationBadge" class="tab-badge" style="display: none;">0</span></button>
             <button class="tab" onclick="switchTab('claudeqa')">🤖 Claude QA</button>
         </div>
+
+        <!-- Tab: Status (Dashboard) -->
+        <div id="tab-status" class="tab-content active">
+
+            <!-- KPI Overview Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📊 Candlestick Pattern Service</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span class="service-badge" id="statusServiceBadge">Laden...</span>
+                        <button class="btn btn-secondary" onclick="loadStatusDashboard()" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">↻</button>
+                    </div>
+                </div>
+
+                <!-- Three Column KPI Layout -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+
+                    <!-- Detection KPIs -->
+                    <div style="background: rgba(100, 200, 255, 0.05); border: 1px solid rgba(100, 200, 255, 0.15); border-radius: 8px; padding: 1rem;">
+                        <div style="font-size: 0.9rem; font-weight: 600; color: #64c8ff; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🔍 Detection</span>
+                            <span class="scan-status" id="statusScanStatus" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
+                                <span class="status-dot"></span>
+                                <span id="statusScanText">-</span>
+                            </span>
+                        </div>
+                        <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                            <div class="stat-card" style="padding: 0.5rem;">
+                                <div class="stat-value" id="statusPatternTypes" style="font-size: 1.5rem;">-</div>
+                                <div class="stat-label" style="font-size: 0.7rem;">Pattern-Typen</div>
+                            </div>
+                            <div class="stat-card" style="padding: 0.5rem;">
+                                <div class="stat-value" id="statusHistoryCount" style="font-size: 1.5rem;">-</div>
+                                <div class="stat-label" style="font-size: 0.7rem;">In History</div>
+                            </div>
+                            <div class="stat-card" style="padding: 0.5rem; border-color: rgba(76, 175, 80, 0.3);">
+                                <div class="stat-value success" id="statusBullish" style="font-size: 1.5rem;">-</div>
+                                <div class="stat-label" style="font-size: 0.7rem;">Bullish</div>
+                            </div>
+                            <div class="stat-card" style="padding: 0.5rem; border-color: rgba(244, 67, 54, 0.3);">
+                                <div class="stat-value error" id="statusBearish" style="font-size: 1.5rem;">-</div>
+                                <div class="stat-label" style="font-size: 0.7rem;">Bearish</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Training KPIs -->
+                    <div style="background: rgba(156, 39, 176, 0.05); border: 1px solid rgba(156, 39, 176, 0.15); border-radius: 8px; padding: 1rem;">
+                        <div style="font-size: 0.9rem; font-weight: 600; color: #ce93d8; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🔧 Training</span>
+                            <span class="service-badge" id="statusTrainBadge" style="font-size: 0.65rem; padding: 0.15rem 0.4rem;">-</span>
+                        </div>
+                        <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                            <div class="stat-card" style="padding: 0.5rem;">
+                                <div class="stat-value" id="statusTrainJobs" style="font-size: 1.5rem;">-</div>
+                                <div class="stat-label" style="font-size: 0.7rem;">Jobs Total</div>
+                            </div>
+                            <div class="stat-card" style="padding: 0.5rem;">
+                                <div class="stat-value" id="statusFeedbackTotal" style="font-size: 1.5rem;">-</div>
+                                <div class="stat-label" style="font-size: 0.7rem;">Feedback</div>
+                            </div>
+                            <div class="stat-card" style="padding: 0.5rem; border-color: rgba(76, 175, 80, 0.3);">
+                                <div class="stat-value" id="statusFeedbackConfirmed" style="font-size: 1.5rem; color: #81c784;">-</div>
+                                <div class="stat-label" style="font-size: 0.7rem;">✓ Bestätigt</div>
+                            </div>
+                            <div class="stat-card" style="padding: 0.5rem; border-color: rgba(255, 152, 0, 0.3);">
+                                <div class="stat-value" id="statusFeedbackCorrected" style="font-size: 1.5rem; color: #ffb74d;">-</div>
+                                <div class="stat-label" style="font-size: 0.7rem;">✎ Korrigiert</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Re-Validation KPIs -->
+                    <div style="background: rgba(255, 193, 7, 0.05); border: 1px solid rgba(255, 193, 7, 0.15); border-radius: 8px; padding: 1rem;">
+                        <div style="font-size: 0.9rem; font-weight: 600; color: #ffd54f; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🔄 Re-Validierung</span>
+                        </div>
+                        <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                            <div class="stat-card" style="padding: 0.5rem;">
+                                <div class="stat-value" id="statusPendingReval" style="font-size: 1.5rem;">-</div>
+                                <div class="stat-label" style="font-size: 0.7rem;">Ausstehend</div>
+                            </div>
+                            <div class="stat-card" style="padding: 0.5rem;">
+                                <div class="stat-value" id="statusRevalidated" style="font-size: 1.5rem;">-</div>
+                                <div class="stat-label" style="font-size: 0.7rem;">Validiert</div>
+                            </div>
+                            <div class="stat-card" style="padding: 0.5rem; grid-column: span 2; border-color: rgba(76, 175, 80, 0.3);">
+                                <div class="stat-value success" id="statusImprovementRate" style="font-size: 1.5rem;">-</div>
+                                <div class="stat-label" style="font-size: 0.7rem;">Verbesserungsrate</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Service Info Footer -->
+                <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1); display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.8rem; color: #888;">
+                    <span>Inference: <span style="color: #64c8ff;">Port 3006</span></span>
+                    <span>Training: <span style="color: #64c8ff;">Port 3016</span></span>
+                    <span>Version: <span style="color: #64c8ff;" id="statusVersion">-</span></span>
+                    <span>Gestartet: <span style="color: #64c8ff;" id="statusStarted">-</span></span>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⚡ Schnellaktionen</h2>
+                </div>
+                <div class="btn-group" style="flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="switchTab('detection'); triggerManualScan();">
+                        🔍 Pattern-Scan starten
+                    </button>
+                    <button class="btn btn-secondary" onclick="switchTab('training');">
+                        🔧 Training öffnen
+                    </button>
+                    <button class="btn btn-secondary" onclick="switchTab('revalidation');">
+                        🔄 Re-Validierung öffnen
+                    </button>
+                    <button class="btn btn-secondary" onclick="switchTab('claudeqa');">
+                        🤖 Claude QA öffnen
+                    </button>
+                </div>
+            </div>
+
+        </div><!-- End Tab: Status -->
 
         <!-- Tab: Training -->
         <div id="tab-training" class="tab-content">
@@ -2189,7 +2316,7 @@
         </div><!-- End Tab: Training -->
 
         <!-- Tab: Pattern-Typen -->
-        <div id="tab-patterntypes" class="tab-content active">
+        <div id="tab-patterntypes" class="tab-content">
 
             <!-- Pattern Categories -->
             <div class="card">
@@ -3653,6 +3780,84 @@
             }
         }
 
+        // === Status Dashboard ===
+        async function loadStatusDashboard() {
+            try {
+                // Load all data in parallel
+                const [infoRes, statsRes, trainInfoRes, feedbackRes, revalRes] = await Promise.all([
+                    fetch(`${CANDLESTICK_API}/info`).catch(() => null),
+                    fetch(`${CANDLESTICK_API}/history/statistics`).catch(() => null),
+                    fetch(`${CANDLESTICK_TRAIN_API}/info`).catch(() => null),
+                    fetch(`${CANDLESTICK_API}/history/feedback/statistics`).catch(() => null),
+                    fetch(`${CANDLESTICK_API}/history/revalidation-statistics`).catch(() => null)
+                ]);
+
+                // Detection KPIs from /info
+                if (infoRes?.ok) {
+                    const info = await infoRes.json();
+                    document.getElementById('statusServiceBadge').textContent = 'Online';
+                    document.getElementById('statusServiceBadge').style.background = 'rgba(76, 175, 80, 0.2)';
+                    document.getElementById('statusServiceBadge').style.color = '#81c784';
+                    document.getElementById('statusVersion').textContent = info.version || '-';
+                    document.getElementById('statusStarted').textContent = info.started_at ? new Date(info.started_at).toLocaleString('de-CH') : '-';
+                    document.getElementById('statusPatternTypes').textContent = info.pattern_types || '-';
+                }
+
+                // Detection KPIs from /history/statistics
+                if (statsRes?.ok) {
+                    const stats = await statsRes.json();
+                    document.getElementById('statusHistoryCount').textContent = stats.total_patterns || '0';
+                    document.getElementById('statusBullish').textContent = stats.by_direction?.bullish || '0';
+                    document.getElementById('statusBearish').textContent = stats.by_direction?.bearish || '0';
+
+                    // Scan status from statistics
+                    const scanStatus = document.getElementById('statusScanStatus');
+                    const scanText = document.getElementById('statusScanText');
+                    if (stats.scan_running) {
+                        scanStatus.className = 'scan-status running';
+                        scanText.textContent = 'Läuft';
+                    } else {
+                        scanStatus.className = 'scan-status stopped';
+                        scanText.textContent = 'Gestoppt';
+                    }
+                }
+
+                // Training KPIs
+                if (trainInfoRes?.ok) {
+                    const trainInfo = await trainInfoRes.json();
+                    document.getElementById('statusTrainBadge').textContent = 'Online';
+                    document.getElementById('statusTrainBadge').style.background = 'rgba(76, 175, 80, 0.2)';
+                    document.getElementById('statusTrainBadge').style.color = '#81c784';
+                    document.getElementById('statusTrainJobs').textContent = trainInfo.jobs?.total || '0';
+                } else {
+                    document.getElementById('statusTrainBadge').textContent = 'Offline';
+                    document.getElementById('statusTrainBadge').style.background = 'rgba(244, 67, 54, 0.2)';
+                    document.getElementById('statusTrainBadge').style.color = '#e57373';
+                }
+
+                if (feedbackRes?.ok) {
+                    const feedback = await feedbackRes.json();
+                    document.getElementById('statusFeedbackTotal').textContent = feedback.total || '0';
+                    document.getElementById('statusFeedbackConfirmed').textContent = feedback.confirmed || '0';
+                    document.getElementById('statusFeedbackCorrected').textContent = feedback.corrected || '0';
+                }
+
+                // Re-Validation KPIs
+                if (revalRes?.ok) {
+                    const reval = await revalRes.json();
+                    document.getElementById('statusPendingReval').textContent = reval.pending_revalidation || '0';
+                    document.getElementById('statusRevalidated').textContent = reval.revalidated || '0';
+                    document.getElementById('statusImprovementRate').textContent = `${reval.improvement_rate || 0}%`;
+                }
+
+            } catch (error) {
+                console.error('Failed to load status dashboard:', error);
+                document.getElementById('statusServiceBadge').textContent = 'Fehler';
+                document.getElementById('statusServiceBadge').style.background = 'rgba(244, 67, 54, 0.2)';
+                document.getElementById('statusServiceBadge').style.color = '#e57373';
+            }
+        }
+
         // === Tab Switching ===
         function switchTab(tabName) {
             // Update tab buttons
@@ -3664,7 +3869,15 @@
             document.getElementById(`tab-${tabName}`).classList.add('active');
 
             // Load data based on tab
-            if (tabName === 'patterntypes') {
+            if (tabName === 'status') {
+                loadStatusDashboard();
+
+                // Stop auto-refresh
+                if (trainingRefreshInterval) {
+                    clearInterval(trainingRefreshInterval);
+                    trainingRefreshInterval = null;
+                }
+            } else if (tabName === 'patterntypes') {
                 loadPatternTypes();
 
                 // Stop auto-refresh
@@ -6587,8 +6800,8 @@
             await updateRevalidationBadge();
             await loadReasonCategories();
 
-            // Pattern-Typen Tab laden (da Pattern-Typen standardmäßig aktiv ist)
-            await loadPatternTypes();
+            // Status Dashboard laden (da Status standardmäßig aktiv ist)
+            await loadStatusDashboard();
 
             // Auto-Scan standardmäßig starten (ohne Toast-Nachricht)
             if (isAutoScanRunning) {
@@ -6606,6 +6819,10 @@
             // Auto-refresh every 30 seconds
             setInterval(async () => {
                 await loadStatistics();
+                // Also refresh status dashboard if active
+                if (document.getElementById('tab-status').classList.contains('active')) {
+                    await loadStatusDashboard();
+                }
             }, 30000);
         });
 
