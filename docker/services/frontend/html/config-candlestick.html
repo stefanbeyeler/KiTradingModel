@@ -2083,15 +2083,15 @@
     <main class="container">
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('status')">Status</button>
-            <button class="tab" onclick="switchTab('patterntypes')">Pattern-Typen</button>
+            <button class="tab active" onclick="switchTab('patterntypes')">Pattern-Typen</button>
             <button class="tab" onclick="switchTab('detection')">Detection & History</button>
+            <button class="tab" onclick="switchTab('training')">Training</button>
             <button class="tab" onclick="switchTab('revalidation')">Re-Validierung <span id="revalidationBadge" class="tab-badge" style="display: none;">0</span></button>
             <button class="tab" onclick="switchTab('claudeqa')">🤖 Claude QA</button>
         </div>
 
-        <!-- Tab: Status -->
-        <div id="tab-status" class="tab-content active">
+        <!-- Tab: Training -->
+        <div id="tab-training" class="tab-content">
 
             <!-- Combined Training Status Card -->
             <div class="card">
@@ -2186,10 +2186,10 @@
                 </div>
             </div>
 
-        </div><!-- End Tab: Status -->
+        </div><!-- End Tab: Training -->
 
         <!-- Tab: Pattern-Typen -->
-        <div id="tab-patterntypes" class="tab-content">
+        <div id="tab-patterntypes" class="tab-content active">
 
             <!-- Pattern Categories -->
             <div class="card">
@@ -3433,6 +3433,9 @@
             }
         }
 
+        // Alias for loadPatterns (used by Pattern-Typen tab)
+        const loadPatternTypes = loadPatterns;
+
         // Render pattern category
         function renderPatternCategory(containerId, countId, patterns) {
             const container = document.getElementById(containerId);
@@ -3661,17 +3664,7 @@
             document.getElementById(`tab-${tabName}`).classList.add('active');
 
             // Load data based on tab
-            if (tabName === 'status') {
-                loadTrainingServiceInfo();
-                loadFeedbackStats();
-                loadTrainingStatus();
-                loadTrainingJobs();
-
-                // Start auto-refresh for training status
-                if (!trainingRefreshInterval) {
-                    trainingRefreshInterval = setInterval(loadTrainingStatus, 5000);
-                }
-            } else if (tabName === 'patterntypes') {
+            if (tabName === 'patterntypes') {
                 loadPatternTypes();
 
                 // Stop auto-refresh
@@ -3688,6 +3681,16 @@
                 if (trainingRefreshInterval) {
                     clearInterval(trainingRefreshInterval);
                     trainingRefreshInterval = null;
+                }
+            } else if (tabName === 'training') {
+                loadTrainingServiceInfo();
+                loadFeedbackStats();
+                loadTrainingStatus();
+                loadTrainingJobs();
+
+                // Start auto-refresh for training status
+                if (!trainingRefreshInterval) {
+                    trainingRefreshInterval = setInterval(loadTrainingStatus, 5000);
                 }
             } else if (tabName === 'revalidation') {
                 loadRevalidationData();
@@ -6580,21 +6583,12 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             await loadServiceInfo();
-            await loadPatterns();
             await loadStatistics();
             await updateRevalidationBadge();
             await loadReasonCategories();
 
-            // Status-Tab Daten laden (da Status-Tab standardmäßig aktiv ist)
-            await loadTrainingServiceInfo();
-            await loadFeedbackStats();
-            await loadTrainingStatus();
-            await loadTrainingJobs();
-
-            // Status-Tab Auto-Refresh starten
-            if (!trainingRefreshInterval) {
-                trainingRefreshInterval = setInterval(loadTrainingStatus, 5000);
-            }
+            // Pattern-Typen Tab laden (da Pattern-Typen standardmäßig aktiv ist)
+            await loadPatternTypes();
 
             // Auto-Scan standardmäßig starten (ohne Toast-Nachricht)
             if (isAutoScanRunning) {
