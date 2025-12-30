@@ -2742,14 +2742,15 @@
                         <table class="data-table" style="font-size: 0.8rem; width: 100%;">
                             <thead>
                                 <tr>
-                                    <th style="width: 90px;">Symbol/TF</th>
-                                    <th style="min-width: 120px;">Pattern</th>
-                                    <th style="width: 70px; text-align: center;">Result</th>
-                                    <th>Begründung</th>
+                                    <th style="text-align: left; width: 70px;">Symbol</th>
+                                    <th style="text-align: left; width: 40px;">TF</th>
+                                    <th style="text-align: left; min-width: 100px;">Pattern</th>
+                                    <th style="text-align: left; width: 65px;">Result</th>
+                                    <th style="text-align: left; max-width: 200px;">Begründung</th>
                                 </tr>
                             </thead>
                             <tbody id="claudeHistoryBody">
-                                <tr><td colspan="4" style="text-align: center; color: #888; padding: 1rem;"><span class="spinner"></span> Laden...</td></tr>
+                                <tr><td colspan="5" style="text-align: center; color: #888; padding: 1rem;"><span class="spinner"></span> Laden...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -2779,24 +2780,20 @@
                 </div>
             </div>
 
-            <!-- Chart Preview (Collapsible) -->
+            <!-- Chart Preview -->
             <div class="card" style="margin-top: 1rem;">
-                <div class="card-header" style="cursor: pointer;" onclick="toggleSection('chartPreviewSection')">
+                <div class="card-header">
                     <h2 class="card-title" style="font-size: 1rem;">🔍 Chart-Vorschau</h2>
-                    <div class="btn-group">
-                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); loadRecentPatternsForPreview()">Patterns</button>
-                        <span style="color: #888; font-size: 0.8rem;" id="chartPreviewToggle">▼</span>
-                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadRecentPatternsForPreview()">Refresh</button>
                 </div>
-                <div id="chartPreviewSection" style="display: none;">
+                <div id="chartPreviewSection">
                     <div style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
-                        <select id="chartPreviewSelect" onchange="selectPatternForPreview()"
+                        <select id="chartPreviewSelect" onchange="selectPatternForPreview(); loadChartPreview();"
                                 style="flex: 2; min-width: 180px; padding: 0.4rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.85rem;">
                             <option value="">-- Pattern wählen --</option>
                         </select>
                         <input type="text" id="chartPreviewPatternId" placeholder="oder ID..."
                                style="flex: 1; min-width: 100px; padding: 0.4rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.85rem;">
-                        <button class="btn btn-primary btn-sm" onclick="loadChartPreview()">Laden</button>
                     </div>
                     <div id="chartPreviewContainer" style="display: none; margin-top: 0.75rem; text-align: center;">
                         <img id="chartPreviewImage" style="max-width: 100%; max-height: 250px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);" />
@@ -2879,27 +2876,22 @@
                 </div>
             </div>
 
-            <!-- Feedback Loop Section (Collapsible) -->
+            <!-- Feedback Loop Section -->
             <div class="card" style="border: 1px solid rgba(100, 200, 255, 0.2);">
-                <div class="card-header" style="cursor: pointer;" onclick="toggleSection('feedbackSection')">
+                <div class="card-header">
                     <h2 class="card-title" style="font-size: 1rem;">🔄 Feedback-Loop</h2>
-                    <div class="btn-group">
-                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); loadRecommendations()">Empfehlungen</button>
-                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); loadCurrentRules()">Regeln</button>
-                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); loadImpactAnalysis()">Impact</button>
-                        <span style="color: #888; font-size: 0.8rem;" id="feedbackToggle">▼</span>
-                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadFeedbackLoopData()">Refresh</button>
                 </div>
-                <div id="feedbackSection" style="display: none;">
+                <div id="feedbackSection">
                     <!-- Recommendations -->
                     <div id="recommendationsContainer" style="margin-bottom: 1rem;">
                         <div style="text-align: center; color: #888; padding: 0.5rem; font-size: 0.85rem;">
-                            Klicke "Empfehlungen" für Verbesserungsvorschläge
+                            <span class="spinner"></span> Laden...
                         </div>
                     </div>
 
                     <!-- Current Rules -->
-                    <div id="currentRulesContainer" style="display: none; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div id="currentRulesContainer" style="padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
                         <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 200px;">
                                 <h4 style="font-size: 0.85rem; margin-bottom: 0.3rem; color: #64c8ff;">Kürzliche Anpassungen</h4>
@@ -2917,7 +2909,7 @@
                     </div>
 
                     <!-- Impact Analysis -->
-                    <div id="impactContainer" style="display: none; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div id="impactContainer" style="padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
                         <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
                             <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem;">
                                 Anpassungen: <strong id="impactTotalAdj">-</strong>
@@ -3684,6 +3676,8 @@
                 loadAutoOptStatus();
                 loadClaudeHistory();
                 loadProblematicPatterns();
+                loadRecentPatternsForPreview();
+                loadFeedbackLoopData();
 
                 // Stop training auto-refresh
                 if (trainingRefreshInterval) {
@@ -6593,7 +6587,7 @@
             const tbody = document.getElementById('claudeHistoryBody');
             const limitSelect = document.getElementById('claudeHistoryLimit');
             const limit = limitSelect ? limitSelect.value : 10;
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><span class="spinner"></span></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;"><span class="spinner"></span></td></tr>';
 
             try {
                 const response = await fetch(`${CANDLESTICK_API}/claude/history?limit=${limit}`);
@@ -6601,25 +6595,26 @@
                 const data = await response.json();
 
                 if (!data.history || data.history.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #888;">Keine Validierungen</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">Keine Validierungen</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.history.map(v => `
                     <tr>
-                        <td style="white-space: nowrap;"><strong>${v.symbol}</strong><br><span style="color:#888; font-size: 0.75rem;">${v.timeframe}</span></td>
+                        <td style="white-space: nowrap;"><strong>${v.symbol}</strong></td>
+                        <td style="color: #888; font-size: 0.75rem;">${v.timeframe}</td>
                         <td style="font-size: 0.85rem;">${formatPatternType(v.pattern_type)}</td>
-                        <td style="color: ${v.claude_agrees ? '#81c784' : '#e57373'}; text-align: center; white-space: nowrap;">
+                        <td style="color: ${v.claude_agrees ? '#81c784' : '#e57373'}; white-space: nowrap;">
                             ${v.claude_agrees ? '✓' : '✗'} ${(v.claude_confidence * 100).toFixed(0)}%
                         </td>
-                        <td style="color: #aaa; font-size: 0.75rem;" title="${v.claude_reasoning || ''}">
-                            ${v.claude_reasoning ? v.claude_reasoning.substring(0, 100) + (v.claude_reasoning.length > 100 ? '...' : '') : '-'}
+                        <td style="color: #aaa; font-size: 0.75rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${v.claude_reasoning || ''}">
+                            ${v.claude_reasoning ? v.claude_reasoning.substring(0, 60) + (v.claude_reasoning.length > 60 ? '...' : '') : '-'}
                         </td>
                     </tr>
                 `).join('');
             } catch (e) {
                 console.error('Claude history error:', e);
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #e57373;">Fehler: ${e.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #e57373;">Fehler: ${e.message}</td></tr>`;
             }
         }
 
@@ -6746,6 +6741,15 @@
 
         // === Feedback Loop Functions ===
         let currentRulesData = null;
+
+        // Combined function to load all feedback loop data
+        async function loadFeedbackLoopData() {
+            await Promise.all([
+                loadRecommendations(),
+                loadCurrentRules(),
+                loadImpactAnalysis()
+            ]);
+        }
 
         async function loadRecommendations() {
             const container = document.getElementById('recommendationsContainer');
