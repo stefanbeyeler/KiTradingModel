@@ -2084,8 +2084,8 @@
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab active" onclick="switchTab('status')">Status</button>
-            <button class="tab" onclick="switchTab('patterns')">Pattern Detection</button>
-            <button class="tab" onclick="switchTab('history')">Pattern History</button>
+            <button class="tab" onclick="switchTab('patterntypes')">Pattern-Typen</button>
+            <button class="tab" onclick="switchTab('detection')">Detection & History</button>
             <button class="tab" onclick="switchTab('revalidation')">Re-Validierung <span id="revalidationBadge" class="tab-badge" style="display: none;">0</span></button>
             <button class="tab" onclick="switchTab('claudeqa')">🤖 Claude QA</button>
         </div>
@@ -2195,126 +2195,126 @@
 
         </div><!-- End Tab: Status -->
 
-        <!-- Tab: Pattern Detection -->
-        <div id="tab-patterns" class="tab-content">
+        <!-- Tab: Pattern-Typen -->
+        <div id="tab-patterntypes" class="tab-content">
 
-        <!-- Combined Stats & Service Info -->
-        <div class="card" style="margin-bottom: 1.5rem;">
-            <div class="stats-grid" style="margin-bottom: 1rem;">
-                <div class="stat-card">
-                    <div class="stat-value" id="patternCount">-</div>
-                    <div class="stat-label">Pattern-Typen</div>
+            <!-- Pattern Categories -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Verfügbare Pattern-Typen</h2>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="timeframeCount">-</div>
-                    <div class="stat-label">Timeframes</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="historyCount">-</div>
-                    <div class="stat-label">History</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value success" id="bullishCount">-</div>
-                    <div class="stat-label">Bullish</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value error" id="bearishCount">-</div>
-                    <div class="stat-label">Bearish</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value warning" id="neutralCount">-</div>
-                    <div class="stat-label">Neutral</div>
-                </div>
-            </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: #888;">
-                    <span>Version: <span style="color: #64c8ff;" id="infoVersion">-</span></span>
-                    <span>Port: <span style="color: #64c8ff;">3006</span></span>
-                    <span>Gestartet: <span style="color: #64c8ff;" id="infoStarted">-</span></span>
-                </div>
-                <div class="timeframe-list" id="timeframeList" style="flex: 1; min-width: 200px;">
-                    <span class="loading" style="padding: 0;"><span class="spinner" style="width: 16px; height: 16px;"></span></span>
-                </div>
-            </div>
-        </div>
 
-        <!-- Scan Controls -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Auto-Scan Steuerung</h2>
-                <div class="scan-status running" id="scanStatus">
-                    <span class="status-dot running"></span>
-                    <span id="scanStatusText">Läuft</span>
+                <!-- Reversal Patterns -->
+                <div class="category-section" id="reversalSection">
+                    <div class="category-title">
+                        <span class="badge badge-reversal">Reversal</span>
+                        Umkehrmuster
+                        <span class="category-count" id="reversalCount">0</span>
+                    </div>
+                    <div class="pattern-grid" id="reversalPatterns">
+                        <div class="loading"><span class="spinner"></span></div>
+                    </div>
                 </div>
-            </div>
-            <p class="card-description">
-                Der Auto-Scan überwacht alle Favoriten-Symbole und erkennt Candlestick-Patterns automatisch.
-            </p>
-            <div class="btn-group">
-                <button class="btn btn-success" id="btnStartScan" onclick="startAutoScan()" style="display: none;">
-                    Auto-Scan starten
-                </button>
-                <button class="btn btn-danger" id="btnStopScan" onclick="stopAutoScan()">
-                    Auto-Scan stoppen
-                </button>
-                <button class="btn btn-primary" onclick="triggerManualScan()">
-                    Jetzt scannen
-                </button>
-                <button class="btn btn-warning" onclick="clearHistory()">
-                    History löschen
-                </button>
-            </div>
-        </div>
 
-        <!-- Pattern Categories -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Verfügbare Pattern-Typen</h2>
-            </div>
-
-            <!-- Reversal Patterns -->
-            <div class="category-section" id="reversalSection">
-                <div class="category-title">
-                    <span class="badge badge-reversal">Reversal</span>
-                    Umkehrmuster
-                    <span class="category-count" id="reversalCount">0</span>
+                <!-- Continuation Patterns -->
+                <div class="category-section" id="continuationSection">
+                    <div class="category-title">
+                        <span class="badge badge-continuation">Continuation</span>
+                        Fortsetzungsmuster
+                        <span class="category-count" id="continuationCount">0</span>
+                    </div>
+                    <div class="pattern-grid" id="continuationPatterns">
+                        <div class="loading"><span class="spinner"></span></div>
+                    </div>
                 </div>
-                <div class="pattern-grid" id="reversalPatterns">
-                    <div class="loading"><span class="spinner"></span></div>
+
+                <!-- Indecision Patterns -->
+                <div class="category-section" id="indecisionSection">
+                    <div class="category-title">
+                        <span class="badge badge-indecision">Indecision</span>
+                        Unentschlossenheit
+                        <span class="category-count" id="indecisionCount">0</span>
+                    </div>
+                    <div class="pattern-grid" id="indecisionPatterns">
+                        <div class="loading"><span class="spinner"></span></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Continuation Patterns -->
-            <div class="category-section" id="continuationSection">
-                <div class="category-title">
-                    <span class="badge badge-continuation">Continuation</span>
-                    Fortsetzungsmuster
-                    <span class="category-count" id="continuationCount">0</span>
+        </div><!-- End Tab: Pattern-Typen -->
+
+        <!-- Tab: Detection & History -->
+        <div id="tab-detection" class="tab-content">
+
+            <!-- Combined Stats & Service Info -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="stats-grid" style="margin-bottom: 1rem;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="patternCount">-</div>
+                        <div class="stat-label">Pattern-Typen</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="timeframeCount">-</div>
+                        <div class="stat-label">Timeframes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="historyCount">-</div>
+                        <div class="stat-label">History</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success" id="bullishCount">-</div>
+                        <div class="stat-label">Bullish</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value error" id="bearishCount">-</div>
+                        <div class="stat-label">Bearish</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value warning" id="neutralCount">-</div>
+                        <div class="stat-label">Neutral</div>
+                    </div>
                 </div>
-                <div class="pattern-grid" id="continuationPatterns">
-                    <div class="loading"><span class="spinner"></span></div>
+                <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: #888;">
+                        <span>Version: <span style="color: #64c8ff;" id="infoVersion">-</span></span>
+                        <span>Port: <span style="color: #64c8ff;">3006</span></span>
+                        <span>Gestartet: <span style="color: #64c8ff;" id="infoStarted">-</span></span>
+                    </div>
+                    <div class="timeframe-list" id="timeframeList" style="flex: 1; min-width: 200px;">
+                        <span class="loading" style="padding: 0;"><span class="spinner" style="width: 16px; height: 16px;"></span></span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Indecision Patterns -->
-            <div class="category-section" id="indecisionSection">
-                <div class="category-title">
-                    <span class="badge badge-indecision">Indecision</span>
-                    Unentschlossenheit
-                    <span class="category-count" id="indecisionCount">0</span>
+            <!-- Scan Controls -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Auto-Scan Steuerung</h2>
+                    <div class="scan-status running" id="scanStatus">
+                        <span class="status-dot running"></span>
+                        <span id="scanStatusText">Läuft</span>
+                    </div>
                 </div>
-                <div class="pattern-grid" id="indecisionPatterns">
-                    <div class="loading"><span class="spinner"></span></div>
+                <p class="card-description">
+                    Der Auto-Scan überwacht alle Favoriten-Symbole und erkennt Candlestick-Patterns automatisch.
+                </p>
+                <div class="btn-group">
+                    <button class="btn btn-success" id="btnStartScan" onclick="startAutoScan()" style="display: none;">
+                        Auto-Scan starten
+                    </button>
+                    <button class="btn btn-danger" id="btnStopScan" onclick="stopAutoScan()">
+                        Auto-Scan stoppen
+                    </button>
+                    <button class="btn btn-primary" onclick="triggerManualScan()">
+                        Jetzt scannen
+                    </button>
+                    <button class="btn btn-warning" onclick="clearHistory()">
+                        History löschen
+                    </button>
                 </div>
             </div>
-        </div>
 
-        </div><!-- End Tab: Pattern Detection -->
-
-        <!-- Tab: Pattern History -->
-        <div id="tab-history" class="tab-content">
-
-            <!-- Filter Controls -->
+            <!-- Pattern History -->
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Erkannte Patterns</h2>
@@ -2394,7 +2394,7 @@
                 </div>
             </div>
 
-        </div><!-- End Tab: Pattern History -->
+        </div><!-- End Tab: Detection & History -->
 
         <!-- Pattern Detail Modal -->
         <div class="modal-overlay" id="patternModal" onclick="closePatternModal(event)">
@@ -3678,7 +3678,16 @@
                 if (!trainingRefreshInterval) {
                     trainingRefreshInterval = setInterval(loadTrainingStatus, 5000);
                 }
-            } else if (tabName === 'history') {
+            } else if (tabName === 'patterntypes') {
+                loadPatternTypes();
+
+                // Stop auto-refresh
+                if (trainingRefreshInterval) {
+                    clearInterval(trainingRefreshInterval);
+                    trainingRefreshInterval = null;
+                }
+            } else if (tabName === 'detection') {
+                loadServiceInfo();
                 initHistoryFilters();
                 loadPatternHistory();
 
