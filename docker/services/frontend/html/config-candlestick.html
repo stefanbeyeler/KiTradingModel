@@ -2682,218 +2682,245 @@
 
         <!-- Tab: Claude QA -->
         <div id="tab-claudeqa" class="tab-content">
-            <!-- Claude Validator Status -->
+            <!-- Claude Validator Status + Batch Validation (Combined) -->
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">🤖 Claude Vision Validator</h2>
-                    <button class="btn btn-primary" onclick="loadClaudeStatus()">Aktualisieren</button>
-                </div>
-                <p class="card-description">
-                    Qualitätssicherung der Pattern-Erkennung durch Claude Vision AI.
-                    Claude analysiert Chart-Bilder und validiert die erkannten Patterns.
-                </p>
-                <div class="stats-grid" style="margin-top: 1rem;">
-                    <div class="stat-card">
-                        <div class="stat-value" id="claudeEnabled">-</div>
-                        <div class="stat-label">Status</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="claudeModel">-</div>
-                        <div class="stat-label">Modell</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="claudeCached">-</div>
-                        <div class="stat-label">Im Cache</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="claudeTotal">-</div>
-                        <div class="stat-label">Validierungen</div>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary btn-sm" onclick="loadClaudeStatus()">Status</button>
+                        <button class="btn btn-primary btn-sm" onclick="runBatchValidation(5)">5x</button>
+                        <button class="btn btn-primary btn-sm" onclick="runBatchValidation(10)">10x</button>
+                        <button class="btn btn-warning btn-sm" onclick="runBatchValidation(20)">20x</button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Batch Validation -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">📋 Batch-Validierung</h2>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; flex: 1;">
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            <span id="claudeEnabled" style="color: #81c784;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Modell: <span id="claudeModel" style="color: #64c8ff;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Cache: <span id="claudeCached" style="color: #ffb74d;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Total: <span id="claudeTotal" style="color: #ce93d8;">-</span>
+                        </span>
+                    </div>
                 </div>
-                <p class="card-description">
-                    Validiere mehrere Patterns auf einmal. Claude analysiert jedes Pattern
-                    und gibt Feedback zur Erkennungsqualität.
-                </p>
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
-                    <button class="btn btn-primary" onclick="runBatchValidation(5)" id="btnBatch5">
-                        5 Patterns validieren
-                    </button>
-                    <button class="btn btn-primary" onclick="runBatchValidation(10)" id="btnBatch10">
-                        10 Patterns validieren
-                    </button>
-                    <button class="btn btn-warning" onclick="runBatchValidation(20)" id="btnBatch20">
-                        20 Patterns validieren
-                    </button>
-                </div>
-                <div id="batchProgress" style="display: none; margin-top: 1rem;">
+                <div id="batchProgress" style="display: none; margin-top: 0.75rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span class="spinner"></span>
                         <span id="batchProgressText">Validierung läuft...</span>
                     </div>
                 </div>
-                <div id="batchResult" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                    <h4 style="margin-bottom: 0.5rem;">Ergebnis</h4>
+                <div id="batchResult" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 6px;">
                     <div id="batchResultContent"></div>
                 </div>
             </div>
 
-            <!-- Validation History -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">📜 Validierungs-Historie</h2>
-                    <button class="btn btn-secondary" onclick="loadClaudeHistory()">Laden</button>
-                </div>
-                <div id="claudeHistoryTable" style="overflow-x: auto;">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Zeit</th>
-                                <th>Symbol</th>
-                                <th>Timeframe</th>
-                                <th>Pattern</th>
-                                <th>Claude sagt</th>
-                                <th>Konfidenz</th>
-                                <th>Begründung</th>
-                            </tr>
-                        </thead>
-                        <tbody id="claudeHistoryBody">
-                            <tr><td colspan="7" style="text-align: center; color: #888;">Klicke "Laden" um die Historie anzuzeigen</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Problematic Patterns -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">⚠️ Problematische Patterns</h2>
-                    <button class="btn btn-secondary" onclick="loadProblematicPatterns()">Analysieren</button>
-                </div>
-                <p class="card-description">
-                    Patterns, die von Claude häufig abgelehnt werden.
-                    Diese könnten Anpassungen in der Erkennungslogik erfordern.
-                </p>
-                <div id="problematicPatternsTable" style="overflow-x: auto; margin-top: 1rem;">
-                    <table class="data-table" style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr>
-                                <th style="text-align: left; padding: 0.75rem; width: 25%;">Pattern-Typ</th>
-                                <th style="text-align: center; padding: 0.75rem; width: 12%;">Gesamt</th>
-                                <th style="text-align: center; padding: 0.75rem; width: 12%;">✓ OK</th>
-                                <th style="text-align: center; padding: 0.75rem; width: 12%;">✗ Abgelehnt</th>
-                                <th style="text-align: left; padding: 0.75rem; width: 39%;">Ablehnungsrate</th>
-                            </tr>
-                        </thead>
-                        <tbody id="problematicPatternsBody">
-                            <tr><td colspan="5" style="text-align: center; color: #888; padding: 1.5rem;">Klicke "Analysieren" für die Auswertung</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Chart Preview -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">🔍 Chart-Vorschau</h2>
-                    <button class="btn btn-secondary" onclick="loadRecentPatternsForPreview()">Patterns laden</button>
-                </div>
-                <p class="card-description">
-                    Zeige die Chart-Vorschau für ein Pattern an, wie sie an Claude gesendet wird.
-                    Wähle ein kürzlich erkanntes Pattern aus oder gib die Pattern-ID manuell ein.
-                </p>
-                <div style="display: flex; gap: 1rem; align-items: flex-end; margin-top: 1rem; flex-wrap: wrap;">
-                    <div style="flex: 2; min-width: 200px;">
-                        <label style="display: block; margin-bottom: 0.5rem; color: #888;">Pattern auswählen</label>
-                        <select id="chartPreviewSelect" onchange="selectPatternForPreview()"
-                                style="width: 100%; padding: 0.5rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
-                            <option value="">-- Klicke "Patterns laden" --</option>
-                        </select>
+            <!-- Two-Column Layout for History and Problems -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <!-- Validation History -->
+                <div class="card" style="margin-bottom: 0;">
+                    <div class="card-header">
+                        <h2 class="card-title" style="font-size: 1rem;">📜 Historie</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="loadClaudeHistory()">Laden</button>
                     </div>
-                    <div style="flex: 1; min-width: 150px;">
-                        <label style="display: block; margin-bottom: 0.5rem; color: #888;">oder Pattern-ID</label>
-                        <input type="text" id="chartPreviewPatternId" placeholder="z.B. abc123..."
-                               style="width: 100%; padding: 0.5rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
+                    <div id="claudeHistoryTable" style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
+                        <table class="data-table" style="font-size: 0.8rem;">
+                            <thead>
+                                <tr>
+                                    <th>Symbol/TF</th>
+                                    <th>Pattern</th>
+                                    <th>Result</th>
+                                    <th>Begründung</th>
+                                </tr>
+                            </thead>
+                            <tbody id="claudeHistoryBody">
+                                <tr><td colspan="4" style="text-align: center; color: #888; padding: 1rem;">Klicke "Laden"</td></tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <button class="btn btn-primary" onclick="loadChartPreview()">Vorschau laden</button>
                 </div>
-                <div id="chartPreviewContainer" style="display: none; margin-top: 1rem; text-align: center;">
-                    <img id="chartPreviewImage" style="max-width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);" />
-                    <div id="chartPreviewInfo" style="margin-top: 0.5rem; color: #888;"></div>
-                </div>
-            </div>
 
-            <!-- Feedback Loop - Parameter Recommendations -->
-            <div class="card" style="border: 1px solid rgba(100, 200, 255, 0.3);">
-                <div class="card-header">
-                    <h2 class="card-title">🔄 Feedback-Loop: Empfehlungen</h2>
-                    <button class="btn btn-primary" onclick="loadRecommendations()">Empfehlungen laden</button>
-                </div>
-                <p class="card-description">
-                    Basierend auf Claude's Ablehnungsgründen werden Parameter-Anpassungen empfohlen,
-                    um die Erkennungsgenauigkeit zu verbessern. Ein Klick auf "Anwenden" passt den Parameter an.
-                </p>
-                <div id="recommendationsContainer" style="margin-top: 1rem;">
-                    <div style="text-align: center; color: #888; padding: 1rem;">
-                        Klicke "Empfehlungen laden" um Verbesserungsvorschläge zu erhalten.
+                <!-- Problematic Patterns -->
+                <div class="card" style="margin-bottom: 0;">
+                    <div class="card-header">
+                        <h2 class="card-title" style="font-size: 1rem;">⚠️ Problematische Patterns</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="loadProblematicPatterns()">Analyse</button>
+                    </div>
+                    <div id="problematicPatternsTable" style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
+                        <table class="data-table" style="width: 100%; font-size: 0.8rem;">
+                            <thead>
+                                <tr>
+                                    <th style="text-align: left; padding: 0.5rem;">Pattern</th>
+                                    <th style="text-align: center; padding: 0.5rem; width: 50px;">✓</th>
+                                    <th style="text-align: center; padding: 0.5rem; width: 50px;">✗</th>
+                                    <th style="text-align: left; padding: 0.5rem;">Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="problematicPatternsBody">
+                                <tr><td colspan="4" style="text-align: center; color: #888; padding: 1rem;">Klicke "Analyse"</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
-            <!-- Current Rules -->
+            <!-- Chart Preview (Collapsible) -->
             <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">⚙️ Aktuelle Regel-Parameter</h2>
+                <div class="card-header" style="cursor: pointer;" onclick="toggleSection('chartPreviewSection')">
+                    <h2 class="card-title" style="font-size: 1rem;">🔍 Chart-Vorschau</h2>
                     <div class="btn-group">
-                        <button class="btn btn-secondary" onclick="loadCurrentRules()">Laden</button>
-                        <button class="btn btn-warning" onclick="resetAllRules()">Alle zurücksetzen</button>
+                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); loadRecentPatternsForPreview()">Patterns</button>
+                        <span style="color: #888; font-size: 0.8rem;" id="chartPreviewToggle">▼</span>
                     </div>
                 </div>
-                <p class="card-description">
-                    Zeigt die aktuellen Erkennungsparameter und kürzliche Anpassungen.
-                </p>
-                <div id="currentRulesContainer" style="display: none; margin-top: 1rem;">
-                    <h4 style="margin-bottom: 0.5rem;">Kürzliche Anpassungen</h4>
-                    <div id="recentAdjustments" style="max-height: 200px; overflow-y: auto;"></div>
-                    <h4 style="margin: 1rem 0 0.5rem;">Parameter nach Pattern-Typ</h4>
-                    <select id="rulePatternSelect" onchange="showPatternParams()" style="padding: 0.5rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; margin-bottom: 0.5rem;">
-                        <option value="">-- Pattern auswählen --</option>
-                    </select>
-                    <div id="patternParamsTable"></div>
+                <div id="chartPreviewSection" style="display: none;">
+                    <div style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
+                        <select id="chartPreviewSelect" onchange="selectPatternForPreview()"
+                                style="flex: 2; min-width: 180px; padding: 0.4rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.85rem;">
+                            <option value="">-- Pattern wählen --</option>
+                        </select>
+                        <input type="text" id="chartPreviewPatternId" placeholder="oder ID..."
+                               style="flex: 1; min-width: 100px; padding: 0.4rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.85rem;">
+                        <button class="btn btn-primary btn-sm" onclick="loadChartPreview()">Laden</button>
+                    </div>
+                    <div id="chartPreviewContainer" style="display: none; margin-top: 0.75rem; text-align: center;">
+                        <img id="chartPreviewImage" style="max-width: 100%; max-height: 250px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);" />
+                        <div id="chartPreviewInfo" style="margin-top: 0.3rem; color: #888; font-size: 0.8rem;"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Impact Analysis -->
-            <div class="card">
+            <!-- Auto-Optimization Controls -->
+            <div class="card" style="border: 1px solid rgba(76, 175, 80, 0.3);">
                 <div class="card-header">
-                    <h2 class="card-title">📊 Impact-Analyse</h2>
-                    <button class="btn btn-secondary" onclick="loadImpactAnalysis()">Analysieren</button>
+                    <h2 class="card-title" style="font-size: 1rem;">⚡ Auto-Optimierung</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary btn-sm" onclick="loadAutoOptStatus()">Status</button>
+                        <button class="btn btn-success btn-sm" onclick="toggleAutoOptimization(true)" id="autoOptEnableBtn">Aktivieren</button>
+                        <button class="btn btn-danger btn-sm" onclick="toggleAutoOptimization(false)" id="autoOptDisableBtn" style="display: none;">Deaktivieren</button>
+                    </div>
                 </div>
-                <p class="card-description">
-                    Misst die Wirksamkeit der Anpassungen durch Vergleich der Ablehnungsraten vor und nach Änderungen.
-                </p>
-                <div id="impactContainer" style="display: none; margin-top: 1rem;">
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-value" id="impactTotalAdj">-</div>
-                            <div class="stat-label">Anpassungen gesamt</div>
-                        </div>
-                        <div class="stat-card" style="border-color: rgba(76, 175, 80, 0.3);">
-                            <div class="stat-value" id="impactImprovements" style="color: #81c784;">-</div>
-                            <div class="stat-label">Verbesserungen</div>
-                        </div>
-                        <div class="stat-card" style="border-color: rgba(100, 200, 255, 0.3);">
-                            <div class="stat-value" id="impactSuccessRate" style="color: #64c8ff;">-</div>
-                            <div class="stat-label">Erfolgsrate</div>
+                <div id="autoOptStatusSection">
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Status: <span id="autoOptRunning" style="color: #888;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Warteschlange: <span id="autoOptPending" style="color: #ffb74d;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Auto-Anpassungen/h: <span id="autoOptAdjustments" style="color: #64c8ff;">-</span>
+                        </span>
+                    </div>
+
+                    <!-- Konfiguration -->
+                    <div style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 6px; margin-bottom: 0.75rem;">
+                        <h4 style="font-size: 0.85rem; margin-bottom: 0.5rem; color: #64c8ff;">Konfiguration</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                <input type="checkbox" id="autoOptValidateNew" onchange="updateAutoOptConfig()">
+                                Neue Patterns validieren
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                <input type="checkbox" id="autoOptAutoApply" onchange="updateAutoOptConfig()">
+                                Empfehlungen auto-anwenden
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                <span>Sample-Rate:</span>
+                                <input type="number" id="autoOptSampleRate" min="0.1" max="1.0" step="0.1" value="0.3"
+                                       style="width: 60px; padding: 0.2rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;"
+                                       onchange="updateAutoOptConfig()">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                <span>Min. Konfidenz:</span>
+                                <input type="number" id="autoOptMinConfidence" min="0.5" max="1.0" step="0.05" value="0.85"
+                                       style="width: 60px; padding: 0.2rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;"
+                                       onchange="updateAutoOptConfig()">
+                            </div>
                         </div>
                     </div>
-                    <div id="impactDetails" style="margin-top: 1rem;"></div>
+
+                    <!-- Aktionen -->
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-primary btn-sm" onclick="runOptimizationCycle()">Zyklus ausführen</button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadAutoOptHistory()">Historie</button>
+                        <button class="btn btn-warning btn-sm" onclick="clearValidationQueue()">Queue leeren</button>
+                    </div>
+
+                    <!-- Historie -->
+                    <div id="autoOptHistoryContainer" style="display: none; margin-top: 0.75rem; max-height: 150px; overflow-y: auto;">
+                        <table class="data-table" style="font-size: 0.8rem;">
+                            <thead>
+                                <tr>
+                                    <th>Zeit</th>
+                                    <th>Pattern</th>
+                                    <th>Parameter</th>
+                                    <th>Änderung</th>
+                                </tr>
+                            </thead>
+                            <tbody id="autoOptHistoryBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback Loop Section (Collapsible) -->
+            <div class="card" style="border: 1px solid rgba(100, 200, 255, 0.2);">
+                <div class="card-header" style="cursor: pointer;" onclick="toggleSection('feedbackSection')">
+                    <h2 class="card-title" style="font-size: 1rem;">🔄 Feedback-Loop</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); loadRecommendations()">Empfehlungen</button>
+                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); loadCurrentRules()">Regeln</button>
+                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); loadImpactAnalysis()">Impact</button>
+                        <span style="color: #888; font-size: 0.8rem;" id="feedbackToggle">▼</span>
+                    </div>
+                </div>
+                <div id="feedbackSection" style="display: none;">
+                    <!-- Recommendations -->
+                    <div id="recommendationsContainer" style="margin-bottom: 1rem;">
+                        <div style="text-align: center; color: #888; padding: 0.5rem; font-size: 0.85rem;">
+                            Klicke "Empfehlungen" für Verbesserungsvorschläge
+                        </div>
+                    </div>
+
+                    <!-- Current Rules -->
+                    <div id="currentRulesContainer" style="display: none; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <h4 style="font-size: 0.85rem; margin-bottom: 0.3rem; color: #64c8ff;">Kürzliche Anpassungen</h4>
+                                <div id="recentAdjustments" style="max-height: 120px; overflow-y: auto; font-size: 0.8rem;"></div>
+                            </div>
+                            <div style="flex: 1; min-width: 200px;">
+                                <h4 style="font-size: 0.85rem; margin-bottom: 0.3rem; color: #64c8ff;">Parameter</h4>
+                                <select id="rulePatternSelect" onchange="showPatternParams()" style="width: 100%; padding: 0.3rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.8rem; margin-bottom: 0.3rem;">
+                                    <option value="">-- Pattern --</option>
+                                </select>
+                                <div id="patternParamsTable" style="font-size: 0.8rem;"></div>
+                            </div>
+                        </div>
+                        <button class="btn btn-warning btn-sm" onclick="resetAllRules()" style="margin-top: 0.5rem;">Alle zurücksetzen</button>
+                    </div>
+
+                    <!-- Impact Analysis -->
+                    <div id="impactContainer" style="display: none; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                            <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem;">
+                                Anpassungen: <strong id="impactTotalAdj">-</strong>
+                            </span>
+                            <span style="background: rgba(76, 175, 80, 0.2); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem;">
+                                Verbesserungen: <strong id="impactImprovements" style="color: #81c784;">-</strong>
+                            </span>
+                            <span style="background: rgba(100, 200, 255, 0.2); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem;">
+                                Erfolgsrate: <strong id="impactSuccessRate" style="color: #64c8ff;">-</strong>
+                            </span>
+                        </div>
+                        <div id="impactDetails" style="font-size: 0.8rem;"></div>
+                    </div>
                 </div>
             </div>
         </div><!-- End Tab: Claude QA -->
@@ -5162,21 +5189,23 @@
 
                 const result = await res.json();
 
-                if (result.status === 'started') {
+                if (res.ok && result.status === 'started') {
                     showToast(`Training gestartet: ${result.job?.job_id}`, 'success');
                     await loadTrainingStatus();
                     await loadTrainingJobs();
                 } else {
-                    showToast('Training konnte nicht gestartet werden', 'error');
+                    // Show actual error message from API
+                    const errorMsg = result.detail || result.message || 'Training konnte nicht gestartet werden';
+                    showToast(errorMsg, 'error');
                     btn.disabled = false;
-                    btn.textContent = 'Training starten';
+                    btn.textContent = '▶ Training starten';
                 }
 
             } catch (error) {
                 console.error('Failed to start training:', error);
-                showToast('Fehler beim Starten des Trainings', 'error');
+                showToast('Fehler beim Starten des Trainings: ' + error.message, 'error');
                 btn.disabled = false;
-                btn.textContent = 'Training starten';
+                btn.textContent = '▶ Training starten';
             }
         }
 
@@ -6528,16 +6557,28 @@
                 `;
                 showToast('Batch-Validierung fehlgeschlagen: ' + e.message, 'error');
             } finally {
-                // Re-enable buttons
-                document.getElementById('btnBatch5').disabled = false;
-                document.getElementById('btnBatch10').disabled = false;
-                document.getElementById('btnBatch20').disabled = false;
+                // Buttons are always enabled in compact layout
+            }
+        }
+
+        // Toggle collapsible sections
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const toggleId = sectionId.replace('Section', 'Toggle');
+            const toggle = document.getElementById(toggleId);
+
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                if (toggle) toggle.textContent = '▲';
+            } else {
+                section.style.display = 'none';
+                if (toggle) toggle.textContent = '▼';
             }
         }
 
         async function loadClaudeHistory() {
             const tbody = document.getElementById('claudeHistoryBody');
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;"><span class="spinner"></span> Laden...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;"><span class="spinner"></span></td></tr>';
 
             try {
                 const response = await fetch(`${CANDLESTICK_API}/claude/history?limit=50`);
@@ -6545,36 +6586,31 @@
                 const data = await response.json();
 
                 if (!data.history || data.history.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #888;">Keine Validierungen vorhanden</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #888;">Keine Validierungen</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.history.map(v => `
                     <tr>
-                        <td>${new Date(v.validation_timestamp).toLocaleString('de-CH')}</td>
-                        <td><strong>${v.symbol}</strong></td>
-                        <td>${v.timeframe}</td>
+                        <td style="white-space: nowrap;"><strong>${v.symbol}</strong><br><span style="color:#888;">${v.timeframe}</span></td>
                         <td>${formatPatternType(v.pattern_type)}</td>
-                        <td style="color: ${v.claude_agrees ? '#81c784' : '#e57373'};">
-                            ${v.claude_agrees ? '✓ Bestätigt' : '✗ Abgelehnt'}
-                            ${v.claude_pattern_type && v.claude_pattern_type !== v.pattern_type ?
-                                `<br><small>(→ ${formatPatternType(v.claude_pattern_type)})</small>` : ''}
+                        <td style="color: ${v.claude_agrees ? '#81c784' : '#e57373'}; text-align: center;">
+                            ${v.claude_agrees ? '✓' : '✗'} ${(v.claude_confidence * 100).toFixed(0)}%
                         </td>
-                        <td>${(v.claude_confidence * 100).toFixed(0)}%</td>
-                        <td style="max-width: 300px; font-size: 0.85rem; color: #aaa;">
-                            ${v.claude_reasoning ? v.claude_reasoning.substring(0, 150) + (v.claude_reasoning.length > 150 ? '...' : '') : '-'}
+                        <td style="max-width: 150px; color: #aaa; font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis;" title="${v.claude_reasoning || ''}">
+                            ${v.claude_reasoning ? v.claude_reasoning.substring(0, 60) + (v.claude_reasoning.length > 60 ? '...' : '') : '-'}
                         </td>
                     </tr>
                 `).join('');
             } catch (e) {
                 console.error('Claude history error:', e);
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #e57373;">Fehler: ${e.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #e57373;">Fehler: ${e.message}</td></tr>`;
             }
         }
 
         async function loadProblematicPatterns() {
             const tbody = document.getElementById('problematicPatternsBody');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1.5rem;"><span class="spinner"></span> Analysiere...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 1rem;"><span class="spinner"></span></td></tr>';
 
             try {
                 const response = await fetch(`${CANDLESTICK_API}/claude/problematic-patterns?min_rejections=1&limit=20`);
@@ -6582,55 +6618,33 @@
                 const data = await response.json();
 
                 if (!data.patterns || data.patterns.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888; padding: 1.5rem;">Keine problematischen Patterns gefunden</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #888; padding: 1rem;">Keine problematischen Patterns</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.patterns.map(p => {
-                    // Determine color based on rejection rate
                     const rateColor = p.rejection_rate >= 70 ? '#e57373' :
                                       p.rejection_rate >= 50 ? '#ffb74d' :
                                       p.rejection_rate >= 30 ? '#fff176' : '#81c784';
                     const statusIcon = p.rejection_rate >= 70 ? '🔴' :
                                        p.rejection_rate >= 50 ? '🟠' :
                                        p.rejection_rate >= 30 ? '🟡' : '🟢';
-
-                    // Create visual progress bar
                     const barWidth = Math.min(p.rejection_rate, 100);
-                    const barColor = p.rejection_rate >= 70 ? 'linear-gradient(90deg, #e57373, #ef5350)' :
-                                     p.rejection_rate >= 50 ? 'linear-gradient(90deg, #ffb74d, #ffa726)' :
-                                     p.rejection_rate >= 30 ? 'linear-gradient(90deg, #fff176, #ffee58)' :
-                                     'linear-gradient(90deg, #81c784, #66bb6a)';
 
                     return `
-                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <td style="padding: 0.75rem; vertical-align: middle;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span style="font-size: 1.1rem;">${statusIcon}</span>
-                                    <strong style="color: #e8e8e8;">${formatPatternType(p.pattern_type)}</strong>
-                                </div>
+                        <tr>
+                            <td style="padding: 0.4rem;">
+                                <span style="font-size: 0.9rem;">${statusIcon}</span>
+                                <strong>${formatPatternType(p.pattern_type)}</strong>
                             </td>
-                            <td style="text-align: center; padding: 0.75rem; color: #b0b0b0; font-weight: 500;">
-                                ${p.total_validations}
-                            </td>
-                            <td style="text-align: center; padding: 0.75rem;">
-                                <span style="background: rgba(129, 199, 132, 0.2); color: #81c784; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600;">
-                                    ${p.agreed}
-                                </span>
-                            </td>
-                            <td style="text-align: center; padding: 0.75rem;">
-                                <span style="background: rgba(229, 115, 115, 0.2); color: #e57373; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600;">
-                                    ${p.rejected}
-                                </span>
-                            </td>
-                            <td style="padding: 0.75rem;">
-                                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                    <div style="flex: 1; background: rgba(255,255,255,0.1); border-radius: 4px; height: 20px; overflow: hidden; min-width: 100px;">
-                                        <div style="width: ${barWidth}%; height: 100%; background: ${barColor}; transition: width 0.3s ease;"></div>
+                            <td style="text-align: center; padding: 0.4rem; color: #81c784;">${p.agreed}</td>
+                            <td style="text-align: center; padding: 0.4rem; color: #e57373;">${p.rejected}</td>
+                            <td style="padding: 0.4rem;">
+                                <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                    <div style="flex: 1; background: rgba(255,255,255,0.1); border-radius: 3px; height: 12px; overflow: hidden;">
+                                        <div style="width: ${barWidth}%; height: 100%; background: ${rateColor};"></div>
                                     </div>
-                                    <span style="color: ${rateColor}; font-weight: 600; min-width: 50px; text-align: right;">
-                                        ${p.rejection_rate.toFixed(1)}%
-                                    </span>
+                                    <span style="color: ${rateColor}; font-size: 0.75rem; min-width: 35px;">${p.rejection_rate.toFixed(0)}%</span>
                                 </div>
                             </td>
                         </tr>
@@ -6638,7 +6652,7 @@
                 }).join('');
             } catch (e) {
                 console.error('Problematic patterns error:', e);
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #e57373; padding: 1.5rem;">Fehler: ${e.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #e57373; padding: 1rem;">Fehler: ${e.message}</td></tr>`;
             }
         }
 
@@ -6955,6 +6969,168 @@
                 showToast('Fehler: ' + e.message, 'error');
             }
         }
+
+        // === Auto-Optimization Functions ===
+        async function loadAutoOptStatus() {
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/auto-optimization/status`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                // Update status display
+                const running = data.running;
+                document.getElementById('autoOptRunning').textContent = running ? '✓ Läuft' : '✗ Gestoppt';
+                document.getElementById('autoOptRunning').style.color = running ? '#81c784' : '#888';
+                document.getElementById('autoOptPending').textContent = data.pending_validations || '0';
+                document.getElementById('autoOptAdjustments').textContent = `${data.auto_adjustments_this_hour || 0} / ${data.config?.max_auto_adjustments_per_hour || 3}`;
+
+                // Update buttons
+                document.getElementById('autoOptEnableBtn').style.display = running ? 'none' : 'inline-flex';
+                document.getElementById('autoOptDisableBtn').style.display = running ? 'inline-flex' : 'none';
+
+                // Update config checkboxes
+                if (data.config) {
+                    document.getElementById('autoOptValidateNew').checked = data.config.auto_validate_new_patterns;
+                    document.getElementById('autoOptAutoApply').checked = data.config.auto_apply_recommendations;
+                    document.getElementById('autoOptSampleRate').value = data.config.validation_sample_rate || 0.3;
+                    document.getElementById('autoOptMinConfidence').value = data.config.min_confidence_for_auto_apply || 0.85;
+                }
+            } catch (e) {
+                console.error('Auto-opt status error:', e);
+                document.getElementById('autoOptRunning').textContent = '✗ Fehler';
+                document.getElementById('autoOptRunning').style.color = '#e57373';
+            }
+        }
+
+        async function toggleAutoOptimization(enable) {
+            try {
+                const endpoint = enable ? 'enable' : 'disable';
+                const autoApply = document.getElementById('autoOptAutoApply').checked;
+
+                const response = await fetch(`${CANDLESTICK_API}/auto-optimization/${endpoint}?auto_validate=true&auto_apply=${autoApply}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                showToast(`Auto-Optimierung ${enable ? 'aktiviert' : 'deaktiviert'}`, 'success');
+                loadAutoOptStatus();
+            } catch (e) {
+                console.error('Toggle auto-opt error:', e);
+                showToast('Fehler: ' + e.message, 'error');
+            }
+        }
+
+        async function updateAutoOptConfig() {
+            try {
+                const config = {
+                    auto_validate_new_patterns: document.getElementById('autoOptValidateNew').checked,
+                    auto_apply_recommendations: document.getElementById('autoOptAutoApply').checked,
+                    validation_sample_rate: parseFloat(document.getElementById('autoOptSampleRate').value),
+                    min_confidence_for_auto_apply: parseFloat(document.getElementById('autoOptMinConfidence').value)
+                };
+
+                const response = await fetch(`${CANDLESTICK_API}/auto-optimization/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                showToast('Konfiguration aktualisiert', 'success');
+            } catch (e) {
+                console.error('Update config error:', e);
+                showToast('Fehler: ' + e.message, 'error');
+            }
+        }
+
+        async function runOptimizationCycle() {
+            try {
+                showToast('Starte Optimierungszyklus...', 'info');
+
+                const response = await fetch(`${CANDLESTICK_API}/auto-optimization/run-cycle`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showToast(`Zyklus abgeschlossen: ${data.patterns_validated} validiert, ${data.recommendations_applied} angewendet`, 'success');
+                } else if (data.status === 'disabled') {
+                    showToast('Auto-Optimierung ist deaktiviert', 'warning');
+                } else {
+                    showToast('Zyklus mit Fehler: ' + (data.error || 'Unbekannt'), 'error');
+                }
+
+                loadAutoOptStatus();
+            } catch (e) {
+                console.error('Run cycle error:', e);
+                showToast('Fehler: ' + e.message, 'error');
+            }
+        }
+
+        async function loadAutoOptHistory() {
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/auto-optimization/history?limit=20`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                const container = document.getElementById('autoOptHistoryContainer');
+                const tbody = document.getElementById('autoOptHistoryBody');
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #888;">Keine automatischen Anpassungen</td></tr>';
+                } else {
+                    tbody.innerHTML = data.map(item => {
+                        const time = new Date(item.timestamp).toLocaleTimeString('de-CH', {hour: '2-digit', minute: '2-digit'});
+                        const change = `${item.old_value?.toFixed(3)} → ${item.new_value?.toFixed(3)}`;
+                        return `
+                            <tr>
+                                <td style="color: #888;">${time}</td>
+                                <td style="color: #ce93d8;">${formatPatternType(item.pattern || '')}</td>
+                                <td>${item.parameter || '-'}</td>
+                                <td style="color: #81c784;">${change}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+
+                container.style.display = 'block';
+            } catch (e) {
+                console.error('Load history error:', e);
+                showToast('Fehler: ' + e.message, 'error');
+            }
+        }
+
+        async function clearValidationQueue() {
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/auto-optimization/queue`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                showToast(`Queue geleert: ${data.removed || 0} Einträge entfernt`, 'success');
+                loadAutoOptStatus();
+            } catch (e) {
+                console.error('Clear queue error:', e);
+                showToast('Fehler: ' + e.message, 'error');
+            }
+        }
+
+        // Load auto-opt status when Claude QA tab is shown
+        document.querySelectorAll('[data-tab]').forEach(tab => {
+            tab.addEventListener('click', () => {
+                if (tab.dataset.tab === 'claudeqa') {
+                    loadAutoOptStatus();
+                }
+            });
+        });
     </script>
 </body>
 </html>

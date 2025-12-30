@@ -22,9 +22,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from .routers import detection_router, system_router, history_router, claude_validator_router
+from .routers.auto_optimization_router import router as auto_optimization_router
 from .services.pattern_detection_service import candlestick_pattern_service
 from .services.pattern_history_service import pattern_history_service
 from .services.claude_validator_service import claude_validator_service
+from .services.auto_optimization_service import auto_optimization_service
 
 # Configuration
 VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
@@ -59,7 +61,18 @@ async def lifespan(app: FastAPI):
         await pattern_history_service.start()
         logger.info("Pattern History auto-scan started")
 
+    # Start auto-optimization service
+    auto_optimization_enabled = os.getenv("AUTO_OPTIMIZATION_ENABLED", "true").lower() == "true"
+    if auto_optimization_enabled:
+        await auto_optimization_service.start()
+        logger.info("Auto-optimization service started")
+
     yield
+
+    # Stop auto-optimization on shutdown
+    if auto_optimization_service._running:
+        await auto_optimization_service.stop()
+        logger.info("Auto-optimization service stopped")
 
     # Stop auto-scan on shutdown
     if pattern_history_service.is_running():
@@ -89,6 +102,10 @@ openapi_tags = [
     {
         "name": "4. Claude QA",
         "description": "Externe Pattern-Validierung mit Claude Vision AI"
+    },
+    {
+        "name": "7. Auto-Optimization",
+        "description": "Automatische Regeloptimierung basierend auf Feedback"
     },
 ]
 
@@ -147,6 +164,7 @@ app.include_router(system_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(detection_router, prefix="/api/v1", tags=["2. Pattern Detection"])
 app.include_router(history_router, prefix="/api/v1", tags=["3. Pattern History"])
 app.include_router(claude_validator_router, prefix="/api/v1/claude", tags=["4. Claude QA"])
+app.include_router(auto_optimization_router, prefix="/api/v1", tags=["7. Auto-Optimization"])
 
 
 @app.get("/")

@@ -266,6 +266,17 @@ class PatternHistoryService:
             self._save_history()
 
             logger.info(f"Pattern scan complete: {new_patterns} new patterns found")
+
+            # Queue new patterns for auto-validation if enabled
+            if new_patterns > 0:
+                try:
+                    from .auto_optimization_service import auto_optimization_service
+                    # Get the newly added patterns (last new_patterns entries)
+                    new_pattern_dicts = [e.to_dict() for e in self._history[-new_patterns:]]
+                    await auto_optimization_service.queue_patterns_for_validation(new_pattern_dicts)
+                except Exception as e:
+                    logger.debug(f"Auto-optimization not available: {e}")
+
             return new_patterns
 
         except Exception as e:
