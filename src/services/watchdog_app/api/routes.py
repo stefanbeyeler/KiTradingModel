@@ -460,6 +460,89 @@ async def update_daily_summary_config(
     }
 
 
+@router.get("/config/service-alerts", tags=["Konfiguration"])
+async def get_service_alert_config():
+    """
+    Gibt die Alarm-Konfiguration pro Service zurück.
+
+    Zeigt für jeden überwachten Service, ob Telegram-Alerts aktiviert sind.
+    Training-Services sind standardmässig deaktiviert.
+    """
+    config_service = _get_config_service()
+    return config_service.get_service_alert_config()
+
+
+@router.put("/config/service-alerts/{service_name}", tags=["Konfiguration"])
+async def update_service_alert(
+    service_name: str,
+    enabled: bool = Query(..., description="True = Alarme aktiviert, False = deaktiviert")
+):
+    """
+    Aktiviert oder deaktiviert Telegram-Alerts für einen bestimmten Service.
+
+    ## Verfügbare Services
+
+    **Inference Services (Standard: aktiviert):**
+    - frontend, data, nhits, tcn, hmm, embedder, candlestick, redis, rag, llm, easyinsight
+
+    **Training Services (Standard: deaktiviert):**
+    - nhits-train, tcn-train, hmm-train, candlestick-train
+    """
+    config_service = _get_config_service()
+
+    # Prüfe ob Service existiert
+    all_services = config_service._get_default_service_alerts().keys()
+    if service_name not in all_services:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unbekannter Service: {service_name}. Verfügbar: {list(all_services)}"
+        )
+
+    result = config_service.set_service_alert(service_name, enabled)
+
+    return {
+        "success": True,
+        "message": f"Alerts für '{service_name}' {'aktiviert' if enabled else 'deaktiviert'}",
+        **result
+    }
+
+
+class ServiceAlertsBulkRequest(BaseModel):
+    """Request für Bulk-Update der Service-Alerts."""
+    services: dict = Field(
+        ...,
+        description="Dict mit Service-Namen und deren Alarm-Status (True/False)",
+        json_schema_extra={"example": {"nhits": True, "tcn": False, "nhits-train": False}}
+    )
+
+
+@router.put("/config/service-alerts", tags=["Konfiguration"])
+async def update_service_alerts_bulk(request: ServiceAlertsBulkRequest):
+    """
+    Aktualisiert Telegram-Alerts für mehrere Services gleichzeitig.
+
+    Nützlich für das Speichern aller Änderungen auf einmal aus dem Config-UI.
+    """
+    config_service = _get_config_service()
+
+    # Validiere alle Service-Namen
+    all_services = config_service._get_default_service_alerts().keys()
+    invalid_services = [s for s in request.services.keys() if s not in all_services]
+    if invalid_services:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unbekannte Services: {invalid_services}. Verfügbar: {list(all_services)}"
+        )
+
+    result = config_service.set_service_alerts_bulk(request.services)
+
+    return {
+        "success": True,
+        "message": f"{len(request.services)} Service-Alerts aktualisiert",
+        **result
+    }
+
+
 @router.post("/check")
 async def trigger_check():
     """Triggert einen manuellen Health-Check aller Services."""

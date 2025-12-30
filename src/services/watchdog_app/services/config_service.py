@@ -305,6 +305,100 @@ class ConfigService:
 
         return self.get_daily_summary_config()
 
+    def _get_default_service_alerts(self) -> Dict[str, bool]:
+        """Gibt die Standard-Alarm-Einstellungen pro Service zurück."""
+        return {
+            "frontend": True,
+            "data": True,
+            "nhits": True,
+            "tcn": True,
+            "hmm": True,
+            "embedder": True,
+            "candlestick": True,
+            "redis": True,
+            "nhits-train": False,
+            "tcn-train": False,
+            "hmm-train": False,
+            "candlestick-train": False,
+            "rag": True,
+            "llm": True,
+            "easyinsight": True,
+        }
+
+    def get_service_alert_config(self) -> Dict[str, Any]:
+        """
+        Gibt die Alarm-Konfiguration pro Service zurück.
+
+        Returns:
+            Dict mit Service-Namen und deren Alarm-Status
+        """
+        defaults = self._get_default_service_alerts()
+        saved = self._config.get("service_alerts", {})
+
+        # Merge: gespeicherte Werte überschreiben Defaults
+        service_alerts = {**defaults, **saved}
+
+        return {
+            "services": service_alerts,
+            "enabled_count": sum(1 for v in service_alerts.values() if v),
+            "disabled_count": sum(1 for v in service_alerts.values() if not v),
+            "total_count": len(service_alerts)
+        }
+
+    def set_service_alert(self, service_name: str, enabled: bool) -> Dict[str, Any]:
+        """
+        Aktiviert oder deaktiviert Alarme für einen bestimmten Service.
+
+        Args:
+            service_name: Name des Services
+            enabled: True = Alarme aktiviert, False = deaktiviert
+
+        Returns:
+            Die aktualisierte Service-Alarm-Konfiguration
+        """
+        service_alerts = self._config.get("service_alerts", {})
+        service_alerts[service_name] = enabled
+
+        with self._lock:
+            self._config["service_alerts"] = service_alerts
+        self._save_config()
+
+        return self.get_service_alert_config()
+
+    def set_service_alerts_bulk(self, updates: Dict[str, bool]) -> Dict[str, Any]:
+        """
+        Aktualisiert Alarme für mehrere Services gleichzeitig.
+
+        Args:
+            updates: Dict mit Service-Namen und deren neuen Alarm-Status
+
+        Returns:
+            Die aktualisierte Service-Alarm-Konfiguration
+        """
+        service_alerts = self._config.get("service_alerts", {})
+        service_alerts.update(updates)
+
+        with self._lock:
+            self._config["service_alerts"] = service_alerts
+        self._save_config()
+
+        return self.get_service_alert_config()
+
+    def is_service_alert_enabled(self, service_name: str) -> bool:
+        """
+        Prüft, ob Alarme für einen bestimmten Service aktiviert sind.
+
+        Args:
+            service_name: Name des Services
+
+        Returns:
+            True wenn Alarme aktiviert sind
+        """
+        service_alerts = self._config.get("service_alerts", {})
+        defaults = self._get_default_service_alerts()
+
+        return service_alerts.get(service_name, defaults.get(service_name, True))
+
 
 # Singleton-Instanz
 config_service = ConfigService()

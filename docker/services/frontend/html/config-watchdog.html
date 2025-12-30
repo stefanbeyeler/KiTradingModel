@@ -577,7 +577,7 @@
         /* Compact Services Grid */
         .services-grid-compact {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
             gap: 0.5rem;
         }
 
@@ -627,6 +627,93 @@
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
+        }
+
+        /* Service Alert Toggle Items */
+        .service-alert-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s;
+        }
+
+        .service-alert-toggle:hover {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .service-alert-toggle .service-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .service-alert-toggle .service-icon {
+            font-size: 1rem;
+        }
+
+        .service-alert-toggle .service-name {
+            font-weight: 500;
+        }
+
+        .service-alert-toggle.alert-enabled {
+            border-left: 3px solid #81c784;
+        }
+
+        .service-alert-toggle.alert-disabled {
+            border-left: 3px solid #666;
+            opacity: 0.7;
+        }
+
+        /* Mini Toggle Switch */
+        .toggle-switch-mini {
+            position: relative;
+            width: 36px;
+            height: 20px;
+        }
+
+        .toggle-switch-mini input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-switch-mini .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: 0.3s;
+            border-radius: 20px;
+        }
+
+        .toggle-switch-mini .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #888;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch-mini input:checked + .toggle-slider {
+            background-color: rgba(129, 199, 132, 0.5);
+        }
+
+        .toggle-switch-mini input:checked + .toggle-slider:before {
+            transform: translateX(16px);
+            background-color: #81c784;
         }
 
         /* Quick Actions */
@@ -1115,6 +1202,64 @@
 
         <!-- Alerts Tab -->
         <div id="tab-alerts" class="tab-content">
+            <!-- Service-spezifische Alarmierung -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Service-Alarmierung</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <span class="badge badge-success" id="service-alerts-enabled">- aktiv</span>
+                        <span class="badge badge-warning" id="service-alerts-disabled">- deaktiviert</span>
+                    </div>
+                </div>
+                <p style="opacity: 0.7; margin-bottom: 1rem; font-size: 0.9rem;">
+                    Konfiguriere für jeden Service, ob bei Ausfällen Telegram-Benachrichtigungen gesendet werden sollen.
+                </p>
+
+                <!-- Inference Services -->
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <h3 style="font-size: 1rem; color: #81c784; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>&#128994;</span> Inference Services
+                        </h3>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-sm btn-success" onclick="toggleServiceCategory('inference', true)">Alle an</button>
+                            <button class="btn btn-sm btn-danger" onclick="toggleServiceCategory('inference', false)">Alle aus</button>
+                        </div>
+                    </div>
+                    <div class="services-grid-compact" id="inference-services-alerts">
+                        <!-- Wird dynamisch geladen -->
+                    </div>
+                </div>
+
+                <!-- Training Services -->
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <h3 style="font-size: 1rem; color: #ffb74d; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>&#127891;</span> Training Services
+                        </h3>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-sm btn-success" onclick="toggleServiceCategory('training', true)">Alle an</button>
+                            <button class="btn btn-sm btn-danger" onclick="toggleServiceCategory('training', false)">Alle aus</button>
+                        </div>
+                    </div>
+                    <div class="services-grid-compact" id="training-services-alerts">
+                        <!-- Wird dynamisch geladen -->
+                    </div>
+                </div>
+
+                <!-- External Services -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <h3 style="font-size: 1rem; color: #64b5f6; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>&#127760;</span> Externe Services
+                        </h3>
+                    </div>
+                    <div class="services-grid-compact" id="external-services-alerts">
+                        <!-- Wird dynamisch geladen -->
+                    </div>
+                </div>
+            </div>
+
             <div class="grid-equal">
                 <!-- Telegram Configuration -->
                 <div class="card">
@@ -1235,6 +1380,161 @@
     <script>
         const API_BASE = '/watchdog/api/v1';
 
+        // Service Alert Configuration
+        const SERVICE_ALERT_CONFIG = {
+            // Inference Services
+            'frontend': { icon: '&#128187;', name: 'Frontend', category: 'inference' },
+            'data': { icon: '&#128279;', name: 'Data Service', category: 'inference' },
+            'nhits': { icon: '&#128202;', name: 'NHITS', category: 'inference' },
+            'tcn': { icon: '&#128200;', name: 'TCN Pattern', category: 'inference' },
+            'hmm': { icon: '&#128201;', name: 'HMM Regime', category: 'inference' },
+            'embedder': { icon: '&#129302;', name: 'Embedder', category: 'inference' },
+            'candlestick': { icon: '&#128293;', name: 'Candlestick', category: 'inference' },
+            'redis': { icon: '&#128451;', name: 'Redis Cache', category: 'inference' },
+            'rag': { icon: '&#128269;', name: 'RAG Service', category: 'inference' },
+            'llm': { icon: '&#129504;', name: 'LLM Service', category: 'inference' },
+            // Training Services
+            'nhits-train': { icon: '&#127891;', name: 'NHITS Train', category: 'training' },
+            'tcn-train': { icon: '&#127891;', name: 'TCN Train', category: 'training' },
+            'hmm-train': { icon: '&#127891;', name: 'HMM Train', category: 'training' },
+            'candlestick-train': { icon: '&#127891;', name: 'Candle Train', category: 'training' },
+            // External Services
+            'easyinsight': { icon: '&#127760;', name: 'EasyInsight', category: 'external' }
+        };
+
+        let currentServiceAlerts = {};
+
+        // Load Service Alert Configuration
+        async function loadServiceAlertConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/config/service-alerts`);
+                if (!res.ok) return;
+
+                const data = await res.json();
+                currentServiceAlerts = data.services || {};
+
+                // Update summary badges
+                document.getElementById('service-alerts-enabled').textContent = `${data.enabled_count} aktiv`;
+                document.getElementById('service-alerts-disabled').textContent = `${data.disabled_count} deaktiviert`;
+
+                // Render service toggles
+                renderServiceAlertToggles();
+            } catch (err) {
+                console.error('Error loading service alert config:', err);
+            }
+        }
+
+        // Render Service Alert Toggles
+        function renderServiceAlertToggles() {
+            const inferenceContainer = document.getElementById('inference-services-alerts');
+            const trainingContainer = document.getElementById('training-services-alerts');
+            const externalContainer = document.getElementById('external-services-alerts');
+
+            inferenceContainer.innerHTML = '';
+            trainingContainer.innerHTML = '';
+            externalContainer.innerHTML = '';
+
+            for (const [serviceName, config] of Object.entries(SERVICE_ALERT_CONFIG)) {
+                const enabled = currentServiceAlerts[serviceName] !== false;
+                const html = renderServiceAlertToggle(serviceName, config, enabled);
+
+                if (config.category === 'training') {
+                    trainingContainer.innerHTML += html;
+                } else if (config.category === 'external') {
+                    externalContainer.innerHTML += html;
+                } else {
+                    inferenceContainer.innerHTML += html;
+                }
+            }
+        }
+
+        // Render single Service Alert Toggle
+        function renderServiceAlertToggle(serviceName, config, enabled) {
+            return `
+                <div class="service-alert-toggle ${enabled ? 'alert-enabled' : 'alert-disabled'}" id="alert-toggle-${serviceName}">
+                    <div class="service-info">
+                        <span class="service-icon">${config.icon}</span>
+                        <span class="service-name">${config.name}</span>
+                    </div>
+                    <label class="toggle-switch-mini">
+                        <input type="checkbox"
+                               id="alert-check-${serviceName}"
+                               ${enabled ? 'checked' : ''}
+                               onchange="toggleServiceAlert('${serviceName}', this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            `;
+        }
+
+        // Toggle single service alert
+        async function toggleServiceAlert(serviceName, enabled) {
+            const toggleEl = document.getElementById(`alert-toggle-${serviceName}`);
+
+            try {
+                const res = await fetch(`${API_BASE}/config/service-alerts/${serviceName}?enabled=${enabled}`, {
+                    method: 'PUT'
+                });
+
+                if (!res.ok) throw new Error('Failed to save');
+
+                const data = await res.json();
+                currentServiceAlerts[serviceName] = enabled;
+
+                // Update UI
+                toggleEl.classList.toggle('alert-enabled', enabled);
+                toggleEl.classList.toggle('alert-disabled', !enabled);
+
+                // Update summary
+                document.getElementById('service-alerts-enabled').textContent = `${data.enabled_count} aktiv`;
+                document.getElementById('service-alerts-disabled').textContent = `${data.disabled_count} deaktiviert`;
+
+                showToast(`${SERVICE_ALERT_CONFIG[serviceName]?.name || serviceName}: Alerts ${enabled ? 'aktiviert' : 'deaktiviert'}`, 'success');
+            } catch (err) {
+                console.error('Error toggling service alert:', err);
+                showToast('Fehler beim Speichern', 'error');
+
+                // Rollback
+                document.getElementById(`alert-check-${serviceName}`).checked = !enabled;
+            }
+        }
+
+        // Toggle all services in a category
+        async function toggleServiceCategory(category, enabled) {
+            const updates = {};
+
+            for (const [serviceName, config] of Object.entries(SERVICE_ALERT_CONFIG)) {
+                if (config.category === category) {
+                    updates[serviceName] = enabled;
+                }
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/config/service-alerts`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ services: updates })
+                });
+
+                if (!res.ok) throw new Error('Failed to save');
+
+                const data = await res.json();
+                Object.assign(currentServiceAlerts, updates);
+
+                // Update summary
+                document.getElementById('service-alerts-enabled').textContent = `${data.enabled_count} aktiv`;
+                document.getElementById('service-alerts-disabled').textContent = `${data.disabled_count} deaktiviert`;
+
+                // Re-render
+                renderServiceAlertToggles();
+
+                showToast(`${Object.keys(updates).length} Services ${enabled ? 'aktiviert' : 'deaktiviert'}`, 'success');
+            } catch (err) {
+                console.error('Error toggling category:', err);
+                showToast('Fehler beim Speichern', 'error');
+            }
+        }
+
         // Tab switching
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -1255,6 +1555,7 @@
                 loadRetentionConfig();
             }
             if (tabName === 'alerts') {
+                loadServiceAlertConfig();
                 loadAlertHistory();
                 loadTelegramConfig();
                 loadAlertConfig();
