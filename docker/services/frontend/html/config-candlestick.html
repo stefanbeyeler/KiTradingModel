@@ -3681,6 +3681,9 @@
                 }
             } else if (tabName === 'claudeqa') {
                 loadClaudeStatus();
+                loadAutoOptStatus();
+                loadClaudeHistory();
+                loadProblematicPatterns();
 
                 // Stop training auto-refresh
                 if (trainingRefreshInterval) {
@@ -7135,25 +7138,6 @@
             }
         }
 
-        // Load data when Claude QA tab is shown
-        document.querySelectorAll('[data-tab]').forEach(tab => {
-            tab.addEventListener('click', () => {
-                if (tab.dataset.tab === 'claudeqa') {
-                    loadAutoOptStatus();
-                    loadClaudeHistory();
-                    loadProblematicPatterns();
-                }
-            });
-        });
-
-        // Auto-load Claude QA data if tab is already active on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            const claudeTab = document.getElementById('tab-claudeqa');
-            if (claudeTab && claudeTab.style.display !== 'none' && claudeTab.classList.contains('active')) {
-                loadClaudeHistory();
-                loadProblematicPatterns();
-            }
-        });
     </script>
 </body>
 </html>
