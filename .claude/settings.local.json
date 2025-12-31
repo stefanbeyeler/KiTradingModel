@@ -215,7 +215,10 @@
       "Bash(do echo \"=== Port $port ===\" curl -s \"http://10.1.19.101:$port/openapi.json\")",
       "Bash(git -C \"e:/KiTradingModel\" add docker/services/frontend/html/config-candlestick.html)",
       "Bash(git -C \"e:/KiTradingModel\" commit -m \"$\\(cat <<''EOF''\nfix: reload training history after training completion\n\nTraining History \\(Job-Liste\\) wird jetzt automatisch aktualisiert,\nsobald ein Training abgeschlossen wurde.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git -C \"e:/KiTradingModel\" push)"
+      "Bash(git -C \"e:/KiTradingModel\" push)",
+      "Bash(git -C \"e:/KiTradingModel\" commit -m \"$\\(cat <<''EOF''\nfix: hide training section when no training is active\n\nDie \"Aktuelles Training\" Sektion wird jetzt nur angezeigt,\nwenn tatsächlich ein Training läuft \\(data.training === true\\).\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"e:/KiTradingModel\" status docker/services/frontend/html/config-candlestick.html)",
+      "Bash(git -C \"e:/KiTradingModel\" commit -m \"$\\(cat <<''EOF''\nrefactor: move training progress into \"Neues Training starten\" card\n\nMoved \"Aktuelles Training\" section into the training form card\nand updated all JavaScript references to use unified element IDs\n\\(currentTrainingSection, currentJobProgress, etc.\\).\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ],
     "deny": [],
     "ask": []
