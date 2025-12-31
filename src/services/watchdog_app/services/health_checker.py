@@ -619,6 +619,34 @@ class HealthChecker:
         self._running = False
         logger.info("Health monitoring loop stopped")
 
+    def simulate_failure(self, service_name: str, error_message: str = "Simulierter Ausfall (Test)") -> bool:
+        """
+        Simuliert einen Service-Ausfall für Testzwecke.
+
+        Args:
+            service_name: Name des Services
+            error_message: Fehlermeldung für den simulierten Ausfall
+
+        Returns:
+            True wenn erfolgreich, False wenn Service nicht gefunden
+        """
+        if service_name not in self.services:
+            logger.warning(f"Service {service_name} nicht gefunden für Simulation")
+            return False
+
+        # Erstelle einen Failure-Status für den Service
+        self.status[service_name] = ServiceStatus(
+            name=service_name,
+            state=HealthState.UNHEALTHY,
+            response_time_ms=None,
+            last_check=datetime.now(timezone.utc),
+            error=error_message,
+            consecutive_failures=1
+        )
+
+        logger.info(f"Simulierter Ausfall für Service {service_name}: {error_message}")
+        return True
+
     def get_summary(self) -> dict:
         """Gibt eine Zusammenfassung des aktuellen Status zurück."""
         healthy = sum(

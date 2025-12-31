@@ -492,52 +492,53 @@
         </div>
 
         <div class="content-card">
-            <h2>&#128279; API-Endpunkte</h2>
+            <h2>&#128279; API-Endpunkte (über 60 Endpoints)</h2>
 
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; color: #f472b6;">Monitoring & Status (7 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/health</span>
-                    <span class="endpoint-desc">Health-Check des Watchdog selbst</span>
+                    <span class="endpoint-desc">Health-Check des Watchdog</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/status</span>
-                    <span class="endpoint-desc">Aktueller Status aller überwachten Services</span>
+                    <span class="endpoint-desc">Status aller überwachten Services</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/services</span>
-                    <span class="endpoint-desc">Liste aller überwachten Services mit Konfiguration</span>
+                    <span class="endpoint-desc">Liste aller überwachten Services</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/alerts/history</span>
-                    <span class="endpoint-desc">Historie der gesendeten Alerts</span>
+                    <span class="endpoint-desc">Alert-Historie</span>
                 </div>
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/alerts/test</span>
-                    <span class="endpoint-desc">Test-Alert uber Telegram senden</span>
+                    <span class="endpoint-desc">Test-Alert senden</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/config</span>
-                    <span class="endpoint-desc">Aktuelle Konfiguration (ohne sensible Daten)</span>
+                    <span class="endpoint-desc">Aktuelle Konfiguration</span>
                 </div>
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/check</span>
-                    <span class="endpoint-desc">Manuellen Health-Check triggern</span>
+                    <span class="endpoint-desc">Manuellen Check triggern</span>
                 </div>
             </div>
 
-            <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; color: #f472b6;">Testing-Endpunkte</h3>
+            <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; color: #f472b6;">Testing-Endpunkte (10 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/tests/modes</span>
-                    <span class="endpoint-desc">Verfugbare Test-Modi</span>
+                    <span class="endpoint-desc">Verfügbare Test-Modi</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -579,6 +580,60 @@
                     <span class="endpoint-path">/api/v1/tests/history</span>
                     <span class="endpoint-desc">Test-Historie (50 Runs)</span>
                 </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/tests/cancel</span>
+                    <span class="endpoint-desc">Laufende Tests abbrechen</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; color: #f472b6;">Training Orchestrator (8 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/training/queue</span>
+                    <span class="endpoint-desc">Training in Queue stellen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/training/train-all</span>
+                    <span class="endpoint-desc">Alle Services trainieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/training/status</span>
+                    <span class="endpoint-desc">Training-Status aller Services</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/training/services</span>
+                    <span class="endpoint-desc">Training-Services Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/training/schedules</span>
+                    <span class="endpoint-desc">Geplante Trainings</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/training/schedules</span>
+                    <span class="endpoint-desc">Training planen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/training/cancel/{job_id}</span>
+                    <span class="endpoint-desc">Training abbrechen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/training/history</span>
+                    <span class="endpoint-desc">Training-Historie</span>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 1.5rem;">
+                <strong>Vollständige API:</strong> Über 60 Endpoints für Monitoring, Testing und Training-Orchestrierung.
+                Siehe <a href="/watchdog/docs" target="_blank" style="color: #f472b6;">/watchdog/docs</a> für die interaktive Swagger-Dokumentation.
             </div>
         </div>
 

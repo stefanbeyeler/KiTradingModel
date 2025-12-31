@@ -381,6 +381,7 @@
 
         <div class="content-card">
             <h2>&#128279; Wichtige API-Endpunkte</h2>
+            <p style="opacity: 0.7; margin-bottom: 1rem;">Der NHITS Service bietet über <strong>50 API-Endpoints</strong> für Forecasting und Training.</p>
 
             <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Prognosen</h3>
             <div class="endpoint-list">
@@ -398,6 +399,16 @@
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/forecast/models/by-timeframe</span>
                     <span class="endpoint-desc">Modelle nach Timeframe gruppiert</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/forecast/{symbol}/model</span>
+                    <span class="endpoint-desc">Modell-Informationen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/forecast/latest-per-model</span>
+                    <span class="endpoint-desc">Letzte Prognosen pro Modell</span>
                 </div>
             </div>
 
@@ -419,23 +430,67 @@
                     <span class="endpoint-desc">Trainingsfortschritt abfragen</span>
                 </div>
                 <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/forecast/training/symbols</span>
+                    <span class="endpoint-desc">Trainierbare Symbole</span>
+                </div>
+                <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/forecast/training/cancel</span>
                     <span class="endpoint-desc">Training abbrechen</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Evaluation & Auto-Forecast</h3>
             <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/forecast/evaluate</span>
+                    <span class="endpoint-desc">Prognosen evaluieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/forecast/performance</span>
+                    <span class="endpoint-desc">Modell-Performance</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/forecast/retraining-needed</span>
+                    <span class="endpoint-desc">Symbole für Retraining</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/forecast/favorites/start</span>
+                    <span class="endpoint-desc">Auto-Forecast Favoriten starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/forecast/auto/daily/start</span>
+                    <span class="endpoint-desc">Tägliche Auto-Prognose starten</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Backup & System</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/backup/status</span>
+                    <span class="endpoint-desc">Backup-Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/backup/models</span>
+                    <span class="endpoint-desc">Modelle sichern</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/restore/models</span>
+                    <span class="endpoint-desc">Modelle wiederherstellen</span>
+                </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/system/metrics</span>
                     <span class="endpoint-desc">CPU/GPU/Memory Metriken</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/forecast/evaluate</span>
-                    <span class="endpoint-desc">Modell-Evaluation</span>
                 </div>
             </div>
         </div>

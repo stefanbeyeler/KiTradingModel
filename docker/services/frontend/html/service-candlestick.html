@@ -458,38 +458,122 @@
 
         <!-- API Endpoints -->
         <div class="content-card">
-            <h2>API Endpoints</h2>
+            <h2>API Endpoints (über 40 Endpoints)</h2>
+
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Pattern-Erkennung (6 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/health</span>
-                    <span class="endpoint-desc">Health Check</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/patterns</span>
-                    <span class="endpoint-desc">Alle verfügbaren Pattern-Typen</span>
-                </div>
-                <div class="endpoint">
                     <span class="method post">POST</span>
-                    <span class="endpoint-path">/detect</span>
+                    <span class="endpoint-path">/api/v1/candlestick/detect</span>
                     <span class="endpoint-desc">Pattern-Erkennung durchführen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/detect/{symbol}</span>
+                    <span class="endpoint-path">/api/v1/candlestick/detect/{symbol}</span>
                     <span class="endpoint-desc">Patterns für Symbol erkennen</span>
                 </div>
                 <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/candlestick/scan</span>
+                    <span class="endpoint-desc">Multi-Symbol Pattern-Scan</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/candlestick/scan-all</span>
+                    <span class="endpoint-desc">Alle Symbole scannen</span>
+                </div>
+                <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/history</span>
+                    <span class="endpoint-path">/api/v1/candlestick/patterns</span>
+                    <span class="endpoint-desc">Alle verfügbaren Pattern-Typen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/candlestick/patterns/{pattern_type}</span>
+                    <span class="endpoint-desc">Pattern-Details abrufen</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Pattern-Historie & Statistiken (5 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/candlestick/history</span>
                     <span class="endpoint-desc">Pattern-Historie abrufen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/statistics</span>
+                    <span class="endpoint-path">/api/v1/candlestick/history/{symbol}</span>
+                    <span class="endpoint-desc">Symbol-spezifische Historie</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/candlestick/statistics</span>
                     <span class="endpoint-desc">Erkennungsstatistiken</span>
                 </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/candlestick/performance</span>
+                    <span class="endpoint-desc">Pattern-Performance</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/candlestick/feedback</span>
+                    <span class="endpoint-desc">Pattern-Feedback senden</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Auto-Scan & Konfiguration (4 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/candlestick/auto-scan/start</span>
+                    <span class="endpoint-desc">Auto-Scan starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/candlestick/auto-scan/stop</span>
+                    <span class="endpoint-desc">Auto-Scan stoppen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/candlestick/auto-scan/status</span>
+                    <span class="endpoint-desc">Auto-Scan Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/candlestick/config</span>
+                    <span class="endpoint-desc">Service-Konfiguration</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System (4 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/health</span>
+                    <span class="endpoint-desc">Service Health Check</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/info</span>
+                    <span class="endpoint-desc">Service-Informationen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/candlestick/model</span>
+                    <span class="endpoint-desc">Modell-Informationen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/candlestick/model/reload</span>
+                    <span class="endpoint-desc">Modell neu laden</span>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 1.5rem;">
+                <strong>Vollständige API:</strong> Über 40 Endpoints für Candlestick-Pattern-Erkennung.
+                Siehe <a href="/candlestick/docs" target="_blank" style="color: #64c8ff;">/candlestick/docs</a> für die interaktive Swagger-Dokumentation.
             </div>
         </div>
 

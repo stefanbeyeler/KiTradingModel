@@ -86,6 +86,51 @@ async def list_monitored_services():
     }
 
 
+@router.post("/services/{service_name}/simulate-failure")
+async def simulate_service_failure(
+    service_name: str,
+    error_message: str = Query(default="Simulierter Ausfall (Test)", description="Fehlermeldung für den simulierten Ausfall")
+):
+    """
+    Simuliert einen Service-Ausfall für Testzwecke.
+
+    Dies löst einen UNHEALTHY-Status für den angegebenen Service aus,
+    was einen Alert-Zyklus triggert (sofern Alerts für diesen Service aktiviert sind).
+
+    Der simulierte Ausfall wird beim nächsten Health-Check automatisch korrigiert,
+    sofern der echte Service gesund ist.
+    """
+    health_checker, alert_manager, _ = _get_services()
+
+    if not health_checker:
+        raise HTTPException(status_code=503, detail="Watchdog not initialized")
+
+    if service_name not in health_checker.services:
+        raise HTTPException(status_code=404, detail=f"Service '{service_name}' nicht gefunden")
+
+    # Simuliere den Ausfall
+    success = health_checker.simulate_failure(service_name, error_message)
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Simulation fehlgeschlagen")
+
+    # Trigger Alert-Verarbeitung
+    if alert_manager:
+        from ..models.service_status import ServiceStatus, HealthState
+        status = health_checker.status.get(service_name)
+        if status:
+            criticality = health_checker.services[service_name]["criticality"]
+            await alert_manager.process_status_change(service_name, status, criticality)
+
+    return {
+        "success": True,
+        "service": service_name,
+        "message": f"Ausfall für '{service_name}' simuliert",
+        "error_message": error_message,
+        "note": "Der Status wird beim nächsten Health-Check automatisch korrigiert"
+    }
+
+
 @router.get("/alerts/history")
 async def get_alert_history(
     limit: int = Query(default=50, ge=1, le=100, description="Anzahl der zurückgegebenen Alerts (max 100)")

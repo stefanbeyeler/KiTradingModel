@@ -465,9 +465,9 @@
         </div>
 
         <div class="content-card">
-            <h2>&#128279; Wichtige API-Endpunkte</h2>
+            <h2>&#128279; API-Endpunkte (über 15 Endpoints)</h2>
 
-            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Text Embeddings</h3>
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Text Embeddings (4 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method post">POST</span>
@@ -484,9 +484,14 @@
                     <span class="endpoint-path">/api/v1/embeddings/finbert</span>
                     <span class="endpoint-desc">FinBERT Embeddings</span>
                 </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/embeddings/sentence</span>
+                    <span class="endpoint-desc">Sentence-Level Embedding</span>
+                </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">TimeSeries Embeddings</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">TimeSeries & Feature Embeddings (3 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method post">POST</span>
@@ -498,19 +503,43 @@
                     <span class="endpoint-path">/api/v1/embeddings/features</span>
                     <span class="endpoint-desc">Features komprimieren</span>
                 </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/embeddings/market-context</span>
+                    <span class="endpoint-desc">Marktkontext-Embedding</span>
+                </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Utilities</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Ähnlichkeitssuche & Utilities (4 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/embeddings/similarity</span>
-                    <span class="endpoint-desc">Ahnlichkeit berechnen</span>
+                    <span class="endpoint-desc">Ähnlichkeit berechnen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/embeddings/search</span>
+                    <span class="endpoint-desc">Ähnliche Embeddings suchen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/embeddings/models</span>
                     <span class="endpoint-desc">Verfügbare Modelle</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/embeddings/dimensions</span>
+                    <span class="endpoint-desc">Embedding-Dimensionen</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Cache & System (4 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/health</span>
+                    <span class="endpoint-desc">Service Health Check</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -522,6 +551,16 @@
                     <span class="endpoint-path">/api/v1/embeddings/cache/clear</span>
                     <span class="endpoint-desc">Cache leeren</span>
                 </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/info</span>
+                    <span class="endpoint-desc">Service-Informationen</span>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 1.5rem;">
+                <strong>Vollständige API:</strong> Über 15 Endpoints für Text-, TimeSeries- und Feature-Embeddings.
+                Siehe <a href="/embedder/docs" target="_blank" style="color: #64c8ff;">/embedder/docs</a> für die interaktive Swagger-Dokumentation.
             </div>
         </div>
 

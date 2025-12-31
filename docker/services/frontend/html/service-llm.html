@@ -438,28 +438,38 @@
         </div>
 
         <div class="content-card">
-            <h2>&#128279; Wichtige API-Endpunkte</h2>
+            <h2>&#128279; API-Endpunkte (über 12 Endpoints)</h2>
 
-            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Analyse & Chat</h3>
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Analyse & Chat (5 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/analyze</span>
+                    <span class="endpoint-path">/api/v1/llm/analyze</span>
                     <span class="endpoint-desc">Trading-Analyse anfragen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/chat</span>
+                    <span class="endpoint-path">/api/v1/llm/chat</span>
                     <span class="endpoint-desc">Chat-Konversation mit LLM</span>
                 </div>
                 <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/llm/generate</span>
+                    <span class="endpoint-desc">Text generieren</span>
+                </div>
+                <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/recommendation/{symbol}</span>
+                    <span class="endpoint-path">/api/v1/llm/recommendation/{symbol}</span>
                     <span class="endpoint-desc">Handelsempfehlung für Symbol</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/llm/summarize</span>
+                    <span class="endpoint-desc">Text zusammenfassen</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Modell-Verwaltung</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Modell-Verwaltung (4 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -467,13 +477,23 @@
                     <span class="endpoint-desc">LLM-Status und Modellinfo</span>
                 </div>
                 <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/llm/models</span>
+                    <span class="endpoint-desc">Verfügbare Modelle</span>
+                </div>
+                <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/llm/pull</span>
-                    <span class="endpoint-desc">Modell herunterladen/aktualisieren</span>
+                    <span class="endpoint-desc">Modell herunterladen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/llm/switch</span>
+                    <span class="endpoint-desc">Modell wechseln</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System (3 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -482,9 +502,19 @@
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/query-logs</span>
+                    <span class="endpoint-path">/api/v1/info</span>
+                    <span class="endpoint-desc">Service-Informationen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/llm/query-logs</span>
                     <span class="endpoint-desc">Anfrage-Protokolle</span>
                 </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 1.5rem;">
+                <strong>Vollständige API:</strong> Über 12 Endpoints für LLM-Analyse, Chat und Modell-Management.
+                Siehe <a href="/llm/docs" target="_blank" style="color: #64c8ff;">/llm/docs</a> für die interaktive Swagger-Dokumentation.
             </div>
         </div>
 

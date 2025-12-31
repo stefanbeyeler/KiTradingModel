@@ -407,13 +407,13 @@
         </div>
 
         <div class="content-card">
-            <h2>&#128279; Wichtige API-Endpunkte</h2>
+            <h2>&#128279; API-Endpunkte (über 40 Endpoints)</h2>
 
-            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Dokumentenverwaltung</h3>
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Dokumentenverwaltung (6 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/rag/document</span>
+                    <span class="endpoint-path">/api/v1/rag/documents</span>
                     <span class="endpoint-desc">Dokument hinzufügen</span>
                 </div>
                 <div class="endpoint">
@@ -422,13 +422,28 @@
                     <span class="endpoint-desc">Alle Dokumente auflisten</span>
                 </div>
                 <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rag/documents/{doc_id}</span>
+                    <span class="endpoint-desc">Dokument abrufen</span>
+                </div>
+                <div class="endpoint">
                     <span class="method delete">DEL</span>
-                    <span class="endpoint-path">/api/v1/rag/document/{id}</span>
+                    <span class="endpoint-path">/api/v1/rag/documents/{doc_id}</span>
                     <span class="endpoint-desc">Dokument entfernen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rag/documents/batch</span>
+                    <span class="endpoint-desc">Batch-Upload von Dokumenten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rag/documents/upload</span>
+                    <span class="endpoint-desc">Datei hochladen</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Suche</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Suche & Query (6 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method post">POST</span>
@@ -436,13 +451,62 @@
                     <span class="endpoint-desc">Semantische Suche ausführen</span>
                 </div>
                 <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rag/search</span>
+                    <span class="endpoint-desc">Ähnlichkeitssuche</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rag/context</span>
+                    <span class="endpoint-desc">Kontext für LLM abrufen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rag/retrieve</span>
+                    <span class="endpoint-desc">Dokumente retrieven</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rag/hybrid-search</span>
+                    <span class="endpoint-desc">Hybrid-Suche (Keyword + Semantic)</span>
+                </div>
+                <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/rag/stats</span>
-                    <span class="endpoint-desc">Index-Statistiken abrufen</span>
+                    <span class="endpoint-path">/api/v1/rag/similar/{doc_id}</span>
+                    <span class="endpoint-desc">Ähnliche Dokumente finden</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Index-Management (5 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rag/index/rebuild</span>
+                    <span class="endpoint-desc">Index neu aufbauen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rag/index/stats</span>
+                    <span class="endpoint-desc">Index-Statistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rag/index/optimize</span>
+                    <span class="endpoint-desc">Index optimieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rag/index/clear</span>
+                    <span class="endpoint-desc">Index leeren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rag/collections</span>
+                    <span class="endpoint-desc">Verfügbare Collections</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System (4 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -450,10 +514,25 @@
                     <span class="endpoint-desc">Service Health-Check</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/rag/rebuild</span>
-                    <span class="endpoint-desc">Index neu aufbauen</span>
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/info</span>
+                    <span class="endpoint-desc">Service-Informationen</span>
                 </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rag/stats</span>
+                    <span class="endpoint-desc">Allgemeine Statistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rag/config</span>
+                    <span class="endpoint-desc">Service-Konfiguration</span>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 1.5rem;">
+                <strong>Vollständige API:</strong> Über 40 Endpoints für Dokumentenverwaltung, semantische Suche und Index-Management.
+                Siehe <a href="/rag/docs" target="_blank" style="color: #64c8ff;">/rag/docs</a> für die interaktive Swagger-Dokumentation.
             </div>
         </div>
 

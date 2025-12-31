@@ -474,28 +474,43 @@
         </div>
 
         <div class="content-card">
-            <h2>&#128279; Wichtige API-Endpunkte</h2>
+            <h2>&#128279; API-Endpunkte (über 25 Endpoints)</h2>
 
-            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Regime-Erkennung</h3>
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Regime-Erkennung (6 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/regime/{symbol}</span>
-                    <span class="endpoint-desc">Aktuelles Regime für ein Symbol</span>
+                    <span class="endpoint-path">/api/v1/regime/detect/{symbol}</span>
+                    <span class="endpoint-desc">Aktuelles Regime erkennen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/regime/detect</span>
+                    <span class="endpoint-desc">Regime mit Parametern erkennen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/regime/{symbol}/history</span>
-                    <span class="endpoint-desc">Regime-Historie</span>
+                    <span class="endpoint-path">/api/v1/regime/history/{symbol}</span>
+                    <span class="endpoint-desc">Regime-Historie abrufen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/regime/{symbol}/transitions</span>
-                    <span class="endpoint-desc">Ubergangswahrscheinlichkeiten</span>
+                    <span class="endpoint-path">/api/v1/regime/regimes</span>
+                    <span class="endpoint-desc">Alle Regime-Typen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/regime/scan</span>
+                    <span class="endpoint-desc">Multi-Symbol Regime-Scan</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/regime/transitions/{symbol}</span>
+                    <span class="endpoint-desc">Übergangswahrscheinlichkeiten</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Signal-Scoring</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Signal-Scoring (6 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method post">POST</span>
@@ -503,9 +518,24 @@
                     <span class="endpoint-desc">Signal bewerten</span>
                 </div>
                 <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/signals/score/{symbol}</span>
+                    <span class="endpoint-desc">Signal für Symbol bewerten</span>
+                </div>
+                <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/signals/batch-score</span>
                     <span class="endpoint-desc">Mehrere Signale bewerten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/signals/evaluate-setup</span>
+                    <span class="endpoint-desc">Trading-Setup evaluieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/signals/alignment-check</span>
+                    <span class="endpoint-desc">Regime-Alignment prüfen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -514,18 +544,67 @@
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Training</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Training & Auto-Training (6 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/regime/train</span>
-                    <span class="endpoint-desc">HMM trainieren</span>
+                    <span class="endpoint-path">/api/v1/training/train</span>
+                    <span class="endpoint-desc">HMM Training starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/training/status</span>
+                    <span class="endpoint-desc">Training-Status abrufen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/training/models</span>
+                    <span class="endpoint-desc">Verfügbare Modelle</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/training/auto-training/status</span>
+                    <span class="endpoint-desc">Auto-Training Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/training/auto-training/run</span>
+                    <span class="endpoint-desc">Auto-Training ausführen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/signals/train</span>
                     <span class="endpoint-desc">LightGBM Scorer trainieren</span>
                 </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System (4 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/health</span>
+                    <span class="endpoint-desc">Service Health Check</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/info</span>
+                    <span class="endpoint-desc">Service-Informationen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/stats</span>
+                    <span class="endpoint-desc">Service-Statistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/config</span>
+                    <span class="endpoint-desc">Service-Konfiguration</span>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 1.5rem;">
+                <strong>Vollständige API:</strong> Über 25 Endpoints für Regime-Erkennung, Signal-Scoring und Training.
+                Siehe <a href="/hmm/docs" target="_blank" style="color: #64c8ff;">/hmm/docs</a> für die interaktive Swagger-Dokumentation.
             </div>
         </div>
 

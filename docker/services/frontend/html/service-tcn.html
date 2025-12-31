@@ -813,9 +813,9 @@
         </div>
 
         <div class="content-card">
-            <h2>&#128279; Wichtige API-Endpunkte</h2>
+            <h2>&#128279; API-Endpunkte (über 35 Endpoints)</h2>
 
-            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Pattern-Erkennung</h3>
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Pattern-Erkennung (5 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method post">POST</span>
@@ -823,38 +823,142 @@
                     <span class="endpoint-desc">Pattern für ein Symbol erkennen</span>
                 </div>
                 <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns/detect/{symbol}</span>
+                    <span class="endpoint-desc">Pattern für Symbol direkt abrufen</span>
+                </div>
+                <div class="endpoint">
                     <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/patterns/scan</span>
                     <span class="endpoint-desc">Mehrere Symbole scannen</span>
                 </div>
                 <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/patterns/scan-all</span>
+                    <span class="endpoint-desc">Alle konfigurierten Symbole scannen</span>
+                </div>
+                <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/patterns/types</span>
+                    <span class="endpoint-path">/api/v1/patterns</span>
                     <span class="endpoint-desc">Liste aller Pattern-Typen</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Training</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Pattern-Historie & Statistiken (5 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/patterns/train</span>
-                    <span class="endpoint-desc">Modell trainieren</span>
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns/history</span>
+                    <span class="endpoint-desc">Erkannte Patterns Historie</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/patterns/model/info</span>
-                    <span class="endpoint-desc">Modell-Informationen</span>
+                    <span class="endpoint-path">/api/v1/patterns/statistics</span>
+                    <span class="endpoint-desc">Erkennungsstatistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns/by-symbol/{symbol}</span>
+                    <span class="endpoint-desc">Pattern-Historie für Symbol</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/patterns/start-auto-scan</span>
+                    <span class="endpoint-desc">Auto-Scan starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/patterns/feedback</span>
+                    <span class="endpoint-desc">Pattern-Feedback senden</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">CRT - Candle Range Theory (10 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/crt/session</span>
+                    <span class="endpoint-desc">Aktuelle Session-Informationen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/crt/status/{symbol}</span>
+                    <span class="endpoint-desc">CRT-Status für Symbol</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/crt/signal/{symbol}</span>
+                    <span class="endpoint-desc">Aktives CRT-Signal</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/crt/range/create</span>
+                    <span class="endpoint-desc">CRT Range erstellen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/crt/ranges</span>
+                    <span class="endpoint-desc">Alle aktiven Ranges</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/crt/analyze</span>
+                    <span class="endpoint-desc">Vollständige CRT-Analyse</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/crt/scan</span>
+                    <span class="endpoint-desc">CRT-Signale scannen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/crt/price/update</span>
+                    <span class="endpoint-desc">Preis-Update für State Machine</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/crt/history/{symbol}</span>
+                    <span class="endpoint-desc">Historische Ranges</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/crt/config</span>
+                    <span class="endpoint-desc">CRT-Konfiguration</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Modell & System (5 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
                     <span class="endpoint-path">/health</span>
                     <span class="endpoint-desc">Service Health Check</span>
                 </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/info</span>
+                    <span class="endpoint-desc">Service-Informationen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/model</span>
+                    <span class="endpoint-desc">Modell-Informationen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/model/reload</span>
+                    <span class="endpoint-desc">Modell neu laden</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/config</span>
+                    <span class="endpoint-desc">Service-Konfiguration</span>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 1.5rem;">
+                <strong>Vollständige API:</strong> Über 35 Endpoints für Pattern-Erkennung, CRT-Analyse und System-Management.
+                Siehe <a href="/tcn/docs" target="_blank" style="color: #64c8ff;">/tcn/docs</a> für die interaktive Swagger-Dokumentation.
             </div>
         </div>
 

@@ -329,70 +329,155 @@
 
         <div class="content-card">
             <h2>&#128279; Wichtige API-Endpunkte</h2>
+            <p style="opacity: 0.7; margin-bottom: 1rem;">Der Data Service bietet über <strong>200 API-Endpoints</strong> in 18 Routern.</p>
 
-            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Symbol-Management</h3>
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">System & Cache</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/managed-symbols</span>
-                    <span class="endpoint-desc">Liste aller verwalteten Symbole</span>
+                    <span class="endpoint-path">/api/v1/health</span>
+                    <span class="endpoint-desc">Health Check aller Services</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method delete">POST</span>
-                    <span class="endpoint-path">/api/v1/managed-symbols</span>
-                    <span class="endpoint-desc">Neues Symbol hinzufügen</span>
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/system/info</span>
+                    <span class="endpoint-desc">System-Informationen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/system/metrics</span>
+                    <span class="endpoint-desc">CPU, Memory, GPU Metriken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/cache/overview</span>
+                    <span class="endpoint-desc">Cache-Übersicht mit Statistiken</span>
                 </div>
                 <div class="endpoint">
                     <span class="method delete">DEL</span>
-                    <span class="endpoint-path">/api/v1/managed-symbols/{id}</span>
-                    <span class="endpoint-desc">Symbol entfernen</span>
+                    <span class="endpoint-path">/api/v1/cache/category/{cat}</span>
+                    <span class="endpoint-desc">Cache-Kategorie löschen</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Symbol-Management (18 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/managed-symbols</span>
+                    <span class="endpoint-desc">Alle verwalteten Symbole</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method delete">POST</span>
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/managed-symbols/stats</span>
+                    <span class="endpoint-desc">Symbol-Statistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/managed-symbols/search</span>
+                    <span class="endpoint-desc">Symbol-Suche</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/managed-symbols/live-data/{symbol}</span>
+                    <span class="endpoint-desc">Live-Daten für Symbol</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/managed-symbols</span>
+                    <span class="endpoint-desc">Symbol hinzufügen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
                     <span class="endpoint-path">/api/v1/managed-symbols/import</span>
-                    <span class="endpoint-desc">Symbole von EasyInsight importieren</span>
+                    <span class="endpoint-desc">Von TimescaleDB importieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/managed-symbols/{id}/favorite</span>
+                    <span class="endpoint-desc">Favorit umschalten</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Trading-Strategien</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Forecast & Training (38+ Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/strategies</span>
-                    <span class="endpoint-desc">Liste aller Strategien</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method delete">POST</span>
-                    <span class="endpoint-path">/api/v1/strategies</span>
-                    <span class="endpoint-desc">Neue Strategie erstellen</span>
+                    <span class="endpoint-path">/api/v1/forecast/{symbol}</span>
+                    <span class="endpoint-desc">Prognose abrufen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/strategies/{id}/export</span>
-                    <span class="endpoint-desc">Strategie exportieren</span>
+                    <span class="endpoint-path">/api/v1/forecast/models</span>
+                    <span class="endpoint-desc">Trainierte Modelle</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/forecast/performance</span>
+                    <span class="endpoint-desc">Modell-Performance</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/forecast/{symbol}/train</span>
+                    <span class="endpoint-desc">Modell trainieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/forecast/train-all</span>
+                    <span class="endpoint-desc">Alle Modelle trainieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/forecast/training/progress</span>
+                    <span class="endpoint-desc">Trainingsfortschritt</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/forecast/evaluate</span>
+                    <span class="endpoint-desc">Prognosen evaluieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/forecast/favorites/start</span>
+                    <span class="endpoint-desc">Auto-Forecast Favoriten</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Synchronisation</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Pattern Detection (13 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/sync/status</span>
-                    <span class="endpoint-desc">Sync-Status abfragen</span>
+                    <span class="endpoint-path">/api/v1/patterns/types</span>
+                    <span class="endpoint-desc">Unterstützte Pattern-Typen</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method delete">POST</span>
-                    <span class="endpoint-path">/api/v1/sync/start</span>
-                    <span class="endpoint-desc">Synchronisation starten</span>
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/patterns/scan</span>
+                    <span class="endpoint-desc">Pattern scannen</span>
                 </div>
                 <div class="endpoint">
-                    <span class="method delete">POST</span>
-                    <span class="endpoint-path">/api/v1/sync/stop</span>
-                    <span class="endpoint-desc">Synchronisation stoppen</span>
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns/scan/{symbol}</span>
+                    <span class="endpoint-desc">Pattern für Symbol</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns/history</span>
+                    <span class="endpoint-desc">Pattern-Historie</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns/history/statistics</span>
+                    <span class="endpoint-desc">Pattern-Statistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/patterns/history/start-auto-scan</span>
+                    <span class="endpoint-desc">Auto-Scan starten</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Twelve Data API</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Twelve Data API (40 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -401,8 +486,8 @@
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/twelvedata/search</span>
-                    <span class="endpoint-desc">Symbol-Suche (Aktien, Forex, Krypto)</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/time_series/{symbol}</span>
+                    <span class="endpoint-desc">Historische OHLCV-Daten</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -411,28 +496,18 @@
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/twelvedata/time_series/{symbol}</span>
-                    <span class="endpoint-desc">Historische OHLCV-Daten</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/indicators/{symbol}</span>
+                    <span class="endpoint-desc">Mehrere Indikatoren</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/twelvedata/indicator/{symbol}/{ind}</span>
-                    <span class="endpoint-desc">Technische Indikatoren (RSI, MACD, etc.)</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/analysis/{symbol}</span>
+                    <span class="endpoint-desc">Komplette Analyse</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/twelvedata/stocks</span>
-                    <span class="endpoint-desc">Liste verfügbarer Aktien</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/twelvedata/forex</span>
-                    <span class="endpoint-desc">Liste verfügbarer Forex-Paare</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/twelvedata/crypto</span>
-                    <span class="endpoint-desc">Liste verfügbarer Kryptowahrungen</span>
+                    <span class="endpoint-path">/api/v1/twelvedata/usage</span>
+                    <span class="endpoint-desc">API-Verbrauch</span>
                 </div>
             </div>
 
@@ -460,8 +535,37 @@
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/easyinsight/latest/{symbol}</span>
-                    <span class="endpoint-desc">Neueste Kursdaten</span>
+                    <span class="endpoint-path">/api/v1/easyinsight/timeframes</span>
+                    <span class="endpoint-desc">Unterstützte Timeframes</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Backup & Config</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/backup/status</span>
+                    <span class="endpoint-desc">Backup-Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/backup/models</span>
+                    <span class="endpoint-desc">Modelle sichern</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/restore/models</span>
+                    <span class="endpoint-desc">Modelle wiederherstellen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/config/timezone</span>
+                    <span class="endpoint-desc">Zeitzone-Konfiguration</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/config/export</span>
+                    <span class="endpoint-desc">Konfiguration exportieren</span>
                 </div>
             </div>
         </div>
