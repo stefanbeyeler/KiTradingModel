@@ -8,6 +8,7 @@ from loguru import logger
 from ..config import WatchdogSettings
 from ..models.service_status import HealthState, ServiceStatus
 from .telegram_notifier import TelegramNotifier
+from .alert_history import alert_history
 
 
 class AlertManager:
@@ -29,7 +30,7 @@ class AlertManager:
         self.telegram = telegram_notifier
         self.last_alerts: Dict[str, datetime] = {}
         self.last_states: Dict[str, HealthState] = {}
-        self.alert_history: list = []
+        self._alert_history_service = alert_history
 
     def _should_alert(self, service_name: str, criticality: str) -> bool:
         """Prüft ob ein Alert basierend auf Service-Konfiguration und Kritikalität gesendet werden soll."""
@@ -215,7 +216,7 @@ class AlertManager:
         suppressed_reason: Optional[str] = None
     ):
         """
-        Zeichnet einen Alert mit allen Details auf.
+        Zeichnet einen Alert mit allen Details auf (persistent).
 
         Args:
             service_name: Name des betroffenen Services
@@ -251,32 +252,25 @@ class AlertManager:
             "suppressed_reason": suppressed_reason
         }
 
-        self.alert_history.append(alert_entry)
-
-        # History auf 1000 Einträge begrenzen
-        if len(self.alert_history) > 1000:
-            self.alert_history = self.alert_history[-1000:]
+        # Persistente Speicherung über AlertHistoryService
+        self._alert_history_service.add_alert(alert_entry)
 
     def get_statistics(self) -> dict:
         """Gibt Alert-Statistiken zurück."""
-        now = datetime.now(timezone.utc)
-        last_24h = now - timedelta(hours=24)
+        stats = self._alert_history_service.get_statistics()
 
-        alerts_24h = [
-            a for a in self.alert_history
-            if datetime.fromisoformat(a["timestamp"].replace("Z", "+00:00")) > last_24h
+        # Füge Cooldown-Informationen hinzu
+        stats["services_in_cooldown"] = [
+            name for name in self.last_alerts
+            if self._is_in_cooldown(name)
         ]
 
-        return {
-            "total_alerts": len(self.alert_history),
-            "alerts_24h": len(alerts_24h),
-            "last_alert": self.alert_history[-1] if self.alert_history else None,
-            "services_in_cooldown": [
-                name for name in self.last_alerts
-                if self._is_in_cooldown(name)
-            ]
-        }
+        return stats
 
     def get_alert_history(self, limit: int = 50) -> list:
-        """Gibt die letzten Alerts zurück."""
-        return list(reversed(self.alert_history[-limit:]))
+        """Gibt die letzten Alerts zurück (persistent)."""
+        return self._alert_history_service.get_history(limit=limit)
+
+    def clear_alert_history(self):
+        """Löscht die Alert-Historie."""
+        self._alert_history_service.clear_history()

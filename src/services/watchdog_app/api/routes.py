@@ -87,8 +87,15 @@ async def list_monitored_services():
 
 
 @router.get("/alerts/history")
-async def get_alert_history(limit: int = 50):
-    """Gibt die Alert-Historie zurück."""
+async def get_alert_history(
+    limit: int = Query(default=50, ge=1, le=100, description="Anzahl der zurückgegebenen Alerts (max 100)")
+):
+    """
+    Gibt die Alert-Historie zurück (persistent gespeichert).
+
+    Die letzten 100 Alerts werden persistent auf dem Volume gespeichert
+    und überleben Container-Neustarts.
+    """
     _, alert_manager, _ = _get_services()
 
     if not alert_manager:
@@ -97,6 +104,26 @@ async def get_alert_history(limit: int = 50):
     return {
         "alerts": alert_manager.get_alert_history(limit),
         "statistics": alert_manager.get_statistics()
+    }
+
+
+@router.delete("/alerts/history")
+async def clear_alert_history():
+    """
+    Löscht die gesamte Alert-Historie.
+
+    **Achtung**: Diese Aktion kann nicht rückgängig gemacht werden!
+    """
+    _, alert_manager, _ = _get_services()
+
+    if not alert_manager:
+        raise HTTPException(status_code=503, detail="Alert manager not initialized")
+
+    alert_manager.clear_alert_history()
+
+    return {
+        "success": True,
+        "message": "Alert-Historie gelöscht"
     }
 
 

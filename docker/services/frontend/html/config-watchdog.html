@@ -1303,10 +1303,10 @@
                         </div>
                     </div>
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                        <button class="btn btn-success" onclick="saveTelegramConfig()" style="flex: 1;">
+                        <button class="btn btn-sm btn-success" onclick="saveTelegramConfig()">
                             Speichern
                         </button>
-                        <button class="btn btn-primary" onclick="testTelegramConnection()">
+                        <button class="btn btn-sm btn-primary" onclick="testTelegramConnection()">
                             Test senden
                         </button>
                     </div>
@@ -1367,8 +1367,8 @@
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <button class="btn btn-success" onclick="saveAlertConfig()" style="width: 100%; margin-top: 1rem;">
-                        Alert-Konfiguration speichern
+                    <button class="btn btn-sm btn-success" onclick="saveAlertConfig()" style="margin-top: 1rem;">
+                        Speichern
                     </button>
                 </div>
             </div>
@@ -1377,13 +1377,27 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Alert-Historie</h2>
-                    <button class="btn btn-sm btn-danger" onclick="clearAlertHistory()">Historie löschen</button>
+                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <label for="alert-history-limit" style="font-size: 0.8rem; opacity: 0.7;">Anzeigen:</label>
+                            <select id="alert-history-limit" class="form-control" style="width: auto; padding: 0.3rem 2rem 0.3rem 0.6rem; font-size: 0.8rem;" onchange="loadAlertHistory()">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50" selected>50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-sm btn-danger" onclick="clearAlertHistory()">Historie löschen</button>
+                    </div>
                 </div>
                 <div id="alert-history">
                     <div class="empty-state">
                         <div class="icon">&#128276;</div>
                         <div>Keine Alerts in der Historie</div>
                     </div>
+                </div>
+                <div id="alert-history-info" style="margin-top: 0.75rem; font-size: 0.75rem; opacity: 0.6; text-align: center;">
+                    Die letzten 100 Meldungen werden persistent gespeichert.
                 </div>
             </div>
         </div>
@@ -2412,9 +2426,11 @@
         // Load alert history
         async function loadAlertHistory() {
             const container = document.getElementById('alert-history');
+            const limitSelect = document.getElementById('alert-history-limit');
+            const limit = limitSelect ? parseInt(limitSelect.value) : 50;
 
             try {
-                const res = await fetch(`${API_BASE}/alerts/history`);
+                const res = await fetch(`${API_BASE}/alerts/history?limit=${limit}`);
                 const data = await res.json();
 
                 if (data.alerts && data.alerts.length > 0) {
@@ -2507,8 +2523,20 @@
 
                     tableHtml += '</tbody></table>';
                     container.innerHTML = tableHtml;
+
+                    // Update info text
+                    const infoEl = document.getElementById('alert-history-info');
+                    if (infoEl && data.statistics) {
+                        const total = data.statistics.total_alerts || 0;
+                        const shown = data.alerts.length;
+                        infoEl.textContent = `Zeige ${shown} von ${total} Alerts (max. 100 werden persistent gespeichert)`;
+                    }
                 } else {
                     container.innerHTML = '<div class="empty-state"><div class="icon">&#128276;</div><div>Keine Alerts in der Historie</div></div>';
+                    const infoEl = document.getElementById('alert-history-info');
+                    if (infoEl) {
+                        infoEl.textContent = 'Die letzten 100 Meldungen werden persistent gespeichert.';
+                    }
                 }
             } catch (err) {
                 console.error('Error loading alert history:', err);
