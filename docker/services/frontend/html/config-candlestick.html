@@ -6703,6 +6703,9 @@
                         showToast('Training fehlgeschlagen: ' + (job.error_message || 'Unbekannter Fehler'), 'error');
                     }
 
+                    // Reload training history immediately after completion
+                    loadTrainingJobs();
+
                     // Hide progress after 3 seconds
                     setTimeout(() => {
                         document.getElementById('revalTrainingProgress').style.display = 'none';
