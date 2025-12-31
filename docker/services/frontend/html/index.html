@@ -1596,29 +1596,6 @@
                 </div>
             </div>
 
-            <!-- Redis Cache -->
-            <div class="service-card" id="redis-card">
-                <div class="service-header">
-                    <h2>Redis Cache</h2>
-                    <span class="status-badge status-loading" id="redis-status">Laden...</span>
-                </div>
-                <p>Zentraler In-Memory Cache für alle Services. LRU-Eviction, Persistenz und schnelle Datenzugriffe.</p>
-                <div class="service-info" id="redis-info">
-                    <div><span class="label">Port</span><span>6379</span></div>
-                    <div><span class="label">Memory</span><span id="redis-memory">512 MB</span></div>
-                    <div><span class="label">Policy</span><span id="redis-policy">allkeys-lru</span></div>
-                </div>
-                <div class="service-resources">
-                    <div class="service-resource cpu"><span class="value">1 CPU</span><span class="label">CPU Limit</span></div>
-                    <div class="service-resource ram"><span class="value">512 MB</span><span class="label">RAM Limit</span></div>
-                    <div class="service-resource net"><span class="value">TCP</span><span class="label">Mode</span></div>
-                </div>
-                <div class="service-links">
-                    <a href="/service-redis.html" target="_blank">Info</a>
-                    <a href="https://redis.io/docs/" target="_blank">Redis Docs</a>
-                </div>
-            </div>
-
             <!-- Candlestick Pattern Service (Inference) -->
             <div class="service-card" id="candlestick-card">
                 <div class="service-header">
@@ -1785,30 +1762,6 @@
                 </div>
             </div>
 
-            <!-- Watchdog Service -->
-            <div class="service-card" id="watchdog-card">
-                <div class="service-header">
-                    <h2>Watchdog</h2>
-                    <span class="status-badge status-loading" id="watchdog-status">Laden...</span>
-                </div>
-                <p>Service-Monitoring mit Telegram-Alerts - Überwacht alle Microservices und sendet Alarme.</p>
-                <div class="service-info" id="watchdog-info">
-                    <div><span class="label">Port</span><span>3010</span></div>
-                    <div><span class="label">Services</span><span id="watchdog-services">-</span></div>
-                    <div><span class="label">Telegram</span><span id="watchdog-telegram">-</span></div>
-                </div>
-                <div class="service-resources">
-                    <div class="service-resource cpu"><span class="value">1 CPU</span><span class="label">CPU Limit</span></div>
-                    <div class="service-resource ram"><span class="value">512 MB</span><span class="label">RAM Limit</span></div>
-                    <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
-                </div>
-                <div class="service-links">
-                    <a href="/service-watchdog.html" target="_blank">Info</a>
-                    <a href="/watchdog/docs" target="_blank">API Docs</a>
-                    <a href="/config-watchdog.html" target="_blank">Config</a>
-                </div>
-            </div>
-
         </div>
 
         <!-- Training Services Section -->
@@ -1904,6 +1857,59 @@
                     <div class="service-links">
                         <a href="/service-tcn-train.html" target="_blank">Info</a>
                         <a href="/tcn-train/docs" target="_blank" class="training-link">API Docs</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Supporting Services Section -->
+        <div class="training-section">
+            <h3 class="section-title"><span class="section-icon">&#128736;</span> Supporting Services</h3>
+            <div class="services-grid training-grid">
+                <!-- Redis Cache -->
+                <div class="service-card" id="redis-card">
+                    <div class="service-header">
+                        <h2>Redis Cache</h2>
+                        <span class="status-badge status-loading" id="redis-status">Laden...</span>
+                    </div>
+                    <p>Zentraler In-Memory Cache für alle Services. LRU-Eviction, Persistenz und schnelle Datenzugriffe.</p>
+                    <div class="service-info" id="redis-info">
+                        <div><span class="label">Port</span><span>6379</span></div>
+                        <div><span class="label">Memory</span><span id="redis-memory">512 MB</span></div>
+                        <div><span class="label">Policy</span><span id="redis-policy">allkeys-lru</span></div>
+                    </div>
+                    <div class="service-resources">
+                        <div class="service-resource cpu"><span class="value">1 CPU</span><span class="label">CPU Limit</span></div>
+                        <div class="service-resource ram"><span class="value">512 MB</span><span class="label">RAM Limit</span></div>
+                        <div class="service-resource net"><span class="value">TCP</span><span class="label">Mode</span></div>
+                    </div>
+                    <div class="service-links">
+                        <a href="/service-redis.html" target="_blank">Info</a>
+                        <a href="https://redis.io/docs/" target="_blank">Redis Docs</a>
+                    </div>
+                </div>
+
+                <!-- Watchdog Service -->
+                <div class="service-card" id="watchdog-card">
+                    <div class="service-header">
+                        <h2>Watchdog</h2>
+                        <span class="status-badge status-loading" id="watchdog-status">Laden...</span>
+                    </div>
+                    <p>Service-Monitoring mit Telegram-Alerts - Überwacht alle Microservices und sendet Alarme.</p>
+                    <div class="service-info" id="watchdog-info">
+                        <div><span class="label">Port</span><span>3010</span></div>
+                        <div><span class="label">Services</span><span id="watchdog-services">-</span></div>
+                        <div><span class="label">Telegram</span><span id="watchdog-telegram">-</span></div>
+                    </div>
+                    <div class="service-resources">
+                        <div class="service-resource cpu"><span class="value">1 CPU</span><span class="label">CPU Limit</span></div>
+                        <div class="service-resource ram"><span class="value">512 MB</span><span class="label">RAM Limit</span></div>
+                        <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
+                    </div>
+                    <div class="service-links">
+                        <a href="/service-watchdog.html" target="_blank">Info</a>
+                        <a href="/watchdog/docs" target="_blank">API Docs</a>
+                        <a href="/config-watchdog.html" target="_blank">Config</a>
                     </div>
                 </div>
             </div>
