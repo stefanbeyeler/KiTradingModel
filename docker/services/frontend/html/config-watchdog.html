@@ -642,19 +642,26 @@
         /* Service Alert Toggle Items */
         .service-alert-toggle {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            flex-direction: column;
             padding: 0.6rem 0.8rem;
             background: rgba(0, 0, 0, 0.2);
             border-radius: 6px;
             font-size: 0.85rem;
             border: 1px solid rgba(255, 255, 255, 0.05);
             transition: all 0.2s;
+            min-height: 70px;
         }
 
         .service-alert-toggle:hover {
             background: rgba(0, 0, 0, 0.3);
             border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .service-alert-toggle .service-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
         }
 
         .service-alert-toggle .service-info {
@@ -680,14 +687,15 @@
             opacity: 0.7;
         }
 
-        .service-alert-toggle .service-actions {
+        .service-alert-toggle .service-footer {
             display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: auto;
+            padding-top: 0.5rem;
         }
 
         .btn-test-failure {
-            padding: 0.2rem 0.4rem;
+            padding: 0.25rem 0.5rem;
             font-size: 0.7rem;
             background: rgba(244, 67, 54, 0.15);
             color: #e57373;
@@ -1435,28 +1443,28 @@
     <script>
         const API_BASE = '/watchdog/api/v1';
 
-        // Service Alert Configuration
+        // Service Alert Configuration mit Ports für direkten Test-Endpoint-Aufruf
         const SERVICE_ALERT_CONFIG = {
             // Inference Services
-            'frontend': { icon: '&#128187;', name: 'Frontend', category: 'inference' },
-            'data': { icon: '&#128279;', name: 'Data Service', category: 'inference' },
-            'nhits': { icon: '&#128202;', name: 'NHITS', category: 'inference' },
-            'tcn': { icon: '&#128200;', name: 'TCN Pattern', category: 'inference' },
-            'hmm': { icon: '&#128201;', name: 'HMM Regime', category: 'inference' },
-            'embedder': { icon: '&#129302;', name: 'Embedder', category: 'inference' },
-            'candlestick': { icon: '&#128293;', name: 'Candlestick', category: 'inference' },
-            'redis': { icon: '&#128451;', name: 'Redis Cache', category: 'inference' },
-            'rag': { icon: '&#128269;', name: 'RAG Service', category: 'inference' },
-            'llm': { icon: '&#129504;', name: 'LLM Service', category: 'inference' },
+            'frontend': { icon: '&#128187;', name: 'Frontend', category: 'inference', port: null },
+            'data': { icon: '&#128279;', name: 'Data Service', category: 'inference', port: 3001, proxyPath: '/data' },
+            'nhits': { icon: '&#128202;', name: 'NHITS', category: 'inference', port: 3002, proxyPath: '/nhits' },
+            'tcn': { icon: '&#128200;', name: 'TCN Pattern', category: 'inference', port: 3003, proxyPath: '/tcn' },
+            'hmm': { icon: '&#128201;', name: 'HMM Regime', category: 'inference', port: 3004, proxyPath: '/hmm' },
+            'embedder': { icon: '&#129302;', name: 'Embedder', category: 'inference', port: 3005, proxyPath: '/embedder' },
+            'candlestick': { icon: '&#128293;', name: 'Candlestick', category: 'inference', port: 3006, proxyPath: '/candlestick' },
+            'redis': { icon: '&#128451;', name: 'Redis Cache', category: 'inference', port: null },
+            'rag': { icon: '&#128269;', name: 'RAG Service', category: 'inference', port: 3008, proxyPath: '/rag' },
+            'llm': { icon: '&#129504;', name: 'LLM Service', category: 'inference', port: 3009, proxyPath: '/llm' },
             // Training Services
-            'nhits-train': { icon: '&#127891;', name: 'NHITS Train', category: 'training' },
-            'tcn-train': { icon: '&#127891;', name: 'TCN Train', category: 'training' },
-            'hmm-train': { icon: '&#127891;', name: 'HMM Train', category: 'training' },
-            'candlestick-train': { icon: '&#127891;', name: 'Candle Train', category: 'training' },
-            // External Services
-            'easyinsight': { icon: '&#127760;', name: 'EasyInsight', category: 'external' },
-            'twelvedata': { icon: '&#128200;', name: 'TwelveData', category: 'external' },
-            'yahoo': { icon: '&#128176;', name: 'Yahoo Finance', category: 'external' }
+            'nhits-train': { icon: '&#127891;', name: 'NHITS Train', category: 'training', port: 3012, proxyPath: '/nhits-train' },
+            'tcn-train': { icon: '&#127891;', name: 'TCN Train', category: 'training', port: 3013, proxyPath: '/tcn-train' },
+            'hmm-train': { icon: '&#127891;', name: 'HMM Train', category: 'training', port: 3014, proxyPath: '/hmm-train' },
+            'candlestick-train': { icon: '&#127891;', name: 'Candle Train', category: 'training', port: 3016, proxyPath: '/candlestick-train' },
+            // External Services (keine direkten Test-Endpoints)
+            'easyinsight': { icon: '&#127760;', name: 'EasyInsight', category: 'external', port: null },
+            'twelvedata': { icon: '&#128200;', name: 'TwelveData', category: 'external', port: null },
+            'yahoo': { icon: '&#128176;', name: 'Yahoo Finance', category: 'external', port: null }
         };
 
         let currentServiceAlerts = {};
@@ -1507,16 +1515,19 @@
 
         // Render single Service Alert Toggle
         function renderServiceAlertToggle(serviceName, config, enabled) {
+            // Test-Button nur anzeigen wenn proxyPath vorhanden ist
+            const hasTestEndpoint = config.proxyPath != null;
+            const testButton = hasTestEndpoint
+                ? `<button class="btn-test-failure" onclick="triggerTestUnhealthy('${serviceName}')" title="Ruft /api/v1/test-unhealthy auf dem Service auf">⚡ Test</button>`
+                : '';
+
             return `
                 <div class="service-alert-toggle ${enabled ? 'alert-enabled' : 'alert-disabled'}" id="alert-toggle-${serviceName}">
-                    <div class="service-info">
-                        <span class="service-icon">${config.icon}</span>
-                        <span class="service-name">${config.name}</span>
-                    </div>
-                    <div class="service-actions">
-                        <button class="btn-test-failure" onclick="simulateServiceFailure('${serviceName}')" title="Simuliert einen Ausfall für diesen Service">
-                            ⚡ Test
-                        </button>
+                    <div class="service-header">
+                        <div class="service-info">
+                            <span class="service-icon">${config.icon}</span>
+                            <span class="service-name">${config.name}</span>
+                        </div>
                         <label class="toggle-switch-mini">
                             <input type="checkbox"
                                    id="alert-check-${serviceName}"
@@ -1524,6 +1535,9 @@
                                    onchange="toggleServiceAlert('${serviceName}', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
+                    </div>
+                    <div class="service-footer">
+                        ${testButton}
                     </div>
                 </div>
             `;
@@ -1597,35 +1611,49 @@
             }
         }
 
-        // Simulate service failure for testing alerts
-        async function simulateServiceFailure(serviceName) {
+        // Trigger test-unhealthy endpoint on the service directly
+        async function triggerTestUnhealthy(serviceName) {
             const config = SERVICE_ALERT_CONFIG[serviceName];
             const displayName = config ? config.name : serviceName;
 
-            if (!confirm(`Möchten Sie einen Ausfall für "${displayName}" simulieren?\n\nDies löst einen Alert aus (sofern aktiviert) und wird beim nächsten Health-Check automatisch korrigiert.`)) {
+            if (!config || !config.proxyPath) {
+                showToast(`Service "${displayName}" hat keinen Test-Endpoint`, 'error');
+                return;
+            }
+
+            if (!confirm(`Möchten Sie den Test-Unhealthy-Endpoint für "${displayName}" aufrufen?\n\nDies setzt den Service temporär auf UNHEALTHY und löst einen Alert aus (sofern aktiviert).`)) {
                 return;
             }
 
             try {
-                const res = await fetch(`${API_BASE}/services/${serviceName}/simulate-failure`, {
+                // Direkter Aufruf des Service-Endpoints über den Nginx-Proxy
+                const url = `${config.proxyPath}/api/v1/test-unhealthy`;
+                const res = await fetch(url, {
                     method: 'POST'
                 });
 
                 if (!res.ok) {
-                    const error = await res.json();
-                    throw new Error(error.detail || 'Simulation fehlgeschlagen');
+                    const errorText = await res.text();
+                    let errorMsg = 'Test fehlgeschlagen';
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        errorMsg = errorJson.detail || errorMsg;
+                    } catch {
+                        errorMsg = errorText || errorMsg;
+                    }
+                    throw new Error(errorMsg);
                 }
 
                 const data = await res.json();
-                showToast(`Ausfall für "${displayName}" simuliert - Alert wird verarbeitet`, 'warning');
+                showToast(`Test-Unhealthy für "${displayName}" ausgelöst`, 'warning');
 
                 // Aktualisiere Alert-Historie nach kurzer Verzögerung
                 setTimeout(() => {
                     loadAlertHistory();
-                }, 1000);
+                }, 2000);
 
             } catch (err) {
-                console.error('Error simulating failure:', err);
+                console.error('Error triggering test-unhealthy:', err);
                 showToast(`Fehler: ${err.message}`, 'error');
             }
         }
