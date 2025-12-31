@@ -2001,35 +2001,70 @@
             }
         }
 
-        async function checkHealth(service, port, statusId) {
+        // Cached watchdog status for all services
+        let watchdogServicesStatus = {};
+
+        // Central function to fetch all service status from Watchdog
+        async function fetchWatchdogStatus() {
             try {
-                const res = await fetchWithTimeout(`/${service}/health`, 5000);
-
-                // Prüfe ob HTTP-Response erfolgreich war
-                if (!res.ok) {
-                    throw new Error(`HTTP ${res.status}`);
-                }
-
+                const res = await fetchWithTimeout('/watchdog/api/v1/status', 5000);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
-
-                const statusEl = document.getElementById(statusId);
-                statusEl.textContent = data.status === 'healthy' ? 'Online' : 'Degraded';
-                statusEl.className = `status-badge ${data.status === 'healthy' ? 'status-healthy' : 'status-unhealthy'}`;
-
-                if (data.status === 'healthy') healthyServices++;
-
-                // Update dataflow status indicator
-                updateDataflowStatus(service, data.status === 'healthy');
-
+                watchdogServicesStatus = data.services || {};
                 return data;
             } catch (err) {
-                const statusEl = document.getElementById(statusId);
-                statusEl.textContent = err.name === 'AbortError' ? 'Timeout' : 'Offline';
-                statusEl.className = 'status-badge status-unhealthy';
+                console.error('Failed to fetch watchdog status:', err);
+                watchdogServicesStatus = {};
+                return null;
+            }
+        }
+
+        // Update service status from cached watchdog data
+        function updateServiceFromWatchdog(service, statusId) {
+            const serviceData = watchdogServicesStatus[service];
+            const statusEl = document.getElementById(statusId);
+
+            if (!statusEl) return null;
+
+            if (serviceData) {
+                const isHealthy = serviceData.state === 'HEALTHY';
+                const isDegraded = serviceData.state === 'DEGRADED';
+
+                if (isHealthy) {
+                    statusEl.textContent = 'Online';
+                    statusEl.className = 'status-badge status-healthy';
+                    healthyServices++;
+                } else if (isDegraded) {
+                    statusEl.textContent = 'Degraded';
+                    statusEl.className = 'status-badge status-unhealthy';
+                } else {
+                    statusEl.textContent = 'Offline';
+                    statusEl.className = 'status-badge status-unhealthy';
+                }
 
                 // Update dataflow status indicator
-                updateDataflowStatus(service, false);
+                updateDataflowStatus(service, isHealthy);
 
+                return { status: isHealthy ? 'healthy' : 'unhealthy', ...serviceData };
+            } else {
+                statusEl.textContent = 'Unbekannt';
+                statusEl.className = 'status-badge status-unhealthy';
+                updateDataflowStatus(service, false);
+                return null;
+            }
+        }
+
+        // Legacy checkHealth for services that need additional data from their own endpoints
+        async function checkHealth(service, port, statusId) {
+            // First update status from watchdog cache
+            updateServiceFromWatchdog(service, statusId);
+
+            // Then fetch additional details from service endpoint
+            try {
+                const res = await fetchWithTimeout(`/${service}/health`, 3000);
+                if (!res.ok) return null;
+                return await res.json();
+            } catch (err) {
                 return null;
             }
         }
@@ -2057,52 +2092,42 @@
             }
         }
 
-        // Separate function to update Redis status from Watchdog
-        async function updateRedisStatus() {
+        // Update Redis status from cached watchdog data
+        function updateRedisStatus() {
             const redisDot = document.getElementById('wp-dot-redis');
             const redisStatus = document.getElementById('redis-status');
             const redisDataflow = document.getElementById('df-redis-status');
 
-            try {
-                const res = await fetchWithTimeout('/watchdog/api/v1/status', 5000);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const redisService = watchdogServicesStatus['redis'];
+            const redisHealthy = redisService?.state === 'HEALTHY';
 
-                const data = await res.json();
-                const redisService = data.services?.redis;
-                const redisHealthy = redisService?.state === 'HEALTHY';
+            if (redisDot) {
+                redisDot.classList.remove('loading', 'healthy', 'unhealthy');
+                redisDot.classList.add(redisHealthy ? 'healthy' : 'unhealthy');
+            }
 
-                if (redisDot) {
-                    redisDot.classList.remove('loading', 'healthy', 'unhealthy');
-                    redisDot.classList.add(redisHealthy ? 'healthy' : 'unhealthy');
-                }
+            if (redisStatus) {
+                redisStatus.classList.remove('status-loading', 'status-healthy', 'status-unhealthy');
+                redisStatus.classList.add(redisHealthy ? 'status-healthy' : 'status-unhealthy');
+                redisStatus.textContent = redisHealthy ? 'Online' : 'Offline';
+            }
 
-                if (redisStatus) {
-                    redisStatus.classList.remove('status-loading', 'status-healthy', 'status-unhealthy');
-                    redisStatus.classList.add(redisHealthy ? 'status-healthy' : 'status-unhealthy');
-                    redisStatus.textContent = redisHealthy ? 'Online' : 'Offline';
-                }
+            if (redisDataflow) {
+                redisDataflow.classList.remove('loading', 'healthy', 'unhealthy');
+                redisDataflow.classList.add(redisHealthy ? 'healthy' : 'unhealthy');
+            }
+        }
 
-                if (redisDataflow) {
-                    redisDataflow.classList.remove('loading', 'healthy', 'unhealthy');
-                    redisDataflow.classList.add(redisHealthy ? 'healthy' : 'unhealthy');
-                }
-            } catch (err) {
-                // Watchdog not available - mark Redis as unknown
-                if (redisDot) {
-                    redisDot.classList.remove('loading', 'healthy');
-                    redisDot.classList.add('unhealthy');
-                }
+        // Update EasyInsight status from cached watchdog data
+        function updateEasyInsightStatusFromWatchdog() {
+            const easyinsightService = watchdogServicesStatus['easyinsight'];
+            const statusEl = document.getElementById('easyinsight-status');
 
-                if (redisStatus) {
-                    redisStatus.classList.remove('status-loading', 'status-healthy');
-                    redisStatus.classList.add('status-unhealthy');
-                    redisStatus.textContent = 'Unbekannt';
-                }
-
-                if (redisDataflow) {
-                    redisDataflow.classList.remove('loading', 'healthy');
-                    redisDataflow.classList.add('unhealthy');
-                }
+            if (statusEl && easyinsightService) {
+                const isHealthy = easyinsightService.state === 'HEALTHY';
+                statusEl.textContent = isHealthy ? 'Online' : 'Offline';
+                statusEl.className = `status-badge ${isHealthy ? 'status-healthy' : 'status-unhealthy'}`;
+                if (isHealthy) healthyServices++;
             }
         }
 
@@ -2453,9 +2478,18 @@
         }
 
         async function updateEasyInsightInfo() {
-            const statusEl = document.getElementById('easyinsight-status');
+            // Status already set by updateEasyInsightStatusFromWatchdog()
+            // This function only fetches additional details (symbols count, latency)
             const symbolsEl = document.getElementById('easyinsight-symbols');
             const latencyEl = document.getElementById('easyinsight-latency');
+
+            // Only fetch details if EasyInsight is healthy according to watchdog
+            const easyinsightService = watchdogServicesStatus['easyinsight'];
+            if (easyinsightService?.state !== 'HEALTHY') {
+                symbolsEl.textContent = '-';
+                latencyEl.textContent = '-';
+                return;
+            }
 
             try {
                 const startTime = performance.now();
@@ -2464,17 +2498,12 @@
 
                 if (res.ok) {
                     const symbols = await res.json();
-                    statusEl.textContent = 'Online';
-                    statusEl.className = 'status-badge status-healthy';
                     symbolsEl.textContent = symbols.length;
                     latencyEl.textContent = `${latency}ms`;
-                    healthyServices++;
                 } else {
                     throw new Error('API returned error');
                 }
             } catch (err) {
-                statusEl.textContent = 'Offline';
-                statusEl.className = 'status-badge status-unhealthy';
                 symbolsEl.textContent = '-';
                 latencyEl.textContent = '-';
             }
@@ -2673,11 +2702,19 @@
 
         async function refreshStatus() {
             healthyServices = 0;
+
+            // First fetch all service status from Watchdog (single API call)
+            await fetchWatchdogStatus();
+
+            // Then update UI and fetch additional details where needed
+            // Redis and EasyInsight only need watchdog data (no additional details)
+            updateRedisStatus();
+            updateEasyInsightStatusFromWatchdog();
+
             await Promise.all([
                 updateNhitsInfo(),
                 updateLlmInfo(),
                 updateDataInfo(),
-                updateRedisStatus(),
                 updateRagInfo(),
                 updateTcnInfo(),
                 updateTcnTrainInfo(),
@@ -2689,7 +2726,7 @@
                 updateHmmTrainInfo(),
                 updateWatchdogInfo(),
                 updateTestsInfo(),
-                updateEasyInsightInfo(),
+                updateEasyInsightInfo(),  // Fetch additional details (symbols, latency)
                 updateSystemMetrics(),
                 updateStorageMetrics()
             ]);
