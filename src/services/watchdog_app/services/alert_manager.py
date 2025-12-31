@@ -32,7 +32,18 @@ class AlertManager:
         self.alert_history: list = []
 
     def _should_alert(self, service_name: str, criticality: str) -> bool:
-        """Prüft ob ein Alert basierend auf Kritikalität gesendet werden soll."""
+        """Prüft ob ein Alert basierend auf Service-Konfiguration und Kritikalität gesendet werden soll."""
+        # Zuerst prüfen: Ist der Service-Alert überhaupt aktiviert?
+        try:
+            from .config_service import config_service
+            if not config_service.is_service_alert_enabled(service_name):
+                logger.debug(f"Alert for {service_name} disabled via service config")
+                return False
+        except Exception as e:
+            logger.warning(f"Could not check service alert config: {e}")
+            # Bei Fehler: Fallback auf Kritikalitäts-Prüfung
+
+        # Dann Kritikalitätsstufe prüfen
         if criticality == "critical" and self.settings.alert_on_critical:
             return True
         if criticality == "high" and self.settings.alert_on_high:
@@ -101,10 +112,22 @@ class AlertManager:
 
         # Failure-Alert?
         if new_state in [HealthState.UNHEALTHY, HealthState.DEGRADED]:
-            # Kritikalität prüfen
+            # Service-spezifische und Kritikalitäts-Prüfung
             if not self._should_alert(service_name, criticality):
+                # Ermittle den genauen Grund für die Unterdrückung
+                suppressed_reason = "criticality"
+                suppressed_message = f"Alert unterdrückt (Kritikalität {criticality} nicht aktiviert)"
+
+                try:
+                    from .config_service import config_service
+                    if not config_service.is_service_alert_enabled(service_name):
+                        suppressed_reason = "service_disabled"
+                        suppressed_message = f"Alert unterdrückt (Service-Alarmierung deaktiviert)"
+                except Exception:
+                    pass
+
                 logger.debug(
-                    f"Alert for {service_name} suppressed (criticality: {criticality})"
+                    f"Alert for {service_name} suppressed ({suppressed_reason})"
                 )
                 # Trotzdem aufzeichnen, aber als suppressed
                 self._record_alert(
@@ -115,9 +138,9 @@ class AlertManager:
                     new_state=new_state.value,
                     error=new_status.error,
                     telegram_sent=False,
-                    message=f"Alert unterdrückt (Kritikalität {criticality} nicht aktiviert)",
+                    message=suppressed_message,
                     suppressed=True,
-                    suppressed_reason="criticality"
+                    suppressed_reason=suppressed_reason
                 )
                 return
 
