@@ -2004,6 +2004,12 @@
         async function checkHealth(service, port, statusId) {
             try {
                 const res = await fetchWithTimeout(`/${service}/health`, 5000);
+
+                // Prüfe ob HTTP-Response erfolgreich war
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+
                 const data = await res.json();
 
                 const statusEl = document.getElementById(statusId);
