@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from loguru import logger
 
-from .claude_validator_service import claude_validator_service, ValidationResult, ValidationStatus
+from .claude_validator_service import claude_validator_service, ClaudeValidationResult, ValidationStatus
 from .pattern_detection_service import candlestick_pattern_service
 from .rule_config_service import rule_config_service, DEFAULT_RULE_PARAMS
 from ..models.schemas import PatternScanRequest, Timeframe
