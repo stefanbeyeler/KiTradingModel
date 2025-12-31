@@ -83,18 +83,30 @@ class ClaudeValidationResult:
 
 
 class ChartRenderer:
-    """Renders candlestick charts for pattern visualization."""
+    """
+    Renders candlestick charts for pattern visualization.
+
+    Uses unified color scheme from src/config/chart_colors.py to ensure
+    consistency between manual validation (Frontend) and Claude AI validation.
+    """
 
     def __init__(self):
         self.figure_size = (12, 6)
         self.dpi = 100
+        # Unified colors - matching Frontend JavaScript implementation
+        # See: src/config/chart_colors.py for documentation
         self.colors = {
-            "bullish": "#26A69A",  # Green
-            "bearish": "#EF5350",  # Red
-            "highlight": "#FFD700",  # Gold for pattern highlight
-            "background": "#1E1E1E",  # Dark background
-            "grid": "#333333",
-            "text": "#FFFFFF"
+            "bullish": "#4caf50",            # Green - same as Frontend
+            "bullish_highlight": "#66bb6a",  # Lighter green for highlighted
+            "bearish": "#f44336",            # Red - same as Frontend
+            "bearish_highlight": "#ef5350",  # Lighter red for highlighted
+            "neutral": "#ff9800",            # Orange for neutral patterns
+            "background": "#1a1a2e",         # Dark background - same as Frontend
+            "grid": "#333333",               # Grid lines
+            "text": "#ffffff",               # White text
+            "highlight_bullish": (76/255, 175/255, 80/255, 0.2),   # RGBA tuple
+            "highlight_bearish": (244/255, 67/255, 54/255, 0.2),   # RGBA tuple
+            "highlight_neutral": (255/255, 152/255, 0/255, 0.2),   # RGBA tuple
         }
 
     def render_pattern_chart(
@@ -103,7 +115,8 @@ class ChartRenderer:
         pattern_type: str,
         pattern_candles: int = 3,
         context_before: int = 5,
-        context_after: int = 5
+        context_after: int = 5,
+        direction: str = "neutral"
     ) -> Optional[str]:
         """
         Render a candlestick chart with the pattern centered.
@@ -114,6 +127,7 @@ class ChartRenderer:
             pattern_candles: Number of candles in the pattern
             context_before: Number of context candles before pattern
             context_after: Number of context candles after pattern (empty space)
+            direction: Pattern direction ("bullish", "bearish", or "neutral")
 
         Returns:
             Base64 encoded PNG image, or None if rendering fails
@@ -139,6 +153,13 @@ class ChartRenderer:
             # Total display width: data + empty space after
             total_display = len(data) + context_after
 
+            # Determine highlight color based on direction
+            highlight_color_key = f"highlight_{direction}" if direction in ["bullish", "bearish"] else "highlight_neutral"
+            highlight_color = self.colors.get(highlight_color_key, self.colors["highlight_neutral"])
+
+            # Determine label color based on direction
+            label_color = self.colors.get(direction, self.colors["neutral"])
+
             # Create figure
             fig, ax = plt.subplots(figsize=self.figure_size, facecolor=self.colors["background"])
             ax.set_facecolor(self.colors["background"])
@@ -151,20 +172,25 @@ class ChartRenderer:
                 c = float(candle.get("close", candle.get("c", 0)))
 
                 is_bullish = c >= o
-                color = self.colors["bullish"] if is_bullish else self.colors["bearish"]
-
-                # Highlight pattern candles
                 is_pattern_candle = i >= pattern_start_idx
+
+                # Select color based on candle direction and highlight state
+                if is_bullish:
+                    color = self.colors["bullish_highlight"] if is_pattern_candle else self.colors["bullish"]
+                else:
+                    color = self.colors["bearish_highlight"] if is_pattern_candle else self.colors["bearish"]
+
+                # Highlight pattern candles with direction-based background
                 if is_pattern_candle:
-                    # Add highlight background
                     ax.axvspan(
                         i - 0.4, i + 0.4,
-                        alpha=0.2,
-                        color=self.colors["highlight"]
+                        color=highlight_color[:3] if isinstance(highlight_color, tuple) else highlight_color,
+                        alpha=highlight_color[3] if isinstance(highlight_color, tuple) else 0.2
                     )
 
-                # Draw wick (high-low line)
-                ax.plot([i, i], [l, h], color=color, linewidth=1)
+                # Draw wick (high-low line) - thicker for highlighted candles
+                line_width = 2 if is_pattern_candle else 1
+                ax.plot([i, i], [l, h], color=color, linewidth=line_width)
 
                 # Draw body
                 body_bottom = min(o, c)
@@ -172,14 +198,26 @@ class ChartRenderer:
                 if body_height < 0.0001:  # Doji
                     body_height = (h - l) * 0.01
 
-                rect = Rectangle(
-                    (i - 0.3, body_bottom),
-                    0.6,
-                    body_height,
-                    facecolor=color if is_bullish else color,
-                    edgecolor=color,
-                    linewidth=1
-                )
+                # Bullish candles: hollow (dark fill with colored border)
+                # Bearish candles: filled
+                if is_bullish:
+                    rect = Rectangle(
+                        (i - 0.3, body_bottom),
+                        0.6,
+                        body_height,
+                        facecolor='#1a1a2e',  # Dark fill for hollow effect
+                        edgecolor=color,
+                        linewidth=2 if is_pattern_candle else 1
+                    )
+                else:
+                    rect = Rectangle(
+                        (i - 0.3, body_bottom),
+                        0.6,
+                        body_height,
+                        facecolor=color,
+                        edgecolor=color,
+                        linewidth=1
+                    )
                 ax.add_patch(rect)
 
             # Draw empty placeholder candles after pattern (gray outlines)
@@ -215,24 +253,24 @@ class ChartRenderer:
             ax.grid(True, alpha=0.3, color=self.colors["grid"])
             ax.tick_params(colors=self.colors["text"])
 
-            # Title
+            # Title with direction-based color
             ax.set_title(
                 f"Pattern: {pattern_type.replace('_', ' ').title()}",
-                color=self.colors["text"],
+                color=label_color,
                 fontsize=14,
                 fontweight="bold"
             )
 
-            # Add annotation for pattern area
+            # Add annotation for pattern area with direction-based color
             pattern_center = pattern_start_idx + pattern_candles / 2 - 0.5
             ax.annotate(
                 "Pattern",
                 xy=(pattern_center, y_max),
                 xytext=(pattern_center, y_max + y_padding * 0.4),
-                color=self.colors["highlight"],
+                color=label_color,
                 fontsize=10,
                 ha="center",
-                arrowprops=dict(arrowstyle="->", color=self.colors["highlight"])
+                arrowprops=dict(arrowstyle="->", color=label_color)
             )
 
             # Remove spines
@@ -327,6 +365,34 @@ class ClaudeValidatorService:
             return 3
         else:
             return 2  # Default
+
+    def _get_pattern_direction(self, pattern_type: str) -> str:
+        """
+        Get the direction (bullish/bearish/neutral) of a pattern type.
+
+        This ensures consistent color-coding between Frontend and Backend rendering.
+        """
+        bullish_patterns = [
+            "hammer", "inverted_hammer", "bullish_engulfing", "bullish_harami",
+            "morning_star", "three_white_soldiers", "piercing_line",
+            "dragonfly_doji", "rising_three_methods", "tweezer_bottom"
+        ]
+        bearish_patterns = [
+            "hanging_man", "shooting_star", "bearish_engulfing", "bearish_harami",
+            "evening_star", "three_black_crows", "dark_cloud_cover",
+            "gravestone_doji", "falling_three_methods", "tweezer_top"
+        ]
+        neutral_patterns = [
+            "doji", "spinning_top", "harami_cross", "inside_bar"
+        ]
+
+        pattern_lower = pattern_type.lower()
+        if pattern_lower in bullish_patterns:
+            return "bullish"
+        elif pattern_lower in bearish_patterns:
+            return "bearish"
+        else:
+            return "neutral"
 
     def _build_validation_prompt(self, pattern_type: str, symbol: str, timeframe: str) -> str:
         """Build the prompt for Claude to validate a pattern."""
@@ -425,14 +491,16 @@ Be strict but fair in your assessment. Only confirm patterns that clearly meet t
             )
 
         try:
-            # Render chart
+            # Render chart with direction-based colors for consistency with Frontend
             pattern_candles = self._get_pattern_candle_count(pattern_type)
+            direction = self._get_pattern_direction(pattern_type)
             chart_base64 = self.chart_renderer.render_pattern_chart(
                 ohlcv_data=ohlcv_data,
                 pattern_type=pattern_type,
                 pattern_candles=pattern_candles,
                 context_before=5,
-                context_after=5
+                context_after=5,
+                direction=direction
             )
 
             if not chart_base64:

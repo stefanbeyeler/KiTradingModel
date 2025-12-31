@@ -2361,6 +2361,56 @@
                 </div>
             </div>
 
+            <!-- Start New Training Card -->
+            <div class="card" style="border: 1px solid rgba(100, 200, 255, 0.3);">
+                <div class="card-header">
+                    <h2 class="card-title">🚀 Neues Training starten</h2>
+                </div>
+                <p class="card-description" style="margin-bottom: 1rem;">
+                    Trainiere das Modell mit den gesammelten Korrekturen, um die Pattern-Erkennung zu verbessern.
+                </p>
+
+                <!-- Training Progress (hidden by default) -->
+                <div id="revalTrainingProgress" style="display: none; margin-bottom: 1rem; padding: 1rem; background: rgba(100, 200, 255, 0.1); border-radius: 8px; border: 1px solid rgba(100, 200, 255, 0.3);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-weight: 500; color: #64c8ff;">⏳ Training läuft...</span>
+                        <span id="revalTrainingPercent" style="color: #fff;">0%</span>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 4px; height: 8px; overflow: hidden;">
+                        <div id="revalTrainingBar" style="background: linear-gradient(90deg, #64c8ff, #81c784); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.8rem; color: #888;">
+                        <span>Epoch: <span id="revalTrainingEpoch">0</span> / <span id="revalTrainingTotalEpochs">0</span></span>
+                        <span>Loss: <span id="revalTrainingLoss">-</span></span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                    <div style="flex: 1; min-width: 300px;">
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label style="font-size: 0.8rem; color: #888;">Epochen:</label>
+                                <input type="number" id="trainEpochs" value="50" min="1" max="500" style="width: 70px; padding: 0.3rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label style="font-size: 0.8rem; color: #888;">Batch:</label>
+                                <input type="number" id="trainBatchSize" value="32" min="8" max="128" style="width: 60px; padding: 0.3rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <label style="font-size: 0.8rem; color: #888;">LR:</label>
+                                <input type="number" id="trainLearningRate" value="0.001" min="0.0001" max="0.1" step="0.0001" style="width: 80px; padding: 0.3rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
+                            </div>
+                        </div>
+                        <span style="font-size: 0.75rem; color: #666;">Symbole: BTCUSD, EURUSD, GBPUSD, XAUUSD, GER40, XTIUSD</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
+                        <button class="btn btn-success" id="btnStartRevalTraining" onclick="startRevalTraining()" style="padding: 0.6rem 1.5rem;">
+                            ▶ Training starten
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Training History -->
             <div class="card">
                 <div class="card-header">
@@ -2674,60 +2724,19 @@
                     </div>
                 </div>
 
-                <!-- Training Section integrated -->
+                <!-- Training Info Section -->
                 <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
                     <!-- Last Training Info -->
-                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center;">
                         <span style="background: rgba(255,255,255,0.1); padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.85rem;">
                             Letztes Training: <span id="revalLastTraining" style="color: #64c8ff;">-</span>
                         </span>
                         <span style="background: rgba(255,255,255,0.1); padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.85rem;">
                             Letzte Re-Validierung: <span id="revalLastRevalidation" style="color: #81c784;">-</span>
                         </span>
-                    </div>
-
-                    <!-- Training Progress (hidden by default) -->
-                    <div id="revalTrainingProgress" style="display: none; margin-bottom: 1rem; padding: 1rem; background: rgba(100, 200, 255, 0.1); border-radius: 8px; border: 1px solid rgba(100, 200, 255, 0.3);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <span style="font-weight: 500; color: #64c8ff;">⏳ Training läuft...</span>
-                            <span id="revalTrainingPercent" style="color: #fff;">0%</span>
-                        </div>
-                        <div style="background: rgba(0,0,0,0.3); border-radius: 4px; height: 8px; overflow: hidden;">
-                            <div id="revalTrainingBar" style="background: linear-gradient(90deg, #64c8ff, #81c784); height: 100%; width: 0%; transition: width 0.3s;"></div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.8rem; color: #888;">
-                            <span>Epoch: <span id="revalTrainingEpoch">0</span> / <span id="revalTrainingTotalEpochs">0</span></span>
-                            <span>Loss: <span id="revalTrainingLoss">-</span></span>
-                        </div>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-                        <div style="flex: 1; min-width: 300px;">
-                            <h3 style="font-size: 1rem; color: #64c8ff; margin-bottom: 0.5rem;">🚀 Neues Training starten</h3>
-                            <p style="font-size: 0.85rem; color: #888; margin-bottom: 0.75rem;">
-                                Trainiere das Modell mit den gesammelten Korrekturen, um die Pattern-Erkennung zu verbessern.
-                            </p>
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <label style="font-size: 0.8rem; color: #888;">Epochen:</label>
-                                    <input type="number" id="trainEpochs" value="50" min="1" max="500" style="width: 70px; padding: 0.3rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <label style="font-size: 0.8rem; color: #888;">Batch:</label>
-                                    <input type="number" id="trainBatchSize" value="32" min="8" max="128" style="width: 60px; padding: 0.3rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <label style="font-size: 0.8rem; color: #888;">LR:</label>
-                                    <input type="number" id="trainLearningRate" value="0.001" min="0.0001" max="0.1" step="0.0001" style="width: 80px; padding: 0.3rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;">
-                                </div>
-                            </div>
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end;">
-                            <button class="btn btn-success" id="btnStartRevalTraining" onclick="startRevalTraining()" style="padding: 0.6rem 1.5rem;">
-                                ▶ Training starten
-                            </button>
-                            <span style="font-size: 0.75rem; color: #666;">Symbole: BTCUSD, EURUSD, GBPUSD, XAUUSD, GER40, XTIUSD</span>
-                        </div>
+                        <button class="btn btn-primary" onclick="switchTab('training')" style="margin-left: auto; padding: 0.4rem 1rem; font-size: 0.85rem;">
+                            🚀 Neues Training starten →
+                        </button>
                     </div>
                 </div>
             </div>
@@ -5064,6 +5073,34 @@
         }
 
         // Render candlestick chart on canvas
+        /**
+         * Unified Chart Color Configuration
+         * These colors match the Backend (Python/Matplotlib) implementation
+         * See: src/config/chart_colors.py for documentation
+         */
+        const CHART_COLORS = {
+            // Candle Colors
+            bullish: '#4caf50',            // Green - bullish candles
+            bullish_highlight: '#66bb6a',  // Lighter green for highlighted bullish
+            bearish: '#f44336',            // Red - bearish candles
+            bearish_highlight: '#ef5350',  // Lighter red for highlighted bearish
+            neutral: '#ff9800',            // Orange - neutral/indecision patterns
+
+            // Background & Grid
+            background: '#1a1a2e',         // Dark background
+            grid: 'rgba(255, 255, 255, 0.05)',  // Subtle grid lines
+
+            // Highlight Colors (pattern area background)
+            highlight_bullish: 'rgba(76, 175, 80, 0.2)',   // Green tint
+            highlight_bearish: 'rgba(244, 67, 54, 0.2)',   // Red tint
+            highlight_neutral: 'rgba(255, 152, 0, 0.2)',   // Orange tint
+
+            // Text & Labels
+            text_primary: '#ffffff',       // Primary text (white)
+            text_secondary: '#888888',     // Secondary text (gray)
+            text_highlight: '#ffffff',     // Highlighted text
+        };
+
         function renderCandlestickChart(canvas, candles, highlightIndex, direction, patternType) {
             const ctx = canvas.getContext('2d');
             const width = canvas.offsetWidth;
@@ -5074,8 +5111,8 @@
             canvas.height = height * 2;
             ctx.scale(2, 2);
 
-            // Clear canvas
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            // Clear canvas with unified background color
+            ctx.fillStyle = CHART_COLORS.background;
             ctx.fillRect(0, 0, width, height);
 
             if (!candles || candles.length === 0) {
@@ -5105,8 +5142,8 @@
                 return chartPadding.top + chartHeight - ((price - minPrice + padding) / (priceRange + 2 * padding)) * chartHeight;
             };
 
-            // Draw grid lines
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            // Draw grid lines with unified color
+            ctx.strokeStyle = CHART_COLORS.grid;
             ctx.lineWidth = 1;
             for (let i = 0; i <= 4; i++) {
                 const y = chartPadding.top + (chartHeight / 4) * i;
@@ -5144,54 +5181,61 @@
                 const isHighlighted = i >= highlightIndex && i <= highlightIndex + getPatternCandleCount(patternType) - 1;
 
                 if (isHighlighted) {
-                    // Draw highlight background
+                    // Draw highlight background with unified direction-based colors
                     ctx.fillStyle = direction === 'bullish'
-                        ? 'rgba(76, 175, 80, 0.2)'
+                        ? CHART_COLORS.highlight_bullish
                         : direction === 'bearish'
-                            ? 'rgba(244, 67, 54, 0.2)'
-                            : 'rgba(255, 152, 0, 0.2)';
+                            ? CHART_COLORS.highlight_bearish
+                            : CHART_COLORS.highlight_neutral;
                     ctx.fillRect(x - candleSpacing / 2, chartPadding.top, candleSpacing, chartHeight);
                 }
 
-                // Colors
-                const bullColor = isHighlighted ? '#4caf50' : '#81c784';
-                const bearColor = isHighlighted ? '#f44336' : '#e57373';
-                const wickColor = isBullish ? bullColor : bearColor;
-                const bodyColor = isBullish ? bullColor : bearColor;
+                // Unified colors matching Backend (Matplotlib) implementation
+                const bullColor = isHighlighted ? CHART_COLORS.bullish_highlight : CHART_COLORS.bullish;
+                const bearColor = isHighlighted ? CHART_COLORS.bearish_highlight : CHART_COLORS.bearish;
+                const candleColor = isBullish ? bullColor : bearColor;
 
-                // Draw wick
-                ctx.strokeStyle = wickColor;
+                // Draw wick with thicker line for highlighted candles
+                ctx.strokeStyle = candleColor;
                 ctx.lineWidth = isHighlighted ? 2 : 1;
                 ctx.beginPath();
                 ctx.moveTo(x, priceToY(high));
                 ctx.lineTo(x, priceToY(low));
                 ctx.stroke();
 
-                // Draw body
-                ctx.fillStyle = isBullish ? 'rgba(0,0,0,0.3)' : bodyColor;
-                ctx.strokeStyle = bodyColor;
-                ctx.lineWidth = isHighlighted ? 2 : 1;
-
+                // Draw body - bullish: hollow (dark fill), bearish: filled
                 if (isBullish) {
+                    // Hollow candle with dark fill and colored border
+                    ctx.fillStyle = CHART_COLORS.background;
+                    ctx.strokeStyle = candleColor;
+                    ctx.lineWidth = isHighlighted ? 2 : 1;
                     ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
                     ctx.strokeRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
                 } else {
+                    // Filled candle
+                    ctx.fillStyle = candleColor;
                     ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
                 }
 
-                // Draw timestamp below candle
+                // Draw timestamp below candle with unified text colors
                 const timeLabel = formatCandleTime(candle.datetime, timeframe);
-                ctx.fillStyle = isHighlighted ? '#fff' : '#666';
+                ctx.fillStyle = isHighlighted ? CHART_COLORS.text_highlight : CHART_COLORS.text_secondary;
                 ctx.font = isHighlighted ? 'bold 9px sans-serif' : '8px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText(timeLabel, x, height - 5);
             });
 
-            // Draw pattern label at the top
+            // Draw pattern label at the top with unified direction-based colors
             if (highlightIndex >= 0 && highlightIndex < candles.length && patternType) {
                 const patternCandleCount = getPatternCandleCount(patternType);
                 const labelX = chartPadding.left + (highlightIndex + patternCandleCount / 2) * candleSpacing;
-                const markerColor = direction === 'bullish' ? '#4caf50' : direction === 'bearish' ? '#f44336' : '#ff9800';
+
+                // Use unified label colors based on direction
+                const labelColor = direction === 'bullish'
+                    ? CHART_COLORS.bullish
+                    : direction === 'bearish'
+                        ? CHART_COLORS.bearish
+                        : CHART_COLORS.neutral;
 
                 // Draw pattern name label
                 const label = formatPatternType(patternType);
@@ -5199,7 +5243,7 @@
                 const textWidth = ctx.measureText(label).width;
 
                 // Background for label
-                ctx.fillStyle = markerColor;
+                ctx.fillStyle = labelColor;
                 const labelPadding = 4;
                 const labelHeight = 14;
                 const labelY = 3;
@@ -5212,21 +5256,18 @@
                 ctx.fill();
 
                 // Label text
-                ctx.fillStyle = '#fff';
+                ctx.fillStyle = CHART_COLORS.text_primary;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(label, labelX, labelY + labelHeight / 2);
 
                 // Draw bracket/lines connecting to candles
-                ctx.strokeStyle = markerColor;
+                ctx.strokeStyle = labelColor;
                 ctx.lineWidth = 2;
                 ctx.setLineDash([]);
 
-                // Left bracket line
+                // Bracket line pointing to pattern
                 const bracketY = labelY + labelHeight + 2;
-                const leftX = chartPadding.left + (highlightIndex + 0.5) * candleSpacing;
-                const rightX = chartPadding.left + (highlightIndex + patternCandleCount - 0.5) * candleSpacing;
-
                 ctx.beginPath();
                 ctx.moveTo(labelX, bracketY);
                 ctx.lineTo(labelX, bracketY + 3);

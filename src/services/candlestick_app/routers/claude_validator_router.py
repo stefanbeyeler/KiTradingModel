@@ -336,19 +336,21 @@ async def get_chart_preview(pattern_id: str):
                     detail=f"Could not fetch OHLCV data for {symbol}/{timeframe}"
                 )
 
-        # Render chart
+        # Render chart with direction-based colors for consistency with Frontend
         pattern_type = pattern.get("pattern_type", "unknown")
         chart_renderer = claude_validator_service.chart_renderer
 
-        # Determine candle count
+        # Determine candle count and direction
         pattern_candles = claude_validator_service._get_pattern_candle_count(pattern_type)
+        direction = claude_validator_service._get_pattern_direction(pattern_type)
 
         chart_base64 = chart_renderer.render_pattern_chart(
             ohlcv_data=ohlcv_data,
             pattern_type=pattern_type,
             pattern_candles=pattern_candles,
             context_before=5,
-            context_after=5
+            context_after=5,
+            direction=direction
         )
 
         if not chart_base64:
