@@ -22,8 +22,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from .routers import detection_router, system_router, history_router, claude_validator_router
+from .routers.system_router import test_health_router
 from .routers.auto_optimization_router import router as auto_optimization_router
 from .services.pattern_detection_service import candlestick_pattern_service
+
+# Import für Test-Health-Funktionalität
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
+from src.shared.health import get_test_unhealthy_status
 from .services.pattern_history_service import pattern_history_service
 from .services.claude_validator_service import claude_validator_service
 from .services.auto_optimization_service import auto_optimization_service
@@ -161,6 +166,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(system_router, prefix="/api/v1", tags=["1. System"])
+app.include_router(test_health_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(detection_router, prefix="/api/v1", tags=["2. Pattern Detection"])
 app.include_router(history_router, prefix="/api/v1", tags=["3. Pattern History"])
 app.include_router(claude_validator_router, prefix="/api/v1/claude", tags=["4. Claude QA"])
@@ -193,7 +199,20 @@ async def root():
 @app.get("/health")
 async def health():
     """Simple health check at root level."""
-    return {"status": "healthy", "service": SERVICE_NAME}
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("candlestick")
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
+    response = {
+        "status": "unhealthy" if is_unhealthy else "healthy",
+        "service": SERVICE_NAME
+    }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 if __name__ == "__main__":

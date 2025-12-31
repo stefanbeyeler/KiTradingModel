@@ -3,9 +3,16 @@
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
 from loguru import logger
+import sys
+import os
 
 from ..models.schemas import CacheStatsResponse, ModelInfoResponse
 from ..services.embedding_service import embedding_service
+
+# Import für Test-Health-Funktionalität
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
+from src.shared.health import get_test_unhealthy_status
+from src.shared.test_health_router import create_test_health_router
 
 router = APIRouter()
 
@@ -13,16 +20,29 @@ VERSION = "1.0.0"
 SERVICE_NAME = "embedder"
 START_TIME = datetime.now()
 
+# Test-Health-Router
+test_health_router = create_test_health_router("embedder")
+
 
 @router.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("embedder")
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
+    response = {
         "service": SERVICE_NAME,
-        "status": "healthy",
+        "status": "unhealthy" if is_unhealthy else "healthy",
         "version": VERSION,
         "uptime_seconds": (datetime.now() - START_TIME).total_seconds()
     }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 @router.get("/models", response_model=ModelInfoResponse)

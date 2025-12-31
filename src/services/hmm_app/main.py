@@ -17,6 +17,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from .routers import regime_router, scoring_router, training_router, system_router
+from .routers.system_router import test_health_router
+
+# Import für Test-Health-Funktionalität
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
+from src.shared.health import get_test_unhealthy_status
 
 # Configuration
 VERSION = "1.0.0"
@@ -105,6 +110,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(system_router, prefix="/api/v1", tags=["1. System & Monitoring"])
+app.include_router(test_health_router, prefix="/api/v1", tags=["1. System & Monitoring"])
 app.include_router(regime_router, prefix="/api/v1/regime", tags=["2. Regime Detection"])
 app.include_router(scoring_router, prefix="/api/v1/scoring", tags=["3. Signal Scoring"])
 app.include_router(training_router, prefix="/api/v1", tags=["4. Model Training"])
@@ -132,7 +138,20 @@ async def root():
 @app.get("/health")
 async def health():
     """Simple health check."""
-    return {"status": "healthy", "service": SERVICE_NAME}
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("hmm")
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
+    response = {
+        "status": "unhealthy" if is_unhealthy else "healthy",
+        "service": SERVICE_NAME
+    }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 if __name__ == "__main__":

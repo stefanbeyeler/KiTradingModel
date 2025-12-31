@@ -20,8 +20,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from .routers import detection_router, system_router, history_router, crt_router
+from .routers.system_router import test_health_router
 from .services.pattern_detection_service import pattern_detection_service
 from .services.tcn_pattern_history_service import tcn_pattern_history_service
+
+# Import für Test-Health-Funktionalität
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
+from src.shared.health import get_test_unhealthy_status
 
 # Configuration
 VERSION = "1.0.0"
@@ -136,6 +141,7 @@ app.add_middleware(
 # Include routers
 # Note: Training router moved to tcn_train_app service
 app.include_router(system_router, prefix="/api/v1", tags=["1. System & Monitoring"])
+app.include_router(test_health_router, prefix="/api/v1", tags=["1. System & Monitoring"])
 app.include_router(detection_router, prefix="/api/v1", tags=["2. Pattern Detection"])
 app.include_router(history_router, prefix="/api/v1", tags=["3. Pattern History"])
 app.include_router(crt_router, prefix="/api/v1", tags=["4. CRT (Candle Range Theory)"])
@@ -171,7 +177,20 @@ async def root():
 @app.get("/health")
 async def health():
     """Simple health check."""
-    return {"status": "healthy", "service": SERVICE_NAME}
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("tcn")
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
+    response = {
+        "status": "unhealthy" if is_unhealthy else "healthy",
+        "service": SERVICE_NAME
+    }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 if __name__ == "__main__":

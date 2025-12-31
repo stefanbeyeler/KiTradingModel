@@ -29,6 +29,8 @@ from src.config import settings
 from src.version import VERSION
 from src.services.rag_service import RAGService
 from src.services.data_fetcher_proxy import DataFetcherProxy, get_data_fetcher_proxy
+from src.shared.test_health_router import create_test_health_router
+from src.shared.health import get_test_unhealthy_status
 
 # Enums for API compatibility (data sources are now in Data Service)
 class DataSourceTypeEnum(str, Enum):
@@ -264,6 +266,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Test-Health-Router
+test_health_router = create_test_health_router("rag")
+app.include_router(test_health_router, prefix="/api/v1", tags=["Health & Info"])
 
 
 # =====================================================
@@ -628,6 +634,10 @@ async def health_check():
 
     Returns service status, version, embedding model info, and document count.
     """
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("rag")
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
     stats = None
     if rag_service:
         try:
@@ -635,15 +645,29 @@ async def health_check():
         except Exception as e:
             logger.error(f"Health check error: {e}")
 
-    return {
+    # Bestimme Status
+    if is_unhealthy:
+        status = "unhealthy"
+    elif not rag_service:
+        status = "unhealthy"
+    else:
+        status = "healthy"
+
+    response = {
         "service": "rag",
-        "status": "healthy" if rag_service else "unhealthy",
+        "status": status,
         "version": VERSION,
         "embedding_model": settings.embedding_model,
         "device": settings.device,
         "faiss_gpu": stats.get("faiss_gpu", False) if stats else False,
         "document_count": stats.get("document_count", 0) if stats else 0
     }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 @app.get("/", tags=["Health & Info"])

@@ -23,6 +23,8 @@ from src.version import VERSION
 from src.api.routes import llm_router, rag_router, trading_router
 from src.services import LLMService
 from src.services.rag_service import RAGService
+from src.shared.test_health_router import create_test_health_router
+from src.shared.health import get_test_unhealthy_status
 
 # Global service instances
 llm_service = None
@@ -65,6 +67,10 @@ app.add_middleware(
 app.include_router(llm_router, prefix="/api/v1", tags=["LLM Service"])
 app.include_router(rag_router, prefix="/api/v1", tags=["RAG & Knowledge Base"])
 app.include_router(trading_router, prefix="/api/v1", tags=["Trading Analysis"])
+
+# Test-Health-Router
+test_health_router = create_test_health_router("llm")
+app.include_router(test_health_router, prefix="/api/v1", tags=["System"])
 
 
 @app.on_event("startup")
@@ -123,6 +129,10 @@ async def shutdown_event():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("llm")
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
     llm_status = "unknown"
     if llm_service:
         try:
@@ -131,14 +141,20 @@ async def health_check():
         except Exception:
             llm_status = "unhealthy"
 
-    return {
+    response = {
         "service": "llm",
-        "status": "healthy",
+        "status": "unhealthy" if is_unhealthy else "healthy",
         "version": VERSION,
         "llm_model": settings.ollama_model,
         "llm_status": llm_status,
         "rag_enabled": rag_service is not None
     }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 @app.get("/")

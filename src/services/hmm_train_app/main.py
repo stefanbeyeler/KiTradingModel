@@ -29,6 +29,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 
 from src.services.hmm_train_app.routers import training_router, system_router
 from src.services.hmm_train_app.services.training_service import training_service
+from src.shared.test_health_router import create_test_health_router
+from src.shared.health import get_test_unhealthy_status
 
 # Configure logging
 logger.remove()
@@ -66,6 +68,10 @@ app.add_middleware(
 # Include routers
 app.include_router(training_router, prefix="/api/v1")
 app.include_router(system_router, prefix="/api/v1")
+
+# Test-Health-Router
+test_health_router = create_test_health_router("hmm-train")
+app.include_router(test_health_router, prefix="/api/v1", tags=["System"])
 
 
 @app.on_event("startup")
@@ -109,11 +115,21 @@ async def shutdown_event():
 @app.get("/health")
 async def health_check():
     """Health check endpoint - must respond quickly even during training."""
-    return {
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("hmm-train")
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
+    response = {
         "service": "hmm-train",
-        "status": "healthy",
+        "status": "unhealthy" if is_unhealthy else "healthy",
         "training_in_progress": training_service.is_training()
     }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 @app.get("/")

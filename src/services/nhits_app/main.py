@@ -25,6 +25,8 @@ from src.services.nhits_training_service import nhits_training_service
 from src.services.event_based_training_service import event_based_training_service
 from src.services.model_improvement_service import model_improvement_service
 from src.services.auto_forecast_service import auto_forecast_service
+from src.shared.test_health_router import create_test_health_router
+from src.shared.health import get_test_unhealthy_status
 
 # Configure logging
 logger.remove()
@@ -67,6 +69,10 @@ app.include_router(training_router, prefix="/api/v1", tags=["NHITS Training"])
 app.include_router(forecast_router, prefix="/api/v1", tags=["NHITS Forecast"])
 app.include_router(system_router, prefix="/api/v1", tags=["System & Monitoring"])
 app.include_router(backup_router, prefix="/api/v1", tags=["Backup & Restore"])
+
+# Test-Health-Router für Test-Unhealthy-Endpoint
+test_health_router = create_test_health_router("nhits")
+app.include_router(test_health_router, prefix="/api/v1", tags=["System & Monitoring"])
 
 
 @app.on_event("startup")
@@ -131,13 +137,25 @@ async def shutdown_event():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {
-        "service": "nhits",
-        "status": "healthy",
+    service_name = "nhits"
+
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status(service_name)
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
+    response = {
+        "service": service_name,
+        "status": "unhealthy" if is_unhealthy else "healthy",
         "version": VERSION,
         "gpu_enabled": settings.nhits_use_gpu,
         "training_in_progress": nhits_training_service.get_status().get("training_in_progress", False)
     }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 @app.get("/")

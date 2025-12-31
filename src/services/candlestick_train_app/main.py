@@ -23,6 +23,11 @@ from .routers import training_router, system_router
 from .services.training_service import training_service
 from .services.training_scheduler import training_scheduler
 
+# Import für Test-Health-Funktionalität
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
+from src.shared.test_health_router import create_test_health_router
+from src.shared.health import get_test_unhealthy_status
+
 # Configuration
 VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
 SERVICE_NAME = "candlestick-train"
@@ -119,6 +124,10 @@ app.add_middleware(
 app.include_router(system_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(training_router, prefix="/api/v1", tags=["2. Training"])
 
+# Test-Health-Router
+test_health_router = create_test_health_router("candlestick-train")
+app.include_router(test_health_router, prefix="/api/v1", tags=["1. System"])
+
 
 @app.get("/")
 async def root():
@@ -142,7 +151,20 @@ async def root():
 @app.get("/health")
 async def health():
     """Simple health check at root level."""
-    return {"status": "healthy", "service": SERVICE_NAME}
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("candlestick-train")
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
+    response = {
+        "status": "unhealthy" if is_unhealthy else "healthy",
+        "service": SERVICE_NAME
+    }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 if __name__ == "__main__":

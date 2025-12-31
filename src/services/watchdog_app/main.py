@@ -11,6 +11,8 @@ from fastapi import FastAPI
 from loguru import logger
 
 from src.shared.logging_config import log_shutdown_info, log_startup_info, setup_logging
+from src.shared.test_health_router import create_test_health_router
+from src.shared.health import get_test_unhealthy_status
 
 from .api.routes import router
 from .api.training_routes import router as training_router
@@ -144,15 +146,24 @@ app = FastAPI(
 app.include_router(router, prefix="/api/v1")
 app.include_router(training_router, prefix="/api/v1")
 
+# Test-Health-Router für alle Services (vom Watchdog aus steuerbar)
+test_health_router = create_test_health_router("watchdog")
+app.include_router(test_health_router, prefix="/api/v1", tags=["Testing"])
+
 
 @app.get("/health")
 async def health_check():
     """Health-Check für den Watchdog selbst."""
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("watchdog")
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
     summary = health_checker.get_summary() if health_checker else {}
     orchestrator_status = training_orchestrator.get_status()
-    return {
+
+    response = {
         "service": "watchdog",
-        "status": "healthy",
+        "status": "unhealthy" if is_unhealthy else "healthy",
         "version": VERSION,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "monitoring_active": health_checker._running if health_checker else False,
@@ -166,6 +177,12 @@ async def health_check():
             "running_jobs": orchestrator_status.get("running_jobs", 0)
         }
     }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 if __name__ == "__main__":

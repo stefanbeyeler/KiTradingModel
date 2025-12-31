@@ -46,6 +46,8 @@ from src.api.routes import (
 from src.api.testing_routes import testing_router
 from src.services.training_data_cache_service import training_data_cache
 from src.service_registry import register_service
+from src.shared.test_health_router import create_test_health_router
+from src.shared.health import is_test_unhealthy, get_test_unhealthy_status
 import asyncio
 
 # Optional imports for RAG sync (requires sentence_transformers)
@@ -241,6 +243,10 @@ app.include_router(external_sources_router, prefix="/api/v1", tags=["10. Externa
 app.include_router(indicators_router, prefix="/api/v1", tags=["11. Technical Indicators"])
 app.include_router(testing_router, prefix="/api/v1/testing", tags=["12. Testing"])
 
+# Test-Health-Router für Test-Unhealthy-Endpoint
+test_health_router = create_test_health_router("data")
+app.include_router(test_health_router, prefix="/api/v1", tags=["12. Testing"])
+
 
 async def _periodic_cache_cleanup():
     """Background task to periodically cleanup expired cache entries."""
@@ -381,6 +387,12 @@ async def shutdown_event():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+    service_name = "data"
+
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status(service_name)
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
     sync_status = "unknown"
     if sync_service:
         sync_status = "running" if getattr(sync_service, '_running', False) else "stopped"
@@ -393,14 +405,20 @@ async def health_check():
     except Exception:
         pass
 
-    return {
-        "service": "data",
-        "status": "healthy",
+    response = {
+        "service": service_name,
+        "status": "unhealthy" if is_unhealthy else "healthy",
         "version": VERSION,
         "easyinsight_api": settings.easyinsight_api_url,
         "sync_service_status": sync_status,
         "prefetch_service_status": prefetch_status
     }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 @app.get("/")

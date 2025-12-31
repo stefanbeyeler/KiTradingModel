@@ -188,7 +188,7 @@ app.add_middleware(
 # ============================================================
 # Health Check (Standardized)
 # ============================================================
-from src.shared.health import HealthResponse, HealthStatus
+from src.shared.health import HealthResponse, HealthStatus, get_test_unhealthy_status
 
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
@@ -199,6 +199,10 @@ async def health_check() -> HealthResponse:
     Returns:
         HealthResponse mit Service-Status und Model-Informationen
     """
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("embedder")
+    is_test_unhealthy = test_status.get("test_unhealthy", False)
+
     # GPU Status
     gpu_available = False
     gpu_name = None
@@ -214,12 +218,28 @@ async def health_check() -> HealthResponse:
     model_info = embedding_service.get_model_info()
 
     # Status bestimmen
-    if state.startup_error:
+    if is_test_unhealthy:
         status = HealthStatus.UNHEALTHY
+        error_msg = f"Test-Unhealthy aktiv (noch {test_status.get('remaining_seconds')}s)"
+    elif state.startup_error:
+        status = HealthStatus.UNHEALTHY
+        error_msg = state.startup_error
     elif not state.is_ready:
         status = HealthStatus.STARTING
+        error_msg = None
     else:
         status = HealthStatus.HEALTHY
+        error_msg = None
+
+    extras = {
+        "models": model_info,
+        "cache_size": settings.cache_max_size,
+        "lazy_loading": settings.lazy_load_models,
+    }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_test_unhealthy:
+        extras["test_unhealthy"] = test_status
 
     return HealthResponse(
         status=status,
@@ -227,24 +247,23 @@ async def health_check() -> HealthResponse:
         version=settings.version,
         timestamp=datetime.utcnow().isoformat() + "Z",
         uptime_seconds=round(get_uptime_seconds(), 2),
-        is_ready=state.is_ready,
-        error=state.startup_error,
+        is_ready=state.is_ready and not is_test_unhealthy,
+        error=error_msg,
         gpu_available=gpu_available,
         gpu_name=gpu_name,
         model_loaded=state.models_loaded or model_info.get("text", {}).get("loaded", False),
         model_name=settings.text_model,
-        extras={
-            "models": model_info,
-            "cache_size": settings.cache_max_size,
-            "lazy_loading": settings.lazy_load_models,
-        },
+        extras=extras,
     )
 
 
 # ============================================================
 # Router Registration
 # ============================================================
+from .routers.system_router import test_health_router
+
 app.include_router(system_router, prefix="/api/v1", tags=["1. System & Monitoring"])
+app.include_router(test_health_router, prefix="/api/v1", tags=["1. System & Monitoring"])
 app.include_router(text_router, prefix="/api/v1/text", tags=["2. Text Embeddings"])
 app.include_router(timeseries_router, prefix="/api/v1/timeseries", tags=["3. Time Series Embeddings"])
 app.include_router(feature_router, prefix="/api/v1/features", tags=["4. Feature Embeddings"])

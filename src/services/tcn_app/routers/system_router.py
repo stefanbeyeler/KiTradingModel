@@ -7,11 +7,21 @@ from datetime import datetime
 
 from ..services.pattern_detection_service import pattern_detection_service
 
+# Import für Test-Health-Funktionalität
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
+from src.shared.health import get_test_unhealthy_status
+from src.shared.test_health_router import create_test_health_router
+
 router = APIRouter()
 
 VERSION = "1.0.0"
 SERVICE_NAME = "tcn-pattern"
 START_TIME = datetime.now()
+
+# Test-Health-Router
+test_health_router = create_test_health_router("tcn")
 
 
 class ModelReloadRequest(BaseModel):
@@ -22,13 +32,23 @@ class ModelReloadRequest(BaseModel):
 @router.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("tcn")
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
+    response = {
         "service": SERVICE_NAME,
-        "status": "healthy",
+        "status": "unhealthy" if is_unhealthy else "healthy",
         "version": VERSION,
         "uptime_seconds": (datetime.now() - START_TIME).total_seconds(),
         "model_loaded": pattern_detection_service.is_model_loaded()
     }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 @router.get("/info")

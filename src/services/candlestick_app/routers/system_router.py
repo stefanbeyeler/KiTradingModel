@@ -1,6 +1,7 @@
 """System and monitoring endpoints."""
 
 import os
+import sys
 from datetime import datetime
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -10,23 +11,41 @@ from ..services.pattern_detection_service import candlestick_pattern_service
 from ..services.pattern_history_service import pattern_history_service
 from ..services.ai_validator_service import ai_validator_service
 
+# Import für Test-Health-Funktionalität
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
+from src.shared.health import get_test_unhealthy_status
+from src.shared.test_health_router import create_test_health_router
+
 router = APIRouter()
 
 VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
 SERVICE_NAME = "candlestick"
 START_TIME = datetime.now()
 
+# Test-Health-Router
+test_health_router = create_test_health_router("candlestick")
+
 
 @router.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {
+    # Prüfe Test-Unhealthy-Status
+    test_status = get_test_unhealthy_status("candlestick")
+    is_unhealthy = test_status.get("test_unhealthy", False)
+
+    response = {
         "service": SERVICE_NAME,
-        "status": "healthy",
+        "status": "unhealthy" if is_unhealthy else "healthy",
         "version": VERSION,
         "uptime_seconds": (datetime.now() - START_TIME).total_seconds(),
         "auto_scan_running": pattern_history_service.is_running()
     }
+
+    # Test-Status hinzufügen wenn aktiv
+    if is_unhealthy:
+        response["test_unhealthy"] = test_status
+
+    return response
 
 
 @router.get("/info")
