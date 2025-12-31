@@ -12,6 +12,67 @@ from ..config import WatchdogSettings
 from ..models.service_status import HealthState, ServiceStatus
 
 
+# Mapping von technischen Fehlermeldungen zu benutzerfreundlichen Texten
+ERROR_MESSAGES = {
+    # DNS/Name Resolution Errors
+    "Temporary failure in name resolution": "Container nicht gestartet",
+    "Name or service not known": "Container nicht gestartet",
+    "nodename nor servname provided": "Container nicht gestartet",
+    "getaddrinfo failed": "Container nicht gestartet",
+    # Connection Errors
+    "Connection refused": "Verbindung abgelehnt - Service nicht bereit",
+    "Connection reset": "Verbindung unterbrochen",
+    "Connection timed out": "Zeitüberschreitung bei Verbindungsaufbau",
+    "No route to host": "Netzwerk nicht erreichbar",
+    "Network is unreachable": "Netzwerk nicht erreichbar",
+    # Timeout Errors
+    "Timeout": "Zeitüberschreitung - Service antwortet nicht",
+    "Read timed out": "Zeitüberschreitung beim Lesen",
+    "timed out": "Zeitüberschreitung",
+    # TCP Errors
+    "not responding": "Port nicht erreichbar",
+    # HTTP Errors
+    "HTTP 500": "Interner Server-Fehler",
+    "HTTP 502": "Bad Gateway - Backend nicht erreichbar",
+    "HTTP 503": "Service nicht verfügbar",
+    "HTTP 504": "Gateway Timeout",
+}
+
+
+def _translate_error(error: str) -> str:
+    """
+    Übersetzt technische Fehlermeldungen in benutzerfreundliche Texte.
+
+    Args:
+        error: Technische Fehlermeldung
+
+    Returns:
+        Benutzerfreundliche Fehlermeldung
+    """
+    if not error:
+        return "Unbekannter Fehler"
+
+    # Prüfe auf bekannte Fehlermuster
+    error_lower = error.lower()
+    for pattern, friendly_msg in ERROR_MESSAGES.items():
+        if pattern.lower() in error_lower:
+            return friendly_msg
+
+    # Errno-Codes extrahieren und übersetzen
+    if "[errno" in error_lower:
+        if "errno -2]" in error_lower or "errno -3]" in error_lower:
+            return "Container nicht gestartet"
+        if "errno 111]" in error_lower:
+            return "Verbindung abgelehnt - Service nicht bereit"
+        if "errno 110]" in error_lower:
+            return "Zeitüberschreitung bei Verbindungsaufbau"
+        if "errno 113]" in error_lower:
+            return "Netzwerk nicht erreichbar"
+
+    # Fallback: Originalmeldung zurückgeben
+    return error
+
+
 class HealthChecker:
     """Prüft regelmässig den Health-Status aller Services."""
 
@@ -240,16 +301,19 @@ class HealthChecker:
     def _create_failure_status(
         self, name: str, check_time: datetime, error: str
     ) -> ServiceStatus:
-        """Erstellt einen Fehler-Status."""
+        """Erstellt einen Fehler-Status mit benutzerfreundlicher Fehlermeldung."""
         prev_status = self.status.get(name)
         consecutive = (prev_status.consecutive_failures + 1) if prev_status else 1
+
+        # Übersetze technische Fehlermeldung
+        friendly_error = _translate_error(error)
 
         return ServiceStatus(
             name=name,
             state=HealthState.UNHEALTHY,
             response_time_ms=None,
             last_check=check_time,
-            error=error,
+            error=friendly_error,
             consecutive_failures=consecutive
         )
 
