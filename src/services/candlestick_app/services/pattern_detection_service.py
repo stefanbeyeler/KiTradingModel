@@ -283,19 +283,28 @@ class CandlestickPatternService:
         - Small body at the top
         - Long lower shadow (at least 2x body)
         - Little or no upper shadow
+
+        Uses configurable parameters from rule_config_service.
         """
         if candle.total_range == 0:
             return False
+
+        # Get configurable parameters
+        params = rule_config_service.get_pattern_params("hammer")
+        body_max_ratio = params.get("body_max_ratio", 0.35)
+        lower_shadow_min_ratio = params.get("lower_shadow_min_ratio", 0.5)
+        upper_shadow_max_ratio = params.get("upper_shadow_max_ratio", 0.15)
+        shadow_to_body_min = params.get("shadow_to_body_min", 2.0)
 
         body_ratio = candle.body_size / candle.total_range
         lower_shadow_ratio = candle.lower_shadow / candle.total_range
         upper_shadow_ratio = candle.upper_shadow / candle.total_range
 
         return (
-            body_ratio < 0.35 and
-            lower_shadow_ratio > 0.5 and
-            upper_shadow_ratio < 0.15 and
-            candle.lower_shadow >= candle.body_size * 2
+            body_ratio < body_max_ratio and
+            lower_shadow_ratio > lower_shadow_min_ratio and
+            upper_shadow_ratio < upper_shadow_max_ratio and
+            candle.lower_shadow >= candle.body_size * shadow_to_body_min
         )
 
     def _is_inverted_hammer(self, candle: CandleData, avg_body: float) -> bool:
@@ -304,31 +313,46 @@ class CandlestickPatternService:
         - Small body at the bottom
         - Long upper shadow (at least 2x body)
         - Little or no lower shadow
+
+        Uses configurable parameters from rule_config_service.
         """
         if candle.total_range == 0:
             return False
+
+        # Get configurable parameters
+        params = rule_config_service.get_pattern_params("inverted_hammer")
+        body_max_ratio = params.get("body_max_ratio", 0.35)
+        upper_shadow_min_ratio = params.get("upper_shadow_min_ratio", 0.5)
+        lower_shadow_max_ratio = params.get("lower_shadow_max_ratio", 0.15)
+        shadow_to_body_min = params.get("shadow_to_body_min", 2.0)
 
         body_ratio = candle.body_size / candle.total_range
         upper_shadow_ratio = candle.upper_shadow / candle.total_range
         lower_shadow_ratio = candle.lower_shadow / candle.total_range
 
         return (
-            body_ratio < 0.35 and
-            upper_shadow_ratio > 0.5 and
-            lower_shadow_ratio < 0.15 and
-            candle.upper_shadow >= candle.body_size * 2
+            body_ratio < body_max_ratio and
+            upper_shadow_ratio > upper_shadow_min_ratio and
+            lower_shadow_ratio < lower_shadow_max_ratio and
+            candle.upper_shadow >= candle.body_size * shadow_to_body_min
         )
 
     def _is_shooting_star(self, candle: CandleData, prev_candle: CandleData, avg_body: float) -> bool:
         """
         Check for Shooting Star pattern (Inverted Hammer after uptrend).
+
+        Uses configurable parameters from rule_config_service.
         """
         # Must be in an uptrend (previous candle bullish)
         if not prev_candle.is_bullish:
             return False
 
+        # Get configurable gap tolerance
+        params = rule_config_service.get_pattern_params("shooting_star")
+        gap_tolerance = params.get("gap_tolerance", 0.998)
+
         # Must gap up or open at/near previous high
-        if candle.open < prev_candle.close * 0.998:
+        if candle.open < prev_candle.close * gap_tolerance:
             return False
 
         return self._is_inverted_hammer(candle, avg_body)
@@ -336,13 +360,19 @@ class CandlestickPatternService:
     def _is_hanging_man(self, candle: CandleData, prev_candle: CandleData, avg_body: float) -> bool:
         """
         Check for Hanging Man pattern (Hammer after uptrend).
+
+        Uses configurable parameters from rule_config_service.
         """
         # Must be in an uptrend (previous candle bullish)
         if not prev_candle.is_bullish:
             return False
 
+        # Get configurable gap tolerance
+        params = rule_config_service.get_pattern_params("hanging_man")
+        gap_tolerance = params.get("gap_tolerance", 0.998)
+
         # Must gap up or open at/near previous high
-        if candle.open < prev_candle.close * 0.998:
+        if candle.open < prev_candle.close * gap_tolerance:
             return False
 
         return self._is_hammer(candle, avg_body)
@@ -352,9 +382,17 @@ class CandlestickPatternService:
         Check for Spinning Top pattern.
         - Small body
         - Long shadows on both sides (roughly equal)
+
+        Uses configurable parameters from rule_config_service.
         """
         if candle.total_range == 0:
             return False
+
+        # Get configurable parameters
+        params = rule_config_service.get_pattern_params("spinning_top")
+        body_max_ratio = params.get("body_max_ratio", 0.3)
+        shadow_min_ratio = params.get("shadow_min_ratio", 0.25)
+        shadow_balance_max_diff = params.get("shadow_balance_max_diff", 0.2)
 
         body_ratio = candle.body_size / candle.total_range
         upper_shadow_ratio = candle.upper_shadow / candle.total_range
@@ -362,10 +400,10 @@ class CandlestickPatternService:
 
         # Small body, significant shadows on both sides
         return (
-            body_ratio < 0.3 and
-            upper_shadow_ratio > 0.25 and
-            lower_shadow_ratio > 0.25 and
-            abs(upper_shadow_ratio - lower_shadow_ratio) < 0.2  # Roughly equal shadows
+            body_ratio < body_max_ratio and
+            upper_shadow_ratio > shadow_min_ratio and
+            lower_shadow_ratio > shadow_min_ratio and
+            abs(upper_shadow_ratio - lower_shadow_ratio) < shadow_balance_max_diff
         )
 
     def _is_bullish_engulfing(self, current: CandleData, prev: CandleData, avg_body: float = 0) -> bool:
