@@ -296,7 +296,7 @@ async def create_crt_range(request: RangeCreateRequest):
         candle_start = session_manager.get_current_h4_candle()["start_utc"]
 
     # Check if this is a key session candle
-    from ..services.crt.session_utils import get_session_for_h4_candle
+    from src.utils.session_utils import get_session_for_h4_candle
     session_type = get_session_for_h4_candle(candle_start)
 
     if not session_type:

@@ -211,7 +211,8 @@
       "Bash(/e/KiTradingModel/venv/Scripts/python.exe -m py_compile src/utils/session_utils.py)",
       "Bash(/e/KiTradingModel/venv/Scripts/python.exe -m py_compile:*)",
       "Bash(/e/KiTradingModel/src/services/watchdog_app/ )",
-      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/src/services/watchdog_app/ )"
+      "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/src/services/watchdog_app/ )",
+      "Bash(do echo \"=== Port $port ===\" curl -s \"http://10.1.19.101:$port/openapi.json\")"
     ],
     "deny": [],
     "ask": []

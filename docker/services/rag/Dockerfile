@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-COPY requirements.txt .
+COPY docker/services/rag/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install FAISS - use faiss-cpu as faiss-gpu is not available for ARM64/Tegra

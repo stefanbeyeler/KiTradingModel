@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Optional, Dict
 from loguru import logger
 
-from .session_utils import SessionType, UTC_TZ
+from src.utils.session_utils import SessionType, UTC_TZ
 
 
 class CRTState(str, Enum):
