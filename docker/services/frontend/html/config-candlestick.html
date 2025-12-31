@@ -5370,8 +5370,9 @@
                 const data = await res.json();
 
                 const card = document.getElementById('currentTrainingSection');
-                const btn = document.getElementById('btnStartTraining');
+                const btn = document.getElementById('btnStartRevalTraining');
 
+                // Only show section if training is actively running
                 if (data.training && data.last_job) {
                     // Show current training
                     card.style.display = 'block';
@@ -5390,28 +5391,11 @@
                     document.getElementById('currentJobStatus').textContent = 'Running';
                     document.getElementById('currentJobStatus').className = 'job-status running';
 
-                } else if (data.last_job) {
-                    // Show last job result briefly
-                    card.style.display = 'block';
-                    btn.disabled = false;
-                    btn.textContent = 'Training starten';
-
-                    const job = data.last_job;
-                    document.getElementById('currentJobId').textContent = job.job_id;
-                    document.getElementById('currentJobProgress').textContent = `${job.progress?.toFixed(1) || 0}%`;
-                    document.getElementById('currentProgressBar').style.width = `${job.progress || 0}%`;
-                    document.getElementById('currentEpoch').textContent = job.current_epoch || 0;
-                    document.getElementById('totalEpochs').textContent = job.epochs || 0;
-                    document.getElementById('currentLoss').textContent = job.current_loss?.toFixed(4) || '-';
-                    document.getElementById('bestLoss').textContent = job.best_loss?.toFixed(4) || '-';
-
-                    document.getElementById('currentJobStatus').textContent = job.status;
-                    document.getElementById('currentJobStatus').className = `job-status ${job.status}`;
-
                 } else {
+                    // No active training - hide section
                     card.style.display = 'none';
                     btn.disabled = false;
-                    btn.textContent = 'Training starten';
+                    btn.textContent = '▶ Training starten';
                 }
 
             } catch (error) {
