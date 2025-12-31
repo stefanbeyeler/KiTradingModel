@@ -1,6 +1,7 @@
 """Health Checker Service für Microservice-Überwachung."""
 
 import asyncio
+import os
 import socket
 from datetime import datetime, timezone
 from typing import Dict
@@ -10,6 +11,9 @@ from loguru import logger
 
 from ..config import WatchdogSettings
 from ..models.service_status import HealthState, ServiceStatus
+
+# Data Service URL für externe Service-Checks (Gateway-Pattern)
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
 
 
 # Mapping von technischen Fehlermeldungen zu benutzerfreundlichen Texten
@@ -176,11 +180,30 @@ class HealthChecker:
                 "startup_grace": 60,
                 "dependencies": ["rag"]
             },
+            # Externe Datenquellen werden über den Data Service abgefragt (Gateway-Pattern)
             "easyinsight": {
-                "url": "http://10.1.19.102:3000/api/health",
+                "url": "/api/v1/easyinsight/status",
                 "criticality": "critical",
                 "startup_grace": 10,
-                "dependencies": []
+                "dependencies": ["data"],
+                "check_type": "easyinsight",
+                "is_external": True
+            },
+            "twelvedata": {
+                "url": "/api/v1/twelvedata/status",
+                "criticality": "high",
+                "startup_grace": 5,
+                "dependencies": ["data"],
+                "check_type": "twelvedata",
+                "is_external": True
+            },
+            "yahoo": {
+                "url": "/api/v1/yfinance/status",
+                "criticality": "medium",
+                "startup_grace": 5,
+                "dependencies": ["data"],
+                "check_type": "yahoo",
+                "is_external": True
             }
         }
 
@@ -200,6 +223,18 @@ class HealthChecker:
         # TCP-Check für Redis und andere non-HTTP Services
         if config.get("check_type") == "tcp":
             return await self._check_tcp_service(name, config, start_time)
+
+        # EasyInsight API Check (über Data Service)
+        if config.get("check_type") == "easyinsight":
+            return await self._check_easyinsight(name, config, start_time)
+
+        # TwelveData API Check (über Data Service)
+        if config.get("check_type") == "twelvedata":
+            return await self._check_twelvedata(name, config, start_time)
+
+        # Yahoo Finance API Check (über Data Service)
+        if config.get("check_type") == "yahoo":
+            return await self._check_yahoo(name, config, start_time)
 
         try:
             async with httpx.AsyncClient(timeout=self.settings.timeout_seconds) as client:
@@ -295,6 +330,208 @@ class HealthChecker:
                     name, start_time, f"TCP port {port} not responding"
                 )
 
+        except Exception as e:
+            return self._create_failure_status(name, start_time, str(e))
+
+    async def _check_easyinsight(
+        self, name: str, config: dict, start_time: datetime
+    ) -> ServiceStatus:
+        """
+        Prüft EasyInsight API-Verfügbarkeit über den Data Service.
+
+        Args:
+            name: Service-Name
+            config: Service-Konfiguration
+            start_time: Zeitpunkt des Check-Starts
+
+        Returns:
+            ServiceStatus mit aktuellem Status
+        """
+        try:
+            async with httpx.AsyncClient(timeout=self.settings.timeout_seconds) as client:
+                response = await client.get(f"{DATA_SERVICE_URL}{config['url']}")
+                response_time_ms = (
+                    datetime.now(timezone.utc) - start_time
+                ).total_seconds() * 1000
+
+                if response.status_code == 200:
+                    data = response.json()
+                    status = data.get("status", "disconnected")
+
+                    if status == "connected":
+                        return ServiceStatus(
+                            name=name,
+                            state=HealthState.HEALTHY,
+                            response_time_ms=response_time_ms,
+                            last_check=start_time,
+                            details={
+                                "status": "healthy",
+                                "url": data.get("url", "N/A"),
+                                "latency_ms": data.get("latency_ms", 0),
+                                "symbols_available": data.get("symbols_available", 0)
+                            },
+                            consecutive_failures=0
+                        )
+                    elif status == "error":
+                        return ServiceStatus(
+                            name=name,
+                            state=HealthState.DEGRADED,
+                            response_time_ms=response_time_ms,
+                            last_check=start_time,
+                            details={
+                                "status": "degraded",
+                                "reason": data.get("error", "Unknown error"),
+                                "url": data.get("url", "N/A")
+                            },
+                            consecutive_failures=0
+                        )
+                    else:  # disconnected
+                        return self._create_failure_status(
+                            name, start_time, data.get("error", "EasyInsight disconnected")
+                        )
+                else:
+                    return self._create_failure_status(
+                        name, start_time, f"Data Service returned HTTP {response.status_code}"
+                    )
+
+        except httpx.TimeoutException:
+            return self._create_failure_status(name, start_time, "Timeout")
+        except Exception as e:
+            return self._create_failure_status(name, start_time, str(e))
+
+    async def _check_twelvedata(
+        self, name: str, config: dict, start_time: datetime
+    ) -> ServiceStatus:
+        """
+        Prüft TwelveData API-Verfügbarkeit über den Data Service.
+
+        Args:
+            name: Service-Name
+            config: Service-Konfiguration
+            start_time: Zeitpunkt des Check-Starts
+
+        Returns:
+            ServiceStatus mit aktuellem Status
+        """
+        try:
+            async with httpx.AsyncClient(timeout=self.settings.timeout_seconds) as client:
+                response = await client.get(f"{DATA_SERVICE_URL}{config['url']}")
+                response_time_ms = (
+                    datetime.now(timezone.utc) - start_time
+                ).total_seconds() * 1000
+
+                if response.status_code == 200:
+                    data = response.json()
+                    available = data.get("available", False)
+                    api_key_configured = data.get("api_key_configured", False)
+
+                    if not api_key_configured:
+                        return ServiceStatus(
+                            name=name,
+                            state=HealthState.DEGRADED,
+                            response_time_ms=response_time_ms,
+                            last_check=start_time,
+                            details={
+                                "status": "degraded",
+                                "reason": "API key not configured in Data Service"
+                            },
+                            consecutive_failures=0
+                        )
+
+                    if available:
+                        return ServiceStatus(
+                            name=name,
+                            state=HealthState.HEALTHY,
+                            response_time_ms=response_time_ms,
+                            last_check=start_time,
+                            details={
+                                "status": "healthy",
+                                "daily_used": data.get("daily_usage", "N/A"),
+                                "plan_limit": data.get("plan_limit", "N/A"),
+                                "credits_remaining": data.get("credits_remaining", "N/A")
+                            },
+                            consecutive_failures=0
+                        )
+                    else:
+                        return ServiceStatus(
+                            name=name,
+                            state=HealthState.DEGRADED,
+                            response_time_ms=response_time_ms,
+                            last_check=start_time,
+                            details={
+                                "status": "degraded",
+                                "reason": data.get("error", "TwelveData not available")
+                            },
+                            consecutive_failures=0
+                        )
+                else:
+                    return self._create_failure_status(
+                        name, start_time, f"Data Service returned HTTP {response.status_code}"
+                    )
+
+        except httpx.TimeoutException:
+            return self._create_failure_status(name, start_time, "Timeout")
+        except Exception as e:
+            return self._create_failure_status(name, start_time, str(e))
+
+    async def _check_yahoo(
+        self, name: str, config: dict, start_time: datetime
+    ) -> ServiceStatus:
+        """
+        Prüft Yahoo Finance API-Verfügbarkeit über den Data Service.
+
+        Args:
+            name: Service-Name
+            config: Service-Konfiguration
+            start_time: Zeitpunkt des Check-Starts
+
+        Returns:
+            ServiceStatus mit aktuellem Status
+        """
+        try:
+            async with httpx.AsyncClient(timeout=self.settings.timeout_seconds) as client:
+                response = await client.get(f"{DATA_SERVICE_URL}{config['url']}")
+                response_time_ms = (
+                    datetime.now(timezone.utc) - start_time
+                ).total_seconds() * 1000
+
+                if response.status_code == 200:
+                    data = response.json()
+                    available = data.get("available", False)
+
+                    if available:
+                        return ServiceStatus(
+                            name=name,
+                            state=HealthState.HEALTHY,
+                            response_time_ms=response_time_ms,
+                            last_check=start_time,
+                            details={
+                                "status": "healthy",
+                                "version": data.get("version", "N/A"),
+                                "supported_symbols": data.get("supported_symbols", 0),
+                                "categories": data.get("categories", [])
+                            },
+                            consecutive_failures=0
+                        )
+                    else:
+                        return ServiceStatus(
+                            name=name,
+                            state=HealthState.DEGRADED,
+                            response_time_ms=response_time_ms,
+                            last_check=start_time,
+                            details={
+                                "status": "degraded",
+                                "reason": "yfinance not installed or unavailable"
+                            },
+                            consecutive_failures=0
+                        )
+                else:
+                    return self._create_failure_status(
+                        name, start_time, f"Data Service returned HTTP {response.status_code}"
+                    )
+
+        except httpx.TimeoutException:
+            return self._create_failure_status(name, start_time, "Timeout")
         except Exception as e:
             return self._create_failure_status(name, start_time, str(e))
 

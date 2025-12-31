@@ -457,6 +457,11 @@
             box-shadow: 0 0 6px rgba(229, 115, 115, 0.6);
         }
 
+        .service-status-item .status-dot.degraded {
+            background: #ffb74d;
+            box-shadow: 0 0 6px rgba(255, 183, 77, 0.6);
+        }
+
         .service-status-item .status-dot.loading {
             background: #ffb74d;
             animation: pulse 1.5s ease-in-out infinite;
@@ -610,6 +615,11 @@
 
         .service-item-compact .status-dot.offline {
             background: #e57373;
+        }
+
+        .service-item-compact .status-dot.degraded {
+            background: #ffb74d;
+            box-shadow: 0 0 6px rgba(255, 183, 77, 0.5);
         }
 
         .service-item-compact .service-name {
@@ -1253,6 +1263,10 @@
                         <h3 style="font-size: 1rem; color: #64b5f6; display: flex; align-items: center; gap: 0.5rem;">
                             <span>&#127760;</span> Externe Services
                         </h3>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-sm btn-success" onclick="toggleServiceCategory('external', true)">Alle an</button>
+                            <button class="btn btn-sm btn-danger" onclick="toggleServiceCategory('external', false)">Alle aus</button>
+                        </div>
                     </div>
                     <div class="services-grid-compact" id="external-services-alerts">
                         <!-- Wird dynamisch geladen -->
@@ -1399,7 +1413,9 @@
             'hmm-train': { icon: '&#127891;', name: 'HMM Train', category: 'training' },
             'candlestick-train': { icon: '&#127891;', name: 'Candle Train', category: 'training' },
             // External Services
-            'easyinsight': { icon: '&#127760;', name: 'EasyInsight', category: 'external' }
+            'easyinsight': { icon: '&#127760;', name: 'EasyInsight', category: 'external' },
+            'twelvedata': { icon: '&#128200;', name: 'TwelveData', category: 'external' },
+            'yahoo': { icon: '&#128176;', name: 'Yahoo Finance', category: 'external' }
         };
 
         let currentServiceAlerts = {};
@@ -1622,6 +1638,13 @@
             { name: 'Candle-Train', port: 3016, key: 'candlestick-train' }
         ];
 
+        // External API Services (checked via Watchdog)
+        const EXTERNAL_SERVICES = [
+            { name: 'EasyInsight', key: 'easyinsight', icon: '&#127760;' },
+            { name: 'TwelveData', key: 'twelvedata', icon: '&#128200;' },
+            { name: 'Yahoo Finance', key: 'yahoo', icon: '&#128176;' }
+        ];
+
         // Track service health status
         let serviceHealthStatus = {};
 
@@ -1629,10 +1652,12 @@
         async function loadServicesStatus() {
             const grid = document.getElementById('services-status-grid');
 
-            // Update total count immediately
-            document.getElementById('stat-services-total').textContent = ALL_SERVICES.length;
+            // Update total count (including external services)
+            const totalCount = ALL_SERVICES.length + EXTERNAL_SERVICES.length;
+            document.getElementById('stat-services-total').textContent = totalCount;
 
-            grid.innerHTML = ALL_SERVICES.map(s => `
+            // Build HTML for internal services
+            let html = ALL_SERVICES.map(s => `
                 <div class="service-status-item" id="svc-${s.key}">
                     <span class="status-dot loading" id="dot-${s.key}"></span>
                     <span class="service-name">${s.name}</span>
@@ -1640,12 +1665,96 @@
                 </div>
             `).join('');
 
+            // Add separator and external services section
+            html += `
+                <div class="service-status-item" style="grid-column: 1/-1; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem; margin-top: 0.5rem;">
+                    <span style="font-size: 0.75rem; opacity: 0.7; color: #64b5f6;">&#127760; Externe Datenquellen</span>
+                </div>
+            `;
+
+            // Add external services
+            html += EXTERNAL_SERVICES.map(s => `
+                <div class="service-status-item" id="svc-${s.key}">
+                    <span class="status-dot loading" id="dot-${s.key}"></span>
+                    <span class="service-name">${s.name}</span>
+                    <span class="service-port" style="opacity: 0.5;">extern</span>
+                </div>
+            `).join('');
+
+            grid.innerHTML = html;
+
             // Reset health status tracking
             serviceHealthStatus = {};
 
-            // Check each service
+            // Check each internal service
             for (const s of ALL_SERVICES) {
                 checkServiceHealth(s);
+            }
+
+            // Check external services via Watchdog API
+            checkExternalServicesHealth();
+        }
+
+        // Check external services via Watchdog API
+        async function checkExternalServicesHealth() {
+            try {
+                const res = await fetch('/watchdog/api/v1/status');
+                if (!res.ok) throw new Error('Watchdog API not available');
+
+                const data = await res.json();
+                const services = data.services || {};
+
+                for (const extSvc of EXTERNAL_SERVICES) {
+                    const dot = document.getElementById(`dot-${extSvc.key}`);
+                    const item = document.getElementById(`svc-${extSvc.key}`);
+                    if (!dot || !item) continue;
+
+                    const svcData = services[extSvc.key];
+                    if (svcData) {
+                        const isHealthy = svcData.state === 'HEALTHY';
+                        const isDegraded = svcData.state === 'DEGRADED';
+
+                        if (isHealthy) {
+                            dot.classList.remove('loading', 'unhealthy', 'degraded');
+                            dot.classList.add('healthy');
+                            item.classList.remove('unhealthy', 'degraded');
+                            item.classList.add('healthy');
+                            serviceHealthStatus[extSvc.key] = true;
+                        } else if (isDegraded) {
+                            dot.classList.remove('loading', 'unhealthy', 'healthy');
+                            dot.classList.add('degraded');
+                            item.classList.remove('unhealthy', 'healthy');
+                            item.classList.add('degraded');
+                            serviceHealthStatus[extSvc.key] = true; // Count degraded as online
+                        } else {
+                            dot.classList.remove('loading', 'healthy', 'degraded');
+                            dot.classList.add('unhealthy');
+                            item.classList.remove('healthy', 'degraded');
+                            item.classList.add('unhealthy');
+                            serviceHealthStatus[extSvc.key] = false;
+                        }
+                    } else {
+                        dot.classList.remove('loading', 'healthy', 'degraded');
+                        dot.classList.add('unhealthy');
+                        item.classList.remove('healthy', 'degraded');
+                        item.classList.add('unhealthy');
+                        serviceHealthStatus[extSvc.key] = false;
+                    }
+
+                    updateOnlineCount();
+                }
+            } catch (err) {
+                console.error('Error checking external services:', err);
+                // Mark all external services as unknown
+                for (const extSvc of EXTERNAL_SERVICES) {
+                    const dot = document.getElementById(`dot-${extSvc.key}`);
+                    if (dot) {
+                        dot.classList.remove('loading', 'healthy', 'degraded');
+                        dot.classList.add('unhealthy');
+                    }
+                    serviceHealthStatus[extSvc.key] = false;
+                }
+                updateOnlineCount();
             }
         }
 
@@ -1710,7 +1819,8 @@
         async function loadMonitoredServices() {
             const container = document.getElementById('monitored-services-list');
 
-            container.innerHTML = `<div class="services-grid-compact">
+            // Internal services
+            let html = `<div class="services-grid-compact">
                 ${ALL_SERVICES.map(s => `
                     <div class="service-item-compact" id="mon-${s.key}" title="${s.name} (Port ${s.port})">
                         <span class="status-dot checking" id="mon-dot-${s.key}"></span>
@@ -1720,9 +1830,72 @@
                 `).join('')}
             </div>`;
 
-            // Check each service status
+            // External services section
+            html += `
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size: 0.85rem; color: #64b5f6; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>&#127760;</span> Externe Datenquellen
+                    </div>
+                    <div class="services-grid-compact">
+                        ${EXTERNAL_SERVICES.map(s => `
+                            <div class="service-item-compact" id="mon-${s.key}" title="${s.name} (extern)">
+                                <span class="status-dot checking" id="mon-dot-${s.key}"></span>
+                                <span class="service-name">${s.name}</span>
+                                <span class="service-port" style="opacity: 0.5;">extern</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+
+            // Check each internal service status
             for (const s of ALL_SERVICES) {
                 checkMonitoredServiceHealth(s);
+            }
+
+            // Check external services via Watchdog API
+            checkMonitoredExternalServicesHealth();
+        }
+
+        // Check external services for the Monitoring tab via Watchdog API
+        async function checkMonitoredExternalServicesHealth() {
+            try {
+                const res = await fetch('/watchdog/api/v1/status');
+                if (!res.ok) throw new Error('Watchdog API not available');
+
+                const data = await res.json();
+                const services = data.services || {};
+
+                for (const extSvc of EXTERNAL_SERVICES) {
+                    const dot = document.getElementById(`mon-dot-${extSvc.key}`);
+                    if (!dot) continue;
+
+                    const svcData = services[extSvc.key];
+                    if (svcData) {
+                        const isHealthy = svcData.state === 'HEALTHY';
+                        const isDegraded = svcData.state === 'DEGRADED';
+
+                        if (isHealthy) {
+                            dot.className = 'status-dot online';
+                        } else if (isDegraded) {
+                            dot.className = 'status-dot degraded';
+                        } else {
+                            dot.className = 'status-dot offline';
+                        }
+                    } else {
+                        dot.className = 'status-dot offline';
+                    }
+                }
+            } catch (err) {
+                console.error('Error checking external services in monitoring:', err);
+                for (const extSvc of EXTERNAL_SERVICES) {
+                    const dot = document.getElementById(`mon-dot-${extSvc.key}`);
+                    if (dot) {
+                        dot.className = 'status-dot offline';
+                    }
+                }
             }
         }
 

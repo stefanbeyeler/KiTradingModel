@@ -1171,6 +1171,7 @@
                         <span class="dataflow-stage-label">Extern</span>
                         <div class="dataflow-nodes-vertical">
                             <div class="dataflow-node external">
+                                <span class="node-status loading" id="df-easyinsight-status"></span>
                                 <span class="node-icon">&#127760;</span>
                                 <div class="node-info">
                                     <span class="node-name">EasyInsight</span>
@@ -1178,6 +1179,7 @@
                                 </div>
                             </div>
                             <div class="dataflow-node external">
+                                <span class="node-status loading" id="df-twelvedata-status"></span>
                                 <span class="node-icon">&#128200;</span>
                                 <div class="node-info">
                                     <span class="node-name">TwelveData</span>
@@ -1185,6 +1187,7 @@
                                 </div>
                             </div>
                             <div class="dataflow-node external">
+                                <span class="node-status loading" id="df-yahoo-status"></span>
                                 <span class="node-icon">&#128176;</span>
                                 <div class="node-info">
                                     <span class="node-name">Yahoo Finance</span>
@@ -1950,7 +1953,11 @@
             'hmm-train': 'df-hmm-train-status',
             'rag': 'df-rag-status',
             'llm': 'df-llm-status',
-            'watchdog': 'df-watchdog-status'
+            'watchdog': 'df-watchdog-status',
+            // External data sources
+            'easyinsight': 'df-easyinsight-status',
+            'twelvedata': 'df-twelvedata-status',
+            'yahoo': 'df-yahoo-status'
         };
 
         function updateDataflowStatus(service, isHealthy) {
@@ -2057,7 +2064,10 @@
         // Legacy checkHealth for services that need additional data from their own endpoints
         async function checkHealth(service, port, statusId) {
             // First update status from watchdog cache
-            updateServiceFromWatchdog(service, statusId);
+            // Skip for watchdog itself - it doesn't monitor itself
+            if (service !== 'watchdog') {
+                updateServiceFromWatchdog(service, statusId);
+            }
 
             // Then fetch additional details from service endpoint
             try {
@@ -2123,11 +2133,44 @@
             const easyinsightService = watchdogServicesStatus['easyinsight'];
             const statusEl = document.getElementById('easyinsight-status');
 
-            if (statusEl && easyinsightService) {
+            if (easyinsightService) {
                 const isHealthy = easyinsightService.state === 'HEALTHY';
-                statusEl.textContent = isHealthy ? 'Online' : 'Offline';
-                statusEl.className = `status-badge ${isHealthy ? 'status-healthy' : 'status-unhealthy'}`;
-                if (isHealthy) healthyServices++;
+                if (statusEl) {
+                    statusEl.textContent = isHealthy ? 'Online' : 'Offline';
+                    statusEl.className = `status-badge ${isHealthy ? 'status-healthy' : 'status-unhealthy'}`;
+                    if (isHealthy) healthyServices++;
+                }
+                // Update dataflow status
+                updateDataflowStatus('easyinsight', isHealthy);
+            } else {
+                // No data from watchdog - mark as unknown/loading
+                updateDataflowStatus('easyinsight', false);
+            }
+        }
+
+        // Update TwelveData status from cached watchdog data
+        function updateTwelveDataStatusFromWatchdog() {
+            const twelvedataService = watchdogServicesStatus['twelvedata'];
+
+            if (twelvedataService) {
+                const isHealthy = twelvedataService.state === 'HEALTHY';
+                const isDegraded = twelvedataService.state === 'DEGRADED';
+                // DEGRADED means API key not configured but service is reachable
+                updateDataflowStatus('twelvedata', isHealthy || isDegraded);
+            } else {
+                updateDataflowStatus('twelvedata', false);
+            }
+        }
+
+        // Update Yahoo Finance status from cached watchdog data
+        function updateYahooStatusFromWatchdog() {
+            const yahooService = watchdogServicesStatus['yahoo'];
+
+            if (yahooService) {
+                const isHealthy = yahooService.state === 'HEALTHY';
+                updateDataflowStatus('yahoo', isHealthy);
+            } else {
+                updateDataflowStatus('yahoo', false);
             }
         }
 
@@ -2327,7 +2370,21 @@
 
         async function updateWatchdogInfo() {
             const data = await checkHealth('watchdog', 3010, 'watchdog-status');
+            const statusEl = document.getElementById('watchdog-status');
+
             if (data) {
+                // Watchdog is online - update status badge and dataflow status explicitly
+                // (Watchdog doesn't monitor itself, so we need to set this manually)
+                const isHealthy = data.status === 'healthy';
+
+                if (statusEl) {
+                    statusEl.textContent = isHealthy ? 'Online' : 'Unhealthy';
+                    statusEl.className = isHealthy ? 'status-badge status-healthy' : 'status-badge status-unhealthy';
+                    if (isHealthy) healthyServices++;
+                }
+
+                updateDataflowStatus('watchdog', isHealthy);
+
                 // Count healthy/total services from watchdog status
                 const servicesEl = document.getElementById('watchdog-services');
                 const telegramEl = document.getElementById('watchdog-telegram');
@@ -2343,8 +2400,13 @@
                 // Update Watchdog Panel (neben Datenfluss)
                 updateWatchdogPanel(data);
             } else {
-                // Watchdog offline - Panel aktualisieren
+                // Watchdog offline - update status badge and panel
+                if (statusEl) {
+                    statusEl.textContent = 'Offline';
+                    statusEl.className = 'status-badge status-unhealthy';
+                }
                 updateWatchdogPanelOffline();
+                updateDataflowStatus('watchdog', false);
             }
         }
 
@@ -2707,9 +2769,11 @@
             await fetchWatchdogStatus();
 
             // Then update UI and fetch additional details where needed
-            // Redis and EasyInsight only need watchdog data (no additional details)
+            // Redis and external sources only need watchdog data (no additional details)
             updateRedisStatus();
             updateEasyInsightStatusFromWatchdog();
+            updateTwelveDataStatusFromWatchdog();
+            updateYahooStatusFromWatchdog();
 
             await Promise.all([
                 updateNhitsInfo(),
