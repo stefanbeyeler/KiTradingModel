@@ -2330,31 +2330,6 @@
                     </div>
                 </div>
 
-                <!-- Current Training Section (shown only when training is active) -->
-                <div id="currentTrainingSection" style="display: none; padding: 1rem; background: rgba(100, 200, 255, 0.08); border: 1px solid rgba(100, 200, 255, 0.2); border-radius: 8px; margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span style="font-weight: 600; color: #64c8ff;">⏳ Aktuelles Training</span>
-                            <span class="job-status running" id="currentJobStatus">Running</span>
-                        </div>
-                        <button class="btn btn-danger" onclick="cancelCurrentTraining()" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">Abbrechen</button>
-                    </div>
-                    <div class="training-status-card" style="background: transparent; padding: 0;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
-                            <span id="currentJobId">-</span>
-                            <span id="currentJobProgress">0%</span>
-                        </div>
-                        <div class="training-progress">
-                            <div class="training-progress-bar" id="currentProgressBar" style="width: 0%;"></div>
-                        </div>
-                        <div class="job-meta" style="margin-top: 0.5rem; font-size: 0.8rem;">
-                            <span>Epoch: <span id="currentEpoch">0</span>/<span id="totalEpochs">0</span></span>
-                            <span>Loss: <span id="currentLoss">-</span></span>
-                            <span>Best Loss: <span id="bestLoss">-</span></span>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Info Footer -->
                 <div style="font-size: 0.8rem; color: #888;">
                     <span id="feedbackInfo">Das gesammelte Feedback wird beim nächsten Training automatisch berücksichtigt.</span>
@@ -2370,18 +2345,26 @@
                     Trainiere das Modell mit den gesammelten Korrekturen, um die Pattern-Erkennung zu verbessern.
                 </p>
 
-                <!-- Training Progress (hidden by default) -->
-                <div id="revalTrainingProgress" style="display: none; margin-bottom: 1rem; padding: 1rem; background: rgba(100, 200, 255, 0.1); border-radius: 8px; border: 1px solid rgba(100, 200, 255, 0.3);">
+                <!-- Current Training Progress (shown only when training is active) -->
+                <div id="currentTrainingSection" style="display: none; margin-bottom: 1rem; padding: 1rem; background: rgba(100, 200, 255, 0.1); border-radius: 8px; border: 1px solid rgba(100, 200, 255, 0.3);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 500; color: #64c8ff;">⏳ Training läuft...</span>
-                        <span id="revalTrainingPercent" style="color: #fff;">0%</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-weight: 600; color: #64c8ff;">⏳ Aktuelles Training</span>
+                            <span class="job-status running" id="currentJobStatus">Running</span>
+                        </div>
+                        <button class="btn btn-danger" onclick="cancelCurrentTraining()" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">Abbrechen</button>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: #888;">
+                        <span id="currentJobId">-</span>
+                        <span id="currentJobProgress">0%</span>
                     </div>
                     <div style="background: rgba(0,0,0,0.3); border-radius: 4px; height: 8px; overflow: hidden;">
-                        <div id="revalTrainingBar" style="background: linear-gradient(90deg, #64c8ff, #81c784); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        <div id="currentProgressBar" style="background: linear-gradient(90deg, #64c8ff, #81c784); height: 100%; width: 0%; transition: width 0.3s;"></div>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.8rem; color: #888;">
-                        <span>Epoch: <span id="revalTrainingEpoch">0</span> / <span id="revalTrainingTotalEpochs">0</span></span>
-                        <span>Loss: <span id="revalTrainingLoss">-</span></span>
+                        <span>Epoch: <span id="currentEpoch">0</span> / <span id="totalEpochs">0</span></span>
+                        <span>Loss: <span id="currentLoss">-</span></span>
+                        <span>Best: <span id="bestLoss">-</span></span>
                     </div>
                 </div>
 
@@ -6632,9 +6615,11 @@
                     const data = await res.json();
                     showToast(`Training gestartet: ${data.job?.job_id || 'OK'}`, 'success');
 
-                    // Show progress bar
-                    document.getElementById('revalTrainingProgress').style.display = 'block';
-                    document.getElementById('revalTrainingTotalEpochs').textContent = epochs;
+                    // Show progress section
+                    document.getElementById('currentTrainingSection').style.display = 'block';
+                    document.getElementById('totalEpochs').textContent = epochs;
+                    document.getElementById('currentJobStatus').textContent = 'Running';
+                    document.getElementById('currentJobStatus').className = 'job-status running';
 
                     // Start polling for progress
                     revalTrainingInterval = setInterval(pollRevalTrainingProgress, 2000);
@@ -6659,15 +6644,15 @@
                 if (data.training && data.last_job && data.last_job.status === 'running') {
                     const job = data.last_job;
                     const epoch = job.current_epoch || 0;
-                    const totalEpochs = job.epochs || 50;
+                    const epochs = job.epochs || 50;
                     // Use progress field if available, otherwise calculate from epochs
-                    const percent = job.progress !== undefined ? Math.min(Math.round(job.progress), 100) : Math.round((epoch / totalEpochs) * 100);
+                    const percent = job.progress !== undefined ? Math.min(Math.round(job.progress), 100) : Math.round((epoch / epochs) * 100);
 
-                    document.getElementById('revalTrainingEpoch').textContent = epoch;
-                    document.getElementById('revalTrainingTotalEpochs').textContent = totalEpochs;
-                    document.getElementById('revalTrainingPercent').textContent = `${percent}%`;
-                    document.getElementById('revalTrainingBar').style.width = `${percent}%`;
-                    document.getElementById('revalTrainingLoss').textContent =
+                    document.getElementById('currentEpoch').textContent = epoch;
+                    document.getElementById('totalEpochs').textContent = epochs;
+                    document.getElementById('currentJobProgress').textContent = `${percent}%`;
+                    document.getElementById('currentProgressBar').style.width = `${percent}%`;
+                    document.getElementById('currentLoss').textContent =
                         job.current_loss ? job.current_loss.toFixed(4) : '-';
 
                 } else if (!data.training && data.last_job) {
@@ -6676,14 +6661,19 @@
                     revalTrainingInterval = null;
 
                     const job = data.last_job;
-                    document.getElementById('revalTrainingPercent').textContent = '100%';
-                    document.getElementById('revalTrainingBar').style.width = '100%';
-                    document.getElementById('revalTrainingEpoch').textContent = job.current_epoch || job.epochs || '-';
-                    document.getElementById('revalTrainingTotalEpochs').textContent = job.epochs || '-';
+                    document.getElementById('currentJobProgress').textContent = '100%';
+                    document.getElementById('currentProgressBar').style.width = '100%';
+                    document.getElementById('currentEpoch').textContent = job.current_epoch || job.epochs || '-';
+                    document.getElementById('totalEpochs').textContent = job.epochs || '-';
 
+                    // Update status badge
                     if (job.status === 'completed') {
+                        document.getElementById('currentJobStatus').textContent = 'Completed';
+                        document.getElementById('currentJobStatus').className = 'job-status completed';
                         showToast('Training abgeschlossen!', 'success');
                     } else if (job.status === 'failed') {
+                        document.getElementById('currentJobStatus').textContent = 'Failed';
+                        document.getElementById('currentJobStatus').className = 'job-status failed';
                         showToast('Training fehlgeschlagen: ' + (job.error_message || 'Unbekannter Fehler'), 'error');
                     }
 
@@ -6692,7 +6682,7 @@
 
                     // Hide progress after 3 seconds
                     setTimeout(() => {
-                        document.getElementById('revalTrainingProgress').style.display = 'none';
+                        document.getElementById('currentTrainingSection').style.display = 'none';
                         document.getElementById('btnStartRevalTraining').disabled = false;
                         document.getElementById('btnStartRevalTraining').textContent = '▶ Training starten';
                         loadRevalidationStats();
@@ -6702,7 +6692,7 @@
                     // No job at all
                     clearInterval(revalTrainingInterval);
                     revalTrainingInterval = null;
-                    document.getElementById('revalTrainingProgress').style.display = 'none';
+                    document.getElementById('currentTrainingSection').style.display = 'none';
                     document.getElementById('btnStartRevalTraining').disabled = false;
                     document.getElementById('btnStartRevalTraining').textContent = '▶ Training starten';
                 }
