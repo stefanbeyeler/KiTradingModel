@@ -24,6 +24,7 @@ from loguru import logger
 from .routers import detection_router, system_router, history_router, claude_validator_router
 from .routers.system_router import test_health_router
 from .routers.auto_optimization_router import router as auto_optimization_router
+from .routers.rule_optimizer_router import router as rule_optimizer_router
 from .services.pattern_detection_service import candlestick_pattern_service
 
 # Import für Test-Health-Funktionalität
@@ -109,6 +110,10 @@ openapi_tags = [
         "description": "Externe Pattern-Validierung mit Claude Vision AI"
     },
     {
+        "name": "5. Rule Optimizer",
+        "description": "Claude Vision-basierte Regelwerk-Optimierung"
+    },
+    {
         "name": "7. Auto-Optimization",
         "description": "Automatische Regeloptimierung basierend auf Feedback"
     },
@@ -170,6 +175,7 @@ app.include_router(test_health_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(detection_router, prefix="/api/v1", tags=["2. Pattern Detection"])
 app.include_router(history_router, prefix="/api/v1", tags=["3. Pattern History"])
 app.include_router(claude_validator_router, prefix="/api/v1/claude", tags=["4. Claude QA"])
+app.include_router(rule_optimizer_router, tags=["5. Rule Optimizer"])
 app.include_router(auto_optimization_router, prefix="/api/v1", tags=["7. Auto-Optimization"])
 
 

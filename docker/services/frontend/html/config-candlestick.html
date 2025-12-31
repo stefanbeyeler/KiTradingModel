@@ -2125,6 +2125,7 @@
             <button class="tab" onclick="switchTab('detection')">Detection & History</button>
             <button class="tab" onclick="switchTab('training')">Training</button>
             <button class="tab" onclick="switchTab('revalidation')">Re-Validierung <span id="revalidationBadge" class="tab-badge" style="display: none;">0</span></button>
+            <button class="tab" onclick="switchTab('ruleoptimizer')">⚙️ Regelwerk</button>
             <button class="tab" onclick="switchTab('claudeqa')">🤖 Claude QA</button>
         </div>
 
@@ -2827,6 +2828,117 @@
             </div>
 
         </div><!-- End Tab: Re-Validierung -->
+
+        <!-- Tab: Regelwerk Optimierung -->
+        <div id="tab-ruleoptimizer" class="tab-content">
+            <!-- Einleitung -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⚙️ Regelwerk-Optimierung mit Claude Vision</h2>
+                </div>
+                <p style="color: #888; margin-bottom: 1rem;">
+                    Diese Funktion analysiert eine große Anzahl erkannter Patterns mit Claude Vision API,
+                    um systematische Probleme in der Regel-basierten Erkennung zu identifizieren und
+                    optimale Parameter-Werte zu berechnen.
+                </p>
+                <div style="background: rgba(255, 152, 0, 0.1); border: 1px solid rgba(255, 152, 0, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <strong style="color: #ff9800;">⚠️ Hinweis:</strong>
+                    <span style="color: #ccc;"> Diese Optimierung verbraucht Claude API Credits. Pro Pattern-Sample wird ein API-Call gemacht. Bei 10 Samples × 19 Pattern-Typen = ~190 API Calls.</span>
+                </div>
+            </div>
+
+            <!-- Optimierung starten -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🚀 Optimierung starten</h2>
+                </div>
+
+                <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label>Symbole</label>
+                        <input type="text" id="optimizerSymbols" value="BTCUSD,EURUSD,XAUUSD,GER40" placeholder="Komma-getrennt">
+                    </div>
+                    <div class="form-group">
+                        <label>Timeframes</label>
+                        <input type="text" id="optimizerTimeframes" value="H1,H4,D1" placeholder="Komma-getrennt">
+                    </div>
+                    <div class="form-group">
+                        <label>Samples pro Pattern</label>
+                        <input type="number" id="optimizerSamples" value="10" min="3" max="50">
+                    </div>
+                </div>
+
+                <button id="btnStartOptimization" class="btn btn-primary" onclick="startRuleOptimization()" style="margin-bottom: 1rem;">
+                    ▶ Optimierung starten
+                </button>
+
+                <!-- Progress Section -->
+                <div id="optimizationProgress" style="display: none; margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span id="optimizationPhase" style="color: #64c8ff;">Phase: Sammle Patterns...</span>
+                        <span id="optimizationPercent">0%</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 4px; height: 20px; overflow: hidden;">
+                        <div id="optimizationBar" style="background: linear-gradient(90deg, #64c8ff, #81c784); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <p id="optimizationMessage" style="margin-top: 0.5rem; color: #888; font-size: 0.85rem;"></p>
+                    <div style="margin-top: 0.5rem; color: #888; font-size: 0.85rem;">
+                        <span>Patterns gesammelt: <span id="optimizationCollected">0</span></span>
+                        <span style="margin-left: 1rem;">Validiert: <span id="optimizationValidated">0</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aktuelle Parameter -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📊 Aktuelle Regel-Parameter</h2>
+                    <button class="btn btn-secondary" onclick="loadCurrentParams()">🔄 Aktualisieren</button>
+                </div>
+
+                <div id="currentParamsContainer" style="max-height: 400px; overflow-y: auto;">
+                    <p style="color: #888;">Lade Parameter...</p>
+                </div>
+            </div>
+
+            <!-- Empfehlungen -->
+            <div class="card" id="recommendationsCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">💡 Optimierungs-Empfehlungen</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="applyAllRecommendations()">✓ Alle anwenden</button>
+                        <button class="btn btn-secondary" onclick="applySelectedRecommendations()">Ausgewählte anwenden</button>
+                    </div>
+                </div>
+
+                <div id="recommendationsContainer">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Pattern-Analyse Ergebnisse -->
+            <div class="card" id="analysisResultsCard" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">📈 Pattern-Analyse Ergebnisse</h2>
+                </div>
+
+                <div id="analysisResultsContainer">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Parameter-Änderungshistorie -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📜 Änderungshistorie</h2>
+                    <button class="btn btn-danger" onclick="resetAllParams()">⟲ Auf Standard zurücksetzen</button>
+                </div>
+
+                <div id="paramHistoryContainer" style="max-height: 300px; overflow-y: auto;">
+                    <p style="color: #888;">Lade Historie...</p>
+                </div>
+            </div>
+        </div><!-- End Tab: Regelwerk Optimierung -->
 
         <!-- Tab: Claude QA -->
         <div id="tab-claudeqa" class="tab-content">
@@ -3903,6 +4015,15 @@
                 }
             } else if (tabName === 'revalidation') {
                 loadRevalidationData();
+
+                // Stop training auto-refresh
+                if (trainingRefreshInterval) {
+                    clearInterval(trainingRefreshInterval);
+                    trainingRefreshInterval = null;
+                }
+            } else if (tabName === 'ruleoptimizer') {
+                loadCurrentParams();
+                loadParamHistory();
 
                 // Stop training auto-refresh
                 if (trainingRefreshInterval) {
@@ -6820,6 +6941,353 @@
                 reasonCategoriesCache = data.categories || {};
             } catch (error) {
                 console.warn('Could not load reason categories:', error);
+            }
+        }
+
+        // ==================== Rule Optimizer Functions ====================
+
+        let optimizationPollInterval = null;
+        let currentRecommendations = [];
+
+        async function startRuleOptimization() {
+            const symbols = document.getElementById('optimizerSymbols').value.split(',').map(s => s.trim()).filter(s => s);
+            const timeframes = document.getElementById('optimizerTimeframes').value.split(',').map(s => s.trim()).filter(s => s);
+            const samples = parseInt(document.getElementById('optimizerSamples').value) || 10;
+
+            if (symbols.length === 0 || timeframes.length === 0) {
+                showToast('Bitte Symbole und Timeframes eingeben', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnStartOptimization');
+            btn.disabled = true;
+            btn.textContent = '⏳ Starte...';
+
+            document.getElementById('optimizationProgress').style.display = 'block';
+
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/rule-optimizer/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbols: symbols,
+                        timeframes: timeframes,
+                        samples_per_pattern: samples
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast(`Optimierung gestartet: ${data.session_id}`, 'success');
+
+                    // Start polling for progress
+                    optimizationPollInterval = setInterval(pollOptimizationProgress, 2000);
+                } else {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Start fehlgeschlagen');
+                }
+            } catch (error) {
+                console.error('Failed to start optimization:', error);
+                showToast('Fehler: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = '▶ Optimierung starten';
+                document.getElementById('optimizationProgress').style.display = 'none';
+            }
+        }
+
+        async function pollOptimizationProgress() {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/rule-optimizer/progress`);
+                const data = await res.json();
+
+                document.getElementById('optimizationPhase').textContent = `Phase: ${data.phase}`;
+                document.getElementById('optimizationPercent').textContent = `${data.progress}%`;
+                document.getElementById('optimizationBar').style.width = `${data.progress}%`;
+                document.getElementById('optimizationMessage').textContent = data.message || '';
+                document.getElementById('optimizationCollected').textContent = data.patterns_collected || 0;
+                document.getElementById('optimizationValidated').textContent = data.patterns_validated || 0;
+
+                if (data.phase === 'completed') {
+                    clearInterval(optimizationPollInterval);
+                    optimizationPollInterval = null;
+
+                    document.getElementById('btnStartOptimization').disabled = false;
+                    document.getElementById('btnStartOptimization').textContent = '▶ Optimierung starten';
+
+                    showToast('Optimierung abgeschlossen!', 'success');
+
+                    // Load recommendations
+                    await loadRecommendations();
+                    await loadCurrentParams();
+
+                } else if (data.phase === 'error') {
+                    clearInterval(optimizationPollInterval);
+                    optimizationPollInterval = null;
+
+                    document.getElementById('btnStartOptimization').disabled = false;
+                    document.getElementById('btnStartOptimization').textContent = '▶ Optimierung starten';
+
+                    showToast('Optimierung fehlgeschlagen: ' + data.message, 'error');
+                }
+
+            } catch (error) {
+                console.error('Failed to poll optimization progress:', error);
+            }
+        }
+
+        async function loadRecommendations() {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/rule-optimizer/recommendations`);
+                const data = await res.json();
+
+                currentRecommendations = data.recommendations || [];
+                const container = document.getElementById('recommendationsContainer');
+                const card = document.getElementById('recommendationsCard');
+                const analysisCard = document.getElementById('analysisResultsCard');
+                const analysisContainer = document.getElementById('analysisResultsContainer');
+
+                if (currentRecommendations.length === 0) {
+                    card.style.display = 'none';
+                } else {
+                    card.style.display = 'block';
+
+                    let html = '<div style="display: flex; flex-direction: column; gap: 0.5rem;">';
+                    currentRecommendations.forEach((rec, idx) => {
+                        const changePercent = rec.current_value !== 0
+                            ? ((rec.recommended_value - rec.current_value) / rec.current_value * 100).toFixed(1)
+                            : 'N/A';
+                        const changeColor = parseFloat(changePercent) > 0 ? '#4caf50' : '#f44336';
+
+                        html += `
+                            <div style="background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 1rem;">
+                                <input type="checkbox" id="rec-${idx}" checked style="width: 18px; height: 18px;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+                                        <span style="font-weight: 600; color: #64c8ff;">${rec.pattern_type}</span>
+                                        <span style="color: #888;">→</span>
+                                        <span style="color: #ce93d8;">${rec.parameter}</span>
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #888;">
+                                        ${rec.current_value} → <span style="color: ${changeColor}; font-weight: 600;">${rec.recommended_value}</span>
+                                        <span style="margin-left: 0.5rem;">(${changePercent}%)</span>
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+                                        ${rec.reasoning || ''}
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="color: #81c784; font-size: 0.85rem;">
+                                        ~${(rec.improvement_estimate * 100).toFixed(0)}% weniger False Positives
+                                    </div>
+                                    <div style="color: #888; font-size: 0.75rem;">
+                                        ${rec.sample_count} Samples
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+                }
+
+                // Show analysis results
+                const analyses = data.pattern_analyses || {};
+                if (Object.keys(analyses).length > 0) {
+                    analysisCard.style.display = 'block';
+
+                    let analysisHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">';
+                    for (const [pattern, analysis] of Object.entries(analyses)) {
+                        const validityRate = (analysis.validity_rate * 100).toFixed(0);
+                        const fpRate = (analysis.false_positive_rate * 100).toFixed(0);
+                        const validityColor = validityRate >= 70 ? '#4caf50' : validityRate >= 40 ? '#ff9800' : '#f44336';
+
+                        analysisHtml += `
+                            <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                                <div style="font-weight: 600; color: #64c8ff; margin-bottom: 0.5rem;">${pattern}</div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                                    <span style="color: #888;">Samples:</span>
+                                    <span>${analysis.total_samples}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                                    <span style="color: #888;">Validity Rate:</span>
+                                    <span style="color: ${validityColor}; font-weight: 600;">${validityRate}%</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: #888;">False Positive:</span>
+                                    <span style="color: #f44336;">${fpRate}%</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    analysisHtml += '</div>';
+                    analysisContainer.innerHTML = analysisHtml;
+                }
+
+            } catch (error) {
+                console.error('Failed to load recommendations:', error);
+            }
+        }
+
+        async function loadCurrentParams() {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/rule-optimizer/current-params`);
+                const data = await res.json();
+
+                const container = document.getElementById('currentParamsContainer');
+                const params = data.params || {};
+
+                let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">';
+                for (const [pattern, patternParams] of Object.entries(params)) {
+                    html += `
+                        <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px;">
+                            <div style="font-weight: 600; color: #64c8ff; margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                                ${pattern}
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem;">
+                    `;
+                    for (const [param, value] of Object.entries(patternParams)) {
+                        html += `
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: #888;">${param}:</span>
+                                <span style="color: #ce93d8;">${typeof value === 'number' ? value.toFixed(4) : value}</span>
+                            </div>
+                        `;
+                    }
+                    html += '</div></div>';
+                }
+                html += '</div>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Failed to load current params:', error);
+                document.getElementById('currentParamsContainer').innerHTML = '<p style="color: #f44336;">Fehler beim Laden der Parameter</p>';
+            }
+        }
+
+        async function loadParamHistory() {
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/rule-optimizer/history?limit=30`);
+                const data = await res.json();
+
+                const container = document.getElementById('paramHistoryContainer');
+                const history = data.history || [];
+
+                if (history.length === 0) {
+                    container.innerHTML = '<p style="color: #888;">Keine Änderungen vorhanden</p>';
+                    return;
+                }
+
+                let html = '<div style="display: flex; flex-direction: column; gap: 0.5rem;">';
+                for (const entry of history) {
+                    const timestamp = new Date(entry.timestamp).toLocaleString('de-DE');
+                    html += `
+                        <div style="background: rgba(255,255,255,0.03); padding: 0.5rem 0.8rem; border-radius: 4px; font-size: 0.85rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #64c8ff;">${entry.pattern}.${entry.parameter}</span>
+                                <span style="color: #888;">${timestamp}</span>
+                            </div>
+                            <div style="color: #888; margin-top: 0.2rem;">
+                                ${entry.old_value} → <span style="color: #81c784;">${entry.new_value}</span>
+                                <span style="margin-left: 0.5rem; color: #666;">(${entry.reason})</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                html += '</div>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Failed to load param history:', error);
+                document.getElementById('paramHistoryContainer').innerHTML = '<p style="color: #f44336;">Fehler beim Laden der Historie</p>';
+            }
+        }
+
+        async function applyAllRecommendations() {
+            if (currentRecommendations.length === 0) {
+                showToast('Keine Empfehlungen vorhanden', 'info');
+                return;
+            }
+
+            if (!confirm(`${currentRecommendations.length} Empfehlungen anwenden?`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/rule-optimizer/apply`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ indices: null })  // null = all
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast(`${data.applied_count} Empfehlungen angewendet`, 'success');
+                    await loadCurrentParams();
+                    await loadParamHistory();
+                } else {
+                    throw new Error('Anwendung fehlgeschlagen');
+                }
+            } catch (error) {
+                console.error('Failed to apply recommendations:', error);
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        async function applySelectedRecommendations() {
+            const selected = [];
+            for (let i = 0; i < currentRecommendations.length; i++) {
+                const checkbox = document.getElementById(`rec-${i}`);
+                if (checkbox && checkbox.checked) {
+                    selected.push(i);
+                }
+            }
+
+            if (selected.length === 0) {
+                showToast('Keine Empfehlungen ausgewählt', 'info');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/rule-optimizer/apply`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ indices: selected })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast(`${data.applied_count} Empfehlungen angewendet`, 'success');
+                    await loadCurrentParams();
+                    await loadParamHistory();
+                } else {
+                    throw new Error('Anwendung fehlgeschlagen');
+                }
+            } catch (error) {
+                console.error('Failed to apply selected recommendations:', error);
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        async function resetAllParams() {
+            if (!confirm('Alle Parameter auf Standardwerte zurücksetzen?')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/rule-optimizer/reset`, {
+                    method: 'POST'
+                });
+
+                if (res.ok) {
+                    showToast('Parameter zurückgesetzt', 'success');
+                    await loadCurrentParams();
+                    await loadParamHistory();
+                } else {
+                    throw new Error('Reset fehlgeschlagen');
+                }
+            } catch (error) {
+                console.error('Failed to reset params:', error);
+                showToast('Fehler: ' + error.message, 'error');
             }
         }
 
