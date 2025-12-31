@@ -2054,36 +2054,40 @@
             if (data) {
                 document.getElementById('data-easyinsight').textContent = data.easyinsight_api ? 'Verbunden' : '-';
                 document.getElementById('data-sync').textContent = data.sync_service_status || '-';
+            }
+        }
 
-                // Update Redis status in Watchdog Panel, Redis Card and Dataflow
-                const redisDot = document.getElementById('wp-dot-redis');
-                const redisStatus = document.getElementById('redis-status');
-                const redisDataflow = document.getElementById('df-redis-status');
-                const redisHealthy = data.redis_connected !== false;
+        // Separate function to update Redis status from Watchdog
+        async function updateRedisStatus() {
+            const redisDot = document.getElementById('wp-dot-redis');
+            const redisStatus = document.getElementById('redis-status');
+            const redisDataflow = document.getElementById('df-redis-status');
+
+            try {
+                const res = await fetchWithTimeout('/watchdog/api/v1/status', 5000);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+                const redisService = data.services?.redis;
+                const redisHealthy = redisService?.state === 'HEALTHY';
 
                 if (redisDot) {
                     redisDot.classList.remove('loading', 'healthy', 'unhealthy');
                     redisDot.classList.add(redisHealthy ? 'healthy' : 'unhealthy');
                 }
 
-                // Update Redis Card status
                 if (redisStatus) {
                     redisStatus.classList.remove('status-loading', 'status-healthy', 'status-unhealthy');
                     redisStatus.classList.add(redisHealthy ? 'status-healthy' : 'status-unhealthy');
                     redisStatus.textContent = redisHealthy ? 'Online' : 'Offline';
                 }
 
-                // Update Redis Dataflow status
                 if (redisDataflow) {
                     redisDataflow.classList.remove('loading', 'healthy', 'unhealthy');
                     redisDataflow.classList.add(redisHealthy ? 'healthy' : 'unhealthy');
                 }
-            } else {
-                // Data service offline - Redis status unknown
-                const redisDot = document.getElementById('wp-dot-redis');
-                const redisStatus = document.getElementById('redis-status');
-                const redisDataflow = document.getElementById('df-redis-status');
-
+            } catch (err) {
+                // Watchdog not available - mark Redis as unknown
                 if (redisDot) {
                     redisDot.classList.remove('loading', 'healthy');
                     redisDot.classList.add('unhealthy');
@@ -2673,6 +2677,7 @@
                 updateNhitsInfo(),
                 updateLlmInfo(),
                 updateDataInfo(),
+                updateRedisStatus(),
                 updateRagInfo(),
                 updateTcnInfo(),
                 updateTcnTrainInfo(),
