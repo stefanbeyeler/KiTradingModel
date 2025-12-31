@@ -212,7 +212,10 @@
       "Bash(/e/KiTradingModel/venv/Scripts/python.exe -m py_compile:*)",
       "Bash(/e/KiTradingModel/src/services/watchdog_app/ )",
       "Bash(sbeyeler@10.1.19.101:~/KiTradingModel/src/services/watchdog_app/ )",
-      "Bash(do echo \"=== Port $port ===\" curl -s \"http://10.1.19.101:$port/openapi.json\")"
+      "Bash(do echo \"=== Port $port ===\" curl -s \"http://10.1.19.101:$port/openapi.json\")",
+      "Bash(git -C \"e:/KiTradingModel\" add docker/services/frontend/html/config-candlestick.html)",
+      "Bash(git -C \"e:/KiTradingModel\" commit -m \"$\\(cat <<''EOF''\nfix: reload training history after training completion\n\nTraining History \\(Job-Liste\\) wird jetzt automatisch aktualisiert,\nsobald ein Training abgeschlossen wurde.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"e:/KiTradingModel\" push)"
     ],
     "deny": [],
     "ask": []
