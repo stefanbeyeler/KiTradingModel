@@ -5937,20 +5937,32 @@
                 const chronoData = [...ohlcData].reverse();
 
                 // Find pattern's last candle in chronological array
-                let lastCandleIdx = chronoData.findIndex(candle => {
-                    const candleTime = new Date(candle.datetime);
-                    return Math.abs(candleTime - patternTime) < 3600000 * 4;  // Within 4h for better precision
-                });
-
-                if (lastCandleIdx === -1) {
-                    // Fallback: try 24h window
-                    lastCandleIdx = chronoData.findIndex(candle => {
-                        const candleTime = new Date(candle.datetime);
-                        return Math.abs(candleTime - patternTime) < 3600000 * 24;
-                    });
+                // IMPORTANT: Search from END (newest) to START (oldest) to find the correct match
+                // findIndex searches from start, but we need the match closest to "now"
+                let lastCandleIdx = -1;
+                for (let i = chronoData.length - 1; i >= 0; i--) {
+                    const candleTime = new Date(chronoData[i].datetime);
+                    if (Math.abs(candleTime - patternTime) < 3600000 * 4) {  // Within 4h
+                        lastCandleIdx = i;
+                        break;
+                    }
                 }
 
-                if (lastCandleIdx === -1) lastCandleIdx = chronoData.length - 1;
+                if (lastCandleIdx === -1) {
+                    // Fallback: try 24h window, still searching from newest
+                    for (let i = chronoData.length - 1; i >= 0; i--) {
+                        const candleTime = new Date(chronoData[i].datetime);
+                        if (Math.abs(candleTime - patternTime) < 3600000 * 24) {
+                            lastCandleIdx = i;
+                            break;
+                        }
+                    }
+                }
+
+                // If still not found, use a position that allows context candles
+                if (lastCandleIdx === -1) {
+                    lastCandleIdx = Math.max(patternCandleCount + 4, chronoData.length - 1);
+                }
 
                 // First candle of pattern is (patternCandleCount - 1) positions BEFORE the last candle
                 const firstCandleIdx = lastCandleIdx - (patternCandleCount - 1);
