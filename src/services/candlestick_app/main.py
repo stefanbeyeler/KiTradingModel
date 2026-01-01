@@ -21,7 +21,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from .routers import detection_router, system_router, history_router, claude_validator_router
+from .routers import detection_router, system_router, history_router, claude_validator_router, pattern_examples_router
 from .routers.system_router import test_health_router
 from .routers.auto_optimization_router import router as auto_optimization_router
 from .routers.rule_optimizer_router import router as rule_optimizer_router
@@ -114,6 +114,10 @@ openapi_tags = [
         "description": "Claude Vision-basierte Regelwerk-Optimierung"
     },
     {
+        "name": "6. Pattern Examples",
+        "description": "Ideale Beispiel-Charts für alle Pattern-Typen"
+    },
+    {
         "name": "7. Auto-Optimization",
         "description": "Automatische Regeloptimierung basierend auf Feedback"
     },
@@ -176,6 +180,7 @@ app.include_router(detection_router, prefix="/api/v1", tags=["2. Pattern Detecti
 app.include_router(history_router, prefix="/api/v1", tags=["3. Pattern History"])
 app.include_router(claude_validator_router, prefix="/api/v1/claude", tags=["4. Claude QA"])
 app.include_router(rule_optimizer_router, tags=["5. Rule Optimizer"])
+app.include_router(pattern_examples_router, prefix="/api/v1/examples", tags=["6. Pattern Examples"])
 app.include_router(auto_optimization_router, prefix="/api/v1", tags=["7. Auto-Optimization"])
 
 
@@ -198,6 +203,10 @@ async def root():
             "history_by_symbol": "/api/v1/history/{symbol}",
             "history_statistics": "/api/v1/history/statistics",
             "scan_trigger": "/api/v1/history/scan",
+            "examples_list": "/api/v1/examples/list",
+            "example_chart": "/api/v1/examples/chart/{pattern_type}",
+            "examples_all": "/api/v1/examples/all",
+            "examples_gallery": "/api/v1/examples/gallery",
         }
     }
 
