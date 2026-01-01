@@ -144,6 +144,9 @@ class RuleConfigService:
                     self.params = data.get("params", {})
                     self.adjustment_history = data.get("history", [])
                     logger.info(f"Loaded rule config from {self.config_path}")
+
+                    # Ensure all parameter changes are in history
+                    self._ensure_history_complete()
             else:
                 # Use defaults
                 self.params = DEFAULT_RULE_PARAMS.copy()
@@ -152,6 +155,53 @@ class RuleConfigService:
         except Exception as e:
             logger.error(f"Failed to load rule config: {e}")
             self.params = DEFAULT_RULE_PARAMS.copy()
+
+    def _ensure_history_complete(self):
+        """
+        Ensure all parameter differences from defaults are recorded in history.
+
+        This catches parameters that were set directly in the config file
+        without going through set_param().
+        """
+        # Build a set of already-recorded changes (pattern:param combinations)
+        recorded_changes = set()
+        for record in self.adjustment_history:
+            pattern = record.get("pattern", "")
+            param = record.get("parameter", "")
+            if pattern and param:
+                recorded_changes.add(f"{pattern}:{param}")
+
+        # Find differences between current params and defaults
+        missing_records = []
+        for pattern, params in self.params.items():
+            defaults = DEFAULT_RULE_PARAMS.get(pattern, {})
+
+            for param_name, current_value in params.items():
+                default_value = defaults.get(param_name)
+                key = f"{pattern}:{param_name}"
+
+                # If value differs from default and not in history, add it
+                if default_value is not None and current_value != default_value:
+                    if key not in recorded_changes:
+                        missing_records.append({
+                            "timestamp": "2024-01-01T00:00:00",  # Initial config timestamp
+                            "pattern": pattern,
+                            "parameter": param_name,
+                            "old_value": default_value,
+                            "new_value": current_value,
+                            "reason": "initial_config",
+                            "feedback_count": 0
+                        })
+                        logger.info(
+                            f"Added missing history for {pattern}.{param_name}: "
+                            f"{default_value} -> {current_value}"
+                        )
+
+        # Add missing records at the beginning of history
+        if missing_records:
+            self.adjustment_history = missing_records + self.adjustment_history
+            self._save_config()
+            logger.info(f"Added {len(missing_records)} missing history records")
 
     def _save_config(self):
         """Save configuration to file."""
