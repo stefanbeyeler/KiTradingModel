@@ -238,7 +238,9 @@
       "Bash(e:/KiTradingModel/venv/Scripts/pip.exe show:*)",
       "Bash(e:/KiTradingModel/venv/Scripts/pip.exe install:*)",
       "Bash(/e/KiTradingModel/venv/Scripts/pip.exe install:*)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(git -C \"e:/KiTradingModel\" add src/services/candlestick_app/services/pattern_example_service.py src/services/candlestick_app/routers/pattern_examples_router.py src/services/candlestick_app/routers/__init__.py src/services/candlestick_app/main.py docker/services/frontend/html/service-candlestick.html docker/services/frontend/html/pattern-gallery.html)",
+      "Bash(git -C \"e:/KiTradingModel\" commit -m \"$\\(cat <<''EOF''\nfeat\\(candlestick\\): add pattern example generator service and gallery\n\nNew features:\n- PatternExampleService: Generates synthetic \"textbook\" examples for all\n  32 candlestick pattern types with proper trend context\n- Pattern Examples API endpoints:\n  - GET /api/v1/examples/list - List all available patterns\n  - GET /api/v1/examples/chart/{pattern_type} - Get example chart\n  - GET /api/v1/examples/all - Generate all pattern examples\n  - GET /api/v1/examples/gallery - Filterable pattern gallery\n\n- New Pattern Gallery page \\(pattern-gallery.html\\):\n  - Interactive grid view of all patterns\n  - Filters by direction \\(bullish/bearish/neutral\\) and candle count\n  - Statistics for each category\n  - Modal view for detailed pattern inspection\n\n- Updated service documentation with new endpoints\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ],
     "deny": [],
     "ask": []
