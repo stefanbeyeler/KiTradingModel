@@ -184,7 +184,7 @@ class RuleConfigService:
                 if default_value is not None and current_value != default_value:
                     if key not in recorded_changes:
                         missing_records.append({
-                            "timestamp": "2024-01-01T00:00:00",  # Initial config timestamp
+                            "timestamp": datetime.utcnow().isoformat(),
                             "pattern": pattern,
                             "parameter": param_name,
                             "old_value": default_value,
