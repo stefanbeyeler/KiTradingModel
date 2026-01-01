@@ -6168,6 +6168,9 @@
         }
 
         // Format candle timestamp for display
+        // IMPORTANT: TwelveData returns datetime without timezone suffix (e.g., "2026-01-01 17:55:00")
+        // These are UTC times. We need to append 'Z' to parse them correctly as UTC,
+        // then convert to local timezone for display (same as formatTimestamp).
         function formatCandleTime(datetime, timeframe) {
             if (!datetime) return '';
 
@@ -6176,9 +6179,18 @@
                 return datetime;
             }
 
-            const date = new Date(datetime);
+            let dateStr = datetime;
+
+            // If datetime has no timezone info, treat it as UTC by appending 'Z'
+            // This ensures consistency with pattern timestamps which are explicit UTC
+            if (typeof dateStr === 'string' && !dateStr.includes('+') && !dateStr.includes('Z')) {
+                // Convert "2026-01-01 17:55:00" to "2026-01-01T17:55:00Z"
+                dateStr = dateStr.replace(' ', 'T') + 'Z';
+            }
+
+            const date = new Date(dateStr);
             if (isNaN(date.getTime())) {
-                // Try parsing as "YYYY-MM-DD HH:mm:ss" format
+                // Fallback: Try parsing as "YYYY-MM-DD HH:mm:ss" format manually
                 const parts = datetime.split(' ');
                 if (parts.length === 2) {
                     const [datePart, timePart] = parts;
@@ -6189,7 +6201,9 @@
                     if (timeframe === 'D1' || timeframe === 'W1' || timeframe === 'MN') {
                         return `${day}.${month}.`;
                     }
-                    return `${hour}:${minute}`;
+                    // Add 1 hour for UTC+1 (Europe/Zurich winter time)
+                    const localHour = (parseInt(hour) + 1) % 24;
+                    return `${String(localHour).padStart(2, '0')}:${minute}`;
                 }
                 return datetime.substring(11, 16) || '';
             }
@@ -6198,7 +6212,7 @@
             if (timeframe === 'D1' || timeframe === 'W1' || timeframe === 'MN') {
                 return date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
             }
-            // For intraday, show time
+            // For intraday, show time in local timezone
             return date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
         }
 
