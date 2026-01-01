@@ -516,8 +516,19 @@ class CandlestickPatternService:
         5. The engulfing candle must represent a significant price move (>= 0.25%)
         """
         # Basic direction checks - MUST be correct colors
+        # prev.is_bearish: close < open (red candle)
+        # current.is_bullish: close > open (green candle)
         if not prev.is_bearish or not current.is_bullish:
             return False
+
+        # Double-check: Previous candle must actually have lower close than open
+        # This catches edge cases where floating point comparison might fail
+        if prev.close >= prev.open:
+            return False  # Not a bearish (red) candle
+
+        # Current candle must actually have higher close than open
+        if current.close <= current.open:
+            return False  # Not a bullish (green) candle
 
         # Minimum percentage move check - engulfing candle must be significant
         # Body must be at least 0.25% of the price to filter out noise
@@ -580,8 +591,19 @@ class CandlestickPatternService:
         5. The engulfing candle must represent a significant price move (>= 0.25%)
         """
         # Basic direction checks - MUST be correct colors
+        # prev.is_bullish: close > open (green candle)
+        # current.is_bearish: close < open (red candle)
         if not prev.is_bullish or not current.is_bearish:
             return False
+
+        # Double-check: Previous candle must actually have higher close than open
+        # This catches edge cases where floating point comparison might fail
+        if prev.close <= prev.open:
+            return False  # Not a bullish (green) candle
+
+        # Current candle must actually have lower close than open
+        if current.close >= current.open:
+            return False  # Not a bearish (red) candle
 
         # Minimum percentage move check - engulfing candle must be significant
         # Body must be at least 0.25% of the price to filter out noise
