@@ -5250,26 +5250,41 @@
             const container = document.getElementById('modalReferenceContainer');
             if (!container) return;
 
+            console.log(`loadReferenceChart called with patternType: "${patternType}", direction: "${direction}"`);
+
             // Show loading spinner
             container.innerHTML = '<span class="spinner"></span>';
 
             // Check cache first
             if (patternImageCache[patternType]) {
-                container.innerHTML = `<img src="data:image/png;base64,${patternImageCache[patternType]}" alt="${patternType}" style="max-width: 100%; height: auto; border-radius: 4px;">`;
+                console.log(`Using cached image for ${patternType}`);
+                container.innerHTML = `
+                    <img src="data:image/png;base64,${patternImageCache[patternType]}" alt="${patternType}" style="max-width: 100%; height: auto; border-radius: 4px;">
+                    <div style="font-size: 0.7rem; color: #666; text-align: center; margin-top: 4px;">${formatPatternType(patternType)}</div>
+                `;
                 return;
             }
 
             try {
                 // Load from API (compact version for modal)
+                console.log(`Fetching from API: ${CANDLESTICK_API}/examples/chart/${patternType}?compact=true`);
                 const res = await fetch(`${CANDLESTICK_API}/examples/chart/${patternType}?compact=true`);
                 if (!res.ok) throw new Error('Failed to load chart');
                 const data = await res.json();
 
-                // Cache the image
+                // Validate the API returned the correct pattern
+                if (data.pattern_type && data.pattern_type !== patternType) {
+                    console.warn(`API returned wrong pattern: requested=${patternType}, got=${data.pattern_type}`);
+                }
+
+                // Cache the image using the requested pattern type
                 patternImageCache[patternType] = data.image_base64;
 
-                // Display the image
-                container.innerHTML = `<img src="data:image/png;base64,${data.image_base64}" alt="${patternType}" style="max-width: 100%; height: auto; border-radius: 4px;">`;
+                // Display the image with pattern type label for verification
+                container.innerHTML = `
+                    <img src="data:image/png;base64,${data.image_base64}" alt="${patternType}" style="max-width: 100%; height: auto; border-radius: 4px;">
+                    <div style="font-size: 0.7rem; color: #666; text-align: center; margin-top: 4px;">${formatPatternType(patternType)}</div>
+                `;
             } catch (error) {
                 console.error(`Failed to load reference chart for ${patternType}:`, error);
                 // Fallback: show pattern name
