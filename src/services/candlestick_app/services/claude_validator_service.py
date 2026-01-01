@@ -104,9 +104,12 @@ class ChartRenderer:
             "background": "#1a1a2e",         # Dark background - same as Frontend
             "grid": "#333333",               # Grid lines
             "text": "#ffffff",               # White text
-            "highlight_bullish": (76/255, 175/255, 80/255, 0.2),   # RGBA tuple
-            "highlight_bearish": (244/255, 67/255, 54/255, 0.2),   # RGBA tuple
-            "highlight_neutral": (255/255, 152/255, 0/255, 0.2),   # RGBA tuple
+            # MUCH stronger highlight for Claude to identify - 50% alpha instead of 20%
+            "highlight_bullish": (76/255, 175/255, 80/255, 0.5),   # RGBA tuple - STRONG
+            "highlight_bearish": (244/255, 67/255, 54/255, 0.5),   # RGBA tuple - STRONG
+            "highlight_neutral": (255/255, 152/255, 0/255, 0.5),   # RGBA tuple - STRONG
+            # Border color for pattern candles
+            "pattern_border": "#ffffff",     # White border around pattern candles
         }
 
     def render_pattern_chart(
@@ -180,16 +183,20 @@ class ChartRenderer:
                 else:
                     color = self.colors["bearish_highlight"] if is_pattern_candle else self.colors["bearish"]
 
-                # Highlight pattern candles with direction-based background
+                # Highlight pattern candles with STRONG background + white border
                 if is_pattern_candle:
+                    # Strong colored background
                     ax.axvspan(
-                        i - 0.4, i + 0.4,
+                        i - 0.45, i + 0.45,
                         color=highlight_color[:3] if isinstance(highlight_color, tuple) else highlight_color,
-                        alpha=highlight_color[3] if isinstance(highlight_color, tuple) else 0.2
+                        alpha=highlight_color[3] if isinstance(highlight_color, tuple) else 0.5
                     )
+                    # Add white dashed border around the pattern area for clarity
+                    ax.axvline(x=i - 0.45, color=self.colors["pattern_border"], linestyle='--', linewidth=1.5, alpha=0.8)
+                    ax.axvline(x=i + 0.45, color=self.colors["pattern_border"], linestyle='--', linewidth=1.5, alpha=0.8)
 
-                # Draw wick (high-low line) - thicker for highlighted candles
-                line_width = 2 if is_pattern_candle else 1
+                # Draw wick (high-low line) - MUCH thicker for highlighted candles
+                line_width = 3 if is_pattern_candle else 1
                 ax.plot([i, i], [l, h], color=color, linewidth=line_width)
 
                 # Draw body
@@ -200,14 +207,15 @@ class ChartRenderer:
 
                 # Bullish candles: hollow (dark fill with colored border)
                 # Bearish candles: filled
+                # Pattern candles get WHITE border for maximum visibility
                 if is_bullish:
                     rect = Rectangle(
                         (i - 0.3, body_bottom),
                         0.6,
                         body_height,
                         facecolor='#1a1a2e',  # Dark fill for hollow effect
-                        edgecolor=color,
-                        linewidth=2 if is_pattern_candle else 1
+                        edgecolor=self.colors["pattern_border"] if is_pattern_candle else color,
+                        linewidth=3 if is_pattern_candle else 1
                     )
                 else:
                     rect = Rectangle(
@@ -215,8 +223,8 @@ class ChartRenderer:
                         0.6,
                         body_height,
                         facecolor=color,
-                        edgecolor=color,
-                        linewidth=1
+                        edgecolor=self.colors["pattern_border"] if is_pattern_candle else color,
+                        linewidth=3 if is_pattern_candle else 1
                     )
                 ax.add_patch(rect)
 
@@ -456,38 +464,49 @@ class ClaudeValidatorService:
         specific_criteria = self._get_pattern_criteria(pattern_type)
 
         return f"""You are an expert technical analyst specializing in candlestick pattern recognition.
-You must be VERY STRICT in your assessment - only confirm patterns that clearly meet ALL criteria.
+You must be EXTREMELY STRICT - reject patterns that don't clearly meet ALL criteria.
 
-Analyze this candlestick chart image. The HIGHLIGHTED candle(s) with the lighter/brighter background are the pattern candles to evaluate.
+**HOW TO IDENTIFY THE PATTERN CANDLE:**
+The pattern candle is marked with:
+- A STRONG colored background highlight (orange/green/red shading)
+- WHITE DASHED vertical lines on both sides
+- A WHITE BORDER around the candle body
+- The candle is on the RIGHT side of the chart (last or near-last position)
+
+Look for the candle with these markings - that is the ONLY candle you should evaluate.
 
 **Symbol:** {symbol}
 **Timeframe:** {timeframe}
 **Claimed Pattern:** {pattern_type.replace('_', ' ').title()}
 {specific_criteria}
 
-**IMPORTANT INSTRUCTIONS:**
-1. Focus ONLY on the highlighted candle(s) - ignore non-highlighted context candles
-2. Measure the body size relative to the total range (high-low)
-3. Measure shadow lengths relative to body size
-4. Check if body position matches the pattern definition
-5. Be STRICT - if body is too large or shadows don't meet criteria, REJECT
+**CRITICAL EVALUATION STEPS:**
+1. IDENTIFY the highlighted candle (white border, colored background, dashed lines)
+2. MEASURE the body size: body_ratio = body_height / (high - low)
+   - For Doji: body_ratio must be < 5% (0.05)
+   - For Hammer/Shooting Star: body_ratio must be < 35% (0.35)
+3. MEASURE shadow lengths relative to body
+4. CHECK body position (top/bottom of candle)
+5. REJECT if ANY criterion is not met
+
+**STRICT THRESHOLDS:**
+- Doji: Body < 5% of total range. If body is visible/substantial, it's NOT a Doji
+- Hammer/Shooting Star/Inverted Hammer: Body < 35% of range, relevant shadow > 2x body
+- Large red or green body = NOT a reversal single-candle pattern
 
 Please evaluate:
 
-1. **Pattern Validity**: Does this truly match the characteristics of a {pattern_type.replace('_', ' ').title()}?
-   - Check candle body sizes, shadow lengths, and relative positions
-   - A large body (>35% of range) usually disqualifies hammer/shooting star patterns
+1. **Pattern Validity**: Does this match a {pattern_type.replace('_', ' ').title()}?
+   - Estimate the body ratio visually
+   - A clearly visible body (>10% of range) is NOT a Doji
+   - A large body (>35% of range) is NOT a Hammer/Shooting Star
 
-2. **Visual Quality Score (0.0-1.0)**: How well-formed is this pattern?
-   - 1.0 = Textbook perfect example
-   - 0.5 = Acceptable but not ideal
-   - 0.0 = Does not meet basic criteria
+2. **Visual Quality Score (0.0-1.0)**:
+   - 1.0 = Perfect textbook example
+   - 0.5 = Marginal, borderline
+   - 0.0 = Does NOT meet criteria
 
-3. **Market Context Score (0.0-1.0)**: Is the pattern appearing in appropriate context?
-   - Shooting Star/Hanging Man: MUST appear after uptrend
-   - Hammer/Inverted Hammer: MUST appear after downtrend
-
-4. **Your Assessment**: What pattern do YOU see? (if different from claimed)
+3. **Market Context Score (0.0-1.0)**: Correct trend context?
 
 Respond in this exact JSON format:
 ```json
@@ -497,12 +516,12 @@ Respond in this exact JSON format:
     "detected_pattern": "pattern_name_or_null",
     "visual_quality": 0.0-1.0,
     "market_context": 0.0-1.0,
-    "reasoning": "Brief explanation of your assessment"
+    "reasoning": "Brief explanation including your body ratio estimate"
 }}
 ```
 
-Be STRICT in your assessment. Only confirm patterns that clearly meet ALL the criteria above.
-If the body is too large, shadows too short, or context wrong, set agrees=false."""
+BE VERY STRICT. When in doubt, REJECT (agrees=false).
+A regular candle with normal body is NOT a Doji. A candle with large body is NOT a Shooting Star."""
 
     async def _rate_limit(self):
         """Apply rate limiting between API requests."""
