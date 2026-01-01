@@ -55,6 +55,9 @@ class PatternType(str, Enum):
     THREE_INSIDE_DOWN = "three_inside_down"
     BEARISH_ABANDONED_BABY = "bearish_abandoned_baby"
     TOWER_TOP = "tower_top"
+    ADVANCE_BLOCK = "advance_block"
+    BEARISH_ISLAND = "bearish_island"
+    BULLISH_ISLAND = "bullish_island"
 
     # Reversal Patterns - Neutral
     DOJI = "doji"

@@ -294,6 +294,25 @@ class CandlestickPatternService:
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BEARISH,
             },
+            # New Patterns - Advance Block & Island
+            PatternType.ADVANCE_BLOCK: {
+                "description": "Advance Block - drei bullische Kerzen mit abnehmender Stärke",
+                "implication": "Warnsignal für nachlassende Kaufkraft, bärische Umkehr möglich",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BEARISH,
+            },
+            PatternType.BEARISH_ISLAND: {
+                "description": "Bearish Island - Kerzengruppe isoliert durch Gaps auf beiden Seiten",
+                "implication": "Starkes bärisches Umkehrsignal nach Aufwärtstrend",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BEARISH,
+            },
+            PatternType.BULLISH_ISLAND: {
+                "description": "Bullish Island - Kerzengruppe isoliert durch Gaps auf beiden Seiten",
+                "implication": "Starkes bullisches Umkehrsignal nach Abwärtstrend",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BULLISH,
+            },
         }
 
     # ==================== Pattern Detection Methods ====================
@@ -1325,6 +1344,137 @@ class CandlestickPatternService:
 
         return True
 
+    def _is_advance_block(self, c1: CandleData, c2: CandleData, c3: CandleData, avg_body: float) -> bool:
+        """
+        Check for Advance Block pattern (bearish reversal signal).
+
+        Three bullish candles where:
+        - All three candles are bullish
+        - Each candle opens within the body of the previous candle
+        - Bodies progressively get smaller (decreasing strength)
+        - Upper shadows progressively get longer (selling pressure increasing)
+        - Appears after an uptrend
+
+        This pattern signals weakening buying pressure and potential reversal.
+        """
+        # All three must be bullish
+        if not (c1.is_bullish and c2.is_bullish and c3.is_bullish):
+            return False
+
+        # Each opens within or near the body of the previous
+        if c2.open < min(c1.open, c1.close) or c2.open > max(c1.open, c1.close):
+            return False
+        if c3.open < min(c2.open, c2.close) or c3.open > max(c2.open, c2.close):
+            return False
+
+        # Each closes higher than the previous (upward progression)
+        if c2.close <= c1.close or c3.close <= c2.close:
+            return False
+
+        # Bodies get progressively smaller (key characteristic)
+        if not (c1.body_size > c2.body_size > c3.body_size):
+            return False
+
+        # Upper shadows get progressively larger (increasing selling pressure)
+        if c1.upper_shadow >= c2.upper_shadow or c2.upper_shadow >= c3.upper_shadow:
+            return False
+
+        # Third candle should have significant upper shadow
+        if c3.total_range > 0:
+            upper_shadow_ratio = c3.upper_shadow / c3.total_range
+            if upper_shadow_ratio < 0.2:  # At least 20% upper shadow
+                return False
+
+        return True
+
+    def _is_bearish_island(self, candles: list[CandleData], avg_body: float) -> bool:
+        """
+        Check for Bearish Island Reversal pattern.
+
+        Structure:
+        - Gap up (first island candle's low > previous candle's high)
+        - One or more candles forming the "island"
+        - Gap down (last island candle's high < next candle's low becomes current close)
+
+        This is a strong bearish reversal signal when found after an uptrend.
+        """
+        if len(candles) < 3:
+            return False
+
+        # The pattern needs: pre-gap candle, island candle(s), post-gap candle
+        # For detection at current position, we look backwards
+        pre_gap = candles[0]
+        island = candles[1:-1] if len(candles) > 3 else [candles[1]]
+        post_gap = candles[-1]
+
+        if not island:
+            return False
+
+        first_island = island[0]
+        last_island = island[-1]
+
+        # Gap up: first island candle's low > pre-gap candle's high
+        gap_up = first_island.low > pre_gap.high
+
+        # Gap down: post-gap candle's high < last island candle's low
+        gap_down = post_gap.high < last_island.low
+
+        if not (gap_up and gap_down):
+            return False
+
+        # Post-gap candle should be bearish (confirming the reversal)
+        if not post_gap.is_bearish:
+            return False
+
+        # Pre-gap should be bullish (uptrend context)
+        if not pre_gap.is_bullish:
+            return False
+
+        return True
+
+    def _is_bullish_island(self, candles: list[CandleData], avg_body: float) -> bool:
+        """
+        Check for Bullish Island Reversal pattern.
+
+        Structure:
+        - Gap down (first island candle's high < previous candle's low)
+        - One or more candles forming the "island"
+        - Gap up (last island candle's low > next candle's high becomes current close)
+
+        This is a strong bullish reversal signal when found after a downtrend.
+        """
+        if len(candles) < 3:
+            return False
+
+        pre_gap = candles[0]
+        island = candles[1:-1] if len(candles) > 3 else [candles[1]]
+        post_gap = candles[-1]
+
+        if not island:
+            return False
+
+        first_island = island[0]
+        last_island = island[-1]
+
+        # Gap down: first island candle's high < pre-gap candle's low
+        gap_down = first_island.high < pre_gap.low
+
+        # Gap up: post-gap candle's low > last island candle's high
+        gap_up = post_gap.low > last_island.high
+
+        if not (gap_down and gap_up):
+            return False
+
+        # Post-gap candle should be bullish (confirming the reversal)
+        if not post_gap.is_bullish:
+            return False
+
+        # Pre-gap should be bearish (downtrend context)
+        if not pre_gap.is_bearish:
+            return False
+
+        return True
+
     # ==================== Main Detection Logic ====================
 
     def _calculate_avg_body(self, candles: list[CandleData], lookback: int = 20) -> float:
@@ -1551,6 +1701,26 @@ class CandlestickPatternService:
                 elif self._is_bearish_abandoned_baby(prev2, prev, current, avg_body):
                     confidence = 0.9 if trend == "uptrend" else 0.75
                     detected.append((PatternType.BEARISH_ABANDONED_BABY, confidence, 3))
+
+                # Advance Block (bearish reversal warning)
+                if self._is_advance_block(prev2, prev, current, avg_body):
+                    confidence = 0.7 if trend == "uptrend" else 0.55
+                    detected.append((PatternType.ADVANCE_BLOCK, confidence, 3))
+
+            # === Island Patterns (multi-candle with gaps) ===
+            # Check for Island patterns with varying window sizes (3-6 candles)
+            for window_size in range(3, min(7, i + 1)):
+                start_idx = i - window_size + 1
+                if start_idx >= 0:
+                    window_candles = candles[start_idx:i + 1]
+                    if self._is_bearish_island(window_candles, avg_body):
+                        confidence = 0.85 if trend == "uptrend" else 0.65
+                        detected.append((PatternType.BEARISH_ISLAND, confidence, window_size))
+                        break  # Found an Island, don't check larger windows
+                    elif self._is_bullish_island(window_candles, avg_body):
+                        confidence = 0.85 if trend == "downtrend" else 0.65
+                        detected.append((PatternType.BULLISH_ISLAND, confidence, window_size))
+                        break
 
             # === Tower Patterns (multi-candle) ===
             # Check for Tower patterns with varying window sizes (4-12 candles)

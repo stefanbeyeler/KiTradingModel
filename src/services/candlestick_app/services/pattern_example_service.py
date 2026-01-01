@@ -118,6 +118,9 @@ class PatternExampleService:
             "falling_three_methods": self._gen_falling_three_methods,
             "tower_bottom": self._gen_tower_bottom,
             "tower_top": self._gen_tower_top,
+            "advance_block": self._gen_advance_block,
+            "bearish_island": self._gen_bearish_island,
+            "bullish_island": self._gen_bullish_island,
         }
 
         # Pattern metadata
@@ -153,6 +156,9 @@ class PatternExampleService:
             "falling_three_methods": {"direction": "bearish", "candles": 5, "context": "downtrend"},
             "tower_bottom": {"direction": "bullish", "candles": 5, "context": "downtrend"},
             "tower_top": {"direction": "bearish", "candles": 5, "context": "uptrend"},
+            "advance_block": {"direction": "bearish", "candles": 3, "context": "uptrend"},
+            "bearish_island": {"direction": "bearish", "candles": 3, "context": "uptrend"},
+            "bullish_island": {"direction": "bullish", "candles": 3, "context": "downtrend"},
         }
 
     def get_available_patterns(self) -> List[str]:
@@ -891,6 +897,106 @@ class PatternExampleService:
 
         pattern = [candle1] + inner_candles + [candle5]
         return context + pattern, list(range(len(context), len(context) + 5))
+
+    def _gen_advance_block(self) -> Tuple[List[SyntheticCandle], List[int]]:
+        """
+        Advance Block: Three bullish candles with decreasing body size and increasing upper shadows.
+        Bearish reversal warning pattern.
+        """
+        context = self._gen_uptrend_context(100, 3)
+        last_close = context[-1].close
+
+        # First: strong bullish candle with minimal upper shadow
+        c1_o = last_close
+        c1_c = last_close + 4
+        c1_h = c1_c + 0.3  # Small upper shadow
+        c1_l = c1_o - 0.2
+        candle1 = SyntheticCandle(c1_o, c1_h, c1_l, c1_c)
+
+        # Second: smaller bullish candle with longer upper shadow
+        c2_o = c1_c - 1  # Opens within first body
+        c2_c = c1_c + 2  # Closes higher
+        c2_h = c2_c + 1.2  # Longer upper shadow
+        c2_l = c2_o - 0.2
+        candle2 = SyntheticCandle(c2_o, c2_h, c2_l, c2_c)
+
+        # Third: smallest bullish candle with longest upper shadow
+        c3_o = c2_c - 0.8  # Opens within second body
+        c3_c = c2_c + 1  # Closes higher but smallest gain
+        c3_h = c3_c + 2  # Longest upper shadow (selling pressure)
+        c3_l = c3_o - 0.2
+        candle3 = SyntheticCandle(c3_o, c3_h, c3_l, c3_c)
+
+        pattern = [candle1, candle2, candle3]
+        return context + pattern, list(range(len(context), len(context) + 3))
+
+    def _gen_bearish_island(self) -> Tuple[List[SyntheticCandle], List[int]]:
+        """
+        Bearish Island Reversal: Candles isolated by gaps on both sides.
+        Strong bearish reversal after uptrend.
+        """
+        context = self._gen_uptrend_context(100, 2)
+        last_close = context[-1].close
+        last_high = context[-1].high
+
+        # Gap up - island candles
+        island_low = last_high + 1  # Gap above previous high
+        c1_o = island_low + 1
+        c1_c = c1_o + 2  # Bullish island candle
+        c1_h = c1_c + 0.5
+        c1_l = island_low
+        island1 = SyntheticCandle(c1_o, c1_h, c1_l, c1_c)
+
+        c2_o = c1_c
+        c2_c = c2_o - 1  # Slight bearish
+        c2_h = c2_o + 0.5
+        c2_l = c2_c - 0.3
+        island2 = SyntheticCandle(c2_o, c2_h, c2_l, c2_c)
+
+        # Gap down - bearish confirmation
+        gap_down_high = island2.low - 1  # Gap below island
+        c3_o = gap_down_high - 0.5
+        c3_c = c3_o - 4  # Strong bearish
+        c3_h = gap_down_high
+        c3_l = c3_c - 0.3
+        candle3 = SyntheticCandle(c3_o, c3_h, c3_l, c3_c)
+
+        pattern = [island1, island2, candle3]
+        return context + pattern, list(range(len(context), len(context) + 3))
+
+    def _gen_bullish_island(self) -> Tuple[List[SyntheticCandle], List[int]]:
+        """
+        Bullish Island Reversal: Candles isolated by gaps on both sides.
+        Strong bullish reversal after downtrend.
+        """
+        context = self._gen_downtrend_context(100, 2)
+        last_close = context[-1].close
+        last_low = context[-1].low
+
+        # Gap down - island candles
+        island_high = last_low - 1  # Gap below previous low
+        c1_o = island_high - 1
+        c1_c = c1_o - 2  # Bearish island candle
+        c1_h = island_high
+        c1_l = c1_c - 0.5
+        island1 = SyntheticCandle(c1_o, c1_h, c1_l, c1_c)
+
+        c2_o = c1_c
+        c2_c = c2_o + 1  # Slight bullish
+        c2_h = c2_c + 0.3
+        c2_l = c2_o - 0.5
+        island2 = SyntheticCandle(c2_o, c2_h, c2_l, c2_c)
+
+        # Gap up - bullish confirmation
+        gap_up_low = island2.high + 1  # Gap above island
+        c3_o = gap_up_low + 0.5
+        c3_c = c3_o + 4  # Strong bullish
+        c3_h = c3_c + 0.3
+        c3_l = gap_up_low
+        candle3 = SyntheticCandle(c3_o, c3_h, c3_l, c3_c)
+
+        pattern = [island1, island2, candle3]
+        return context + pattern, list(range(len(context), len(context) + 3))
 
     # ==================== Chart Rendering ====================
 

@@ -371,7 +371,8 @@ class ClaudeValidatorService:
             "morning_star", "evening_star", "three_white_soldiers",
             "three_black_crows", "rising_three_methods", "falling_three_methods",
             "three_inside_up", "three_inside_down",
-            "bullish_abandoned_baby", "bearish_abandoned_baby"
+            "bullish_abandoned_baby", "bearish_abandoned_baby",
+            "advance_block", "bearish_island", "bullish_island"
         ]
         # Tower patterns have variable candle count (4-12)
         multi_candle = ["tower_top", "tower_bottom"]
@@ -399,14 +400,14 @@ class ClaudeValidatorService:
             "morning_star", "three_white_soldiers", "piercing_line",
             "dragonfly_doji", "rising_three_methods", "tweezer_bottom",
             "bullish_belt_hold", "bullish_counterattack", "three_inside_up",
-            "bullish_abandoned_baby", "tower_bottom"
+            "bullish_abandoned_baby", "tower_bottom", "bullish_island"
         ]
         bearish_patterns = [
             "hanging_man", "shooting_star", "bearish_engulfing", "bearish_harami",
             "evening_star", "three_black_crows", "dark_cloud_cover",
             "gravestone_doji", "falling_three_methods", "tweezer_top",
             "bearish_belt_hold", "bearish_counterattack", "three_inside_down",
-            "bearish_abandoned_baby", "tower_top"
+            "bearish_abandoned_baby", "tower_top", "advance_block", "bearish_island"
         ]
         neutral_patterns = [
             "doji", "spinning_top", "harami_cross", "inside_bar"
@@ -611,6 +612,31 @@ class ClaudeValidatorService:
 - Last candle: large bearish (red) body
 - The small candles form a "roof" between the two large "tower walls"
 - Appears at the end of an uptrend""",
+
+            "advance_block": """
+**STRICT Advance Block Criteria (ALL must be met):**
+- Three consecutive bullish (green) candles
+- Each candle opens within the body of the previous candle
+- Bodies get progressively SMALLER (decreasing buying strength)
+- Upper shadows get progressively LONGER (increasing selling pressure)
+- Each candle closes higher than the previous
+- Appears after an uptrend - signals potential weakness/reversal""",
+
+            "bearish_island": """
+**STRICT Bearish Island Reversal Criteria (ALL must be met):**
+- Gap UP before the island (first island candle's low > previous candle's high)
+- One or more candles forming the isolated "island"
+- Gap DOWN after the island (last island candle's low > next candle's high)
+- Post-gap candle is bearish (confirming the reversal)
+- Appears after an uptrend - strong bearish reversal signal""",
+
+            "bullish_island": """
+**STRICT Bullish Island Reversal Criteria (ALL must be met):**
+- Gap DOWN before the island (first island candle's high < previous candle's low)
+- One or more candles forming the isolated "island"
+- Gap UP after the island (last island candle's high < next candle's low)
+- Post-gap candle is bullish (confirming the reversal)
+- Appears after a downtrend - strong bullish reversal signal""",
         }
         return criteria.get(pattern_type.lower(), "")
 

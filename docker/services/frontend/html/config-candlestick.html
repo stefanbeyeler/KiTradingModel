@@ -3483,6 +3483,9 @@
             'bearish_abandoned_baby': [[4, 18, 4, 'bullish'], [10, 2, 10, 'doji'], [4, 18, 4, 'bearish']],
             'tower_bottom': [[4, 22, 4, 'bearish'], [6, 8, 6, 'bearish'], [6, 6, 6, 'bullish'], [6, 8, 6, 'bullish'], [4, 22, 4, 'bullish']],
             'tower_top': [[4, 22, 4, 'bullish'], [6, 8, 6, 'bullish'], [6, 6, 6, 'bearish'], [6, 8, 6, 'bearish'], [4, 22, 4, 'bearish']],
+            'advance_block': [[2, 20, 2, 'bullish'], [4, 14, 6, 'bullish'], [6, 10, 8, 'bullish']],
+            'bearish_island': [[4, 18, 4, 'bullish'], [4, 10, 4, 'bearish'], [4, 20, 4, 'bearish']],
+            'bullish_island': [[4, 18, 4, 'bearish'], [4, 10, 4, 'bullish'], [4, 20, 4, 'bullish']],
 
             // Default fallback
             'default': [[8, 12, 8, 'doji']]
@@ -3829,6 +3832,40 @@
                     'Erscheint am Ende eines Aufwärtstrends'
                 ],
                 confidence: 'Zuverlässiges Umkehrmuster, je länger Konsolidierung desto stärker'
+            },
+            'advance_block': {
+                candles: 3,
+                rules: [
+                    'Drei aufeinanderfolgende bullische (grüne) Kerzen',
+                    'Jede Kerze öffnet innerhalb des Bodies der vorherigen Kerze',
+                    'Bodies werden progressiv KLEINER (abnehmende Kaufkraft)',
+                    'Obere Schatten werden progressiv LÄNGER (zunehmender Verkaufsdruck)',
+                    'Jede Kerze schließt höher als die vorherige',
+                    'Erscheint nach einem Aufwärtstrend'
+                ],
+                confidence: 'Warnsignal für nachlassende Kaufkraft - bärische Umkehr möglich'
+            },
+            'bearish_island': {
+                candles: 3,
+                rules: [
+                    'Gap UP vor der Insel (Low der Inselkerze > High der vorherigen)',
+                    'Eine oder mehrere Kerzen bilden die isolierte "Insel"',
+                    'Gap DOWN nach der Insel (High der letzten Inselkerze < Low der nächsten)',
+                    'Bestätigungskerze nach dem Gap ist bearish',
+                    'Erscheint nach einem Aufwärtstrend'
+                ],
+                confidence: 'Starkes bärisches Umkehrsignal - Gaps bestätigen Trendwende'
+            },
+            'bullish_island': {
+                candles: 3,
+                rules: [
+                    'Gap DOWN vor der Insel (High der Inselkerze < Low der vorherigen)',
+                    'Eine oder mehrere Kerzen bilden die isolierte "Insel"',
+                    'Gap UP nach der Insel (Low der letzten Inselkerze > High der nächsten)',
+                    'Bestätigungskerze nach dem Gap ist bullish',
+                    'Erscheint nach einem Abwärtstrend'
+                ],
+                confidence: 'Starkes bullisches Umkehrsignal - Gaps bestätigen Trendwende'
             }
         };
 
