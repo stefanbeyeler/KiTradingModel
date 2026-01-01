@@ -231,13 +231,13 @@ class CandlestickPatternService:
             },
             # New Patterns - Belt Hold
             PatternType.BULLISH_BELT_HOLD: {
-                "description": "Bullish Belt Hold - lange weisse Kerze ohne unteren Schatten",
+                "description": "Bullish Belt Hold - lange grüne Kerze ohne unteren Schatten",
                 "implication": "Starkes bullisches Signal nach Abwärtstrend",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BULLISH,
             },
             PatternType.BEARISH_BELT_HOLD: {
-                "description": "Bearish Belt Hold - lange schwarze Kerze ohne oberen Schatten",
+                "description": "Bearish Belt Hold - lange rote Kerze ohne oberen Schatten",
                 "implication": "Starkes bärisches Signal nach Aufwärtstrend",
                 "category": PatternCategory.REVERSAL,
                 "direction": PatternDirection.BEARISH,
