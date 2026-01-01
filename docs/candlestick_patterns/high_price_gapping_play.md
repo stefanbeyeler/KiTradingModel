@@ -1,6 +1,6 @@
 # High Price Gapping Play
 
-![High Price Gapping Play Pattern](high_price_gapping_play.svg)
+![High Price Gapping Play Pattern](high_price_gapping_play.png)
 
 ## Kurzbeschreibung
 

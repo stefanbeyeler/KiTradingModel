@@ -1,6 +1,6 @@
 # Bullische Kastenformation
 
-![Bullische Kastenformation Pattern](bullische_kastenformation.svg)
+![Bullische Kastenformation Pattern](bullische_kastenformation.png)
 
 ## Kurzbeschreibung
 

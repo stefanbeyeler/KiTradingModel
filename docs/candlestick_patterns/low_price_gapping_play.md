@@ -1,6 +1,6 @@
 # Low Price Gapping Play
 
-![Low Price Gapping Play Pattern](low_price_gapping_play.svg)
+![Low Price Gapping Play Pattern](low_price_gapping_play.png)
 
 ## Kurzbeschreibung
 

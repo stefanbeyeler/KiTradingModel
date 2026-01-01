@@ -1,6 +1,6 @@
 # Advance Block Pattern
 
-![Advance Block Pattern](advance_block_pattern.svg)
+![Advance Block Pattern](advance_block_pattern.png)
 
 ## Kurzbeschreibung
 

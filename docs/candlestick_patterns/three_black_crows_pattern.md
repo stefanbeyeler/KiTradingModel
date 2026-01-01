@@ -1,6 +1,6 @@
 # Three Black Crows Pattern
 
-![Three Black Crows Pattern](three_black_crows.svg)
+![Three Black Crows Pattern](three_black_crows.png)
 
 ## Kurzbeschreibung
 

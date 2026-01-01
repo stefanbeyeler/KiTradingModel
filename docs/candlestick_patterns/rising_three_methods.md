@@ -1,6 +1,6 @@
 # Rising Three Methods
 
-![Rising Three Methods Pattern](rising_three_methods.svg)
+![Rising Three Methods Pattern](rising_three_methods.png)
 
 ## Kurzbeschreibung
 
@@ -38,7 +38,7 @@ Der Einstieg erfolgt entweder direkt am Ende der zweiten weißen Kerze oder nach
 
 ## Beispiel
 
-![Rising Three Methods Beispiel](rising_three_methods_example.svg)
+![Rising Three Methods Beispiel](rising_three_methods_example.png)
 
 Um den typischen Aufbau einer Fortsetzungsformation zu veranschaulichen, schauen wir uns den untenstehenden Chart an.
 

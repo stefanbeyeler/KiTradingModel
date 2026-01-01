@@ -234,7 +234,11 @@
       "Bash(git -C \"e:/KiTradingModel\" commit -m \"$\\(cat <<''EOF''\nfix\\(candlestick\\): correct attribute names in rule_optimizer_service\n\nFixed incorrect attribute references in ClaudeValidationResult:\n- overall_confidence -> claude_confidence\n- chart_image -> chart_image_base64\n- reasoning -> claude_reasoning\n- agrees -> claude_agrees\n\nThis caused all validations to fail with AttributeError despite\npatterns being correctly classified \\(REJECTED -> INVALID\\).\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git -C \"e:/KiTradingModel\" add src/services/candlestick_app/services/rule_config_service.py)",
       "Bash(git -C \"e:/KiTradingModel\" commit -m \"$\\(cat <<''EOF''\nfeat\\(candlestick\\): auto-complete history for rule parameter changes\n\nAdded _ensure_history_complete\\(\\) method that runs on config load.\nIt detects parameter values that differ from defaults but have no\nhistory entry, and creates retroactive history records for them.\n\nThis ensures the /history endpoint shows ALL parameter changes,\nincluding those made directly in the config file.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git -C \"e:/KiTradingModel\" commit -m \"fix\\(candlestick\\): use current timestamp for missing history entries\n\nChanged from hardcoded ''2024-01-01'' to datetime.utcnow\\(\\) so that\ninitial_config entries show the actual time they were detected.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\")"
+      "Bash(git -C \"e:/KiTradingModel\" commit -m \"fix\\(candlestick\\): use current timestamp for missing history entries\n\nChanged from hardcoded ''2024-01-01'' to datetime.utcnow\\(\\) so that\ninitial_config entries show the actual time they were detected.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\")",
+      "Bash(e:/KiTradingModel/venv/Scripts/pip.exe show:*)",
+      "Bash(e:/KiTradingModel/venv/Scripts/pip.exe install:*)",
+      "Bash(/e/KiTradingModel/venv/Scripts/pip.exe install:*)",
+      "Bash(where:*)"
     ],
     "deny": [],
     "ask": []

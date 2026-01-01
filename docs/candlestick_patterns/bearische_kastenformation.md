@@ -1,6 +1,6 @@
 # Bearische Kastenformation
 
-![Bearische Kastenformation Pattern](bearische_kastenformation.svg)
+![Bearische Kastenformation Pattern](bearische_kastenformation.png)
 
 ## Kurzbeschreibung
 

@@ -1,6 +1,6 @@
 # Falling Three Methods
 
-![Falling Three Methods Pattern](falling_three_methods.svg)
+![Falling Three Methods Pattern](falling_three_methods.png)
 
 ## Kurzbeschreibung
 
