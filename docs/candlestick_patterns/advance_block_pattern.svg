@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <!-- Background -->
+  <rect width="400" height="300" fill="#ffffff"/>
+  
+  <!-- Title -->
+  <text x="200" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#333">Advance Block Pattern</text>
+  
+  <!-- Previous candles (black/bearish - showing prior uptrend) -->
+  <!-- First prior candle -->
+  <line x1="60" y1="200" x2="60" y2="260" stroke="#666" stroke-width="2"/>
+  <rect x="45" y="210" width="30" height="40" fill="#ffffff" stroke="#666" stroke-width="2"/>
+  
+  <!-- Second prior candle -->
+  <line x1="110" y1="180" x2="110" y2="240" stroke="#666" stroke-width="2"/>
+  <rect x="95" y="190" width="30" height="40" fill="#ffffff" stroke="#666" stroke-width="2"/>
+  
+  <!-- ADVANCE BLOCK PATTERN -->
+  
+  <!-- First white candle (largest) -->
+  <line x1="170" y1="100" x2="170" y2="200" stroke="#666" stroke-width="2"/>
+  <rect x="150" y="105" width="40" height="90" fill="#ffffff" stroke="#666" stroke-width="2"/>
+  
+  <!-- Second white candle (smaller) -->
+  <line x1="240" y1="70" x2="240" y2="155" stroke="#666" stroke-width="2"/>
+  <rect x="220" y="75" width="40" height="70" fill="#ffffff" stroke="#666" stroke-width="2"/>
+  
+  <!-- Third white candle (smallest with long upper shadow) -->
+  <line x1="310" y1="40" x2="310" y2="120" stroke="#666" stroke-width="2"/>
+  <rect x="290" y="75" width="40" height="40" fill="#ffffff" stroke="#666" stroke-width="2"/>
+  
+  <!-- Labels -->
+  <text x="170" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">1. Kerze</text>
+  <text x="240" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">2. Kerze</text>
+  <text x="310" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#666">3. Kerze</text>
+  
+  <!-- Arrow showing decreasing size -->
+  <path d="M 155 85 L 295 55" stroke="#f44336" stroke-width="1.5" fill="none" stroke-dasharray="4,2"/>
+  <text x="225" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#f44336">abnehmende Körpergröße</text>
+  
+  <!-- Long upper shadow annotation -->
+  <line x1="340" y1="55" x2="320" y2="55" stroke="#f44336" stroke-width="1"/>
+  <text x="355" y="58" font-family="Arial, sans-serif" font-size="8" fill="#f44336">langer</text>
+  <text x="355" y="68" font-family="Arial, sans-serif" font-size="8" fill="#f44336">Schatten</text>
+  
+  <!-- Uptrend arrow before pattern -->
+  <path d="M 40 260 Q 80 220 130 180" stroke="#4CAF50" stroke-width="2" fill="none" stroke-dasharray="5,3"/>
+  <text x="35" y="275" font-family="Arial, sans-serif" font-size="9" fill="#4CAF50">Aufwärts-</text>
+  <text x="35" y="287" font-family="Arial, sans-serif" font-size="9" fill="#4CAF50">trend</text>
+  
+  <!-- Warning signal -->
+  <text x="310" y="165" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#ff9800">⚠ Warnsignal</text>
+</svg>
