@@ -3070,6 +3070,28 @@
                     <p style="color: #888;">Lade Historie...</p>
                 </div>
             </div>
+
+            <!-- Backup/Restore -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">💾 Backup & Restore</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="createBackup()">+ Backup erstellen</button>
+                        <button class="btn btn-primary" onclick="exportConfig()">📥 Exportieren</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('importFileInput').click()">📤 Importieren</button>
+                        <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importConfig(event)">
+                    </div>
+                </div>
+                <p style="color: #888; margin-bottom: 1rem;">
+                    Sichere deine Regelwerk-Einstellungen oder stelle einen früheren Stand wieder her.
+                    Vor jedem Restore/Import wird automatisch ein Backup erstellt.
+                </p>
+
+                <!-- Backup List -->
+                <div id="backupListContainer">
+                    <p style="color: #888;">Lade Backups...</p>
+                </div>
+            </div>
         </div><!-- End Tab: Regelwerk Optimierung -->
 
         <!-- Tab: Claude QA -->
@@ -4371,6 +4393,7 @@
             } else if (tabName === 'ruleoptimizer') {
                 loadCurrentParams();
                 loadParamHistory();
+                loadBackups();
 
                 // Stop training auto-refresh
                 if (trainingRefreshInterval) {
@@ -8511,6 +8534,210 @@
                 }
             } catch (error) {
                 console.error('Failed to reset params:', error);
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // === Backup/Restore Functions ===
+
+        async function loadBackups() {
+            const container = document.getElementById('backupListContainer');
+            if (!container) return;
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/rule-optimizer/backups`);
+                if (!response.ok) throw new Error('Backups konnten nicht geladen werden');
+                const data = await response.json();
+
+                if (!data.backups || data.backups.length === 0) {
+                    container.innerHTML = '<p style="color: #888;">Keine Backups vorhanden.</p>';
+                    return;
+                }
+
+                let html = '<table style="width: 100%; font-size: 0.85rem;">';
+                html += '<thead><tr style="text-align: left; color: #888;">';
+                html += '<th style="padding: 0.5rem;">Name</th>';
+                html += '<th style="padding: 0.5rem;">Erstellt</th>';
+                html += '<th style="padding: 0.5rem;">Parameter</th>';
+                html += '<th style="padding: 0.5rem;">Größe</th>';
+                html += '<th style="padding: 0.5rem;">Aktionen</th>';
+                html += '</tr></thead><tbody>';
+
+                for (const backup of data.backups) {
+                    const createdAt = backup.created_at ? new Date(backup.created_at).toLocaleString('de-CH') : '-';
+                    const sizeKB = backup.size_bytes ? (backup.size_bytes / 1024).toFixed(1) : '-';
+                    const isAutoBackup = backup.name.startsWith('auto_');
+
+                    html += '<tr style="border-top: 1px solid rgba(255,255,255,0.1);">';
+                    html += `<td style="padding: 0.5rem;">
+                        <span style="color: ${isAutoBackup ? '#ffb74d' : '#64c8ff'};">${backup.name}</span>
+                        ${isAutoBackup ? '<span style="font-size: 0.7rem; color: #888; margin-left: 0.3rem;">(auto)</span>' : ''}
+                    </td>`;
+                    html += `<td style="padding: 0.5rem; color: #aaa;">${createdAt}</td>`;
+                    html += `<td style="padding: 0.5rem; color: #81c784;">${backup.param_count}</td>`;
+                    html += `<td style="padding: 0.5rem; color: #aaa;">${sizeKB} KB</td>`;
+                    html += `<td style="padding: 0.5rem;">
+                        <button class="btn btn-primary btn-sm" onclick="restoreBackup('${backup.name}')" title="Wiederherstellen">⟲</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteBackup('${backup.name}')" title="Löschen">✕</button>
+                    </td>`;
+                    html += '</tr>';
+                }
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Failed to load backups:', error);
+                container.innerHTML = `<p style="color: #e57373;">Fehler beim Laden der Backups: ${error.message}</p>`;
+            }
+        }
+
+        async function createBackup() {
+            const name = prompt('Backup-Name (optional, leer = auto-generiert):');
+            if (name === null) return; // Abgebrochen
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/rule-optimizer/backup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name || null })
+                });
+
+                if (!response.ok) throw new Error('Backup fehlgeschlagen');
+                const result = await response.json();
+
+                showToast(`Backup erstellt: ${result.name}`, 'success');
+                await loadBackups();
+
+            } catch (error) {
+                console.error('Failed to create backup:', error);
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        async function restoreBackup(backupName) {
+            if (!confirm(`Backup "${backupName}" wiederherstellen?\n\nEin automatisches Backup des aktuellen Stands wird erstellt.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/rule-optimizer/restore`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ backup_name: backupName })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Restore fehlgeschlagen');
+                }
+
+                const result = await response.json();
+                showToast(`Wiederhergestellt: ${result.restored_from}`, 'success');
+
+                // Reload UI
+                await loadBackups();
+                await loadCurrentParams();
+                await loadParamHistory();
+
+            } catch (error) {
+                console.error('Failed to restore backup:', error);
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteBackup(backupName) {
+            if (!confirm(`Backup "${backupName}" wirklich löschen?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/rule-optimizer/backup/${encodeURIComponent(backupName)}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Löschen fehlgeschlagen');
+                }
+
+                showToast(`Backup gelöscht: ${backupName}`, 'success');
+                await loadBackups();
+
+            } catch (error) {
+                console.error('Failed to delete backup:', error);
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        async function exportConfig() {
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/rule-optimizer/export`);
+                if (!response.ok) throw new Error('Export fehlgeschlagen');
+                const data = await response.json();
+
+                // Download as JSON file
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `rule_config_export_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast('Konfiguration exportiert', 'success');
+
+            } catch (error) {
+                console.error('Failed to export config:', error);
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        async function importConfig(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Reset file input for re-selection
+            event.target.value = '';
+
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+
+                if (!data.params) {
+                    throw new Error('Ungültiges Format: "params" Feld fehlt');
+                }
+
+                if (!confirm(`Konfiguration importieren?\n\nParameter: ${Object.keys(data.params).length} Pattern-Typen\n\nEin automatisches Backup wird erstellt.`)) {
+                    return;
+                }
+
+                const response = await fetch(`${CANDLESTICK_API}/rule-optimizer/import`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        params: data.params,
+                        history: data.history || null
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Import fehlgeschlagen');
+                }
+
+                const result = await response.json();
+                showToast(`Import erfolgreich: ${result.param_count} Parameter`, 'success');
+
+                // Reload UI
+                await loadBackups();
+                await loadCurrentParams();
+                await loadParamHistory();
+
+            } catch (error) {
+                console.error('Failed to import config:', error);
                 showToast('Fehler: ' + error.message, 'error');
             }
         }

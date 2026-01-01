@@ -296,3 +296,118 @@ async def get_sample(sample_id: str):
     if not sample:
         raise HTTPException(status_code=404, detail="Sample not found")
     return sample
+
+
+# ==================== Backup/Restore Endpoints ====================
+
+class CreateBackupRequest(BaseModel):
+    """Request to create a backup."""
+    name: Optional[str] = Field(
+        default=None,
+        description="Optional backup name. Auto-generated if not provided."
+    )
+
+
+class RestoreBackupRequest(BaseModel):
+    """Request to restore a backup."""
+    backup_name: str = Field(..., description="Name or filename of the backup to restore")
+
+
+class ImportConfigRequest(BaseModel):
+    """Request to import configuration."""
+    params: dict = Field(..., description="Parameter configuration to import")
+    history: Optional[list] = Field(default=None, description="Optional history to import")
+
+
+@router.post("/backup", summary="Create configuration backup")
+async def create_backup(request: CreateBackupRequest = CreateBackupRequest()):
+    """
+    Create a backup of the current rule configuration.
+
+    The backup includes all parameters and adjustment history.
+    An automatic backup is also created before restore/import operations.
+    """
+    result = rule_config_service.create_backup(name=request.name)
+
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Backup failed"))
+
+    return result
+
+
+@router.get("/backups", summary="List all backups")
+async def list_backups():
+    """
+    List all available configuration backups.
+
+    Returns backup metadata including name, creation date, and size.
+    """
+    backups = rule_config_service.list_backups()
+    return {
+        "backups": backups,
+        "total": len(backups)
+    }
+
+
+@router.post("/restore", summary="Restore from backup")
+async def restore_backup(request: RestoreBackupRequest):
+    """
+    Restore rule configuration from a backup.
+
+    An automatic backup of the current state is created before restoring.
+    """
+    result = rule_config_service.restore_backup(backup_name=request.backup_name)
+
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=404 if "not found" in result.get("error", "") else 500,
+            detail=result.get("error", "Restore failed")
+        )
+
+    return result
+
+
+@router.delete("/backup/{backup_name}", summary="Delete a backup")
+async def delete_backup(backup_name: str):
+    """Delete a specific backup file."""
+    result = rule_config_service.delete_backup(backup_name)
+
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=404 if "not found" in result.get("error", "") else 500,
+            detail=result.get("error", "Delete failed")
+        )
+
+    return result
+
+
+@router.get("/export", summary="Export configuration")
+async def export_config():
+    """
+    Export the current configuration as JSON.
+
+    The exported data can be saved locally and imported later.
+    Includes parameters, history, and default values for reference.
+    """
+    return rule_config_service.export_config()
+
+
+@router.post("/import", summary="Import configuration")
+async def import_config(request: ImportConfigRequest):
+    """
+    Import configuration from uploaded JSON.
+
+    An automatic backup is created before importing.
+    The request must include a 'params' field with the configuration.
+    """
+    config_data = {
+        "params": request.params,
+        "history": request.history
+    }
+
+    result = rule_config_service.import_config(config_data)
+
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Import failed"))
+
+    return result

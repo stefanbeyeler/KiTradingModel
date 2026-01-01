@@ -538,6 +538,273 @@ class RuleConfigService:
             feedback_count=feedback_count
         )
 
+    # ==================== Backup/Restore ====================
+
+    def create_backup(self, name: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Create a backup of current rule configuration.
+
+        Args:
+            name: Optional backup name/description
+
+        Returns:
+            Backup data including metadata
+        """
+        backup_name = name or f"backup_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+
+        backup_data = {
+            "name": backup_name,
+            "created_at": datetime.utcnow().isoformat(),
+            "params": self.params.copy(),
+            "history": self.adjustment_history.copy(),
+            "version": "1.0"
+        }
+
+        # Save backup to file
+        backup_dir = self.config_path.parent / "backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+
+        backup_filename = f"rule_config_{backup_name}.json"
+        backup_path = backup_dir / backup_filename
+
+        try:
+            with open(backup_path, 'w', encoding='utf-8') as f:
+                json.dump(backup_data, f, indent=2, ensure_ascii=False)
+
+            logger.info(f"Created backup: {backup_path}")
+
+            return {
+                "success": True,
+                "name": backup_name,
+                "path": str(backup_path),
+                "created_at": backup_data["created_at"],
+                "param_count": sum(len(p) for p in self.params.values()),
+                "history_count": len(self.adjustment_history)
+            }
+        except Exception as e:
+            logger.error(f"Failed to create backup: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def list_backups(self) -> List[Dict[str, Any]]:
+        """
+        List all available backups.
+
+        Returns:
+            List of backup metadata
+        """
+        backup_dir = self.config_path.parent / "backups"
+        backups = []
+
+        if not backup_dir.exists():
+            return backups
+
+        for backup_file in sorted(backup_dir.glob("rule_config_*.json"), reverse=True):
+            try:
+                with open(backup_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                backups.append({
+                    "name": data.get("name", backup_file.stem),
+                    "filename": backup_file.name,
+                    "created_at": data.get("created_at", ""),
+                    "param_count": sum(len(p) for p in data.get("params", {}).values()),
+                    "history_count": len(data.get("history", [])),
+                    "size_bytes": backup_file.stat().st_size
+                })
+            except Exception as e:
+                logger.warning(f"Failed to read backup {backup_file}: {e}")
+
+        return backups
+
+    def restore_backup(self, backup_name: str) -> Dict[str, Any]:
+        """
+        Restore rule configuration from a backup.
+
+        Args:
+            backup_name: Name or filename of the backup to restore
+
+        Returns:
+            Result of restore operation
+        """
+        backup_dir = self.config_path.parent / "backups"
+
+        # Find the backup file
+        backup_path = None
+        for pattern in [
+            backup_dir / f"rule_config_{backup_name}.json",
+            backup_dir / backup_name,
+            backup_dir / f"{backup_name}.json"
+        ]:
+            if pattern.exists():
+                backup_path = pattern
+                break
+
+        if not backup_path:
+            return {
+                "success": False,
+                "error": f"Backup not found: {backup_name}"
+            }
+
+        try:
+            # Read backup
+            with open(backup_path, 'r', encoding='utf-8') as f:
+                backup_data = json.load(f)
+
+            # Store current config as auto-backup before restore
+            self.create_backup(name="auto_before_restore")
+
+            # Restore params and history
+            self.params = backup_data.get("params", {})
+            self.adjustment_history = backup_data.get("history", [])
+
+            # Add restore record to history
+            self.adjustment_history.append({
+                "timestamp": datetime.utcnow().isoformat(),
+                "pattern": "all",
+                "parameter": "all",
+                "old_value": None,
+                "new_value": None,
+                "reason": f"restored_from_backup:{backup_data.get('name', backup_name)}",
+                "feedback_count": 0
+            })
+
+            # Save restored config
+            self._save_config()
+
+            logger.info(f"Restored from backup: {backup_path}")
+
+            return {
+                "success": True,
+                "restored_from": backup_data.get("name", backup_name),
+                "backup_created_at": backup_data.get("created_at", ""),
+                "param_count": sum(len(p) for p in self.params.values()),
+                "history_count": len(self.adjustment_history)
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to restore backup: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def delete_backup(self, backup_name: str) -> Dict[str, Any]:
+        """
+        Delete a backup file.
+
+        Args:
+            backup_name: Name or filename of the backup to delete
+
+        Returns:
+            Result of delete operation
+        """
+        backup_dir = self.config_path.parent / "backups"
+
+        # Find the backup file
+        backup_path = None
+        for pattern in [
+            backup_dir / f"rule_config_{backup_name}.json",
+            backup_dir / backup_name,
+            backup_dir / f"{backup_name}.json"
+        ]:
+            if pattern.exists():
+                backup_path = pattern
+                break
+
+        if not backup_path:
+            return {
+                "success": False,
+                "error": f"Backup not found: {backup_name}"
+            }
+
+        try:
+            backup_path.unlink()
+            logger.info(f"Deleted backup: {backup_path}")
+            return {
+                "success": True,
+                "deleted": backup_name
+            }
+        except Exception as e:
+            logger.error(f"Failed to delete backup: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def export_config(self) -> Dict[str, Any]:
+        """
+        Export current configuration as downloadable data.
+
+        Returns:
+            Complete configuration data
+        """
+        return {
+            "exported_at": datetime.utcnow().isoformat(),
+            "params": self.params,
+            "history": self.adjustment_history,
+            "defaults": DEFAULT_RULE_PARAMS,
+            "version": "1.0"
+        }
+
+    def import_config(self, config_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Import configuration from uploaded data.
+
+        Args:
+            config_data: Configuration data to import
+
+        Returns:
+            Result of import operation
+        """
+        try:
+            # Validate structure
+            if "params" not in config_data:
+                return {
+                    "success": False,
+                    "error": "Invalid config: missing 'params' field"
+                }
+
+            # Create backup before import
+            self.create_backup(name="auto_before_import")
+
+            # Import params
+            self.params = config_data.get("params", {})
+
+            # Optionally import history
+            if "history" in config_data:
+                self.adjustment_history = config_data["history"]
+
+            # Add import record
+            self.adjustment_history.append({
+                "timestamp": datetime.utcnow().isoformat(),
+                "pattern": "all",
+                "parameter": "all",
+                "old_value": None,
+                "new_value": None,
+                "reason": "imported_config",
+                "feedback_count": 0
+            })
+
+            self._save_config()
+
+            logger.info("Imported configuration successfully")
+
+            return {
+                "success": True,
+                "param_count": sum(len(p) for p in self.params.values()),
+                "history_count": len(self.adjustment_history)
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to import config: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
 
 # Global singleton
 rule_config_service = RuleConfigService()
