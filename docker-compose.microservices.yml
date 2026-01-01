@@ -475,6 +475,7 @@ services:
       - SCAN_INTERVAL_SECONDS=300
       - MAX_HISTORY_ENTRIES=1000
       - MAX_HISTORY_AGE_HOURS=24
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     networks:
       - trading-net
     extra_hosts:

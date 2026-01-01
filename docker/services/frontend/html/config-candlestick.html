@@ -2613,8 +2613,18 @@
 
                     <!-- Correction Section -->
                     <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                        <div style="font-size: 0.9rem; font-weight: 600; color: #64c8ff; margin-bottom: 0.75rem;">
-                            Pattern-Korrektur (für Training)
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="font-size: 0.9rem; font-weight: 600; color: #64c8ff;">
+                                Pattern-Korrektur (für Training)
+                            </div>
+                            <button class="btn" id="btnClaudeVision" onclick="validateWithClaudeVision()"
+                                    style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border: none;"
+                                    title="Pattern mit Claude Vision analysieren und Korrektur automatisch ausfüllen">
+                                🤖 Claude Vision
+                            </button>
+                        </div>
+                        <!-- Claude Vision Result -->
+                        <div id="claudeVisionResult" style="display: none; margin-bottom: 1rem; padding: 0.75rem; border-radius: 8px;">
                         </div>
                         <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                             <button class="btn btn-success" onclick="confirmPattern()" style="padding: 0.5rem 1rem;">
@@ -4660,8 +4670,11 @@
             // Populate correction dropdown
             await populateCorrectionDropdown();
 
-            // Reset feedback
+            // Reset feedback and Claude Vision result
             document.getElementById('correctionFeedback').style.display = 'none';
+            document.getElementById('claudeVisionResult').style.display = 'none';
+            document.getElementById('reasonSection').style.display = 'none';
+            pendingFeedback = null;
 
             // Show modal
             document.getElementById('patternModal').classList.add('show');
@@ -4700,8 +4713,11 @@
             // Populate correction dropdown
             await populateCorrectionDropdown();
 
-            // Reset feedback
+            // Reset feedback and Claude Vision result
             document.getElementById('correctionFeedback').style.display = 'none';
+            document.getElementById('claudeVisionResult').style.display = 'none';
+            document.getElementById('reasonSection').style.display = 'none';
+            pendingFeedback = null;
 
             // Load charts
             await Promise.all([
@@ -4924,6 +4940,228 @@
             showReasonSection(true);
             // Populate reason categories for this pattern type
             await populateReasonCategories(currentModalPattern.pattern_type);
+        }
+
+        // Validate pattern with Claude Vision API
+        async function validateWithClaudeVision() {
+            if (!currentModalPattern) {
+                showCorrectionFeedback('Kein Pattern ausgewählt.', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('btnClaudeVision');
+            const resultDiv = document.getElementById('claudeVisionResult');
+            const originalText = btn.innerHTML;
+
+            try {
+                // Show loading state
+                btn.disabled = true;
+                btn.innerHTML = '⏳ Analysiere...';
+                resultDiv.style.display = 'none';
+
+                // Get pattern ID
+                const patternId = currentModalPattern.id ||
+                    `${currentModalPattern.symbol}_${currentModalPattern.timestamp}_${currentModalPattern.pattern_type}`;
+
+                // Call Claude Vision API
+                const response = await fetch(`${CANDLESTICK_API}/claude/validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pattern_id: patternId,
+                        force: true  // Always get fresh validation
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const validation = data.validation || {};
+
+                // Display result
+                displayClaudeVisionResult(validation);
+
+                // Auto-fill correction fields if pattern is invalid
+                if (!validation.claude_agrees) {
+                    await autoFillCorrectionFromClaude(validation);
+                }
+
+            } catch (error) {
+                console.error('Claude Vision validation error:', error);
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = 'rgba(244, 67, 54, 0.15)';
+                resultDiv.style.border = '1px solid rgba(244, 67, 54, 0.3)';
+                resultDiv.innerHTML = `
+                    <div style="color: #f44336; font-weight: 600; margin-bottom: 0.25rem;">
+                        ❌ Claude Vision Fehler
+                    </div>
+                    <div style="color: #ccc; font-size: 0.85rem;">
+                        ${error.message || 'Unbekannter Fehler'}
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // Display Claude Vision validation result
+        function displayClaudeVisionResult(validation) {
+            const resultDiv = document.getElementById('claudeVisionResult');
+            const agrees = validation.claude_agrees;
+            const confidence = validation.claude_confidence || 0;
+            const reasoning = validation.claude_reasoning || 'Keine Begründung verfügbar';
+            const suggestedPattern = validation.claude_pattern_type;
+
+            resultDiv.style.display = 'block';
+
+            if (agrees) {
+                resultDiv.style.background = 'rgba(76, 175, 80, 0.15)';
+                resultDiv.style.border = '1px solid rgba(76, 175, 80, 0.3)';
+                resultDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="color: #81c784; font-weight: 600;">✓ Claude bestätigt das Pattern</span>
+                        <span style="background: rgba(76, 175, 80, 0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                            ${Math.round(confidence * 100)}% Konfidenz
+                        </span>
+                    </div>
+                    <div style="color: #aaa; font-size: 0.85rem; line-height: 1.4;">
+                        ${reasoning}
+                    </div>
+                `;
+            } else {
+                resultDiv.style.background = 'rgba(255, 152, 0, 0.15)';
+                resultDiv.style.border = '1px solid rgba(255, 152, 0, 0.3)';
+
+                let suggestedHtml = '';
+                if (suggestedPattern && suggestedPattern !== 'no_pattern' && suggestedPattern !== 'none') {
+                    suggestedHtml = `
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <span style="color: #888;">Vorschlag:</span>
+                            <span style="color: #64c8ff; font-weight: 500;">${formatPatternType(suggestedPattern)}</span>
+                        </div>
+                    `;
+                }
+
+                resultDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="color: #ffb74d; font-weight: 600;">⚠ Claude erkennt ein Problem</span>
+                        <span style="background: rgba(255, 152, 0, 0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                            ${Math.round(confidence * 100)}% Konfidenz
+                        </span>
+                    </div>
+                    <div style="color: #aaa; font-size: 0.85rem; line-height: 1.4;">
+                        ${reasoning}
+                    </div>
+                    ${suggestedHtml}
+                `;
+            }
+        }
+
+        // Auto-fill correction fields based on Claude's validation
+        async function autoFillCorrectionFromClaude(validation) {
+            const suggestedPattern = validation.claude_pattern_type;
+            const reasoning = validation.claude_reasoning || '';
+
+            // Determine the correction type
+            if (!suggestedPattern || suggestedPattern === 'no_pattern' || suggestedPattern === 'none') {
+                // Claude says it's not a valid pattern - trigger "Kein Pattern" flow
+                pendingFeedback = {
+                    pattern: currentModalPattern,
+                    feedbackType: 'rejected',
+                    correctedPattern: 'no_pattern'
+                };
+                document.getElementById('reasonSectionTitle').textContent = 'Begründung für Ablehnung (von Claude Vision)';
+                showReasonSection(true);
+
+                // Try to map Claude's reasoning to a reason category
+                await populateReasonCategories(currentModalPattern.pattern_type);
+                autoSelectReasonFromClaude(reasoning);
+
+                showCorrectionFeedback('Claude Vision: Pattern ungültig. Begründung wurde vorausgefüllt.', 'info');
+            } else if (suggestedPattern !== currentModalPattern.pattern_type) {
+                // Claude suggests a different pattern
+                const correctionSelect = document.getElementById('correctionPatternSelect');
+
+                // Try to find the suggested pattern in the dropdown
+                let found = false;
+                for (let option of correctionSelect.options) {
+                    if (option.value.toLowerCase() === suggestedPattern.toLowerCase()) {
+                        correctionSelect.value = option.value;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (found) {
+                    // Set up pending feedback for correction
+                    pendingFeedback = {
+                        pattern: currentModalPattern,
+                        feedbackType: 'corrected',
+                        correctedPattern: correctionSelect.value
+                    };
+                    document.getElementById('reasonSectionTitle').textContent =
+                        `Begründung für Korrektur zu "${formatPatternType(correctionSelect.value)}" (von Claude Vision)`;
+                    showReasonSection(true);
+
+                    await populateReasonCategories(currentModalPattern.pattern_type);
+                    autoSelectReasonFromClaude(reasoning);
+
+                    showCorrectionFeedback(`Claude Vision: Korrektur zu "${formatPatternType(suggestedPattern)}" vorgeschlagen.`, 'info');
+                } else {
+                    showCorrectionFeedback(`Claude Vision schlägt "${formatPatternType(suggestedPattern)}" vor (nicht in Liste).`, 'warning');
+                }
+            }
+        }
+
+        // Try to auto-select a reason category based on Claude's reasoning text
+        function autoSelectReasonFromClaude(reasoning) {
+            const reasonSelect = document.getElementById('reasonCategorySelect');
+            const reasonText = document.getElementById('reasonTextInput');
+            const lowerReasoning = reasoning.toLowerCase();
+
+            // Mapping of keywords to reason categories
+            const keywordMap = {
+                'body_too_large': ['körper zu groß', 'body too large', 'body is too large', 'großer körper'],
+                'body_too_small': ['körper zu klein', 'body too small', 'small body', 'kleiner körper'],
+                'upper_shadow_too_short': ['oberer schatten zu kurz', 'upper shadow too short', 'upper wick'],
+                'upper_shadow_too_long': ['oberer schatten zu lang', 'upper shadow too long'],
+                'lower_shadow_too_short': ['unterer schatten zu kurz', 'lower shadow too short', 'lower wick'],
+                'lower_shadow_too_long': ['unterer schatten zu lang', 'lower shadow too long'],
+                'wrong_trend_context': ['trend', 'uptrend', 'downtrend', 'trendkontext', 'kein aufwärtstrend', 'kein abwärtstrend'],
+                'not_fully_engulfing': ['engulfing', 'umschließt nicht', 'not fully engulfing'],
+                'missing_gap': ['gap', 'lücke', 'keine lücke'],
+                'false_positive': ['false positive', 'kein pattern', 'nicht erkennbar', 'no pattern']
+            };
+
+            // Find matching category
+            let bestMatch = null;
+            for (const [category, keywords] of Object.entries(keywordMap)) {
+                for (const keyword of keywords) {
+                    if (lowerReasoning.includes(keyword)) {
+                        bestMatch = category;
+                        break;
+                    }
+                }
+                if (bestMatch) break;
+            }
+
+            // Set the reason category if found
+            if (bestMatch) {
+                for (let option of reasonSelect.options) {
+                    if (option.value === bestMatch) {
+                        reasonSelect.value = bestMatch;
+                        onReasonCategoryChange();  // Update description
+                        break;
+                    }
+                }
+            }
+
+            // Always put Claude's full reasoning in the text input
+            reasonText.value = reasoning.substring(0, 500);  // Limit length
         }
 
         // Submit the pending feedback (called from reason section button)
