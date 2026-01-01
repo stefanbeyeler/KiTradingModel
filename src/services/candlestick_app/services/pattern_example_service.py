@@ -63,8 +63,8 @@ class PatternExampleService:
     """
 
     def __init__(self):
-        self.figure_size = (10, 6)
-        self.dpi = 120
+        self.figure_size = (6, 4)  # Narrower default size
+        self.dpi = 100
         self.colors = {
             "bullish": "#26a69a",            # Teal green
             "bullish_body": "#26a69a",
@@ -926,8 +926,8 @@ class PatternExampleService:
             info = self._pattern_info.get(pattern_lower, {})
             direction = info.get("direction", "neutral")
 
-            # Figure size
-            fig_size = (8, 4) if compact else self.figure_size
+            # Figure size - narrower for integration in config page
+            fig_size = (4, 3) if compact else self.figure_size
 
             # Create figure
             fig, ax = plt.subplots(figsize=fig_size, facecolor=self.colors["background"])
@@ -985,42 +985,41 @@ class PatternExampleService:
             for spine in ax.spines.values():
                 spine.set_visible(False)
 
-            if show_labels:
-                # Title
+            if show_labels and not compact:
+                # Title - only for non-compact view
                 title_color = self.colors["bullish"] if direction == "bullish" else \
                              self.colors["bearish"] if direction == "bearish" else \
                              "#ff9800"
                 title = pattern_type.replace("_", " ").title()
-                ax.set_title(title, color=title_color, fontsize=14, fontweight="bold", pad=10)
+                ax.set_title(title, color=title_color, fontsize=12, fontweight="bold", pad=8)
 
-                # Direction badge
+                # Direction badge - only for non-compact view
                 if direction != "neutral":
                     badge_text = "↑ BULLISH" if direction == "bullish" else "↓ BEARISH"
                     ax.text(
                         0.98, 0.98, badge_text,
                         transform=ax.transAxes,
-                        fontsize=9,
+                        fontsize=8,
                         color=title_color,
                         ha='right', va='top',
                         fontweight='bold',
-                        bbox=dict(boxstyle='round,pad=0.3', facecolor=self.colors["highlight_bg"],
+                        bbox=dict(boxstyle='round,pad=0.2', facecolor=self.colors["highlight_bg"],
                                   edgecolor=title_color, alpha=0.8)
                     )
 
-                # Pattern bracket
-                if pattern_indices:
-                    pattern_start = min(pattern_indices)
-                    pattern_end = max(pattern_indices)
-                    pattern_center = (pattern_start + pattern_end) / 2
-                    y_top = max(all_highs) + y_padding * 0.5
+            # Pattern bracket - always show to identify pattern candles
+            if pattern_indices:
+                pattern_start = min(pattern_indices)
+                pattern_end = max(pattern_indices)
+                y_top = max(all_highs) + y_padding * 0.4
 
-                    # Bracket line
-                    ax.plot([pattern_start - 0.3, pattern_end + 0.3], [y_top, y_top],
-                           color=self.colors["annotation"], linewidth=1.5)
-                    ax.plot([pattern_start - 0.3, pattern_start - 0.3], [y_top, y_top - y_padding * 0.2],
-                           color=self.colors["annotation"], linewidth=1.5)
-                    ax.plot([pattern_end + 0.3, pattern_end + 0.3], [y_top, y_top - y_padding * 0.2],
-                           color=self.colors["annotation"], linewidth=1.5)
+                # Bracket line
+                ax.plot([pattern_start - 0.3, pattern_end + 0.3], [y_top, y_top],
+                       color=self.colors["annotation"], linewidth=1.5)
+                ax.plot([pattern_start - 0.3, pattern_start - 0.3], [y_top, y_top - y_padding * 0.15],
+                       color=self.colors["annotation"], linewidth=1.5)
+                ax.plot([pattern_end + 0.3, pattern_end + 0.3], [y_top, y_top - y_padding * 0.15],
+                       color=self.colors["annotation"], linewidth=1.5)
 
             plt.tight_layout()
 

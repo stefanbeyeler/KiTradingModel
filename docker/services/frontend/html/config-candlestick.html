@@ -494,6 +494,38 @@
             height: 2px !important;
         }
 
+        /* Pattern Chart Container (clickable for API charts) */
+        .pattern-chart-container {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        .pattern-chart-container:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(100, 200, 255, 0.2);
+        }
+
+        .pattern-chart-container:hover::after {
+            content: '🔍 Klicken für Chart';
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            font-size: 0.65rem;
+            color: #64c8ff;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .pattern-chart-container img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+        }
+
         /* Toast */
         .toast {
             position: fixed;
@@ -3440,6 +3472,18 @@
             'bearish_harami_cross': [[3, 14, 3, 'bullish'], [2, 16, 2, 'bullish'], [2, 24, 2, 'bullish'], [8, 2, 8, 'doji']],
             'inside_bar': [[4, 20, 4, 'bearish'], [6, 12, 6, 'bullish']],
 
+            // New patterns
+            'bullish_belt_hold': [[0, 28, 2, 'bullish']],
+            'bearish_belt_hold': [[2, 28, 0, 'bearish']],
+            'bullish_counterattack': [[4, 18, 4, 'bearish'], [4, 18, 4, 'bullish']],
+            'bearish_counterattack': [[4, 18, 4, 'bullish'], [4, 18, 4, 'bearish']],
+            'three_inside_up': [[4, 22, 4, 'bearish'], [6, 10, 6, 'bullish'], [2, 20, 4, 'bullish']],
+            'three_inside_down': [[4, 22, 4, 'bullish'], [6, 10, 6, 'bearish'], [4, 20, 2, 'bearish']],
+            'bullish_abandoned_baby': [[4, 18, 4, 'bearish'], [10, 2, 10, 'doji'], [4, 18, 4, 'bullish']],
+            'bearish_abandoned_baby': [[4, 18, 4, 'bullish'], [10, 2, 10, 'doji'], [4, 18, 4, 'bearish']],
+            'tower_bottom': [[4, 22, 4, 'bearish'], [6, 8, 6, 'bearish'], [6, 6, 6, 'bullish'], [6, 8, 6, 'bullish'], [4, 22, 4, 'bullish']],
+            'tower_top': [[4, 22, 4, 'bullish'], [6, 8, 6, 'bullish'], [6, 6, 6, 'bearish'], [6, 8, 6, 'bearish'], [4, 22, 4, 'bearish']],
+
             // Default fallback
             'default': [[8, 12, 8, 'doji']]
         };
@@ -3673,6 +3717,118 @@
                     'Doji verstärkt die Unentschlossenheit'
                 ],
                 confidence: 'Starkes Umkehrsignal, Bestätigung empfohlen'
+            },
+
+            // === NEW PATTERNS ===
+            'bullish_belt_hold': {
+                candles: 1,
+                rules: [
+                    'Langer bullischer Body (≥ 75% der Gesamtrange)',
+                    'Eröffnet am oder sehr nahe am Low (unterer Schatten < 5%)',
+                    'Kleiner oder kein oberer Schatten (< 15%)',
+                    'Erscheint nach Abwärtstrend',
+                    'Gap Down vor der Kerze verstärkt das Signal'
+                ],
+                confidence: 'Höher mit Gap, nach klarem Abwärtstrend'
+            },
+            'bearish_belt_hold': {
+                candles: 1,
+                rules: [
+                    'Langer bearischer Body (≥ 75% der Gesamtrange)',
+                    'Eröffnet am oder sehr nahe am High (oberer Schatten < 5%)',
+                    'Kleiner oder kein unterer Schatten (< 15%)',
+                    'Erscheint nach Aufwärtstrend',
+                    'Gap Up vor der Kerze verstärkt das Signal'
+                ],
+                confidence: 'Höher mit Gap, nach klarem Aufwärtstrend'
+            },
+            'bullish_counterattack': {
+                candles: 2,
+                rules: [
+                    'Erste Kerze: bearish mit signifikantem Body',
+                    'Zweite Kerze: bullish mit Gap Down Eröffnung',
+                    'Beide Kerzen schließen auf ungefähr gleichem Niveau',
+                    'Beide Bodies sind signifikant (nicht Doji)',
+                    'Schlusskurs-Differenz < 0.3% des Preises'
+                ],
+                confidence: 'Starkes Signal nach klarem Abwärtstrend'
+            },
+            'bearish_counterattack': {
+                candles: 2,
+                rules: [
+                    'Erste Kerze: bullish mit signifikantem Body',
+                    'Zweite Kerze: bearish mit Gap Up Eröffnung',
+                    'Beide Kerzen schließen auf ungefähr gleichem Niveau',
+                    'Beide Bodies sind signifikant (nicht Doji)',
+                    'Schlusskurs-Differenz < 0.3% des Preises'
+                ],
+                confidence: 'Starkes Signal nach klarem Aufwärtstrend'
+            },
+            'three_inside_up': {
+                candles: 3,
+                rules: [
+                    'Erste Kerze: große bearish Kerze',
+                    'Zweite Kerze: kleine bullish Kerze vollständig innerhalb des ersten Bodies (Harami)',
+                    'Dritte Kerze: bullish, schließt über dem Open der ersten Kerze',
+                    'Erscheint nach Abwärtstrend',
+                    'Bestätigt das Harami-Pattern'
+                ],
+                confidence: 'Sehr zuverlässiges bullish Umkehrsignal'
+            },
+            'three_inside_down': {
+                candles: 3,
+                rules: [
+                    'Erste Kerze: große bullish Kerze',
+                    'Zweite Kerze: kleine bearish Kerze vollständig innerhalb des ersten Bodies (Harami)',
+                    'Dritte Kerze: bearish, schließt unter dem Open der ersten Kerze',
+                    'Erscheint nach Aufwärtstrend',
+                    'Bestätigt das Harami-Pattern'
+                ],
+                confidence: 'Sehr zuverlässiges bearish Umkehrsignal'
+            },
+            'bullish_abandoned_baby': {
+                candles: 3,
+                rules: [
+                    'Erste Kerze: bearish mit signifikantem Body',
+                    'Zweite Kerze: Doji mit Gap Down (High unter Low der ersten)',
+                    'Dritte Kerze: bullish mit Gap Up (Low über High des Doji)',
+                    'Der Doji schwebt isoliert durch Gaps auf beiden Seiten',
+                    'Seltenes aber sehr starkes Pattern'
+                ],
+                confidence: 'Eines der stärksten bullish Umkehrsignale'
+            },
+            'bearish_abandoned_baby': {
+                candles: 3,
+                rules: [
+                    'Erste Kerze: bullish mit signifikantem Body',
+                    'Zweite Kerze: Doji mit Gap Up (Low über High der ersten)',
+                    'Dritte Kerze: bearish mit Gap Down (High unter Low des Doji)',
+                    'Der Doji schwebt isoliert durch Gaps auf beiden Seiten',
+                    'Seltenes aber sehr starkes Pattern'
+                ],
+                confidence: 'Eines der stärksten bearish Umkehrsignale'
+            },
+            'tower_bottom': {
+                candles: 5,
+                rules: [
+                    'Erste Kerze: große bearish Kerze (Turmwand)',
+                    'Mittlere Kerzen (2-4): kleine Bodies in Konsolidierungszone',
+                    'Letzte Kerze: große bullish Kerze (Turmwand)',
+                    'Kleine Kerzen bilden ein "Dach" zwischen den Turmwänden',
+                    'Erscheint am Ende eines Abwärtstrends'
+                ],
+                confidence: 'Zuverlässiges Umkehrmuster, je länger Konsolidierung desto stärker'
+            },
+            'tower_top': {
+                candles: 5,
+                rules: [
+                    'Erste Kerze: große bullish Kerze (Turmwand)',
+                    'Mittlere Kerzen (2-4): kleine Bodies in Konsolidierungszone',
+                    'Letzte Kerze: große bearish Kerze (Turmwand)',
+                    'Kleine Kerzen bilden ein "Dach" zwischen den Turmwänden',
+                    'Erscheint am Ende eines Aufwärtstrends'
+                ],
+                confidence: 'Zuverlässiges Umkehrmuster, je länger Konsolidierung desto stärker'
             }
         };
 
@@ -3778,6 +3934,9 @@
         // Alias for loadPatterns (used by Pattern-Typen tab)
         const loadPatternTypes = loadPatterns;
 
+        // Cache for loaded API chart images
+        const patternImageCache = {};
+
         // Render pattern category
         function renderPatternCategory(containerId, countId, patterns) {
             const container = document.getElementById(containerId);
@@ -3818,7 +3977,9 @@
                                 <span class="badge badge-${p.direction}">${p.direction}</span>
                             </div>
                         </div>
-                        ${renderPatternExample(p.type)}
+                        <div class="pattern-chart-container" id="chart-${p.type}" onclick="loadPatternChart('${p.type}')" title="Klicken für Beispiel-Chart">
+                            ${renderPatternExample(p.type)}
+                        </div>
                         <p class="pattern-description">${p.description}</p>
                         ${rulesHtml}
                     </div>
@@ -3836,6 +3997,37 @@
             } else {
                 content.style.display = 'none';
                 toggle.textContent = '▼';
+            }
+        }
+
+        // Load pattern chart from API
+        async function loadPatternChart(patternType) {
+            const container = document.getElementById(`chart-${patternType}`);
+            if (!container) return;
+
+            // Check cache first
+            if (patternImageCache[patternType]) {
+                container.innerHTML = `<img src="data:image/png;base64,${patternImageCache[patternType]}" alt="${patternType}" style="max-width: 100%; height: auto; border-radius: 4px;">`;
+                return;
+            }
+
+            // Show loading
+            container.innerHTML = '<div style="text-align: center; padding: 1rem; color: #888;"><span class="spinner" style="width: 20px; height: 20px;"></span></div>';
+
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/examples/chart/${patternType}?compact=true`);
+                if (!res.ok) throw new Error('Failed to load chart');
+                const data = await res.json();
+
+                // Cache the image
+                patternImageCache[patternType] = data.image_base64;
+
+                // Display the image
+                container.innerHTML = `<img src="data:image/png;base64,${data.image_base64}" alt="${patternType}" style="max-width: 100%; height: auto; border-radius: 4px;">`;
+            } catch (error) {
+                console.error(`Failed to load chart for ${patternType}:`, error);
+                // Fall back to simple example
+                container.innerHTML = renderPatternExample(patternType);
             }
         }
 
