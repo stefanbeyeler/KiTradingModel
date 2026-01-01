@@ -3400,16 +3400,8 @@
                     </div>
                 </div>
 
-                <!-- Claude Vision Analysis -->
-                <div class="reval-detail-claude" style="margin-top: 1rem;">
-                    <h4>🤖 Claude Vision Analyse</h4>
-                    <div id="revalClaudeVisionResult" style="display: none; margin-bottom: 0.75rem; padding: 0.75rem; border-radius: 8px;"></div>
-                    <button class="btn btn-secondary" id="revalBtnClaudeVision" onclick="validateRevalWithClaudeVision()"
-                            style="width: 100%; margin-bottom: 0.5rem;"
-                            title="Pattern mit Claude Vision analysieren">
-                        🤖 Mit Claude Vision prüfen
-                    </button>
-                </div>
+                <!-- Claude Vision Result -->
+                <div id="revalClaudeVisionResult" style="display: none; margin: 1rem 0 0.75rem 0; padding: 0.75rem; border-radius: 8px;"></div>
 
                 <!-- Actions -->
                 <div class="reval-detail-actions">
@@ -3421,6 +3413,10 @@
                     </button>
                     <button class="btn btn-danger" onclick="submitRevalFeedback('still_wrong')" id="revalBtnStillWrong">
                         ✗ Weiterhin falsch
+                    </button>
+                    <button class="btn btn-secondary" id="revalBtnClaudeVision" onclick="validateRevalWithClaudeVision()"
+                            title="Mit Claude Vision prüfen">
+                        🤖 Claude Vision
                     </button>
                 </div>
             </div>
