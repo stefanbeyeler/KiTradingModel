@@ -411,14 +411,44 @@ class RuleOptimizerService:
                     )
 
                     # Map validation result to our classification
+                    # WICHTIG: Status-basierte Klassifikation hat Priorität
                     if result.status == ValidationStatus.ERROR:
                         sample.claude_valid = PatternValidity.ERROR
-                    elif result.overall_confidence >= 0.7:
-                        sample.claude_valid = PatternValidity.VALID
-                    elif result.overall_confidence >= 0.4:
-                        sample.claude_valid = PatternValidity.BORDERLINE
-                    else:
+                        logger.debug(f"Pattern {sample.pattern_type}: ERROR status")
+                    elif result.status == ValidationStatus.REJECTED:
+                        # Claude hat das Pattern abgelehnt - es ist ein False Positive
+                        # HINWEIS: Bei REJECTED ist agrees oft None, daher prüfen wir hier nur den Status
                         sample.claude_valid = PatternValidity.INVALID
+                        logger.debug(f"Pattern {sample.pattern_type}: REJECTED -> INVALID")
+                    elif result.agrees is False:
+                        # Claude stimmt nicht zu, aber Status ist nicht REJECTED (z.B. VALIDATED mit agrees=False)
+                        sample.claude_valid = PatternValidity.INVALID
+                        logger.debug(f"Pattern {sample.pattern_type}: agrees=False -> INVALID")
+                    elif result.status == ValidationStatus.VALIDATED:
+                        # Claude hat validiert - prüfe Confidence
+                        if result.agrees is True or result.overall_confidence >= 0.6:
+                            sample.claude_valid = PatternValidity.VALID
+                            logger.debug(f"Pattern {sample.pattern_type}: VALIDATED (conf={result.overall_confidence}) -> VALID")
+                        elif result.overall_confidence >= 0.4:
+                            sample.claude_valid = PatternValidity.BORDERLINE
+                            logger.debug(f"Pattern {sample.pattern_type}: VALIDATED (conf={result.overall_confidence}) -> BORDERLINE")
+                        else:
+                            # Niedrige Confidence bei VALIDATED = grenzwertig
+                            sample.claude_valid = PatternValidity.BORDERLINE
+                            logger.debug(f"Pattern {sample.pattern_type}: VALIDATED low conf -> BORDERLINE")
+                    elif result.status == ValidationStatus.SKIPPED:
+                        # Übersprungen = Error zählen
+                        sample.claude_valid = PatternValidity.ERROR
+                        logger.debug(f"Pattern {sample.pattern_type}: SKIPPED -> ERROR")
+                    else:
+                        # Fallback basierend auf Confidence
+                        if result.overall_confidence >= 0.6:
+                            sample.claude_valid = PatternValidity.VALID
+                        elif result.overall_confidence >= 0.4:
+                            sample.claude_valid = PatternValidity.BORDERLINE
+                        else:
+                            sample.claude_valid = PatternValidity.INVALID
+                        logger.debug(f"Pattern {sample.pattern_type}: Fallback (conf={result.overall_confidence}) -> {sample.claude_valid}")
 
                     sample.claude_confidence = result.overall_confidence
                     sample.claude_reasoning = result.reasoning
