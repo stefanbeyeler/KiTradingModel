@@ -2696,8 +2696,8 @@
                         </div>
                         <div>
                             <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; text-align: center;">Referenz-Beispiel</div>
-                            <div class="modal-chart-container" style="margin-bottom: 0;">
-                                <canvas class="modal-chart" id="modalReferenceChart"></canvas>
+                            <div class="modal-chart-container" id="modalReferenceContainer" style="margin-bottom: 0; display: flex; align-items: center; justify-content: center; min-height: 150px;">
+                                <span class="spinner"></span>
                             </div>
                         </div>
                     </div>
@@ -5245,52 +5245,36 @@
             }
         }
 
-        // Load reference chart showing ideal pattern
-        function loadReferenceChart(patternType, direction) {
-            const canvas = document.getElementById('modalReferenceChart');
-            if (!canvas) return;
+        // Load reference chart showing ideal pattern from API
+        async function loadReferenceChart(patternType, direction) {
+            const container = document.getElementById('modalReferenceContainer');
+            if (!container) return;
 
-            // Get reference data or generate generic example
-            let refCandles = PATTERN_REFERENCES[patternType];
+            // Show loading spinner
+            container.innerHTML = '<span class="spinner"></span>';
 
-            if (!refCandles) {
-                // Generate generic reference based on direction
-                if (direction === 'bullish') {
-                    refCandles = [
-                        { open: 100, high: 101, low: 98, close: 99 },
-                        { open: 99, high: 100, low: 97, close: 98 },
-                        { open: 98, high: 103, low: 97, close: 102 }
-                    ];
-                } else if (direction === 'bearish') {
-                    refCandles = [
-                        { open: 100, high: 102, low: 99, close: 101 },
-                        { open: 101, high: 103, low: 100, close: 102 },
-                        { open: 102, high: 103, low: 98, close: 99 }
-                    ];
-                } else {
-                    refCandles = [
-                        { open: 100, high: 102, low: 98, close: 101 },
-                        { open: 101, high: 103, low: 99, close: 100 },
-                        { open: 100, high: 102, low: 98, close: 101 }
-                    ];
-                }
+            // Check cache first
+            if (patternImageCache[patternType]) {
+                container.innerHTML = `<img src="data:image/png;base64,${patternImageCache[patternType]}" alt="${patternType}" style="max-width: 100%; height: auto; border-radius: 4px;">`;
+                return;
             }
 
-            // Format for chart rendering
-            const formattedCandles = refCandles.map((c, i) => ({
-                datetime: `Kerze ${i + 1}`,
-                open: c.open.toString(),
-                high: c.high.toString(),
-                low: c.low.toString(),
-                close: c.close.toString()
-            }));
+            try {
+                // Load from API (compact version for modal)
+                const res = await fetch(`${CANDLESTICK_API}/examples/chart/${patternType}?compact=true`);
+                if (!res.ok) throw new Error('Failed to load chart');
+                const data = await res.json();
 
-            // For reference chart, highlight starts at first candle of the pattern
-            // The PATTERN_REFERENCES data contains exactly the pattern candles
-            const patternCandleCount = getPatternCandleCount(patternType);
-            const highlightStart = formattedCandles.length - patternCandleCount;
+                // Cache the image
+                patternImageCache[patternType] = data.image_base64;
 
-            renderCandlestickChart(canvas, formattedCandles, highlightStart, direction, patternType);
+                // Display the image
+                container.innerHTML = `<img src="data:image/png;base64,${data.image_base64}" alt="${patternType}" style="max-width: 100%; height: auto; border-radius: 4px;">`;
+            } catch (error) {
+                console.error(`Failed to load reference chart for ${patternType}:`, error);
+                // Fallback: show pattern name
+                container.innerHTML = `<div style="text-align: center; color: #888; padding: 1rem;">${formatPatternType(patternType)}</div>`;
+            }
         }
 
         // Close pattern detail modal
