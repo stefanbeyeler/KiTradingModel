@@ -447,8 +447,8 @@ class RuleOptimizerService:
                     )
 
                     # Store the chart image from validation result
-                    if hasattr(result, 'chart_image') and result.chart_image:
-                        sample.chart_image = result.chart_image
+                    if hasattr(result, 'chart_image_base64') and result.chart_image_base64:
+                        sample.chart_image = result.chart_image_base64
 
                     # Store the status for display
                     sample.claude_status = result.status.value if result.status else None
@@ -463,18 +463,18 @@ class RuleOptimizerService:
                         # HINWEIS: Bei REJECTED ist agrees oft None, daher prüfen wir hier nur den Status
                         sample.claude_valid = PatternValidity.INVALID
                         logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): REJECTED -> INVALID")
-                    elif result.agrees is False:
+                    elif result.claude_agrees is False:
                         # Claude stimmt nicht zu, aber Status ist nicht REJECTED (z.B. VALIDATED mit agrees=False)
                         sample.claude_valid = PatternValidity.INVALID
-                        logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): agrees=False -> INVALID")
+                        logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): claude_agrees=False -> INVALID")
                     elif result.status == ValidationStatus.VALIDATED:
                         # Claude hat validiert - prüfe Confidence
-                        if result.agrees is True or result.overall_confidence >= 0.6:
+                        if result.claude_agrees is True or result.claude_confidence >= 0.6:
                             sample.claude_valid = PatternValidity.VALID
-                            logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): VALIDATED (conf={result.overall_confidence}) -> VALID")
-                        elif result.overall_confidence >= 0.4:
+                            logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): VALIDATED (conf={result.claude_confidence}) -> VALID")
+                        elif result.claude_confidence >= 0.4:
                             sample.claude_valid = PatternValidity.BORDERLINE
-                            logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): VALIDATED (conf={result.overall_confidence}) -> BORDERLINE")
+                            logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): VALIDATED (conf={result.claude_confidence}) -> BORDERLINE")
                         else:
                             # Niedrige Confidence bei VALIDATED = grenzwertig
                             sample.claude_valid = PatternValidity.BORDERLINE
@@ -485,20 +485,20 @@ class RuleOptimizerService:
                         logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): SKIPPED -> ERROR")
                     else:
                         # Fallback basierend auf Confidence
-                        if result.overall_confidence >= 0.6:
+                        if result.claude_confidence >= 0.6:
                             sample.claude_valid = PatternValidity.VALID
-                        elif result.overall_confidence >= 0.4:
+                        elif result.claude_confidence >= 0.4:
                             sample.claude_valid = PatternValidity.BORDERLINE
                         else:
                             sample.claude_valid = PatternValidity.INVALID
-                        logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): Fallback (conf={result.overall_confidence}) -> {sample.claude_valid}")
+                        logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): Fallback (conf={result.claude_confidence}) -> {sample.claude_valid}")
 
-                    sample.claude_confidence = result.overall_confidence
-                    sample.claude_reasoning = result.reasoning
+                    sample.claude_confidence = result.claude_confidence
+                    sample.claude_reasoning = result.claude_reasoning
 
                     # Extract issues from reasoning
-                    if result.reasoning:
-                        sample.claude_issues = self._extract_issues(result.reasoning)
+                    if result.claude_reasoning:
+                        sample.claude_issues = self._extract_issues(result.claude_reasoning)
 
                     session.total_patterns_validated += 1
 
