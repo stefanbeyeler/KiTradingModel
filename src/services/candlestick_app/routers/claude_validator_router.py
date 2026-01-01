@@ -40,6 +40,9 @@ class ValidationRequest(BaseModel):
     symbol: Optional[str] = Field(default=None, description="Symbol if not in history")
     timeframe: Optional[str] = Field(default=None, description="Timeframe if not in history")
     pattern_timestamp: Optional[str] = Field(default=None, description="Pattern timestamp if not in history")
+    # Optional OHLC data - if provided, use this instead of fetching from API
+    # This ensures Claude validates the EXACT same data that was shown to the user
+    ohlc_data: Optional[List[dict]] = Field(default=None, description="OHLC data to validate (from feedback storage)")
 
 
 class BatchValidationRequest(BaseModel):
@@ -204,10 +207,34 @@ async def validate_pattern(request: ValidationRequest):
                        "Provide pattern_type, symbol, timeframe, and pattern_timestamp for direct validation."
             )
 
-        # Get OHLCV data
-        ohlcv_data = pattern.get("ohlc_data", []) if pattern else []
+        # Get OHLCV data - priority order:
+        # 1. Directly provided in request (ensures exact same data as shown to user)
+        # 2. From pattern history
+        # 3. Fetch fresh from Data Service (fallback)
+        ohlcv_data = request.ohlc_data
+        if not ohlcv_data and pattern:
+            ohlcv_data = pattern.get("ohlc_data", [])
+        if not ohlcv_data:
+            # Try to get from feedback storage
+            from pathlib import Path
+            import json
+            feedback_file = Path("/app/data/pattern_feedback.json")
+            if feedback_file.exists():
+                try:
+                    with open(feedback_file, 'r', encoding='utf-8') as f:
+                        feedback_data = json.load(f)
+                    for entry in feedback_data:
+                        if entry.get("id") == request.pattern_id:
+                            ohlcv_data = entry.get("ohlc_data", [])
+                            if ohlcv_data:
+                                logger.info(f"Using OHLC data from feedback storage for {request.pattern_id}")
+                            break
+                except Exception as e:
+                    logger.warning(f"Could not read feedback file: {e}")
+
         if not ohlcv_data:
             # Fetch from Data Service - use pattern timestamp to get correct candle
+            logger.info(f"Fetching fresh OHLC data for {symbol}/{timeframe} at {pattern_timestamp}")
             ohlcv_data = await fetch_ohlcv_data(
                 symbol,
                 timeframe,

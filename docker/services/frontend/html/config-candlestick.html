@@ -6077,11 +6077,15 @@
                 // Format for rendering
                 const formattedCandles = chartCandles.map(c => ({
                     datetime: c.datetime,
-                    open: c.open,
-                    high: c.high,
-                    low: c.low,
-                    close: c.close
+                    open: parseFloat(c.open),
+                    high: parseFloat(c.high),
+                    low: parseFloat(c.low),
+                    close: parseFloat(c.close)
                 }));
+
+                // IMPORTANT: Store OHLC data in pattern for feedback submission
+                // This ensures Claude Vision validates the exact same data shown to the user
+                pattern.ohlc_data = formattedCandles;
 
                 renderCandlestickChart(canvas, formattedCandles, highlightStartIdx, pattern.direction, pattern.pattern_type, pattern.timeframe);
 
@@ -7132,6 +7136,8 @@
                     `${item.symbol}_${item.pattern_timestamp}_${item.original_pattern}`;
 
                 // Call Claude Vision API with direct data (pattern may not be in history)
+                // IMPORTANT: Include stored ohlc_data to ensure Claude validates the EXACT same data
+                // that was shown when the user gave feedback (not fresh data that may have changed)
                 const response = await fetch(`${CANDLESTICK_API}/claude/validate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -7142,7 +7148,9 @@
                         pattern_type: item.original_pattern,
                         symbol: item.symbol,
                         timeframe: item.timeframe,
-                        pattern_timestamp: item.pattern_timestamp
+                        pattern_timestamp: item.pattern_timestamp,
+                        // Include stored OHLC data from feedback (if available)
+                        ohlc_data: item.ohlc_data || null
                     })
                 });
 
