@@ -8822,11 +8822,16 @@
 
                 // Show result
                 let message = 'Factory Reset abgeschlossen.\n\n';
-                message += 'Candlestick Service:\n';
+                message += '📁 Dateien gelöscht:\n';
                 message += result.deleted.map(f => `• ${f}`).join('\n');
 
+                if (result.memory_cleared && result.memory_cleared.length > 0) {
+                    message += '\n\n🧹 In-Memory Daten gelöscht:\n';
+                    message += result.memory_cleared.map(m => `• ${m}`).join('\n');
+                }
+
                 if (trainResult) {
-                    message += '\n\nTraining Service:\n';
+                    message += '\n\n📊 Training Service:\n';
                     message += trainResult.deleted.map(f => `• ${f}`).join('\n');
                 }
 

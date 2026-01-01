@@ -386,6 +386,7 @@ class RuleConfigService:
         - claude_validations.json (deleted)
         - pending_validations.json (deleted)
         - backups/ directory (deleted)
+        - In-Memory data from all services (cleared)
 
         Returns:
             Result of factory reset operation
@@ -394,6 +395,7 @@ class RuleConfigService:
 
         data_dir = self.config_path.parent
         deleted_files = []
+        memory_cleared = []
         errors = []
 
         # Files to delete
@@ -446,10 +448,45 @@ class RuleConfigService:
             errors.append(f"rule_config.json: {str(e)}")
             logger.error(f"Factory reset: Failed to reset rule_config.json: {e}")
 
+        # Clear In-Memory data from all services
+        try:
+            from .pattern_history_service import pattern_history_service
+            result = pattern_history_service.clear_memory()
+            memory_cleared.append(f"pattern_history_service (was_running: {result.get('was_running', False)})")
+            logger.info("Factory reset: Cleared pattern_history_service memory")
+        except Exception as e:
+            errors.append(f"pattern_history_service memory: {str(e)}")
+            logger.error(f"Factory reset: Failed to clear pattern_history_service memory: {e}")
+
+        try:
+            from .auto_optimization_service import auto_optimization_service
+            result = auto_optimization_service.clear_memory()
+            memory_cleared.append(
+                f"auto_optimization_service (pending: {result.get('pending_validations_cleared', 0)}, "
+                f"history: {result.get('optimization_history_cleared', 0)})"
+            )
+            logger.info("Factory reset: Cleared auto_optimization_service memory")
+        except Exception as e:
+            errors.append(f"auto_optimization_service memory: {str(e)}")
+            logger.error(f"Factory reset: Failed to clear auto_optimization_service memory: {e}")
+
+        try:
+            from .claude_validator_service import claude_validator_service
+            result = claude_validator_service.clear_memory()
+            memory_cleared.append(
+                f"claude_validator_service (history: {result.get('validation_history_cleared', 0)}, "
+                f"cache: {result.get('validation_cache_cleared', 0)})"
+            )
+            logger.info("Factory reset: Cleared claude_validator_service memory")
+        except Exception as e:
+            errors.append(f"claude_validator_service memory: {str(e)}")
+            logger.error(f"Factory reset: Failed to clear claude_validator_service memory: {e}")
+
         if errors:
             return {
                 "success": False,
                 "deleted": deleted_files,
+                "memory_cleared": memory_cleared,
                 "errors": errors,
                 "message": "Factory reset completed with errors"
             }
@@ -457,7 +494,8 @@ class RuleConfigService:
         return {
             "success": True,
             "deleted": deleted_files,
-            "message": "Factory reset completed successfully. All data has been cleared."
+            "memory_cleared": memory_cleared,
+            "message": "Factory reset completed successfully. All data and in-memory state have been cleared."
         }
 
     def get_adjustment_history(self, limit: int = 50) -> List[Dict]:

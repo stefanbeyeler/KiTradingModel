@@ -457,6 +457,44 @@ class AutoOptimizationService:
         """Get recent optimization history."""
         return list(reversed(self._optimization_history[-limit:]))
 
+    def clear_memory(self):
+        """
+        Loesche alle In-Memory Daten fuer Factory Reset.
+
+        Dies loescht:
+        - Pending validations queue
+        - Optimization history
+        - Auto-adjustment counter
+        - Stoppt den laufenden Task (falls aktiv)
+        """
+        # Stop task if running
+        was_running = self._running
+        if self._running:
+            self._running = False
+            if self._validation_task:
+                self._validation_task.cancel()
+
+        # Clear in-memory data
+        pending_count = len(self._pending_validations)
+        history_count = len(self._optimization_history)
+
+        self._pending_validations = []
+        self._optimization_history = []
+        self._auto_adjustments_this_hour = 0
+        self._last_hour_reset = datetime.now(timezone.utc)
+
+        logger.info(
+            f"Auto-optimization memory cleared: "
+            f"pending={pending_count}, history={history_count}, was_running={was_running}"
+        )
+
+        return {
+            "cleared": True,
+            "was_running": was_running,
+            "pending_validations_cleared": pending_count,
+            "optimization_history_cleared": history_count
+        }
+
     async def trigger_revalidation_with_claude(
         self,
         pattern_ids: List[str]

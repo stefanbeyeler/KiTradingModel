@@ -1258,6 +1258,31 @@ WICHTIG: Die "reasoning" Begründung MUSS auf Deutsch sein!"""
             "api_configured": bool(self.api_key)
         }
 
+    def clear_memory(self):
+        """
+        Loesche alle In-Memory Daten fuer Factory Reset.
+
+        Dies loescht:
+        - Validation history (In-Memory)
+        - Validation cache
+        """
+        history_count = len(self._validation_history)
+        cache_count = len(self._validation_cache)
+
+        self._validation_history = []
+        self._validation_cache = {}
+
+        logger.info(
+            f"Claude validator memory cleared: "
+            f"history={history_count}, cache={cache_count}"
+        )
+
+        return {
+            "cleared": True,
+            "validation_history_cleared": history_count,
+            "validation_cache_cleared": cache_count
+        }
+
 
 # Global singleton
 claude_validator_service = ClaudeValidatorService()

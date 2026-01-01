@@ -421,6 +421,32 @@ class PatternHistoryService:
         self._save_history()
         logger.info("Pattern history cleared")
 
+    def clear_memory(self):
+        """
+        Loesche alle In-Memory Daten fuer Factory Reset.
+
+        Dies loescht:
+        - In-Memory History Liste
+        - Stoppt den laufenden Scan-Task (falls aktiv)
+        """
+        # Stop scan task if running
+        was_running = self._running
+        if self._running:
+            self._running = False
+            if self._scan_task:
+                self._scan_task.cancel()
+
+        # Clear in-memory history
+        self._history = []
+
+        logger.info(f"Pattern history memory cleared (was running: {was_running})")
+
+        return {
+            "cleared": True,
+            "was_running": was_running,
+            "history_entries_cleared": True
+        }
+
 
 # Global singleton
 pattern_history_service = PatternHistoryService()
