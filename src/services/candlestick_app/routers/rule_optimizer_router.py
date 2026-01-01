@@ -381,6 +381,24 @@ async def delete_backup(backup_name: str):
     return result
 
 
+@router.get("/backup/{backup_name}/export", summary="Export a specific backup")
+async def export_backup(backup_name: str):
+    """
+    Export a specific backup as JSON for download.
+
+    Returns the complete backup data including params and history.
+    """
+    result = rule_config_service.get_backup(backup_name)
+
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=404 if "not found" in result.get("error", "") else 500,
+            detail=result.get("error", "Backup not found")
+        )
+
+    return result["data"]
+
+
 @router.get("/export", summary="Export configuration")
 async def export_config():
     """

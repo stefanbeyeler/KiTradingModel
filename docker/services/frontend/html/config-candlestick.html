@@ -8578,6 +8578,7 @@
                     html += `<td style="padding: 0.5rem; color: #aaa;">${sizeKB} KB</td>`;
                     html += `<td style="padding: 0.5rem;">
                         <button class="btn btn-primary btn-sm" onclick="restoreBackup('${backup.name}')" title="Wiederherstellen">⟲</button>
+                        <button class="btn btn-secondary btn-sm" onclick="exportBackup('${backup.name}')" title="Exportieren">📥</button>
                         <button class="btn btn-danger btn-sm" onclick="deleteBackup('${backup.name}')" title="Löschen">✕</button>
                     </td>`;
                     html += '</tr>';
@@ -8666,6 +8667,34 @@
 
             } catch (error) {
                 console.error('Failed to delete backup:', error);
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        async function exportBackup(backupName) {
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/rule-optimizer/backup/${encodeURIComponent(backupName)}/export`);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Export fehlgeschlagen');
+                }
+                const data = await response.json();
+
+                // Download as JSON file
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `rule_config_${backupName}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast(`Backup exportiert: ${backupName}`, 'success');
+
+            } catch (error) {
+                console.error('Failed to export backup:', error);
                 showToast('Fehler: ' + error.message, 'error');
             }
         }

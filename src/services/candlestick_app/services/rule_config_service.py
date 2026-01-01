@@ -734,6 +734,50 @@ class RuleConfigService:
                 "error": str(e)
             }
 
+    def get_backup(self, backup_name: str) -> Dict[str, Any]:
+        """
+        Get a specific backup's data for export.
+
+        Args:
+            backup_name: Name or filename of the backup
+
+        Returns:
+            Backup data or error
+        """
+        backup_dir = self.config_path.parent / "backups"
+
+        # Find the backup file
+        backup_path = None
+        for pattern in [
+            backup_dir / f"rule_config_{backup_name}.json",
+            backup_dir / backup_name,
+            backup_dir / f"{backup_name}.json"
+        ]:
+            if pattern.exists():
+                backup_path = pattern
+                break
+
+        if not backup_path:
+            return {
+                "success": False,
+                "error": f"Backup not found: {backup_name}"
+            }
+
+        try:
+            with open(backup_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            return {
+                "success": True,
+                "data": data
+            }
+        except Exception as e:
+            logger.error(f"Failed to read backup: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
     def export_config(self) -> Dict[str, Any]:
         """
         Export current configuration as downloadable data.
