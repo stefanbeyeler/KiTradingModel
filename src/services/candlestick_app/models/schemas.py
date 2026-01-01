@@ -30,20 +30,34 @@ class PatternStrength(str, Enum):
 
 class PatternType(str, Enum):
     """Types of candlestick patterns."""
-    # Reversal Patterns
+    # Reversal Patterns - Bullish
     HAMMER = "hammer"
     INVERTED_HAMMER = "inverted_hammer"
+    BULLISH_ENGULFING = "bullish_engulfing"
+    MORNING_STAR = "morning_star"
+    PIERCING_LINE = "piercing_line"
+    DRAGONFLY_DOJI = "dragonfly_doji"
+    BULLISH_BELT_HOLD = "bullish_belt_hold"
+    BULLISH_COUNTERATTACK = "bullish_counterattack"
+    THREE_INSIDE_UP = "three_inside_up"
+    BULLISH_ABANDONED_BABY = "bullish_abandoned_baby"
+    TOWER_BOTTOM = "tower_bottom"
+
+    # Reversal Patterns - Bearish
     SHOOTING_STAR = "shooting_star"
     HANGING_MAN = "hanging_man"
-    DOJI = "doji"
-    DRAGONFLY_DOJI = "dragonfly_doji"
-    GRAVESTONE_DOJI = "gravestone_doji"
-    BULLISH_ENGULFING = "bullish_engulfing"
     BEARISH_ENGULFING = "bearish_engulfing"
-    MORNING_STAR = "morning_star"
     EVENING_STAR = "evening_star"
-    PIERCING_LINE = "piercing_line"
     DARK_CLOUD_COVER = "dark_cloud_cover"
+    GRAVESTONE_DOJI = "gravestone_doji"
+    BEARISH_BELT_HOLD = "bearish_belt_hold"
+    BEARISH_COUNTERATTACK = "bearish_counterattack"
+    THREE_INSIDE_DOWN = "three_inside_down"
+    BEARISH_ABANDONED_BABY = "bearish_abandoned_baby"
+    TOWER_TOP = "tower_top"
+
+    # Reversal Patterns - Neutral
+    DOJI = "doji"
 
     # Continuation Patterns
     THREE_WHITE_SOLDIERS = "three_white_soldiers"

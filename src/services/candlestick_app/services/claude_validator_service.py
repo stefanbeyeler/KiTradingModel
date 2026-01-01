@@ -357,12 +357,24 @@ class ClaudeValidatorService:
 
     def _get_pattern_candle_count(self, pattern_type: str) -> int:
         """Get the number of candles involved in a pattern."""
-        single_candle = ["doji", "dragonfly_doji", "gravestone_doji", "hammer",
-                        "inverted_hammer", "shooting_star", "hanging_man", "spinning_top"]
-        two_candle = ["bullish_engulfing", "bearish_engulfing", "bullish_harami",
-                     "bearish_harami", "harami_cross", "piercing_line", "dark_cloud_cover"]
-        three_candle = ["morning_star", "evening_star", "three_white_soldiers",
-                       "three_black_crows", "rising_three_methods", "falling_three_methods"]
+        single_candle = [
+            "doji", "dragonfly_doji", "gravestone_doji", "hammer",
+            "inverted_hammer", "shooting_star", "hanging_man", "spinning_top",
+            "bullish_belt_hold", "bearish_belt_hold"
+        ]
+        two_candle = [
+            "bullish_engulfing", "bearish_engulfing", "bullish_harami",
+            "bearish_harami", "harami_cross", "piercing_line", "dark_cloud_cover",
+            "bullish_counterattack", "bearish_counterattack"
+        ]
+        three_candle = [
+            "morning_star", "evening_star", "three_white_soldiers",
+            "three_black_crows", "rising_three_methods", "falling_three_methods",
+            "three_inside_up", "three_inside_down",
+            "bullish_abandoned_baby", "bearish_abandoned_baby"
+        ]
+        # Tower patterns have variable candle count (4-12)
+        multi_candle = ["tower_top", "tower_bottom"]
 
         pattern_lower = pattern_type.lower()
         if pattern_lower in single_candle:
@@ -371,6 +383,8 @@ class ClaudeValidatorService:
             return 2
         elif pattern_lower in three_candle:
             return 3
+        elif pattern_lower in multi_candle:
+            return 5  # Default for tower patterns
         else:
             return 2  # Default
 
@@ -383,12 +397,16 @@ class ClaudeValidatorService:
         bullish_patterns = [
             "hammer", "inverted_hammer", "bullish_engulfing", "bullish_harami",
             "morning_star", "three_white_soldiers", "piercing_line",
-            "dragonfly_doji", "rising_three_methods", "tweezer_bottom"
+            "dragonfly_doji", "rising_three_methods", "tweezer_bottom",
+            "bullish_belt_hold", "bullish_counterattack", "three_inside_up",
+            "bullish_abandoned_baby", "tower_bottom"
         ]
         bearish_patterns = [
             "hanging_man", "shooting_star", "bearish_engulfing", "bearish_harami",
             "evening_star", "three_black_crows", "dark_cloud_cover",
-            "gravestone_doji", "falling_three_methods", "tweezer_top"
+            "gravestone_doji", "falling_three_methods", "tweezer_top",
+            "bearish_belt_hold", "bearish_counterattack", "three_inside_down",
+            "bearish_abandoned_baby", "tower_top"
         ]
         neutral_patterns = [
             "doji", "spinning_top", "harami_cross", "inside_bar"
@@ -517,6 +535,82 @@ class ClaudeValidatorService:
 - Current candle must be bearish (red/filled)
 - Current body COMPLETELY engulfs previous body
 - Shadows don't need to engulf, only the BODY""",
+
+            "bullish_belt_hold": """
+**STRICT Bullish Belt Hold Criteria (ALL must be met):**
+- Long bullish (green) candle body (at least 75% of total range)
+- Opens at or very near the low (lower shadow < 5% of range)
+- May have small upper shadow (< 15% of range)
+- Appears after a downtrend""",
+
+            "bearish_belt_hold": """
+**STRICT Bearish Belt Hold Criteria (ALL must be met):**
+- Long bearish (red) candle body (at least 75% of total range)
+- Opens at or very near the high (upper shadow < 5% of range)
+- May have small lower shadow (< 15% of range)
+- Appears after an uptrend""",
+
+            "bullish_counterattack": """
+**STRICT Bullish Counterattack Criteria (ALL must be met):**
+- Previous candle is bearish (red)
+- Current candle is bullish (green)
+- Gap down opening (current opens below previous close)
+- Both candles close at approximately the same price level
+- Both candles have significant bodies""",
+
+            "bearish_counterattack": """
+**STRICT Bearish Counterattack Criteria (ALL must be met):**
+- Previous candle is bullish (green)
+- Current candle is bearish (red)
+- Gap up opening (current opens above previous close)
+- Both candles close at approximately the same price level
+- Both candles have significant bodies""",
+
+            "three_inside_up": """
+**STRICT Three Inside Up Criteria (ALL must be met):**
+- First candle: large bearish (red) body
+- Second candle: small bullish (green) body completely within first body (Harami)
+- Third candle: bullish (green), closes above first candle's open
+- Appears after a downtrend""",
+
+            "three_inside_down": """
+**STRICT Three Inside Down Criteria (ALL must be met):**
+- First candle: large bullish (green) body
+- Second candle: small bearish (red) body completely within first body (Harami)
+- Third candle: bearish (red), closes below first candle's open
+- Appears after an uptrend""",
+
+            "bullish_abandoned_baby": """
+**STRICT Bullish Abandoned Baby Criteria (ALL must be met):**
+- First candle: bearish (red) with significant body
+- Second candle: Doji that GAPS DOWN (Doji high is BELOW first candle's low)
+- Third candle: bullish (green) that GAPS UP (third low is ABOVE Doji high)
+- The Doji must be completely separated by gaps on both sides
+- This is a RARE pattern due to the strict gap requirements""",
+
+            "bearish_abandoned_baby": """
+**STRICT Bearish Abandoned Baby Criteria (ALL must be met):**
+- First candle: bullish (green) with significant body
+- Second candle: Doji that GAPS UP (Doji low is ABOVE first candle's high)
+- Third candle: bearish (red) that GAPS DOWN (third high is BELOW Doji low)
+- The Doji must be completely separated by gaps on both sides
+- This is a RARE pattern due to the strict gap requirements""",
+
+            "tower_bottom": """
+**STRICT Tower Bottom Criteria (ALL must be met):**
+- First candle: large bearish (red) body
+- Middle candles (2-10): small body candles in consolidation zone
+- Last candle: large bullish (green) body
+- The small candles form a "roof" between the two large "tower walls"
+- Appears at the end of a downtrend""",
+
+            "tower_top": """
+**STRICT Tower Top Criteria (ALL must be met):**
+- First candle: large bullish (green) body
+- Middle candles (2-10): small body candles in consolidation zone
+- Last candle: large bearish (red) body
+- The small candles form a "roof" between the two large "tower walls"
+- Appears at the end of an uptrend""",
         }
         return criteria.get(pattern_type.lower(), "")
 

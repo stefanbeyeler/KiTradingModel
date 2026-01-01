@@ -111,6 +111,61 @@ DEFAULT_RULE_PARAMS = {
         "uptrend_threshold": 1.0,    # +1% for uptrend
         "downtrend_threshold": -1.0, # -1% for downtrend
     },
+    # Belt Hold - Einzelkerze mit langem Körper, fast ohne Schatten
+    "bullish_belt_hold": {
+        "body_min_ratio": 0.75,      # Body >= 75% of range (long body)
+        "lower_shadow_max_ratio": 0.05,  # Lower shadow < 5% of range (opens at low)
+        "upper_shadow_max_ratio": 0.15,  # Upper shadow < 15% of range
+    },
+    "bearish_belt_hold": {
+        "body_min_ratio": 0.75,      # Body >= 75% of range (long body)
+        "upper_shadow_max_ratio": 0.05,  # Upper shadow < 5% of range (opens at high)
+        "lower_shadow_max_ratio": 0.15,  # Lower shadow < 15% of range
+    },
+    # Counterattack - 2 Kerzen, schliessen auf gleichem Niveau
+    "bullish_counterattack": {
+        "close_tolerance_pct": 0.05,  # Close within 0.05% of each other
+        "body_min_ratio": 0.5,        # Both candles have significant bodies
+        "gap_min_pct": 0.2,           # Gap down of at least 0.2%
+    },
+    "bearish_counterattack": {
+        "close_tolerance_pct": 0.05,
+        "body_min_ratio": 0.5,
+        "gap_min_pct": 0.2,           # Gap up of at least 0.2%
+    },
+    # Three Inside Up/Down - Harami + Bestätigungskerze
+    "three_inside_up": {
+        "harami_body_max_ratio": 0.5,  # Second candle < 50% of first
+        "confirm_close_above_first": True,  # Third closes above first's body
+    },
+    "three_inside_down": {
+        "harami_body_max_ratio": 0.5,
+        "confirm_close_below_first": True,
+    },
+    # Abandoned Baby - Doji mit Gaps auf beiden Seiten
+    "bullish_abandoned_baby": {
+        "doji_body_max_ratio": 0.1,  # Middle candle is Doji (< 10% body)
+        "first_body_min_ratio": 0.5,  # First candle has significant body
+        "third_body_min_ratio": 0.5,  # Third candle has significant body
+    },
+    "bearish_abandoned_baby": {
+        "doji_body_max_ratio": 0.1,
+        "first_body_min_ratio": 0.5,
+        "third_body_min_ratio": 0.5,
+    },
+    # Tower patterns - Multi-Kerzen mit kleinen inneren Kerzen
+    "tower_bottom": {
+        "outer_body_min_ratio": 0.6,  # Outer candles have large bodies
+        "inner_body_max_ratio": 0.4,  # Inner candles are small
+        "min_inner_candles": 2,       # At least 2 inner candles
+        "max_inner_candles": 10,      # Up to 10 inner candles
+    },
+    "tower_top": {
+        "outer_body_min_ratio": 0.6,
+        "inner_body_max_ratio": 0.4,
+        "min_inner_candles": 2,
+        "max_inner_candles": 10,
+    },
 }
 
 

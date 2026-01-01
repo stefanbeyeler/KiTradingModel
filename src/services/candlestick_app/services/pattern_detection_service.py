@@ -229,6 +229,71 @@ class CandlestickPatternService:
                 "category": PatternCategory.INDECISION,
                 "direction": PatternDirection.NEUTRAL,
             },
+            # New Patterns - Belt Hold
+            PatternType.BULLISH_BELT_HOLD: {
+                "description": "Bullish Belt Hold - lange weisse Kerze ohne unteren Schatten",
+                "implication": "Starkes bullisches Signal nach Abwärtstrend",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BULLISH,
+            },
+            PatternType.BEARISH_BELT_HOLD: {
+                "description": "Bearish Belt Hold - lange schwarze Kerze ohne oberen Schatten",
+                "implication": "Starkes bärisches Signal nach Aufwärtstrend",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BEARISH,
+            },
+            # New Patterns - Counterattack
+            PatternType.BULLISH_COUNTERATTACK: {
+                "description": "Bullish Counterattack - zwei Kerzen schliessen auf gleichem Niveau nach Gap",
+                "implication": "Bullisches Umkehrsignal nach Abwärtstrend",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BULLISH,
+            },
+            PatternType.BEARISH_COUNTERATTACK: {
+                "description": "Bearish Counterattack - zwei Kerzen schliessen auf gleichem Niveau nach Gap",
+                "implication": "Bärisches Umkehrsignal nach Aufwärtstrend",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BEARISH,
+            },
+            # New Patterns - Three Inside
+            PatternType.THREE_INSIDE_UP: {
+                "description": "Three Inside Up - Bullish Harami mit Bestätigungskerze",
+                "implication": "Bestätigtes bullisches Umkehrsignal",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BULLISH,
+            },
+            PatternType.THREE_INSIDE_DOWN: {
+                "description": "Three Inside Down - Bearish Harami mit Bestätigungskerze",
+                "implication": "Bestätigtes bärisches Umkehrsignal",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BEARISH,
+            },
+            # New Patterns - Abandoned Baby
+            PatternType.BULLISH_ABANDONED_BABY: {
+                "description": "Bullish Abandoned Baby - Doji schwebt unter beiden Nachbarkerzen",
+                "implication": "Sehr seltenes, starkes bullisches Umkehrsignal",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BULLISH,
+            },
+            PatternType.BEARISH_ABANDONED_BABY: {
+                "description": "Bearish Abandoned Baby - Doji schwebt über beiden Nachbarkerzen",
+                "implication": "Sehr seltenes, starkes bärisches Umkehrsignal",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BEARISH,
+            },
+            # New Patterns - Tower
+            PatternType.TOWER_BOTTOM: {
+                "description": "Tower Bottom - grosse Abwärtskerze, kleine Kerzen, grosse Aufwärtskerze",
+                "implication": "Bullisches Umkehrsignal nach Stauchungsphase",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BULLISH,
+            },
+            PatternType.TOWER_TOP: {
+                "description": "Tower Top - grosse Aufwärtskerze, kleine Kerzen, grosse Abwärtskerze",
+                "implication": "Bärisches Umkehrsignal nach Stauchungsphase",
+                "category": PatternCategory.REVERSAL,
+                "direction": PatternDirection.BEARISH,
+            },
         }
 
     # ==================== Pattern Detection Methods ====================
@@ -818,6 +883,448 @@ class CandlestickPatternService:
 
         return True
 
+    # ==================== New Pattern Detection Methods ====================
+
+    def _is_bullish_belt_hold(self, candle: CandleData, avg_body: float) -> bool:
+        """
+        Check for Bullish Belt Hold pattern.
+        - Long bullish body (opens at/near low)
+        - Very small or no lower shadow
+        - May have small upper shadow
+
+        Uses configurable parameters from rule_config_service.
+        """
+        if not candle.is_valid_candle or not candle.is_bullish:
+            return False
+
+        params = rule_config_service.get_pattern_params("bullish_belt_hold")
+        body_min_ratio = params.get("body_min_ratio", 0.75)
+        lower_shadow_max_ratio = params.get("lower_shadow_max_ratio", 0.05)
+        upper_shadow_max_ratio = params.get("upper_shadow_max_ratio", 0.15)
+
+        body_ratio = candle.body_size / candle.total_range if candle.total_range > 0 else 0
+        lower_shadow_ratio = candle.lower_shadow / candle.total_range if candle.total_range > 0 else 0
+        upper_shadow_ratio = candle.upper_shadow / candle.total_range if candle.total_range > 0 else 0
+
+        return (
+            body_ratio >= body_min_ratio and
+            lower_shadow_ratio <= lower_shadow_max_ratio and
+            upper_shadow_ratio <= upper_shadow_max_ratio
+        )
+
+    def _is_bearish_belt_hold(self, candle: CandleData, avg_body: float) -> bool:
+        """
+        Check for Bearish Belt Hold pattern.
+        - Long bearish body (opens at/near high)
+        - Very small or no upper shadow
+        - May have small lower shadow
+
+        Uses configurable parameters from rule_config_service.
+        """
+        if not candle.is_valid_candle or not candle.is_bearish:
+            return False
+
+        params = rule_config_service.get_pattern_params("bearish_belt_hold")
+        body_min_ratio = params.get("body_min_ratio", 0.75)
+        upper_shadow_max_ratio = params.get("upper_shadow_max_ratio", 0.05)
+        lower_shadow_max_ratio = params.get("lower_shadow_max_ratio", 0.15)
+
+        body_ratio = candle.body_size / candle.total_range if candle.total_range > 0 else 0
+        upper_shadow_ratio = candle.upper_shadow / candle.total_range if candle.total_range > 0 else 0
+        lower_shadow_ratio = candle.lower_shadow / candle.total_range if candle.total_range > 0 else 0
+
+        return (
+            body_ratio >= body_min_ratio and
+            upper_shadow_ratio <= upper_shadow_max_ratio and
+            lower_shadow_ratio <= lower_shadow_max_ratio
+        )
+
+    def _is_bullish_counterattack(self, current: CandleData, prev: CandleData) -> bool:
+        """
+        Check for Bullish Counterattack pattern.
+        - Previous candle is bearish
+        - Current candle is bullish with gap down open
+        - Both candles close at approximately the same level
+
+        Uses configurable parameters from rule_config_service.
+        """
+        if not prev.is_bearish or not current.is_bullish:
+            return False
+
+        params = rule_config_service.get_pattern_params("bullish_counterattack")
+        close_tolerance_pct = params.get("close_tolerance_pct", 0.05)
+        body_min_ratio = params.get("body_min_ratio", 0.5)
+        gap_min_pct = params.get("gap_min_pct", 0.2)
+
+        # Both candles must have significant bodies
+        if prev.total_range > 0:
+            prev_body_ratio = prev.body_size / prev.total_range
+            if prev_body_ratio < body_min_ratio:
+                return False
+
+        if current.total_range > 0:
+            curr_body_ratio = current.body_size / current.total_range
+            if curr_body_ratio < body_min_ratio:
+                return False
+
+        # Gap down required
+        price_ref = prev.close
+        gap_pct = ((prev.close - current.open) / price_ref) * 100 if price_ref > 0 else 0
+        if gap_pct < gap_min_pct:
+            return False
+
+        # Closes must be at same level
+        close_diff_pct = abs(current.close - prev.close) / prev.close * 100 if prev.close > 0 else float('inf')
+
+        return close_diff_pct <= close_tolerance_pct
+
+    def _is_bearish_counterattack(self, current: CandleData, prev: CandleData) -> bool:
+        """
+        Check for Bearish Counterattack pattern.
+        - Previous candle is bullish
+        - Current candle is bearish with gap up open
+        - Both candles close at approximately the same level
+
+        Uses configurable parameters from rule_config_service.
+        """
+        if not prev.is_bullish or not current.is_bearish:
+            return False
+
+        params = rule_config_service.get_pattern_params("bearish_counterattack")
+        close_tolerance_pct = params.get("close_tolerance_pct", 0.05)
+        body_min_ratio = params.get("body_min_ratio", 0.5)
+        gap_min_pct = params.get("gap_min_pct", 0.2)
+
+        # Both candles must have significant bodies
+        if prev.total_range > 0:
+            prev_body_ratio = prev.body_size / prev.total_range
+            if prev_body_ratio < body_min_ratio:
+                return False
+
+        if current.total_range > 0:
+            curr_body_ratio = current.body_size / current.total_range
+            if curr_body_ratio < body_min_ratio:
+                return False
+
+        # Gap up required
+        price_ref = prev.close
+        gap_pct = ((current.open - prev.close) / price_ref) * 100 if price_ref > 0 else 0
+        if gap_pct < gap_min_pct:
+            return False
+
+        # Closes must be at same level
+        close_diff_pct = abs(current.close - prev.close) / prev.close * 100 if prev.close > 0 else float('inf')
+
+        return close_diff_pct <= close_tolerance_pct
+
+    def _is_three_inside_up(
+        self,
+        first: CandleData,
+        second: CandleData,
+        third: CandleData,
+        avg_body: float
+    ) -> bool:
+        """
+        Check for Three Inside Up pattern.
+        - First candle: bearish
+        - Second candle: bullish, contained within first body (Harami)
+        - Third candle: bullish, closes above first candle's open
+
+        Uses configurable parameters from rule_config_service.
+        """
+        # First: bearish with large body
+        if not first.is_bearish:
+            return False
+
+        # Second: bullish, small body contained within first
+        if not second.is_bullish:
+            return False
+
+        params = rule_config_service.get_pattern_params("three_inside_up")
+        harami_body_max_ratio = params.get("harami_body_max_ratio", 0.5)
+
+        # Second body must be within first body (Harami)
+        if second.open < first.close or second.close > first.open:
+            return False
+
+        # Second body must be smaller than first
+        if second.body_size > first.body_size * harami_body_max_ratio:
+            return False
+
+        # Third: bullish, closes above first's open (top of first's body)
+        if not third.is_bullish:
+            return False
+
+        if third.close <= first.open:
+            return False
+
+        return True
+
+    def _is_three_inside_down(
+        self,
+        first: CandleData,
+        second: CandleData,
+        third: CandleData,
+        avg_body: float
+    ) -> bool:
+        """
+        Check for Three Inside Down pattern.
+        - First candle: bullish
+        - Second candle: bearish, contained within first body (Harami)
+        - Third candle: bearish, closes below first candle's open
+
+        Uses configurable parameters from rule_config_service.
+        """
+        # First: bullish with large body
+        if not first.is_bullish:
+            return False
+
+        # Second: bearish, small body contained within first
+        if not second.is_bearish:
+            return False
+
+        params = rule_config_service.get_pattern_params("three_inside_down")
+        harami_body_max_ratio = params.get("harami_body_max_ratio", 0.5)
+
+        # Second body must be within first body (Harami)
+        if second.close < first.open or second.open > first.close:
+            return False
+
+        # Second body must be smaller than first
+        if second.body_size > first.body_size * harami_body_max_ratio:
+            return False
+
+        # Third: bearish, closes below first's open (bottom of first's body)
+        if not third.is_bearish:
+            return False
+
+        if third.close >= first.open:
+            return False
+
+        return True
+
+    def _is_bullish_abandoned_baby(
+        self,
+        first: CandleData,
+        second: CandleData,
+        third: CandleData,
+        avg_body: float
+    ) -> bool:
+        """
+        Check for Bullish Abandoned Baby pattern.
+        - First candle: bearish with large body
+        - Second candle: Doji that gaps down (HIGH is below first's LOW)
+        - Third candle: bullish with large body, gaps up (LOW is above second's HIGH)
+
+        The Doji must be completely separated from both neighboring candles.
+        Uses configurable parameters from rule_config_service.
+        """
+        params = rule_config_service.get_pattern_params("bullish_abandoned_baby")
+        doji_body_max_ratio = params.get("doji_body_max_ratio", 0.1)
+        first_body_min_ratio = params.get("first_body_min_ratio", 0.5)
+        third_body_min_ratio = params.get("third_body_min_ratio", 0.5)
+
+        # First: bearish with significant body
+        if not first.is_bearish:
+            return False
+        if first.total_range > 0:
+            first_body_ratio = first.body_size / first.total_range
+            if first_body_ratio < first_body_min_ratio:
+                return False
+
+        # Second: Doji (very small body)
+        if second.total_range > 0:
+            second_body_ratio = second.body_size / second.total_range
+            if second_body_ratio > doji_body_max_ratio:
+                return False
+
+        # Critical: Gap between first and second (second HIGH must be below first LOW)
+        if second.high >= first.low:
+            return False
+
+        # Third: bullish with significant body
+        if not third.is_bullish:
+            return False
+        if third.total_range > 0:
+            third_body_ratio = third.body_size / third.total_range
+            if third_body_ratio < third_body_min_ratio:
+                return False
+
+        # Critical: Gap between second and third (third LOW must be above second HIGH)
+        if third.low <= second.high:
+            return False
+
+        return True
+
+    def _is_bearish_abandoned_baby(
+        self,
+        first: CandleData,
+        second: CandleData,
+        third: CandleData,
+        avg_body: float
+    ) -> bool:
+        """
+        Check for Bearish Abandoned Baby pattern.
+        - First candle: bullish with large body
+        - Second candle: Doji that gaps up (LOW is above first's HIGH)
+        - Third candle: bearish with large body, gaps down (HIGH is below second's LOW)
+
+        The Doji must be completely separated from both neighboring candles.
+        Uses configurable parameters from rule_config_service.
+        """
+        params = rule_config_service.get_pattern_params("bearish_abandoned_baby")
+        doji_body_max_ratio = params.get("doji_body_max_ratio", 0.1)
+        first_body_min_ratio = params.get("first_body_min_ratio", 0.5)
+        third_body_min_ratio = params.get("third_body_min_ratio", 0.5)
+
+        # First: bullish with significant body
+        if not first.is_bullish:
+            return False
+        if first.total_range > 0:
+            first_body_ratio = first.body_size / first.total_range
+            if first_body_ratio < first_body_min_ratio:
+                return False
+
+        # Second: Doji (very small body)
+        if second.total_range > 0:
+            second_body_ratio = second.body_size / second.total_range
+            if second_body_ratio > doji_body_max_ratio:
+                return False
+
+        # Critical: Gap between first and second (second LOW must be above first HIGH)
+        if second.low <= first.high:
+            return False
+
+        # Third: bearish with significant body
+        if not third.is_bearish:
+            return False
+        if third.total_range > 0:
+            third_body_ratio = third.body_size / third.total_range
+            if third_body_ratio < third_body_min_ratio:
+                return False
+
+        # Critical: Gap between second and third (third HIGH must be below second LOW)
+        if third.high >= second.low:
+            return False
+
+        return True
+
+    def _is_tower_bottom(self, candles: list[CandleData], avg_body: float) -> bool:
+        """
+        Check for Tower Bottom pattern.
+        - First candle: large bearish body
+        - Middle candles (2-10): small bodies in consolidation zone
+        - Last candle: large bullish body
+
+        Uses configurable parameters from rule_config_service.
+        """
+        if len(candles) < 4:  # Min: first + 2 inner + last
+            return False
+
+        params = rule_config_service.get_pattern_params("tower_bottom")
+        outer_body_min_ratio = params.get("outer_body_min_ratio", 0.6)
+        inner_body_max_ratio = params.get("inner_body_max_ratio", 0.4)
+        min_inner_candles = int(params.get("min_inner_candles", 2))
+        max_inner_candles = int(params.get("max_inner_candles", 10))
+
+        inner_count = len(candles) - 2
+        if inner_count < min_inner_candles or inner_count > max_inner_candles:
+            return False
+
+        first = candles[0]
+        last = candles[-1]
+        inner = candles[1:-1]
+
+        # First: large bearish body
+        if not first.is_bearish:
+            return False
+        if first.total_range > 0:
+            first_body_ratio = first.body_size / first.total_range
+            if first_body_ratio < outer_body_min_ratio:
+                return False
+
+        # Last: large bullish body
+        if not last.is_bullish:
+            return False
+        if last.total_range > 0:
+            last_body_ratio = last.body_size / last.total_range
+            if last_body_ratio < outer_body_min_ratio:
+                return False
+
+        # Inner candles: small bodies
+        for c in inner:
+            if c.total_range > 0:
+                body_ratio = c.body_size / c.total_range
+                if body_ratio > inner_body_max_ratio:
+                    return False
+
+        # Inner candles should be in the upper area of first candle or slightly above
+        first_high = max(first.open, first.close)  # Top of first candle's body
+        for c in inner:
+            if c.low < first.close * 0.99:  # Allow small tolerance
+                return False
+
+        return True
+
+    def _is_tower_top(self, candles: list[CandleData], avg_body: float) -> bool:
+        """
+        Check for Tower Top pattern.
+        - First candle: large bullish body
+        - Middle candles (2-10): small bodies in consolidation zone
+        - Last candle: large bearish body
+
+        Uses configurable parameters from rule_config_service.
+        """
+        if len(candles) < 4:  # Min: first + 2 inner + last
+            return False
+
+        params = rule_config_service.get_pattern_params("tower_top")
+        outer_body_min_ratio = params.get("outer_body_min_ratio", 0.6)
+        inner_body_max_ratio = params.get("inner_body_max_ratio", 0.4)
+        min_inner_candles = int(params.get("min_inner_candles", 2))
+        max_inner_candles = int(params.get("max_inner_candles", 10))
+
+        inner_count = len(candles) - 2
+        if inner_count < min_inner_candles or inner_count > max_inner_candles:
+            return False
+
+        first = candles[0]
+        last = candles[-1]
+        inner = candles[1:-1]
+
+        # First: large bullish body
+        if not first.is_bullish:
+            return False
+        if first.total_range > 0:
+            first_body_ratio = first.body_size / first.total_range
+            if first_body_ratio < outer_body_min_ratio:
+                return False
+
+        # Last: large bearish body
+        if not last.is_bearish:
+            return False
+        if last.total_range > 0:
+            last_body_ratio = last.body_size / last.total_range
+            if last_body_ratio < outer_body_min_ratio:
+                return False
+
+        # Inner candles: small bodies
+        for c in inner:
+            if c.total_range > 0:
+                body_ratio = c.body_size / c.total_range
+                if body_ratio > inner_body_max_ratio:
+                    return False
+
+        # Inner candles should be in the upper area of first candle or slightly above
+        first_high = max(first.open, first.close)  # Top of first candle's body
+        for c in inner:
+            if c.high > first.close * 1.01:  # Allow small tolerance above first close
+                pass  # Inner candles can be at or above first close
+            if c.low < first.open * 0.99:  # Should not go too far below first open
+                return False
+
+        return True
+
     # ==================== Main Detection Logic ====================
 
     def _calculate_avg_body(self, candles: list[CandleData], lookback: int = 20) -> float:
@@ -966,6 +1473,14 @@ class CandlestickPatternService:
             if self._is_spinning_top(current, avg_body):
                 detected.append((PatternType.SPINNING_TOP, 0.55, 1))
 
+            # Belt Hold patterns
+            if self._is_bullish_belt_hold(current, avg_body):
+                confidence = 0.7 if trend == "downtrend" else 0.5
+                detected.append((PatternType.BULLISH_BELT_HOLD, confidence, 1))
+            elif self._is_bearish_belt_hold(current, avg_body):
+                confidence = 0.7 if trend == "uptrend" else 0.5
+                detected.append((PatternType.BEARISH_BELT_HOLD, confidence, 1))
+
             # === Two Candle Patterns ===
 
             # Engulfing - pass avg_body for better validation
@@ -995,6 +1510,14 @@ class CandlestickPatternService:
                 confidence = 0.65 if trend == "uptrend" else 0.5
                 detected.append((PatternType.DARK_CLOUD_COVER, confidence, 2))
 
+            # Counterattack patterns
+            if self._is_bullish_counterattack(current, prev):
+                confidence = 0.65 if trend == "downtrend" else 0.5
+                detected.append((PatternType.BULLISH_COUNTERATTACK, confidence, 2))
+            elif self._is_bearish_counterattack(current, prev):
+                confidence = 0.65 if trend == "uptrend" else 0.5
+                detected.append((PatternType.BEARISH_COUNTERATTACK, confidence, 2))
+
             # === Three Candle Patterns ===
             if prev2 is not None:
                 # Morning/Evening Star
@@ -1012,6 +1535,37 @@ class CandlestickPatternService:
                 elif self._is_three_black_crows(prev2, prev, current, avg_body):
                     confidence = 0.8
                     detected.append((PatternType.THREE_BLACK_CROWS, confidence, 3))
+
+                # Three Inside Up/Down
+                if self._is_three_inside_up(prev2, prev, current, avg_body):
+                    confidence = 0.75 if trend == "downtrend" else 0.6
+                    detected.append((PatternType.THREE_INSIDE_UP, confidence, 3))
+                elif self._is_three_inside_down(prev2, prev, current, avg_body):
+                    confidence = 0.75 if trend == "uptrend" else 0.6
+                    detected.append((PatternType.THREE_INSIDE_DOWN, confidence, 3))
+
+                # Abandoned Baby (rare but strong patterns)
+                if self._is_bullish_abandoned_baby(prev2, prev, current, avg_body):
+                    confidence = 0.9 if trend == "downtrend" else 0.75
+                    detected.append((PatternType.BULLISH_ABANDONED_BABY, confidence, 3))
+                elif self._is_bearish_abandoned_baby(prev2, prev, current, avg_body):
+                    confidence = 0.9 if trend == "uptrend" else 0.75
+                    detected.append((PatternType.BEARISH_ABANDONED_BABY, confidence, 3))
+
+            # === Tower Patterns (multi-candle) ===
+            # Check for Tower patterns with varying window sizes (4-12 candles)
+            for window_size in range(4, min(13, i + 1)):
+                start_idx = i - window_size + 1
+                if start_idx >= 0:
+                    window_candles = candles[start_idx:i + 1]
+                    if self._is_tower_bottom(window_candles, avg_body):
+                        confidence = 0.7 if trend == "downtrend" else 0.55
+                        detected.append((PatternType.TOWER_BOTTOM, confidence, window_size))
+                        break  # Found a Tower, don't check larger windows
+                    elif self._is_tower_top(window_candles, avg_body):
+                        confidence = 0.7 if trend == "uptrend" else 0.55
+                        detected.append((PatternType.TOWER_TOP, confidence, window_size))
+                        break
 
             # Create pattern objects for detected patterns
             for pattern_type, confidence, candles_count in detected:
@@ -1114,6 +1668,14 @@ class CandlestickPatternService:
             if self._is_spinning_top(current, avg_body):
                 detected.append((PatternType.SPINNING_TOP, 0.55, 1))
 
+            # Belt Hold patterns
+            if self._is_bullish_belt_hold(current, avg_body):
+                confidence = 0.7 if trend == "downtrend" else 0.5
+                detected.append((PatternType.BULLISH_BELT_HOLD, confidence, 1))
+            elif self._is_bearish_belt_hold(current, avg_body):
+                confidence = 0.7 if trend == "uptrend" else 0.5
+                detected.append((PatternType.BEARISH_BELT_HOLD, confidence, 1))
+
             # === Two Candle Patterns ===
             if self._is_bullish_engulfing(current, prev, avg_body):
                 confidence = 0.8 if trend == "downtrend" else 0.6
@@ -1138,6 +1700,14 @@ class CandlestickPatternService:
                 confidence = 0.65 if trend == "uptrend" else 0.5
                 detected.append((PatternType.DARK_CLOUD_COVER, confidence, 2))
 
+            # Counterattack patterns
+            if self._is_bullish_counterattack(current, prev):
+                confidence = 0.65 if trend == "downtrend" else 0.5
+                detected.append((PatternType.BULLISH_COUNTERATTACK, confidence, 2))
+            elif self._is_bearish_counterattack(current, prev):
+                confidence = 0.65 if trend == "uptrend" else 0.5
+                detected.append((PatternType.BEARISH_COUNTERATTACK, confidence, 2))
+
             # === Three Candle Patterns ===
             if prev2 is not None:
                 if self._is_morning_star(prev2, prev, current, avg_body):
@@ -1151,6 +1721,36 @@ class CandlestickPatternService:
                     detected.append((PatternType.THREE_WHITE_SOLDIERS, 0.8, 3))
                 elif self._is_three_black_crows(prev2, prev, current, avg_body):
                     detected.append((PatternType.THREE_BLACK_CROWS, 0.8, 3))
+
+                # Three Inside Up/Down
+                if self._is_three_inside_up(prev2, prev, current, avg_body):
+                    confidence = 0.75 if trend == "downtrend" else 0.6
+                    detected.append((PatternType.THREE_INSIDE_UP, confidence, 3))
+                elif self._is_three_inside_down(prev2, prev, current, avg_body):
+                    confidence = 0.75 if trend == "uptrend" else 0.6
+                    detected.append((PatternType.THREE_INSIDE_DOWN, confidence, 3))
+
+                # Abandoned Baby (rare but strong patterns)
+                if self._is_bullish_abandoned_baby(prev2, prev, current, avg_body):
+                    confidence = 0.9 if trend == "downtrend" else 0.75
+                    detected.append((PatternType.BULLISH_ABANDONED_BABY, confidence, 3))
+                elif self._is_bearish_abandoned_baby(prev2, prev, current, avg_body):
+                    confidence = 0.9 if trend == "uptrend" else 0.75
+                    detected.append((PatternType.BEARISH_ABANDONED_BABY, confidence, 3))
+
+            # === Tower Patterns (multi-candle) ===
+            for window_size in range(4, min(13, i + 1)):
+                start_idx = i - window_size + 1
+                if start_idx >= 0:
+                    window_candles = candles[start_idx:i + 1]
+                    if self._is_tower_bottom(window_candles, avg_body):
+                        confidence = 0.7 if trend == "downtrend" else 0.55
+                        detected.append((PatternType.TOWER_BOTTOM, confidence, window_size))
+                        break
+                    elif self._is_tower_top(window_candles, avg_body):
+                        confidence = 0.7 if trend == "uptrend" else 0.55
+                        detected.append((PatternType.TOWER_TOP, confidence, window_size))
+                        break
 
             # Validate with AI and create pattern objects
             for pattern_type, rule_confidence, candles_count in detected:
