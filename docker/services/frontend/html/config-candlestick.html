@@ -3370,9 +3370,20 @@
                     </div>
                 </div>
 
-                <!-- Chart -->
-                <div class="reval-detail-chart">
-                    <div id="revalDetailChartContainer" style="width: 100%; height: 300px;"></div>
+                <!-- Charts: Actual vs Reference -->
+                <div class="reval-detail-charts" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <!-- Aktueller Chart -->
+                    <div style="flex: 2; min-width: 300px;">
+                        <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; text-align: center;">Erkanntes Pattern (Marktdaten)</div>
+                        <div id="revalDetailChartContainer" style="width: 100%; height: 280px; background: rgba(0,0,0,0.2); border-radius: 8px;"></div>
+                    </div>
+                    <!-- Referenz-Beispiel -->
+                    <div style="flex: 1; min-width: 200px;">
+                        <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; text-align: center;">Referenz-Beispiel</div>
+                        <div id="revalDetailReferenceContainer" style="width: 100%; min-height: 150px; background: rgba(0,0,0,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            <span class="spinner"></span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Feedback History -->
@@ -6976,6 +6987,9 @@
             const container = document.getElementById('revalDetailChartContainer');
             container.innerHTML = '<div class="loading"><span class="spinner"></span> Lade Chart...</div>';
 
+            // Load reference chart in parallel
+            loadRevalReferenceChart(item.original_pattern);
+
             try {
                 const patternCandleCount = getPatternCandleCount(item.original_pattern);
                 const ohlcData = await fetchOhlcForRevalidation(item.symbol, item.timeframe, item.pattern_timestamp, patternCandleCount);
@@ -7038,6 +7052,46 @@
             } catch (error) {
                 console.error('Failed to load detail chart:', error);
                 container.innerHTML = '<div style="color: #e57373; text-align: center; padding: 2rem;">Fehler beim Laden des Charts</div>';
+            }
+        }
+
+        // Load reference chart for revalidation detail modal
+        async function loadRevalReferenceChart(patternType) {
+            const container = document.getElementById('revalDetailReferenceContainer');
+            if (!container) return;
+
+            // Show loading spinner
+            container.innerHTML = '<span class="spinner"></span>';
+
+            // Check cache first
+            if (patternImageCache[patternType]) {
+                container.innerHTML = `
+                    <div style="text-align: center;">
+                        <img src="data:image/png;base64,${patternImageCache[patternType]}" alt="${patternType}" style="max-width: 100%; height: auto; border-radius: 4px;">
+                        <div style="font-size: 0.7rem; color: #666; margin-top: 4px;">${formatPatternType(patternType)}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const res = await fetch(`${CANDLESTICK_API}/examples/chart/${patternType}?compact=true`);
+                if (!res.ok) throw new Error('Failed to load chart');
+                const data = await res.json();
+
+                // Cache the image
+                patternImageCache[patternType] = data.image_base64;
+
+                // Display the image with pattern type label
+                container.innerHTML = `
+                    <div style="text-align: center;">
+                        <img src="data:image/png;base64,${data.image_base64}" alt="${patternType}" style="max-width: 100%; height: auto; border-radius: 4px;">
+                        <div style="font-size: 0.7rem; color: #666; margin-top: 4px;">${formatPatternType(patternType)}</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error(`Failed to load reference chart for ${patternType}:`, error);
+                container.innerHTML = `<div style="text-align: center; color: #888; padding: 1rem;">${formatPatternType(patternType)}</div>`;
             }
         }
 
