@@ -394,21 +394,89 @@ class ClaudeValidatorService:
         else:
             return "neutral"
 
+    def _get_pattern_criteria(self, pattern_type: str) -> str:
+        """Get specific criteria for each pattern type."""
+        criteria = {
+            "shooting_star": """
+**STRICT Shooting Star Criteria (ALL must be met):**
+- Small real body near the LOW of the candle (body in bottom 1/3)
+- Long UPPER shadow at least 2x the body length
+- Little to NO lower shadow (less than 10% of total range)
+- Appears after an uptrend (prior candles should be bullish/rising)
+- Color of body (red or green) is less important than position""",
+
+            "hanging_man": """
+**STRICT Hanging Man Criteria (ALL must be met):**
+- Small real body near the HIGH of the candle (body in top 1/3)
+- Long LOWER shadow at least 2x the body length
+- Little to NO upper shadow (less than 10% of total range)
+- Appears after an uptrend (prior candles should be bullish/rising)
+- Color of body is less important than position""",
+
+            "hammer": """
+**STRICT Hammer Criteria (ALL must be met):**
+- Small real body near the HIGH of the candle (body in top 1/3)
+- Long LOWER shadow at least 2x the body length
+- Little to NO upper shadow (less than 10% of total range)
+- Appears after a downtrend (prior candles should be bearish/falling)
+- Color of body is less important than position""",
+
+            "inverted_hammer": """
+**STRICT Inverted Hammer Criteria (ALL must be met):**
+- Small real body near the LOW of the candle (body in bottom 1/3)
+- Long UPPER shadow at least 2x the body length
+- Little to NO lower shadow (less than 10% of total range)
+- Appears after a downtrend (prior candles should be bearish/falling)
+- Color of body is less important than position""",
+
+            "doji": """
+**STRICT Doji Criteria (ALL must be met):**
+- Extremely small or no body (open ≈ close, less than 5% of total range)
+- Upper and lower shadows can vary but body must be tiny
+- The cross/plus shape is the defining characteristic""",
+
+            "bullish_engulfing": """
+**STRICT Bullish Engulfing Criteria (ALL must be met):**
+- Previous candle must be bearish (red/filled)
+- Current candle must be bullish (green/hollow)
+- Current body COMPLETELY engulfs previous body
+- Shadows don't need to engulf, only the BODY""",
+
+            "bearish_engulfing": """
+**STRICT Bearish Engulfing Criteria (ALL must be met):**
+- Previous candle must be bullish (green/hollow)
+- Current candle must be bearish (red/filled)
+- Current body COMPLETELY engulfs previous body
+- Shadows don't need to engulf, only the BODY""",
+        }
+        return criteria.get(pattern_type.lower(), "")
+
     def _build_validation_prompt(self, pattern_type: str, symbol: str, timeframe: str) -> str:
         """Build the prompt for Claude to validate a pattern."""
-        return f"""You are an expert technical analyst specializing in candlestick pattern recognition.
+        specific_criteria = self._get_pattern_criteria(pattern_type)
 
-Analyze this candlestick chart image and evaluate whether the highlighted pattern is a valid **{pattern_type.replace('_', ' ').title()}** pattern.
+        return f"""You are an expert technical analyst specializing in candlestick pattern recognition.
+You must be VERY STRICT in your assessment - only confirm patterns that clearly meet ALL criteria.
+
+Analyze this candlestick chart image. The HIGHLIGHTED candle(s) with the lighter/brighter background are the pattern candles to evaluate.
 
 **Symbol:** {symbol}
 **Timeframe:** {timeframe}
 **Claimed Pattern:** {pattern_type.replace('_', ' ').title()}
+{specific_criteria}
+
+**IMPORTANT INSTRUCTIONS:**
+1. Focus ONLY on the highlighted candle(s) - ignore non-highlighted context candles
+2. Measure the body size relative to the total range (high-low)
+3. Measure shadow lengths relative to body size
+4. Check if body position matches the pattern definition
+5. Be STRICT - if body is too large or shadows don't meet criteria, REJECT
 
 Please evaluate:
 
 1. **Pattern Validity**: Does this truly match the characteristics of a {pattern_type.replace('_', ' ').title()}?
    - Check candle body sizes, shadow lengths, and relative positions
-   - Consider the classic definition of this pattern
+   - A large body (>35% of range) usually disqualifies hammer/shooting star patterns
 
 2. **Visual Quality Score (0.0-1.0)**: How well-formed is this pattern?
    - 1.0 = Textbook perfect example
@@ -416,8 +484,8 @@ Please evaluate:
    - 0.0 = Does not meet basic criteria
 
 3. **Market Context Score (0.0-1.0)**: Is the pattern appearing in appropriate context?
-   - Consider if reversal patterns appear after trends
-   - Consider if continuation patterns appear within trends
+   - Shooting Star/Hanging Man: MUST appear after uptrend
+   - Hammer/Inverted Hammer: MUST appear after downtrend
 
 4. **Your Assessment**: What pattern do YOU see? (if different from claimed)
 
@@ -433,7 +501,8 @@ Respond in this exact JSON format:
 }}
 ```
 
-Be strict but fair in your assessment. Only confirm patterns that clearly meet the definition."""
+Be STRICT in your assessment. Only confirm patterns that clearly meet ALL the criteria above.
+If the body is too large, shadows too short, or context wrong, set agrees=false."""
 
     async def _rate_limit(self):
         """Apply rate limiting between API requests."""

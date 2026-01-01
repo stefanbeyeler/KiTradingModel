@@ -188,6 +188,16 @@
             background: rgba(255, 152, 0, 0.3);
         }
 
+        .btn-secondary {
+            background: rgba(128, 128, 128, 0.2);
+            color: #aaa;
+            border: 1px solid rgba(128, 128, 128, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(128, 128, 128, 0.3);
+        }
+
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -2613,55 +2623,61 @@
 
                     <!-- Correction Section -->
                     <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                            <div style="font-size: 0.9rem; font-weight: 600; color: #64c8ff;">
-                                Pattern-Korrektur (für Training)
-                            </div>
+                        <!-- Claude Vision Result (above buttons) -->
+                        <div id="claudeVisionResult" style="display: none; margin-bottom: 1rem; padding: 0.75rem; border-radius: 8px;">
+                        </div>
+
+                        <!-- Primary Action Buttons -->
+                        <div id="primaryActions" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                            <button class="btn btn-success" onclick="confirmPatternAndNext()" style="padding: 0.5rem 1rem;" title="Pattern bestätigen und zum nächsten">
+                                ✓ Korrekt
+                            </button>
+                            <button class="btn btn-warning" onclick="showCorrectionForm()" style="padding: 0.5rem 1rem;" title="Anderes Pattern erkannt">
+                                ✗ Falsches Pattern
+                            </button>
+                            <button class="btn btn-secondary" onclick="showNoPatternForm()" style="padding: 0.5rem 1rem;" title="Kein gültiges Pattern erkennbar">
+                                ✗ Kein Pattern
+                            </button>
                             <button class="btn" id="btnClaudeVision" onclick="validateWithClaudeVision()"
-                                    style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border: none;"
-                                    title="Pattern mit Claude Vision analysieren und Korrektur automatisch ausfüllen">
+                                    style="padding: 0.5rem 1rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border: none; margin-left: auto;"
+                                    title="Pattern mit Claude Vision analysieren">
                                 🤖 Claude Vision
                             </button>
                         </div>
-                        <!-- Claude Vision Result -->
-                        <div id="claudeVisionResult" style="display: none; margin-bottom: 1rem; padding: 0.75rem; border-radius: 8px;">
-                        </div>
-                        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                            <button class="btn btn-success" onclick="confirmPattern()" style="padding: 0.5rem 1rem;">
-                                ✓ Korrekt erkannt
-                            </button>
-                            <select id="correctionPatternSelect" style="padding: 0.5rem; background: #252540; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; min-width: 180px;">
-                                <option value="">-- Korrektes Pattern wählen --</option>
-                            </select>
-                            <button class="btn btn-warning" onclick="submitCorrection()" style="padding: 0.5rem 1rem;">
-                                Korrektur speichern
-                            </button>
-                            <button class="btn btn-secondary" onclick="markAsNoPattern()" style="padding: 0.5rem 1rem;">
-                                ✗ Kein Pattern
-                            </button>
-                        </div>
 
-                        <!-- Begründung für Korrektur/Ablehnung -->
-                        <div id="reasonSection" style="margin-top: 1rem; padding: 0.75rem; background: rgba(100,200,255,0.08); border: 1px solid rgba(100,200,255,0.2); border-radius: 8px; display: none;">
-                            <div style="font-size: 0.9rem; font-weight: 600; color: #64c8ff; margin-bottom: 0.5rem;">
-                                <span id="reasonSectionTitle">Begründung für Ablehnung</span>
+                        <!-- Correction Form (hidden initially) -->
+                        <div id="correctionFormSection" style="display: none; margin-top: 1rem; padding: 0.75rem; background: rgba(255,152,0,0.08); border: 1px solid rgba(255,152,0,0.2); border-radius: 8px;">
+                            <div style="font-size: 0.9rem; font-weight: 600; color: #ffb74d; margin-bottom: 0.75rem;">
+                                <span id="correctionFormTitle">Korrektur eingeben</span>
                             </div>
-                            <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.75rem;">
-                                Wähle einen Grund, damit die Erkennungsregeln verbessert werden können:
+
+                            <!-- Pattern Selection (only for "Falsches Pattern") -->
+                            <div id="patternSelectionRow" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                                <label style="color: #aaa; font-size: 0.85rem;">Korrektes Pattern:</label>
+                                <select id="correctionPatternSelect" style="padding: 0.5rem; background: #252540; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; min-width: 200px;">
+                                    <option value="">-- Pattern wählen --</option>
+                                </select>
                             </div>
-                            <div style="display: flex; gap: 0.75rem; align-items: flex-start; flex-wrap: wrap;">
+
+                            <!-- Reason Selection -->
+                            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                                <label style="color: #aaa; font-size: 0.85rem;">Grund:</label>
                                 <select id="reasonCategorySelect" style="padding: 0.5rem; background: #252540; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; min-width: 220px;" onchange="onReasonCategoryChange()">
                                     <option value="">-- Grund wählen (optional) --</option>
                                 </select>
-                                <input type="text" id="reasonTextInput" placeholder="Zusätzliche Details (z.B. 'Körper ist 15% statt max. 10%')"
-                                       style="flex: 1; min-width: 200px; padding: 0.5rem; background: #252540; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;">
                             </div>
-                            <div id="reasonDescription" style="margin-top: 0.5rem; font-size: 0.8rem; color: #888; font-style: italic;"></div>
-                            <div style="margin-top: 1rem; display: flex; gap: 0.75rem;">
-                                <button class="btn btn-primary" id="btnSubmitWithReason" onclick="submitPendingFeedback()" style="padding: 0.5rem 1.5rem;">
-                                    💾 Feedback speichern
+                            <div id="reasonDescription" style="margin-bottom: 0.75rem; font-size: 0.8rem; color: #888; font-style: italic;"></div>
+
+                            <!-- Additional Details -->
+                            <input type="text" id="reasonTextInput" placeholder="Zusätzliche Details (optional)"
+                                   style="width: 100%; padding: 0.5rem; background: #252540; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; margin-bottom: 0.75rem;">
+
+                            <!-- Action Buttons -->
+                            <div style="display: flex; gap: 0.75rem;">
+                                <button class="btn btn-primary" onclick="submitCorrectionAndNext()" style="padding: 0.5rem 1.5rem;">
+                                    💾 Speichern & Weiter
                                 </button>
-                                <button class="btn btn-secondary" onclick="cancelPendingFeedback()" style="padding: 0.5rem 1rem;">
+                                <button class="btn btn-secondary" onclick="hideCorrectionForm()" style="padding: 0.5rem 1rem;">
                                     Abbrechen
                                 </button>
                             </div>
@@ -2669,6 +2685,8 @@
 
                         <div id="correctionFeedback" style="margin-top: 0.5rem; font-size: 0.85rem; display: none;"></div>
                     </div>
+                    <!-- Hidden legacy elements for compatibility -->
+                    <div id="reasonSection" style="display: none;"></div>
                 </div>
                 <!-- Navigation Footer -->
                 <div class="modal-footer">
@@ -4717,11 +4735,18 @@
             // Populate correction dropdown
             await populateCorrectionDropdown();
 
-            // Reset feedback and Claude Vision result
+            // Reset feedback, Claude Vision result, and correction form
             document.getElementById('correctionFeedback').style.display = 'none';
             document.getElementById('claudeVisionResult').style.display = 'none';
             document.getElementById('reasonSection').style.display = 'none';
+            document.getElementById('correctionFormSection').style.display = 'none';
             pendingFeedback = null;
+
+            // Reset correction form fields
+            document.getElementById('correctionPatternSelect').value = '';
+            document.getElementById('reasonCategorySelect').value = '';
+            document.getElementById('reasonTextInput').value = '';
+            document.getElementById('reasonDescription').textContent = '';
 
             // Load charts
             await Promise.all([
@@ -4910,6 +4935,110 @@
             await submitPatternFeedback(currentModalPattern, 'confirmed', currentModalPattern.pattern_type);
         }
 
+        // === NEW OPTIMIZED WORKFLOW FUNCTIONS ===
+
+        // Confirm pattern and automatically navigate to next
+        async function confirmPatternAndNext() {
+            if (!currentModalPattern) return;
+
+            // Hide correction form if visible
+            hideCorrectionForm();
+
+            // Submit confirmation
+            await submitPatternFeedback(currentModalPattern, 'confirmed', currentModalPattern.pattern_type);
+
+            // Auto-navigate to next pattern after short delay
+            setTimeout(() => {
+                if (currentModalIndex < allFilteredPatterns.length - 1) {
+                    navigatePattern(1);
+                } else {
+                    showCorrectionFeedback('Letztes Pattern erreicht.', 'info');
+                }
+            }, 300);
+        }
+
+        // Show correction form for "Falsches Pattern"
+        function showCorrectionForm() {
+            const formSection = document.getElementById('correctionFormSection');
+            const patternRow = document.getElementById('patternSelectionRow');
+            const formTitle = document.getElementById('correctionFormTitle');
+
+            // Show pattern selection for corrections
+            if (patternRow) patternRow.style.display = 'flex';
+            if (formTitle) formTitle.textContent = 'Korrektur: Welches Pattern ist korrekt?';
+
+            // Show the form
+            formSection.style.display = 'block';
+
+            // Populate dropdowns
+            populateCorrectionDropdown();
+        }
+
+        // Show form for "Kein Pattern"
+        function showNoPatternForm() {
+            const formSection = document.getElementById('correctionFormSection');
+            const patternRow = document.getElementById('patternSelectionRow');
+            const formTitle = document.getElementById('correctionFormTitle');
+
+            // Hide pattern selection - we already know it's "no pattern"
+            if (patternRow) patternRow.style.display = 'none';
+            if (formTitle) formTitle.textContent = 'Ablehnung: Warum ist dies kein valides Pattern?';
+
+            // Show the form
+            formSection.style.display = 'block';
+
+            // Pre-select "no_pattern" in the hidden dropdown
+            const correctionSelect = document.getElementById('correctionPatternSelect');
+            if (correctionSelect) correctionSelect.value = 'no_pattern';
+
+            // Populate reason categories
+            populateReasonCategories(currentModalPattern?.pattern_type);
+        }
+
+        // Submit correction/rejection and navigate to next
+        async function submitCorrectionAndNext() {
+            if (!currentModalPattern) return;
+
+            const correctedPattern = document.getElementById('correctionPatternSelect').value;
+            const feedbackType = correctedPattern === 'no_pattern' ? 'rejected' : 'corrected';
+
+            // Validate selection for corrections
+            if (feedbackType === 'corrected' && !correctedPattern) {
+                showCorrectionFeedback('Bitte wählen Sie das korrekte Pattern aus.', 'warning');
+                return;
+            }
+
+            // Submit feedback
+            await submitPatternFeedback(currentModalPattern, feedbackType, correctedPattern || 'no_pattern');
+
+            // Hide form and reset
+            hideCorrectionForm();
+
+            // Auto-navigate to next pattern after short delay
+            setTimeout(() => {
+                if (currentModalIndex < allFilteredPatterns.length - 1) {
+                    navigatePattern(1);
+                } else {
+                    showCorrectionFeedback('Letztes Pattern erreicht.', 'info');
+                }
+            }, 300);
+        }
+
+        // Hide correction form and reset fields
+        function hideCorrectionForm() {
+            const formSection = document.getElementById('correctionFormSection');
+            formSection.style.display = 'none';
+
+            // Reset fields
+            document.getElementById('correctionPatternSelect').value = '';
+            document.getElementById('reasonCategorySelect').value = '';
+            document.getElementById('reasonTextInput').value = '';
+            document.getElementById('reasonDescription').textContent = '';
+
+            // Clear any pending feedback
+            pendingFeedback = null;
+        }
+
         // Submit correction with different pattern
         async function submitCorrection() {
             if (!currentModalPattern) return;
@@ -5073,51 +5202,55 @@
             // Determine the correction type
             if (!suggestedPattern || suggestedPattern === 'no_pattern' || suggestedPattern === 'none') {
                 // Claude says it's not a valid pattern - trigger "Kein Pattern" flow
-                pendingFeedback = {
-                    pattern: currentModalPattern,
-                    feedbackType: 'rejected',
-                    correctedPattern: 'no_pattern'
-                };
-                document.getElementById('reasonSectionTitle').textContent = 'Begründung für Ablehnung (von Claude Vision)';
-                showReasonSection(true);
+                showNoPatternForm();
 
-                // Try to map Claude's reasoning to a reason category
+                // Wait for reason categories to be populated, then auto-select
                 await populateReasonCategories(currentModalPattern.pattern_type);
-                autoSelectReasonFromClaude(reasoning);
+
+                // Small delay to ensure DOM is updated
+                setTimeout(() => {
+                    autoSelectReasonFromClaude(reasoning);
+
+                    // Update form title to indicate Claude source
+                    const formTitle = document.getElementById('correctionFormTitle');
+                    if (formTitle) formTitle.textContent = 'Ablehnung (von Claude Vision vorgeschlagen)';
+                }, 50);
 
                 showCorrectionFeedback('Claude Vision: Pattern ungültig. Begründung wurde vorausgefüllt.', 'info');
             } else if (suggestedPattern !== currentModalPattern.pattern_type) {
-                // Claude suggests a different pattern
-                const correctionSelect = document.getElementById('correctionPatternSelect');
+                // Claude suggests a different pattern - show correction form first
+                showCorrectionForm();
 
-                // Try to find the suggested pattern in the dropdown
-                let found = false;
-                for (let option of correctionSelect.options) {
-                    if (option.value.toLowerCase() === suggestedPattern.toLowerCase()) {
-                        correctionSelect.value = option.value;
-                        found = true;
-                        break;
+                // Wait for dropdowns to be populated
+                await populateReasonCategories(currentModalPattern.pattern_type);
+
+                // Wait for dropdown to be populated, then select the suggested pattern
+                setTimeout(() => {
+                    const correctionSelect = document.getElementById('correctionPatternSelect');
+
+                    // Try to find the suggested pattern in the dropdown
+                    let found = false;
+                    for (let option of correctionSelect.options) {
+                        if (option.value.toLowerCase() === suggestedPattern.toLowerCase()) {
+                            correctionSelect.value = option.value;
+                            found = true;
+                            break;
+                        }
                     }
-                }
 
-                if (found) {
-                    // Set up pending feedback for correction
-                    pendingFeedback = {
-                        pattern: currentModalPattern,
-                        feedbackType: 'corrected',
-                        correctedPattern: correctionSelect.value
-                    };
-                    document.getElementById('reasonSectionTitle').textContent =
-                        `Begründung für Korrektur zu "${formatPatternType(correctionSelect.value)}" (von Claude Vision)`;
-                    showReasonSection(true);
+                    if (found) {
+                        // Update form title to indicate Claude source
+                        const formTitle = document.getElementById('correctionFormTitle');
+                        if (formTitle) formTitle.textContent = `Korrektur zu "${formatPatternType(correctionSelect.value)}" (von Claude Vision)`;
 
-                    await populateReasonCategories(currentModalPattern.pattern_type);
-                    autoSelectReasonFromClaude(reasoning);
+                        // Auto-select reason from Claude's reasoning
+                        autoSelectReasonFromClaude(reasoning);
 
-                    showCorrectionFeedback(`Claude Vision: Korrektur zu "${formatPatternType(suggestedPattern)}" vorgeschlagen.`, 'info');
-                } else {
-                    showCorrectionFeedback(`Claude Vision schlägt "${formatPatternType(suggestedPattern)}" vor (nicht in Liste).`, 'warning');
-                }
+                        showCorrectionFeedback(`Claude Vision: Korrektur zu "${formatPatternType(suggestedPattern)}" vorgeschlagen.`, 'info');
+                    } else {
+                        showCorrectionFeedback(`Claude Vision schlägt "${formatPatternType(suggestedPattern)}" vor (nicht in Liste).`, 'warning');
+                    }
+                }, 100);
             }
         }
 
@@ -5127,18 +5260,18 @@
             const reasonText = document.getElementById('reasonTextInput');
             const lowerReasoning = reasoning.toLowerCase();
 
-            // Mapping of keywords to reason categories
+            // Mapping of keywords to reason categories (order matters - more specific first)
             const keywordMap = {
-                'body_too_large': ['körper zu groß', 'body too large', 'body is too large', 'großer körper'],
-                'body_too_small': ['körper zu klein', 'body too small', 'small body', 'kleiner körper'],
-                'upper_shadow_too_short': ['oberer schatten zu kurz', 'upper shadow too short', 'upper wick'],
+                'body_too_large': ['körper zu groß', 'body too large', 'body is too large', 'großer körper', 'relatively large body', 'large body', 'body size'],
+                'body_too_small': ['körper zu klein', 'body too small', 'small body', 'kleiner körper', 'tiny body'],
+                'upper_shadow_too_short': ['oberer schatten zu kurz', 'upper shadow too short', 'upper wick too short', 'no upper shadow', 'little upper shadow', 'long upper shadow'],
                 'upper_shadow_too_long': ['oberer schatten zu lang', 'upper shadow too long'],
-                'lower_shadow_too_short': ['unterer schatten zu kurz', 'lower shadow too short', 'lower wick'],
+                'lower_shadow_too_short': ['unterer schatten zu kurz', 'lower shadow too short', 'lower wick too short', 'no lower shadow', 'little to no lower shadow', 'little lower shadow'],
                 'lower_shadow_too_long': ['unterer schatten zu lang', 'lower shadow too long'],
-                'wrong_trend_context': ['trend', 'uptrend', 'downtrend', 'trendkontext', 'kein aufwärtstrend', 'kein abwärtstrend'],
-                'not_fully_engulfing': ['engulfing', 'umschließt nicht', 'not fully engulfing'],
-                'missing_gap': ['gap', 'lücke', 'keine lücke'],
-                'false_positive': ['false positive', 'kein pattern', 'nicht erkennbar', 'no pattern']
+                'wrong_trend_context': ['after an uptrend', 'after a downtrend', 'trend context', 'uptrend', 'downtrend', 'trendkontext', 'kein aufwärtstrend', 'kein abwärtstrend', 'appearance after'],
+                'not_fully_engulfing': ['engulfing', 'umschließt nicht', 'not fully engulfing', 'does not engulf'],
+                'missing_gap': ['gap', 'lücke', 'keine lücke', 'no gap'],
+                'false_positive': ['does not meet', 'does not show', 'not a valid', 'false positive', 'kein pattern', 'nicht erkennbar', 'no pattern', 'criteria']
             };
 
             // Find matching category
