@@ -419,6 +419,7 @@ class ClaudeValidatorService:
             return {
                 "open": o, "high": h, "low": l, "close": c,
                 "total_range": 0, "body_size": 0,
+                "body_top": o, "body_bottom": o,
                 "body_ratio": 0, "upper_shadow_ratio": 0, "lower_shadow_ratio": 0,
                 "body_position": "middle", "is_bullish": c >= o
             }
@@ -453,6 +454,8 @@ class ClaudeValidatorService:
             "close": round(c, 6),
             "total_range": round(total_range, 6),
             "body_size": round(body_size, 6),
+            "body_top": round(body_top, 6),
+            "body_bottom": round(body_bottom, 6),
             "body_ratio": round(body_ratio * 100, 1),  # As percentage
             "upper_shadow_ratio": round(upper_shadow_ratio * 100, 1),
             "lower_shadow_ratio": round(lower_shadow_ratio * 100, 1),
@@ -522,7 +525,8 @@ class ClaudeValidatorService:
         pattern_type: str,
         symbol: str,
         timeframe: str,
-        candle_metrics: Optional[Dict] = None
+        candle_metrics: Optional[Dict] = None,
+        prev_candle_metrics: Optional[Dict] = None
     ) -> str:
         """Build the prompt for Claude to validate a pattern."""
         specific_criteria = self._get_pattern_criteria(pattern_type)
@@ -530,9 +534,107 @@ class ClaudeValidatorService:
         # Build metrics section if available
         metrics_section = ""
         validation_instruction = ""
-        if candle_metrics:
+
+        # Check if this is a multi-candle pattern (engulfing, harami, etc.)
+        is_engulfing = pattern_type.lower() in ["bullish_engulfing", "bearish_engulfing"]
+        is_harami = pattern_type.lower() in ["bullish_harami", "bearish_harami", "harami_cross"]
+        is_two_candle = is_engulfing or is_harami
+
+        if candle_metrics and is_two_candle and prev_candle_metrics:
+            # Multi-candle pattern: show BOTH candles
             metrics_section = f"""
-**EXACT OHLC DATA OF THE PATTERN CANDLE (use these numbers, not visual estimation!):**
+**EXAKTE OHLC-DATEN FÜR BEIDE KERZEN (verwende diese Zahlen, keine visuelle Schätzung!):**
+
+**VORHERIGE KERZE (Kerze 1):**
+- Open: {prev_candle_metrics['open']}
+- High: {prev_candle_metrics['high']}
+- Low: {prev_candle_metrics['low']}
+- Close: {prev_candle_metrics['close']}
+- Body Top: {prev_candle_metrics['body_top']}
+- Body Bottom: {prev_candle_metrics['body_bottom']}
+- Kerzenrichtung: {"Bullish (grün)" if prev_candle_metrics['is_bullish'] else "Bearish (rot)"}
+
+**AKTUELLE KERZE (Kerze 2 - Pattern-Kerze):**
+- Open: {candle_metrics['open']}
+- High: {candle_metrics['high']}
+- Low: {candle_metrics['low']}
+- Close: {candle_metrics['close']}
+- Body Top: {candle_metrics['body_top']}
+- Body Bottom: {candle_metrics['body_bottom']}
+- Kerzenrichtung: {"Bullish (grün)" if candle_metrics['is_bullish'] else "Bearish (rot)"}
+"""
+            # Automatic validation for Engulfing patterns
+            if is_engulfing:
+                curr_body_top = candle_metrics['body_top']
+                curr_body_bottom = candle_metrics['body_bottom']
+                prev_body_top = prev_candle_metrics['body_top']
+                prev_body_bottom = prev_candle_metrics['body_bottom']
+
+                # Check direction requirements
+                if pattern_type.lower() == "bearish_engulfing":
+                    direction_ok = prev_candle_metrics['is_bullish'] and not candle_metrics['is_bullish']
+                    direction_msg = "Vorherige Kerze bullish (grün) UND aktuelle Kerze bearish (rot)"
+                else:  # bullish_engulfing
+                    direction_ok = not prev_candle_metrics['is_bullish'] and candle_metrics['is_bullish']
+                    direction_msg = "Vorherige Kerze bearish (rot) UND aktuelle Kerze bullish (grün)"
+
+                # Check engulfing: current body must completely contain previous body
+                engulfs = curr_body_top >= prev_body_top and curr_body_bottom <= prev_body_bottom
+
+                metrics_section += f"""
+**ENGULFING-PRÜFUNG (automatisch berechnet):**
+- Richtungsbedingung ({direction_msg}): {"✅ ERFÜLLT" if direction_ok else "❌ NICHT ERFÜLLT"}
+- Vorherige Body-Grenzen: Top={prev_body_top}, Bottom={prev_body_bottom}
+- Aktuelle Body-Grenzen: Top={curr_body_top}, Bottom={curr_body_bottom}
+- Umhüllt vollständig (curr_top >= prev_top UND curr_bottom <= prev_bottom): {"✅ JA" if engulfs else "❌ NEIN"}
+"""
+                if direction_ok and engulfs:
+                    validation_instruction = f"""
+**AUTOMATISCHE BESTÄTIGUNG ERFORDERLICH:**
+Die mathematische Prüfung zeigt:
+- Richtung korrekt: Vorherige Kerze {"bullish" if prev_candle_metrics['is_bullish'] else "bearish"}, aktuelle Kerze {"bullish" if candle_metrics['is_bullish'] else "bearish"}
+- Body der aktuellen Kerze ({curr_body_bottom} bis {curr_body_top}) umhüllt Body der vorherigen Kerze ({prev_body_bottom} bis {prev_body_top}) vollständig
+Du MUSST agrees=true setzen. Dies ist ein GÜLTIGES {pattern_type.replace('_', ' ').title()} Pattern."""
+                else:
+                    reasons = []
+                    if not direction_ok:
+                        reasons.append(f"Richtung falsch - erwartet: {direction_msg}")
+                    if not engulfs:
+                        reasons.append(f"Body umhüllt nicht vollständig (aktuell: {curr_body_bottom}-{curr_body_top}, vorher: {prev_body_bottom}-{prev_body_top})")
+                    validation_instruction = f"""
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Die mathematische Prüfung ist fehlgeschlagen:
+{chr(10).join('- ' + r for r in reasons)}
+Du MUSST agrees=false setzen."""
+
+            elif is_harami:
+                curr_body_top = candle_metrics['body_top']
+                curr_body_bottom = candle_metrics['body_bottom']
+                prev_body_top = prev_candle_metrics['body_top']
+                prev_body_bottom = prev_candle_metrics['body_bottom']
+
+                # Harami: previous body contains current body
+                contained = prev_body_top >= curr_body_top and prev_body_bottom <= curr_body_bottom
+
+                metrics_section += f"""
+**HARAMI-PRÜFUNG (automatisch berechnet):**
+- Vorherige Body-Grenzen: Top={prev_body_top}, Bottom={prev_body_bottom}
+- Aktuelle Body-Grenzen: Top={curr_body_top}, Bottom={curr_body_bottom}
+- Enthalten in vorheriger Kerze (prev_top >= curr_top UND prev_bottom <= curr_bottom): {"✅ JA" if contained else "❌ NEIN"}
+"""
+                if contained:
+                    validation_instruction = """
+**Metrik-Prüfung BESTANDEN:** Aktuelle Kerze ist innerhalb der vorherigen Kerze enthalten."""
+                else:
+                    validation_instruction = f"""
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Die aktuelle Kerze ({curr_body_bottom} bis {curr_body_top}) ist NICHT vollständig in der vorherigen Kerze ({prev_body_bottom} bis {prev_body_top}) enthalten.
+Du MUSST agrees=false setzen."""
+
+        elif candle_metrics:
+            # Single candle pattern
+            metrics_section = f"""
+**EXAKTE OHLC-DATEN DER PATTERN-KERZE (verwende diese Zahlen, keine visuelle Schätzung!):**
 - Open: {candle_metrics['open']}
 - High: {candle_metrics['high']}
 - Low: {candle_metrics['low']}
@@ -543,7 +645,7 @@ class ClaudeValidatorService:
 - Upper Shadow Ratio: {candle_metrics['upper_shadow_ratio']}%
 - Lower Shadow Ratio: {candle_metrics['lower_shadow_ratio']}%
 - Body Position: {candle_metrics['body_position']}
-- Candle Direction: {"Bullish (green)" if candle_metrics['is_bullish'] else "Bearish (red)"}
+- Kerzenrichtung: {"Bullish (grün)" if candle_metrics['is_bullish'] else "Bearish (rot)"}
 """
             # Add specific validation based on pattern type and actual metrics
             body_ratio = candle_metrics['body_ratio']
@@ -598,7 +700,7 @@ Die Body-Ratio beträgt {body_ratio}%, was > 35% ist. Dies KANN KEIN {pattern_ty
 Du MUSST agrees=false setzen."""
 
         return f"""Du bist ein Experte für technische Analyse, spezialisiert auf Candlestick-Muster-Erkennung.
-Du musst EXTREM STRENG sein - lehne Muster ab, die nicht ALLE Kriterien klar erfüllen.
+Du musst die bereitgestellten Metriken verwenden und die automatischen Prüfungen respektieren.
 
 **Symbol:** {symbol}
 **Timeframe:** {timeframe}
@@ -607,24 +709,19 @@ Du musst EXTREM STRENG sein - lehne Muster ab, die nicht ALLE Kriterien klar erf
 {validation_instruction}
 {specific_criteria}
 
-**WIE DU DIE PATTERN-KERZE IM CHART IDENTIFIZIERST:**
-Die Pattern-Kerze ist markiert mit:
+**WIE DU DIE PATTERN-KERZEN IM CHART IDENTIFIZIERST:**
+Die Pattern-Kerzen sind markiert mit:
 - Einem STARKEN farbigen Hintergrund (orange/grün/rot)
 - WEISSEN GESTRICHELTEN vertikalen Linien auf beiden Seiten
 - Einem WEISSEN RAND um den Kerzenkörper
 
 **KRITISCH: VERWENDE DIE EXAKTEN METRIKEN OBEN, KEINE VISUELLE SCHÄTZUNG!**
 Die bereitgestellten Metriken sind aus den tatsächlichen OHLC-Daten berechnet und 100% genau.
-Versuche NICHT, Verhältnisse visuell zu schätzen - verwende die exakten Zahlen.
+Die automatischen Prüfungen (AUTOMATISCHE BESTÄTIGUNG/ABLEHNUNG) MÜSSEN respektiert werden.
 
-**STRIKTE SCHWELLENWERTE (basierend auf echten Daten):**
-- Doji: Body-Ratio muss < 5% sein
-- Hammer/Shooting Star/Inverted Hammer/Hanging Man: Body-Ratio muss < 35% sein
-- Erforderliche Schatten müssen mindestens 2x die Körpergröße betragen
-
-**ANTWORTE BASIEREND AUF DEN DATEN:**
-Wenn die Metriken body_ratio > Schwellenwert zeigen, MUSST du ablehnen (agrees=false).
-Überschreibe die mathematische Realität NICHT mit visuellem Eindruck.
+**FÜR ENGULFING-MUSTER:**
+- Nur der KÖRPER muss umhüllt werden, NICHT die Schatten
+- Die mathematische Prüfung oben ist verbindlich
 
 Antworte in diesem exakten JSON-Format:
 ```json
@@ -638,8 +735,8 @@ Antworte in diesem exakten JSON-Format:
 }}
 ```
 
-Wenn oben AUTOMATIC REJECTION angegeben ist, MUSST du agrees=false setzen.
-SEI SEHR STRENG. Mathematische Kriterien überschreiben den visuellen Eindruck.
+Wenn oben AUTOMATISCHE BESTÄTIGUNG angegeben ist, MUSST du agrees=true setzen.
+Wenn oben AUTOMATISCHE ABLEHNUNG angegeben ist, MUSST du agrees=false setzen.
 WICHTIG: Die "reasoning" Begründung MUSS auf Deutsch sein!"""
 
     async def _rate_limit(self):
@@ -715,19 +812,43 @@ WICHTIG: Die "reasoning" Begründung MUSS auf Deutsch sein!"""
 
             # Calculate metrics for the pattern candle (last candle in data)
             candle_metrics = None
+            prev_candle_metrics = None
+
+            # Check if this is a multi-candle pattern
+            is_two_candle = pattern_type.lower() in [
+                "bullish_engulfing", "bearish_engulfing",
+                "bullish_harami", "bearish_harami", "harami_cross",
+                "piercing_line", "dark_cloud_cover"
+            ]
+
             if ohlcv_data:
                 # Get the pattern candle (last one)
                 pattern_candle = ohlcv_data[-1]
                 candle_metrics = self._calculate_candle_metrics(pattern_candle)
-                logger.info(
-                    f"Pattern candle metrics for {pattern_type}: "
-                    f"body_ratio={candle_metrics['body_ratio']}%, "
-                    f"upper_shadow={candle_metrics['upper_shadow_ratio']}%, "
-                    f"lower_shadow={candle_metrics['lower_shadow_ratio']}%"
-                )
 
-            # Build prompt with metrics
-            prompt = self._build_validation_prompt(pattern_type, symbol, timeframe, candle_metrics)
+                # For 2-candle patterns, also get the previous candle
+                if is_two_candle and len(ohlcv_data) >= 2:
+                    prev_candle = ohlcv_data[-2]
+                    prev_candle_metrics = self._calculate_candle_metrics(prev_candle)
+                    logger.info(
+                        f"Two-candle pattern {pattern_type}: "
+                        f"prev_body={prev_candle_metrics['body_bottom']}-{prev_candle_metrics['body_top']} "
+                        f"({'bullish' if prev_candle_metrics['is_bullish'] else 'bearish'}), "
+                        f"curr_body={candle_metrics['body_bottom']}-{candle_metrics['body_top']} "
+                        f"({'bullish' if candle_metrics['is_bullish'] else 'bearish'})"
+                    )
+                else:
+                    logger.info(
+                        f"Pattern candle metrics for {pattern_type}: "
+                        f"body_ratio={candle_metrics['body_ratio']}%, "
+                        f"upper_shadow={candle_metrics['upper_shadow_ratio']}%, "
+                        f"lower_shadow={candle_metrics['lower_shadow_ratio']}%"
+                    )
+
+            # Build prompt with metrics (including prev_candle for 2-candle patterns)
+            prompt = self._build_validation_prompt(
+                pattern_type, symbol, timeframe, candle_metrics, prev_candle_metrics
+            )
 
             # Apply rate limiting
             await self._rate_limit()
