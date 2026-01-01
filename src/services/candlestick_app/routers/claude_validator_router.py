@@ -79,21 +79,44 @@ async def get_claude_validator_status():
     return claude_validator_service.get_status()
 
 
-async def fetch_ohlcv_data(symbol: str, timeframe: str, limit: int = 50) -> List[dict]:
-    """Fetch OHLCV data from Data Service."""
+async def fetch_ohlcv_data(
+    symbol: str,
+    timeframe: str,
+    limit: int = 50,
+    pattern_timestamp: str = None
+) -> List[dict]:
+    """
+    Fetch OHLCV data from Data Service.
+
+    Args:
+        symbol: Trading symbol
+        timeframe: Timeframe (M5, H1, etc.)
+        limit: Number of candles to fetch
+        pattern_timestamp: If provided, fetch data ending at this timestamp
+                          so the pattern candle is the last one in the data
+    """
     try:
         interval = TIMEFRAME_TO_INTERVAL.get(timeframe.upper(), "1h")
         url = f"{DATA_SERVICE_URL}/api/v1/twelvedata/time_series/{symbol}"
 
+        params = {
+            "interval": interval,
+            "outputsize": limit + 20  # Fetch extra to ensure we have enough after filtering
+        }
+
+        # If we have a pattern timestamp, add end_date to get historical data
+        if pattern_timestamp:
+            # TwelveData expects end_date in format YYYY-MM-DD HH:MM:SS
+            params["end_date"] = pattern_timestamp.replace("T", " ").split("+")[0].split(".")[0]
+            logger.info(f"Fetching OHLCV data ending at {params['end_date']}")
+
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(url, params={
-                "interval": interval,
-                "outputsize": limit
-            })
+            response = await client.get(url, params=params)
 
             if response.status_code == 200:
                 data = response.json()
                 candles = data.get("values", data.get("data", []))
+
                 # Ensure newest last for chart rendering
                 if candles and len(candles) > 1:
                     # Check if data is in descending order (newest first)
@@ -101,7 +124,32 @@ async def fetch_ohlcv_data(symbol: str, timeframe: str, limit: int = 50) -> List
                     last_ts = candles[-1].get("datetime", candles[-1].get("timestamp", ""))
                     if first_ts > last_ts:
                         candles = list(reversed(candles))
-                return candles
+
+                # If pattern_timestamp provided, find and trim to that candle
+                if pattern_timestamp and candles:
+                    pattern_ts_clean = pattern_timestamp.replace("T", " ").split("+")[0].split(".")[0]
+                    # Find the index of the pattern candle
+                    pattern_idx = None
+                    for i, candle in enumerate(candles):
+                        candle_ts = candle.get("datetime", candle.get("timestamp", ""))
+                        # Compare timestamps (handle different formats)
+                        candle_ts_clean = candle_ts.replace("T", " ").split("+")[0].split(".")[0]
+                        if candle_ts_clean == pattern_ts_clean:
+                            pattern_idx = i
+                            break
+
+                    if pattern_idx is not None:
+                        # Return candles up to and including the pattern candle
+                        # Take 'limit' candles ending at pattern_idx
+                        start_idx = max(0, pattern_idx - limit + 1)
+                        candles = candles[start_idx:pattern_idx + 1]
+                        logger.info(f"Trimmed to {len(candles)} candles ending at pattern timestamp")
+                    else:
+                        logger.warning(f"Pattern timestamp {pattern_ts_clean} not found in data")
+                        # Fall back to last 'limit' candles
+                        candles = candles[-limit:]
+
+                return candles[-limit:]  # Ensure we return at most 'limit' candles
             else:
                 logger.warning(f"Failed to fetch OHLCV: {response.status_code}")
                 return []
@@ -133,10 +181,17 @@ async def validate_pattern(request: ValidationRequest):
         # Get OHLCV data for this pattern
         ohlcv_data = pattern.get("ohlc_data", [])
         if not ohlcv_data:
-            # Fetch from Data Service
+            # Fetch from Data Service - use pattern timestamp to get correct candle
             symbol = pattern.get("symbol", "")
             timeframe = pattern.get("timeframe", "H1")
-            ohlcv_data = await fetch_ohlcv_data(symbol, timeframe, limit=50)
+            pattern_timestamp = pattern.get("timestamp", "")
+
+            ohlcv_data = await fetch_ohlcv_data(
+                symbol,
+                timeframe,
+                limit=50,
+                pattern_timestamp=pattern_timestamp
+            )
 
             if not ohlcv_data:
                 raise HTTPException(
@@ -211,11 +266,17 @@ async def validate_patterns_batch(
             if p.get("ohlc_data"):
                 ohlcv_data_map[pattern_id] = p.get("ohlc_data")
             else:
-                # Fetch from Data Service
+                # Fetch from Data Service - use pattern timestamp for correct candle
                 symbol = p.get("symbol", "")
                 timeframe = p.get("timeframe", "H1")
+                pattern_timestamp = p.get("timestamp", "")
                 if symbol:
-                    ohlcv_data = await fetch_ohlcv_data(symbol, timeframe, limit=50)
+                    ohlcv_data = await fetch_ohlcv_data(
+                        symbol,
+                        timeframe,
+                        limit=50,
+                        pattern_timestamp=pattern_timestamp
+                    )
                     if ohlcv_data:
                         ohlcv_data_map[pattern_id] = ohlcv_data
                     else:
@@ -325,10 +386,17 @@ async def get_chart_preview(pattern_id: str):
 
         ohlcv_data = pattern.get("ohlc_data", [])
         if not ohlcv_data:
-            # Fetch from Data Service
+            # Fetch from Data Service - use pattern timestamp for correct candle
             symbol = pattern.get("symbol", "")
             timeframe = pattern.get("timeframe", "H1")
-            ohlcv_data = await fetch_ohlcv_data(symbol, timeframe, limit=50)
+            pattern_timestamp = pattern.get("timestamp", "")
+
+            ohlcv_data = await fetch_ohlcv_data(
+                symbol,
+                timeframe,
+                limit=50,
+                pattern_timestamp=pattern_timestamp
+            )
 
             if not ohlcv_data:
                 raise HTTPException(

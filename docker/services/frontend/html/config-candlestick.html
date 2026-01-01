@@ -5286,7 +5286,7 @@
                 if (bestMatch) break;
             }
 
-            // Set the reason category if found
+            // Set the reason category if found, otherwise use 'other' as fallback
             if (bestMatch) {
                 for (let option of reasonSelect.options) {
                     if (option.value === bestMatch) {
@@ -5295,6 +5295,10 @@
                         break;
                     }
                 }
+            } else {
+                // No specific match found - select "Anderer Grund" as fallback
+                reasonSelect.value = 'other';
+                onReasonCategoryChange();
             }
 
             // Always put Claude's full reasoning in the text input
