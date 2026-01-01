@@ -238,12 +238,18 @@ class CandlestickPatternService:
         Check if candle is a Doji (very small body relative to range).
 
         A Doji is detected when:
+        - Candle has valid market data (not a flat/missing data candle)
         - Body is less than configured % of the candle's total range (PRIMARY criterion)
 
         The body_to_range check is the primary criterion because a true Doji must
         have an extremely small body regardless of market volatility.
         Parameters are configurable via rule_config_service.
         """
+        # CRITICAL: Reject flat/invalid candles (missing data, weekend, etc.)
+        # These would otherwise be falsely detected as Doji patterns
+        if not candle.is_valid_candle:
+            return False
+
         # Get configurable threshold (default to 0.05 = 5%)
         body_to_range_threshold = rule_config_service.get_param("doji", "body_to_range_ratio") or 0.05
 
@@ -286,7 +292,8 @@ class CandlestickPatternService:
 
         Uses configurable parameters from rule_config_service.
         """
-        if candle.total_range == 0:
+        # Reject invalid/flat candles (missing data)
+        if not candle.is_valid_candle:
             return False
 
         # Get configurable parameters
@@ -316,7 +323,8 @@ class CandlestickPatternService:
 
         Uses configurable parameters from rule_config_service.
         """
-        if candle.total_range == 0:
+        # Reject invalid/flat candles (missing data)
+        if not candle.is_valid_candle:
             return False
 
         # Get configurable parameters
@@ -385,7 +393,8 @@ class CandlestickPatternService:
 
         Uses configurable parameters from rule_config_service.
         """
-        if candle.total_range == 0:
+        # Reject invalid/flat candles (missing data)
+        if not candle.is_valid_candle:
             return False
 
         # Get configurable parameters

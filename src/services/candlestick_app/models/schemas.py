@@ -106,6 +106,35 @@ class CandleData(BaseModel):
         """True if candle closed lower than opened."""
         return self.close < self.open
 
+    @property
+    def is_valid_candle(self) -> bool:
+        """
+        Check if this candle has valid market data.
+
+        Returns False for:
+        - Flat candles where O=H=L=C (missing data, weekend, holiday)
+        - Zero or negative range (data error)
+        - Candles with no price movement at all
+
+        This helps filter out invalid patterns detected on missing/corrupt data.
+        """
+        # Minimum range threshold (relative to price level)
+        # For most instruments, 0.0001% is essentially zero movement
+        min_relative_range = 0.000001
+
+        # Check for zero range (O=H=L=C)
+        if self.total_range <= 0:
+            return False
+
+        # Check for extremely small range relative to price (essentially flat)
+        price_level = (self.high + self.low) / 2
+        if price_level > 0:
+            relative_range = self.total_range / price_level
+            if relative_range < min_relative_range:
+                return False
+
+        return True
+
 
 class DetectedPattern(BaseModel):
     """
