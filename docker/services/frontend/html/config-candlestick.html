@@ -4957,6 +4957,85 @@
             'inside_bar': [
                 { open: 106, high: 108, low: 98, close: 100 },   // Große Mutterkerze
                 { open: 102, high: 105, low: 100, close: 103 }   // Kleinere Kerze komplett innerhalb
+            ],
+
+            // === Three Inside Patterns ===
+            'three_inside_up': [
+                { open: 108, high: 109, low: 102, close: 103 },  // 1. Große bearish Kerze (Abwärtstrend)
+                { open: 104, high: 106, low: 103, close: 105 },  // 2. Kleine bullish Harami innerhalb
+                { open: 105, high: 110, low: 104, close: 109 }   // 3. Bullish Bestätigung über Open der 1.
+            ],
+            'three_inside_down': [
+                { open: 100, high: 106, low: 99, close: 105 },   // 1. Große bullish Kerze (Aufwärtstrend)
+                { open: 104, high: 105, low: 102, close: 103 },  // 2. Kleine bearish Harami innerhalb
+                { open: 103, high: 104, low: 97, close: 98 }     // 3. Bearish Bestätigung unter Open der 1.
+            ],
+
+            // === Abandoned Baby ===
+            'bullish_abandoned_baby': [
+                { open: 106, high: 107, low: 100, close: 101 },  // 1. Große bearish Kerze
+                { open: 98, high: 99, low: 97, close: 98 },      // 2. Doji mit Gap down (Island)
+                { open: 100, high: 108, low: 99, close: 107 }    // 3. Große bullish mit Gap up
+            ],
+            'bearish_abandoned_baby': [
+                { open: 100, high: 107, low: 99, close: 106 },   // 1. Große bullish Kerze
+                { open: 109, high: 110, low: 108, close: 109 },  // 2. Doji mit Gap up (Island)
+                { open: 107, high: 108, low: 100, close: 101 }   // 3. Große bearish mit Gap down
+            ],
+
+            // === Tower Patterns ===
+            'tower_bottom': [
+                { open: 106, high: 107, low: 100, close: 101 },  // 1. Große bearish
+                { open: 101, high: 102, low: 99, close: 100 },   // 2. Kleine bearish
+                { open: 100, high: 101, low: 99, close: 100 },   // 3. Kleine (Konsolidierung)
+                { open: 100, high: 102, low: 99, close: 101 },   // 4. Kleine bullish
+                { open: 101, high: 108, low: 100, close: 107 }   // 5. Große bullish
+            ],
+            'tower_top': [
+                { open: 100, high: 107, low: 99, close: 106 },   // 1. Große bullish
+                { open: 106, high: 108, low: 105, close: 107 },  // 2. Kleine bullish
+                { open: 107, high: 108, low: 106, close: 107 },  // 3. Kleine (Konsolidierung)
+                { open: 107, high: 108, low: 105, close: 106 },  // 4. Kleine bearish
+                { open: 106, high: 107, low: 99, close: 100 }    // 5. Große bearish
+            ],
+
+            // === Advance Block ===
+            'advance_block': [
+                { open: 100, high: 106, low: 99, close: 105 },   // 1. Starke bullish
+                { open: 104, high: 109, low: 103, close: 107 },  // 2. Kleinere bullish, längerer Docht
+                { open: 106, high: 112, low: 105, close: 108 }   // 3. Kleinste bullish, längster Docht
+            ],
+
+            // === Island Reversal ===
+            'bearish_island': [
+                { open: 100, high: 106, low: 99, close: 105 },   // 1. Bullish vor Gap
+                { open: 108, high: 111, low: 107, close: 109 },  // 2. Island-Kerze (Gap up)
+                { open: 104, high: 105, low: 97, close: 98 }     // 3. Bearish nach Gap down
+            ],
+            'bullish_island': [
+                { open: 106, high: 107, low: 100, close: 101 },  // 1. Bearish vor Gap
+                { open: 98, high: 99, low: 95, close: 97 },      // 2. Island-Kerze (Gap down)
+                { open: 102, high: 109, low: 101, close: 108 }   // 3. Bullish nach Gap up
+            ],
+
+            // === Belt Hold ===
+            'bullish_belt_hold': [
+                { open: 104, high: 105, low: 100, close: 101 },  // Vorherige bearish
+                { open: 99, high: 106, low: 99, close: 105 }     // Belt Hold: Open = Low, starker Körper
+            ],
+            'bearish_belt_hold': [
+                { open: 100, high: 105, low: 99, close: 104 },   // Vorherige bullish
+                { open: 106, high: 106, low: 99, close: 100 }    // Belt Hold: Open = High, starker Körper
+            ],
+
+            // === Counterattack ===
+            'bullish_counterattack': [
+                { open: 106, high: 107, low: 100, close: 101 },  // 1. Große bearish
+                { open: 98, high: 102, low: 97, close: 101 }     // 2. Bullish schließt auf gleichem Level
+            ],
+            'bearish_counterattack': [
+                { open: 100, high: 106, low: 99, close: 105 },   // 1. Große bullish
+                { open: 108, high: 109, low: 104, close: 105 }   // 2. Bearish schließt auf gleichem Level
             ]
         };
 
@@ -6275,23 +6354,37 @@
         // Get number of candles in a pattern type
         function getPatternCandleCount(patternType) {
             const multiCandlePatterns = {
+                // 2-candle patterns
                 'bullish_engulfing': 2,
                 'bearish_engulfing': 2,
-                'morning_star': 3,
-                'evening_star': 3,
-                'three_white_soldiers': 3,
-                'three_black_crows': 3,
                 'piercing_line': 2,
                 'dark_cloud_cover': 2,
                 'tweezer_top': 2,
                 'tweezer_bottom': 2,
-                'rising_three_methods': 5,
-                'falling_three_methods': 5,
                 'harami': 2,
                 'bullish_harami': 2,
                 'bearish_harami': 2,
                 'harami_cross': 2,
-                'inside_bar': 2
+                'inside_bar': 2,
+                'bullish_counterattack': 2,
+                'bearish_counterattack': 2,
+                // 3-candle patterns
+                'morning_star': 3,
+                'evening_star': 3,
+                'three_white_soldiers': 3,
+                'three_black_crows': 3,
+                'three_inside_up': 3,
+                'three_inside_down': 3,
+                'bullish_abandoned_baby': 3,
+                'bearish_abandoned_baby': 3,
+                'advance_block': 3,
+                'bearish_island': 3,
+                'bullish_island': 3,
+                // 5-candle patterns
+                'rising_three_methods': 5,
+                'falling_three_methods': 5,
+                'tower_bottom': 5,
+                'tower_top': 5
             };
             return multiCandlePatterns[patternType] || 1;
         }
