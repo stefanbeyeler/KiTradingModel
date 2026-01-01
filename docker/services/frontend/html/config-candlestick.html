@@ -6991,7 +6991,7 @@
                 const canvas = document.getElementById('revalDetailCanvas');
 
                 const direction = getPatternDirection(item.original_pattern);
-                const patternCandleCount = getPatternCandleCount(item.original_pattern);
+                // patternCandleCount already defined above for fetchOhlcForRevalidation
 
                 // Save _patternIdx before mapping (map creates new array without custom properties)
                 const patternIdx = ohlcData._patternIdx;
