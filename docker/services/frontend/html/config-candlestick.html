@@ -2573,23 +2573,27 @@
 
         <!-- Optimization Summary Modal -->
         <div class="modal-overlay" id="optimizationSummaryModal" onclick="closeOptimizationSummary(event)">
-            <div class="modal" onclick="event.stopPropagation()" style="max-width: 700px;">
+            <div class="modal" onclick="event.stopPropagation()" style="max-width: 95vw; width: 1200px; max-height: 90vh;">
                 <div class="modal-header">
                     <div class="modal-title">
                         <span>📊 Optimierung abgeschlossen</span>
                     </div>
                     <button class="modal-close" onclick="closeOptimizationSummary()">&times;</button>
                 </div>
-                <div class="modal-body" style="padding: 1.5rem;">
+                <div class="modal-body" style="padding: 1.5rem; overflow-y: auto; max-height: calc(90vh - 60px);">
                     <!-- Summary Stats -->
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
                         <div style="background: rgba(100, 200, 255, 0.1); padding: 1rem; border-radius: 8px; text-align: center;">
                             <div style="font-size: 1.8rem; font-weight: bold; color: #64c8ff;" id="summaryCollected">0</div>
                             <div style="font-size: 0.8rem; color: #888;">Patterns gesammelt</div>
                         </div>
                         <div style="background: rgba(76, 175, 80, 0.1); padding: 1rem; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 1.8rem; font-weight: bold; color: #4caf50;" id="summaryValidated">0</div>
-                            <div style="font-size: 0.8rem; color: #888;">Validiert</div>
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #4caf50;" id="summaryValidCount">0</div>
+                            <div style="font-size: 0.8rem; color: #888;">Valide</div>
+                        </div>
+                        <div style="background: rgba(244, 67, 54, 0.1); padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #f44336;" id="summaryInvalidCount">0</div>
+                            <div style="font-size: 0.8rem; color: #888;">Invalide</div>
                         </div>
                         <div style="background: rgba(255, 152, 0, 0.1); padding: 1rem; border-radius: 8px; text-align: center;">
                             <div style="font-size: 1.8rem; font-weight: bold; color: #ff9800;" id="summaryRecommendations">0</div>
@@ -2601,11 +2605,22 @@
                         </div>
                     </div>
 
-                    <!-- Pattern Analysis Results -->
+                    <!-- Pattern Analysis Summary -->
                     <div style="margin-bottom: 1.5rem;">
-                        <h4 style="margin: 0 0 0.8rem 0; color: #64c8ff; font-size: 1rem;">Pattern-Analyse</h4>
-                        <div id="summaryPatternAnalysis" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.8rem;">
+                        <h4 style="margin: 0 0 0.8rem 0; color: #64c8ff; font-size: 1rem;">Pattern-Analyse nach Typ</h4>
+                        <div id="summaryPatternAnalysis" style="max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.8rem;">
                             <!-- Filled dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Detailed Sample List with Images -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 0.8rem 0; color: #ce93d8; font-size: 1rem;">
+                            Validierte Patterns im Detail
+                            <span style="font-weight: normal; color: #888; font-size: 0.85rem;"> - Claude Vision Analyse</span>
+                        </h4>
+                        <div id="summarySamplesList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1rem; max-height: 400px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                            <!-- Filled dynamically with pattern cards -->
                         </div>
                     </div>
 
@@ -4984,16 +4999,31 @@
 
         async function showOptimizationSummary(progressData) {
             try {
-                // Fetch detailed recommendations
-                const recRes = await fetch(`${CANDLESTICK_API}/rule-optimizer/recommendations`);
+                // Fetch detailed recommendations and samples in parallel
+                const [recRes, samplesRes] = await Promise.all([
+                    fetch(`${CANDLESTICK_API}/rule-optimizer/recommendations`),
+                    fetch(`${CANDLESTICK_API}/rule-optimizer/validated-samples`)
+                ]);
+
                 const recData = await recRes.json();
+                const samplesData = await samplesRes.json();
 
                 const recommendations = recData.recommendations || [];
                 const patternAnalyses = recData.pattern_analyses || {};
+                const samples = samplesData.samples || [];
+
+                // Count valid and invalid
+                let validCount = 0;
+                let invalidCount = 0;
+                samples.forEach(s => {
+                    if (s.claude_valid === 'valid') validCount++;
+                    else if (s.claude_valid === 'invalid') invalidCount++;
+                });
 
                 // Update summary stats
                 document.getElementById('summaryCollected').textContent = progressData.patterns_collected || 0;
-                document.getElementById('summaryValidated').textContent = progressData.patterns_validated || 0;
+                document.getElementById('summaryValidCount').textContent = validCount;
+                document.getElementById('summaryInvalidCount').textContent = invalidCount;
                 document.getElementById('summaryRecommendations').textContent = recommendations.length;
                 document.getElementById('summaryPatternTypes').textContent = Object.keys(patternAnalyses).length;
 
@@ -5027,6 +5057,73 @@
                 }
 
                 document.getElementById('summaryPatternAnalysis').innerHTML = analysisHtml;
+
+                // Build detailed samples list with images
+                let samplesHtml = '';
+                if (samples.length > 0) {
+                    samples.forEach(sample => {
+                        const statusColor = sample.claude_valid === 'valid' ? '#4caf50' :
+                                           sample.claude_valid === 'invalid' ? '#f44336' :
+                                           sample.claude_valid === 'borderline' ? '#ff9800' : '#888';
+                        const statusIcon = sample.claude_valid === 'valid' ? '✓' :
+                                          sample.claude_valid === 'invalid' ? '✗' :
+                                          sample.claude_valid === 'borderline' ? '~' : '?';
+                        const statusText = sample.claude_valid === 'valid' ? 'Valide' :
+                                          sample.claude_valid === 'invalid' ? 'Invalide' :
+                                          sample.claude_valid === 'borderline' ? 'Grenzwertig' : 'Fehler';
+
+                        // Build image or placeholder
+                        const imageHtml = sample.chart_image
+                            ? `<img src="data:image/png;base64,${sample.chart_image}" style="width: 100%; height: 120px; object-fit: contain; background: #1a1a2e; border-radius: 4px;">`
+                            : `<div style="width: 100%; height: 120px; background: #1a1a2e; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #666;">Kein Bild</div>`;
+
+                        // Truncate reasoning
+                        const reasoning = sample.claude_reasoning
+                            ? (sample.claude_reasoning.length > 120 ? sample.claude_reasoning.substring(0, 120) + '...' : sample.claude_reasoning)
+                            : 'Keine Begründung';
+
+                        samplesHtml += `
+                            <div style="background: rgba(255,255,255,0.03); border-radius: 8px; overflow: hidden; border: 1px solid ${statusColor}33;">
+                                <!-- Image -->
+                                <div style="position: relative;">
+                                    ${imageHtml}
+                                    <!-- Status Badge -->
+                                    <div style="position: absolute; top: 8px; right: 8px; background: ${statusColor}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold;">
+                                        ${statusIcon} ${statusText}
+                                    </div>
+                                </div>
+                                <!-- Info -->
+                                <div style="padding: 0.8rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                        <span style="color: #64c8ff; font-weight: 600; font-size: 0.9rem;">${sample.pattern_type.replace(/_/g, ' ')}</span>
+                                        <span style="color: #888; font-size: 0.75rem;">${sample.symbol} / ${sample.timeframe}</span>
+                                    </div>
+                                    <!-- Confidence -->
+                                    <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                                        <span style="color: #888;">Regel: <span style="color: #ce93d8;">${((sample.rule_confidence || 0) * 100).toFixed(0)}%</span></span>
+                                        <span style="color: #888;">Claude: <span style="color: ${statusColor};">${((sample.claude_confidence || 0) * 100).toFixed(0)}%</span></span>
+                                    </div>
+                                    <!-- Metrics -->
+                                    ${sample.body_ratio !== null ? `
+                                        <div style="font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">
+                                            Body: ${(sample.body_ratio * 100).toFixed(0)}% |
+                                            Upper: ${((sample.upper_shadow_ratio || 0) * 100).toFixed(0)}% |
+                                            Lower: ${((sample.lower_shadow_ratio || 0) * 100).toFixed(0)}%
+                                        </div>
+                                    ` : ''}
+                                    <!-- Reasoning -->
+                                    <div style="font-size: 0.75rem; color: #aaa; font-style: italic; line-height: 1.3;">
+                                        "${reasoning}"
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    samplesHtml = '<div style="color: #888; text-align: center; padding: 2rem;">Keine validierten Samples verfügbar</div>';
+                }
+
+                document.getElementById('summarySamplesList').innerHTML = samplesHtml;
 
                 // Build recommendations list
                 const recSection = document.getElementById('summaryRecommendationsSection');

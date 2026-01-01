@@ -272,3 +272,27 @@ async def get_pattern_stats():
         }
 
     return summary
+
+
+@router.get("/validated-samples", summary="Get all validated pattern samples")
+async def get_validated_samples():
+    """
+    Get all validated pattern samples with their details.
+
+    Returns samples including chart images, Claude's validation result,
+    and reasoning for each pattern that was validated during optimization.
+    """
+    samples = rule_optimizer_service.get_validated_samples()
+    return {
+        "samples": samples,
+        "total": len(samples),
+    }
+
+
+@router.get("/sample/{sample_id}", summary="Get a specific sample by ID")
+async def get_sample(sample_id: str):
+    """Get a specific validated sample by its ID."""
+    sample = rule_optimizer_service.get_sample_by_id(sample_id)
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+    return sample

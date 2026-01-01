@@ -14,6 +14,7 @@ Workflow:
 import asyncio
 import json
 import statistics
+import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from enum import Enum
@@ -45,11 +46,18 @@ class PatternSample:
     rule_confidence: float
     ohlcv_data: List[Dict]
 
+    # Unique ID for this sample
+    sample_id: str = field(default_factory=lambda: "")
+
     # Claude validation results
     claude_valid: Optional[PatternValidity] = None
     claude_confidence: Optional[float] = None
     claude_reasoning: Optional[str] = None
     claude_issues: List[str] = field(default_factory=list)
+    claude_status: Optional[str] = None  # validated, rejected, error
+
+    # Chart image (base64)
+    chart_image: Optional[str] = None
 
     # Calculated metrics for the pattern
     body_ratio: Optional[float] = None
@@ -58,7 +66,30 @@ class PatternSample:
     engulfing_ratio: Optional[float] = None
 
     def to_dict(self) -> Dict:
-        return asdict(self)
+        """Convert to dict, excluding large data like chart_image for API responses."""
+        result = asdict(self)
+        # Don't include ohlcv_data and chart_image in regular API responses
+        result.pop('ohlcv_data', None)
+        return result
+
+    def to_summary_dict(self) -> Dict:
+        """Convert to summary dict including chart_image for detailed view."""
+        return {
+            'sample_id': self.sample_id,
+            'pattern_type': self.pattern_type,
+            'symbol': self.symbol,
+            'timeframe': self.timeframe,
+            'timestamp': self.timestamp,
+            'rule_confidence': self.rule_confidence,
+            'claude_valid': self.claude_valid.value if self.claude_valid else None,
+            'claude_confidence': self.claude_confidence,
+            'claude_reasoning': self.claude_reasoning,
+            'claude_status': self.claude_status,
+            'chart_image': self.chart_image,
+            'body_ratio': self.body_ratio,
+            'upper_shadow_ratio': self.upper_shadow_ratio,
+            'lower_shadow_ratio': self.lower_shadow_ratio,
+        }
 
 
 @dataclass
@@ -321,6 +352,9 @@ class RuleOptimizerService:
                             )
 
                             if chart_data.get("candles"):
+                                # Generate unique sample ID
+                                sample_id = f"{pt}_{symbol}_{tf_str}_{str(uuid.uuid4())[:8]}"
+
                                 sample = PatternSample(
                                     pattern_type=pt,
                                     symbol=symbol,
@@ -328,6 +362,7 @@ class RuleOptimizerService:
                                     timestamp=pattern.timestamp.isoformat(),
                                     rule_confidence=pattern.confidence,
                                     ohlcv_data=chart_data["candles"],
+                                    sample_id=sample_id,
                                 )
 
                                 # Calculate metrics
@@ -402,44 +437,52 @@ class RuleOptimizerService:
 
             for sample in samples:
                 try:
-                    # Use Claude validator service
+                    # Use Claude validator service with pattern_id
                     result = await claude_validator_service.validate_pattern(
+                        pattern_id=sample.sample_id,
                         pattern_type=sample.pattern_type,
                         symbol=sample.symbol,
                         timeframe=sample.timeframe,
                         ohlcv_data=sample.ohlcv_data,
                     )
 
+                    # Store the chart image from validation result
+                    if hasattr(result, 'chart_image') and result.chart_image:
+                        sample.chart_image = result.chart_image
+
+                    # Store the status for display
+                    sample.claude_status = result.status.value if result.status else None
+
                     # Map validation result to our classification
                     # WICHTIG: Status-basierte Klassifikation hat Priorität
                     if result.status == ValidationStatus.ERROR:
                         sample.claude_valid = PatternValidity.ERROR
-                        logger.debug(f"Pattern {sample.pattern_type}: ERROR status")
+                        logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): ERROR status")
                     elif result.status == ValidationStatus.REJECTED:
                         # Claude hat das Pattern abgelehnt - es ist ein False Positive
                         # HINWEIS: Bei REJECTED ist agrees oft None, daher prüfen wir hier nur den Status
                         sample.claude_valid = PatternValidity.INVALID
-                        logger.debug(f"Pattern {sample.pattern_type}: REJECTED -> INVALID")
+                        logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): REJECTED -> INVALID")
                     elif result.agrees is False:
                         # Claude stimmt nicht zu, aber Status ist nicht REJECTED (z.B. VALIDATED mit agrees=False)
                         sample.claude_valid = PatternValidity.INVALID
-                        logger.debug(f"Pattern {sample.pattern_type}: agrees=False -> INVALID")
+                        logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): agrees=False -> INVALID")
                     elif result.status == ValidationStatus.VALIDATED:
                         # Claude hat validiert - prüfe Confidence
                         if result.agrees is True or result.overall_confidence >= 0.6:
                             sample.claude_valid = PatternValidity.VALID
-                            logger.debug(f"Pattern {sample.pattern_type}: VALIDATED (conf={result.overall_confidence}) -> VALID")
+                            logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): VALIDATED (conf={result.overall_confidence}) -> VALID")
                         elif result.overall_confidence >= 0.4:
                             sample.claude_valid = PatternValidity.BORDERLINE
-                            logger.debug(f"Pattern {sample.pattern_type}: VALIDATED (conf={result.overall_confidence}) -> BORDERLINE")
+                            logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): VALIDATED (conf={result.overall_confidence}) -> BORDERLINE")
                         else:
                             # Niedrige Confidence bei VALIDATED = grenzwertig
                             sample.claude_valid = PatternValidity.BORDERLINE
-                            logger.debug(f"Pattern {sample.pattern_type}: VALIDATED low conf -> BORDERLINE")
+                            logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): VALIDATED low conf -> BORDERLINE")
                     elif result.status == ValidationStatus.SKIPPED:
                         # Übersprungen = Error zählen
                         sample.claude_valid = PatternValidity.ERROR
-                        logger.debug(f"Pattern {sample.pattern_type}: SKIPPED -> ERROR")
+                        logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): SKIPPED -> ERROR")
                     else:
                         # Fallback basierend auf Confidence
                         if result.overall_confidence >= 0.6:
@@ -448,7 +491,7 @@ class RuleOptimizerService:
                             sample.claude_valid = PatternValidity.BORDERLINE
                         else:
                             sample.claude_valid = PatternValidity.INVALID
-                        logger.debug(f"Pattern {sample.pattern_type}: Fallback (conf={result.overall_confidence}) -> {sample.claude_valid}")
+                        logger.info(f"Pattern {sample.pattern_type} ({sample.symbol}/{sample.timeframe}): Fallback (conf={result.overall_confidence}) -> {sample.claude_valid}")
 
                     sample.claude_confidence = result.overall_confidence
                     sample.claude_reasoning = result.reasoning
@@ -462,6 +505,7 @@ class RuleOptimizerService:
                 except Exception as e:
                     logger.warning(f"Validation error for {pattern_type}: {e}")
                     sample.claude_valid = PatternValidity.ERROR
+                    sample.claude_status = "error"
                     sample.claude_issues = [str(e)]
 
                 validated += 1
@@ -730,6 +774,22 @@ class RuleOptimizerService:
         """Reset all rule parameters to defaults."""
         rule_config_service.reset_all()
         return {"status": "reset", "message": "Alle Parameter auf Standardwerte zurückgesetzt"}
+
+    def get_validated_samples(self) -> List[Dict]:
+        """Get all validated samples with their details including chart images."""
+        all_samples = []
+        for pattern_type, samples in self.samples.items():
+            for sample in samples:
+                all_samples.append(sample.to_summary_dict())
+        return all_samples
+
+    def get_sample_by_id(self, sample_id: str) -> Optional[Dict]:
+        """Get a specific sample by its ID."""
+        for pattern_type, samples in self.samples.items():
+            for sample in samples:
+                if sample.sample_id == sample_id:
+                    return sample.to_summary_dict()
+        return None
 
 
 # Global singleton
