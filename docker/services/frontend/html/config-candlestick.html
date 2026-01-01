@@ -3101,8 +3101,8 @@
                 </div>
                 <p style="color: #888;">
                     <strong style="color: #e57373;">Achtung:</strong> Dies löscht ALLE Daten unwiderruflich:
-                    Regelwerk-Einstellungen, Feedbacks, Pattern-History, Claude-Validierungen und Backups.
-                    Der Service wird auf den Auslieferungszustand zurückgesetzt.
+                    Regelwerk-Einstellungen, Feedbacks, Pattern-History, Claude-Validierungen, Backups
+                    und Training History. Der Service wird auf den Auslieferungszustand zurückgesetzt.
                 </p>
             </div>
         </div><!-- End Tab: Regelwerk Optimierung -->
@@ -8786,7 +8786,7 @@
 
         async function factoryReset() {
             // Double confirmation for destructive action
-            if (!confirm('⚠️ WARNUNG: Factory Reset\n\nDies löscht ALLE Daten unwiderruflich:\n- Regelwerk-Einstellungen\n- Alle Feedbacks\n- Pattern-History\n- Claude-Validierungen\n- Alle Backups\n\nFortfahren?')) {
+            if (!confirm('⚠️ WARNUNG: Factory Reset\n\nDies löscht ALLE Daten unwiderruflich:\n- Regelwerk-Einstellungen\n- Alle Feedbacks\n- Pattern-History\n- Claude-Validierungen\n- Alle Backups\n- Training History\n\nFortfahren?')) {
                 return;
             }
 
@@ -8795,6 +8795,7 @@
             }
 
             try {
+                // Reset Candlestick Service
                 const response = await fetch(`${CANDLESTICK_API}/rule-optimizer/factory-reset`, {
                     method: 'POST'
                 });
@@ -8806,9 +8807,28 @@
 
                 const result = await response.json();
 
+                // Also reset Training Service
+                let trainResult = null;
+                try {
+                    const trainResponse = await fetch(`${CANDLESTICK_TRAIN_API}/train/factory-reset`, {
+                        method: 'POST'
+                    });
+                    if (trainResponse.ok) {
+                        trainResult = await trainResponse.json();
+                    }
+                } catch (trainError) {
+                    console.warn('Training Service Factory Reset failed:', trainError);
+                }
+
                 // Show result
-                let message = 'Factory Reset abgeschlossen.\n\nGelöschte Dateien:\n';
+                let message = 'Factory Reset abgeschlossen.\n\n';
+                message += 'Candlestick Service:\n';
                 message += result.deleted.map(f => `• ${f}`).join('\n');
+
+                if (trainResult) {
+                    message += '\n\nTraining Service:\n';
+                    message += trainResult.deleted.map(f => `• ${f}`).join('\n');
+                }
 
                 alert(message);
                 showToast('Factory Reset erfolgreich', 'success');

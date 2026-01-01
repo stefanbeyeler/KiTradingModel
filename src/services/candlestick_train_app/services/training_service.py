@@ -1023,6 +1023,67 @@ class TrainingService:
         """Check if a training job is currently running."""
         return self._current_job is not None and self._current_job.status == TrainingStatus.RUNNING
 
+    def factory_reset(self, delete_models: bool = False) -> Dict[str, Any]:
+        """
+        Reset training data to factory defaults.
+
+        Args:
+            delete_models: If True, also delete all trained model files
+
+        Returns:
+            Result of factory reset operation
+        """
+        import shutil
+
+        deleted_files = []
+        errors = []
+
+        # Delete training_history.json
+        if self._history_file.exists():
+            try:
+                self._history_file.unlink()
+                deleted_files.append("training_history.json")
+                logger.info("Factory reset: Deleted training_history.json")
+            except Exception as e:
+                errors.append(f"training_history.json: {str(e)}")
+                logger.error(f"Factory reset: Failed to delete training_history.json: {e}")
+
+        # Clear in-memory jobs
+        self._jobs.clear()
+        self._current_job = None
+        deleted_files.append("in-memory jobs (cleared)")
+
+        # Optionally delete model files
+        if delete_models:
+            model_dir = self._model_path
+            if model_dir.exists():
+                model_count = 0
+                for model_file in model_dir.glob("candlestick_model_*.pt*"):
+                    try:
+                        model_file.unlink()
+                        model_count += 1
+                    except Exception as e:
+                        errors.append(f"{model_file.name}: {str(e)}")
+                        logger.error(f"Factory reset: Failed to delete {model_file.name}: {e}")
+
+                if model_count > 0:
+                    deleted_files.append(f"models/ ({model_count} files)")
+                    logger.info(f"Factory reset: Deleted {model_count} model files")
+
+        if errors:
+            return {
+                "success": False,
+                "deleted": deleted_files,
+                "errors": errors,
+                "message": "Factory reset completed with errors"
+            }
+
+        return {
+            "success": True,
+            "deleted": deleted_files,
+            "message": "Factory reset completed successfully. Training history has been cleared."
+        }
+
 
 # Global singleton
 training_service = TrainingService()

@@ -308,3 +308,25 @@ async def get_feedback_analysis():
             "Training-Empfehlungen basierend auf Feedback-Analyse"
         )
     }
+
+
+@router.post("/factory-reset")
+async def factory_reset(delete_models: bool = Query(default=False)):
+    """
+    Reset training data to factory defaults.
+
+    This will DELETE:
+    - training_history.json (training job history)
+    - Optionally: All trained models (.pt and .pt.json files)
+
+    WARNING: This action is irreversible!
+
+    Parameters:
+    - **delete_models**: If True, also delete all trained model files
+    """
+    result = training_service.factory_reset(delete_models=delete_models)
+
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Factory reset failed"))
+
+    return result
