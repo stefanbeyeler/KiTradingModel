@@ -1044,37 +1044,64 @@ class CandlestickPatternService:
         avg_body: float
     ) -> bool:
         """
-        Check for Three Inside Up pattern.
-        - First candle: bearish
-        - Second candle: bullish, contained within first body (Harami)
-        - Third candle: bullish, closes above first candle's open
+        Check for Three Inside Up pattern (bullish reversal).
+
+        STRICT Criteria:
+        - First candle: LARGE bearish candle (body >= 60% of range, body > avg_body)
+        - Second candle: SMALL bullish candle COMPLETELY within first body (Harami)
+        - Third candle: bullish, closes ABOVE first candle's open (confirmation)
 
         Uses configurable parameters from rule_config_service.
         """
-        # First: bearish with large body
+        params = rule_config_service.get_pattern_params("three_inside_up")
+        harami_body_max_ratio = params.get("harami_body_max_ratio", 0.5)
+        first_body_min_ratio = params.get("first_body_min_ratio", 0.6)
+
+        # First: must be bearish with LARGE body
         if not first.is_bearish:
             return False
 
-        # Second: bullish, small body contained within first
+        # First candle must have significant body (not a doji or spinning top)
+        if first.total_range > 0:
+            first_body_ratio = first.body_size / first.total_range
+            if first_body_ratio < first_body_min_ratio:
+                return False
+
+        # First candle body must be larger than average
+        if first.body_size < avg_body * 0.8:
+            return False
+
+        # Second: must be bullish
         if not second.is_bullish:
             return False
 
-        params = rule_config_service.get_pattern_params("three_inside_up")
-        harami_body_max_ratio = params.get("harami_body_max_ratio", 0.5)
+        # Second body must be COMPLETELY within first body (strict Harami)
+        # For bearish first: close is bottom, open is top
+        first_body_top = first.open
+        first_body_bottom = first.close
 
-        # Second body must be within first body (Harami)
-        if second.open < first.close or second.close > first.open:
+        # Second candle's ENTIRE body must be within first body
+        second_body_top = max(second.open, second.close)
+        second_body_bottom = min(second.open, second.close)
+
+        if second_body_top > first_body_top or second_body_bottom < first_body_bottom:
             return False
 
-        # Second body must be smaller than first
+        # Second body must be significantly smaller than first
         if second.body_size > first.body_size * harami_body_max_ratio:
             return False
 
-        # Third: bullish, closes above first's open (top of first's body)
+        # Third: must be bullish
         if not third.is_bullish:
             return False
 
+        # Third must close ABOVE first's open (top of first's body)
+        # This is the confirmation that breaks the resistance
         if third.close <= first.open:
+            return False
+
+        # Third candle should have meaningful body (not a doji)
+        if third.total_range > 0 and third.body_size / third.total_range < 0.3:
             return False
 
         return True
@@ -1087,37 +1114,64 @@ class CandlestickPatternService:
         avg_body: float
     ) -> bool:
         """
-        Check for Three Inside Down pattern.
-        - First candle: bullish
-        - Second candle: bearish, contained within first body (Harami)
-        - Third candle: bearish, closes below first candle's open
+        Check for Three Inside Down pattern (bearish reversal).
+
+        STRICT Criteria:
+        - First candle: LARGE bullish candle (body >= 60% of range, body > avg_body)
+        - Second candle: SMALL bearish candle COMPLETELY within first body (Harami)
+        - Third candle: bearish, closes BELOW first candle's open (confirmation)
 
         Uses configurable parameters from rule_config_service.
         """
-        # First: bullish with large body
+        params = rule_config_service.get_pattern_params("three_inside_down")
+        harami_body_max_ratio = params.get("harami_body_max_ratio", 0.5)
+        first_body_min_ratio = params.get("first_body_min_ratio", 0.6)
+
+        # First: must be bullish with LARGE body
         if not first.is_bullish:
             return False
 
-        # Second: bearish, small body contained within first
+        # First candle must have significant body (not a doji or spinning top)
+        if first.total_range > 0:
+            first_body_ratio = first.body_size / first.total_range
+            if first_body_ratio < first_body_min_ratio:
+                return False
+
+        # First candle body must be larger than average
+        if first.body_size < avg_body * 0.8:
+            return False
+
+        # Second: must be bearish
         if not second.is_bearish:
             return False
 
-        params = rule_config_service.get_pattern_params("three_inside_down")
-        harami_body_max_ratio = params.get("harami_body_max_ratio", 0.5)
+        # Second body must be COMPLETELY within first body (strict Harami)
+        # For bullish first: open is bottom, close is top
+        first_body_top = first.close
+        first_body_bottom = first.open
 
-        # Second body must be within first body (Harami)
-        if second.close < first.open or second.open > first.close:
+        # Second candle's ENTIRE body must be within first body
+        second_body_top = max(second.open, second.close)
+        second_body_bottom = min(second.open, second.close)
+
+        if second_body_top > first_body_top or second_body_bottom < first_body_bottom:
             return False
 
-        # Second body must be smaller than first
+        # Second body must be significantly smaller than first
         if second.body_size > first.body_size * harami_body_max_ratio:
             return False
 
-        # Third: bearish, closes below first's open (bottom of first's body)
+        # Third: must be bearish
         if not third.is_bearish:
             return False
 
+        # Third must close BELOW first's open (bottom of first's body)
+        # This is the confirmation that breaks the support
         if third.close >= first.open:
+            return False
+
+        # Third candle should have meaningful body (not a doji)
+        if third.total_range > 0 and third.body_size / third.total_range < 0.3:
             return False
 
         return True
