@@ -6069,51 +6069,23 @@
                 const chronoData = [...ohlcData].reverse();
 
                 // Find pattern's last candle in chronological array
-                // IMPORTANT: TwelveData returns datetime without timezone ("2026-01-01 17:55:00")
-                // These are UTC times but JS interprets them as local. We must parse as UTC.
-
-                function parseTwelveDataTimeUTC(datetime) {
-                    if (!datetime) return null;
-                    let dateStr = datetime;
-                    if (typeof dateStr === 'string' && !dateStr.includes('+') && !dateStr.includes('Z')) {
-                        dateStr = dateStr.replace(' ', 'T') + 'Z';
-                    }
-                    return new Date(dateStr);
-                }
-
+                // IMPORTANT: Search from END (newest) to START (oldest) to find the correct match
+                // findIndex searches from start, but we need the match closest to "now"
                 let lastCandleIdx = -1;
-                const timeframeTolerance = getTimeframeMinutes(pattern.timeframe) * 60 * 1000;
-
-                // First try: exact match within timeframe tolerance
                 for (let i = chronoData.length - 1; i >= 0; i--) {
-                    const candleTime = parseTwelveDataTimeUTC(chronoData[i].datetime);
-                    const timeDiff = Math.abs(candleTime - patternTime);
-                    if (timeDiff < timeframeTolerance) {
+                    const candleTime = new Date(chronoData[i].datetime);
+                    if (Math.abs(candleTime - patternTime) < 3600000 * 4) {  // Within 4h
                         lastCandleIdx = i;
-                        console.log(`Highlight: exact match idx=${i}, candle=${chronoData[i].datetime}, pattern=${pattern.timestamp}`);
                         break;
                     }
                 }
 
                 if (lastCandleIdx === -1) {
-                    // Fallback: try 4h window
+                    // Fallback: try 24h window, still searching from newest
                     for (let i = chronoData.length - 1; i >= 0; i--) {
-                        const candleTime = parseTwelveDataTimeUTC(chronoData[i].datetime);
-                        if (Math.abs(candleTime - patternTime) < 3600000 * 4) {
-                            lastCandleIdx = i;
-                            console.log(`Highlight: 4h fallback idx=${i}`);
-                            break;
-                        }
-                    }
-                }
-
-                if (lastCandleIdx === -1) {
-                    // Second fallback: try 24h window
-                    for (let i = chronoData.length - 1; i >= 0; i--) {
-                        const candleTime = parseTwelveDataTimeUTC(chronoData[i].datetime);
+                        const candleTime = new Date(chronoData[i].datetime);
                         if (Math.abs(candleTime - patternTime) < 3600000 * 24) {
                             lastCandleIdx = i;
-                            console.log(`Highlight: 24h fallback idx=${i}`);
                             break;
                         }
                     }
@@ -6122,7 +6094,6 @@
                 // If still not found, use a position that allows context candles
                 if (lastCandleIdx === -1) {
                     lastCandleIdx = Math.max(patternCandleCount + 4, chronoData.length - 1);
-                    console.log(`Highlight: no match, fallback idx=${lastCandleIdx}`);
                 }
 
                 // First candle of pattern is (patternCandleCount - 1) positions BEFORE the last candle
@@ -6452,15 +6423,6 @@
         }
 
         // Get number of candles in a pattern type
-        // Get minutes for a timeframe (for tolerance calculation)
-        function getTimeframeMinutes(tf) {
-            const tfMap = {
-                'M1': 1, 'M5': 5, 'M15': 15, 'M30': 30,
-                'H1': 60, 'H4': 240, 'D1': 1440, 'W1': 10080
-            };
-            return tfMap[tf] || 60;
-        }
-
         function getPatternCandleCount(patternType) {
             const multiCandlePatterns = {
                 // 2-candle patterns

@@ -2397,6 +2397,12 @@ class CandlestickPatternService:
                 # Convert to CandleData
                 candles = self._convert_ohlc_to_candles(aggregated_data, tf.value)
 
+                # IMPORTANT: Skip the last (most recent) candle as it may still be open/forming
+                # TwelveData returns the current candle which changes until it closes
+                # Pattern detection on incomplete candles leads to false positives
+                if len(candles) > 1:
+                    candles = candles[:-1]  # Remove the last (potentially open) candle
+
                 if len(candles) < 3:
                     logger.warning(f"[{request_id}] Insufficient candles for {request.symbol} {tf.value}")
                     continue
