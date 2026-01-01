@@ -7135,13 +7135,18 @@
                 const patternId = item.pattern_id || item.id ||
                     `${item.symbol}_${item.pattern_timestamp}_${item.original_pattern}`;
 
-                // Call Claude Vision API
+                // Call Claude Vision API with direct data (pattern may not be in history)
                 const response = await fetch(`${CANDLESTICK_API}/claude/validate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         pattern_id: patternId,
-                        force: true  // Always get fresh validation
+                        force: true,
+                        // Provide direct data for patterns not in history
+                        pattern_type: item.original_pattern,
+                        symbol: item.symbol,
+                        timeframe: item.timeframe,
+                        pattern_timestamp: item.pattern_timestamp
                     })
                 });
 

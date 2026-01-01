@@ -35,6 +35,11 @@ class ValidationRequest(BaseModel):
     """Request to validate a specific pattern."""
     pattern_id: str = Field(..., description="ID of the pattern to validate")
     force: bool = Field(default=False, description="Force re-validation even if cached")
+    # Optional direct data for patterns not in history (e.g., revalidation items)
+    pattern_type: Optional[str] = Field(default=None, description="Pattern type if not in history")
+    symbol: Optional[str] = Field(default=None, description="Symbol if not in history")
+    timeframe: Optional[str] = Field(default=None, description="Timeframe if not in history")
+    pattern_timestamp: Optional[str] = Field(default=None, description="Pattern timestamp if not in history")
 
 
 class BatchValidationRequest(BaseModel):
@@ -168,24 +173,41 @@ async def validate_pattern(request: ValidationRequest):
     Claude for visual analysis. Claude will assess whether the pattern
     is correctly identified.
 
+    Supports two modes:
+    1. Pattern ID lookup: Finds pattern in history by ID
+    2. Direct data: Uses pattern_type, symbol, timeframe, pattern_timestamp from request
+
     **Note**: Requires ANTHROPIC_API_KEY environment variable to be set.
     """
     try:
-        # Get pattern from history
+        pattern = None
+        symbol = request.symbol
+        timeframe = request.timeframe
+        pattern_type = request.pattern_type
+        pattern_timestamp = request.pattern_timestamp
+
+        # Try to get pattern from history first
         history = pattern_history_service.get_history(limit=1000)
         pattern = next((p for p in history if p.get("id") == request.pattern_id), None)
 
-        if not pattern:
-            raise HTTPException(status_code=404, detail=f"Pattern {request.pattern_id} not found")
-
-        # Get OHLCV data for this pattern
-        ohlcv_data = pattern.get("ohlc_data", [])
-        if not ohlcv_data:
-            # Fetch from Data Service - use pattern timestamp to get correct candle
+        if pattern:
+            # Use data from history
             symbol = pattern.get("symbol", "")
             timeframe = pattern.get("timeframe", "H1")
+            pattern_type = pattern.get("pattern_type", "unknown")
             pattern_timestamp = pattern.get("timestamp", "")
+        elif not all([symbol, timeframe, pattern_type, pattern_timestamp]):
+            # No pattern found and no direct data provided
+            raise HTTPException(
+                status_code=404,
+                detail=f"Pattern {request.pattern_id} not found in history. "
+                       "Provide pattern_type, symbol, timeframe, and pattern_timestamp for direct validation."
+            )
 
+        # Get OHLCV data
+        ohlcv_data = pattern.get("ohlc_data", []) if pattern else []
+        if not ohlcv_data:
+            # Fetch from Data Service - use pattern timestamp to get correct candle
             ohlcv_data = await fetch_ohlcv_data(
                 symbol,
                 timeframe,
@@ -202,9 +224,9 @@ async def validate_pattern(request: ValidationRequest):
         # Validate with Claude
         result = await claude_validator_service.validate_pattern(
             pattern_id=request.pattern_id,
-            pattern_type=pattern.get("pattern_type", "unknown"),
-            symbol=pattern.get("symbol", ""),
-            timeframe=pattern.get("timeframe", ""),
+            pattern_type=pattern_type,
+            symbol=symbol,
+            timeframe=timeframe,
             ohlcv_data=ohlcv_data,
             force=request.force
         )
