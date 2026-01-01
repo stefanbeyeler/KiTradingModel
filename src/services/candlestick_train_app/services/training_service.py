@@ -128,14 +128,27 @@ class TrainingService:
 
     # Pattern type mapping (must match inference service)
     PATTERN_TYPES = [
+        # Single candle patterns
         "hammer", "inverted_hammer", "shooting_star", "hanging_man",
         "doji", "dragonfly_doji", "gravestone_doji",
+        "spinning_top",
+        "bullish_belt_hold", "bearish_belt_hold",
+        # Two candle patterns
         "bullish_engulfing", "bearish_engulfing",
-        "morning_star", "evening_star",
         "piercing_line", "dark_cloud_cover",
+        "bullish_harami", "bearish_harami", "harami_cross",
+        "bullish_counterattack", "bearish_counterattack",
+        # Three candle patterns
+        "morning_star", "evening_star",
         "three_white_soldiers", "three_black_crows",
         "rising_three_methods", "falling_three_methods",
-        "spinning_top", "bullish_harami", "bearish_harami", "harami_cross",
+        "three_inside_up", "three_inside_down",
+        "bullish_abandoned_baby", "bearish_abandoned_baby",
+        "tower_bottom", "tower_top",
+        "advance_block",
+        # Island reversal patterns (multi-candle)
+        "bearish_island", "bullish_island",
+        # No pattern
         "no_pattern"
     ]
 

@@ -298,12 +298,25 @@ class RuleOptimizerService:
     ):
         """Collect pattern samples from market data."""
         all_pattern_types = [
+            # Single candle patterns
             "doji", "dragonfly_doji", "gravestone_doji",
             "hammer", "inverted_hammer", "shooting_star", "hanging_man",
-            "spinning_top", "bullish_engulfing", "bearish_engulfing",
+            "spinning_top",
+            "bullish_belt_hold", "bearish_belt_hold",
+            # Two candle patterns
+            "bullish_engulfing", "bearish_engulfing",
             "bullish_harami", "bearish_harami", "harami_cross",
-            "morning_star", "evening_star", "piercing_line", "dark_cloud_cover",
-            "three_white_soldiers", "three_black_crows"
+            "piercing_line", "dark_cloud_cover",
+            "bullish_counterattack", "bearish_counterattack",
+            # Three candle patterns
+            "morning_star", "evening_star",
+            "three_white_soldiers", "three_black_crows",
+            "three_inside_up", "three_inside_down",
+            "bullish_abandoned_baby", "bearish_abandoned_baby",
+            "tower_bottom", "tower_top",
+            "advance_block",
+            # Island reversal patterns (multi-candle)
+            "bearish_island", "bullish_island",
         ]
 
         target_patterns = pattern_types or all_pattern_types
