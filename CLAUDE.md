@@ -289,6 +289,55 @@ In allen HTML-Dateien und UI-Texten sind deutsche Umlaute korrekt zu verwenden:
 - `Filter zurücksetzen` (nicht `Filter zurucksetzen`)
 - `Datenquellen-Übersicht` (nicht `Datenquellen-Ubersicht`)
 
+## Candlestick Pattern Charts (VERBINDLICH)
+
+### Chart-Kontext-Regel
+
+Bei der Darstellung von erkannten Candlestick-Patterns muss IMMER ein konsistenter Kontext angezeigt werden:
+
+- **5 Kerzen VOR dem Pattern** (Kontext für Trend-Erkennung)
+- **Das Pattern selbst** (1-5 Kerzen je nach Typ)
+- **5 Kerzen NACH dem Pattern** (Bestätigung/Entwicklung)
+
+### Implementierung
+
+```javascript
+// Pattern-Timestamp zeigt auf die LETZTE Kerze des Patterns
+const patternStartIdx = patternIdx - (patternCandleCount - 1);
+const candlesBefore = 5;
+const candlesAfter = 5;
+const startIdx = Math.max(0, patternStartIdx - candlesBefore);
+const endIdx = Math.min(allCandles.length, patternIdx + candlesAfter + 1);
+```
+
+### Betroffene Funktionen
+
+| Funktion | Datei | Beschreibung |
+|----------|-------|--------------|
+| `showPatternModal()` | config-candlestick.html | Modal für Pattern-Details |
+| `fetchOhlcForRevalidation()` | config-candlestick.html | Daten für Revalidierungs-Charts |
+| `loadRevalDetailChart()` | config-candlestick.html | Detail-Chart in Revalidierung |
+| `loadRevalidationItemChart()` | config-candlestick.html | Item-Charts in Revalidierungs-Liste |
+
+### Multi-Kerzen-Patterns
+
+Für Patterns mit mehreren Kerzen muss `getPatternCandleCount()` verwendet werden:
+
+| Pattern-Typ | Kerzenanzahl |
+|-------------|-------------|
+| Hammer, Doji, etc. | 1 |
+| Engulfing, Harami, etc. | 2 |
+| Morning/Evening Star, Three Inside, etc. | 3 |
+| Rising/Falling Three Methods, Tower | 5 |
+
+### Beispiel
+
+Ein **Three Inside Down** Pattern (3 Kerzen) wird angezeigt als:
+- 5 Kontext-Kerzen (Trend vor dem Pattern)
+- 3 Pattern-Kerzen (hervorgehoben)
+- 5 Kontext-Kerzen (Entwicklung nach dem Pattern)
+- **Gesamt: 13 Kerzen im Chart**
+
 ## Microservices Ports
 
 ### Inference Services (High Priority)

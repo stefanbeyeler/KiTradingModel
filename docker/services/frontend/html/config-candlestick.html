@@ -6978,7 +6978,8 @@
             container.innerHTML = '<div class="loading"><span class="spinner"></span> Lade Chart...</div>';
 
             try {
-                const ohlcData = await fetchOhlcForRevalidation(item.symbol, item.timeframe, item.pattern_timestamp);
+                const patternCandleCount = getPatternCandleCount(item.original_pattern);
+                const ohlcData = await fetchOhlcForRevalidation(item.symbol, item.timeframe, item.pattern_timestamp, patternCandleCount);
 
                 if (!ohlcData || ohlcData.length === 0) {
                     container.innerHTML = '<div style="color: #888; text-align: center; padding: 2rem;">Keine Chart-Daten verfügbar</div>';
@@ -7171,9 +7172,10 @@
             ctx.fillText('Lade Chart...', canvas.offsetWidth / 2, canvas.offsetHeight / 2);
 
             try {
-                // Always fetch fresh data from API for better context (15 candles before, 14 after)
+                // Always fetch fresh data from API for better context (5 candles before pattern, 5 after)
                 // The cached ohlc_data in item often only contains the pattern candles without context
-                let ohlcData = await fetchOhlcForRevalidation(item.symbol, item.timeframe, item.pattern_timestamp);
+                const patternCandleCount = getPatternCandleCount(item.original_pattern);
+                let ohlcData = await fetchOhlcForRevalidation(item.symbol, item.timeframe, item.pattern_timestamp, patternCandleCount);
 
                 // Fallback to cached data only if API fails
                 if (!ohlcData || ohlcData.length === 0) {
@@ -7196,7 +7198,7 @@
 
                 // Find pattern position and render chart
                 const direction = getPatternDirection(item.original_pattern);
-                const patternCandleCount = getPatternCandleCount(item.original_pattern);
+                // patternCandleCount already defined above for fetchOhlcForRevalidation
 
                 // Save _patternIdx before mapping (map creates new array without custom properties)
                 const patternIdx = ohlcData._patternIdx;
@@ -7260,7 +7262,8 @@
         }
 
         // Fetch OHLC data for revalidation chart - centered around pattern timestamp
-        async function fetchOhlcForRevalidation(symbol, timeframe, patternTimestamp) {
+        // patternCandleCount: Number of candles in the pattern (1 for single-candle, 3 for morning star, etc.)
+        async function fetchOhlcForRevalidation(symbol, timeframe, patternTimestamp, patternCandleCount = 1) {
             try {
                 // Convert timeframe to TwelveData format
                 const intervalMap = {
@@ -7329,15 +7332,19 @@
                     return allCandles.slice(-30);
                 }
 
-                // Extract window centered around pattern (5 before, pattern, 5 after)
+                // Extract window: 5 candles BEFORE the pattern start, pattern candles, 5 candles AFTER
+                // patternIdx points to the LAST candle of the pattern
+                // Pattern starts at: patternIdx - (patternCandleCount - 1)
+                const patternStartIdx = patternIdx - (patternCandleCount - 1);
                 const candlesBefore = 5;
                 const candlesAfter = 5;
-                const startIdx = Math.max(0, patternIdx - candlesBefore);
+                const startIdx = Math.max(0, patternStartIdx - candlesBefore);
                 const endIdx = Math.min(allCandles.length, patternIdx + candlesAfter + 1);
 
                 const windowCandles = allCandles.slice(startIdx, endIdx);
 
                 // Recalculate pattern position within the window for highlighting
+                // _patternIdx should point to the LAST candle of the pattern in the window
                 windowCandles._patternIdx = patternIdx - startIdx;
 
                 return windowCandles;
