@@ -3400,6 +3400,17 @@
                     </div>
                 </div>
 
+                <!-- Claude Vision Analysis -->
+                <div class="reval-detail-claude" style="margin-top: 1rem;">
+                    <h4>🤖 Claude Vision Analyse</h4>
+                    <div id="revalClaudeVisionResult" style="display: none; margin-bottom: 0.75rem; padding: 0.75rem; border-radius: 8px;"></div>
+                    <button class="btn btn-secondary" id="revalBtnClaudeVision" onclick="validateRevalWithClaudeVision()"
+                            style="width: 100%; margin-bottom: 0.5rem;"
+                            title="Pattern mit Claude Vision analysieren">
+                        🤖 Mit Claude Vision prüfen
+                    </button>
+                </div>
+
                 <!-- Actions -->
                 <div class="reval-detail-actions">
                     <button class="btn btn-success" onclick="submitRevalFeedback('correct')" id="revalBtnCorrect">
@@ -6931,6 +6942,13 @@
             const historyContainer = document.getElementById('revalDetailFeedbackHistory');
             historyContainer.innerHTML = renderRevalDetailFeedbackHistory(item);
 
+            // Reset Claude Vision result
+            const claudeResultDiv = document.getElementById('revalClaudeVisionResult');
+            if (claudeResultDiv) {
+                claudeResultDiv.style.display = 'none';
+                claudeResultDiv.innerHTML = '';
+            }
+
             // Load chart
             await loadRevalDetailChart(item);
 
@@ -7092,6 +7110,149 @@
             } catch (error) {
                 console.error(`Failed to load reference chart for ${patternType}:`, error);
                 container.innerHTML = `<div style="text-align: center; color: #888; padding: 1rem;">${formatPatternType(patternType)}</div>`;
+            }
+        }
+
+        // Validate revalidation item with Claude Vision API
+        async function validateRevalWithClaudeVision() {
+            const item = filteredRevalidationItems[currentRevalDetailIndex];
+            if (!item) {
+                showToast('Kein Pattern ausgewählt.', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('revalBtnClaudeVision');
+            const resultDiv = document.getElementById('revalClaudeVisionResult');
+            const originalText = btn.innerHTML;
+
+            try {
+                // Show loading state
+                btn.disabled = true;
+                btn.innerHTML = '⏳ Analysiere...';
+                resultDiv.style.display = 'none';
+
+                // Build pattern ID
+                const patternId = item.pattern_id || item.id ||
+                    `${item.symbol}_${item.pattern_timestamp}_${item.original_pattern}`;
+
+                // Call Claude Vision API
+                const response = await fetch(`${CANDLESTICK_API}/claude/validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pattern_id: patternId,
+                        force: true  // Always get fresh validation
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const validation = data.validation || {};
+
+                // Display result
+                displayRevalClaudeVisionResult(validation, item);
+
+            } catch (error) {
+                console.error('Claude Vision validation error:', error);
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = 'rgba(244, 67, 54, 0.15)';
+                resultDiv.style.border = '1px solid rgba(244, 67, 54, 0.3)';
+                resultDiv.innerHTML = `
+                    <div style="color: #f44336; font-weight: 600; margin-bottom: 0.25rem;">
+                        ❌ Claude Vision Fehler
+                    </div>
+                    <div style="color: #ccc; font-size: 0.85rem;">
+                        ${error.message || 'Unbekannter Fehler'}
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // Display Claude Vision validation result for revalidation
+        function displayRevalClaudeVisionResult(validation, item) {
+            const resultDiv = document.getElementById('revalClaudeVisionResult');
+            const agrees = validation.claude_agrees;
+            const confidence = validation.claude_confidence || 0;
+            const reasoning = validation.claude_reasoning || 'Keine Begründung verfügbar';
+            const suggestedPattern = validation.claude_pattern_type;
+
+            resultDiv.style.display = 'block';
+
+            // For revalidation, we want to know if Claude agrees with the CORRECTED pattern
+            // or if it confirms that the ORIGINAL pattern was indeed wrong
+            const isRejected = item.feedback_type === 'rejected';
+            const correctedPattern = item.corrected_pattern;
+
+            if (agrees) {
+                // Claude agrees the original pattern was correct
+                resultDiv.style.background = 'rgba(255, 152, 0, 0.15)';
+                resultDiv.style.border = '1px solid rgba(255, 152, 0, 0.3)';
+                resultDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="color: #ffb74d; font-weight: 600;">⚠ Claude bestätigt Original-Pattern</span>
+                        <span style="background: rgba(255, 152, 0, 0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                            ${Math.round(confidence * 100)}% Konfidenz
+                        </span>
+                    </div>
+                    <div style="color: #aaa; font-size: 0.85rem; line-height: 1.4;">
+                        ${reasoning}
+                    </div>
+                    <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); color: #888; font-size: 0.8rem;">
+                        ${isRejected
+                            ? 'Die Ablehnung könnte falsch gewesen sein - Pattern war möglicherweise korrekt.'
+                            : 'Die Korrektur könnte überflüssig gewesen sein.'
+                        }
+                    </div>
+                `;
+            } else {
+                // Claude doesn't agree - this confirms the correction was right
+                let suggestionHtml = '';
+                if (suggestedPattern && suggestedPattern !== 'no_pattern' && suggestedPattern !== 'none') {
+                    const matchesCorrected = correctedPattern && suggestedPattern.toLowerCase() === correctedPattern.toLowerCase();
+                    if (matchesCorrected) {
+                        suggestionHtml = `
+                            <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <span style="color: #81c784;">✓ Claude bestätigt Korrektur zu "${formatPatternType(suggestedPattern)}"</span>
+                            </div>
+                        `;
+                    } else {
+                        suggestionHtml = `
+                            <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <span style="color: #888;">Claude Vorschlag:</span>
+                                <span style="color: #64c8ff; font-weight: 500;">${formatPatternType(suggestedPattern)}</span>
+                                ${correctedPattern ? `<span style="color: #888; margin-left: 0.5rem;">(statt ${formatPatternType(correctedPattern)})</span>` : ''}
+                            </div>
+                        `;
+                    }
+                } else if (isRejected) {
+                    suggestionHtml = `
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <span style="color: #81c784;">✓ Claude bestätigt: Kein gültiges Pattern</span>
+                        </div>
+                    `;
+                }
+
+                resultDiv.style.background = 'rgba(76, 175, 80, 0.15)';
+                resultDiv.style.border = '1px solid rgba(76, 175, 80, 0.3)';
+                resultDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="color: #81c784; font-weight: 600;">✓ Claude bestätigt die Korrektur</span>
+                        <span style="background: rgba(76, 175, 80, 0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                            ${Math.round(confidence * 100)}% Konfidenz
+                        </span>
+                    </div>
+                    <div style="color: #aaa; font-size: 0.85rem; line-height: 1.4;">
+                        ${reasoning}
+                    </div>
+                    ${suggestionHtml}
+                `;
             }
         }
 
