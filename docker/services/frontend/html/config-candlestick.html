@@ -2571,6 +2571,63 @@
 
         </div><!-- End Tab: Detection & History -->
 
+        <!-- Optimization Summary Modal -->
+        <div class="modal-overlay" id="optimizationSummaryModal" onclick="closeOptimizationSummary(event)">
+            <div class="modal" onclick="event.stopPropagation()" style="max-width: 700px;">
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span>📊 Optimierung abgeschlossen</span>
+                    </div>
+                    <button class="modal-close" onclick="closeOptimizationSummary()">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <!-- Summary Stats -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: rgba(100, 200, 255, 0.1); padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #64c8ff;" id="summaryCollected">0</div>
+                            <div style="font-size: 0.8rem; color: #888;">Patterns gesammelt</div>
+                        </div>
+                        <div style="background: rgba(76, 175, 80, 0.1); padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #4caf50;" id="summaryValidated">0</div>
+                            <div style="font-size: 0.8rem; color: #888;">Validiert</div>
+                        </div>
+                        <div style="background: rgba(255, 152, 0, 0.1); padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #ff9800;" id="summaryRecommendations">0</div>
+                            <div style="font-size: 0.8rem; color: #888;">Empfehlungen</div>
+                        </div>
+                        <div style="background: rgba(206, 147, 216, 0.1); padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #ce93d8;" id="summaryPatternTypes">0</div>
+                            <div style="font-size: 0.8rem; color: #888;">Pattern-Typen</div>
+                        </div>
+                    </div>
+
+                    <!-- Pattern Analysis Results -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 0.8rem 0; color: #64c8ff; font-size: 1rem;">Pattern-Analyse</h4>
+                        <div id="summaryPatternAnalysis" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.8rem;">
+                            <!-- Filled dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Recommendations Preview -->
+                    <div id="summaryRecommendationsSection" style="display: none;">
+                        <h4 style="margin: 0 0 0.8rem 0; color: #ff9800; font-size: 1rem;">Empfehlungen</h4>
+                        <div id="summaryRecommendationsList" style="max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.8rem;">
+                            <!-- Filled dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="closeOptimizationSummary()">Schliessen</button>
+                        <button class="btn btn-primary" id="summaryApplyBtn" onclick="applyAllRecommendationsFromSummary()" style="display: none;">
+                            ✓ Alle Empfehlungen anwenden
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Pattern Detail Modal -->
         <div class="modal-overlay" id="patternModal" onclick="closePatternModal(event)">
             <div class="modal" onclick="event.stopPropagation()" style="max-width: 800px;">
@@ -2888,7 +2945,7 @@
                     </div>
                     <div class="form-group">
                         <label>Timeframes</label>
-                        <input type="text" id="optimizerTimeframes" value="H1,H4,D1" placeholder="Komma-getrennt">
+                        <input type="text" id="optimizerTimeframes" value="M5,M15,H1,H4,D1" placeholder="Komma-getrennt">
                     </div>
                     <div class="form-group">
                         <label>Samples pro Pattern</label>
@@ -4921,6 +4978,116 @@
             currentModalPattern = null;
             pendingFeedback = null;  // Clear pending feedback
             showReasonSection(false);
+        }
+
+        // ==================== Optimization Summary Modal ====================
+
+        async function showOptimizationSummary(progressData) {
+            try {
+                // Fetch detailed recommendations
+                const recRes = await fetch(`${CANDLESTICK_API}/rule-optimizer/recommendations`);
+                const recData = await recRes.json();
+
+                const recommendations = recData.recommendations || [];
+                const patternAnalyses = recData.pattern_analyses || {};
+
+                // Update summary stats
+                document.getElementById('summaryCollected').textContent = progressData.patterns_collected || 0;
+                document.getElementById('summaryValidated').textContent = progressData.patterns_validated || 0;
+                document.getElementById('summaryRecommendations').textContent = recommendations.length;
+                document.getElementById('summaryPatternTypes').textContent = Object.keys(patternAnalyses).length;
+
+                // Build pattern analysis table
+                let analysisHtml = '<table style="width: 100%; font-size: 0.85rem; border-collapse: collapse;">';
+                analysisHtml += '<thead><tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">';
+                analysisHtml += '<th style="text-align: left; padding: 0.4rem;">Pattern</th>';
+                analysisHtml += '<th style="text-align: center; padding: 0.4rem;">Samples</th>';
+                analysisHtml += '<th style="text-align: center; padding: 0.4rem;">Valide</th>';
+                analysisHtml += '<th style="text-align: center; padding: 0.4rem;">Invalide</th>';
+                analysisHtml += '<th style="text-align: center; padding: 0.4rem;">Rate</th>';
+                analysisHtml += '</tr></thead><tbody>';
+
+                for (const [patternType, analysis] of Object.entries(patternAnalyses)) {
+                    const validityRate = analysis.validity_rate || 0;
+                    const rateColor = validityRate >= 0.7 ? '#4caf50' : validityRate >= 0.4 ? '#ff9800' : '#f44336';
+
+                    analysisHtml += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 0.4rem; color: #64c8ff;">${patternType.replace(/_/g, ' ')}</td>
+                        <td style="text-align: center; padding: 0.4rem;">${analysis.total_samples || 0}</td>
+                        <td style="text-align: center; padding: 0.4rem; color: #4caf50;">${analysis.valid_count || 0}</td>
+                        <td style="text-align: center; padding: 0.4rem; color: #f44336;">${analysis.invalid_count || 0}</td>
+                        <td style="text-align: center; padding: 0.4rem; color: ${rateColor};">${(validityRate * 100).toFixed(0)}%</td>
+                    </tr>`;
+                }
+
+                analysisHtml += '</tbody></table>';
+
+                if (Object.keys(patternAnalyses).length === 0) {
+                    analysisHtml = '<div style="color: #888; text-align: center; padding: 1rem;">Keine Pattern-Analyse verfügbar</div>';
+                }
+
+                document.getElementById('summaryPatternAnalysis').innerHTML = analysisHtml;
+
+                // Build recommendations list
+                const recSection = document.getElementById('summaryRecommendationsSection');
+                const recList = document.getElementById('summaryRecommendationsList');
+                const applyBtn = document.getElementById('summaryApplyBtn');
+
+                if (recommendations.length > 0) {
+                    recSection.style.display = 'block';
+                    applyBtn.style.display = 'inline-block';
+
+                    let recHtml = '';
+                    recommendations.forEach(rec => {
+                        const changePercent = rec.current_value !== 0
+                            ? ((rec.recommended_value - rec.current_value) / rec.current_value * 100).toFixed(1)
+                            : 'N/A';
+                        const changeColor = parseFloat(changePercent) > 0 ? '#4caf50' : '#f44336';
+
+                        recHtml += `<div style="display: flex; align-items: center; gap: 0.8rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <span style="color: #64c8ff; min-width: 120px;">${rec.pattern_type}</span>
+                            <span style="color: #ce93d8;">${rec.parameter}</span>
+                            <span style="color: #888;">→</span>
+                            <span>${rec.current_value}</span>
+                            <span style="color: #888;">→</span>
+                            <span style="color: ${changeColor}; font-weight: bold;">${rec.recommended_value}</span>
+                            <span style="color: ${changeColor}; font-size: 0.8rem;">(${changePercent}%)</span>
+                        </div>`;
+                    });
+
+                    recList.innerHTML = recHtml;
+                } else {
+                    recSection.style.display = 'none';
+                    applyBtn.style.display = 'none';
+                    recList.innerHTML = '';
+                }
+
+                // Show modal
+                document.getElementById('optimizationSummaryModal').classList.add('show');
+                document.body.style.overflow = 'hidden';
+
+            } catch (error) {
+                console.error('Failed to show optimization summary:', error);
+                showToast('Optimierung abgeschlossen!', 'success');
+            }
+        }
+
+        function closeOptimizationSummary(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('optimizationSummaryModal').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        async function applyAllRecommendationsFromSummary() {
+            try {
+                // Apply recommendations using existing function
+                await applySelectedRecommendations();
+                closeOptimizationSummary();
+                showToast('Alle Empfehlungen angewendet!', 'success');
+            } catch (error) {
+                console.error('Failed to apply recommendations:', error);
+                showToast('Fehler beim Anwenden der Empfehlungen', 'error');
+            }
         }
 
         // Pending feedback state for two-step submission
@@ -7393,11 +7560,12 @@
                     document.getElementById('btnStartOptimization').disabled = false;
                     document.getElementById('btnStartOptimization').textContent = '▶ Optimierung starten';
 
-                    showToast('Optimierung abgeschlossen!', 'success');
-
-                    // Load recommendations
+                    // Load recommendations first
                     await loadRecommendations();
                     await loadCurrentParams();
+
+                    // Show summary modal with results
+                    await showOptimizationSummary(data);
 
                 } else if (data.phase === 'error') {
                     clearInterval(optimizationPollInterval);
