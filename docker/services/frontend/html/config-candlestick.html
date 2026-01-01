@@ -8810,7 +8810,7 @@
                 // Also reset Training Service
                 let trainResult = null;
                 try {
-                    const trainResponse = await fetch(`${CANDLESTICK_TRAIN_API}/train/factory-reset`, {
+                    const trainResponse = await fetch(`${CANDLESTICK_TRAIN_API}/factory-reset`, {
                         method: 'POST'
                     });
                     if (trainResponse.ok) {
