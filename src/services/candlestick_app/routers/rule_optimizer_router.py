@@ -200,6 +200,29 @@ async def reset_to_defaults():
     return result
 
 
+@router.post("/factory-reset", summary="Reset to factory defaults")
+async def factory_reset():
+    """
+    Reset everything to factory defaults.
+
+    This will DELETE all data files and reset to a clean state:
+    - rule_config.json (reset to defaults)
+    - pattern_feedback.json (deleted)
+    - pattern_history.json (deleted)
+    - claude_validations.json (deleted)
+    - pending_validations.json (deleted)
+    - backups/ directory (deleted)
+
+    WARNING: This action is irreversible! All feedback, history, and validations will be lost.
+    """
+    result = rule_config_service.factory_reset()
+
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Factory reset failed"))
+
+    return result
+
+
 @router.get("/history", summary="Get parameter adjustment history")
 async def get_adjustment_history(limit: int = Query(default=50, ge=1, le=200)):
     """Get history of parameter adjustments."""

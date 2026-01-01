@@ -3092,6 +3092,19 @@
                     <p style="color: #888;">Lade Backups...</p>
                 </div>
             </div>
+
+            <!-- Factory Reset -->
+            <div class="card" style="border: 1px solid rgba(244, 67, 54, 0.3);">
+                <div class="card-header">
+                    <h2 class="card-title" style="color: #e57373;">⚠️ Factory Reset</h2>
+                    <button class="btn btn-danger" onclick="factoryReset()">🗑️ Alles zurücksetzen</button>
+                </div>
+                <p style="color: #888;">
+                    <strong style="color: #e57373;">Achtung:</strong> Dies löscht ALLE Daten unwiderruflich:
+                    Regelwerk-Einstellungen, Feedbacks, Pattern-History, Claude-Validierungen und Backups.
+                    Der Service wird auf den Auslieferungszustand zurückgesetzt.
+                </p>
+            </div>
         </div><!-- End Tab: Regelwerk Optimierung -->
 
         <!-- Tab: Claude QA -->
@@ -8767,6 +8780,48 @@
 
             } catch (error) {
                 console.error('Failed to import config:', error);
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        async function factoryReset() {
+            // Double confirmation for destructive action
+            if (!confirm('⚠️ WARNUNG: Factory Reset\n\nDies löscht ALLE Daten unwiderruflich:\n- Regelwerk-Einstellungen\n- Alle Feedbacks\n- Pattern-History\n- Claude-Validierungen\n- Alle Backups\n\nFortfahren?')) {
+                return;
+            }
+
+            if (!confirm('🗑️ LETZTE WARNUNG!\n\nAlle Daten werden UNWIDERRUFLICH gelöscht.\n\nWirklich fortfahren?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/rule-optimizer/factory-reset`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Factory Reset fehlgeschlagen');
+                }
+
+                const result = await response.json();
+
+                // Show result
+                let message = 'Factory Reset abgeschlossen.\n\nGelöschte Dateien:\n';
+                message += result.deleted.map(f => `• ${f}`).join('\n');
+
+                alert(message);
+                showToast('Factory Reset erfolgreich', 'success');
+
+                // Reload all UI components
+                await loadBackups();
+                await loadCurrentParams();
+                await loadParamHistory();
+                await loadStatistics();
+                await updateRevalidationBadge();
+
+            } catch (error) {
+                console.error('Failed to factory reset:', error);
                 showToast('Fehler: ' + error.message, 'error');
             }
         }

@@ -375,6 +375,91 @@ class RuleConfigService:
         logger.info("All rule parameters reset to defaults")
         return True
 
+    def factory_reset(self) -> Dict[str, Any]:
+        """
+        Reset everything to factory defaults.
+
+        Deletes all data files and resets to a clean state:
+        - rule_config.json (reset to defaults)
+        - pattern_feedback.json (deleted)
+        - pattern_history.json (deleted)
+        - claude_validations.json (deleted)
+        - pending_validations.json (deleted)
+        - backups/ directory (deleted)
+
+        Returns:
+            Result of factory reset operation
+        """
+        import shutil
+
+        data_dir = self.config_path.parent
+        deleted_files = []
+        errors = []
+
+        # Files to delete
+        files_to_delete = [
+            "pattern_feedback.json",
+            "pattern_history.json",
+            "claude_validations.json",
+            "pending_validations.json",
+        ]
+
+        # Delete individual files
+        for filename in files_to_delete:
+            file_path = data_dir / filename
+            if file_path.exists():
+                try:
+                    file_path.unlink()
+                    deleted_files.append(filename)
+                    logger.info(f"Factory reset: Deleted {filename}")
+                except Exception as e:
+                    errors.append(f"{filename}: {str(e)}")
+                    logger.error(f"Factory reset: Failed to delete {filename}: {e}")
+
+        # Delete backups directory
+        backup_dir = data_dir / "backups"
+        if backup_dir.exists():
+            try:
+                shutil.rmtree(backup_dir)
+                deleted_files.append("backups/")
+                logger.info("Factory reset: Deleted backups directory")
+            except Exception as e:
+                errors.append(f"backups/: {str(e)}")
+                logger.error(f"Factory reset: Failed to delete backups: {e}")
+
+        # Reset rule_config.json to defaults
+        try:
+            self.params = {}  # Will be populated from defaults
+            self.adjustment_history = [{
+                "timestamp": datetime.utcnow().isoformat(),
+                "pattern": "all",
+                "parameter": "all",
+                "old_value": None,
+                "new_value": None,
+                "reason": "factory_reset",
+                "feedback_count": 0
+            }]
+            self._save_config()
+            deleted_files.append("rule_config.json (reset)")
+            logger.info("Factory reset: Reset rule_config.json to defaults")
+        except Exception as e:
+            errors.append(f"rule_config.json: {str(e)}")
+            logger.error(f"Factory reset: Failed to reset rule_config.json: {e}")
+
+        if errors:
+            return {
+                "success": False,
+                "deleted": deleted_files,
+                "errors": errors,
+                "message": "Factory reset completed with errors"
+            }
+
+        return {
+            "success": True,
+            "deleted": deleted_files,
+            "message": "Factory reset completed successfully. All data has been cleared."
+        }
+
     def get_adjustment_history(self, limit: int = 50) -> List[Dict]:
         """Get recent parameter adjustment history, sorted newest first."""
         # Sort by timestamp descending (newest first)
