@@ -948,7 +948,8 @@ class CandlestickPatternService:
                 if trend == "downtrend":
                     confidence = 0.75
                     detected.append((PatternType.HAMMER, confidence, 1))
-                elif self._is_hanging_man(current, prev, avg_body):
+                elif trend == "uptrend" and self._is_hanging_man(current, prev, avg_body):
+                    # Hanging Man requires clear uptrend, not just non-downtrend
                     confidence = 0.65
                     detected.append((PatternType.HANGING_MAN, confidence, 1))
 
@@ -956,7 +957,8 @@ class CandlestickPatternService:
                 if trend == "downtrend":
                     confidence = 0.6
                     detected.append((PatternType.INVERTED_HAMMER, confidence, 1))
-                elif self._is_shooting_star(current, prev, avg_body):
+                elif trend == "uptrend" and self._is_shooting_star(current, prev, avg_body):
+                    # Shooting Star requires clear uptrend, not just non-downtrend
                     confidence = 0.7
                     detected.append((PatternType.SHOOTING_STAR, confidence, 1))
 
@@ -1098,13 +1100,15 @@ class CandlestickPatternService:
             if self._is_hammer(current, avg_body):
                 if trend == "downtrend":
                     detected.append((PatternType.HAMMER, 0.75, 1))
-                elif self._is_hanging_man(current, prev, avg_body):
+                elif trend == "uptrend" and self._is_hanging_man(current, prev, avg_body):
+                    # Hanging Man requires clear uptrend, not just non-downtrend
                     detected.append((PatternType.HANGING_MAN, 0.65, 1))
 
             if self._is_inverted_hammer(current, avg_body):
                 if trend == "downtrend":
                     detected.append((PatternType.INVERTED_HAMMER, 0.6, 1))
-                elif self._is_shooting_star(current, prev, avg_body):
+                elif trend == "uptrend" and self._is_shooting_star(current, prev, avg_body):
+                    # Shooting Star requires clear uptrend, not just non-downtrend
                     detected.append((PatternType.SHOOTING_STAR, 0.7, 1))
 
             if self._is_spinning_top(current, avg_body):
