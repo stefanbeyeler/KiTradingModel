@@ -5987,7 +5987,7 @@
                     close: c.close
                 }));
 
-                renderCandlestickChart(canvas, formattedCandles, highlightStartIdx, pattern.direction, pattern.pattern_type);
+                renderCandlestickChart(canvas, formattedCandles, highlightStartIdx, pattern.direction, pattern.pattern_type, pattern.timeframe);
 
             } catch (error) {
                 console.error(`Failed to load modal chart for ${pattern.symbol}:`, error);
@@ -6034,6 +6034,12 @@
         // Format candle timestamp for display
         function formatCandleTime(datetime, timeframe) {
             if (!datetime) return '';
+
+            // Handle reference chart labels like "Kerze 1", "Kerze 2", etc.
+            if (typeof datetime === 'string' && datetime.startsWith('Kerze ')) {
+                return datetime;
+            }
+
             const date = new Date(datetime);
             if (isNaN(date.getTime())) {
                 // Try parsing as "YYYY-MM-DD HH:mm:ss" format
@@ -6045,7 +6051,7 @@
 
                     // For daily timeframes, show date only
                     if (timeframe === 'D1' || timeframe === 'W1' || timeframe === 'MN') {
-                        return `${day}.${month}`;
+                        return `${day}.${month}.`;
                     }
                     return `${hour}:${minute}`;
                 }
@@ -6089,7 +6095,7 @@
             text_highlight: '#ffffff',     // Highlighted text
         };
 
-        function renderCandlestickChart(canvas, candles, highlightIndex, direction, patternType) {
+        function renderCandlestickChart(canvas, candles, highlightIndex, direction, patternType, timeframe = null) {
             const ctx = canvas.getContext('2d');
             const width = canvas.offsetWidth;
             const height = canvas.offsetHeight;
@@ -6141,14 +6147,17 @@
                 ctx.stroke();
             }
 
-            // Determine timeframe from datetime format (rough detection)
-            const firstCandle = candles[0];
-            let timeframe = 'H1';
-            if (firstCandle?.datetime) {
-                const dt = firstCandle.datetime;
-                // Check if it looks like daily data (no significant time variation)
-                if (dt.includes('00:00:00') || !dt.includes(':')) {
-                    timeframe = 'D1';
+            // Use provided timeframe or detect from datetime format
+            let effectiveTimeframe = timeframe;
+            if (!effectiveTimeframe) {
+                const firstCandle = candles[0];
+                effectiveTimeframe = 'H1';
+                if (firstCandle?.datetime) {
+                    const dt = firstCandle.datetime;
+                    // Check if it looks like daily data (no significant time variation)
+                    if (dt.includes('00:00:00') || !dt.includes(':')) {
+                        effectiveTimeframe = 'D1';
+                    }
                 }
             }
 
@@ -6206,7 +6215,7 @@
                 }
 
                 // Draw timestamp below candle with unified text colors
-                const timeLabel = formatCandleTime(candle.datetime, timeframe);
+                const timeLabel = formatCandleTime(candle.datetime, effectiveTimeframe);
                 ctx.fillStyle = isHighlighted ? CHART_COLORS.text_highlight : CHART_COLORS.text_secondary;
                 ctx.font = isHighlighted ? 'bold 9px sans-serif' : '8px sans-serif';
                 ctx.textAlign = 'center';
@@ -6931,7 +6940,7 @@
 
                 console.log(`Detail chart: ${formattedCandles.length} candles, patternIdx=${patternIdx}, highlightIdx=${highlightIdx}`);
 
-                renderCandlestickChart(canvas, formattedCandles, highlightIdx, direction, item.original_pattern);
+                renderCandlestickChart(canvas, formattedCandles, highlightIdx, direction, item.original_pattern, item.timeframe);
 
             } catch (error) {
                 console.error('Failed to load detail chart:', error);
@@ -7141,7 +7150,7 @@
                 }
 
                 // Render the chart
-                renderCandlestickChart(canvas, formattedCandles, highlightIdx, direction, item.original_pattern);
+                renderCandlestickChart(canvas, formattedCandles, highlightIdx, direction, item.original_pattern, item.timeframe);
 
             } catch (error) {
                 console.error(`Failed to load chart for ${item.id}:`, error);
