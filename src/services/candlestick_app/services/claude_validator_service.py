@@ -402,6 +402,64 @@ class ClaudeValidatorService:
         else:
             return "neutral"
 
+    def _calculate_candle_metrics(self, candle: Dict) -> Dict[str, float]:
+        """
+        Calculate precise metrics for a candle to provide to Claude.
+
+        Returns:
+            Dict with body_ratio, upper_shadow_ratio, lower_shadow_ratio, body_position
+        """
+        o = float(candle.get("open", candle.get("o", 0)))
+        h = float(candle.get("high", candle.get("h", 0)))
+        l = float(candle.get("low", candle.get("l", 0)))
+        c = float(candle.get("close", candle.get("c", 0)))
+
+        total_range = h - l
+        if total_range <= 0:
+            return {
+                "open": o, "high": h, "low": l, "close": c,
+                "total_range": 0, "body_size": 0,
+                "body_ratio": 0, "upper_shadow_ratio": 0, "lower_shadow_ratio": 0,
+                "body_position": "middle", "is_bullish": c >= o
+            }
+
+        body_size = abs(c - o)
+        body_ratio = body_size / total_range
+
+        body_top = max(o, c)
+        body_bottom = min(o, c)
+
+        upper_shadow = h - body_top
+        lower_shadow = body_bottom - l
+
+        upper_shadow_ratio = upper_shadow / total_range
+        lower_shadow_ratio = lower_shadow / total_range
+
+        # Body position: where is the body within the candle?
+        body_center = (body_top + body_bottom) / 2
+        candle_center = (h + l) / 2
+
+        if body_center > candle_center + total_range * 0.15:
+            body_position = "top"
+        elif body_center < candle_center - total_range * 0.15:
+            body_position = "bottom"
+        else:
+            body_position = "middle"
+
+        return {
+            "open": round(o, 6),
+            "high": round(h, 6),
+            "low": round(l, 6),
+            "close": round(c, 6),
+            "total_range": round(total_range, 6),
+            "body_size": round(body_size, 6),
+            "body_ratio": round(body_ratio * 100, 1),  # As percentage
+            "upper_shadow_ratio": round(upper_shadow_ratio * 100, 1),
+            "lower_shadow_ratio": round(lower_shadow_ratio * 100, 1),
+            "body_position": body_position,
+            "is_bullish": c >= o
+        }
+
     def _get_pattern_criteria(self, pattern_type: str) -> str:
         """Get specific criteria for each pattern type."""
         criteria = {
@@ -459,69 +517,130 @@ class ClaudeValidatorService:
         }
         return criteria.get(pattern_type.lower(), "")
 
-    def _build_validation_prompt(self, pattern_type: str, symbol: str, timeframe: str) -> str:
+    def _build_validation_prompt(
+        self,
+        pattern_type: str,
+        symbol: str,
+        timeframe: str,
+        candle_metrics: Optional[Dict] = None
+    ) -> str:
         """Build the prompt for Claude to validate a pattern."""
         specific_criteria = self._get_pattern_criteria(pattern_type)
 
-        return f"""You are an expert technical analyst specializing in candlestick pattern recognition.
-You must be EXTREMELY STRICT - reject patterns that don't clearly meet ALL criteria.
+        # Build metrics section if available
+        metrics_section = ""
+        validation_instruction = ""
+        if candle_metrics:
+            metrics_section = f"""
+**EXACT OHLC DATA OF THE PATTERN CANDLE (use these numbers, not visual estimation!):**
+- Open: {candle_metrics['open']}
+- High: {candle_metrics['high']}
+- Low: {candle_metrics['low']}
+- Close: {candle_metrics['close']}
+- Total Range (High-Low): {candle_metrics['total_range']}
+- Body Size: {candle_metrics['body_size']}
+- **Body Ratio: {candle_metrics['body_ratio']}%** (body / total range)
+- Upper Shadow Ratio: {candle_metrics['upper_shadow_ratio']}%
+- Lower Shadow Ratio: {candle_metrics['lower_shadow_ratio']}%
+- Body Position: {candle_metrics['body_position']}
+- Candle Direction: {"Bullish (green)" if candle_metrics['is_bullish'] else "Bearish (red)"}
+"""
+            # Add specific validation based on pattern type and actual metrics
+            body_ratio = candle_metrics['body_ratio']
+            upper_ratio = candle_metrics['upper_shadow_ratio']
+            lower_ratio = candle_metrics['lower_shadow_ratio']
 
-**HOW TO IDENTIFY THE PATTERN CANDLE:**
-The pattern candle is marked with:
-- A STRONG colored background highlight (orange/green/red shading)
-- WHITE DASHED vertical lines on both sides
-- A WHITE BORDER around the candle body
-- The candle is on the RIGHT side of the chart (last or near-last position)
+            if pattern_type.lower() == "doji":
+                if body_ratio > 5:
+                    validation_instruction = f"""
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Die Body-Ratio beträgt {body_ratio}%, was > 5% ist. Dies KANN KEIN Doji sein.
+Du MUSST agrees=false setzen."""
+                else:
+                    validation_instruction = f"""
+**Metrik-Prüfung BESTANDEN:** Body-Ratio {body_ratio}% ist < 5%, konsistent mit Doji."""
 
-Look for the candle with these markings - that is the ONLY candle you should evaluate.
+            elif pattern_type.lower() == "shooting_star":
+                if body_ratio > 35:
+                    validation_instruction = f"""
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Die Body-Ratio beträgt {body_ratio}%, was > 35% ist. Dies KANN KEIN Shooting Star sein.
+Du MUSST agrees=false setzen."""
+                elif upper_ratio < 2 * body_ratio:
+                    validation_instruction = f"""
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Oberer Schatten ({upper_ratio}%) ist nicht mindestens 2x der Körper ({body_ratio}%).
+Du MUSST agrees=false setzen."""
+                else:
+                    validation_instruction = f"""
+**Metrik-Prüfung BESTANDEN:** Body-Ratio {body_ratio}% < 35%, oberer Schatten {upper_ratio}%."""
+
+            elif pattern_type.lower() == "hammer":
+                if body_ratio > 35:
+                    validation_instruction = f"""
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Die Body-Ratio beträgt {body_ratio}%, was > 35% ist. Dies KANN KEIN Hammer sein.
+Du MUSST agrees=false setzen."""
+                elif lower_ratio < 2 * body_ratio:
+                    validation_instruction = f"""
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Unterer Schatten ({lower_ratio}%) ist nicht mindestens 2x der Körper ({body_ratio}%).
+Du MUSST agrees=false setzen."""
+                else:
+                    validation_instruction = f"""
+**Metrik-Prüfung BESTANDEN:** Body-Ratio {body_ratio}% < 35%, unterer Schatten {lower_ratio}%."""
+
+            elif pattern_type.lower() in ["hanging_man", "inverted_hammer"]:
+                if body_ratio > 35:
+                    validation_instruction = f"""
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Die Body-Ratio beträgt {body_ratio}%, was > 35% ist. Dies KANN KEIN {pattern_type.replace('_', ' ').title()} sein.
+Du MUSST agrees=false setzen."""
+
+        return f"""Du bist ein Experte für technische Analyse, spezialisiert auf Candlestick-Muster-Erkennung.
+Du musst EXTREM STRENG sein - lehne Muster ab, die nicht ALLE Kriterien klar erfüllen.
 
 **Symbol:** {symbol}
 **Timeframe:** {timeframe}
-**Claimed Pattern:** {pattern_type.replace('_', ' ').title()}
+**Behauptetes Muster:** {pattern_type.replace('_', ' ').title()}
+{metrics_section}
+{validation_instruction}
 {specific_criteria}
 
-**CRITICAL EVALUATION STEPS:**
-1. IDENTIFY the highlighted candle (white border, colored background, dashed lines)
-2. MEASURE the body size: body_ratio = body_height / (high - low)
-   - For Doji: body_ratio must be < 5% (0.05)
-   - For Hammer/Shooting Star: body_ratio must be < 35% (0.35)
-3. MEASURE shadow lengths relative to body
-4. CHECK body position (top/bottom of candle)
-5. REJECT if ANY criterion is not met
+**WIE DU DIE PATTERN-KERZE IM CHART IDENTIFIZIERST:**
+Die Pattern-Kerze ist markiert mit:
+- Einem STARKEN farbigen Hintergrund (orange/grün/rot)
+- WEISSEN GESTRICHELTEN vertikalen Linien auf beiden Seiten
+- Einem WEISSEN RAND um den Kerzenkörper
 
-**STRICT THRESHOLDS:**
-- Doji: Body < 5% of total range. If body is visible/substantial, it's NOT a Doji
-- Hammer/Shooting Star/Inverted Hammer: Body < 35% of range, relevant shadow > 2x body
-- Large red or green body = NOT a reversal single-candle pattern
+**KRITISCH: VERWENDE DIE EXAKTEN METRIKEN OBEN, KEINE VISUELLE SCHÄTZUNG!**
+Die bereitgestellten Metriken sind aus den tatsächlichen OHLC-Daten berechnet und 100% genau.
+Versuche NICHT, Verhältnisse visuell zu schätzen - verwende die exakten Zahlen.
 
-Please evaluate:
+**STRIKTE SCHWELLENWERTE (basierend auf echten Daten):**
+- Doji: Body-Ratio muss < 5% sein
+- Hammer/Shooting Star/Inverted Hammer/Hanging Man: Body-Ratio muss < 35% sein
+- Erforderliche Schatten müssen mindestens 2x die Körpergröße betragen
 
-1. **Pattern Validity**: Does this match a {pattern_type.replace('_', ' ').title()}?
-   - Estimate the body ratio visually
-   - A clearly visible body (>10% of range) is NOT a Doji
-   - A large body (>35% of range) is NOT a Hammer/Shooting Star
+**ANTWORTE BASIEREND AUF DEN DATEN:**
+Wenn die Metriken body_ratio > Schwellenwert zeigen, MUSST du ablehnen (agrees=false).
+Überschreibe die mathematische Realität NICHT mit visuellem Eindruck.
 
-2. **Visual Quality Score (0.0-1.0)**:
-   - 1.0 = Perfect textbook example
-   - 0.5 = Marginal, borderline
-   - 0.0 = Does NOT meet criteria
-
-3. **Market Context Score (0.0-1.0)**: Correct trend context?
-
-Respond in this exact JSON format:
+Antworte in diesem exakten JSON-Format:
 ```json
 {{
     "agrees": true/false,
     "confidence": 0.0-1.0,
-    "detected_pattern": "pattern_name_or_null",
+    "detected_pattern": "pattern_name_oder_null",
     "visual_quality": 0.0-1.0,
     "market_context": 0.0-1.0,
-    "reasoning": "Brief explanation including your body ratio estimate"
+    "reasoning": "Kurze Begründung auf DEUTSCH mit Bezug auf die tatsächlichen Metriken"
 }}
 ```
 
-BE VERY STRICT. When in doubt, REJECT (agrees=false).
-A regular candle with normal body is NOT a Doji. A candle with large body is NOT a Shooting Star."""
+Wenn oben AUTOMATIC REJECTION angegeben ist, MUSST du agrees=false setzen.
+SEI SEHR STRENG. Mathematische Kriterien überschreiben den visuellen Eindruck.
+WICHTIG: Die "reasoning" Begründung MUSS auf Deutsch sein!"""
 
     async def _rate_limit(self):
         """Apply rate limiting between API requests."""
@@ -594,8 +713,21 @@ A regular candle with normal body is NOT a Doji. A candle with large body is NOT
             if not chart_base64:
                 raise ValueError("Failed to render chart image")
 
-            # Build prompt
-            prompt = self._build_validation_prompt(pattern_type, symbol, timeframe)
+            # Calculate metrics for the pattern candle (last candle in data)
+            candle_metrics = None
+            if ohlcv_data:
+                # Get the pattern candle (last one)
+                pattern_candle = ohlcv_data[-1]
+                candle_metrics = self._calculate_candle_metrics(pattern_candle)
+                logger.info(
+                    f"Pattern candle metrics for {pattern_type}: "
+                    f"body_ratio={candle_metrics['body_ratio']}%, "
+                    f"upper_shadow={candle_metrics['upper_shadow_ratio']}%, "
+                    f"lower_shadow={candle_metrics['lower_shadow_ratio']}%"
+                )
+
+            # Build prompt with metrics
+            prompt = self._build_validation_prompt(pattern_type, symbol, timeframe, candle_metrics)
 
             # Apply rate limiting
             await self._rate_limit()
