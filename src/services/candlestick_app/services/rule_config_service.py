@@ -321,8 +321,14 @@ class RuleConfigService:
         return True
 
     def get_adjustment_history(self, limit: int = 50) -> List[Dict]:
-        """Get recent parameter adjustment history."""
-        return list(reversed(self.adjustment_history[-limit:]))
+        """Get recent parameter adjustment history, sorted newest first."""
+        # Sort by timestamp descending (newest first)
+        sorted_history = sorted(
+            self.adjustment_history,
+            key=lambda x: x.get("timestamp", ""),
+            reverse=True
+        )
+        return sorted_history[:limit]
 
     def generate_recommendations(
         self,
