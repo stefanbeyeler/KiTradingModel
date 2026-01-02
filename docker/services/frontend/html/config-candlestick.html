@@ -3528,17 +3528,17 @@
                     <button class="btn btn-danger" onclick="submitRevalFeedback('still_wrong')" id="revalBtnStillWrong">
                         ✗ Weiterhin falsch
                     </button>
-                    <button class="btn btn-secondary" id="revalBtnClaudeVision" onclick="validateRevalWithClaudeVision()"
-                            title="Mit Claude Vision prüfen">
-                        🤖 Claude Vision
-                    </button>
-                </div>
-                <!-- Edit Correction Button -->
-                <div style="margin-top: 0.75rem; text-align: right;">
-                    <button class="btn btn-sm" onclick="openEditCorrectionModal()"
+                    <button class="btn btn-sm" onclick="openEditCorrectionModal()" id="revalBtnEditCorrection"
                             style="background: rgba(156, 39, 176, 0.2); color: #ce93d8; border: 1px solid rgba(156, 39, 176, 0.4);"
                             title="Falsche Korrektur nachträglich ändern">
                         ✏️ Korrektur ändern
+                    </button>
+                </div>
+                <!-- Claude Vision Button (separate row) -->
+                <div style="margin-top: 0.75rem; text-align: right;">
+                    <button class="btn btn-secondary" id="revalBtnClaudeVision" onclick="validateRevalWithClaudeVision()"
+                            title="Mit Claude Vision prüfen">
+                        🤖 Claude Vision
                     </button>
                 </div>
             </div>
@@ -10292,11 +10292,20 @@
         // ==================== Edit Correction Functions ====================
 
         function openEditCorrectionModal() {
+            console.log('[EditCorrection] Opening modal, index:', currentRevalDetailIndex);
+            console.log('[EditCorrection] filteredRevalidationItems length:', filteredRevalidationItems.length);
+
             const item = filteredRevalidationItems[currentRevalDetailIndex];
+            console.log('[EditCorrection] Item:', item);
+
             if (!item) {
                 showToast('Kein Pattern ausgewählt', 'error');
                 return;
             }
+
+            console.log('[EditCorrection] Item ID:', item.id);
+            console.log('[EditCorrection] Original:', item.original_pattern);
+            console.log('[EditCorrection] Corrected:', item.corrected_pattern);
 
             // Show current values
             document.getElementById('editCorrOriginal').textContent = formatPatternType(item.original_pattern);
@@ -10316,6 +10325,7 @@
         }
 
         async function submitEditCorrection() {
+            console.log('[EditCorrection] Submitting, index:', currentRevalDetailIndex);
             const item = filteredRevalidationItems[currentRevalDetailIndex];
             if (!item) {
                 showToast('Kein Pattern ausgewählt', 'error');
@@ -10323,6 +10333,8 @@
             }
 
             const newPattern = document.getElementById('editCorrNewPattern').value;
+            console.log('[EditCorrection] New pattern:', newPattern);
+            console.log('[EditCorrection] API URL:', `${CANDLESTICK_API}/feedback/${item.id}`);
 
             try {
                 const response = await fetch(`${CANDLESTICK_API}/feedback/${item.id}`, {
