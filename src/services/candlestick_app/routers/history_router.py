@@ -1,15 +1,65 @@
 """Pattern history endpoints."""
 
 import json
-from datetime import datetime
+import os
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from loguru import logger
 
 from ..services.pattern_history_service import pattern_history_service
-from src.utils.timezone_utils import to_display_timezone
+
+# Display timezone for date filtering (matches what users see in UI)
+DISPLAY_TIMEZONE = ZoneInfo(os.getenv("DISPLAY_TIMEZONE", "Europe/Zurich"))
+
+
+def _parse_timestamp(timestamp: Union[str, datetime, None]) -> Optional[datetime]:
+    """Parse a timestamp string into a timezone-aware datetime."""
+    if timestamp is None:
+        return None
+
+    if isinstance(timestamp, datetime):
+        if timestamp.tzinfo is None:
+            return timestamp.replace(tzinfo=timezone.utc)
+        return timestamp
+
+    if not isinstance(timestamp, str):
+        return None
+
+    ts = timestamp.strip()
+
+    try:
+        # Handle Z suffix (UTC)
+        if ts.endswith('Z'):
+            ts = ts[:-1] + '+00:00'
+
+        # Handle space separator (TwelveData format)
+        if ' ' in ts and 'T' not in ts:
+            ts = ts.replace(' ', 'T')
+
+        # Parse ISO format
+        parsed = datetime.fromisoformat(ts)
+
+        # If no timezone info, assume UTC
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+
+        return parsed
+
+    except (ValueError, TypeError):
+        return None
+
+
+def _to_display_timezone(timestamp: Union[str, datetime, None]) -> Optional[datetime]:
+    """Convert a timestamp to the display timezone (Europe/Zurich)."""
+    parsed = _parse_timestamp(timestamp)
+    if parsed is None:
+        return None
+
+    return parsed.astimezone(DISPLAY_TIMEZONE)
 
 router = APIRouter()
 
@@ -277,7 +327,7 @@ async def get_pattern_history(
                     try:
                         # Convert UTC timestamp to display timezone (Europe/Zurich)
                         # so the date comparison matches what the user sees
-                        local_dt = to_display_timezone(pattern_timestamp)
+                        local_dt = _to_display_timezone(pattern_timestamp)
                         if local_dt is None:
                             logger.debug(f"Could not parse timestamp: {pattern_timestamp}")
                             continue
