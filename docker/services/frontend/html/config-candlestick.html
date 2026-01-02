@@ -2584,6 +2584,14 @@
                             <option value="rejected">Abgelehnt</option>
                         </select>
                     </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.75rem;">Von</label>
+                        <input type="date" id="historyFilterDateFrom" onchange="loadPatternHistory()" style="padding: 0.4rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #e8e8e8;">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.75rem;">Bis</label>
+                        <input type="date" id="historyFilterDateTo" onchange="loadPatternHistory()" style="padding: 0.4rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #e8e8e8;">
+                    </div>
                 </div>
 
                 <!-- Timeline Container -->
@@ -4486,6 +4494,8 @@
             document.getElementById('historyFilterTimeframe').value = '';
             document.getElementById('historyFilterConfidence').value = '0';
             document.getElementById('historyFilterStatus').value = '';
+            document.getElementById('historyFilterDateFrom').value = '';
+            document.getElementById('historyFilterDateTo').value = '';
             loadPatternHistory(1);
         }
 
@@ -4668,6 +4678,8 @@
             const timeframe = document.getElementById('historyFilterTimeframe')?.value || '';
             const minConfidence = parseFloat(document.getElementById('historyFilterConfidence')?.value || '0');
             const feedbackStatus = document.getElementById('historyFilterStatus')?.value || '';
+            const dateFrom = document.getElementById('historyFilterDateFrom')?.value || '';
+            const dateTo = document.getElementById('historyFilterDateTo')?.value || '';
 
             try {
                 // Load feedback data first (for status display)
@@ -4679,6 +4691,8 @@
                 if (symbol) params.set('symbol', symbol);
                 if (timeframe) params.set('timeframe', timeframe);
                 if (feedbackStatus) params.set('feedback_status', feedbackStatus);
+                if (dateFrom) params.set('date_from', dateFrom);
+                if (dateTo) params.set('date_to', dateTo);
 
                 const res = await fetch(`${CANDLESTICK_API}/history?${params}`);
                 let data = await res.json();
