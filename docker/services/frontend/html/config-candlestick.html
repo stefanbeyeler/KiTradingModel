@@ -9485,81 +9485,95 @@
                 // Store for modal access
                 loadedClaudeHistory = data.history;
 
-                // Render timeline items (same style as "Erkannte Patterns")
-                timeline.innerHTML = data.history.map((v, idx) => {
-                    // Determine direction class based on pattern type
-                    const patternLower = (v.pattern_type || '').toLowerCase();
-                    let directionClass = 'neutral';
-                    if (patternLower.includes('bullish') || patternLower.includes('hammer') ||
-                        patternLower.includes('morning') || patternLower.includes('piercing') ||
-                        patternLower.includes('dragonfly') || patternLower.includes('inverted_hammer') ||
-                        patternLower.includes('three_white') || patternLower.includes('rising')) {
-                        directionClass = 'bullish';
-                    } else if (patternLower.includes('bearish') || patternLower.includes('shooting') ||
-                               patternLower.includes('hanging') || patternLower.includes('evening') ||
-                               patternLower.includes('dark_cloud') || patternLower.includes('gravestone') ||
-                               patternLower.includes('three_black') || patternLower.includes('falling')) {
-                        directionClass = 'bearish';
-                    }
-
-                    // Format validation timestamp (when Claude validated)
-                    let validatedTime = '-';
-                    if (v.validation_timestamp) {
-                        const date = new Date(v.validation_timestamp);
-                        validatedTime = date.toLocaleString('de-CH', {
-                            day: '2-digit', month: '2-digit',
-                            hour: '2-digit', minute: '2-digit'
-                        });
-                    }
-
-                    // Extract pattern timestamp from pattern_id for display
-                    let patternTime = '-';
-                    if (v.pattern_id) {
-                        // Pattern ID format: SYMBOL_TIMEFRAME_TYPE_TIMESTAMP
-                        const parts = v.pattern_id.split('_');
-                        if (parts.length >= 4) {
-                            const tsStr = parts.slice(3).join('_');
-                            try {
-                                const date = new Date(tsStr);
-                                if (!isNaN(date.getTime())) {
-                                    // Show only time (HH:mm) like in "Erkannte Patterns"
-                                    patternTime = date.toLocaleTimeString('de-CH', {
-                                        hour: '2-digit', minute: '2-digit'
-                                    });
-                                }
-                            } catch (e) {}
+                // Group by date (using validation_timestamp)
+                const groupedByDate = {};
+                data.history.forEach((v, idx) => {
+                    // Use validation_timestamp for grouping
+                    const timestamp = v.validation_timestamp || null;
+                    let dateKey = 'Unbekanntes Datum';
+                    if (timestamp) {
+                        const date = new Date(timestamp);
+                        if (!isNaN(date.getTime())) {
+                            dateKey = date.toLocaleDateString('de-CH', {
+                                weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+                            });
                         }
                     }
+                    if (!groupedByDate[dateKey]) {
+                        groupedByDate[dateKey] = [];
+                    }
+                    groupedByDate[dateKey].push({ ...v, originalIdx: idx });
+                });
 
-                    // Result badge
-                    const resultClass = v.claude_agrees ? 'confirmed' : 'rejected';
-                    const resultIcon = v.claude_agrees ? '✓' : '✗';
-                    const confidencePercent = (v.claude_confidence * 100).toFixed(0);
+                // Render grouped timeline
+                let html = '';
+                for (const [dateKey, items] of Object.entries(groupedByDate)) {
+                    html += `<div class="timeline-date-group">`;
+                    html += `<div class="timeline-date-header">${dateKey}</div>`;
 
-                    // Escape reasoning for title attribute
-                    const reasoningEscaped = (v.claude_reasoning || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    items.forEach(v => {
+                        const idx = v.originalIdx;
 
-                    // Direction text for badge
-                    const directionText = directionClass === 'bullish' ? 'BULLISH' :
-                                          directionClass === 'bearish' ? 'BEARISH' : 'NEUTRAL';
+                        // Determine direction class based on pattern type
+                        const patternLower = (v.pattern_type || '').toLowerCase();
+                        let directionClass = 'neutral';
+                        if (patternLower.includes('bullish') || patternLower.includes('hammer') ||
+                            patternLower.includes('morning') || patternLower.includes('piercing') ||
+                            patternLower.includes('dragonfly') || patternLower.includes('inverted_hammer') ||
+                            patternLower.includes('three_white') || patternLower.includes('rising')) {
+                            directionClass = 'bullish';
+                        } else if (patternLower.includes('bearish') || patternLower.includes('shooting') ||
+                                   patternLower.includes('hanging') || patternLower.includes('evening') ||
+                                   patternLower.includes('dark_cloud') || patternLower.includes('gravestone') ||
+                                   patternLower.includes('three_black') || patternLower.includes('falling')) {
+                            directionClass = 'bearish';
+                        }
 
-                    return `
-                        <div class="timeline-item ${directionClass}" title="${reasoningEscaped}" onclick="openClaudeHistoryModal(${idx})" style="cursor: pointer;">
-                            <span class="timeline-time">${patternTime}</span>
-                            <div class="timeline-content">
-                                <span class="timeline-pattern-name">${formatPatternType(v.pattern_type)}</span>
-                                <span class="timeline-symbol">${v.symbol}</span>
-                                <span class="timeline-direction ${directionClass}">${directionText}</span>
-                                <span class="timeline-timeframe">${v.timeframe}</span>
-                                <span class="timeline-confidence">${confidencePercent}%</span>
-                                <span class="timeline-status">
-                                    <span class="timeline-status-badge ${resultClass}">${resultIcon} ${v.claude_agrees ? 'Valide' : 'Invalide'}</span>
-                                </span>
-                                <span class="timeline-arrow">›</span>
+                        // Format validation time (HH:mm only, date is in header)
+                        let validationTime = '-';
+                        if (v.validation_timestamp) {
+                            const date = new Date(v.validation_timestamp);
+                            if (!isNaN(date.getTime())) {
+                                validationTime = date.toLocaleTimeString('de-CH', {
+                                    hour: '2-digit', minute: '2-digit'
+                                });
+                            }
+                        }
+
+                        // Result badge
+                        const resultClass = v.claude_agrees ? 'confirmed' : 'rejected';
+                        const resultIcon = v.claude_agrees ? '✓' : '✗';
+                        const confidencePercent = (v.claude_confidence * 100).toFixed(0);
+
+                        // Escape reasoning for title attribute
+                        const reasoningEscaped = (v.claude_reasoning || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+                        // Direction text for badge
+                        const directionText = directionClass === 'bullish' ? 'BULLISH' :
+                                              directionClass === 'bearish' ? 'BEARISH' : 'NEUTRAL';
+
+                        html += `
+                            <div class="timeline-item ${directionClass}" title="${reasoningEscaped}" onclick="openClaudeHistoryModal(${idx})" style="cursor: pointer;">
+                                <span class="timeline-time">${validationTime}</span>
+                                <div class="timeline-content">
+                                    <span class="timeline-pattern-name">${formatPatternType(v.pattern_type)}</span>
+                                    <span class="timeline-symbol">${v.symbol}</span>
+                                    <span class="timeline-direction ${directionClass}">${directionText}</span>
+                                    <span class="timeline-timeframe">${v.timeframe}</span>
+                                    <span class="timeline-confidence">${confidencePercent}%</span>
+                                    <span class="timeline-status">
+                                        <span class="timeline-status-badge ${resultClass}">${resultIcon} ${v.claude_agrees ? 'Valide' : 'Invalide'}</span>
+                                    </span>
+                                    <span class="timeline-arrow">›</span>
+                                </div>
                             </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    });
+
+                    html += `</div>`;
+                }
+
+                timeline.innerHTML = html;
             } catch (e) {
                 console.error('Claude history error:', e);
                 timeline.innerHTML = `<div style="text-align: center; color: #e57373; padding: 1rem;">Fehler: ${e.message}</div>`;
