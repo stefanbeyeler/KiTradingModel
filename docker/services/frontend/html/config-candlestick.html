@@ -7417,17 +7417,25 @@
                 const patternId = item.pattern_id || item.id ||
                     `${item.symbol}_${item.pattern_timestamp}_${item.original_pattern}`;
 
+                // Determine which pattern type to validate:
+                // - If rejected (corrected_pattern is null/empty), validate the original pattern
+                // - If corrected to another pattern, validate the CORRECTED pattern
+                const isRejected = !item.corrected_pattern || item.corrected_pattern === 'none' || item.corrected_pattern === '';
+                const patternToValidate = isRejected ? item.original_pattern : item.corrected_pattern;
+
                 // Call Claude Vision API with direct data (pattern may not be in history)
                 // IMPORTANT: Include stored ohlc_data to ensure Claude validates the EXACT same data
                 // that was shown when the user gave feedback (not fresh data that may have changed)
+                // NOTE: We validate the CORRECTED pattern, not the original - Claude should confirm
+                // if the user's correction was accurate (e.g., is this really a Harami Cross?)
                 const response = await fetch(`${CANDLESTICK_API}/claude/validate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         pattern_id: patternId,
                         force: true,
-                        // Provide direct data for patterns not in history
-                        pattern_type: item.original_pattern,
+                        // Validate the corrected pattern type (or original if rejected)
+                        pattern_type: patternToValidate,
                         symbol: item.symbol,
                         timeframe: item.timeframe,
                         pattern_timestamp: item.pattern_timestamp,
@@ -7467,6 +7475,7 @@
         }
 
         // Display Claude Vision validation result for revalidation
+        // NOTE: We now validate the CORRECTED pattern type, not the original
         function displayRevalClaudeVisionResult(validation, item) {
             const resultDiv = document.getElementById('revalClaudeVisionResult');
             const agrees = validation.claude_agrees;
@@ -7476,74 +7485,103 @@
 
             resultDiv.style.display = 'block';
 
-            // For revalidation, we want to know if Claude agrees with the CORRECTED pattern
-            // or if it confirms that the ORIGINAL pattern was indeed wrong
-            const isRejected = item.feedback_type === 'rejected';
-            const correctedPattern = item.corrected_pattern;
+            // Determine what was validated
+            const isRejected = !item.corrected_pattern || item.corrected_pattern === 'none' || item.corrected_pattern === '';
+            const validatedPattern = isRejected ? item.original_pattern : item.corrected_pattern;
 
             if (agrees) {
-                // Claude agrees the original pattern was correct
-                resultDiv.style.background = 'rgba(255, 152, 0, 0.15)';
-                resultDiv.style.border = '1px solid rgba(255, 152, 0, 0.3)';
-                resultDiv.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <span style="color: #ffb74d; font-weight: 600;">⚠ Claude bestätigt Original-Pattern</span>
-                        <span style="background: rgba(255, 152, 0, 0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
-                            ${Math.round(confidence * 100)}% Konfidenz
-                        </span>
-                    </div>
-                    <div style="color: #aaa; font-size: 0.85rem; line-height: 1.4;">
-                        ${reasoning}
-                    </div>
-                    <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); color: #888; font-size: 0.8rem;">
-                        ${isRejected
-                            ? 'Die Ablehnung könnte falsch gewesen sein - Pattern war möglicherweise korrekt.'
-                            : 'Die Korrektur könnte überflüssig gewesen sein.'
-                        }
-                    </div>
-                `;
-            } else {
-                // Claude doesn't agree - this confirms the correction was right
-                let suggestionHtml = '';
-                if (suggestedPattern && suggestedPattern !== 'no_pattern' && suggestedPattern !== 'none') {
-                    const matchesCorrected = correctedPattern && suggestedPattern.toLowerCase() === correctedPattern.toLowerCase();
-                    if (matchesCorrected) {
-                        suggestionHtml = `
-                            <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                                <span style="color: #81c784;">✓ Claude bestätigt Korrektur zu "${formatPatternType(suggestedPattern)}"</span>
-                            </div>
-                        `;
-                    } else {
-                        suggestionHtml = `
-                            <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                                <span style="color: #888;">Claude Vorschlag:</span>
-                                <span style="color: #64c8ff; font-weight: 500;">${formatPatternType(suggestedPattern)}</span>
-                                ${correctedPattern ? `<span style="color: #888; margin-left: 0.5rem;">(statt ${formatPatternType(correctedPattern)})</span>` : ''}
-                            </div>
-                        `;
-                    }
-                } else if (isRejected) {
-                    suggestionHtml = `
-                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <span style="color: #81c784;">✓ Claude bestätigt: Kein gültiges Pattern</span>
+                // Claude agrees with the validated pattern
+                if (isRejected) {
+                    // User rejected the pattern, Claude agrees it WAS a valid pattern of that type
+                    // This means the rejection might have been wrong
+                    resultDiv.style.background = 'rgba(255, 152, 0, 0.15)';
+                    resultDiv.style.border = '1px solid rgba(255, 152, 0, 0.3)';
+                    resultDiv.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="color: #ffb74d; font-weight: 600;">⚠ Claude sieht gültiges ${formatPatternType(item.original_pattern)}</span>
+                            <span style="background: rgba(255, 152, 0, 0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                                ${Math.round(confidence * 100)}% Konfidenz
+                            </span>
+                        </div>
+                        <div style="color: #aaa; font-size: 0.85rem; line-height: 1.4;">
+                            ${reasoning}
+                        </div>
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); color: #888; font-size: 0.8rem;">
+                            Die Ablehnung könnte falsch gewesen sein - Pattern war möglicherweise korrekt.
+                        </div>
+                    `;
+                } else {
+                    // User corrected to another pattern, Claude agrees it IS that pattern
+                    // This confirms the correction was right
+                    resultDiv.style.background = 'rgba(76, 175, 80, 0.15)';
+                    resultDiv.style.border = '1px solid rgba(76, 175, 80, 0.3)';
+                    resultDiv.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="color: #81c784; font-weight: 600;">✓ Claude bestätigt ${formatPatternType(item.corrected_pattern)}</span>
+                            <span style="background: rgba(76, 175, 80, 0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                                ${Math.round(confidence * 100)}% Konfidenz
+                            </span>
+                        </div>
+                        <div style="color: #aaa; font-size: 0.85rem; line-height: 1.4;">
+                            ${reasoning}
+                        </div>
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); color: #81c784; font-size: 0.8rem;">
+                            ✓ Die Korrektur von "${formatPatternType(item.original_pattern)}" zu "${formatPatternType(item.corrected_pattern)}" war korrekt.
                         </div>
                     `;
                 }
+            } else {
+                // Claude doesn't agree with the validated pattern
+                if (isRejected) {
+                    // User rejected the pattern, Claude also doesn't see a valid pattern
+                    // This confirms the rejection was right
+                    resultDiv.style.background = 'rgba(76, 175, 80, 0.15)';
+                    resultDiv.style.border = '1px solid rgba(76, 175, 80, 0.3)';
+                    resultDiv.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="color: #81c784; font-weight: 600;">✓ Claude bestätigt: Kein ${formatPatternType(item.original_pattern)}</span>
+                            <span style="background: rgba(76, 175, 80, 0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                                ${Math.round(confidence * 100)}% Konfidenz
+                            </span>
+                        </div>
+                        <div style="color: #aaa; font-size: 0.85rem; line-height: 1.4;">
+                            ${reasoning}
+                        </div>
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); color: #81c784; font-size: 0.8rem;">
+                            ✓ Die Ablehnung war korrekt - das Pattern erfüllt nicht die Kriterien.
+                        </div>
+                    `;
+                } else {
+                    // User corrected to another pattern, but Claude doesn't see that pattern either
+                    // The correction might be wrong
+                    let suggestionHtml = '';
+                    if (suggestedPattern && suggestedPattern !== 'no_pattern' && suggestedPattern !== 'none') {
+                        suggestionHtml = `
+                            <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <span style="color: #888;">Claude Vorschlag:</span>
+                                <span style="color: #64c8ff; font-weight: 500;"> ${formatPatternType(suggestedPattern)}</span>
+                            </div>
+                        `;
+                    }
 
-                resultDiv.style.background = 'rgba(76, 175, 80, 0.15)';
-                resultDiv.style.border = '1px solid rgba(76, 175, 80, 0.3)';
-                resultDiv.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <span style="color: #81c784; font-weight: 600;">✓ Claude bestätigt die Korrektur</span>
-                        <span style="background: rgba(76, 175, 80, 0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
-                            ${Math.round(confidence * 100)}% Konfidenz
-                        </span>
-                    </div>
-                    <div style="color: #aaa; font-size: 0.85rem; line-height: 1.4;">
-                        ${reasoning}
-                    </div>
-                    ${suggestionHtml}
-                `;
+                    resultDiv.style.background = 'rgba(255, 152, 0, 0.15)';
+                    resultDiv.style.border = '1px solid rgba(255, 152, 0, 0.3)';
+                    resultDiv.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="color: #ffb74d; font-weight: 600;">⚠ Claude sieht kein ${formatPatternType(item.corrected_pattern)}</span>
+                            <span style="background: rgba(255, 152, 0, 0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                                ${Math.round(confidence * 100)}% Konfidenz
+                            </span>
+                        </div>
+                        <div style="color: #aaa; font-size: 0.85rem; line-height: 1.4;">
+                            ${reasoning}
+                        </div>
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); color: #888; font-size: 0.8rem;">
+                            Die Korrektur zu "${formatPatternType(item.corrected_pattern)}" könnte falsch sein.
+                        </div>
+                        ${suggestionHtml}
+                    `;
+                }
             }
         }
 
