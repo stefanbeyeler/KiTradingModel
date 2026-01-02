@@ -10307,12 +10307,15 @@
 
                 // Show current values
                 document.getElementById('editCorrOriginal').textContent = formatPatternType(item.original_pattern);
-                document.getElementById('editCorrCurrent').textContent =
-                    item.corrected_pattern === 'none' ? 'Kein Pattern' : formatPatternType(item.corrected_pattern);
 
-                // Pre-select current correction
+                // Handle both 'none' and 'no_pattern' as rejection
+                const isRejection = item.corrected_pattern === 'none' || item.corrected_pattern === 'no_pattern';
+                document.getElementById('editCorrCurrent').textContent =
+                    isRejection ? 'Kein Pattern' : formatPatternType(item.corrected_pattern);
+
+                // Pre-select current correction (map 'no_pattern' to 'none' for dropdown)
                 const select = document.getElementById('editCorrNewPattern');
-                select.value = item.corrected_pattern || 'none';
+                select.value = isRejection ? 'none' : (item.corrected_pattern || 'none');
 
                 // Show modal
                 document.getElementById('editCorrectionModal').style.display = 'flex';
