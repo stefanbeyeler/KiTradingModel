@@ -1050,13 +1050,21 @@ async def get_revalidation_statistics():
 
         # Check for last training from training service (if available)
         try:
-            from ..services.pattern_detection_service import candlestick_pattern_service
-            # Try to get model info which may contain last training date
-            model_info = getattr(candlestick_pattern_service, '_last_model_load', None)
-            if model_info:
-                last_training = model_info
-        except Exception:
-            pass
+            import httpx
+            # Query training service for completed jobs
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get("http://trading-candlestick-train:8000/api/v1/train/jobs")
+                if response.status_code == 200:
+                    jobs_data = response.json()
+                    jobs = jobs_data.get("jobs", [])
+                    # Find the most recent completed training
+                    for job in jobs:
+                        if job.get("status") == "completed" and job.get("completed_at"):
+                            completed_at = job.get("completed_at")
+                            if not last_training or completed_at > last_training:
+                                last_training = completed_at
+        except Exception as e:
+            logger.debug(f"Could not fetch training jobs: {e}")
 
         return {
             "total_feedback": len(feedback_data),
