@@ -7150,7 +7150,22 @@
 
             try {
                 const patternCandleCount = getPatternCandleCount(item.original_pattern);
-                const ohlcData = await fetchOhlcForRevalidation(item.symbol, item.timeframe, item.pattern_timestamp, patternCandleCount);
+
+                // WICHTIG: Verwende gespeicherte ohlc_data wenn vorhanden (für konsistente Zeitstempel)
+                // Die gespeicherten Daten wurden zum Zeitpunkt der Pattern-Erkennung gespeichert
+                // und enthalten die exakten Kerzen, die zur Erkennung führten.
+                let ohlcData;
+                if (item.ohlc_data && Array.isArray(item.ohlc_data) && item.ohlc_data.length > 0) {
+                    console.log('Using stored ohlc_data for revalidation chart');
+                    ohlcData = item.ohlc_data;
+                    // Berechne Pattern-Index aus gespeicherten Daten (5 Kerzen vor Pattern)
+                    // Pattern-Start ist bei Index 5 (nach 5 Kontext-Kerzen), Pattern-Ende ist 5 + candleCount - 1
+                    ohlcData._patternIdx = 5 + patternCandleCount - 1;
+                } else {
+                    // Fallback: Hole aktuelle Daten von TwelveData
+                    console.log('No stored ohlc_data, fetching from TwelveData');
+                    ohlcData = await fetchOhlcForRevalidation(item.symbol, item.timeframe, item.pattern_timestamp, patternCandleCount);
+                }
 
                 if (!ohlcData || ohlcData.length === 0) {
                     container.innerHTML = '<div style="color: #888; text-align: center; padding: 2rem;">Keine Chart-Daten verfügbar</div>';
