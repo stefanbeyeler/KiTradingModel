@@ -180,6 +180,43 @@ async def queue_patterns_for_validation(
     }
 
 
+@router.get("/queue")
+async def get_validation_queue(
+    limit: int = Query(default=50, ge=1, le=200, description="Maximale Anzahl anzuzeigender Einträge"),
+    offset: int = Query(default=0, ge=0, description="Offset für Paginierung")
+):
+    """
+    Get the current validation queue contents.
+
+    Returns patterns waiting to be validated by Claude.
+    """
+    queue = auto_optimization_service._pending_validations
+    total = len(queue)
+
+    # Apply pagination
+    paginated = queue[offset:offset + limit]
+
+    # Simplify the output for display
+    items = []
+    for item in paginated:
+        items.append({
+            "id": item.get("id", "unknown"),
+            "pattern_type": item.get("pattern_type", "unknown"),
+            "symbol": item.get("symbol", "unknown"),
+            "timeframe": item.get("timeframe", "unknown"),
+            "timestamp": item.get("timestamp", "unknown"),
+            "confidence": item.get("confidence", 0),
+            "queued_at": item.get("queued_at", item.get("timestamp", "unknown"))
+        })
+
+    return {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "items": items
+    }
+
+
 @router.delete("/queue")
 async def clear_validation_queue():
     """

@@ -2683,6 +2683,33 @@
             </div>
         </div>
 
+        <!-- Validation Queue Modal -->
+        <div class="modal-overlay" id="queueModal" onclick="closeQueueModal(event)">
+            <div class="modal" onclick="event.stopPropagation()" style="max-width: 900px; width: 90vw; max-height: 85vh;">
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span>📋 Validierungs-Warteschlange</span>
+                        <span id="queueTotalCount" style="font-size: 0.85rem; color: #888; margin-left: 0.5rem;">(0 Einträge)</span>
+                    </div>
+                    <button class="modal-close" onclick="closeQueueModal()">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 1rem; overflow-y: auto; max-height: calc(85vh - 120px);">
+                    <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 1rem;">
+                        Diese Patterns warten auf Validierung durch Claude Vision. Patterns werden beim nächsten Batch-Lauf oder automatisch (wenn aktiviert) validiert.
+                    </p>
+                    <div id="queueContent" style="min-height: 100px;">
+                        <div style="text-align: center; color: #888;">Lade...</div>
+                    </div>
+                </div>
+                <div style="padding: 0.75rem 1rem; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                    <button class="btn btn-danger btn-sm" onclick="clearValidationQueueFromModal()" title="Alle Einträge aus der Warteschlange entfernen">
+                        Queue leeren ❌
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeQueueModal()">Schliessen</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Pattern Detail Modal -->
         <div class="modal-overlay" id="patternModal" onclick="closePatternModal(event)">
             <div class="modal" onclick="event.stopPropagation()" style="max-width: 800px;">
@@ -3168,7 +3195,7 @@
                             <button class="btn btn-primary btn-sm" id="btnBatch10" onclick="runBatchValidation(10)" title="10 Patterns aus der Warteschlange mit Claude validieren">10x</button>
                             <button class="btn btn-warning btn-sm" id="btnBatch20" onclick="runBatchValidation(20)" title="20 Patterns aus der Warteschlange mit Claude validieren">20x</button>
                             <button class="btn btn-secondary btn-sm" onclick="runOptimizationCycle()" title="Vollständigen Optimierungszyklus ausführen (Sammeln → Validieren → Analysieren → Empfehlen)">Zyklus</button>
-                            <button class="btn btn-secondary btn-sm" onclick="clearValidationQueue()" title="Warteschlange leeren - Alle wartenden Patterns entfernen">Queue ❌</button>
+                            <button class="btn btn-secondary btn-sm" onclick="showValidationQueue()" title="Warteschlange anzeigen">Queue 📋</button>
                         </div>
                     </div>
                     <div id="batchProgress" style="display: none; margin-top: 0.5rem;">
@@ -9675,6 +9702,109 @@
 
                 const data = await response.json();
                 showToast(`Queue geleert: ${data.removed || 0} Einträge entfernt`, 'success');
+                loadAutoOptStatus();
+            } catch (e) {
+                console.error('Clear queue error:', e);
+                showToast('Fehler: ' + e.message, 'error');
+            }
+        }
+
+        // ==================== Queue Modal Functions ====================
+
+        async function showValidationQueue() {
+            document.getElementById('queueModal').style.display = 'flex';
+            await loadQueueContent();
+        }
+
+        function closeQueueModal(event) {
+            if (!event || event.target === event.currentTarget) {
+                document.getElementById('queueModal').style.display = 'none';
+            }
+        }
+
+        async function loadQueueContent() {
+            const container = document.getElementById('queueContent');
+            container.innerHTML = '<div style="text-align: center; color: #888;"><span class="spinner"></span> Lade Warteschlange...</div>';
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/auto-optimization/queue?limit=100`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                document.getElementById('queueTotalCount').textContent = `(${data.total} Einträge)`;
+
+                if (data.items.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: #888;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">✓</div>
+                            <div>Die Warteschlange ist leer.</div>
+                            <div style="font-size: 0.85rem; margin-top: 0.5rem;">Neue Patterns werden automatisch hinzugefügt, wenn "Neue Patterns validieren" aktiviert ist.</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Group by pattern type
+                const byType = {};
+                for (const item of data.items) {
+                    const type = item.pattern_type || 'unknown';
+                    if (!byType[type]) byType[type] = [];
+                    byType[type].push(item);
+                }
+
+                let html = '<table class="data-table" style="width: 100%; font-size: 0.85rem;">';
+                html += '<thead><tr><th>Pattern</th><th>Symbol</th><th>Timeframe</th><th>Timestamp</th><th>Konfidenz</th></tr></thead>';
+                html += '<tbody>';
+
+                for (const item of data.items) {
+                    const timestamp = item.timestamp ? new Date(item.timestamp).toLocaleString('de-CH') : '-';
+                    const confidence = item.confidence ? (item.confidence * 100).toFixed(0) + '%' : '-';
+                    html += `
+                        <tr>
+                            <td><span style="color: #64c8ff;">${formatPatternType(item.pattern_type)}</span></td>
+                            <td>${item.symbol}</td>
+                            <td>${item.timeframe}</td>
+                            <td style="font-size: 0.8rem; color: #888;">${timestamp}</td>
+                            <td>${confidence}</td>
+                        </tr>
+                    `;
+                }
+
+                html += '</tbody></table>';
+
+                // Summary by type
+                const typeCount = Object.keys(byType).length;
+                let summaryHtml = '<div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(100,200,255,0.1); border-radius: 6px;">';
+                summaryHtml += `<strong style="color: #64c8ff;">Zusammenfassung:</strong> ${data.total} Patterns in ${typeCount} Typen<br>`;
+                summaryHtml += '<div style="margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">';
+                for (const [type, items] of Object.entries(byType).sort((a, b) => b[1].length - a[1].length)) {
+                    summaryHtml += `<span style="background: rgba(255,255,255,0.1); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${formatPatternType(type)}: ${items.length}</span>`;
+                }
+                summaryHtml += '</div></div>';
+
+                container.innerHTML = summaryHtml + html;
+
+            } catch (e) {
+                console.error('Load queue error:', e);
+                container.innerHTML = `<div style="text-align: center; color: #e57373;">Fehler beim Laden: ${e.message}</div>`;
+            }
+        }
+
+        async function clearValidationQueueFromModal() {
+            if (!confirm('Möchten Sie wirklich alle Einträge aus der Warteschlange entfernen?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/auto-optimization/queue`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                showToast(`Queue geleert: ${data.removed || 0} Einträge entfernt`, 'success');
+                await loadQueueContent();
                 loadAutoOptStatus();
             } catch (e) {
                 console.error('Clear queue error:', e);
