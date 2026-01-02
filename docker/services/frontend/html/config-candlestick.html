@@ -2740,7 +2740,10 @@
                     <div class="modal-info-grid">
                         <div class="modal-info-item">
                             <div class="modal-info-label">Pattern-ID</div>
-                            <div class="modal-info-value" id="modalPatternId" style="font-family: monospace; font-size: 0.75rem; cursor: pointer; word-break: break-all;" onclick="copyPatternId(this.title)" title="-">-</div>
+                            <div class="modal-info-value" style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span id="modalPatternId" style="font-family: monospace; font-size: 0.75rem; word-break: break-all; flex: 1;">-</span>
+                                <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="copyPatternId(document.getElementById('modalPatternId').dataset.fullId)" title="Pattern-ID kopieren">📋</button>
+                            </div>
                         </div>
                         <div class="modal-info-item">
                             <div class="modal-info-label">Symbol</div>
@@ -3447,7 +3450,10 @@
                     <div class="reval-detail-info-row">
                         <div class="reval-detail-info-item">
                             <label>Pattern-ID</label>
-                            <span id="revalDetailPatternId" style="font-family: monospace; font-size: 0.75rem; cursor: pointer; word-break: break-all;" onclick="copyPatternId(this.title)" title="-">-</span>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span id="revalDetailPatternId" style="font-family: monospace; font-size: 0.75rem; word-break: break-all; flex: 1;">-</span>
+                                <button class="btn btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.65rem;" onclick="copyPatternId(document.getElementById('revalDetailPatternId').dataset.fullId)" title="Pattern-ID kopieren">📋</button>
+                            </div>
                         </div>
                         <div class="reval-detail-info-item">
                             <label>Original erkannt</label>
@@ -5216,10 +5222,10 @@
             directionEl.textContent = currentModalPattern.direction;
             directionEl.className = `timeline-direction ${currentModalPattern.direction}`;
 
-            // Set Pattern-ID with full ID as tooltip
+            // Set Pattern-ID with full ID in data attribute for copy button
             const patternIdEl = document.getElementById('modalPatternId');
             patternIdEl.textContent = currentModalPattern.id || '-';
-            patternIdEl.title = currentModalPattern.id || '';
+            patternIdEl.dataset.fullId = currentModalPattern.id || '';
 
             document.getElementById('modalSymbol').textContent = currentModalPattern.symbol;
             document.getElementById('modalTimeframe').textContent = currentModalPattern.timeframe;
@@ -5264,10 +5270,10 @@
             directionEl.textContent = pattern.direction;
             directionEl.className = `timeline-direction ${pattern.direction}`;
 
-            // Set Pattern-ID with full ID as tooltip
+            // Set Pattern-ID with full ID in data attribute for copy button
             const patternIdEl = document.getElementById('modalPatternId');
             patternIdEl.textContent = pattern.id || '-';
-            patternIdEl.title = pattern.id || '';
+            patternIdEl.dataset.fullId = pattern.id || '';
 
             document.getElementById('modalSymbol').textContent = pattern.symbol;
             document.getElementById('modalTimeframe').textContent = pattern.timeframe;
@@ -7150,10 +7156,10 @@
             document.getElementById('revalNextBtn').disabled = index === filteredRevalidationItems.length - 1;
 
             // Update info
-            // Set Pattern-ID with full ID as tooltip
+            // Set Pattern-ID with full ID in data attribute for copy button
             const patternIdEl = document.getElementById('revalDetailPatternId');
             patternIdEl.textContent = item.id || '-';
-            patternIdEl.title = item.id || '';
+            patternIdEl.dataset.fullId = item.id || '';
 
             document.getElementById('revalDetailOriginal').textContent = formatPatternType(item.original_pattern);
             document.getElementById('revalDetailCorrected').textContent = isRejected ? 'Kein Pattern' : formatPatternType(item.corrected_pattern);
@@ -9347,7 +9353,12 @@
 
                 tbody.innerHTML = data.history.map(v => `
                     <tr>
-                        <td style="font-family: monospace; font-size: 0.7rem; color: #888; cursor: pointer;" title="${v.pattern_id || ''}" onclick="copyPatternId('${v.pattern_id || ''}')">${formatPatternIdShort(v.pattern_id)}</td>
+                        <td style="font-family: monospace; font-size: 0.7rem; color: #888;">
+                            <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                <span title="${v.pattern_id || ''}">${formatPatternIdShort(v.pattern_id)}</span>
+                                <button class="btn btn-secondary" style="padding: 0.1rem 0.25rem; font-size: 0.6rem;" onclick="copyPatternId('${v.pattern_id || ''}')" title="ID kopieren">📋</button>
+                            </div>
+                        </td>
                         <td style="white-space: nowrap;"><strong>${v.symbol}</strong></td>
                         <td style="color: #888; font-size: 0.75rem;">${v.timeframe}</td>
                         <td style="font-size: 0.85rem;">${formatPatternType(v.pattern_type)}</td>
@@ -10100,7 +10111,12 @@
                     const shortId = formatPatternIdShort(item.id);
                     html += `
                         <tr>
-                            <td style="font-family: monospace; font-size: 0.75rem; color: #888; cursor: pointer;" title="${item.id || ''}" onclick="copyPatternId('${item.id || ''}')">${shortId}</td>
+                            <td style="font-family: monospace; font-size: 0.75rem; color: #888;">
+                                <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                    <span title="${item.id || ''}">${shortId}</span>
+                                    <button class="btn btn-secondary" style="padding: 0.1rem 0.25rem; font-size: 0.6rem;" onclick="copyPatternId('${item.id || ''}')" title="ID kopieren">📋</button>
+                                </div>
+                            </td>
                             <td><span style="color: #64c8ff;">${formatPatternType(item.pattern_type)}</span></td>
                             <td>${item.symbol}</td>
                             <td>${item.timeframe}</td>
