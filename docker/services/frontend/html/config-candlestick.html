@@ -3543,8 +3543,8 @@
     </div>
 
     <!-- Edit Correction Modal -->
-    <div class="modal" id="editCorrectionModal" onclick="if(event.target===this)closeEditCorrectionModal()">
-        <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-overlay" id="editCorrectionModal" onclick="if(event.target===this)closeEditCorrectionModal()">
+        <div class="modal" onclick="event.stopPropagation()" style="max-width: 500px;">
             <span class="close" onclick="closeEditCorrectionModal()">&times;</span>
             <h3 style="margin-bottom: 1rem;">✏️ Korrektur ändern</h3>
             <p style="color: #aaa; margin-bottom: 1rem; font-size: 0.9rem;">
@@ -10317,8 +10317,8 @@
                 const select = document.getElementById('editCorrNewPattern');
                 select.value = isRejection ? 'none' : (item.corrected_pattern || 'none');
 
-                // Show modal
-                document.getElementById('editCorrectionModal').style.display = 'flex';
+                // Show modal (using .show class for modal-overlay)
+                document.getElementById('editCorrectionModal').classList.add('show');
             } catch (error) {
                 console.error('[EditCorrection] Error:', error);
                 showToast('Fehler: ' + error.message, 'error');
@@ -10326,7 +10326,7 @@
         }
 
         function closeEditCorrectionModal() {
-            document.getElementById('editCorrectionModal').style.display = 'none';
+            document.getElementById('editCorrectionModal').classList.remove('show');
         }
 
         async function submitEditCorrection() {
