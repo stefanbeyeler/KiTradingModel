@@ -9083,6 +9083,29 @@
             }
         }
 
+        // Fill queue from history for manual validation
+        async function fillQueueFromHistory(count) {
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/auto-optimization/queue/fill-from-history?count=${count}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || `HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                alert(`${result.queued} Patterns zur Warteschlange hinzugefügt.`);
+
+                // Now run batch validation
+                runBatchValidation(count);
+            } catch (e) {
+                console.error('Fill queue error:', e);
+                alert('Fehler: ' + e.message);
+            }
+        }
+
         async function runBatchValidation(maxPatterns) {
             const progressDiv = document.getElementById('batchProgress');
             const resultDiv = document.getElementById('batchResult');
@@ -9121,7 +9144,17 @@
                     resultDiv.style.display = 'block';
                     document.getElementById('batchResultContent').innerHTML = `
                         <div style="color: #888; text-align: center;">
-                            Keine Patterns in der Warteschlange. Patterns werden automatisch hinzugefügt wenn "Neue Patterns validieren" aktiviert ist.
+                            <p>Die Warteschlange ist leer.</p>
+                            <p style="font-size: 0.85rem; margin-top: 0.5rem;">
+                                Neue Patterns werden bei jedem Scan automatisch zur Queue hinzugefügt
+                                (Sample-Rate: ${(autoOptConfig?.validation_sample_rate || 0.3) * 100}%).
+                            </p>
+                            <p style="font-size: 0.85rem; margin-top: 0.5rem;">
+                                Alternativ: Verwenden Sie
+                                <button class="btn btn-sm btn-secondary" onclick="closeQueueModal(); fillQueueFromHistory(${maxPatterns})" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">
+                                    📥 ${maxPatterns} aus History laden
+                                </button>
+                            </p>
                         </div>
                     `;
                     // Re-enable buttons
@@ -9832,7 +9865,14 @@
                         <div style="text-align: center; padding: 2rem; color: #888;">
                             <div style="font-size: 2rem; margin-bottom: 0.5rem;">✓</div>
                             <div>Die Warteschlange ist leer.</div>
-                            <div style="font-size: 0.85rem; margin-top: 0.5rem;">Neue Patterns werden automatisch hinzugefügt, wenn "Neue Patterns validieren" aktiviert ist.</div>
+                            <div style="font-size: 0.85rem; margin-top: 0.5rem;">
+                                Neue Patterns werden automatisch hinzugefügt, wenn neue Patterns beim Scan erkannt werden.
+                            </div>
+                            <div style="margin-top: 1rem;">
+                                <button class="btn btn-secondary btn-sm" onclick="fillQueueFromHistory(10)">
+                                    📥 10 aus History laden
+                                </button>
+                            </div>
                         </div>
                     `;
                     return;

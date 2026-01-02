@@ -232,6 +232,62 @@ async def clear_validation_queue():
     }
 
 
+@router.post("/queue/fill-from-history")
+async def fill_queue_from_history(
+    count: int = Query(default=10, ge=1, le=100, description="Anzahl der Patterns aus der History")
+):
+    """
+    Fill the validation queue with recent patterns from history.
+
+    This allows manual batch validation even when the automatic queue is empty.
+    Patterns are selected from the most recent detections that haven't been
+    validated by Claude yet.
+    """
+    from ..services.pattern_history_service import pattern_history_service
+    from ..services.claude_validator_service import claude_validator_service
+
+    # Get recent patterns from history
+    history = pattern_history_service.get_history(limit=count * 3)  # Get more to filter
+
+    if not history:
+        raise HTTPException(status_code=404, detail="Keine Patterns in der History gefunden")
+
+    # Filter out patterns that are already in queue
+    existing_ids = {p.get("id") for p in auto_optimization_service._pending_validations}
+
+    # Filter out patterns already validated by Claude (in cache or history)
+    validated_ids = set()
+    for val in claude_validator_service._validation_history:
+        if val.get("pattern_id"):
+            validated_ids.add(val.get("pattern_id"))
+
+    patterns_to_add = []
+    for pattern in history:
+        pid = pattern.get("id", "")
+        if pid and pid not in existing_ids and pid not in validated_ids:
+            patterns_to_add.append(pattern)
+            if len(patterns_to_add) >= count:
+                break
+
+    if not patterns_to_add:
+        raise HTTPException(
+            status_code=404,
+            detail="Keine unvalidierten Patterns gefunden. Alle Patterns wurden bereits durch Claude geprüft."
+        )
+
+    # Add to queue (bypass sampling rate)
+    for pattern in patterns_to_add:
+        auto_optimization_service._pending_validations.append(pattern)
+
+    auto_optimization_service._save_pending_validations()
+
+    return {
+        "status": "filled",
+        "queued": len(patterns_to_add),
+        "total_in_queue": len(auto_optimization_service._pending_validations)
+    }
+
+
 @router.post("/enable")
 async def enable_auto_optimization(
     auto_validate: bool = Query(default=True, description="Enable auto-validation"),
