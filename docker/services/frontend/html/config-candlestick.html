@@ -9539,12 +9539,17 @@
                     // Escape reasoning for title attribute
                     const reasoningEscaped = (v.claude_reasoning || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
+                    // Direction text for badge
+                    const directionText = directionClass === 'bullish' ? 'BULLISH' :
+                                          directionClass === 'bearish' ? 'BEARISH' : 'NEUTRAL';
+
                     return `
                         <div class="timeline-item ${directionClass}" title="${reasoningEscaped}" onclick="openClaudeHistoryModal(${idx})" style="cursor: pointer;">
                             <span class="timeline-time">${patternTime}</span>
                             <div class="timeline-content">
                                 <span class="timeline-pattern-name">${formatPatternType(v.pattern_type)}</span>
                                 <span class="timeline-symbol">${v.symbol}</span>
+                                <span class="timeline-direction ${directionClass}">${directionText}</span>
                                 <span class="timeline-timeframe">${v.timeframe}</span>
                                 <span class="timeline-confidence">${confidencePercent}%</span>
                                 <span class="timeline-status">
