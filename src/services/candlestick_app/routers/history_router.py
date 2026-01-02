@@ -591,7 +591,19 @@ async def submit_pattern_feedback(feedback: PatternFeedback):
         else:
             entry["reason_category_valid"] = True
 
-        feedback_data.append(entry)
+        # Check if entry with this ID already exists - update instead of adding duplicate
+        existing_idx = None
+        for i, existing in enumerate(feedback_data):
+            if existing.get("id") == feedback.pattern_id:
+                existing_idx = i
+                break
+
+        if existing_idx is not None:
+            # Update existing entry instead of creating duplicate
+            logger.info(f"Updating existing feedback for {feedback.pattern_id}")
+            feedback_data[existing_idx] = entry
+        else:
+            feedback_data.append(entry)
 
         # Ensure directory exists
         FEEDBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
