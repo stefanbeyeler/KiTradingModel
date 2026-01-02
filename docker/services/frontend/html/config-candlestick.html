@@ -8113,6 +8113,9 @@
                     document.getElementById('currentJobStatus').textContent = 'Running';
                     document.getElementById('currentJobStatus').className = 'job-status running';
 
+                    // Reload training history to show new job
+                    loadTrainingJobs();
+
                     // Start polling for progress
                     revalTrainingInterval = setInterval(pollRevalTrainingProgress, 2000);
                 } else {
