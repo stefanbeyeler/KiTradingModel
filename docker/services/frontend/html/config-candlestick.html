@@ -3114,107 +3114,104 @@
 
         <!-- Tab: Claude QA -->
         <div id="tab-claudeqa" class="tab-content">
-            <!-- Claude Validator Status + Batch Validation (Combined) -->
+            <!-- Claude Vision Validator (Combined with Auto-Optimization) -->
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">🤖 Claude Vision Validator</h2>
                     <div class="btn-group">
-                        <button class="btn btn-primary btn-sm" id="btnBatch5" onclick="runBatchValidation(5)">5x</button>
-                        <button class="btn btn-primary btn-sm" id="btnBatch10" onclick="runBatchValidation(10)">10x</button>
-                        <button class="btn btn-warning btn-sm" id="btnBatch20" onclick="runBatchValidation(20)">20x</button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadAutoOptStatus()">Aktualisieren</button>
+                        <button class="btn btn-success btn-sm" onclick="toggleAutoOptimization(true)" id="autoOptEnableBtn">Auto Ein</button>
+                        <button class="btn btn-danger btn-sm" onclick="toggleAutoOptimization(false)" id="autoOptDisableBtn" style="display: none;">Auto Aus</button>
                     </div>
                 </div>
                 <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.75rem; line-height: 1.4;">
                     Validiert erkannte Candlestick-Patterns mit Claude Vision. Claude analysiert das Chart-Bild und prüft,
-                    ob das Pattern den klassischen Kriterien entspricht. Nutze die Batch-Buttons für manuelle Validierung
-                    oder aktiviere die Auto-Optimierung für kontinuierliche Qualitätssicherung.
+                    ob das Pattern den klassischen Kriterien entspricht.
                 </p>
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; flex: 1;">
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
-                            <span id="claudeEnabled" style="color: #81c784;">-</span>
-                        </span>
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
-                            Modell: <span id="claudeModel" style="color: #64c8ff;">-</span>
-                        </span>
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
-                            Cache: <span id="claudeCached" style="color: #ffb74d;">-</span>
-                        </span>
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
-                            Total: <span id="claudeTotal" style="color: #ce93d8;">-</span>
-                        </span>
-                    </div>
-                </div>
-                <div id="batchProgress" style="display: none; margin-top: 0.75rem;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span class="spinner"></span>
-                        <span id="batchProgressText">Validierung läuft...</span>
-                    </div>
-                </div>
-                <div id="batchResult" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 6px;">
-                    <div id="batchResultContent"></div>
-                </div>
-            </div>
 
-            <!-- Auto-Optimization Controls -->
-            <div class="card" style="border: 1px solid rgba(76, 175, 80, 0.3);">
-                <div class="card-header">
-                    <h2 class="card-title" style="font-size: 1rem;">⚡ Auto-Optimierung</h2>
-                    <div class="btn-group">
-                        <button class="btn btn-secondary btn-sm" onclick="loadAutoOptStatus()">Aktualisieren</button>
-                        <button class="btn btn-success btn-sm" onclick="toggleAutoOptimization(true)" id="autoOptEnableBtn">Aktivieren</button>
-                        <button class="btn btn-danger btn-sm" onclick="toggleAutoOptimization(false)" id="autoOptDisableBtn" style="display: none;">Deaktivieren</button>
-                    </div>
+                <!-- Status Row -->
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        <span id="claudeEnabled" style="color: #81c784;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        Modell: <span id="claudeModel" style="color: #64c8ff;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        Cache: <span id="claudeCached" style="color: #ffb74d;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        Total: <span id="claudeTotal" style="color: #ce93d8;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;"
+                          title="Läuft der Hintergrund-Validierungsprozess?">
+                        Auto: <span id="autoOptRunning" style="color: #888;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;"
+                          title="Anzahl neu erkannter Patterns, die auf Claude-Validierung warten">
+                        Queue: <span id="autoOptPending" style="color: #ffb74d;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;"
+                          title="Automatische Parameter-Anpassungen pro Stunde (aktuell / Maximum)">
+                        Anpassungen/h: <span id="autoOptAdjustments" style="color: #64c8ff;">-</span>
+                    </span>
                 </div>
-                <div id="autoOptStatusSection">
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;"
-                              title="Läuft der Hintergrund-Validierungsprozess?">
-                            Status: <span id="autoOptRunning" style="color: #888;">-</span>
-                        </span>
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;"
-                              title="Anzahl neu erkannter Patterns, die auf Claude-Validierung warten. Wird im Batch-Intervall abgearbeitet.">
-                            Warteschlange: <span id="autoOptPending" style="color: #ffb74d;">-</span>
-                        </span>
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;"
-                              title="Automatische Parameter-Anpassungen pro Stunde (aktuell / Maximum). Begrenzt um zu häufige Änderungen zu vermeiden.">
-                            Auto-Anpassungen/h: <span id="autoOptAdjustments" style="color: #64c8ff;">-</span>
-                        </span>
-                    </div>
 
-                    <!-- Konfiguration -->
-                    <div style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 6px; margin-bottom: 0.75rem;">
-                        <h4 style="font-size: 0.85rem; margin-bottom: 0.5rem; color: #64c8ff;">Konfiguration</h4>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
-                                <input type="checkbox" id="autoOptValidateNew" onchange="updateAutoOptConfig()">
-                                Neue Patterns validieren
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
-                                <input type="checkbox" id="autoOptAutoApply" onchange="updateAutoOptConfig()">
-                                Empfehlungen auto-anwenden
-                            </label>
-                            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
-                                <span>Sample-Rate:</span>
-                                <input type="number" id="autoOptSampleRate" min="0.1" max="1.0" step="0.1" value="0.3"
-                                       style="width: 60px; padding: 0.2rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;"
-                                       onchange="updateAutoOptConfig()">
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
-                                <span>Min. Konfidenz:</span>
-                                <input type="number" id="autoOptMinConfidence" min="0.5" max="1.0" step="0.05" value="0.85"
-                                       style="width: 60px; padding: 0.2rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;"
-                                       onchange="updateAutoOptConfig()">
-                            </div>
+                <!-- Manual Batch Validation -->
+                <div style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 6px; margin-bottom: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <span style="font-size: 0.85rem; color: #64c8ff;">Manuelle Batch-Validierung:</span>
+                        <div class="btn-group">
+                            <button class="btn btn-primary btn-sm" id="btnBatch5" onclick="runBatchValidation(5)">5x</button>
+                            <button class="btn btn-primary btn-sm" id="btnBatch10" onclick="runBatchValidation(10)">10x</button>
+                            <button class="btn btn-warning btn-sm" id="btnBatch20" onclick="runBatchValidation(20)">20x</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runOptimizationCycle()">Zyklus</button>
+                            <button class="btn btn-secondary btn-sm" onclick="clearValidationQueue()" title="Warteschlange leeren">Queue ❌</button>
                         </div>
                     </div>
-
-                    <!-- Aktionen -->
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <button class="btn btn-primary btn-sm" onclick="runOptimizationCycle()">Zyklus ausführen</button>
-                        <button class="btn btn-secondary btn-sm" onclick="loadAutoOptHistory()">Historie</button>
-                        <button class="btn btn-warning btn-sm" onclick="clearValidationQueue()">Queue leeren</button>
+                    <div id="batchProgress" style="display: none; margin-top: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="spinner"></span>
+                            <span id="batchProgressText">Validierung läuft...</span>
+                        </div>
                     </div>
+                    <div id="batchResult" style="display: none; margin-top: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.3); border-radius: 4px;">
+                        <div id="batchResultContent"></div>
+                    </div>
+                </div>
+
+                <!-- Auto-Optimization Config (Collapsible) -->
+                <div id="autoOptStatusSection">
+                    <details style="background: rgba(0,0,0,0.2); border-radius: 6px;">
+                        <summary style="padding: 0.75rem; cursor: pointer; font-size: 0.85rem; color: #64c8ff;">
+                            ⚙️ Auto-Optimierung Konfiguration
+                        </summary>
+                        <div style="padding: 0 0.75rem 0.75rem 0.75rem;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                    <input type="checkbox" id="autoOptValidateNew" onchange="updateAutoOptConfig()">
+                                    Neue Patterns validieren
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                    <input type="checkbox" id="autoOptAutoApply" onchange="updateAutoOptConfig()">
+                                    Empfehlungen auto-anwenden
+                                </label>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                    <span>Sample-Rate:</span>
+                                    <input type="number" id="autoOptSampleRate" min="0.1" max="1.0" step="0.1" value="0.3"
+                                           style="width: 55px; padding: 0.2rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;"
+                                           onchange="updateAutoOptConfig()">
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                                    <span>Min. Konfidenz:</span>
+                                    <input type="number" id="autoOptMinConfidence" min="0.5" max="1.0" step="0.05" value="0.85"
+                                           style="width: 55px; padding: 0.2rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;"
+                                           onchange="updateAutoOptConfig()">
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="loadAutoOptHistory()">Historie anzeigen</button>
+                        </div>
+                    </details>
 
                     <!-- Historie -->
                     <div id="autoOptHistoryContainer" style="display: none; margin-top: 0.75rem; max-height: 150px; overflow-y: auto;">
