@@ -3533,9 +3533,6 @@
                             title="Falsche Korrektur nachträglich ändern">
                         ✏️ Korrektur ändern
                     </button>
-                </div>
-                <!-- Claude Vision Button (separate row) -->
-                <div style="margin-top: 0.75rem; text-align: right;">
                     <button class="btn btn-secondary" id="revalBtnClaudeVision" onclick="validateRevalWithClaudeVision()"
                             title="Mit Claude Vision prüfen">
                         🤖 Claude Vision
@@ -10292,32 +10289,37 @@
         // ==================== Edit Correction Functions ====================
 
         function openEditCorrectionModal() {
-            console.log('[EditCorrection] Opening modal, index:', currentRevalDetailIndex);
-            console.log('[EditCorrection] filteredRevalidationItems length:', filteredRevalidationItems.length);
+            try {
+                console.log('[EditCorrection] Opening modal, index:', currentRevalDetailIndex);
+                console.log('[EditCorrection] filteredRevalidationItems length:', filteredRevalidationItems.length);
 
-            const item = filteredRevalidationItems[currentRevalDetailIndex];
-            console.log('[EditCorrection] Item:', item);
+                const item = filteredRevalidationItems[currentRevalDetailIndex];
+                console.log('[EditCorrection] Item:', item);
 
-            if (!item) {
-                showToast('Kein Pattern ausgewählt', 'error');
-                return;
+                if (!item) {
+                    showToast('Kein Pattern ausgewählt', 'error');
+                    return;
+                }
+
+                console.log('[EditCorrection] Item ID:', item.id);
+                console.log('[EditCorrection] Original:', item.original_pattern);
+                console.log('[EditCorrection] Corrected:', item.corrected_pattern);
+
+                // Show current values
+                document.getElementById('editCorrOriginal').textContent = formatPatternType(item.original_pattern);
+                document.getElementById('editCorrCurrent').textContent =
+                    item.corrected_pattern === 'none' ? 'Kein Pattern' : formatPatternType(item.corrected_pattern);
+
+                // Pre-select current correction
+                const select = document.getElementById('editCorrNewPattern');
+                select.value = item.corrected_pattern || 'none';
+
+                // Show modal
+                document.getElementById('editCorrectionModal').style.display = 'flex';
+            } catch (error) {
+                console.error('[EditCorrection] Error:', error);
+                showToast('Fehler: ' + error.message, 'error');
             }
-
-            console.log('[EditCorrection] Item ID:', item.id);
-            console.log('[EditCorrection] Original:', item.original_pattern);
-            console.log('[EditCorrection] Corrected:', item.corrected_pattern);
-
-            // Show current values
-            document.getElementById('editCorrOriginal').textContent = formatPatternType(item.original_pattern);
-            document.getElementById('editCorrCurrent').textContent =
-                item.corrected_pattern === 'none' ? 'Kein Pattern' : formatPatternType(item.corrected_pattern);
-
-            // Pre-select current correction
-            const select = document.getElementById('editCorrNewPattern');
-            select.value = item.corrected_pattern || 'none';
-
-            // Show modal
-            document.getElementById('editCorrectionModal').style.display = 'flex';
         }
 
         function closeEditCorrectionModal() {
