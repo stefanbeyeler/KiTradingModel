@@ -10358,34 +10358,13 @@
                 const result = await response.json();
                 showToast(result.message, 'success');
 
-                // Update local data
-                item.corrected_pattern = newPattern;
-                if (newPattern === 'none') {
-                    item.feedback_type = 'rejected';
-                } else if (newPattern.toLowerCase() === item.original_pattern.toLowerCase()) {
-                    item.feedback_type = 'confirmed';
-                } else {
-                    item.feedback_type = 'corrected';
-                }
-
-                // Close modal and refresh display
+                // Close both modals
                 closeEditCorrectionModal();
+                closeRevalDetail();
 
-                // Update the detail view header to show new correction
-                const headerInfo = document.querySelector('.reval-detail-title');
-                if (headerInfo) {
-                    const correctedText = newPattern === 'none' ? 'Kein Pattern' : formatPatternType(newPattern);
-                    // Update the KORRIGIERT ZU field
-                    const infoGrid = document.querySelector('.reval-detail-info');
-                    if (infoGrid) {
-                        const divs = infoGrid.querySelectorAll('div');
-                        divs.forEach((div, i) => {
-                            if (div.textContent === 'KORRIGIERT ZU' && divs[i+1]) {
-                                divs[i+1].textContent = correctedText;
-                            }
-                        });
-                    }
-                }
+                // Reload the entire revalidation list from server
+                // This ensures items that changed to 'confirmed' are removed
+                await loadPendingRevalidations();
 
             } catch (error) {
                 console.error('Edit correction error:', error);
