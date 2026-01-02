@@ -3124,6 +3124,11 @@
                         <button class="btn btn-warning btn-sm" id="btnBatch20" onclick="runBatchValidation(20)">20x</button>
                     </div>
                 </div>
+                <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.75rem; line-height: 1.4;">
+                    Validiert erkannte Candlestick-Patterns mit Claude Vision. Claude analysiert das Chart-Bild und prüft,
+                    ob das Pattern den klassischen Kriterien entspricht. Nutze die Batch-Buttons für manuelle Validierung
+                    oder aktiviere die Auto-Optimierung für kontinuierliche Qualitätssicherung.
+                </p>
                 <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; flex: 1;">
                         <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
@@ -3163,13 +3168,16 @@
                 </div>
                 <div id="autoOptStatusSection">
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;"
+                              title="Läuft der Hintergrund-Validierungsprozess?">
                             Status: <span id="autoOptRunning" style="color: #888;">-</span>
                         </span>
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;"
+                              title="Anzahl neu erkannter Patterns, die auf Claude-Validierung warten. Wird im Batch-Intervall abgearbeitet.">
                             Warteschlange: <span id="autoOptPending" style="color: #ffb74d;">-</span>
                         </span>
-                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;"
+                              title="Automatische Parameter-Anpassungen pro Stunde (aktuell / Maximum). Begrenzt um zu häufige Änderungen zu vermeiden.">
                             Auto-Anpassungen/h: <span id="autoOptAdjustments" style="color: #64c8ff;">-</span>
                         </span>
                     </div>
