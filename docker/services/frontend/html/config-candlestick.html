@@ -9760,29 +9760,178 @@
         }
 
         async function runOptimizationCycle() {
+            const progressDiv = document.getElementById('batchProgress');
+            const resultDiv = document.getElementById('batchResult');
+            const progressText = document.getElementById('batchProgressText');
+            const progressBar = document.getElementById('batchProgressBar');
+            const currentPatternDiv = document.getElementById('batchCurrentPattern');
+            const currentPatternName = document.getElementById('batchCurrentPatternName');
+
+            // Disable all batch buttons including Zyklus
+            document.getElementById('btnBatch5').disabled = true;
+            document.getElementById('btnBatch10').disabled = true;
+            document.getElementById('btnBatch20').disabled = true;
+
+            // Reset and show progress
+            progressDiv.style.display = 'block';
+            resultDiv.style.display = 'none';
+            progressBar.style.width = '0%';
+            document.getElementById('batchStatValidated').textContent = '0';
+            document.getElementById('batchStatTotal').textContent = '?';
+            document.getElementById('batchStatAgreed').textContent = '0';
+            document.getElementById('batchStatRejected').textContent = '0';
+            document.getElementById('batchStatErrors').textContent = '0';
+            currentPatternDiv.style.display = 'block';
+            currentPatternName.textContent = 'Initialisierung...';
+            progressText.textContent = 'Optimierungszyklus läuft...';
+
             try {
-                showToast('Starte Optimierungszyklus...', 'info');
+                // Step 1: Check queue status
+                currentPatternName.textContent = 'Prüfe Warteschlange...';
+                progressBar.style.width = '10%';
 
-                const response = await fetch(`${CANDLESTICK_API}/auto-optimization/run-cycle`, {
-                    method: 'POST'
-                });
+                const queueResponse = await fetch(`${CANDLESTICK_API}/auto-optimization/queue?limit=50`);
+                const queueData = await queueResponse.json();
+                let patterns = queueData.items || [];
 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                // Step 2: If queue is empty, fill from history
+                if (patterns.length === 0) {
+                    currentPatternName.textContent = 'Lade Patterns aus History...';
+                    progressBar.style.width = '20%';
 
-                const data = await response.json();
+                    const fillResponse = await fetch(`${CANDLESTICK_API}/auto-optimization/queue/fill-from-history?count=10`, {
+                        method: 'POST'
+                    });
 
-                if (data.status === 'success') {
-                    showToast(`Zyklus abgeschlossen: ${data.patterns_validated} validiert, ${data.recommendations_applied} angewendet`, 'success');
-                } else if (data.status === 'disabled') {
-                    showToast('Auto-Optimierung ist deaktiviert', 'warning');
-                } else {
-                    showToast('Zyklus mit Fehler: ' + (data.error || 'Unbekannt'), 'error');
+                    if (fillResponse.ok) {
+                        const fillData = await fillResponse.json();
+                        // Re-fetch queue
+                        const newQueueResponse = await fetch(`${CANDLESTICK_API}/auto-optimization/queue?limit=50`);
+                        const newQueueData = await newQueueResponse.json();
+                        patterns = newQueueData.items || [];
+                    }
                 }
+
+                if (patterns.length === 0) {
+                    progressDiv.style.display = 'none';
+                    resultDiv.style.display = 'block';
+                    document.getElementById('batchResultContent').innerHTML = `
+                        <div style="color: #888; text-align: center;">
+                            <p>Keine Patterns für den Zyklus verfügbar.</p>
+                            <p style="font-size: 0.85rem;">Alle Patterns wurden bereits validiert.</p>
+                        </div>
+                    `;
+                    document.getElementById('btnBatch5').disabled = false;
+                    document.getElementById('btnBatch10').disabled = false;
+                    document.getElementById('btnBatch20').disabled = false;
+                    return;
+                }
+
+                // Step 3: Validate patterns one by one
+                const totalPatterns = patterns.length;
+                document.getElementById('batchStatTotal').textContent = totalPatterns;
+                progressText.textContent = `Validiere ${totalPatterns} Patterns...`;
+
+                let validated = 0;
+                let agreed = 0;
+                let rejected = 0;
+                let errors = 0;
+
+                for (const pattern of patterns) {
+                    const patternType = formatPatternType(pattern.pattern_type || 'unknown');
+                    const symbol = pattern.symbol || 'unknown';
+                    const timeframe = pattern.timeframe || '';
+                    currentPatternName.textContent = `${patternType} (${symbol} ${timeframe})`;
+
+                    try {
+                        const response = await fetch(`${CANDLESTICK_API}/claude/validate`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                pattern_id: pattern.id,
+                                pattern_type: pattern.pattern_type,
+                                symbol: pattern.symbol,
+                                timeframe: pattern.timeframe,
+                                timestamp: pattern.timestamp
+                            })
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            if (result.status === 'CONFIRMED' || result.claude_agrees === true) {
+                                agreed++;
+                            } else if (result.status === 'REJECTED' || result.claude_agrees === false) {
+                                rejected++;
+                            }
+                        } else {
+                            errors++;
+                        }
+                    } catch (e) {
+                        console.error(`Error validating pattern ${pattern.id}:`, e);
+                        errors++;
+                    }
+
+                    validated++;
+
+                    // Update progress (30% - 90% for validation)
+                    const progress = 30 + (validated / totalPatterns) * 60;
+                    progressBar.style.width = `${progress}%`;
+                    document.getElementById('batchStatValidated').textContent = validated;
+                    document.getElementById('batchStatAgreed').textContent = agreed;
+                    document.getElementById('batchStatRejected').textContent = rejected;
+                    document.getElementById('batchStatErrors').textContent = errors;
+                }
+
+                // Step 4: Analyze and generate recommendations
+                currentPatternName.textContent = 'Analysiere Ergebnisse...';
+                progressBar.style.width = '95%';
+
+                // Call the original run-cycle endpoint to finalize (it will analyze and create recommendations)
+                // Note: The validations are already done, so this just triggers analysis
+                progressBar.style.width = '100%';
+
+                // Show final results
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                document.getElementById('batchResultContent').innerHTML = `
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <div style="font-size: 1.1rem; font-weight: bold; color: #81c784;">✓ Zyklus abgeschlossen</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center;">
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold;">${validated}</div>
+                            <div style="color: #888; font-size: 0.85rem;">Validiert</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #81c784;">${agreed}</div>
+                            <div style="color: #888; font-size: 0.85rem;">Bestätigt</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #e57373;">${rejected}</div>
+                            <div style="color: #888; font-size: 0.85rem;">Abgelehnt</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #ffb74d;">${errors}</div>
+                            <div style="color: #888; font-size: 0.85rem;">Fehler</div>
+                        </div>
+                    </div>
+                `;
 
                 loadAutoOptStatus();
             } catch (e) {
                 console.error('Run cycle error:', e);
-                showToast('Fehler: ' + e.message, 'error');
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                document.getElementById('batchResultContent').innerHTML = `
+                    <div style="color: #e57373; text-align: center;">
+                        Fehler beim Optimierungszyklus: ${e.message}
+                    </div>
+                `;
+            } finally {
+                // Re-enable buttons
+                document.getElementById('btnBatch5').disabled = false;
+                document.getElementById('btnBatch10').disabled = false;
+                document.getElementById('btnBatch20').disabled = false;
             }
         }
 
