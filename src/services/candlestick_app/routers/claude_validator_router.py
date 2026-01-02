@@ -248,14 +248,15 @@ async def validate_pattern(request: ValidationRequest):
                     detail=f"Could not fetch OHLCV data for {symbol}/{timeframe}"
                 )
 
-        # Validate with Claude
+        # Validate with Claude - CRITICAL: Pass pattern_timestamp so Claude analyzes the correct candle!
         result = await claude_validator_service.validate_pattern(
             pattern_id=request.pattern_id,
             pattern_type=pattern_type,
             symbol=symbol,
             timeframe=timeframe,
             ohlcv_data=ohlcv_data,
-            force=request.force
+            force=request.force,
+            pattern_timestamp=pattern_timestamp  # Critical for finding correct candle in ohlc_data
         )
 
         return {

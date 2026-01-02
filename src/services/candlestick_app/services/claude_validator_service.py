@@ -1015,6 +1015,59 @@ WICHTIG: Die "reasoning" Begründung MUSS auf Deutsch sein!"""
                 await asyncio.sleep(self._min_request_interval - elapsed)
         self._last_request_time = datetime.now(timezone.utc)
 
+    def _find_pattern_candle_index(
+        self,
+        ohlcv_data: List[Dict],
+        pattern_timestamp: Optional[str],
+        pattern_candle_count: int = 1
+    ) -> int:
+        """
+        Find the index of the pattern's last candle in the OHLCV data.
+
+        CRITICAL: The ohlc_data from Frontend includes context candles BEFORE and AFTER the pattern.
+        This function finds the actual pattern candle by matching the timestamp.
+
+        Args:
+            ohlcv_data: List of OHLC candles in chronological order
+            pattern_timestamp: ISO timestamp of the pattern (last candle of pattern)
+            pattern_candle_count: Number of candles in the pattern
+
+        Returns:
+            Index of the pattern's last candle, or -1 if not found
+        """
+        if not ohlcv_data:
+            return -1
+
+        # If no timestamp provided, assume pattern is at the end (legacy behavior)
+        if not pattern_timestamp:
+            logger.warning("No pattern_timestamp provided, assuming pattern at end of data")
+            return len(ohlcv_data) - 1
+
+        # Clean up pattern timestamp for comparison
+        # Handle various formats: 2026-01-02T15:15:00+00:00, 2026-01-02 15:15:00, etc.
+        pattern_ts_clean = pattern_timestamp.replace("T", " ").split("+")[0].split(".")[0]
+
+        # Search for matching candle timestamp
+        for i, candle in enumerate(ohlcv_data):
+            candle_ts = candle.get("datetime", candle.get("timestamp", ""))
+            candle_ts_clean = candle_ts.replace("T", " ").split("+")[0].split(".")[0]
+
+            if candle_ts_clean == pattern_ts_clean:
+                logger.info(f"Found pattern candle at index {i}/{len(ohlcv_data)-1} (timestamp: {candle_ts_clean})")
+                return i
+
+        # Fallback: pattern not found by timestamp
+        logger.warning(f"Pattern timestamp '{pattern_ts_clean}' not found in data ({len(ohlcv_data)} candles)")
+
+        # Log available timestamps for debugging
+        if ohlcv_data:
+            first_ts = ohlcv_data[0].get("datetime", ohlcv_data[0].get("timestamp", "N/A"))
+            last_ts = ohlcv_data[-1].get("datetime", ohlcv_data[-1].get("timestamp", "N/A"))
+            logger.warning(f"Available range: {first_ts} to {last_ts}")
+
+        # Return -1 to indicate pattern not found
+        return -1
+
     async def validate_pattern(
         self,
         pattern_id: str,
@@ -1022,7 +1075,8 @@ WICHTIG: Die "reasoning" Begründung MUSS auf Deutsch sein!"""
         symbol: str,
         timeframe: str,
         ohlcv_data: List[Dict],
-        force: bool = False
+        force: bool = False,
+        pattern_timestamp: Optional[str] = None
     ) -> ClaudeValidationResult:
         """
         Validate a detected pattern using Claude Vision API.
@@ -1034,6 +1088,7 @@ WICHTIG: Die "reasoning" Begründung MUSS auf Deutsch sein!"""
             timeframe: Chart timeframe
             ohlcv_data: OHLCV data including pattern and context
             force: Force validation even if cached
+            pattern_timestamp: ISO timestamp of the pattern's last candle (CRITICAL for correct candle selection)
 
         Returns:
             ClaudeValidationResult with Claude's assessment
@@ -1091,21 +1146,66 @@ WICHTIG: Die "reasoning" Begründung MUSS auf Deutsch sein!"""
                 "bullish_abandoned_baby", "bearish_abandoned_baby"
             ]
 
+            # CRITICAL FIX: Find the actual pattern candle by timestamp
+            # The ohlc_data may contain context candles AFTER the pattern!
+            # Extract pattern_timestamp from pattern_id if not provided
+            effective_timestamp = pattern_timestamp
+            if not effective_timestamp and pattern_id:
+                # Pattern ID format: symbol_timeframe_type_timestamp
+                # Example: EURJPY_M15_doji_2026-01-02T15:15:00+00:00
+                parts = pattern_id.split('_')
+                if len(parts) >= 4:
+                    # Reconstruct timestamp from parts after pattern type
+                    # The timestamp starts at index 3 (0=symbol, 1=timeframe, 2=type, 3+=timestamp)
+                    potential_ts = '_'.join(parts[3:])
+                    if 'T' in potential_ts or '-' in potential_ts:
+                        effective_timestamp = potential_ts
+                        logger.info(f"Extracted pattern_timestamp from pattern_id: {effective_timestamp}")
+
+            # Find the pattern's last candle index
+            pattern_last_idx = self._find_pattern_candle_index(
+                ohlcv_data, effective_timestamp, pattern_candles
+            )
+
+            # If pattern not found, fall back to end of data
+            if pattern_last_idx < 0:
+                pattern_last_idx = len(ohlcv_data) - 1
+                logger.warning(f"Pattern candle not found by timestamp, using last candle (idx={pattern_last_idx})")
+
+            # Log data structure for debugging
+            if ohlcv_data:
+                logger.info(
+                    f"OHLC data: {len(ohlcv_data)} candles, "
+                    f"pattern at index {pattern_last_idx}, "
+                    f"first={ohlcv_data[0].get('datetime', 'N/A')}, "
+                    f"last={ohlcv_data[-1].get('datetime', 'N/A')}, "
+                    f"pattern_ts={effective_timestamp}"
+                )
+
             # Calculate metrics for pattern candles
+            # CRITICAL: Use the correct pattern candle index, NOT the last candle!
             candle_metrics = None
             prev_candle_metrics = None
             third_candle_metrics = None  # For 3-candle patterns: first, second, third
 
-            if ohlcv_data:
-                # Get the pattern candle (last one)
-                pattern_candle = ohlcv_data[-1]
+            if ohlcv_data and pattern_last_idx >= 0:
+                # Get the pattern candle at the CORRECT index (not -1!)
+                pattern_candle = ohlcv_data[pattern_last_idx]
                 candle_metrics = self._calculate_candle_metrics(pattern_candle)
 
-                # For 3-candle patterns, get all three candles
-                if is_three_candle and len(ohlcv_data) >= 3:
-                    first_candle = ohlcv_data[-3]
-                    second_candle = ohlcv_data[-2]
-                    third_candle = ohlcv_data[-1]
+                # Log the actual OHLC values being used
+                logger.info(
+                    f"Pattern candle OHLC (idx={pattern_last_idx}): "
+                    f"O={pattern_candle.get('open')}, H={pattern_candle.get('high')}, "
+                    f"L={pattern_candle.get('low')}, C={pattern_candle.get('close')}, "
+                    f"datetime={pattern_candle.get('datetime')}"
+                )
+
+                # For 3-candle patterns, get all three candles relative to pattern_last_idx
+                if is_three_candle and pattern_last_idx >= 2:
+                    first_candle = ohlcv_data[pattern_last_idx - 2]
+                    second_candle = ohlcv_data[pattern_last_idx - 1]
+                    third_candle = ohlcv_data[pattern_last_idx]
                     # Store metrics for all three candles
                     # prev_candle_metrics = first candle, candle_metrics = second candle
                     # third_candle_metrics = third candle
@@ -1118,9 +1218,9 @@ WICHTIG: Die "reasoning" Begründung MUSS auf Deutsch sein!"""
                         f"2nd={'bullish' if candle_metrics['is_bullish'] else 'bearish'}, "
                         f"3rd={'bullish' if third_candle_metrics['is_bullish'] else 'bearish'}"
                     )
-                # For 2-candle patterns, also get the previous candle
-                elif is_two_candle and len(ohlcv_data) >= 2:
-                    prev_candle = ohlcv_data[-2]
+                # For 2-candle patterns, also get the previous candle relative to pattern_last_idx
+                elif is_two_candle and pattern_last_idx >= 1:
+                    prev_candle = ohlcv_data[pattern_last_idx - 1]
                     prev_candle_metrics = self._calculate_candle_metrics(prev_candle)
                     logger.info(
                         f"Two-candle pattern {pattern_type}: "
