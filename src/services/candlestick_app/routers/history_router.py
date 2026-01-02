@@ -1051,9 +1051,9 @@ async def get_revalidation_statistics():
         # Check for last training from training service (if available)
         try:
             import httpx
-            # Query training service for completed jobs
+            # Query training service for completed jobs (port 3016 internally)
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get("http://trading-candlestick-train:8000/api/v1/train/jobs")
+                response = await client.get("http://trading-candlestick-train:3016/api/v1/train/jobs")
                 if response.status_code == 200:
                     jobs_data = response.json()
                     jobs = jobs_data.get("jobs", [])
