@@ -8984,6 +8984,10 @@
             await loadStatusDashboard();
             await loadPatternTypes();
 
+            // Training-Status beim Start laden (um Button zu deaktivieren wenn Training läuft)
+            await loadTrainingStatus();
+            await loadTrainingJobs();
+
             // Auto-Scan standardmäßig starten (ohne Toast-Nachricht)
             if (isAutoScanRunning) {
                 try {
