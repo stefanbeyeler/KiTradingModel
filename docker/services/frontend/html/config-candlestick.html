@@ -4133,12 +4133,35 @@
                 showToast('Keine Pattern-ID verfügbar', 'warning');
                 return;
             }
-            navigator.clipboard.writeText(patternId).then(() => {
-                showToast('Pattern-ID kopiert', 'success');
-            }).catch(err => {
-                console.error('Failed to copy:', err);
+
+            // Try modern clipboard API first, fall back to execCommand
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(patternId).then(() => {
+                    showToast('Pattern-ID kopiert: ' + patternId.substring(0, 30) + '...', 'success');
+                }).catch(err => {
+                    console.error('Clipboard API failed:', err);
+                    fallbackCopyToClipboard(patternId);
+                });
+            } else {
+                fallbackCopyToClipboard(patternId);
+            }
+        }
+
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Pattern-ID kopiert: ' + text.substring(0, 30) + '...', 'success');
+            } catch (err) {
+                console.error('Fallback copy failed:', err);
                 showToast('Kopieren fehlgeschlagen', 'error');
-            });
+            }
+            document.body.removeChild(textArea);
         }
 
         // Copy modal pattern ID
