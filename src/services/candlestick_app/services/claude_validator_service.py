@@ -646,7 +646,8 @@ class ClaudeValidatorService:
         symbol: str,
         timeframe: str,
         candle_metrics: Optional[Dict] = None,
-        prev_candle_metrics: Optional[Dict] = None
+        prev_candle_metrics: Optional[Dict] = None,
+        third_candle_metrics: Optional[Dict] = None
     ) -> str:
         """Build the prompt for Claude to validate a pattern."""
         specific_criteria = self._get_pattern_criteria(pattern_type)
@@ -655,12 +656,159 @@ class ClaudeValidatorService:
         metrics_section = ""
         validation_instruction = ""
 
-        # Check if this is a multi-candle pattern (engulfing, harami, etc.)
+        # Check if this is a multi-candle pattern
         is_engulfing = pattern_type.lower() in ["bullish_engulfing", "bearish_engulfing"]
         is_harami = pattern_type.lower() in ["bullish_harami", "bearish_harami", "harami_cross"]
         is_two_candle = is_engulfing or is_harami
+        is_three_inside = pattern_type.lower() in ["three_inside_up", "three_inside_down"]
+        is_three_soldiers_crows = pattern_type.lower() in ["three_white_soldiers", "three_black_crows"]
+        is_three_candle = is_three_inside or is_three_soldiers_crows
 
-        if candle_metrics and is_two_candle and prev_candle_metrics:
+        # Handle 3-candle patterns FIRST
+        if is_three_candle and prev_candle_metrics and candle_metrics and third_candle_metrics:
+            # For 3-candle patterns: prev=first, candle=second, third=third
+            first = prev_candle_metrics
+            second = candle_metrics
+            third = third_candle_metrics
+
+            metrics_section = f"""
+**EXAKTE OHLC-DATEN FÜR ALLE DREI KERZEN (verwende diese Zahlen, keine visuelle Schätzung!):**
+
+**KERZE 1 (erste):**
+- Open: {first['open']}, High: {first['high']}, Low: {first['low']}, Close: {first['close']}
+- Body: {first['body_bottom']} bis {first['body_top']}
+- Richtung: {"Bullish (grün)" if first['is_bullish'] else "Bearish (rot)"}
+
+**KERZE 2 (mittlere):**
+- Open: {second['open']}, High: {second['high']}, Low: {second['low']}, Close: {second['close']}
+- Body: {second['body_bottom']} bis {second['body_top']}
+- Richtung: {"Bullish (grün)" if second['is_bullish'] else "Bearish (rot)"}
+
+**KERZE 3 (letzte):**
+- Open: {third['open']}, High: {third['high']}, Low: {third['low']}, Close: {third['close']}
+- Body: {third['body_bottom']} bis {third['body_top']}
+- Richtung: {"Bullish (grün)" if third['is_bullish'] else "Bearish (rot)"}
+"""
+            # Automatic validation for Three Inside Up/Down
+            if is_three_inside:
+                if pattern_type.lower() == "three_inside_down":
+                    # Three Inside Down: 1st bullish, 2nd bearish inside 1st, 3rd bearish closes below 1st open
+                    first_ok = first['is_bullish']
+                    second_ok = not second['is_bullish']
+                    # Second candle body must be within first candle body
+                    harami_ok = (second['body_top'] <= first['body_top'] and
+                                 second['body_bottom'] >= first['body_bottom'])
+                    third_ok = not third['is_bullish']
+                    # Third candle must close below first candle's open (which is body_bottom for bullish)
+                    close_ok = third['close'] < first['open']
+
+                    all_ok = first_ok and second_ok and harami_ok and third_ok and close_ok
+
+                    metrics_section += f"""
+**THREE INSIDE DOWN PRÜFUNG (automatisch berechnet):**
+- Kerze 1 bullish (grün): {"✅" if first_ok else "❌"} ({("grün" if first['is_bullish'] else "rot")})
+- Kerze 2 bearish (rot): {"✅" if second_ok else "❌"} ({("grün" if second['is_bullish'] else "rot")})
+- Kerze 2 innerhalb Kerze 1 (Harami): {"✅" if harami_ok else "❌"} (2nd: {second['body_bottom']}-{second['body_top']} in 1st: {first['body_bottom']}-{first['body_top']})
+- Kerze 3 bearish (rot): {"✅" if third_ok else "❌"} ({("grün" if third['is_bullish'] else "rot")})
+- Kerze 3 schließt unter Kerze 1 Open ({first['open']}): {"✅" if close_ok else "❌"} (Close: {third['close']})
+"""
+                    if all_ok:
+                        validation_instruction = f"""
+**AUTOMATISCHE BESTÄTIGUNG ERFORDERLICH:**
+Alle Kriterien für Three Inside Down sind erfüllt:
+✅ Kerze 1 ist bullish, Kerze 2 ist bearish innerhalb Kerze 1, Kerze 3 ist bearish und schließt unter {first['open']}
+Du MUSST agrees=true setzen."""
+                    else:
+                        reasons = []
+                        if not first_ok:
+                            reasons.append("Kerze 1 ist nicht bullish")
+                        if not second_ok:
+                            reasons.append("Kerze 2 ist nicht bearish")
+                        if not harami_ok:
+                            reasons.append(f"Kerze 2 Body ({second['body_bottom']}-{second['body_top']}) nicht in Kerze 1 ({first['body_bottom']}-{first['body_top']})")
+                        if not third_ok:
+                            reasons.append("Kerze 3 ist nicht bearish")
+                        if not close_ok:
+                            reasons.append(f"Kerze 3 Close ({third['close']}) nicht unter Kerze 1 Open ({first['open']})")
+                        validation_instruction = f"""
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Kriterien nicht erfüllt:
+{chr(10).join('- ' + r for r in reasons)}
+Du MUSST agrees=false setzen."""
+
+                else:  # three_inside_up
+                    # Three Inside Up: 1st bearish, 2nd bullish inside 1st, 3rd bullish closes above 1st open
+                    first_ok = not first['is_bullish']
+                    second_ok = second['is_bullish']
+                    harami_ok = (second['body_top'] <= first['body_top'] and
+                                 second['body_bottom'] >= first['body_bottom'])
+                    third_ok = third['is_bullish']
+                    close_ok = third['close'] > first['open']
+
+                    all_ok = first_ok and second_ok and harami_ok and third_ok and close_ok
+
+                    metrics_section += f"""
+**THREE INSIDE UP PRÜFUNG (automatisch berechnet):**
+- Kerze 1 bearish (rot): {"✅" if first_ok else "❌"} ({("grün" if first['is_bullish'] else "rot")})
+- Kerze 2 bullish (grün): {"✅" if second_ok else "❌"} ({("grün" if second['is_bullish'] else "rot")})
+- Kerze 2 innerhalb Kerze 1 (Harami): {"✅" if harami_ok else "❌"}
+- Kerze 3 bullish (grün): {"✅" if third_ok else "❌"} ({("grün" if third['is_bullish'] else "rot")})
+- Kerze 3 schließt über Kerze 1 Open ({first['open']}): {"✅" if close_ok else "❌"} (Close: {third['close']})
+"""
+                    if all_ok:
+                        validation_instruction = """
+**AUTOMATISCHE BESTÄTIGUNG ERFORDERLICH:**
+Alle Kriterien für Three Inside Up sind erfüllt.
+Du MUSST agrees=true setzen."""
+                    else:
+                        validation_instruction = """
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Nicht alle Kriterien erfüllt. Du MUSST agrees=false setzen."""
+
+            elif is_three_soldiers_crows:
+                if pattern_type.lower() == "three_black_crows":
+                    # All three must be bearish
+                    all_bearish = not first['is_bullish'] and not second['is_bullish'] and not third['is_bullish']
+                    # Each closes lower
+                    closes_lower = third['close'] < second['close'] < first['close']
+
+                    metrics_section += f"""
+**THREE BLACK CROWS PRÜFUNG (automatisch berechnet):**
+- Alle 3 Kerzen bearish (rot): {"✅" if all_bearish else "❌"} (1:{("rot" if not first['is_bullish'] else "grün")}, 2:{("rot" if not second['is_bullish'] else "grün")}, 3:{("rot" if not third['is_bullish'] else "grün")})
+- Schlusskurse fallen: {"✅" if closes_lower else "❌"} ({first['close']} > {second['close']} > {third['close']})
+"""
+                    if all_bearish and closes_lower:
+                        validation_instruction = """
+**AUTOMATISCHE BESTÄTIGUNG ERFORDERLICH:**
+Alle drei Kerzen sind bearish und die Schlusskurse fallen stetig.
+Du MUSST agrees=true setzen."""
+                    else:
+                        validation_instruction = """
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Nicht alle Kerzen sind bearish oder Schlusskurse fallen nicht stetig.
+Du MUSST agrees=false setzen."""
+
+                else:  # three_white_soldiers
+                    all_bullish = first['is_bullish'] and second['is_bullish'] and third['is_bullish']
+                    closes_higher = third['close'] > second['close'] > first['close']
+
+                    metrics_section += f"""
+**THREE WHITE SOLDIERS PRÜFUNG (automatisch berechnet):**
+- Alle 3 Kerzen bullish (grün): {"✅" if all_bullish else "❌"}
+- Schlusskurse steigen: {"✅" if closes_higher else "❌"} ({first['close']} < {second['close']} < {third['close']})
+"""
+                    if all_bullish and closes_higher:
+                        validation_instruction = """
+**AUTOMATISCHE BESTÄTIGUNG ERFORDERLICH:**
+Alle drei Kerzen sind bullish und die Schlusskurse steigen stetig.
+Du MUSST agrees=true setzen."""
+                    else:
+                        validation_instruction = """
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Nicht alle Kerzen sind bullish oder Schlusskurse steigen nicht stetig.
+Du MUSST agrees=false setzen."""
+
+        elif candle_metrics and is_two_candle and prev_candle_metrics:
             # Multi-candle pattern: show BOTH candles
             metrics_section = f"""
 **EXAKTE OHLC-DATEN FÜR BEIDE KERZEN (verwende diese Zahlen, keine visuelle Schätzung!):**
@@ -930,24 +1078,48 @@ WICHTIG: Die "reasoning" Begründung MUSS auf Deutsch sein!"""
             if not chart_base64:
                 raise ValueError("Failed to render chart image")
 
-            # Calculate metrics for the pattern candle (last candle in data)
-            candle_metrics = None
-            prev_candle_metrics = None
-
             # Check if this is a multi-candle pattern
             is_two_candle = pattern_type.lower() in [
                 "bullish_engulfing", "bearish_engulfing",
                 "bullish_harami", "bearish_harami", "harami_cross",
                 "piercing_line", "dark_cloud_cover"
             ]
+            is_three_candle = pattern_type.lower() in [
+                "three_inside_up", "three_inside_down",
+                "three_white_soldiers", "three_black_crows",
+                "morning_star", "evening_star",
+                "bullish_abandoned_baby", "bearish_abandoned_baby"
+            ]
+
+            # Calculate metrics for pattern candles
+            candle_metrics = None
+            prev_candle_metrics = None
+            third_candle_metrics = None  # For 3-candle patterns: first, second, third
 
             if ohlcv_data:
                 # Get the pattern candle (last one)
                 pattern_candle = ohlcv_data[-1]
                 candle_metrics = self._calculate_candle_metrics(pattern_candle)
 
+                # For 3-candle patterns, get all three candles
+                if is_three_candle and len(ohlcv_data) >= 3:
+                    first_candle = ohlcv_data[-3]
+                    second_candle = ohlcv_data[-2]
+                    third_candle = ohlcv_data[-1]
+                    # Store metrics for all three candles
+                    # prev_candle_metrics = first candle, candle_metrics = second candle
+                    # third_candle_metrics = third candle
+                    prev_candle_metrics = self._calculate_candle_metrics(first_candle)
+                    candle_metrics = self._calculate_candle_metrics(second_candle)
+                    third_candle_metrics = self._calculate_candle_metrics(third_candle)
+                    logger.info(
+                        f"Three-candle pattern {pattern_type}: "
+                        f"1st={'bullish' if prev_candle_metrics['is_bullish'] else 'bearish'}, "
+                        f"2nd={'bullish' if candle_metrics['is_bullish'] else 'bearish'}, "
+                        f"3rd={'bullish' if third_candle_metrics['is_bullish'] else 'bearish'}"
+                    )
                 # For 2-candle patterns, also get the previous candle
-                if is_two_candle and len(ohlcv_data) >= 2:
+                elif is_two_candle and len(ohlcv_data) >= 2:
                     prev_candle = ohlcv_data[-2]
                     prev_candle_metrics = self._calculate_candle_metrics(prev_candle)
                     logger.info(
@@ -965,9 +1137,10 @@ WICHTIG: Die "reasoning" Begründung MUSS auf Deutsch sein!"""
                         f"lower_shadow={candle_metrics['lower_shadow_ratio']}%"
                     )
 
-            # Build prompt with metrics (including prev_candle for 2-candle patterns)
+            # Build prompt with metrics (including all candles for multi-candle patterns)
             prompt = self._build_validation_prompt(
-                pattern_type, symbol, timeframe, candle_metrics, prev_candle_metrics
+                pattern_type, symbol, timeframe, candle_metrics, prev_candle_metrics,
+                third_candle_metrics
             )
 
             # Apply rate limiting
