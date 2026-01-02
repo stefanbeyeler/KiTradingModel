@@ -9196,9 +9196,11 @@
 
                         if (response.ok) {
                             const result = await response.json();
-                            if (result.status === 'CONFIRMED' || result.claude_agrees === true) {
+                            // API returns {"status": "success", "validation": {...}}
+                            const validation = result.validation || result;
+                            if (validation.claude_agrees === true) {
                                 agreed++;
-                            } else if (result.status === 'REJECTED' || result.claude_agrees === false) {
+                            } else if (validation.claude_agrees === false) {
                                 rejected++;
                             }
                         } else {
@@ -9858,9 +9860,11 @@
 
                         if (response.ok) {
                             const result = await response.json();
-                            if (result.status === 'CONFIRMED' || result.claude_agrees === true) {
+                            // API returns {"status": "success", "validation": {...}}
+                            const validation = result.validation || result;
+                            if (validation.claude_agrees === true) {
                                 agreed++;
-                            } else if (result.status === 'REJECTED' || result.claude_agrees === false) {
+                            } else if (validation.claude_agrees === false) {
                                 rejected++;
                             }
                         } else {
