@@ -2714,9 +2714,15 @@
         <div class="modal-overlay" id="patternModal" onclick="closePatternModal(event)">
             <div class="modal" onclick="event.stopPropagation()" style="max-width: 800px;">
                 <div class="modal-header">
-                    <div class="modal-title">
-                        <span id="modalPatternName">-</span>
-                        <span class="timeline-direction" id="modalDirection">-</span>
+                    <div class="modal-title" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span id="modalPatternName">-</span>
+                            <span class="timeline-direction" id="modalDirection">-</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; color: #888;">
+                            <span style="font-family: monospace;" id="modalPatternId">-</span>
+                            <button class="btn btn-secondary" style="padding: 0.15rem 0.35rem; font-size: 0.6rem;" onclick="copyModalPatternId()" title="Pattern-ID kopieren">📋</button>
+                        </div>
                     </div>
                     <button class="modal-close" onclick="closePatternModal()">&times;</button>
                 </div>
@@ -2738,13 +2744,6 @@
                     </div>
 
                     <div class="modal-info-grid">
-                        <div class="modal-info-item">
-                            <div class="modal-info-label">Pattern-ID</div>
-                            <div class="modal-info-value" style="display: flex; align-items: center; gap: 0.5rem;">
-                                <span id="modalPatternId" style="font-family: monospace; font-size: 0.75rem; word-break: break-all; flex: 1;">-</span>
-                                <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="copyPatternId(document.getElementById('modalPatternId').dataset.fullId)" title="Pattern-ID kopieren">📋</button>
-                            </div>
-                        </div>
                         <div class="modal-info-item">
                             <div class="modal-info-label">Symbol</div>
                             <div class="modal-info-value" id="modalSymbol">-</div>
@@ -3428,9 +3427,15 @@
     <div id="revalDetailOverlay" class="reval-detail-overlay" onclick="closeRevalDetail(event)">
         <div class="reval-detail-modal" onclick="event.stopPropagation()">
             <div class="reval-detail-header">
-                <div class="reval-detail-title">
-                    <span id="revalDetailSymbol">BTCUSD</span>
-                    <span class="reval-detail-badge" id="revalDetailType">Korrigiert</span>
+                <div class="reval-detail-title" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span id="revalDetailSymbol">BTCUSD</span>
+                        <span class="reval-detail-badge" id="revalDetailType">Korrigiert</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; color: #888;">
+                        <span style="font-family: monospace;" id="revalDetailPatternId">-</span>
+                        <button class="btn btn-secondary" style="padding: 0.15rem 0.35rem; font-size: 0.6rem;" onclick="copyRevalPatternId()" title="Pattern-ID kopieren">📋</button>
+                    </div>
                 </div>
                 <div class="reval-detail-nav">
                     <button class="btn btn-secondary" onclick="navigateRevalDetail(-1)" id="revalPrevBtn" title="Vorheriger">
@@ -3448,13 +3453,6 @@
                 <!-- Pattern Info -->
                 <div class="reval-detail-info">
                     <div class="reval-detail-info-row">
-                        <div class="reval-detail-info-item">
-                            <label>Pattern-ID</label>
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <span id="revalDetailPatternId" style="font-family: monospace; font-size: 0.75rem; word-break: break-all; flex: 1;">-</span>
-                                <button class="btn btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.65rem;" onclick="copyPatternId(document.getElementById('revalDetailPatternId').dataset.fullId)" title="Pattern-ID kopieren">📋</button>
-                            </div>
-                        </div>
                         <div class="reval-detail-info-item">
                             <label>Original erkannt</label>
                             <span id="revalDetailOriginal">-</span>
@@ -4057,15 +4055,33 @@
             return fullId.substring(0, 6);
         }
 
-        // Copy pattern ID to clipboard
+        // Current pattern IDs for copy functions
+        let currentModalPatternFullId = '';
+        let currentRevalPatternFullId = '';
+
+        // Copy pattern ID to clipboard (generic)
         function copyPatternId(patternId, event) {
             if (event) event.stopPropagation();
+            if (!patternId) {
+                showToast('Keine Pattern-ID verfügbar', 'warning');
+                return;
+            }
             navigator.clipboard.writeText(patternId).then(() => {
-                showToast('Pattern-ID kopiert: ' + patternId, 'success');
+                showToast('Pattern-ID kopiert', 'success');
             }).catch(err => {
                 console.error('Failed to copy:', err);
                 showToast('Kopieren fehlgeschlagen', 'error');
             });
+        }
+
+        // Copy modal pattern ID
+        function copyModalPatternId() {
+            copyPatternId(currentModalPatternFullId);
+        }
+
+        // Copy reval pattern ID
+        function copyRevalPatternId() {
+            copyPatternId(currentRevalPatternFullId);
         }
 
         // Load service info
@@ -5222,10 +5238,9 @@
             directionEl.textContent = currentModalPattern.direction;
             directionEl.className = `timeline-direction ${currentModalPattern.direction}`;
 
-            // Set Pattern-ID with full ID in data attribute for copy button
-            const patternIdEl = document.getElementById('modalPatternId');
-            patternIdEl.textContent = currentModalPattern.id || '-';
-            patternIdEl.dataset.fullId = currentModalPattern.id || '';
+            // Set Pattern-ID in header and store for copy function
+            currentModalPatternFullId = currentModalPattern.id || '';
+            document.getElementById('modalPatternId').textContent = currentModalPatternFullId || '-';
 
             document.getElementById('modalSymbol').textContent = currentModalPattern.symbol;
             document.getElementById('modalTimeframe').textContent = currentModalPattern.timeframe;
@@ -5270,10 +5285,9 @@
             directionEl.textContent = pattern.direction;
             directionEl.className = `timeline-direction ${pattern.direction}`;
 
-            // Set Pattern-ID with full ID in data attribute for copy button
-            const patternIdEl = document.getElementById('modalPatternId');
-            patternIdEl.textContent = pattern.id || '-';
-            patternIdEl.dataset.fullId = pattern.id || '';
+            // Set Pattern-ID in header and store for copy function
+            currentModalPatternFullId = pattern.id || '';
+            document.getElementById('modalPatternId').textContent = currentModalPatternFullId || '-';
 
             document.getElementById('modalSymbol').textContent = pattern.symbol;
             document.getElementById('modalTimeframe').textContent = pattern.timeframe;
@@ -7156,10 +7170,9 @@
             document.getElementById('revalNextBtn').disabled = index === filteredRevalidationItems.length - 1;
 
             // Update info
-            // Set Pattern-ID with full ID in data attribute for copy button
-            const patternIdEl = document.getElementById('revalDetailPatternId');
-            patternIdEl.textContent = item.id || '-';
-            patternIdEl.dataset.fullId = item.id || '';
+            // Set Pattern-ID in header and store for copy function
+            currentRevalPatternFullId = item.id || '';
+            document.getElementById('revalDetailPatternId').textContent = currentRevalPatternFullId || '-';
 
             document.getElementById('revalDetailOriginal').textContent = formatPatternType(item.original_pattern);
             document.getElementById('revalDetailCorrected').textContent = isRejected ? 'Kein Pattern' : formatPatternType(item.corrected_pattern);
