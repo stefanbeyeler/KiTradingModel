@@ -16,92 +16,177 @@ from loguru import logger
 
 
 # Feedback category patterns - regex patterns to extract from Claude's reasoning
+# Supports both English and German (Claude often responds in German)
 FEEDBACK_CATEGORY_PATTERNS = {
-    # Body-related issues
+    # Body-related issues (English + German)
     "body_too_large": [
+        # English
         r"body.{0,20}(too|is|appears?).{0,10}(large|big|thick)",
         r"body.{0,20}(should be|needs to be).{0,10}(smaller|thinner)",
         r"(large|big|thick).{0,10}body",
         r"body.{0,10}(exceed|over|more than).{0,10}\d+%",
+        # German
+        r"body.?ratio.{0,20}(beträgt|ist).{0,10}\d+",
+        r"körper.{0,20}(zu|ist).{0,10}(groß|gross|dick)",
+        r"(zu|viel zu).{0,10}(groß|gross).{0,10}(körper|body)",
+        r"\d+%.{0,20}(über|deutlich über|weit über).{0,20}(grenzwert|kriterium|limit)",
+        r"(body|körper).{0,20}(über|überschreitet).{0,20}\d+%",
     ],
     "body_too_small": [
+        # English
         r"body.{0,20}(too|is|appears?).{0,10}(small|thin|tiny)",
         r"body.{0,20}(should be|needs to be).{0,10}(larger|bigger)",
         r"(small|tiny|minimal).{0,10}body",
         r"not enough.{0,10}body",
+        # German
+        r"körper.{0,20}(zu|ist).{0,10}(klein|dünn)",
+        r"(zu|viel zu).{0,10}(klein|dünn).{0,10}(körper|body)",
+        r"(body|körper).{0,20}(weniger als|unter).{0,20}\d+%",
     ],
 
-    # Shadow-related issues
+    # Shadow-related issues (English + German)
     "upper_shadow_too_short": [
+        # English
         r"upper.{0,10}shadow.{0,20}(too|is).{0,10}(short|small|minimal)",
         r"(insufficient|lacking|missing).{0,10}upper.{0,10}shadow",
         r"upper.{0,10}wick.{0,20}(too|is).{0,10}(short|small)",
+        # German
+        r"(oberer|ober).{0,10}(schatten|docht).{0,20}(zu|ist).{0,10}(kurz|klein)",
+        r"(fehlender|kein).{0,10}(oberer|ober).{0,10}(schatten|docht)",
     ],
     "upper_shadow_too_long": [
+        # English
         r"upper.{0,10}shadow.{0,20}(too|is).{0,10}(long|large|big)",
         r"upper.{0,10}wick.{0,20}(too|is).{0,10}(long|large)",
+        # German
+        r"(oberer|ober).{0,10}(schatten|docht).{0,20}(zu|ist).{0,10}(lang|gross)",
     ],
     "lower_shadow_too_short": [
+        # English
         r"lower.{0,10}shadow.{0,20}(too|is).{0,10}(short|small|minimal)",
         r"(insufficient|lacking|missing).{0,10}lower.{0,10}shadow",
         r"lower.{0,10}wick.{0,20}(too|is).{0,10}(short|small)",
+        # German
+        r"(unterer|unter).{0,10}(schatten|docht).{0,20}(zu|ist).{0,10}(kurz|klein)",
+        r"(fehlender|kein).{0,10}(unterer|unter).{0,10}(schatten|docht)",
     ],
     "lower_shadow_too_long": [
+        # English
         r"lower.{0,10}shadow.{0,20}(too|is).{0,10}(long|large|big)",
         r"lower.{0,10}wick.{0,20}(too|is).{0,10}(long|large)",
+        # German
+        r"(unterer|unter).{0,10}(schatten|docht).{0,20}(zu|ist).{0,10}(lang|gross)",
     ],
 
-    # Engulfing-related issues
+    # Engulfing-related issues (English + German)
     "not_fully_engulfing": [
+        # English
         r"not.{0,20}(fully|completely).{0,10}engulf",
         r"(does not|doesn't).{0,10}engulf",
         r"fail.{0,20}engulf",
         r"engulfing.{0,20}not.{0,10}(complete|full)",
+        # German
+        r"(umhüllt|umschliesst).{0,10}nicht.{0,10}(vollständig|komplett)",
+        r"nicht.{0,10}(vollständig|komplett).{0,10}(umhüllt|umschlossen)",
+        r"kein.{0,10}(gültiges|echtes).{0,10}engulfing",
     ],
     "engulfing_too_small": [
+        # English
         r"engulfing.{0,20}candle.{0,20}(too|is).{0,10}(small|weak)",
         r"(second|current).{0,10}candle.{0,20}not.{0,10}(large|big) enough",
         r"size.{0,10}ratio.{0,10}(insufficient|too small)",
+        # German
+        r"(aktuelle|zweite).{0,10}kerze.{0,20}(zu|ist).{0,10}(klein|schwach)",
     ],
 
-    # Trend context issues
+    # Trend context issues (English + German)
     "wrong_trend_context": [
+        # English
         r"(wrong|incorrect|inappropriate).{0,10}(trend|context)",
         r"no.{0,10}(prior|preceding).{0,10}(uptrend|downtrend)",
         r"(reversal|continuation).{0,10}pattern.{0,20}(without|missing).{0,10}trend",
         r"context.{0,20}not.{0,10}appropriate",
+        # German
+        r"(falscher|falsches|kein).{0,10}(trend|kontext)",
+        r"(trend|kontext).{0,20}(nicht|fehlt)",
     ],
     "no_prior_trend": [
+        # English
         r"no.{0,10}(clear|visible|prior).{0,10}trend",
         r"(lacking|missing|absent).{0,10}(uptrend|downtrend)",
         r"sideways.{0,10}(market|movement)",
+        # German
+        r"(kein|fehlender).{0,10}(vorheriger|klarer).{0,10}trend",
+        r"seitwärts.{0,10}(markt|bewegung)",
     ],
 
-    # Gap-related issues
+    # Gap-related issues (English + German)
     "missing_gap": [
+        # English
         r"(missing|no|absent).{0,10}gap",
         r"gap.{0,10}(required|needed|expected)",
         r"(should|needs to).{0,10}gap",
+        # German
+        r"(fehlende|kein).{0,10}(gap|lücke)",
+        r"(gap|lücke).{0,10}(fehlt|erforderlich)",
     ],
 
-    # General issues
+    # General issues (English + German)
     "false_positive": [
+        # English
         r"(false|incorrect).{0,10}positive",
         r"not.{0,20}(valid|genuine|true).{0,10}(pattern|formation)",
         r"(misidentified|incorrectly identified)",
         r"(does not|doesn't).{0,10}meet.{0,10}(criteria|definition)",
+        # German
+        r"(kein|nicht).{0,10}(gültiges|echtes|valides).{0,10}(muster|pattern)",
+        r"(falsch|inkorrekt).{0,10}(identifiziert|erkannt)",
+        r"(erfüllt|entspricht).{0,10}nicht.{0,10}(kriterien|definition)",
+        r"nicht.{0,10}(vollständig|korrekt).{0,10}erfüllt",
     ],
     "wrong_pattern_type": [
+        # English
         r"(looks more like|appears to be|actually|should be).{0,20}(doji|hammer|engulfing|star|harami)",
         r"(this is|i see).{0,10}(a|an).{0,10}(doji|hammer|engulfing|star|harami)",
         r"misclassified.{0,10}as",
+        # German
+        r"(sieht aus wie|scheint|ist eher).{0,20}(doji|hammer|engulfing|star|harami)",
+        r"(falsch klassifiziert|fehlklassifiziert)",
     ],
 
-    # Proportion issues
+    # Proportion issues (English + German)
     "shadow_body_ratio_wrong": [
+        # English
         r"shadow.{0,10}(to|vs|compared).{0,10}body.{0,10}ratio",
         r"ratio.{0,20}(shadow|wick).{0,20}body",
         r"(shadow|wick).{0,20}(at least|minimum).{0,10}\d+x",
+        # German
+        r"(schatten|docht).{0,10}(zu|verhältnis).{0,10}(körper|body)",
+        r"verhältnis.{0,20}(schatten|docht).{0,20}(körper|body)",
+    ],
+
+    # Doji-specific issues (German patterns for common doji rejections)
+    "doji_body_too_large": [
+        r"body.?ratio.{0,20}\d+%.{0,20}(über|deutlich über|weit über)",
+        r"(doji|grenzwert).{0,20}5%",
+        r"echter doji.{0,10}(erfordert|benötigt)",
+        r"body.?ratio.{0,10}beträgt.{0,10}\d+%",
+        r"automatische ablehnung",
+    ],
+
+    # Multi-candle pattern issues (German)
+    "wrong_candle_direction": [
+        r"kerze.{0,10}\d.{0,10}(ist|sollte).{0,10}(bullish|bearish|grün|rot)",
+        r"(bullish|bearish).{0,10}statt.{0,10}(bullish|bearish)",
+        r"(grün|rot).{0,10}statt.{0,10}(grün|rot)",
+        r"alle.{0,10}(drei|3).{0,10}kerzen.{0,10}(bullish|bearish)",
+    ],
+
+    # Harami issues (German)
+    "harami_not_contained": [
+        r"(nicht|liegt nicht).{0,10}(vollständig|komplett).{0,10}(innerhalb|in|enthalten)",
+        r"harami.{0,10}(bedingung|kriterium).{0,10}(nicht|fehlt)",
+        r"kerze.{0,10}2.{0,10}(innerhalb|in).{0,10}kerze.{0,10}1",
     ],
 }
 
