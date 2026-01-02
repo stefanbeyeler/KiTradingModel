@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from loguru import logger
 
 from ..services.pattern_history_service import pattern_history_service
+from src.utils.timezone_utils import to_display_timezone
 
 router = APIRouter()
 
@@ -189,6 +190,14 @@ async def get_pattern_history(
         default=None,
         description="Filter by feedback status (pending, confirmed, corrected, rejected)"
     ),
+    date_from: Optional[str] = Query(
+        default=None,
+        description="Filter patterns from this date (ISO format: YYYY-MM-DD)"
+    ),
+    date_to: Optional[str] = Query(
+        default=None,
+        description="Filter patterns until this date (ISO format: YYYY-MM-DD)"
+    ),
     min_confidence: float = Query(default=0.0, ge=0.0, le=1.0, description="Minimum confidence"),
     limit: int = Query(default=100, ge=1, le=1000, description="Maximum results")
 ):
@@ -204,14 +213,33 @@ async def get_pattern_history(
     - **category**: Filter by pattern category (reversal, continuation, indecision)
     - **timeframe**: Filter by timeframe (M5, M15, H1, H4, D1)
     - **feedback_status**: Filter by feedback status (pending, confirmed, corrected, rejected)
+    - **date_from**: Filter patterns from this date (YYYY-MM-DD)
+    - **date_to**: Filter patterns until this date (YYYY-MM-DD)
     - **min_confidence**: Minimum confidence threshold
     - **limit**: Maximum number of results
     """
     try:
+        # Parse date filters if provided
+        date_from_dt = None
+        date_to_dt = None
+        if date_from:
+            try:
+                date_from_dt = datetime.strptime(date_from, "%Y-%m-%d")
+            except ValueError:
+                logger.warning(f"Invalid date_from format: {date_from}")
+        if date_to:
+            try:
+                # Add 1 day to include patterns on the end date
+                date_to_dt = datetime.strptime(date_to, "%Y-%m-%d").replace(
+                    hour=23, minute=59, second=59
+                )
+            except ValueError:
+                logger.warning(f"Invalid date_to format: {date_to}")
+
         # Get base history
-        # When filtering by feedback_status, we need to fetch all patterns first
-        # because feedback status is stored separately
-        fetch_limit = 1000 if feedback_status else limit
+        # When filtering by feedback_status or date, we need to fetch all patterns first
+        # because these filters are applied after fetching
+        fetch_limit = 1000 if (feedback_status or date_from or date_to) else limit
         history = pattern_history_service.get_history(
             symbol=symbol.upper() if symbol else None,
             direction=direction.lower() if direction else None,
@@ -239,6 +267,30 @@ async def get_pattern_history(
             if feedback_status:
                 if pattern["feedback_status"] != feedback_status.lower():
                     continue
+
+            # Apply date filters if specified
+            # IMPORTANT: Convert pattern timestamp to display timezone before comparing
+            # because the user sets filters based on what they see in the UI (local time)
+            if date_from_dt or date_to_dt:
+                pattern_timestamp = pattern.get("timestamp")
+                if pattern_timestamp:
+                    try:
+                        # Convert UTC timestamp to display timezone (Europe/Zurich)
+                        # so the date comparison matches what the user sees
+                        local_dt = to_display_timezone(pattern_timestamp)
+                        if local_dt is None:
+                            logger.debug(f"Could not parse timestamp: {pattern_timestamp}")
+                            continue
+                        # Extract just the date part in local timezone for comparison
+                        pattern_date = local_dt.date()
+                        if date_from_dt and pattern_date < date_from_dt.date():
+                            continue
+                        if date_to_dt and pattern_date > date_to_dt.date():
+                            continue
+                    except (ValueError, AttributeError) as e:
+                        logger.debug(f"Error parsing timestamp {pattern_timestamp}: {e}")
+                        # Skip patterns with invalid timestamps
+                        continue
 
             enriched_history.append(pattern)
 
