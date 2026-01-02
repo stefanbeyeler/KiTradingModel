@@ -451,12 +451,14 @@ class RuleOptimizerService:
             for sample in samples:
                 try:
                     # Use Claude validator service with pattern_id
+                    # CRITICAL: Pass pattern_timestamp so Claude analyzes the correct candle!
                     result = await claude_validator_service.validate_pattern(
                         pattern_id=sample.sample_id,
                         pattern_type=sample.pattern_type,
                         symbol=sample.symbol,
                         timeframe=sample.timeframe,
                         ohlcv_data=sample.ohlcv_data,
+                        pattern_timestamp=sample.timestamp,  # Critical for correct candle selection
                     )
 
                     # Store the chart image from validation result
