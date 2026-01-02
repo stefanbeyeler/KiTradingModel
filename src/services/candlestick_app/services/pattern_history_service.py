@@ -17,8 +17,30 @@ from ..models.schemas import (
     PatternHistoryEntry,
     PatternScanRequest,
     Timeframe,
+    OHLCContext,
 )
 from .pattern_detection_service import candlestick_pattern_service
+
+# Pattern candle counts (how many candles form the pattern)
+PATTERN_CANDLE_COUNTS = {
+    # Single candle patterns
+    "hammer": 1, "inverted_hammer": 1, "shooting_star": 1, "hanging_man": 1,
+    "doji": 1, "dragonfly_doji": 1, "gravestone_doji": 1, "spinning_top": 1,
+    "bullish_belt_hold": 1, "bearish_belt_hold": 1,
+    # Two candle patterns
+    "bullish_engulfing": 2, "bearish_engulfing": 2,
+    "piercing_line": 2, "dark_cloud_cover": 2,
+    "bullish_harami": 2, "bearish_harami": 2, "harami_cross": 2,
+    "bullish_counterattack": 2, "bearish_counterattack": 2,
+    # Three candle patterns
+    "morning_star": 3, "evening_star": 3,
+    "three_white_soldiers": 3, "three_black_crows": 3,
+    "rising_three_methods": 3, "falling_three_methods": 3,
+    "three_inside_up": 3, "three_inside_down": 3,
+    "bullish_abandoned_baby": 3, "bearish_abandoned_baby": 3,
+    "tower_bottom": 3, "tower_top": 3, "advance_block": 3,
+    "bearish_island": 3, "bullish_island": 3,
+}
 
 
 # Data directory
@@ -100,11 +122,14 @@ class PatternHistoryService:
     def _get_timeframe_minutes(self, timeframe: str) -> int:
         """Gibt die Anzahl Minuten fuer einen Timeframe zurueck."""
         tf_minutes = {
+            "M1": 1,
             "M5": 5,
             "M15": 15,
+            "M30": 30,
             "H1": 60,
             "H4": 240,
             "D1": 1440,
+            "W1": 10080,
         }
         return tf_minutes.get(timeframe, 60)
 
@@ -157,6 +182,146 @@ class PatternHistoryService:
                         return True
 
         return False
+
+    async def _fetch_ohlc_context(
+        self,
+        symbol: str,
+        timeframe: str,
+        pattern_timestamp: str,
+        pattern_type: str,
+        context_before: int = 5,
+        context_after: int = 5
+    ) -> Optional[dict]:
+        """
+        Hole OHLC-Daten mit Kontext fuer ein Pattern.
+
+        Args:
+            symbol: Trading-Symbol
+            timeframe: Timeframe des Patterns
+            pattern_timestamp: ISO 8601 Zeitstempel des Patterns
+            pattern_type: Pattern-Typ (fuer Anzahl Kerzen)
+            context_before: Anzahl Kerzen vor dem Pattern
+            context_after: Anzahl Kerzen nach dem Pattern
+
+        Returns:
+            OHLCContext als Dictionary oder None bei Fehler
+        """
+        try:
+            # Anzahl Kerzen im Pattern
+            candle_count = PATTERN_CANDLE_COUNTS.get(pattern_type.lower(), 1)
+
+            # Wir brauchen: context_before + pattern_candles + context_after
+            total_candles_needed = context_before + candle_count + context_after
+
+            # Parse Pattern-Timestamp
+            pattern_time = datetime.fromisoformat(pattern_timestamp.replace('Z', '+00:00'))
+
+            # Berechne end_date: Pattern-Zeit + context_after Kerzen
+            tf_minutes = self._get_timeframe_minutes(timeframe)
+            end_time = pattern_time + timedelta(minutes=tf_minutes * context_after)
+            end_date_str = end_time.strftime("%Y-%m-%d %H:%M:%S")
+
+            # Hole Daten via Data Service
+            import httpx
+            data_service_url = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+
+            # TwelveData Interval Mapping
+            interval_map = {
+                "M1": "1min", "M5": "5min", "M15": "15min", "M30": "30min",
+                "H1": "1h", "H4": "4h", "D1": "1day", "W1": "1week"
+            }
+            interval = interval_map.get(timeframe, "1h")
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{data_service_url}/api/v1/twelvedata/time_series/{symbol}",
+                    params={
+                        "interval": interval,
+                        "outputsize": total_candles_needed + 5,  # Extra buffer
+                        "end_date": end_date_str
+                    }
+                )
+
+                if response.status_code != 200:
+                    logger.warning(f"Failed to fetch OHLC context: {response.status_code}")
+                    return None
+
+                data = response.json()
+                values = data.get("values", [])
+
+                if not values:
+                    logger.warning(f"No OHLC data returned for {symbol}/{timeframe}")
+                    return None
+
+                # TwelveData gibt Daten in umgekehrter Reihenfolge (neueste zuerst)
+                # Konvertiere zu chronologischer Reihenfolge (aelteste zuerst)
+                candles = list(reversed(values))
+
+                # Finde die Pattern-Kerze (letzte Kerze des Patterns)
+                pattern_idx = -1
+                tolerance_seconds = tf_minutes * 60
+
+                for i, candle in enumerate(candles):
+                    candle_time_str = candle.get("datetime", "")
+                    if not candle_time_str:
+                        continue
+
+                    # Parse TwelveData datetime (ohne Timezone)
+                    try:
+                        if " " in candle_time_str:
+                            candle_time = datetime.strptime(candle_time_str, "%Y-%m-%d %H:%M:%S")
+                        else:
+                            candle_time = datetime.strptime(candle_time_str, "%Y-%m-%d")
+                        candle_time = candle_time.replace(tzinfo=timezone.utc)
+                    except ValueError:
+                        continue
+
+                    time_diff = abs((candle_time - pattern_time).total_seconds())
+                    if time_diff < tolerance_seconds:
+                        pattern_idx = i
+                        break
+
+                if pattern_idx == -1:
+                    logger.warning(f"Pattern timestamp {pattern_timestamp} not found in OHLC data")
+                    return None
+
+                # Berechne Start- und End-Index fuer den Kontext
+                # Pattern-Timestamp ist die LETZTE Kerze des Patterns
+                pattern_end_idx = pattern_idx
+                pattern_start_idx = pattern_end_idx - (candle_count - 1)
+
+                # Stelle sicher, dass wir genug Daten haben
+                start_idx = max(0, pattern_start_idx - context_before)
+                end_idx = min(len(candles), pattern_end_idx + context_after + 1)
+
+                # Slice die Kerzen
+                context_candles = candles[start_idx:end_idx]
+
+                # Konvertiere zu einfachen Dictionaries
+                formatted_candles = []
+                for c in context_candles:
+                    formatted_candles.append({
+                        "datetime": c.get("datetime"),
+                        "open": float(c.get("open", 0)),
+                        "high": float(c.get("high", 0)),
+                        "low": float(c.get("low", 0)),
+                        "close": float(c.get("close", 0))
+                    })
+
+                # Berechne die neuen Indizes relativ zum Slice
+                new_pattern_start_idx = pattern_start_idx - start_idx
+                new_pattern_end_idx = pattern_end_idx - start_idx
+
+                return {
+                    "candles": formatted_candles,
+                    "pattern_start_idx": new_pattern_start_idx,
+                    "pattern_end_idx": new_pattern_end_idx,
+                    "candle_count": candle_count
+                }
+
+        except Exception as e:
+            logger.error(f"Error fetching OHLC context for {symbol}/{timeframe}: {e}")
+            return None
 
     async def _get_available_timeframes(self, symbol: str) -> list[Timeframe]:
         """Pruefe welche Timeframes fuer ein Symbol verfuegbar sind."""
@@ -239,6 +404,16 @@ class PatternHistoryService:
                         if self._is_duplicate(symbol, pattern.timeframe.value, pattern.pattern_type.value, pattern_ts):
                             continue
 
+                        # Hole OHLC-Daten mit Kontext fuer Re-Evaluation
+                        ohlc_context = await self._fetch_ohlc_context(
+                            symbol=symbol,
+                            timeframe=pattern.timeframe.value,
+                            pattern_timestamp=pattern_ts,
+                            pattern_type=pattern.pattern_type.value,
+                            context_before=5,
+                            context_after=5
+                        )
+
                         entry = PatternHistoryEntry(
                             id=unique_key,
                             timestamp=pattern_ts,  # Pattern-Zeitpunkt (Kerzen-Close)
@@ -253,6 +428,7 @@ class PatternHistoryService:
                             price_at_detection=pattern.price_at_detection,
                             description=pattern.description,
                             trading_implication=pattern.trading_implication,
+                            ohlc_context=ohlc_context,  # OHLC-Daten mit Kontext
                         )
                         self._history.append(entry)
                         new_patterns += 1

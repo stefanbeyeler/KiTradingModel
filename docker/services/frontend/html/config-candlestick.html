@@ -6055,14 +6055,41 @@
             if (!canvas) return;
 
             try {
+                const patternCandleCount = getPatternCandleCount(pattern.pattern_type);
+
+                // PRIORITY 1: Use stored ohlc_context if available (most reliable)
+                // This data was saved when the pattern was detected and never changes
+                if (pattern.ohlc_context && pattern.ohlc_context.candles && pattern.ohlc_context.candles.length > 0) {
+                    console.log(`Using stored ohlc_context for ${pattern.symbol}/${pattern.timeframe} (${pattern.ohlc_context.candles.length} candles)`);
+
+                    // ohlc_context.candles is already in chronological order (oldest first)
+                    const formattedCandles = pattern.ohlc_context.candles.map(c => ({
+                        datetime: c.datetime,
+                        open: parseFloat(c.open),
+                        high: parseFloat(c.high),
+                        low: parseFloat(c.low),
+                        close: parseFloat(c.close)
+                    }));
+
+                    // Use the stored highlight indices
+                    const highlightStartIdx = pattern.ohlc_context.pattern_start_idx;
+
+                    // Store OHLC data in pattern for feedback submission
+                    pattern.ohlc_data = formattedCandles;
+
+                    renderCandlestickChart(canvas, formattedCandles, highlightStartIdx, pattern.direction, pattern.pattern_type, pattern.timeframe);
+                    return;
+                }
+
+                // PRIORITY 2: Fetch from API (fallback for patterns without stored context)
+                console.log(`No stored ohlc_context, fetching from API for ${pattern.symbol}/${pattern.timeframe}`);
+
                 const interval = timeframeToInterval(pattern.timeframe);
                 const patternTime = new Date(pattern.timestamp);
-                const patternCandleCount = getPatternCandleCount(pattern.pattern_type);
                 const timeframeTolerance = getTimeframeMinutes(pattern.timeframe) * 60 * 1000;
 
                 // Calculate cache key including pattern timestamp to avoid stale data issues
-                // We need data AROUND the pattern timestamp, not just the latest data
-                const patternTimeBucket = Math.floor(patternTime.getTime() / (timeframeTolerance * 10)); // Group by ~10 candles
+                const patternTimeBucket = Math.floor(patternTime.getTime() / (timeframeTolerance * 10));
                 const cacheKey = `${pattern.symbol}_${interval}_${patternTimeBucket}`;
 
                 let ohlcData;
@@ -6072,29 +6099,20 @@
                 if (ohlcCache[cacheKey]) {
                     const cachedData = ohlcCache[cacheKey];
                     if (cachedData && cachedData.length > 0) {
-                        // Check if pattern timestamp is within cached data range
                         const newestTime = parseTwelveDataTimeUTC(cachedData[0].datetime);
                         const oldestTime = parseTwelveDataTimeUTC(cachedData[cachedData.length - 1].datetime);
                         if (patternTime >= oldestTime && patternTime <= newestTime) {
                             ohlcData = cachedData;
                             needsFetch = false;
-                            console.log(`Cache hit for ${cacheKey}, pattern time ${pattern.timestamp} is in range`);
-                        } else {
-                            console.log(`Cache miss: pattern time ${pattern.timestamp} not in range [${cachedData[cachedData.length-1].datetime} - ${cachedData[0].datetime}]`);
+                            console.log(`Cache hit for ${cacheKey}`);
                         }
                     }
                 }
 
                 if (needsFetch) {
-                    // Fetch data with end_date to get historical data around the pattern timestamp
-                    // TwelveData end_date format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DD
-                    // We want data ENDING at some point AFTER the pattern, so we can see context after
                     const contextCandlesAfter = 10;
                     const endTime = new Date(patternTime.getTime() + (contextCandlesAfter * timeframeTolerance));
                     const endDateStr = endTime.toISOString().slice(0, 19).replace('T', ' ');
-
-                    // We need enough candles to show context before and after
-                    // Pattern candles + 5 before + 5 after = ~15, but fetch more to be safe
                     const outputSize = 50;
 
                     console.log(`Fetching OHLC data for ${pattern.symbol}/${interval} ending at ${endDateStr}`);
@@ -6102,10 +6120,6 @@
                     const data = await res.json();
                     ohlcData = data.values || [];
                     ohlcCache[cacheKey] = ohlcData;
-
-                    if (ohlcData.length > 0) {
-                        console.log(`Fetched ${ohlcData.length} candles: ${ohlcData[ohlcData.length-1].datetime} to ${ohlcData[0].datetime}`);
-                    }
                 }
 
                 if (!ohlcData || ohlcData.length === 0) {
@@ -6113,17 +6127,12 @@
                     return;
                 }
 
-                // TwelveData returns data in REVERSE order: index 0 = newest, last index = oldest
-                // Pattern timestamp points to the LAST candle of the pattern
-                // For 2-candle patterns: timestamp = second candle, first candle is OLDER (higher index in TwelveData)
-
-                // First, reverse the data to get chronological order (oldest first)
+                // Reverse to chronological order
                 const chronoData = [...ohlcData].reverse();
 
-                // Find pattern's last candle in chronological array
+                // Find pattern's last candle
                 let lastCandleIdx = -1;
 
-                // First try: exact match within timeframe tolerance
                 for (let i = chronoData.length - 1; i >= 0; i--) {
                     const candleTime = parseTwelveDataTimeUTC(chronoData[i].datetime);
                     const timeDiff = Math.abs(candleTime - patternTime);

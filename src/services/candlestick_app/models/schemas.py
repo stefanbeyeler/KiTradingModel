@@ -476,6 +476,19 @@ class PatternScanResponse(BaseModel):
 
 
 @dataclass
+class OHLCContext:
+    """OHLC-Daten mit Kontext fuer Pattern-Re-Evaluation."""
+    candles: list  # Liste von OHLC-Dictionaries [{datetime, open, high, low, close}, ...]
+    pattern_start_idx: int  # Index der ersten Pattern-Kerze im candles Array
+    pattern_end_idx: int  # Index der letzten Pattern-Kerze im candles Array
+    candle_count: int  # Anzahl Kerzen im Pattern (1, 2, oder 3)
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary."""
+        return asdict(self)
+
+
+@dataclass
 class PatternHistoryEntry:
     """Ein Eintrag in der Pattern-History."""
     id: str
@@ -491,6 +504,7 @@ class PatternHistoryEntry:
     price_at_detection: float
     description: str
     trading_implication: str
+    ohlc_context: dict = None  # OHLC-Daten mit 5 Kerzen vor/nach dem Pattern fuer Re-Evaluation
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
