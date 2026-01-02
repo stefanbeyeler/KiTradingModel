@@ -9485,24 +9485,37 @@
                 // Store for modal access
                 loadedClaudeHistory = data.history;
 
-                // Group by date (using validation_timestamp)
+                // Helper function to extract pattern timestamp from pattern_id
+                function extractPatternTimestamp(patternId) {
+                    if (!patternId) return null;
+                    // Pattern ID format: SYMBOL_TIMEFRAME_TYPE_TIMESTAMP
+                    // Example: XTZUSD_M15_doji_2026-01-02T15:15:00+00:00
+                    const parts = patternId.split('_');
+                    if (parts.length >= 4) {
+                        const tsStr = parts.slice(3).join('_');
+                        const date = new Date(tsStr);
+                        if (!isNaN(date.getTime())) {
+                            return date;
+                        }
+                    }
+                    return null;
+                }
+
+                // Group by date (using pattern timestamp from pattern_id)
                 const groupedByDate = {};
                 data.history.forEach((v, idx) => {
-                    // Use validation_timestamp for grouping
-                    const timestamp = v.validation_timestamp || null;
+                    // Extract pattern timestamp from pattern_id
+                    const patternDate = extractPatternTimestamp(v.pattern_id);
                     let dateKey = 'Unbekanntes Datum';
-                    if (timestamp) {
-                        const date = new Date(timestamp);
-                        if (!isNaN(date.getTime())) {
-                            dateKey = date.toLocaleDateString('de-CH', {
-                                weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
-                            });
-                        }
+                    if (patternDate) {
+                        dateKey = patternDate.toLocaleDateString('de-CH', {
+                            weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+                        });
                     }
                     if (!groupedByDate[dateKey]) {
                         groupedByDate[dateKey] = [];
                     }
-                    groupedByDate[dateKey].push({ ...v, originalIdx: idx });
+                    groupedByDate[dateKey].push({ ...v, originalIdx: idx, patternDate: patternDate });
                 });
 
                 // Render grouped timeline
@@ -9529,15 +9542,12 @@
                             directionClass = 'bearish';
                         }
 
-                        // Format validation time (HH:mm only, date is in header)
-                        let validationTime = '-';
-                        if (v.validation_timestamp) {
-                            const date = new Date(v.validation_timestamp);
-                            if (!isNaN(date.getTime())) {
-                                validationTime = date.toLocaleTimeString('de-CH', {
-                                    hour: '2-digit', minute: '2-digit'
-                                });
-                            }
+                        // Format pattern time (HH:mm only, date is in header)
+                        let patternTime = '-';
+                        if (v.patternDate) {
+                            patternTime = v.patternDate.toLocaleTimeString('de-CH', {
+                                hour: '2-digit', minute: '2-digit'
+                            });
                         }
 
                         // Result badge
@@ -9554,7 +9564,7 @@
 
                         html += `
                             <div class="timeline-item ${directionClass}" title="${reasoningEscaped}" onclick="openClaudeHistoryModal(${idx})" style="cursor: pointer;">
-                                <span class="timeline-time">${validationTime}</span>
+                                <span class="timeline-time">${patternTime}</span>
                                 <div class="timeline-content">
                                     <span class="timeline-pattern-name">${formatPatternType(v.pattern_type)}</span>
                                     <span class="timeline-symbol">${v.symbol}</span>
