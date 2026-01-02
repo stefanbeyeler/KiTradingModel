@@ -9522,8 +9522,8 @@
                             try {
                                 const date = new Date(tsStr);
                                 if (!isNaN(date.getTime())) {
-                                    patternTime = date.toLocaleString('de-CH', {
-                                        day: '2-digit', month: '2-digit',
+                                    // Show only time (HH:mm) like in "Erkannte Patterns"
+                                    patternTime = date.toLocaleTimeString('de-CH', {
                                         hour: '2-digit', minute: '2-digit'
                                     });
                                 }
