@@ -2180,7 +2180,7 @@
                     <h2 class="card-title">📊 Candlestick Pattern Service</h2>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <span class="service-badge" id="statusServiceBadge">Laden...</span>
-                        <button class="btn btn-secondary" onclick="loadStatusDashboard()" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">↻</button>
+                        <button class="btn btn-secondary" onclick="loadStatusDashboard()" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">Aktualisieren</button>
                     </div>
                 </div>
 
@@ -2328,7 +2328,7 @@
                     <h2 class="card-title">🔧 Training Service</h2>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <span class="service-badge" id="trainServiceStatus">Laden...</span>
-                        <button class="btn btn-secondary" onclick="loadTrainingServiceInfo(); loadFeedbackStats(); loadTrainingStatus();" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">↻</button>
+                        <button class="btn btn-secondary" onclick="loadTrainingServiceInfo(); loadFeedbackStats(); loadTrainingStatus();" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">Aktualisieren</button>
                     </div>
                 </div>
 
@@ -3033,7 +3033,7 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">📊 Aktuelle Regel-Parameter</h2>
-                    <button class="btn btn-secondary" onclick="loadCurrentParams()">🔄 Aktualisieren</button>
+                    <button class="btn btn-secondary" onclick="loadCurrentParams()">Aktualisieren</button>
                 </div>
 
                 <div id="currentParamsContainer" style="max-height: 400px; overflow-y: auto;">
@@ -3159,7 +3159,7 @@
                 <div class="card-header">
                     <h2 class="card-title" style="font-size: 1rem;">⚡ Auto-Optimierung</h2>
                     <div class="btn-group">
-                        <button class="btn btn-secondary btn-sm" onclick="loadAutoOptStatus()">Refresh</button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadAutoOptStatus()">Aktualisieren</button>
                         <button class="btn btn-success btn-sm" onclick="toggleAutoOptimization(true)" id="autoOptEnableBtn">Aktivieren</button>
                         <button class="btn btn-danger btn-sm" onclick="toggleAutoOptimization(false)" id="autoOptDisableBtn" style="display: none;">Deaktivieren</button>
                     </div>
@@ -3243,7 +3243,7 @@
                                 <option value="50">50</option>
                                 <option value="100">100</option>
                             </select>
-                            <button class="btn btn-secondary btn-sm" onclick="loadClaudeHistory()">Refresh</button>
+                            <button class="btn btn-secondary btn-sm" onclick="loadClaudeHistory()">Aktualisieren</button>
                         </div>
                     </div>
                     <div id="claudeHistoryTable" style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
@@ -3268,7 +3268,7 @@
                 <div class="card" style="margin-bottom: 0;">
                     <div class="card-header">
                         <h2 class="card-title" style="font-size: 1rem;">⚠️ Problematisch</h2>
-                        <button class="btn btn-secondary btn-sm" onclick="loadProblematicPatterns()">Refresh</button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadProblematicPatterns()">Aktualisieren</button>
                     </div>
                     <div id="problematicPatternsTable" style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
                         <table class="data-table" style="width: 100%; font-size: 0.8rem;">
@@ -3292,7 +3292,7 @@
             <div class="card" style="margin-top: 1rem;">
                 <div class="card-header">
                     <h2 class="card-title" style="font-size: 1rem;">🔍 Chart-Vorschau</h2>
-                    <button class="btn btn-secondary btn-sm" onclick="loadRecentPatternsForPreview()">Refresh</button>
+                    <button class="btn btn-secondary btn-sm" onclick="loadRecentPatternsForPreview()">Aktualisieren</button>
                 </div>
                 <div id="chartPreviewSection">
                     <div style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
@@ -3314,7 +3314,7 @@
             <div class="card" style="border: 1px solid rgba(100, 200, 255, 0.2);">
                 <div class="card-header">
                     <h2 class="card-title" style="font-size: 1rem;">🔄 Feedback-Loop</h2>
-                    <button class="btn btn-secondary btn-sm" onclick="loadFeedbackLoopData()">Refresh</button>
+                    <button class="btn btn-secondary btn-sm" onclick="loadFeedbackLoopData()">Aktualisieren</button>
                 </div>
                 <div id="feedbackSection">
                     <!-- Recommendations -->
