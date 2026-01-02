@@ -2739,6 +2739,10 @@
 
                     <div class="modal-info-grid">
                         <div class="modal-info-item">
+                            <div class="modal-info-label">Pattern-ID</div>
+                            <div class="modal-info-value" id="modalPatternId" style="font-family: monospace; font-size: 0.75rem; cursor: pointer; word-break: break-all;" onclick="copyPatternId(this.title)" title="-">-</div>
+                        </div>
+                        <div class="modal-info-item">
                             <div class="modal-info-label">Symbol</div>
                             <div class="modal-info-value" id="modalSymbol">-</div>
                         </div>
@@ -3303,6 +3307,7 @@
                         <table class="data-table" style="font-size: 0.8rem; width: 100%;">
                             <thead>
                                 <tr>
+                                    <th style="text-align: left; width: 70px;">ID</th>
                                     <th style="text-align: left; width: 70px;">Symbol</th>
                                     <th style="text-align: left; width: 40px;">TF</th>
                                     <th style="text-align: left; min-width: 100px;">Pattern</th>
@@ -3311,7 +3316,7 @@
                                 </tr>
                             </thead>
                             <tbody id="claudeHistoryBody">
-                                <tr><td colspan="5" style="text-align: center; color: #888; padding: 1rem;"><span class="spinner"></span> Laden...</td></tr>
+                                <tr><td colspan="6" style="text-align: center; color: #888; padding: 1rem;"><span class="spinner"></span> Laden...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -3440,6 +3445,10 @@
                 <!-- Pattern Info -->
                 <div class="reval-detail-info">
                     <div class="reval-detail-info-row">
+                        <div class="reval-detail-info-item">
+                            <label>Pattern-ID</label>
+                            <span id="revalDetailPatternId" style="font-family: monospace; font-size: 0.75rem; cursor: pointer; word-break: break-all;" onclick="copyPatternId(this.title)" title="-">-</span>
+                        </div>
                         <div class="reval-detail-info-item">
                             <label>Original erkannt</label>
                             <span id="revalDetailOriginal">-</span>
@@ -4025,6 +4034,26 @@
                 .split('_')
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                 .join(' ');
+        }
+
+        // Format pattern ID for display (short version)
+        // Full ID format: BTCUSD_H1_hammer_2026-01-02T10:00:00+00:00
+        // Short version: Last 8 chars of hash or timestamp portion
+        function formatPatternIdShort(fullId) {
+            if (!fullId) return '-';
+            // Take last 8 characters for a short display
+            return fullId.slice(-8);
+        }
+
+        // Copy pattern ID to clipboard
+        function copyPatternId(patternId, event) {
+            if (event) event.stopPropagation();
+            navigator.clipboard.writeText(patternId).then(() => {
+                showToast('Pattern-ID kopiert: ' + patternId, 'success');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showToast('Kopieren fehlgeschlagen', 'error');
+            });
         }
 
         // Load service info
@@ -4945,6 +4974,7 @@
                 <div class="timeline-item ${directionClass}">
                     <span class="timeline-time">${time}</span>
                     <div class="timeline-content" onclick="openPatternModal(${pattern.index})">
+                        <span class="timeline-id" title="${pattern.id || ''}" onclick="copyPatternId('${pattern.id || ''}', event)" style="cursor: pointer; font-family: monospace; font-size: 0.7rem; color: #888; min-width: 70px;">${formatPatternIdShort(pattern.id)}</span>
                         <span class="timeline-pattern-name">${formatPatternType(pattern.pattern_type)}</span>
                         <span class="timeline-symbol">${pattern.symbol}</span>
                         <span class="timeline-direction ${directionClass}">${pattern.direction}</span>
@@ -5181,6 +5211,11 @@
             directionEl.textContent = currentModalPattern.direction;
             directionEl.className = `timeline-direction ${currentModalPattern.direction}`;
 
+            // Set Pattern-ID with full ID as tooltip
+            const patternIdEl = document.getElementById('modalPatternId');
+            patternIdEl.textContent = currentModalPattern.id || '-';
+            patternIdEl.title = currentModalPattern.id || '';
+
             document.getElementById('modalSymbol').textContent = currentModalPattern.symbol;
             document.getElementById('modalTimeframe').textContent = currentModalPattern.timeframe;
             document.getElementById('modalTimestamp').textContent = formatTimestamp(currentModalPattern.timestamp);
@@ -5223,6 +5258,11 @@
             const directionEl = document.getElementById('modalDirection');
             directionEl.textContent = pattern.direction;
             directionEl.className = `timeline-direction ${pattern.direction}`;
+
+            // Set Pattern-ID with full ID as tooltip
+            const patternIdEl = document.getElementById('modalPatternId');
+            patternIdEl.textContent = pattern.id || '-';
+            patternIdEl.title = pattern.id || '';
 
             document.getElementById('modalSymbol').textContent = pattern.symbol;
             document.getElementById('modalTimeframe').textContent = pattern.timeframe;
@@ -7105,6 +7145,11 @@
             document.getElementById('revalNextBtn').disabled = index === filteredRevalidationItems.length - 1;
 
             // Update info
+            // Set Pattern-ID with full ID as tooltip
+            const patternIdEl = document.getElementById('revalDetailPatternId');
+            patternIdEl.textContent = item.id || '-';
+            patternIdEl.title = item.id || '';
+
             document.getElementById('revalDetailOriginal').textContent = formatPatternType(item.original_pattern);
             document.getElementById('revalDetailCorrected').textContent = isRejected ? 'Kein Pattern' : formatPatternType(item.corrected_pattern);
             document.getElementById('revalDetailTimeframe').textContent = item.timeframe;
@@ -9291,12 +9336,13 @@
                 const data = await response.json();
 
                 if (!data.history || data.history.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">Keine Validierungen</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">Keine Validierungen</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.history.map(v => `
                     <tr>
+                        <td style="font-family: monospace; font-size: 0.7rem; color: #888; cursor: pointer;" title="${v.pattern_id || ''}" onclick="copyPatternId('${v.pattern_id || ''}')">${formatPatternIdShort(v.pattern_id)}</td>
                         <td style="white-space: nowrap;"><strong>${v.symbol}</strong></td>
                         <td style="color: #888; font-size: 0.75rem;">${v.timeframe}</td>
                         <td style="font-size: 0.85rem;">${formatPatternType(v.pattern_type)}</td>
@@ -10040,14 +10086,16 @@
                 }
 
                 let html = '<table class="data-table" style="width: 100%; font-size: 0.85rem;">';
-                html += '<thead><tr><th>Pattern</th><th>Symbol</th><th>Timeframe</th><th>Timestamp</th><th>Konfidenz</th></tr></thead>';
+                html += '<thead><tr><th>ID</th><th>Pattern</th><th>Symbol</th><th>Timeframe</th><th>Timestamp</th><th>Konfidenz</th></tr></thead>';
                 html += '<tbody>';
 
                 for (const item of data.items) {
                     const timestamp = item.timestamp ? new Date(item.timestamp).toLocaleString('de-CH') : '-';
                     const confidence = item.confidence ? (item.confidence * 100).toFixed(0) + '%' : '-';
+                    const shortId = formatPatternIdShort(item.id);
                     html += `
                         <tr>
+                            <td style="font-family: monospace; font-size: 0.75rem; color: #888; cursor: pointer;" title="${item.id || ''}" onclick="copyPatternId('${item.id || ''}')">${shortId}</td>
                             <td><span style="color: #64c8ff;">${formatPatternType(item.pattern_type)}</span></td>
                             <td>${item.symbol}</td>
                             <td>${item.timeframe}</td>
