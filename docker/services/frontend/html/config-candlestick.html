@@ -3292,53 +3292,50 @@
                 </div>
             </div>
 
-            <!-- Two-Column Layout for History (2/3) and Problems (1/3) -->
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
-                <!-- Validation History (2/3) -->
-                <div class="card" style="margin-bottom: 0;">
-                    <div class="card-header">
-                        <h2 class="card-title" style="font-size: 1rem;">📜 Historie</h2>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <label style="font-size: 0.8rem; color: #888;">Limit:</label>
-                            <select id="claudeHistoryLimit" onchange="loadClaudeHistory()"
-                                    style="padding: 0.2rem 0.4rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.8rem;">
-                                <option value="10" selected>10</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                            </select>
-                            <button class="btn btn-secondary btn-sm" onclick="loadClaudeHistory()">Aktualisieren</button>
-                        </div>
-                    </div>
-                    <!-- Timeline Container (same style as "Erkannte Patterns") -->
-                    <div class="timeline-container" id="claudeHistoryContainer" style="max-height: 350px; overflow-y: auto; padding-left: 10px;">
-                        <div class="timeline" id="claudeHistoryTimeline">
-                            <div class="loading"><span class="spinner"></span> Lade Historie...</div>
-                        </div>
+            <!-- Validation History (full width) -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title" style="font-size: 1rem;">📜 Historie</h2>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label style="font-size: 0.8rem; color: #888;">Limit:</label>
+                        <select id="claudeHistoryLimit" onchange="loadClaudeHistory()"
+                                style="padding: 0.2rem 0.4rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.8rem;">
+                            <option value="10" selected>10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" onclick="loadClaudeHistory()">Aktualisieren</button>
                     </div>
                 </div>
+                <!-- Timeline Container (same style as "Erkannte Patterns") -->
+                <div class="timeline-container" id="claudeHistoryContainer" style="max-height: 400px; overflow-y: auto; padding-left: 10px;">
+                    <div class="timeline" id="claudeHistoryTimeline">
+                        <div class="loading"><span class="spinner"></span> Lade Historie...</div>
+                    </div>
+                </div>
+            </div>
 
-                <!-- Problematic Patterns (1/3) -->
-                <div class="card" style="margin-bottom: 0;">
-                    <div class="card-header">
-                        <h2 class="card-title" style="font-size: 1rem;">⚠️ Problematisch</h2>
-                        <button class="btn btn-secondary btn-sm" onclick="loadProblematicPatterns()">Aktualisieren</button>
-                    </div>
-                    <div id="problematicPatternsTable" style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
-                        <table class="data-table" style="width: 100%; font-size: 0.8rem;">
-                            <thead>
-                                <tr>
-                                    <th style="text-align: left; padding: 0.5rem;">Pattern</th>
-                                    <th style="text-align: center; padding: 0.5rem; width: 40px;">✓</th>
-                                    <th style="text-align: center; padding: 0.5rem; width: 40px;">✗</th>
-                                    <th style="text-align: left; padding: 0.5rem; min-width: 80px;">Rate</th>
-                                </tr>
-                            </thead>
-                            <tbody id="problematicPatternsBody">
-                                <tr><td colspan="4" style="text-align: center; color: #888; padding: 1rem;"><span class="spinner"></span> Laden...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+            <!-- Problematic Patterns (full width, below history) -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title" style="font-size: 1rem;">⚠️ Problematische Patterns</h2>
+                    <button class="btn btn-secondary btn-sm" onclick="loadProblematicPatterns()">Aktualisieren</button>
+                </div>
+                <div id="problematicPatternsTable" style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
+                    <table class="data-table" style="width: 100%; font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th style="text-align: left; padding: 0.5rem;">Pattern</th>
+                                <th style="text-align: center; padding: 0.5rem; width: 60px;">✓ Valide</th>
+                                <th style="text-align: center; padding: 0.5rem; width: 60px;">✗ Invalide</th>
+                                <th style="text-align: left; padding: 0.5rem; min-width: 150px;">Ablehnungsrate</th>
+                            </tr>
+                        </thead>
+                        <tbody id="problematicPatternsBody">
+                            <tr><td colspan="4" style="text-align: center; color: #888; padding: 1rem;"><span class="spinner"></span> Laden...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
