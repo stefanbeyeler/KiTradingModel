@@ -3309,7 +3309,7 @@
                     </div>
                 </div>
                 <!-- Timeline Container (same style as "Erkannte Patterns") -->
-                <div class="timeline-container" id="claudeHistoryContainer" style="max-height: 400px; overflow-y: auto; padding-left: 10px;">
+                <div class="timeline-container" id="claudeHistoryContainer" style="max-height: 400px; overflow-y: auto; overflow-x: hidden; padding-left: 10px;">
                     <div class="timeline" id="claudeHistoryTimeline">
                         <div class="loading"><span class="spinner"></span> Lade Historie...</div>
                     </div>
@@ -9462,6 +9462,9 @@
             }
         }
 
+        // Store loaded Claude history items for modal access
+        let loadedClaudeHistory = [];
+
         async function loadClaudeHistory() {
             const timeline = document.getElementById('claudeHistoryTimeline');
             const limitSelect = document.getElementById('claudeHistoryLimit');
@@ -9475,11 +9478,15 @@
 
                 if (!data.history || data.history.length === 0) {
                     timeline.innerHTML = '<div style="text-align: center; color: #888; padding: 1rem;">Keine Validierungen vorhanden</div>';
+                    loadedClaudeHistory = [];
                     return;
                 }
 
+                // Store for modal access
+                loadedClaudeHistory = data.history;
+
                 // Render timeline items (same style as "Erkannte Patterns")
-                timeline.innerHTML = data.history.map(v => {
+                timeline.innerHTML = data.history.map((v, idx) => {
                     // Determine direction class based on pattern type
                     const patternLower = (v.pattern_type || '').toLowerCase();
                     let directionClass = 'neutral';
@@ -9495,14 +9502,33 @@
                         directionClass = 'bearish';
                     }
 
-                    // Format timestamp
-                    let time = '-';
-                    if (v.validated_at) {
-                        const date = new Date(v.validated_at);
-                        time = date.toLocaleString('de-CH', {
+                    // Format validation timestamp (when Claude validated)
+                    let validatedTime = '-';
+                    if (v.validation_timestamp) {
+                        const date = new Date(v.validation_timestamp);
+                        validatedTime = date.toLocaleString('de-CH', {
                             day: '2-digit', month: '2-digit',
                             hour: '2-digit', minute: '2-digit'
                         });
+                    }
+
+                    // Extract pattern timestamp from pattern_id for display
+                    let patternTime = '-';
+                    if (v.pattern_id) {
+                        // Pattern ID format: SYMBOL_TIMEFRAME_TYPE_TIMESTAMP
+                        const parts = v.pattern_id.split('_');
+                        if (parts.length >= 4) {
+                            const tsStr = parts.slice(3).join('_');
+                            try {
+                                const date = new Date(tsStr);
+                                if (!isNaN(date.getTime())) {
+                                    patternTime = date.toLocaleString('de-CH', {
+                                        day: '2-digit', month: '2-digit',
+                                        hour: '2-digit', minute: '2-digit'
+                                    });
+                                }
+                            } catch (e) {}
+                        }
                     }
 
                     // Result badge
@@ -9510,14 +9536,12 @@
                     const resultIcon = v.claude_agrees ? '✓' : '✗';
                     const confidencePercent = (v.claude_confidence * 100).toFixed(0);
 
-                    // Truncated reasoning for tooltip
-                    const reasoningShort = v.claude_reasoning
-                        ? v.claude_reasoning.substring(0, 40) + (v.claude_reasoning.length > 40 ? '...' : '')
-                        : '';
+                    // Escape reasoning for title attribute
+                    const reasoningEscaped = (v.claude_reasoning || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
                     return `
-                        <div class="timeline-item ${directionClass}" title="${v.claude_reasoning || ''}">
-                            <span class="timeline-time">${time}</span>
+                        <div class="timeline-item ${directionClass}" title="${reasoningEscaped}" onclick="openClaudeHistoryModal(${idx})" style="cursor: pointer;">
+                            <span class="timeline-time">${patternTime}</span>
                             <div class="timeline-content">
                                 <span class="timeline-pattern-name">${formatPatternType(v.pattern_type)}</span>
                                 <span class="timeline-symbol">${v.symbol}</span>
@@ -9526,6 +9550,7 @@
                                 <span class="timeline-status">
                                     <span class="timeline-status-badge ${resultClass}">${resultIcon} ${v.claude_agrees ? 'Valide' : 'Invalide'}</span>
                                 </span>
+                                <span class="timeline-arrow">›</span>
                             </div>
                         </div>
                     `;
@@ -9534,6 +9559,55 @@
                 console.error('Claude history error:', e);
                 timeline.innerHTML = `<div style="text-align: center; color: #e57373; padding: 1rem;">Fehler: ${e.message}</div>`;
             }
+        }
+
+        // Open Claude History item in detail modal
+        async function openClaudeHistoryModal(idx) {
+            const item = loadedClaudeHistory[idx];
+            if (!item) return;
+
+            // Try to find this pattern in the loaded patterns history
+            // If found, use the existing modal; otherwise show a simplified view
+            const patternId = item.pattern_id;
+
+            // First, try to load the pattern from history API
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/history?limit=500`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.patterns) {
+                        const foundPattern = data.patterns.find(p => p.id === patternId);
+                        if (foundPattern) {
+                            // Found the pattern - open the standard modal
+                            // Add to loadedPatterns temporarily
+                            foundPattern.index = 0;
+                            foundPattern.globalIndex = 0;
+                            loadedPatterns = [foundPattern];
+                            allFilteredPatterns = [foundPattern];
+                            await openPatternModal(0);
+                            return;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading pattern for modal:', e);
+            }
+
+            // Fallback: Show Claude validation details in an alert or simple modal
+            const reasoning = item.claude_reasoning || 'Keine Begründung verfügbar';
+            const agrees = item.claude_agrees ? 'Valide' : 'Invalide';
+            const confidence = (item.claude_confidence * 100).toFixed(0);
+
+            alert(`Claude Vision Validierung
+
+Pattern: ${formatPatternType(item.pattern_type)}
+Symbol: ${item.symbol}
+Timeframe: ${item.timeframe}
+
+Ergebnis: ${agrees} (${confidence}% Konfidenz)
+
+Begründung:
+${reasoning}`);
         }
 
         async function loadProblematicPatterns() {
