@@ -3310,22 +3310,11 @@
                             <button class="btn btn-secondary btn-sm" onclick="loadClaudeHistory()">Aktualisieren</button>
                         </div>
                     </div>
-                    <div id="claudeHistoryTable" style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
-                        <table class="data-table" style="font-size: 0.8rem; width: 100%;">
-                            <thead>
-                                <tr>
-                                    <th style="text-align: left; width: 70px;">ID</th>
-                                    <th style="text-align: left; width: 70px;">Symbol</th>
-                                    <th style="text-align: left; width: 40px;">TF</th>
-                                    <th style="text-align: left; min-width: 100px;">Pattern</th>
-                                    <th style="text-align: left; width: 65px;">Result</th>
-                                    <th style="text-align: left; max-width: 200px;">Begründung</th>
-                                </tr>
-                            </thead>
-                            <tbody id="claudeHistoryBody">
-                                <tr><td colspan="6" style="text-align: center; color: #888; padding: 1rem;"><span class="spinner"></span> Laden...</td></tr>
-                            </tbody>
-                        </table>
+                    <!-- Timeline Container (same style as "Erkannte Patterns") -->
+                    <div class="timeline-container" id="claudeHistoryContainer" style="max-height: 350px; overflow-y: auto; padding-left: 10px;">
+                        <div class="timeline" id="claudeHistoryTimeline">
+                            <div class="loading"><span class="spinner"></span> Lade Historie...</div>
+                        </div>
                     </div>
                 </div>
 
@@ -9477,10 +9466,10 @@
         }
 
         async function loadClaudeHistory() {
-            const tbody = document.getElementById('claudeHistoryBody');
+            const timeline = document.getElementById('claudeHistoryTimeline');
             const limitSelect = document.getElementById('claudeHistoryLimit');
             const limit = limitSelect ? limitSelect.value : 10;
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;"><span class="spinner"></span></td></tr>';
+            timeline.innerHTML = '<div class="loading"><span class="spinner"></span> Lade Historie...</div>';
 
             try {
                 const response = await fetch(`${CANDLESTICK_API}/claude/history?limit=${limit}`);
@@ -9488,32 +9477,65 @@
                 const data = await response.json();
 
                 if (!data.history || data.history.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">Keine Validierungen</td></tr>';
+                    timeline.innerHTML = '<div style="text-align: center; color: #888; padding: 1rem;">Keine Validierungen vorhanden</div>';
                     return;
                 }
 
-                tbody.innerHTML = data.history.map(v => `
-                    <tr>
-                        <td style="font-family: monospace; font-size: 0.7rem; color: #888;">
-                            <div style="display: flex; align-items: center; gap: 0.3rem;">
-                                <span title="${v.pattern_id || ''}">${formatPatternIdShort(v.pattern_id)}</span>
-                                <button class="btn btn-secondary" style="padding: 0.1rem 0.25rem; font-size: 0.6rem;" onclick="copyPatternId('${v.pattern_id || ''}')" title="ID kopieren">📋</button>
+                // Render timeline items (same style as "Erkannte Patterns")
+                timeline.innerHTML = data.history.map(v => {
+                    // Determine direction class based on pattern type
+                    const patternLower = (v.pattern_type || '').toLowerCase();
+                    let directionClass = 'neutral';
+                    if (patternLower.includes('bullish') || patternLower.includes('hammer') ||
+                        patternLower.includes('morning') || patternLower.includes('piercing') ||
+                        patternLower.includes('dragonfly') || patternLower.includes('inverted_hammer') ||
+                        patternLower.includes('three_white') || patternLower.includes('rising')) {
+                        directionClass = 'bullish';
+                    } else if (patternLower.includes('bearish') || patternLower.includes('shooting') ||
+                               patternLower.includes('hanging') || patternLower.includes('evening') ||
+                               patternLower.includes('dark_cloud') || patternLower.includes('gravestone') ||
+                               patternLower.includes('three_black') || patternLower.includes('falling')) {
+                        directionClass = 'bearish';
+                    }
+
+                    // Format timestamp
+                    let time = '-';
+                    if (v.validated_at) {
+                        const date = new Date(v.validated_at);
+                        time = date.toLocaleString('de-CH', {
+                            day: '2-digit', month: '2-digit',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+
+                    // Result badge
+                    const resultClass = v.claude_agrees ? 'confirmed' : 'rejected';
+                    const resultIcon = v.claude_agrees ? '✓' : '✗';
+                    const confidencePercent = (v.claude_confidence * 100).toFixed(0);
+
+                    // Truncated reasoning for tooltip
+                    const reasoningShort = v.claude_reasoning
+                        ? v.claude_reasoning.substring(0, 40) + (v.claude_reasoning.length > 40 ? '...' : '')
+                        : '';
+
+                    return `
+                        <div class="timeline-item ${directionClass}" title="${v.claude_reasoning || ''}">
+                            <span class="timeline-time">${time}</span>
+                            <div class="timeline-content">
+                                <span class="timeline-pattern-name">${formatPatternType(v.pattern_type)}</span>
+                                <span class="timeline-symbol">${v.symbol}</span>
+                                <span class="timeline-timeframe">${v.timeframe}</span>
+                                <span class="timeline-confidence">${confidencePercent}%</span>
+                                <span class="timeline-status">
+                                    <span class="timeline-status-badge ${resultClass}">${resultIcon} ${v.claude_agrees ? 'Valide' : 'Invalide'}</span>
+                                </span>
                             </div>
-                        </td>
-                        <td style="white-space: nowrap;"><strong>${v.symbol}</strong></td>
-                        <td style="color: #888; font-size: 0.75rem;">${v.timeframe}</td>
-                        <td style="font-size: 0.85rem;">${formatPatternType(v.pattern_type)}</td>
-                        <td style="color: ${v.claude_agrees ? '#81c784' : '#e57373'}; white-space: nowrap;">
-                            ${v.claude_agrees ? '✓' : '✗'} ${(v.claude_confidence * 100).toFixed(0)}%
-                        </td>
-                        <td style="color: #aaa; font-size: 0.75rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${v.claude_reasoning || ''}">
-                            ${v.claude_reasoning ? v.claude_reasoning.substring(0, 60) + (v.claude_reasoning.length > 60 ? '...' : '') : '-'}
-                        </td>
-                    </tr>
-                `).join('');
+                        </div>
+                    `;
+                }).join('');
             } catch (e) {
                 console.error('Claude history error:', e);
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #e57373;">Fehler: ${e.message}</td></tr>`;
+                timeline.innerHTML = `<div style="text-align: center; color: #e57373; padding: 1rem;">Fehler: ${e.message}</div>`;
             }
         }
 
