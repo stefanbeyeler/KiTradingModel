@@ -1276,3 +1276,141 @@ async def apply_rule_recommendation(request: ApplyRecommendationRequest):
         }
     else:
         raise HTTPException(status_code=400, detail="Empfehlung konnte nicht angewendet werden")
+
+
+# ==================== Feedback Update Endpoints ====================
+
+
+class UpdateFeedbackRequest(BaseModel):
+    """Request to update an existing feedback entry."""
+    new_corrected_pattern: str  # New pattern type or "none" for rejection
+    new_reason_category: Optional[str] = None
+    new_reason_text: Optional[str] = None
+
+
+@router.put("/feedback/{feedback_id}")
+async def update_feedback(feedback_id: str, request: UpdateFeedbackRequest):
+    """
+    Update an existing feedback entry (change the correction).
+
+    Use this to fix a wrongly submitted feedback. For example:
+    - Originally marked as "Kein Pattern" but should be "Hammer"
+    - Originally corrected to "Hammer" but should be "Spinning Top"
+
+    Parameters:
+    - **feedback_id**: ID of the feedback entry to update
+    - **new_corrected_pattern**: New correction ("none" for rejection, or pattern type)
+    - **new_reason_category**: Optional new reason category
+    - **new_reason_text**: Optional new reason text
+    """
+    try:
+        if not FEEDBACK_FILE.exists():
+            raise HTTPException(status_code=404, detail="Keine Feedback-Daten vorhanden")
+
+        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+            feedback_data = json.load(f)
+
+        # Find the entry
+        found = False
+        old_correction = None
+        for entry in feedback_data:
+            if entry.get("id") == feedback_id:
+                found = True
+                old_correction = entry.get("corrected_pattern")
+
+                # Update the entry
+                entry["corrected_pattern"] = request.new_corrected_pattern
+
+                # Update feedback_type based on new correction
+                if request.new_corrected_pattern.lower() == "none":
+                    entry["feedback_type"] = "rejected"
+                elif request.new_corrected_pattern.lower() == entry.get("original_pattern", "").lower():
+                    entry["feedback_type"] = "confirmed"
+                else:
+                    entry["feedback_type"] = "corrected"
+
+                # Update reason if provided
+                if request.new_reason_category is not None:
+                    entry["reason_category"] = request.new_reason_category
+                if request.new_reason_text is not None:
+                    entry["reason_text"] = request.new_reason_text
+
+                # Track the update in history
+                if "update_history" not in entry:
+                    entry["update_history"] = []
+                entry["update_history"].append({
+                    "old_corrected_pattern": old_correction,
+                    "new_corrected_pattern": request.new_corrected_pattern,
+                    "updated_at": datetime.utcnow().isoformat(),
+                })
+
+                # Reset revalidation status since correction changed
+                entry["revalidated"] = False
+                entry.pop("revalidation_result", None)
+                entry.pop("revalidation_timestamp", None)
+
+                break
+
+        if not found:
+            raise HTTPException(status_code=404, detail=f"Feedback-Eintrag {feedback_id} nicht gefunden")
+
+        # Save updated feedback
+        with open(FEEDBACK_FILE, 'w', encoding='utf-8') as f:
+            json.dump(feedback_data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"Feedback updated: {feedback_id} | {old_correction} -> {request.new_corrected_pattern}")
+
+        return {
+            "status": "success",
+            "message": f"Korrektur geändert: {old_correction} → {request.new_corrected_pattern}",
+            "feedback_id": feedback_id,
+            "old_correction": old_correction,
+            "new_correction": request.new_corrected_pattern
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating feedback: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/feedback/{feedback_id}")
+async def delete_feedback(feedback_id: str):
+    """
+    Delete a feedback entry entirely.
+
+    Use this to completely remove a wrongly submitted feedback.
+    The pattern will return to "pending" status in the history.
+    """
+    try:
+        if not FEEDBACK_FILE.exists():
+            raise HTTPException(status_code=404, detail="Keine Feedback-Daten vorhanden")
+
+        with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+            feedback_data = json.load(f)
+
+        # Find and remove the entry
+        original_count = len(feedback_data)
+        feedback_data = [e for e in feedback_data if e.get("id") != feedback_id]
+
+        if len(feedback_data) == original_count:
+            raise HTTPException(status_code=404, detail=f"Feedback-Eintrag {feedback_id} nicht gefunden")
+
+        # Save updated feedback
+        with open(FEEDBACK_FILE, 'w', encoding='utf-8') as f:
+            json.dump(feedback_data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"Feedback deleted: {feedback_id}")
+
+        return {
+            "status": "success",
+            "message": "Feedback-Eintrag gelöscht",
+            "feedback_id": feedback_id
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting feedback: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

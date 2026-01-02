@@ -3533,6 +3533,71 @@
                         🤖 Claude Vision
                     </button>
                 </div>
+                <!-- Edit Correction Button -->
+                <div style="margin-top: 0.75rem; text-align: right;">
+                    <button class="btn btn-sm" onclick="openEditCorrectionModal()"
+                            style="background: rgba(156, 39, 176, 0.2); color: #ce93d8; border: 1px solid rgba(156, 39, 176, 0.4);"
+                            title="Falsche Korrektur nachträglich ändern">
+                        ✏️ Korrektur ändern
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Correction Modal -->
+    <div class="modal" id="editCorrectionModal" onclick="if(event.target===this)closeEditCorrectionModal()">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close" onclick="closeEditCorrectionModal()">&times;</span>
+            <h3 style="margin-bottom: 1rem;">✏️ Korrektur ändern</h3>
+            <p style="color: #aaa; margin-bottom: 1rem; font-size: 0.9rem;">
+                Hier können Sie eine falsch eingegebene Korrektur nachträglich ändern.
+            </p>
+
+            <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.9rem;">
+                    <div style="color: #888;">Original erkannt:</div>
+                    <div id="editCorrOriginal" style="font-weight: 500;">-</div>
+                    <div style="color: #888;">Aktuelle Korrektur:</div>
+                    <div id="editCorrCurrent" style="font-weight: 500; color: #ff9800;">-</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #aaa;">Neue Korrektur:</label>
+                <select id="editCorrNewPattern" style="width: 100%; padding: 0.75rem; background: #2a2a2a; border: 1px solid #444; border-radius: 6px; color: #fff;">
+                    <option value="none">Kein Pattern (Ablehnung)</option>
+                    <option value="doji">Doji</option>
+                    <option value="hammer">Hammer</option>
+                    <option value="inverted_hammer">Inverted Hammer</option>
+                    <option value="shooting_star">Shooting Star</option>
+                    <option value="hanging_man">Hanging Man</option>
+                    <option value="spinning_top">Spinning Top</option>
+                    <option value="bullish_engulfing">Bullish Engulfing</option>
+                    <option value="bearish_engulfing">Bearish Engulfing</option>
+                    <option value="bullish_harami">Bullish Harami</option>
+                    <option value="bearish_harami">Bearish Harami</option>
+                    <option value="harami_cross">Harami Cross</option>
+                    <option value="morning_star">Morning Star</option>
+                    <option value="evening_star">Evening Star</option>
+                    <option value="three_white_soldiers">Three White Soldiers</option>
+                    <option value="three_black_crows">Three Black Crows</option>
+                    <option value="three_inside_up">Three Inside Up</option>
+                    <option value="three_inside_down">Three Inside Down</option>
+                    <option value="piercing_line">Piercing Line</option>
+                    <option value="dark_cloud_cover">Dark Cloud Cover</option>
+                    <option value="dragonfly_doji">Dragonfly Doji</option>
+                    <option value="gravestone_doji">Gravestone Doji</option>
+                    <option value="tweezer_top">Tweezer Top</option>
+                    <option value="tweezer_bottom">Tweezer Bottom</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeEditCorrectionModal()">Abbrechen</button>
+                <button class="btn btn-primary" onclick="submitEditCorrection()" style="background: #9c27b0;">
+                    💾 Speichern
+                </button>
             </div>
         </div>
     </div>
@@ -10221,6 +10286,93 @@
             } catch (e) {
                 console.error('Clear queue error:', e);
                 showToast('Fehler: ' + e.message, 'error');
+            }
+        }
+
+        // ==================== Edit Correction Functions ====================
+
+        function openEditCorrectionModal() {
+            const item = filteredRevalidationItems[currentRevalDetailIndex];
+            if (!item) {
+                showToast('Kein Pattern ausgewählt', 'error');
+                return;
+            }
+
+            // Show current values
+            document.getElementById('editCorrOriginal').textContent = formatPatternType(item.original_pattern);
+            document.getElementById('editCorrCurrent').textContent =
+                item.corrected_pattern === 'none' ? 'Kein Pattern' : formatPatternType(item.corrected_pattern);
+
+            // Pre-select current correction
+            const select = document.getElementById('editCorrNewPattern');
+            select.value = item.corrected_pattern || 'none';
+
+            // Show modal
+            document.getElementById('editCorrectionModal').style.display = 'flex';
+        }
+
+        function closeEditCorrectionModal() {
+            document.getElementById('editCorrectionModal').style.display = 'none';
+        }
+
+        async function submitEditCorrection() {
+            const item = filteredRevalidationItems[currentRevalDetailIndex];
+            if (!item) {
+                showToast('Kein Pattern ausgewählt', 'error');
+                return;
+            }
+
+            const newPattern = document.getElementById('editCorrNewPattern').value;
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/feedback/${item.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        new_corrected_pattern: newPattern
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Fehler beim Speichern');
+                }
+
+                const result = await response.json();
+                showToast(result.message, 'success');
+
+                // Update local data
+                item.corrected_pattern = newPattern;
+                if (newPattern === 'none') {
+                    item.feedback_type = 'rejected';
+                } else if (newPattern.toLowerCase() === item.original_pattern.toLowerCase()) {
+                    item.feedback_type = 'confirmed';
+                } else {
+                    item.feedback_type = 'corrected';
+                }
+
+                // Close modal and refresh display
+                closeEditCorrectionModal();
+
+                // Update the detail view header to show new correction
+                const headerInfo = document.querySelector('.reval-detail-title');
+                if (headerInfo) {
+                    const correctedText = newPattern === 'none' ? 'Kein Pattern' : formatPatternType(newPattern);
+                    // Update the KORRIGIERT ZU field
+                    const infoGrid = document.querySelector('.reval-detail-info');
+                    if (infoGrid) {
+                        const divs = infoGrid.querySelectorAll('div');
+                        divs.forEach((div, i) => {
+                            if (div.textContent === 'KORRIGIERT ZU' && divs[i+1]) {
+                                divs[i+1].textContent = correctedText;
+                            }
+                        });
+                    }
+                }
+
+            } catch (error) {
+                console.error('Edit correction error:', error);
+                showToast('Fehler: ' + error.message, 'error');
             }
         }
 
