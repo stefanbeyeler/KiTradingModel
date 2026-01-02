@@ -957,6 +957,10 @@
             font-size: 1.3rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
         }
 
         .reval-detail-nav {
@@ -1653,7 +1657,7 @@
         .modal-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             padding: 1rem 1.5rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
@@ -1663,8 +1667,9 @@
             font-weight: 600;
             color: #fff;
             display: flex;
-            align-items: center;
-            gap: 0.75rem;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
         }
 
         .modal-close {
@@ -2714,13 +2719,13 @@
         <div class="modal-overlay" id="patternModal" onclick="closePatternModal(event)">
             <div class="modal" onclick="event.stopPropagation()" style="max-width: 800px;">
                 <div class="modal-header">
-                    <div class="modal-title" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <div class="modal-title">
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <span id="modalPatternName">-</span>
                             <span class="timeline-direction" id="modalDirection">-</span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; color: #888;">
-                            <span style="font-family: monospace;" id="modalPatternId">-</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; color: #888; font-family: monospace;">
+                            <span id="modalPatternId">-</span>
                             <button class="btn btn-secondary" style="padding: 0.15rem 0.35rem; font-size: 0.6rem;" onclick="copyModalPatternId()" title="Pattern-ID kopieren">📋</button>
                         </div>
                     </div>
@@ -3427,13 +3432,13 @@
     <div id="revalDetailOverlay" class="reval-detail-overlay" onclick="closeRevalDetail(event)">
         <div class="reval-detail-modal" onclick="event.stopPropagation()">
             <div class="reval-detail-header">
-                <div class="reval-detail-title" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <div class="reval-detail-title">
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span id="revalDetailSymbol">BTCUSD</span>
                         <span class="reval-detail-badge" id="revalDetailType">Korrigiert</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; color: #888;">
-                        <span style="font-family: monospace;" id="revalDetailPatternId">-</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; color: #888; font-family: monospace;">
+                        <span id="revalDetailPatternId">-</span>
                         <button class="btn btn-secondary" style="padding: 0.15rem 0.35rem; font-size: 0.6rem;" onclick="copyRevalPatternId()" title="Pattern-ID kopieren">📋</button>
                     </div>
                 </div>
