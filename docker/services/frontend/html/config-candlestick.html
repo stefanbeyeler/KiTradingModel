@@ -6039,6 +6039,16 @@
             el.style.color = type === 'success' ? '#81c784' : type === 'error' ? '#e57373' : '#ffb74d';
         }
 
+        // Parse TwelveData datetime as UTC (they return datetime without timezone suffix)
+        function parseTwelveDataTimeUTC(datetime) {
+            if (!datetime) return null;
+            let dateStr = datetime;
+            if (typeof dateStr === 'string' && !dateStr.includes('+') && !dateStr.includes('Z')) {
+                dateStr = dateStr.replace(' ', 'T') + 'Z';
+            }
+            return new Date(dateStr);
+        }
+
         // Load chart for modal
         async function loadModalChart(pattern) {
             const canvas = document.getElementById('modalChart');
@@ -6046,43 +6056,72 @@
 
             try {
                 const interval = timeframeToInterval(pattern.timeframe);
-                const cacheKey = `${pattern.symbol}_${interval}`;
+                const patternTime = new Date(pattern.timestamp);
+                const patternCandleCount = getPatternCandleCount(pattern.pattern_type);
+                const timeframeTolerance = getTimeframeMinutes(pattern.timeframe) * 60 * 1000;
+
+                // Calculate cache key including pattern timestamp to avoid stale data issues
+                // We need data AROUND the pattern timestamp, not just the latest data
+                const patternTimeBucket = Math.floor(patternTime.getTime() / (timeframeTolerance * 10)); // Group by ~10 candles
+                const cacheKey = `${pattern.symbol}_${interval}_${patternTimeBucket}`;
 
                 let ohlcData;
+                let needsFetch = true;
+
+                // Check cache - but verify it contains the pattern timestamp
                 if (ohlcCache[cacheKey]) {
-                    ohlcData = ohlcCache[cacheKey];
-                } else {
-                    const res = await fetch(`${DATA_API}/twelvedata/time_series/${pattern.symbol}?interval=${interval}&outputsize=50`);
+                    const cachedData = ohlcCache[cacheKey];
+                    if (cachedData && cachedData.length > 0) {
+                        // Check if pattern timestamp is within cached data range
+                        const newestTime = parseTwelveDataTimeUTC(cachedData[0].datetime);
+                        const oldestTime = parseTwelveDataTimeUTC(cachedData[cachedData.length - 1].datetime);
+                        if (patternTime >= oldestTime && patternTime <= newestTime) {
+                            ohlcData = cachedData;
+                            needsFetch = false;
+                            console.log(`Cache hit for ${cacheKey}, pattern time ${pattern.timestamp} is in range`);
+                        } else {
+                            console.log(`Cache miss: pattern time ${pattern.timestamp} not in range [${cachedData[cachedData.length-1].datetime} - ${cachedData[0].datetime}]`);
+                        }
+                    }
+                }
+
+                if (needsFetch) {
+                    // Fetch data with end_date to get historical data around the pattern timestamp
+                    // TwelveData end_date format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DD
+                    // We want data ENDING at some point AFTER the pattern, so we can see context after
+                    const contextCandlesAfter = 10;
+                    const endTime = new Date(patternTime.getTime() + (contextCandlesAfter * timeframeTolerance));
+                    const endDateStr = endTime.toISOString().slice(0, 19).replace('T', ' ');
+
+                    // We need enough candles to show context before and after
+                    // Pattern candles + 5 before + 5 after = ~15, but fetch more to be safe
+                    const outputSize = 50;
+
+                    console.log(`Fetching OHLC data for ${pattern.symbol}/${interval} ending at ${endDateStr}`);
+                    const res = await fetch(`${DATA_API}/twelvedata/time_series/${pattern.symbol}?interval=${interval}&outputsize=${outputSize}&end_date=${encodeURIComponent(endDateStr)}`);
                     const data = await res.json();
                     ohlcData = data.values || [];
                     ohlcCache[cacheKey] = ohlcData;
+
+                    if (ohlcData.length > 0) {
+                        console.log(`Fetched ${ohlcData.length} candles: ${ohlcData[ohlcData.length-1].datetime} to ${ohlcData[0].datetime}`);
+                    }
+                }
+
+                if (!ohlcData || ohlcData.length === 0) {
+                    console.error('No OHLC data available');
+                    return;
                 }
 
                 // TwelveData returns data in REVERSE order: index 0 = newest, last index = oldest
                 // Pattern timestamp points to the LAST candle of the pattern
                 // For 2-candle patterns: timestamp = second candle, first candle is OLDER (higher index in TwelveData)
 
-                const patternTime = new Date(pattern.timestamp);
-                const patternCandleCount = getPatternCandleCount(pattern.pattern_type);
-
                 // First, reverse the data to get chronological order (oldest first)
                 const chronoData = [...ohlcData].reverse();
 
                 // Find pattern's last candle in chronological array
-                // IMPORTANT: TwelveData returns datetime without timezone ("2026-01-01 17:55:00")
-                // These are UTC times but JS interprets them as local. We must parse as UTC.
-
-                function parseTwelveDataTimeUTC(datetime) {
-                    if (!datetime) return null;
-                    let dateStr = datetime;
-                    if (typeof dateStr === 'string' && !dateStr.includes('+') && !dateStr.includes('Z')) {
-                        dateStr = dateStr.replace(' ', 'T') + 'Z';
-                    }
-                    return new Date(dateStr);
-                }
-
                 let lastCandleIdx = -1;
-                const timeframeTolerance = getTimeframeMinutes(pattern.timeframe) * 60 * 1000;
 
                 // First try: exact match within timeframe tolerance
                 for (let i = chronoData.length - 1; i >= 0; i--) {
@@ -6096,27 +6135,17 @@
                 }
 
                 if (lastCandleIdx === -1) {
-                    // Fallback: try 4h window
+                    // Fallback: find closest candle
+                    let minDiff = Infinity;
                     for (let i = chronoData.length - 1; i >= 0; i--) {
                         const candleTime = parseTwelveDataTimeUTC(chronoData[i].datetime);
-                        if (Math.abs(candleTime - patternTime) < 3600000 * 4) {
+                        const timeDiff = Math.abs(candleTime - patternTime);
+                        if (timeDiff < minDiff) {
+                            minDiff = timeDiff;
                             lastCandleIdx = i;
-                            console.log(`Highlight: 4h fallback idx=${i}`);
-                            break;
                         }
                     }
-                }
-
-                if (lastCandleIdx === -1) {
-                    // Second fallback: try 24h window
-                    for (let i = chronoData.length - 1; i >= 0; i--) {
-                        const candleTime = parseTwelveDataTimeUTC(chronoData[i].datetime);
-                        if (Math.abs(candleTime - patternTime) < 3600000 * 24) {
-                            lastCandleIdx = i;
-                            console.log(`Highlight: 24h fallback idx=${i}`);
-                            break;
-                        }
-                    }
+                    console.log(`Highlight: closest match idx=${lastCandleIdx}, diff=${minDiff}ms`);
                 }
 
                 // If still not found, use a position that allows context candles
