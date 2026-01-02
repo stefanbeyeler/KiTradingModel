@@ -3198,10 +3198,28 @@
                             <button class="btn btn-secondary btn-sm" onclick="showValidationQueue()" title="Warteschlange anzeigen">Queue 📋</button>
                         </div>
                     </div>
-                    <div id="batchProgress" style="display: none; margin-top: 0.5rem;">
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span class="spinner"></span>
-                            <span id="batchProgressText">Validierung läuft...</span>
+                    <div id="batchProgress" style="display: none; margin-top: 0.75rem;">
+                        <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 6px;">
+                            <!-- Progress Header -->
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span class="spinner"></span>
+                                <span id="batchProgressText" style="font-weight: 500;">Validierung läuft...</span>
+                            </div>
+                            <!-- Progress Bar -->
+                            <div style="background: rgba(255,255,255,0.1); border-radius: 4px; height: 8px; margin-bottom: 0.5rem; overflow: hidden;">
+                                <div id="batchProgressBar" style="background: linear-gradient(90deg, #64c8ff, #81c784); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                            </div>
+                            <!-- Progress Stats -->
+                            <div id="batchProgressStats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; font-size: 0.8rem; text-align: center;">
+                                <div><span id="batchStatValidated" style="color: #64c8ff; font-weight: bold;">0</span> / <span id="batchStatTotal">0</span></div>
+                                <div style="color: #81c784;"><span id="batchStatAgreed">0</span> ✓</div>
+                                <div style="color: #e57373;"><span id="batchStatRejected">0</span> ✗</div>
+                                <div style="color: #ffb74d;"><span id="batchStatErrors">0</span> ⚠</div>
+                            </div>
+                            <!-- Current Pattern -->
+                            <div id="batchCurrentPattern" style="margin-top: 0.5rem; font-size: 0.8rem; color: #888; text-align: center; display: none;">
+                                Aktuell: <span id="batchCurrentPatternName">-</span>
+                            </div>
                         </div>
                     </div>
                     <div id="batchResult" style="display: none; margin-top: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.3); border-radius: 4px;">
@@ -9069,60 +9087,133 @@
             const progressDiv = document.getElementById('batchProgress');
             const resultDiv = document.getElementById('batchResult');
             const progressText = document.getElementById('batchProgressText');
+            const progressBar = document.getElementById('batchProgressBar');
+            const currentPatternDiv = document.getElementById('batchCurrentPattern');
+            const currentPatternName = document.getElementById('batchCurrentPatternName');
 
             // Disable buttons
             document.getElementById('btnBatch5').disabled = true;
             document.getElementById('btnBatch10').disabled = true;
             document.getElementById('btnBatch20').disabled = true;
 
+            // Reset progress display
             progressDiv.style.display = 'block';
             resultDiv.style.display = 'none';
-            progressText.textContent = `Validiere ${maxPatterns} Patterns mit Claude...`;
+            progressBar.style.width = '0%';
+            document.getElementById('batchStatValidated').textContent = '0';
+            document.getElementById('batchStatTotal').textContent = maxPatterns;
+            document.getElementById('batchStatAgreed').textContent = '0';
+            document.getElementById('batchStatRejected').textContent = '0';
+            document.getElementById('batchStatErrors').textContent = '0';
+            currentPatternDiv.style.display = 'none';
+            progressText.textContent = `Lade ${maxPatterns} Patterns aus der Queue...`;
 
             try {
-                const response = await fetch(`${CANDLESTICK_API}/claude/validate-batch`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ max_patterns: maxPatterns })
-                });
+                // First, get patterns from the queue
+                const queueResponse = await fetch(`${CANDLESTICK_API}/auto-optimization/queue?limit=${maxPatterns}`);
+                if (!queueResponse.ok) throw new Error(`Queue laden fehlgeschlagen: HTTP ${queueResponse.status}`);
 
-                const data = await response.json();
-                progressDiv.style.display = 'none';
-                resultDiv.style.display = 'block';
+                const queueData = await queueResponse.json();
+                const patterns = queueData.items || [];
 
-                if (data.status === 'success') {
-                    const summary = data.summary || {};
-                    document.getElementById('batchResultContent').innerHTML = `
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center;">
-                            <div>
-                                <div style="font-size: 1.5rem; font-weight: bold;">${summary.total || 0}</div>
-                                <div style="color: #888; font-size: 0.85rem;">Validiert</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 1.5rem; font-weight: bold; color: #81c784;">${summary.agreed || 0}</div>
-                                <div style="color: #888; font-size: 0.85rem;">Bestätigt</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 1.5rem; font-weight: bold; color: #e57373;">${summary.rejected || 0}</div>
-                                <div style="color: #888; font-size: 0.85rem;">Abgelehnt</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 1.5rem; font-weight: bold; color: #ffb74d;">${summary.errors || 0}</div>
-                                <div style="color: #888; font-size: 0.85rem;">Fehler</div>
-                            </div>
-                        </div>
-                    `;
-                    showToast(`${summary.total} Patterns validiert: ${summary.agreed} bestätigt, ${summary.rejected} abgelehnt`, 'success');
-                    loadClaudeStatus();
-                } else if (data.status === 'no_patterns') {
+                if (patterns.length === 0) {
+                    progressDiv.style.display = 'none';
+                    resultDiv.style.display = 'block';
                     document.getElementById('batchResultContent').innerHTML = `
                         <div style="color: #888; text-align: center;">
-                            Keine Patterns zur Validierung gefunden. Führe zuerst einen Scan durch.
+                            Keine Patterns in der Warteschlange. Patterns werden automatisch hinzugefügt wenn "Neue Patterns validieren" aktiviert ist.
                         </div>
                     `;
-                } else {
-                    throw new Error(data.detail || 'Unbekannter Fehler');
+                    // Re-enable buttons
+                    document.getElementById('btnBatch5').disabled = false;
+                    document.getElementById('btnBatch10').disabled = false;
+                    document.getElementById('btnBatch20').disabled = false;
+                    return;
                 }
+
+                const totalPatterns = patterns.length;
+                document.getElementById('batchStatTotal').textContent = totalPatterns;
+                progressText.textContent = `Validiere ${totalPatterns} Patterns mit Claude Vision...`;
+                currentPatternDiv.style.display = 'block';
+
+                let validated = 0;
+                let agreed = 0;
+                let rejected = 0;
+                let errors = 0;
+
+                // Validate each pattern individually
+                for (const pattern of patterns) {
+                    const patternType = formatPatternType(pattern.pattern_type || 'unknown');
+                    const symbol = pattern.symbol || 'unknown';
+                    const timeframe = pattern.timeframe || '';
+                    currentPatternName.textContent = `${patternType} (${symbol} ${timeframe})`;
+
+                    try {
+                        const response = await fetch(`${CANDLESTICK_API}/claude/validate`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                pattern_id: pattern.id,
+                                pattern_type: pattern.pattern_type,
+                                symbol: pattern.symbol,
+                                timeframe: pattern.timeframe,
+                                timestamp: pattern.timestamp
+                            })
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            if (result.status === 'CONFIRMED' || result.claude_agrees === true) {
+                                agreed++;
+                            } else if (result.status === 'REJECTED' || result.claude_agrees === false) {
+                                rejected++;
+                            }
+                        } else {
+                            errors++;
+                        }
+                    } catch (e) {
+                        console.error(`Error validating pattern ${pattern.id}:`, e);
+                        errors++;
+                    }
+
+                    validated++;
+
+                    // Update progress display
+                    const progress = (validated / totalPatterns) * 100;
+                    progressBar.style.width = `${progress}%`;
+                    document.getElementById('batchStatValidated').textContent = validated;
+                    document.getElementById('batchStatAgreed').textContent = agreed;
+                    document.getElementById('batchStatRejected').textContent = rejected;
+                    document.getElementById('batchStatErrors').textContent = errors;
+                }
+
+                // Show final results
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                document.getElementById('batchResultContent').innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center;">
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold;">${validated}</div>
+                            <div style="color: #888; font-size: 0.85rem;">Validiert</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #81c784;">${agreed}</div>
+                            <div style="color: #888; font-size: 0.85rem;">Bestätigt</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #e57373;">${rejected}</div>
+                            <div style="color: #888; font-size: 0.85rem;">Abgelehnt</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #ffb74d;">${errors}</div>
+                            <div style="color: #888; font-size: 0.85rem;">Fehler</div>
+                        </div>
+                    </div>
+                `;
+                showToast(`${validated} Patterns validiert: ${agreed} bestätigt, ${rejected} abgelehnt`, 'success');
+                loadClaudeStatus();
+                loadAutoOptStatus();
+
             } catch (e) {
                 progressDiv.style.display = 'none';
                 resultDiv.style.display = 'block';
@@ -9131,7 +9222,10 @@
                 `;
                 showToast('Batch-Validierung fehlgeschlagen: ' + e.message, 'error');
             } finally {
-                // Buttons are always enabled in compact layout
+                // Re-enable buttons
+                document.getElementById('btnBatch5').disabled = false;
+                document.getElementById('btnBatch10').disabled = false;
+                document.getElementById('btnBatch20').disabled = false;
             }
         }
 
