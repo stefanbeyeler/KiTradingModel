@@ -34,8 +34,8 @@ from .pattern_history_service import pattern_history_service
 class AutoOptimizationConfig:
     """Configuration for auto-optimization behavior."""
     # Enable/disable switches
-    enabled: bool = True
-    auto_validate_new_patterns: bool = True  # Validate new patterns automatically
+    enabled: bool = False  # Disabled by default - user must enable explicitly
+    auto_validate_new_patterns: bool = False  # Validate new patterns automatically (disabled by default)
     auto_apply_recommendations: bool = False  # Apply recommendations automatically
     auto_revalidate_after_adjustment: bool = True  # Re-validate after parameter changes
 
@@ -65,8 +65,8 @@ class AutoOptimizationService:
 
     def __init__(self):
         self.config = AutoOptimizationConfig(
-            enabled=os.getenv("AUTO_OPTIMIZATION_ENABLED", "true").lower() == "true",
-            auto_validate_new_patterns=os.getenv("AUTO_VALIDATE_NEW_PATTERNS", "true").lower() == "true",
+            enabled=os.getenv("AUTO_OPTIMIZATION_ENABLED", "false").lower() == "true",
+            auto_validate_new_patterns=os.getenv("AUTO_VALIDATE_NEW_PATTERNS", "false").lower() == "true",
             auto_apply_recommendations=os.getenv("AUTO_APPLY_RECOMMENDATIONS", "false").lower() == "true",
             auto_revalidate_after_adjustment=os.getenv("AUTO_REVALIDATE_AFTER_ADJUSTMENT", "true").lower() == "true",
             validation_sample_rate=float(os.getenv("VALIDATION_SAMPLE_RATE", "0.3")),
