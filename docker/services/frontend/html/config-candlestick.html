@@ -4038,11 +4038,17 @@
 
         // Format pattern ID for display (short version)
         // Full ID format: BTCUSD_H1_hammer_2026-01-02T10:00:00+00:00
-        // Short version: Last 8 chars of hash or timestamp portion
+        // Extract just the time (HH:MM) from the timestamp
         function formatPatternIdShort(fullId) {
             if (!fullId) return '-';
-            // Take last 8 characters for a short display
-            return fullId.slice(-8);
+            // Try to extract time from timestamp in ID
+            // Format: symbol_timeframe_type_YYYY-MM-DDTHH:MM:SS+00:00
+            const match = fullId.match(/T(\d{2}:\d{2})/);
+            if (match) {
+                return match[1];  // Returns "HH:MM"
+            }
+            // Fallback: first 6 chars (symbol part)
+            return fullId.substring(0, 6);
         }
 
         // Copy pattern ID to clipboard
@@ -4974,7 +4980,6 @@
                 <div class="timeline-item ${directionClass}">
                     <span class="timeline-time">${time}</span>
                     <div class="timeline-content" onclick="openPatternModal(${pattern.index})">
-                        <span class="timeline-id" title="${pattern.id || ''}" onclick="copyPatternId('${pattern.id || ''}', event)" style="cursor: pointer; font-family: monospace; font-size: 0.7rem; color: #888; min-width: 70px;">${formatPatternIdShort(pattern.id)}</span>
                         <span class="timeline-pattern-name">${formatPatternType(pattern.pattern_type)}</span>
                         <span class="timeline-symbol">${pattern.symbol}</span>
                         <span class="timeline-direction ${directionClass}">${pattern.direction}</span>
