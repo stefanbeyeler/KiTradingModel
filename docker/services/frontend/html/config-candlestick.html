@@ -3342,28 +3342,6 @@
                 </div>
             </div>
 
-            <!-- Chart Preview -->
-            <div class="card" style="margin-top: 1rem;">
-                <div class="card-header">
-                    <h2 class="card-title" style="font-size: 1rem;">🔍 Chart-Vorschau</h2>
-                    <button class="btn btn-secondary btn-sm" onclick="loadRecentPatternsForPreview()">Aktualisieren</button>
-                </div>
-                <div id="chartPreviewSection">
-                    <div style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
-                        <select id="chartPreviewSelect" onchange="selectPatternForPreview(); loadChartPreview();"
-                                style="flex: 2; min-width: 180px; padding: 0.4rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.85rem;">
-                            <option value="">-- Pattern wählen --</option>
-                        </select>
-                        <input type="text" id="chartPreviewPatternId" placeholder="oder ID..."
-                               style="flex: 1; min-width: 100px; padding: 0.4rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.85rem;">
-                    </div>
-                    <div id="chartPreviewContainer" style="display: none; margin-top: 0.75rem; text-align: center;">
-                        <img id="chartPreviewImage" style="max-width: 100%; max-height: 250px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);" />
-                        <div id="chartPreviewInfo" style="margin-top: 0.3rem; color: #888; font-size: 0.8rem;"></div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Feedback Loop Section -->
             <div class="card" style="border: 1px solid rgba(100, 200, 255, 0.2);">
                 <div class="card-header">
@@ -4615,7 +4593,6 @@
                 loadAutoOptStatus();
                 loadClaudeHistory();
                 loadProblematicPatterns();
-                loadRecentPatternsForPreview();
                 loadFeedbackLoopData();
 
                 // Stop training auto-refresh
@@ -9748,79 +9725,6 @@
             } catch (e) {
                 console.error('Reset statistics error:', e);
                 showToast('Fehler: ' + e.message, 'error');
-            }
-        }
-
-        async function loadRecentPatternsForPreview() {
-            const select = document.getElementById('chartPreviewSelect');
-            select.innerHTML = '<option value="">Laden...</option>';
-
-            try {
-                // Load recent patterns from history
-                const response = await fetch(`${CANDLESTICK_API}/history?limit=50`);
-                if (!response.ok) throw new Error('Patterns nicht verfügbar');
-                const data = await response.json();
-
-                if (!data.patterns || data.patterns.length === 0) {
-                    select.innerHTML = '<option value="">Keine Patterns vorhanden</option>';
-                    return;
-                }
-
-                select.innerHTML = '<option value="">-- Pattern auswählen --</option>' +
-                    data.patterns.map(p => {
-                        const time = p.timestamp ? new Date(p.timestamp).toLocaleTimeString('de-CH', {hour: '2-digit', minute: '2-digit'}) : '';
-                        return `<option value="${p.id}">${formatPatternType(p.pattern_type)} | ${p.symbol} | ${p.timeframe} | ${time}</option>`;
-                    }).join('');
-
-                showToast(`${data.patterns.length} Patterns geladen`, 'success');
-            } catch (e) {
-                console.error('Load patterns error:', e);
-                select.innerHTML = '<option value="">Fehler beim Laden</option>';
-                showToast('Fehler: ' + e.message, 'error');
-            }
-        }
-
-        function selectPatternForPreview() {
-            const select = document.getElementById('chartPreviewSelect');
-            const input = document.getElementById('chartPreviewPatternId');
-            if (select.value) {
-                input.value = select.value;
-            }
-        }
-
-        async function loadChartPreview() {
-            const patternId = document.getElementById('chartPreviewPatternId').value.trim();
-            if (!patternId) {
-                showToast('Bitte ein Pattern auswählen oder eine Pattern-ID eingeben', 'warning');
-                return;
-            }
-
-            const container = document.getElementById('chartPreviewContainer');
-            const image = document.getElementById('chartPreviewImage');
-            const info = document.getElementById('chartPreviewInfo');
-
-            container.style.display = 'block';
-            info.textContent = 'Laden...';
-            image.src = '';
-
-            try {
-                const response = await fetch(`${CANDLESTICK_API}/claude/chart-preview/${patternId}`);
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Vorschau nicht verfügbar');
-                }
-                const data = await response.json();
-
-                image.src = data.chart_image;
-                info.innerHTML = `
-                    <strong>${data.symbol}</strong> | ${data.timeframe} |
-                    ${formatPatternType(data.pattern_type)} |
-                    ${data.candles_shown} Kerzen
-                `;
-            } catch (e) {
-                console.error('Chart preview error:', e);
-                container.style.display = 'none';
-                showToast('Chart-Vorschau fehlgeschlagen: ' + e.message, 'error');
             }
         }
 
