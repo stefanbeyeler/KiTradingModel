@@ -9761,14 +9761,25 @@
                     return;
                 }
 
-                container.innerHTML = `
+                // Separate into pending and applied recommendations
+                const pendingRecs = data.recommendations.filter(r => r.current_value !== r.recommended_value);
+                const appliedRecs = data.recommendations.filter(r => r.current_value === r.recommended_value);
+
+                let html = `
                     <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(100, 200, 255, 0.1); border-radius: 8px;">
-                        <strong>${data.count} Empfehlungen</strong> basierend auf
-                        <strong>${data.feedback_summary?.total_rejections || 0}</strong> Ablehnungen
-                        in <strong>${data.feedback_summary?.patterns_analyzed || 0}</strong> Pattern-Typen
+                        <strong>${pendingRecs.length} offene</strong> /
+                        <strong style="color: #81c784;">${appliedRecs.length} angewendete</strong> Empfehlungen
+                        <span style="color: #888; margin-left: 0.5rem;">
+                            (${data.feedback_summary?.total_rejections || 0} Ablehnungen in ${data.feedback_summary?.patterns_analyzed || 0} Pattern-Typen)
+                        </span>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                        ${data.recommendations.map((r, idx) => `
+                `;
+
+                // Pending recommendations
+                if (pendingRecs.length > 0) {
+                    html += `<div style="display: flex; flex-direction: column; gap: 0.75rem;">`;
+                    pendingRecs.forEach((r, idx) => {
+                        html += `
                             <div class="recommendation-item" style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; border-left: 3px solid ${r.priority === 'high' ? '#e57373' : r.priority === 'medium' ? '#ffb74d' : '#81c784'};">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
                                     <div>
@@ -9804,9 +9815,44 @@
                                     💡 ${r.impact_estimate}
                                 </div>
                             </div>
-                        `).join('')}
-                    </div>
-                `;
+                        `;
+                    });
+                    html += `</div>`;
+                }
+
+                // Applied recommendations (collapsed by default)
+                if (appliedRecs.length > 0) {
+                    html += `
+                        <details style="margin-top: 1rem;">
+                            <summary style="cursor: pointer; color: #81c784; font-size: 0.9rem; padding: 0.5rem;">
+                                ✓ ${appliedRecs.length} bereits angewendete Empfehlungen
+                            </summary>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; opacity: 0.7;">
+                    `;
+                    appliedRecs.forEach(r => {
+                        html += `
+                            <div style="padding: 0.75rem; background: rgba(76, 175, 80, 0.1); border-radius: 8px; border-left: 3px solid #81c784;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <span style="font-weight: bold; color: #64c8ff;">${formatPatternType(r.pattern)}</span>
+                                        <span style="color: #888;">.</span>
+                                        <span style="color: #aaa;">${r.parameter}</span>
+                                        <span style="color: #81c784; margin-left: 0.5rem;">= ${r.current_value}</span>
+                                    </div>
+                                    <span class="badge" style="background: rgba(76, 175, 80, 0.3); color: #81c784; font-size: 0.7rem;">
+                                        ✓ ANGEWENDET
+                                    </span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+                                    Grund: ${r.reason.replace(/_/g, ' ')} (${r.feedback_count}x)
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `</div></details>`;
+                }
+
+                container.innerHTML = html;
             } catch (e) {
                 console.error('Recommendations error:', e);
                 container.innerHTML = `<div style="color: #e57373; text-align: center;">Fehler: ${e.message}</div>`;
