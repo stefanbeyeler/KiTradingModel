@@ -5390,6 +5390,10 @@
             document.getElementById('reasonTextInput').value = '';
             document.getElementById('reasonDescription').textContent = '';
 
+            // Show modal
+            document.getElementById('patternModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+
             // Load charts
             await Promise.all([
                 loadModalChart(pattern),
