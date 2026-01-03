@@ -3350,7 +3350,7 @@
                 </div>
                 <div id="feedbackSection">
                     <!-- Recommendations -->
-                    <div id="recommendationsContainer" style="margin-bottom: 1rem;">
+                    <div id="feedbackRecommendationsContainer" style="margin-bottom: 1rem;">
                         <div style="text-align: center; color: #888; padding: 0.5rem; font-size: 0.85rem;">
                             <span class="spinner"></span> Laden...
                         </div>
@@ -9734,14 +9734,14 @@
         // Combined function to load all feedback loop data
         async function loadFeedbackLoopData() {
             await Promise.all([
-                loadRecommendations(),
+                loadFeedbackRecommendations(),
                 loadCurrentRules(),
                 loadImpactAnalysis()
             ]);
         }
 
-        async function loadRecommendations() {
-            const container = document.getElementById('recommendationsContainer');
+        async function loadFeedbackRecommendations() {
+            const container = document.getElementById('feedbackRecommendationsContainer');
             container.innerHTML = '<div style="text-align: center;"><span class="spinner"></span> Analysiere Feedback...</div>';
 
             try {
@@ -9836,7 +9836,7 @@
                 if (response.ok && data.status === 'success') {
                     showToast(`Parameter angepasst: ${pattern}.${parameter} = ${newValue}`, 'success');
                     // Reload recommendations
-                    loadRecommendations();
+                    loadFeedbackRecommendations();
                 } else {
                     throw new Error(data.detail || 'Anpassung fehlgeschlagen');
                 }
