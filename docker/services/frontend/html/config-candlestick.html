@@ -9597,77 +9597,82 @@
 
         // Open Claude History item in detail modal
         async function openClaudeHistoryModal(idx) {
-            console.log('openClaudeHistoryModal called with idx:', idx);
-
             const item = loadedClaudeHistory[idx];
             if (!item) {
                 console.error('Claude history item not found at index:', idx);
-                alert('Fehler: Eintrag nicht gefunden');
                 return;
             }
-
-            console.log('Opening Claude history modal for:', item.pattern_id, item);
 
             // Try to find this pattern in the loaded patterns history
             const patternId = item.pattern_id;
 
             // First, try to load the pattern from history API
             try {
-                console.log('Fetching patterns from history API...');
                 const response = await fetch(`${CANDLESTICK_API}/history?limit=1000`);
-                console.log('History API response status:', response.status);
-
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('History API returned', data.patterns?.length || 0, 'patterns');
-
                     if (data.patterns && data.patterns.length > 0) {
                         const foundIndex = data.patterns.findIndex(p => p.id === patternId);
-                        console.log('Pattern search result - patternId:', patternId, 'foundIndex:', foundIndex);
-
                         if (foundIndex !== -1) {
-                            const foundPattern = data.patterns[foundIndex];
-                            console.log('Found pattern in history:', foundPattern);
-
-                            // Update the global arrays with ALL patterns from the response
-                            // This ensures navigation works correctly
+                            // Pattern found in history - use it
                             allFilteredPatterns = data.patterns.map((p, i) => ({ ...p, globalIndex: i }));
                             loadedPatterns = allFilteredPatterns;
-
-                            // Open the modal at the correct index
-                            console.log('Calling openPatternModalByGlobalIndex with index:', foundIndex);
                             await openPatternModalByGlobalIndex(foundIndex);
-                            console.log('Modal should now be visible');
                             return;
-                        } else {
-                            console.warn('Pattern not found in history by ID:', patternId);
-                            // Log first few pattern IDs for comparison
-                            console.log('Available pattern IDs (first 5):', data.patterns.slice(0, 5).map(p => p.id));
                         }
                     }
-                } else {
-                    console.error('History API failed with status:', response.status);
                 }
             } catch (e) {
-                console.error('Error loading pattern for modal:', e);
+                console.error('Error loading pattern from history:', e);
             }
 
-            // Fallback: Show Claude validation details in an alert
-            console.log('Using fallback alert (pattern not found in history)');
-            const reasoning = item.claude_reasoning || 'Keine Begründung verfügbar';
-            const agrees = item.claude_agrees ? 'Valide' : 'Invalide';
-            const confidence = (item.claude_confidence * 100).toFixed(0);
+            // Pattern not found in history (maybe too old) - create a synthetic pattern object
+            // from the Claude validation data and show it in the modal
+            const syntheticPattern = {
+                id: item.pattern_id,
+                pattern_type: item.pattern_type,
+                symbol: item.symbol,
+                timeframe: item.timeframe,
+                timestamp: item.validated_at || item.pattern_id.match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)?.[0] || '',
+                confidence: item.rule_confidence || 0.5,
+                direction: getPatternDirection(item.pattern_type),
+                description: item.claude_reasoning || 'Claude Vision Validierung',
+                trading_implication: item.claude_agrees ? 'Valide' : 'Invalide',
+                ohlc_context: item.ohlc_data || null,
+                // Claude validation info
+                claude_validated: true,
+                claude_agrees: item.claude_agrees,
+                claude_confidence: item.claude_confidence,
+                claude_reasoning: item.claude_reasoning
+            };
 
-            alert(`Claude Vision Validierung
+            // Set up for single-pattern view (no navigation)
+            allFilteredPatterns = [{ ...syntheticPattern, globalIndex: 0 }];
+            loadedPatterns = allFilteredPatterns;
 
-Pattern: ${formatPatternType(item.pattern_type)}
-Symbol: ${item.symbol}
-Timeframe: ${item.timeframe}
+            // Open modal with the synthetic pattern
+            await openPatternModalByGlobalIndex(0);
+        }
 
-Ergebnis: ${agrees} (${confidence}% Konfidenz)
-
-Begründung:
-${reasoning}`);
+        // Helper to determine pattern direction from pattern type
+        function getPatternDirection(patternType) {
+            if (!patternType) return 'neutral';
+            const lower = patternType.toLowerCase();
+            if (lower.includes('bullish') || lower.includes('hammer') ||
+                lower.includes('morning') || lower.includes('piercing') ||
+                lower.includes('dragonfly') || lower.includes('inverted_hammer') ||
+                lower.includes('three_white') || lower.includes('rising') ||
+                lower.includes('tower_bottom') || lower.includes('bullish_island')) {
+                return 'bullish';
+            } else if (lower.includes('bearish') || lower.includes('shooting') ||
+                       lower.includes('hanging') || lower.includes('evening') ||
+                       lower.includes('dark_cloud') || lower.includes('gravestone') ||
+                       lower.includes('three_black') || lower.includes('falling') ||
+                       lower.includes('tower_top') || lower.includes('bearish_island') ||
+                       lower.includes('advance_block')) {
+                return 'bearish';
+            }
+            return 'neutral';
         }
 
         async function loadProblematicPatterns() {
