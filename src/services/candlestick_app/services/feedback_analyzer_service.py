@@ -486,12 +486,26 @@ class FeedbackAnalyzerService:
             except Exception:
                 continue
 
+            # Get default params to check if already adjusted
+            from .rule_config_service import DEFAULT_RULE_PARAMS
+            default_params = DEFAULT_RULE_PARAMS.get(pattern.lower(), {})
+
             for param_name in adjustment_info["params"]:
                 current_value = pattern_params.get(param_name)
                 if current_value is None:
                     continue
 
-                # Calculate new value
+                default_value = default_params.get(param_name)
+
+                # Check if parameter was already adjusted from default
+                already_adjusted = (
+                    default_value is not None and
+                    abs(current_value - default_value) > 0.001
+                )
+
+                # Calculate new value based on DEFAULT, not current
+                # This ensures consistent recommendations
+                base_value = default_value if default_value is not None else current_value
                 step = adjustment_info["step"]
                 direction = adjustment_info["direction"]
 
@@ -500,21 +514,21 @@ class FeedbackAnalyzerService:
                 scaled_step = step * max(1, multiplier)
 
                 if direction == "decrease":
-                    new_value = max(0.01, current_value - scaled_step)
+                    new_value = max(0.01, base_value - scaled_step)
                 elif direction == "increase":
-                    new_value = current_value + scaled_step
+                    new_value = base_value + scaled_step
                 elif direction == "increase_abs":
-                    if current_value >= 0:
-                        new_value = current_value + scaled_step
+                    if base_value >= 0:
+                        new_value = base_value + scaled_step
                     else:
-                        new_value = current_value - scaled_step
+                        new_value = base_value - scaled_step
                 else:
                     continue
 
                 # Round to reasonable precision
                 new_value = round(new_value, 4)
 
-                if abs(new_value - current_value) < 0.001:
+                if abs(new_value - base_value) < 0.001:
                     continue  # No significant change
 
                 # Calculate confidence based on feedback count
