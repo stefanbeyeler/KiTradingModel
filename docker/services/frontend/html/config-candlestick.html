@@ -9597,11 +9597,13 @@
 
         // Open Claude History item in detail modal
         async function openClaudeHistoryModal(idx) {
+            console.log('openClaudeHistoryModal called, idx:', idx);
             const item = loadedClaudeHistory[idx];
             if (!item) {
                 console.error('Claude history item not found at index:', idx);
                 return;
             }
+            console.log('Claude history item:', item);
 
             // Try to find this pattern in the loaded patterns history
             const patternId = item.pattern_id;
@@ -9613,6 +9615,7 @@
                     const data = await response.json();
                     if (data.patterns && data.patterns.length > 0) {
                         const foundIndex = data.patterns.findIndex(p => p.id === patternId);
+                        console.log('Pattern search in history - patternId:', patternId, 'foundIndex:', foundIndex);
                         if (foundIndex !== -1) {
                             // Pattern found in history - use it
                             allFilteredPatterns = data.patterns.map((p, i) => ({ ...p, globalIndex: i }));
@@ -9627,31 +9630,45 @@
             }
 
             // Pattern not found in history (maybe too old) - create a synthetic pattern object
-            // from the Claude validation data and show it in the modal
+            console.log('Creating synthetic pattern from Claude validation data');
+
+            // Extract timestamp from pattern_id
+            const timestampMatch = item.pattern_id ? item.pattern_id.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/) : null;
+            const timestamp = timestampMatch ? timestampMatch[1] + '+00:00' : (item.validated_at || new Date().toISOString());
+            console.log('Extracted timestamp:', timestamp);
+
             const syntheticPattern = {
                 id: item.pattern_id,
                 pattern_type: item.pattern_type,
                 symbol: item.symbol,
                 timeframe: item.timeframe,
-                timestamp: item.validated_at || item.pattern_id.match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)?.[0] || '',
+                timestamp: timestamp,
                 confidence: item.rule_confidence || 0.5,
                 direction: getPatternDirection(item.pattern_type),
                 description: item.claude_reasoning || 'Claude Vision Validierung',
                 trading_implication: item.claude_agrees ? 'Valide' : 'Invalide',
-                ohlc_context: item.ohlc_data || null,
+                ohlc_context: item.ohlc_data ? { candles: item.ohlc_data, pattern_start_idx: 5 } : null,
                 // Claude validation info
                 claude_validated: true,
                 claude_agrees: item.claude_agrees,
                 claude_confidence: item.claude_confidence,
                 claude_reasoning: item.claude_reasoning
             };
+            console.log('Synthetic pattern:', syntheticPattern);
 
             // Set up for single-pattern view (no navigation)
             allFilteredPatterns = [{ ...syntheticPattern, globalIndex: 0 }];
             loadedPatterns = allFilteredPatterns;
 
             // Open modal with the synthetic pattern
-            await openPatternModalByGlobalIndex(0);
+            console.log('Calling openPatternModalByGlobalIndex(0)');
+            try {
+                await openPatternModalByGlobalIndex(0);
+                console.log('Modal opened successfully');
+            } catch (e) {
+                console.error('Error opening modal:', e);
+                alert('Fehler beim Öffnen des Modals: ' + e.message);
+            }
         }
 
         // Helper to determine pattern direction from pattern type
