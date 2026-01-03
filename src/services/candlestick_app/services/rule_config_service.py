@@ -274,11 +274,17 @@ class RuleConfigService:
     def get_param(self, pattern: str, param_name: str) -> Optional[float]:
         """Get a specific rule parameter."""
         pattern_lower = pattern.lower()
+
+        # First check custom params
         if pattern_lower in self.params:
-            return self.params[pattern_lower].get(param_name)
-        # Fallback to defaults
+            value = self.params[pattern_lower].get(param_name)
+            if value is not None:
+                return value
+
+        # Fallback to defaults (also when param not in custom params)
         if pattern_lower in DEFAULT_RULE_PARAMS:
             return DEFAULT_RULE_PARAMS[pattern_lower].get(param_name)
+
         return None
 
     def get_pattern_params(self, pattern: str) -> Dict[str, float]:
