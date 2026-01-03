@@ -9594,28 +9594,37 @@
         // Open Claude History item in detail modal
         async function openClaudeHistoryModal(idx) {
             const item = loadedClaudeHistory[idx];
-            if (!item) return;
+            if (!item) {
+                console.error('Claude history item not found at index:', idx);
+                return;
+            }
+
+            console.log('Opening Claude history modal for:', item.pattern_id);
 
             // Try to find this pattern in the loaded patterns history
-            // If found, use the existing modal; otherwise show a simplified view
             const patternId = item.pattern_id;
 
             // First, try to load the pattern from history API
             try {
-                const response = await fetch(`${CANDLESTICK_API}/history?limit=500`);
+                const response = await fetch(`${CANDLESTICK_API}/history?limit=1000`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.patterns) {
-                        const foundPattern = data.patterns.find(p => p.id === patternId);
-                        if (foundPattern) {
-                            // Found the pattern - open the standard modal
-                            // Add to loadedPatterns temporarily
-                            foundPattern.index = 0;
-                            foundPattern.globalIndex = 0;
-                            loadedPatterns = [foundPattern];
-                            allFilteredPatterns = [foundPattern];
-                            await openPatternModal(0);
+                        const foundIndex = data.patterns.findIndex(p => p.id === patternId);
+                        if (foundIndex !== -1) {
+                            const foundPattern = data.patterns[foundIndex];
+                            console.log('Found pattern in history:', foundPattern);
+
+                            // Update the global arrays with ALL patterns from the response
+                            // This ensures navigation works correctly
+                            allFilteredPatterns = data.patterns.map((p, i) => ({ ...p, globalIndex: i }));
+                            loadedPatterns = allFilteredPatterns;
+
+                            // Open the modal at the correct index
+                            await openPatternModalByGlobalIndex(foundIndex);
                             return;
+                        } else {
+                            console.warn('Pattern not found in history by ID:', patternId);
                         }
                     }
                 }
@@ -9623,7 +9632,7 @@
                 console.error('Error loading pattern for modal:', e);
             }
 
-            // Fallback: Show Claude validation details in an alert or simple modal
+            // Fallback: Show Claude validation details in an alert
             const reasoning = item.claude_reasoning || 'Keine Begründung verfügbar';
             const agrees = item.claude_agrees ? 'Valide' : 'Invalide';
             const confidence = (item.claude_confidence * 100).toFixed(0);
