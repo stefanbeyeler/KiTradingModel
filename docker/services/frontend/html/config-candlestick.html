@@ -5936,12 +5936,17 @@
                 const patternId = currentModalPattern.id ||
                     `${currentModalPattern.symbol}_${currentModalPattern.timestamp}_${currentModalPattern.pattern_type}`;
 
-                // Call Claude Vision API
+                // Call Claude Vision API - include all required fields for patterns not in history
                 const response = await fetch(`${CANDLESTICK_API}/claude/validate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         pattern_id: patternId,
+                        pattern_type: currentModalPattern.pattern_type,
+                        symbol: currentModalPattern.symbol,
+                        timeframe: currentModalPattern.timeframe,
+                        pattern_timestamp: currentModalPattern.timestamp,
+                        ohlc_data: currentModalPattern.ohlc_data || null,
                         force: true  // Always get fresh validation
                     })
                 });
