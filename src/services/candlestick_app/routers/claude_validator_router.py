@@ -538,6 +538,45 @@ async def get_problematic_patterns(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/reset-statistics")
+async def reset_validation_statistics():
+    """
+    Reset Claude validation statistics.
+
+    Clears the validation history and cache, which resets:
+    - Problematic patterns statistics
+    - Agreement/rejection rates
+    - All by-pattern and by-symbol statistics
+
+    The claude_validations.json file is also cleared.
+    """
+    try:
+        result = claude_validator_service.clear_memory()
+
+        # Also clear the persisted file
+        from pathlib import Path
+        import os
+        data_dir = os.getenv("DATA_DIR", "/app/data")
+        validations_file = Path(data_dir) / "claude_validations.json"
+        if validations_file.exists():
+            validations_file.unlink()
+            result["file_deleted"] = True
+        else:
+            result["file_deleted"] = False
+
+        logger.info(f"Claude validation statistics reset: {result}")
+
+        return {
+            "status": "success",
+            "message": "Claude Validierungsstatistik zurückgesetzt",
+            **result
+        }
+
+    except Exception as e:
+        logger.error(f"Error resetting validation statistics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================================================
 # FEEDBACK ANALYSIS ENDPOINTS
 # ============================================================================

@@ -3320,7 +3320,10 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title" style="font-size: 1rem;">⚠️ Problematische Patterns</h2>
-                    <button class="btn btn-secondary btn-sm" onclick="loadProblematicPatterns()">Aktualisieren</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary btn-sm" onclick="loadProblematicPatterns()">Aktualisieren</button>
+                        <button class="btn btn-sm" style="background: rgba(239,83,80,0.15); color: #ef5350; border: 1px solid rgba(239,83,80,0.3);" onclick="resetProblematicStatistics()" title="Statistik zurücksetzen">↺ Zurücksetzen</button>
+                    </div>
                 </div>
                 <div id="problematicPatternsTable" style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
                     <table class="data-table" style="width: 100%; font-size: 0.85rem;">
@@ -9719,6 +9722,27 @@
             } catch (e) {
                 console.error('Problematic patterns error:', e);
                 tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #e57373; padding: 1rem;">Fehler: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function resetProblematicStatistics() {
+            if (!confirm('Möchten Sie die Claude Validierungsstatistik wirklich zurücksetzen?\n\nDies löscht:\n- Problematische Patterns Statistik\n- Claude QA Historie\n- Alle Validierungsdaten\n\nDiese Aktion kann nicht rückgängig gemacht werden.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${CANDLESTICK_API}/claude/reset-statistics`, { method: 'POST' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                showToast('Statistik zurückgesetzt', 'success');
+
+                // Reload both sections
+                loadProblematicPatterns();
+                loadClaudeHistory();
+            } catch (e) {
+                console.error('Reset statistics error:', e);
+                showToast('Fehler: ' + e.message, 'error');
             }
         }
 
