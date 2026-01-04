@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
             min-height: 100vh;
             color: #e8e8e8;
         }
@@ -692,6 +692,253 @@
         .data-table tr.clickable-row:hover {
             background: rgba(100, 200, 255, 0.1);
         }
+
+        /* Status Grid for Status Tab */
+        .status-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 800px) {
+            .status-grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .status-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s;
+        }
+
+        .status-card:hover {
+            border-color: rgba(100, 200, 255, 0.3);
+        }
+
+        .status-card.healthy {
+            border-color: rgba(76, 175, 80, 0.4);
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .status-card.unhealthy {
+            border-color: rgba(244, 67, 54, 0.4);
+            background: rgba(244, 67, 54, 0.1);
+        }
+
+        .status-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.6;
+            margin-bottom: 0.25rem;
+        }
+
+        .status-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .status-value.success {
+            color: #81c784;
+        }
+
+        .status-value.error {
+            color: #ef5350;
+        }
+
+        /* Pattern Stats Bar */
+        .pattern-stats-bar {
+            display: flex;
+            justify-content: space-around;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .pattern-stat {
+            text-align: center;
+        }
+
+        .pattern-stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .pattern-stat-value.bullish {
+            color: #81c784;
+        }
+
+        .pattern-stat-value.bearish {
+            color: #ef5350;
+        }
+
+        .pattern-stat-value.neutral {
+            color: #ffc107;
+        }
+
+        .pattern-stat-label {
+            font-size: 0.75rem;
+            opacity: 0.6;
+        }
+
+        /* Pattern Filters */
+        .pattern-filters {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .pattern-filter-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.2);
+            color: #e8e8e8;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .pattern-filter-btn:hover {
+            background: rgba(100, 200, 255, 0.1);
+            border-color: rgba(100, 200, 255, 0.3);
+        }
+
+        .pattern-filter-btn.active {
+            background: rgba(100, 200, 255, 0.2);
+            border-color: #64c8ff;
+            color: #64c8ff;
+        }
+
+        .pattern-filter-btn.bullish.active {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: #81c784;
+            color: #81c784;
+        }
+
+        .pattern-filter-btn.bearish.active {
+            background: rgba(244, 67, 54, 0.2);
+            border-color: #ef5350;
+            color: #ef5350;
+        }
+
+        .pattern-filter-btn.neutral.active {
+            background: rgba(255, 193, 7, 0.2);
+            border-color: #ffc107;
+            color: #ffc107;
+        }
+
+        /* Pattern Overview Grid */
+        .pattern-overview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 1200px) {
+            .pattern-overview-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .pattern-overview-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .pattern-overview-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pattern-overview-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s;
+        }
+
+        .pattern-overview-card:hover {
+            border-color: rgba(100, 200, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .pattern-overview-card.hidden {
+            display: none;
+        }
+
+        .pattern-overview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .pattern-overview-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .pattern-overview-badge {
+            font-size: 0.65rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .pattern-overview-badge.bullish {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .pattern-overview-badge.bearish {
+            background: rgba(244, 67, 54, 0.2);
+            color: #ef5350;
+        }
+
+        .pattern-overview-badge.neutral {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .pattern-overview-svg {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            padding: 0.5rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pattern-overview-svg svg {
+            width: 100%;
+            max-width: 200px;
+            height: 70px;
+        }
+
+        .pattern-overview-signal {
+            font-size: 0.75rem;
+            color: #888;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -726,13 +973,366 @@
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('overview')">&#128200; Übersicht</button>
+            <button class="tab-btn active" onclick="showTab('status')">📊 Status</button>
+            <button class="tab-btn" onclick="showTab('overview')">&#128200; Übersicht</button>
             <button class="tab-btn" onclick="showTab('detection')">&#128269; Pattern-Erkennung</button>
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
         </div>
 
+        <!-- Status Tab (NEW) -->
+        <div id="tab-status" class="tab-content active">
+            <!-- Live Status Cards -->
+            <div class="status-grid-4">
+                <div class="status-card" id="statusCard-service">
+                    <div class="status-icon">⏳</div>
+                    <div class="status-label">Service Status</div>
+                    <div class="status-value" id="statusValue-service">Lädt...</div>
+                </div>
+                <div class="status-card" id="statusCard-model">
+                    <div class="status-icon">🧠</div>
+                    <div class="status-label">Modell</div>
+                    <div class="status-value" id="statusValue-model">Lädt...</div>
+                </div>
+                <div class="status-card" id="statusCard-device">
+                    <div class="status-icon">🖥️</div>
+                    <div class="status-label">Device</div>
+                    <div class="status-value" id="statusValue-device">Lädt...</div>
+                </div>
+                <div class="status-card" id="statusCard-patterns">
+                    <div class="status-icon">📊</div>
+                    <div class="status-label">Pattern-Typen</div>
+                    <div class="status-value" id="statusValue-patterns">16</div>
+                </div>
+            </div>
+
+            <!-- Pattern Overview Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📈 Erkennbare Chart-Patterns (16 Typen)</h3>
+                    <button class="btn btn-primary btn-sm" onclick="refreshStatusTab()">↻ Aktualisieren</button>
+                </div>
+
+                <!-- Pattern Stats Bar -->
+                <div class="pattern-stats-bar">
+                    <div class="pattern-stat">
+                        <div class="pattern-stat-value bullish">8</div>
+                        <div class="pattern-stat-label">Bullish</div>
+                    </div>
+                    <div class="pattern-stat">
+                        <div class="pattern-stat-value bearish">6</div>
+                        <div class="pattern-stat-label">Bearish</div>
+                    </div>
+                    <div class="pattern-stat">
+                        <div class="pattern-stat-value neutral">2</div>
+                        <div class="pattern-stat-label">Neutral</div>
+                    </div>
+                    <div class="pattern-stat">
+                        <div class="pattern-stat-value" style="color: #64c8ff;">16</div>
+                        <div class="pattern-stat-label">Gesamt</div>
+                    </div>
+                </div>
+
+                <!-- Pattern Filter Buttons -->
+                <div class="pattern-filters">
+                    <button class="pattern-filter-btn active" data-filter="all">Alle Patterns (16)</button>
+                    <button class="pattern-filter-btn bullish" data-filter="bullish">↑ Bullish (8)</button>
+                    <button class="pattern-filter-btn bearish" data-filter="bearish">↓ Bearish (6)</button>
+                    <button class="pattern-filter-btn neutral" data-filter="neutral">◆ Neutral (2)</button>
+                </div>
+
+                <!-- Pattern Grid -->
+                <div class="pattern-overview-grid">
+                    <!-- Head & Shoulders -->
+                    <div class="pattern-overview-card" data-direction="bearish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Head & Shoulders</span>
+                            <span class="pattern-overview-badge bearish">Bearish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 50 L30 35 L40 50 L60 15 L80 50 L90 35 L110 50" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="10" y1="50" x2="110" y2="50" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                                <path d="M110 50 L140 60 L160 65" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Short • Ziel: Kopfhöhe</div>
+                    </div>
+
+                    <!-- Inverse Head & Shoulders -->
+                    <div class="pattern-overview-card" data-direction="bullish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Inv. Head & Shoulders</span>
+                            <span class="pattern-overview-badge bullish">Bullish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 20 L30 35 L40 20 L60 55 L80 20 L90 35 L110 20" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="10" y1="20" x2="110" y2="20" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                                <path d="M110 20 L140 10 L160 5" stroke="#81c784" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Long • Ziel: Kopftiefe</div>
+                    </div>
+
+                    <!-- Double Top -->
+                    <div class="pattern-overview-card" data-direction="bearish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Double Top</span>
+                            <span class="pattern-overview-badge bearish">Bearish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 50 L40 15 L70 40 L100 15 L130 40" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="40" y1="15" x2="100" y2="15" stroke="#ef5350" stroke-width="1" stroke-dasharray="3"/>
+                                <path d="M130 40 L155 55 L175 60" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Short • Typ: Reversal</div>
+                    </div>
+
+                    <!-- Double Bottom -->
+                    <div class="pattern-overview-card" data-direction="bullish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Double Bottom</span>
+                            <span class="pattern-overview-badge bullish">Bullish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 20 L40 55 L70 30 L100 55 L130 30" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="40" y1="55" x2="100" y2="55" stroke="#81c784" stroke-width="1" stroke-dasharray="3"/>
+                                <path d="M130 30 L155 15 L175 10" stroke="#81c784" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Long • Typ: Reversal</div>
+                    </div>
+
+                    <!-- Triple Top -->
+                    <div class="pattern-overview-card" data-direction="bearish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Triple Top</span>
+                            <span class="pattern-overview-badge bearish">Bearish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 50 L30 15 L45 40 L65 15 L80 40 L100 15 L120 40" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="30" y1="15" x2="100" y2="15" stroke="#ef5350" stroke-width="1" stroke-dasharray="3"/>
+                                <path d="M120 40 L150 55 L170 60" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Short • Stärke: Hoch</div>
+                    </div>
+
+                    <!-- Triple Bottom -->
+                    <div class="pattern-overview-card" data-direction="bullish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Triple Bottom</span>
+                            <span class="pattern-overview-badge bullish">Bullish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 20 L30 55 L45 30 L65 55 L80 30 L100 55 L120 30" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="30" y1="55" x2="100" y2="55" stroke="#81c784" stroke-width="1" stroke-dasharray="3"/>
+                                <path d="M120 30 L150 15 L170 10" stroke="#81c784" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Long • Stärke: Hoch</div>
+                    </div>
+
+                    <!-- Ascending Triangle -->
+                    <div class="pattern-overview-card" data-direction="bullish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Ascending Triangle</span>
+                            <span class="pattern-overview-badge bullish">Bullish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 55 L30 20 L45 50 L65 20 L80 45 L100 20 L115 40" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="30" y1="20" x2="115" y2="20" stroke="#ffc107" stroke-width="1.5"/>
+                                <line x1="10" y1="55" x2="115" y2="40" stroke="#81c784" stroke-width="1.5"/>
+                                <path d="M115 20 L145 10 L165 5" stroke="#81c784" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Long • Typ: Continuation</div>
+                    </div>
+
+                    <!-- Descending Triangle -->
+                    <div class="pattern-overview-card" data-direction="bearish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Descending Triangle</span>
+                            <span class="pattern-overview-badge bearish">Bearish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 15 L30 50 L45 20 L65 50 L80 25 L100 50 L115 30" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="30" y1="50" x2="115" y2="50" stroke="#ffc107" stroke-width="1.5"/>
+                                <line x1="10" y1="15" x2="115" y2="30" stroke="#ef5350" stroke-width="1.5"/>
+                                <path d="M115 50 L145 60 L165 65" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Short • Typ: Continuation</div>
+                    </div>
+
+                    <!-- Symmetrical Triangle -->
+                    <div class="pattern-overview-card" data-direction="neutral">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Symmetrical Triangle</span>
+                            <span class="pattern-overview-badge neutral">Neutral</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 35 L25 15 L40 50 L60 22 L75 45 L95 30 L110 40" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="25" y1="15" x2="110" y2="35" stroke="#a78bfa" stroke-width="1.5"/>
+                                <line x1="40" y1="50" x2="110" y2="40" stroke="#a78bfa" stroke-width="1.5"/>
+                                <path d="M110 35 L135 20 L155 15" stroke="#81c784" stroke-width="2" stroke-dasharray="4" fill="none"/>
+                                <path d="M110 40 L135 55 L155 60" stroke="#ef5350" stroke-width="2" stroke-dasharray="4" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Breakout • Typ: Continuation</div>
+                    </div>
+
+                    <!-- Rising Wedge -->
+                    <div class="pattern-overview-card" data-direction="bearish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Rising Wedge</span>
+                            <span class="pattern-overview-badge bearish">Bearish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 60 L30 45 L45 55 L65 35 L80 45 L100 25 L115 35" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="10" y1="60" x2="115" y2="35" stroke="#81c784" stroke-width="1.5"/>
+                                <line x1="30" y1="45" x2="115" y2="20" stroke="#ef5350" stroke-width="1.5"/>
+                                <path d="M115 35 L145 50 L165 60" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Short • Typ: Reversal</div>
+                    </div>
+
+                    <!-- Falling Wedge -->
+                    <div class="pattern-overview-card" data-direction="bullish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Falling Wedge</span>
+                            <span class="pattern-overview-badge bullish">Bullish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 10 L30 25 L45 15 L65 35 L80 25 L100 45 L115 35" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="10" y1="10" x2="115" y2="35" stroke="#ef5350" stroke-width="1.5"/>
+                                <line x1="30" y1="25" x2="115" y2="50" stroke="#81c784" stroke-width="1.5"/>
+                                <path d="M115 35 L145 20 L165 10" stroke="#81c784" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Long • Typ: Reversal</div>
+                    </div>
+
+                    <!-- Bull Flag -->
+                    <div class="pattern-overview-card" data-direction="bullish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Bull Flag</span>
+                            <span class="pattern-overview-badge bullish">Bullish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 60 L40 20" stroke="#81c784" stroke-width="3" fill="none"/>
+                                <path d="M40 20 L55 28 L70 24 L85 32 L100 28 L110 35" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <path d="M110 30 L145 10 L170 5" stroke="#81c784" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Long • Ziel: Flagpole</div>
+                    </div>
+
+                    <!-- Bear Flag -->
+                    <div class="pattern-overview-card" data-direction="bearish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Bear Flag</span>
+                            <span class="pattern-overview-badge bearish">Bearish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 10 L40 50" stroke="#ef5350" stroke-width="3" fill="none"/>
+                                <path d="M40 50 L55 42 L70 46 L85 38 L100 42 L110 35" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <path d="M110 40 L145 60 L170 65" stroke="#ef5350" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Short • Ziel: Flagpole</div>
+                    </div>
+
+                    <!-- Cup & Handle -->
+                    <div class="pattern-overview-card" data-direction="bullish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Cup & Handle</span>
+                            <span class="pattern-overview-badge bullish">Bullish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 18 Q 20 18, 30 28 Q 55 60, 90 60 Q 125 60, 140 28 Q 150 18, 160 18" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <path d="M160 18 L167 25 L174 22 L181 27 L188 23" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="10" y1="18" x2="188" y2="18" stroke="#ffc107" stroke-width="1" stroke-dasharray="4"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Long • Ziel: Cup-Tiefe</div>
+                    </div>
+
+                    <!-- Channel Up -->
+                    <div class="pattern-overview-card" data-direction="bullish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Channel Up</span>
+                            <span class="pattern-overview-badge bullish">Bullish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 55 L50 35 L90 45 L130 25 L170 35" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="10" y1="55" x2="170" y2="15" stroke="#81c784" stroke-width="1" stroke-dasharray="4"/>
+                                <line x1="50" y1="55" x2="170" y2="35" stroke="#81c784" stroke-width="1" stroke-dasharray="4"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Long • Typ: Trend</div>
+                    </div>
+
+                    <!-- Channel Down -->
+                    <div class="pattern-overview-card" data-direction="bearish">
+                        <div class="pattern-overview-header">
+                            <span class="pattern-overview-title">Channel Down</span>
+                            <span class="pattern-overview-badge bearish">Bearish</span>
+                        </div>
+                        <div class="pattern-overview-svg">
+                            <svg viewBox="0 0 200 70" fill="none">
+                                <path d="M10 15 L50 35 L90 25 L130 45 L170 35" stroke="#64c8ff" stroke-width="2" fill="none"/>
+                                <line x1="10" y1="15" x2="170" y2="55" stroke="#ef5350" stroke-width="1" stroke-dasharray="4"/>
+                                <line x1="50" y1="15" x2="170" y2="35" stroke="#ef5350" stroke-width="1" stroke-dasharray="4"/>
+                            </svg>
+                        </div>
+                        <div class="pattern-overview-signal">Signal: Short • Typ: Trend</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Detections -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🕐 Letzte Erkennungen</h3>
+                </div>
+                <div id="recent-detections-table">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Zeit</th>
+                                <th>Symbol</th>
+                                <th>Pattern</th>
+                                <th>Richtung</th>
+                                <th>Konfidenz</th>
+                                <th>Timeframe</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-detections-body">
+                            <tr><td colspan="6" style="text-align: center; padding: 2rem; color: #888;">Lade letzte Erkennungen...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- Overview Tab -->
-        <div id="tab-overview" class="tab-content active">
+        <div id="tab-overview" class="tab-content">
             <div class="grid-2-equal">
                 <!-- Model Info -->
                 <div class="card">
@@ -1124,7 +1724,141 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
             event.target.classList.add('active');
+
+            // Load status tab data when switching to it
+            if (tabName === 'status') {
+                refreshStatusTab();
+            }
         }
+
+        // Status Tab Functions
+        async function refreshStatusTab() {
+            await updateStatusCards();
+            await loadRecentDetections();
+        }
+
+        async function updateStatusCards() {
+            try {
+                // Health check
+                const healthRes = await fetch(`${API_BASE.replace('/api/v1', '')}/health`);
+                const healthData = await healthRes.json();
+
+                const serviceCard = document.getElementById('statusCard-service');
+                const serviceValue = document.getElementById('statusValue-service');
+
+                if (healthData.status === 'healthy') {
+                    serviceCard.classList.add('healthy');
+                    serviceCard.classList.remove('unhealthy');
+                    serviceValue.textContent = 'Online';
+                    serviceValue.classList.add('success');
+                    serviceValue.classList.remove('error');
+                } else {
+                    serviceCard.classList.add('unhealthy');
+                    serviceCard.classList.remove('healthy');
+                    serviceValue.textContent = 'Offline';
+                    serviceValue.classList.add('error');
+                    serviceValue.classList.remove('success');
+                }
+
+                // Service Info
+                const infoRes = await fetch(`${API_BASE}/info`);
+                const infoData = await infoRes.json();
+
+                // Model Status
+                const modelCard = document.getElementById('statusCard-model');
+                const modelValue = document.getElementById('statusValue-model');
+                if (infoData.model?.loaded) {
+                    modelValue.textContent = 'Geladen';
+                    modelValue.classList.add('success');
+                    modelCard.classList.add('healthy');
+                } else {
+                    modelValue.textContent = 'Nicht geladen';
+                    modelValue.classList.add('error');
+                }
+
+                // Device Status
+                const deviceCard = document.getElementById('statusCard-device');
+                const deviceValue = document.getElementById('statusValue-device');
+                const device = infoData.model?.device || infoData.device || 'CPU';
+                deviceValue.textContent = device;
+                if (device.toLowerCase().includes('cuda')) {
+                    deviceValue.classList.add('success');
+                    deviceCard.classList.add('healthy');
+                }
+
+                // Pattern Count
+                const patternValue = document.getElementById('statusValue-patterns');
+                patternValue.textContent = infoData.num_classes || infoData.model?.num_classes || '16';
+
+            } catch (error) {
+                console.error('Status update failed:', error);
+                const serviceValue = document.getElementById('statusValue-service');
+                serviceValue.textContent = 'Fehler';
+                serviceValue.classList.add('error');
+                document.getElementById('statusCard-service').classList.add('unhealthy');
+            }
+        }
+
+        async function loadRecentDetections() {
+            const tbody = document.getElementById('recent-detections-body');
+            try {
+                const res = await fetch(`${API_BASE}/patterns/history?limit=10`);
+                if (!res.ok) throw new Error('Failed to load history');
+                const data = await res.json();
+
+                if (!data.patterns || data.patterns.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #888;">Keine Patterns erkannt</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.patterns.slice(0, 10).map(p => {
+                    const direction = getPatternType(p.pattern_type || p.type);
+                    const confidence = p.confidence || 0;
+                    const confClass = confidence >= 0.8 ? 'high' : confidence >= 0.6 ? 'medium' : 'low';
+                    return `
+                        <tr>
+                            <td>${formatLocalDateTime(p.detected_at || p.timestamp)}</td>
+                            <td><strong>${p.symbol}</strong></td>
+                            <td>${formatPatternName(p.pattern_type || p.type)}</td>
+                            <td><span class="pattern-badge ${direction}">${direction === 'bullish' ? '↑' : direction === 'bearish' ? '↓' : '◆'} ${direction}</span></td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span>${(confidence * 100).toFixed(0)}%</span>
+                                    <div class="confidence-bar" style="width: 50px;">
+                                        <div class="confidence-fill ${confClass}" style="width: ${confidence * 100}%;"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>${p.timeframe}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Failed to load recent detections:', error);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #888;">Fehler beim Laden</td></tr>';
+            }
+        }
+
+        // Pattern Filter Logic for Status Tab
+        document.querySelectorAll('.pattern-filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const filter = btn.dataset.filter;
+
+                // Update active button
+                document.querySelectorAll('.pattern-filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Filter patterns
+                document.querySelectorAll('.pattern-overview-card').forEach(card => {
+                    if (filter === 'all' || card.dataset.direction === filter) {
+                        card.classList.remove('hidden');
+                    } else {
+                        card.classList.add('hidden');
+                    }
+                });
+            });
+        });
 
         // Toast Notification
         function showToast(message, type = 'success') {
@@ -2241,6 +2975,9 @@
         document.addEventListener('DOMContentLoaded', () => {
             // Load saved pattern filters before loading history
             loadPatternFilters();
+
+            // Load Status Tab data (default tab)
+            refreshStatusTab();
 
             loadInfo();
             loadAvailableSymbols();
