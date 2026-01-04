@@ -9838,7 +9838,7 @@
 
                 // Pattern select (removed from UI, skip if element not found)
                 const select = document.getElementById('rulePatternSelect');
-                if (\!select) return; // Element removed from Feedback Loop section
+                if (!select) return; // Element removed from Feedback Loop section
                 select.innerHTML = '<option value="">-- Pattern auswählen --</option>';
                 Object.keys(data.params).sort().forEach(pattern => {
                     select.innerHTML += `<option value="${pattern}">${formatPatternType(pattern)}</option>`;
