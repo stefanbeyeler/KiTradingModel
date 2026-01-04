@@ -4582,6 +4582,8 @@
                     ...(patternsData.categories?.indecision || [])
                 ];
 
+                // Sort alphabetically by formatted name
+                allPatterns.sort((a, b) => formatPatternType(a.type).localeCompare(formatPatternType(b.type)));
                 patternSelect.innerHTML = '<option value="">Alle Patterns</option>' +
                     allPatterns.map(p => `<option value="${p.type}">${formatPatternType(p.type)}</option>`).join('');
 
