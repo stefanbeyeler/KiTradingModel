@@ -3380,7 +3380,7 @@
                     'D1': '1day', 'W1': '1week', 'MN': '1month'
                 };
                 const interval = intervalMap[timeframe] || '1h';
-                const outputSize = 60; // 60 candles of context
+                const outputSize = 30; // 30 candles for better readability
 
                 const ohlcResponse = await fetch(`/data/api/v1/twelvedata/time_series/${symbol}?interval=${interval}&outputsize=${outputSize}`);
 
