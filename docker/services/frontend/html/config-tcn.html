@@ -3372,34 +3372,45 @@
             modal.classList.add('show');
 
             try {
-                // Fetch OHLC data from Data Service using the patterns/chart endpoint
-                // Use the pattern detection timestamp to get historical data at that point in time
-                const candlesBack = 50; // Show 50 candles of context
-                const patternTimestamp = encodeURIComponent(timestamp);
+                // Fetch OHLC data from TwelveData time_series endpoint
+                // Convert timeframe to TwelveData interval format (H1 -> 1h, M5 -> 5min, D1 -> 1day)
+                const intervalMap = {
+                    'M1': '1min', 'M5': '5min', 'M15': '15min', 'M30': '30min',
+                    'H1': '1h', 'H2': '2h', 'H4': '4h',
+                    'D1': '1day', 'W1': '1week', 'MN': '1month'
+                };
+                const interval = intervalMap[timeframe] || '1h';
+                const outputSize = 60; // 60 candles of context
 
-                let ohlcResponse = await fetch(`/data/api/v1/patterns/chart/${symbol}?candles_before=${candlesBack}&candles_after=5&timeframe=${timeframe}&timestamp=${patternTimestamp}`);
-
-                // If historical data not available (e.g., weekend/holiday), try without timestamp for current data
-                if (!ohlcResponse.ok || ohlcResponse.status === 404) {
-                    console.warn(`Historische Daten für ${timestamp} nicht verfügbar, lade aktuelle Daten...`);
-                    ohlcResponse = await fetch(`/data/api/v1/patterns/chart/${symbol}?candles_before=${candlesBack}&candles_after=5&timeframe=${timeframe}`);
-                }
+                const ohlcResponse = await fetch(`/data/api/v1/twelvedata/time_series/${symbol}?interval=${interval}&outputsize=${outputSize}`);
 
                 if (!ohlcResponse.ok) {
                     throw new Error(`OHLC-Daten konnten nicht geladen werden: ${ohlcResponse.status}`);
                 }
 
                 const ohlcData = await ohlcResponse.json();
-                const candles = ohlcData.candles || ohlcData.data || ohlcData;
 
-                // Check for error in response (e.g., market closed)
-                if (ohlcData.error || ohlcData.detail) {
-                    throw new Error(ohlcData.error || ohlcData.detail || 'Keine Daten verfügbar');
+                // Check for error in response
+                if (ohlcData.error || ohlcData.detail || ohlcData.status === 'error') {
+                    throw new Error(ohlcData.error || ohlcData.detail || ohlcData.message || 'Keine Daten verfügbar');
                 }
 
-                if (!candles || candles.length === 0) {
+                // TwelveData returns data in 'values' array
+                const rawCandles = ohlcData.values || ohlcData.candles || ohlcData.data || ohlcData;
+
+                if (!rawCandles || rawCandles.length === 0) {
                     throw new Error('Keine Candlestick-Daten verfügbar (Markt geschlossen?)');
                 }
+
+                // Transform TwelveData format to our standard format and reverse (oldest first)
+                const candles = rawCandles.map(c => ({
+                    timestamp: c.datetime,
+                    open: parseFloat(c.open),
+                    high: parseFloat(c.high),
+                    low: parseFloat(c.low),
+                    close: parseFloat(c.close),
+                    volume: c.volume ? parseFloat(c.volume) : 0
+                })).reverse();
 
                 // Hide loading, show chart
                 if (loadingEl) loadingEl.style.display = 'none';
