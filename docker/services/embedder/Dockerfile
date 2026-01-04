@@ -19,6 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/services/embedder_app/ ./src/services/embedder_app/
 COPY src/services/data_gateway_service.py ./src/services/
 COPY src/services/cache_service.py ./src/services/
+COPY src/services/twelvedata_service.py ./src/services/
 COPY src/config/ ./src/config/
 COPY src/utils/ ./src/utils/
 COPY src/shared/ ./src/shared/
