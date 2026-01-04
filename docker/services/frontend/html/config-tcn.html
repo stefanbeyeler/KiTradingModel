@@ -1305,29 +1305,6 @@
                 </div>
             </div>
 
-            <!-- Recent Detections -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">🕐 Letzte Erkennungen</h3>
-                </div>
-                <div id="recent-detections-table">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Zeit</th>
-                                <th>Symbol</th>
-                                <th>Pattern</th>
-                                <th>Richtung</th>
-                                <th>Konfidenz</th>
-                                <th>Timeframe</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recent-detections-body">
-                            <tr><td colspan="6" style="text-align: center; padding: 2rem; color: #888;">Lade letzte Erkennungen...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
 
         <!-- Detection Tab -->
@@ -1697,7 +1674,6 @@
         // Status Tab Functions
         async function refreshStatusTab() {
             await updateStatusCards();
-            await loadRecentDetections();
         }
 
         async function updateStatusCards() {
@@ -1759,47 +1735,6 @@
                 serviceValue.textContent = 'Fehler';
                 serviceValue.classList.add('error');
                 document.getElementById('statusCard-service').classList.add('unhealthy');
-            }
-        }
-
-        async function loadRecentDetections() {
-            const tbody = document.getElementById('recent-detections-body');
-            try {
-                const res = await fetch(`${API_BASE}/history?limit=10`);
-                if (!res.ok) throw new Error('Failed to load history');
-                const data = await res.json();
-
-                if (!data.patterns || data.patterns.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #888;">Keine Patterns erkannt</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = data.patterns.slice(0, 10).map(p => {
-                    const direction = getPatternType(p.pattern_type || p.type);
-                    const confidence = p.confidence || 0;
-                    const confClass = confidence >= 0.8 ? 'high' : confidence >= 0.6 ? 'medium' : 'low';
-                    return `
-                        <tr>
-                            <td>${formatLocalDateTime(p.detected_at || p.timestamp)}</td>
-                            <td><strong>${p.symbol}</strong></td>
-                            <td>${formatPatternName(p.pattern_type || p.type)}</td>
-                            <td><span class="pattern-badge ${direction}">${direction === 'bullish' ? '↑' : direction === 'bearish' ? '↓' : '◆'} ${direction}</span></td>
-                            <td>
-                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span>${(confidence * 100).toFixed(0)}%</span>
-                                    <div class="confidence-bar" style="width: 50px;">
-                                        <div class="confidence-fill ${confClass}" style="width: ${confidence * 100}%;"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>${p.timeframe}</td>
-                        </tr>
-                    `;
-                }).join('');
-
-            } catch (error) {
-                console.error('Failed to load recent detections:', error);
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #888;">Fehler beim Laden</td></tr>';
             }
         }
 
