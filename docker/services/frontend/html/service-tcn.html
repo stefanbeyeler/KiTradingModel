@@ -363,70 +363,6 @@
             font-weight: 500;
         }
 
-        /* Status Grid */
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        @media (max-width: 800px) {
-            .status-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        .status-card {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 12px;
-            padding: 1.25rem;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.3s;
-        }
-
-        .status-card:hover {
-            border-color: rgba(100, 200, 255, 0.3);
-        }
-
-        .status-card.healthy {
-            border-color: rgba(76, 175, 80, 0.4);
-            background: rgba(76, 175, 80, 0.1);
-        }
-
-        .status-card.unhealthy {
-            border-color: rgba(244, 67, 54, 0.4);
-            background: rgba(244, 67, 54, 0.1);
-        }
-
-        .status-icon {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .status-label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            opacity: 0.6;
-            margin-bottom: 0.25rem;
-        }
-
-        .status-value {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #64c8ff;
-        }
-
-        .status-value.success {
-            color: #81c784;
-        }
-
-        .status-value.error {
-            color: #ef5350;
-        }
-
         /* Pattern Category Filters */
         .pattern-filters {
             display: flex;
@@ -527,30 +463,6 @@
     <div class="container">
         <h1>TCN-Pattern Service</h1>
         <p class="subtitle">Temporal Convolutional Network - Chart Pattern Erkennung mit Deep Learning</p>
-
-        <!-- Live Status Section -->
-        <div class="status-grid">
-            <div class="status-card" id="serviceStatus">
-                <div class="status-icon">⏳</div>
-                <div class="status-label">Service Status</div>
-                <div class="status-value" id="serviceStatusValue">Lädt...</div>
-            </div>
-            <div class="status-card" id="modelStatus">
-                <div class="status-icon">🧠</div>
-                <div class="status-label">Modell</div>
-                <div class="status-value" id="modelStatusValue">Lädt...</div>
-            </div>
-            <div class="status-card" id="deviceStatus">
-                <div class="status-icon">🖥️</div>
-                <div class="status-label">Device</div>
-                <div class="status-value" id="deviceStatusValue">Lädt...</div>
-            </div>
-            <div class="status-card" id="patternCount">
-                <div class="status-icon">📊</div>
-                <div class="status-label">Pattern-Typen</div>
-                <div class="status-value" id="patternCountValue">16</div>
-            </div>
-        </div>
 
         <div class="content-card">
             <h2>&#129504; Beschreibung</h2>
@@ -1303,72 +1215,6 @@
                 });
             });
         });
-
-        // Live Status Update
-        async function updateServiceStatus() {
-            try {
-                // Health check
-                const healthRes = await fetch('/tcn/health');
-                const healthData = await healthRes.json();
-
-                const statusCard = document.getElementById('serviceStatus');
-                const statusValue = document.getElementById('serviceStatusValue');
-
-                if (healthData.status === 'healthy') {
-                    statusCard.classList.add('healthy');
-                    statusCard.classList.remove('unhealthy');
-                    statusValue.textContent = 'Online';
-                    statusValue.classList.add('success');
-                    statusValue.classList.remove('error');
-                } else {
-                    statusCard.classList.add('unhealthy');
-                    statusCard.classList.remove('healthy');
-                    statusValue.textContent = 'Offline';
-                    statusValue.classList.add('error');
-                    statusValue.classList.remove('success');
-                }
-
-                // Service Info
-                const infoRes = await fetch('/tcn/api/v1/info');
-                const infoData = await infoRes.json();
-
-                // Model Status
-                const modelValue = document.getElementById('modelStatusValue');
-                if (infoData.model_loaded) {
-                    modelValue.textContent = 'Geladen';
-                    modelValue.classList.add('success');
-                    document.getElementById('modelStatus').classList.add('healthy');
-                } else {
-                    modelValue.textContent = 'Nicht geladen';
-                    modelValue.classList.add('error');
-                }
-
-                // Device Status
-                const deviceValue = document.getElementById('deviceStatusValue');
-                deviceValue.textContent = infoData.device || 'CPU';
-                if (infoData.device && infoData.device.includes('cuda')) {
-                    deviceValue.classList.add('success');
-                    document.getElementById('deviceStatus').classList.add('healthy');
-                }
-
-                // Pattern Count
-                const patternValue = document.getElementById('patternCountValue');
-                if (infoData.pattern_classes) {
-                    patternValue.textContent = infoData.pattern_classes;
-                }
-
-            } catch (error) {
-                console.error('Status update failed:', error);
-                const statusValue = document.getElementById('serviceStatusValue');
-                statusValue.textContent = 'Fehler';
-                statusValue.classList.add('error');
-                document.getElementById('serviceStatus').classList.add('unhealthy');
-            }
-        }
-
-        // Initial load and refresh every 30 seconds
-        updateServiceStatus();
-        setInterval(updateServiceStatus, 30000);
     </script>
 </body>
 </html>
