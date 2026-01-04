@@ -1868,6 +1868,28 @@
             return 'neutral';
         }
 
+        function formatPatternName(pattern) {
+            const names = {
+                'head_and_shoulders': 'Head & Shoulders',
+                'inverse_head_and_shoulders': 'Inv. H&S',
+                'double_top': 'Double Top',
+                'double_bottom': 'Double Bottom',
+                'triple_top': 'Triple Top',
+                'triple_bottom': 'Triple Bottom',
+                'ascending_triangle': 'Asc. Triangle',
+                'descending_triangle': 'Desc. Triangle',
+                'symmetrical_triangle': 'Sym. Triangle',
+                'bull_flag': 'Bull Flag',
+                'bear_flag': 'Bear Flag',
+                'cup_and_handle': 'Cup & Handle',
+                'rising_wedge': 'Rising Wedge',
+                'falling_wedge': 'Falling Wedge',
+                'channel_up': 'Channel Up',
+                'channel_down': 'Channel Down'
+            };
+            return names[pattern] || pattern.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+
         // Load Service Info
         async function loadInfo() {
             try {
