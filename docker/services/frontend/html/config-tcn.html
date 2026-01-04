@@ -1765,7 +1765,7 @@
         async function loadRecentDetections() {
             const tbody = document.getElementById('recent-detections-body');
             try {
-                const res = await fetch(`${API_BASE}/patterns/history?limit=10`);
+                const res = await fetch(`${API_BASE}/history?limit=10`);
                 if (!res.ok) throw new Error('Failed to load history');
                 const data = await res.json();
 
