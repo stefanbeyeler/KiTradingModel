@@ -3,6 +3,9 @@
 This client follows the architecture rule that all external data access goes through
 the Data Service (Port 3001). The RAG Service uses this client instead of directly
 accessing external data sources.
+
+Note: Candlestick Pattern endpoints are routed to the Candlestick Service (Port 3006)
+as these have been migrated from the Data Service.
 """
 
 import httpx
@@ -15,15 +18,18 @@ from ..config import settings
 class DataServiceClient:
     """HTTP client for Data Service external sources API."""
 
-    def __init__(self, base_url: Optional[str] = None):
+    def __init__(self, base_url: Optional[str] = None, candlestick_url: Optional[str] = None):
         """Initialize the client.
 
         Args:
             base_url: Data Service URL, defaults to settings.data_service_url
+            candlestick_url: Candlestick Service URL, defaults to settings.candlestick_service_url
         """
         self._base_url = base_url or getattr(settings, 'data_service_url', 'http://localhost:3001')
+        self._candlestick_url = candlestick_url or getattr(settings, 'candlestick_service_url', 'http://trading-candlestick:3006')
         self._timeout = 30.0
         logger.info(f"DataServiceClient initialized with base URL: {self._base_url}")
+        logger.info(f"DataServiceClient using Candlestick Service: {self._candlestick_url}")
 
     async def _get(self, endpoint: str, params: Optional[dict] = None) -> dict:
         """Make GET request to Data Service."""
@@ -38,6 +44,21 @@ class DataServiceClient:
             return {"error": str(e), "status_code": e.response.status_code}
         except Exception as e:
             logger.error(f"Error calling Data Service: {e}")
+            return {"error": str(e)}
+
+    async def _get_candlestick(self, endpoint: str, params: Optional[dict] = None) -> dict:
+        """Make GET request to Candlestick Service."""
+        url = f"{self._candlestick_url}/api/v1{endpoint}"
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from Candlestick Service: {e.response.status_code} - {e.response.text}")
+            return {"error": str(e), "status_code": e.response.status_code}
+        except Exception as e:
+            logger.error(f"Error calling Candlestick Service: {e}")
             return {"error": str(e)}
 
     async def _post(self, endpoint: str, json: Optional[dict] = None) -> dict:
@@ -319,6 +340,10 @@ class DataServiceClient:
             logger.error(f"Error fetching managed symbols: {e}")
             return []
 
+    # -------------------------------------------------------------------------
+    # Candlestick Pattern Methods (routed to Candlestick Service on Port 3006)
+    # -------------------------------------------------------------------------
+
     async def get_candlestick_patterns(
         self,
         symbol: str,
@@ -327,6 +352,8 @@ class DataServiceClient:
         min_confidence: float = 0.5
     ) -> dict:
         """Get detected candlestick patterns for a symbol.
+
+        Note: This endpoint is served by the Candlestick Service (Port 3006).
 
         Args:
             symbol: Trading symbol (e.g., "BTCUSD")
@@ -343,15 +370,22 @@ class DataServiceClient:
         }
         if timeframes:
             params["timeframes"] = ",".join(timeframes)
-        return await self._get(f"/patterns/scan/{symbol}", params)
+        return await self._get_candlestick(f"/scan/{symbol}", params)
 
     async def get_candlestick_pattern_types(self) -> dict:
-        """Get all available candlestick pattern types and their descriptions."""
-        return await self._get("/patterns/types")
+        """Get all available candlestick pattern types and their descriptions.
+
+        Note: This endpoint is served by the Candlestick Service (Port 3006).
+        Uses /examples/list which returns pattern metadata.
+        """
+        return await self._get_candlestick("/examples/list")
 
     async def get_candlestick_pattern_summary(self, symbol: str) -> dict:
-        """Get a simplified candlestick pattern summary for a symbol."""
-        return await self._get(f"/patterns/summary/{symbol}")
+        """Get a simplified candlestick pattern summary for a symbol.
+
+        Note: This endpoint is served by the Candlestick Service (Port 3006).
+        """
+        return await self._get_candlestick(f"/history/statistics", {"symbol": symbol})
 
     async def get_candlestick_pattern_history(
         self,
@@ -362,6 +396,8 @@ class DataServiceClient:
         limit: int = 100
     ) -> dict:
         """Query historical candlestick pattern detections.
+
+        Note: This endpoint is served by the Candlestick Service (Port 3006).
 
         Args:
             symbol: Filter by symbol
@@ -383,7 +419,7 @@ class DataServiceClient:
             params["pattern_type"] = pattern_type
         if direction:
             params["direction"] = direction
-        return await self._get("/patterns/history", params)
+        return await self._get_candlestick("/history", params)
 
 
 # Singleton instance
