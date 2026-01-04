@@ -3377,12 +3377,45 @@
                 const intervalMap = {
                     'M1': '1min', 'M5': '5min', 'M15': '15min', 'M30': '30min',
                     'H1': '1h', 'H2': '2h', 'H4': '4h',
-                    'D1': '1day', 'W1': '1week', 'MN': '1month'
+                    'D1': '1day', 'W1': '1week', 'MN': '1month',
+                    '1h': '1h', '4h': '4h', '1d': '1day'
                 };
                 const interval = intervalMap[timeframe] || '1h';
-                const outputSize = 30; // 30 candles for better readability
 
-                const ohlcResponse = await fetch(`/data/api/v1/twelvedata/time_series/${symbol}?interval=${interval}&outputsize=${outputSize}`);
+                // Calculate date range around the pattern timestamp
+                // We want 20 candles before and 5 after the pattern
+                const patternDate = new Date(timestamp);
+                const candlesBefore = 20;
+                const candlesAfter = 5;
+
+                // Calculate how many hours/days to go back based on timeframe
+                const timeframeHours = {
+                    '1min': 1/60, '5min': 5/60, '15min': 15/60, '30min': 30/60,
+                    '1h': 1, '2h': 2, '4h': 4,
+                    '1day': 24, '1week': 168, '1month': 720
+                };
+                const hoursPerCandle = timeframeHours[interval] || 1;
+
+                // Calculate start and end dates
+                const startDate = new Date(patternDate.getTime() - (candlesBefore + 5) * hoursPerCandle * 60 * 60 * 1000);
+                const endDate = new Date(patternDate.getTime() + (candlesAfter + 5) * hoursPerCandle * 60 * 60 * 1000);
+
+                // Format dates as YYYY-MM-DD HH:mm:ss for TwelveData
+                const formatDate = (d) => {
+                    const year = d.getUTCFullYear();
+                    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                    const day = String(d.getUTCDate()).padStart(2, '0');
+                    const hours = String(d.getUTCHours()).padStart(2, '0');
+                    const mins = String(d.getUTCMinutes()).padStart(2, '0');
+                    return `${year}-${month}-${day} ${hours}:${mins}:00`;
+                };
+
+                const startDateStr = formatDate(startDate);
+                const endDateStr = formatDate(endDate);
+
+                console.log(`Fetching OHLC for ${symbol} from ${startDateStr} to ${endDateStr} (pattern at ${timestamp})`);
+
+                const ohlcResponse = await fetch(`/data/api/v1/twelvedata/time_series/${symbol}?interval=${interval}&start_date=${encodeURIComponent(startDateStr)}&end_date=${encodeURIComponent(endDateStr)}&outputsize=100`);
 
                 if (!ohlcResponse.ok) {
                     throw new Error(`OHLC-Daten konnten nicht geladen werden: ${ohlcResponse.status}`);
@@ -3403,7 +3436,7 @@
                 }
 
                 // Transform TwelveData format to our standard format and reverse (oldest first)
-                const candles = rawCandles.map(c => ({
+                const allCandles = rawCandles.map(c => ({
                     timestamp: c.datetime,
                     open: parseFloat(c.open),
                     high: parseFloat(c.high),
@@ -3411,6 +3444,30 @@
                     close: parseFloat(c.close),
                     volume: c.volume ? parseFloat(c.volume) : 0
                 })).reverse();
+
+                // Find the candle closest to the pattern timestamp
+                let patternIdx = -1;
+                let minDiff = Infinity;
+                allCandles.forEach((c, i) => {
+                    const candleDate = new Date(c.timestamp);
+                    const diff = Math.abs(candleDate - patternDate);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        patternIdx = i;
+                    }
+                });
+
+                // If no match found, use middle of array
+                if (patternIdx === -1) {
+                    patternIdx = Math.floor(allCandles.length / 2);
+                }
+
+                // Calculate slice range: 20 before, 5 after
+                const startIdx = Math.max(0, patternIdx - candlesBefore);
+                const endIdx = Math.min(allCandles.length, patternIdx + candlesAfter + 1);
+                const candles = allCandles.slice(startIdx, endIdx);
+
+                console.log(`Pattern at index ${patternIdx}, showing candles ${startIdx} to ${endIdx} (${candles.length} total)`);
 
                 // Hide loading, show chart
                 if (loadingEl) loadingEl.style.display = 'none';
