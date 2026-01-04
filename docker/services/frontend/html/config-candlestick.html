@@ -3306,17 +3306,6 @@
                         </div>
                     </div>
 
-                    <!-- Current Rules - Parameter Section -->
-                    <div id="currentRulesContainer" style="padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
-                            <select id="rulePatternSelect" onchange="showPatternParams()" style="flex: 1; padding: 0.4rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.85rem;">
-                                <option value="">-- Pattern wählen --</option>
-                            </select>
-                            <button class="btn btn-warning btn-sm" onclick="resetAllRules()" title="Alle Parameter zurücksetzen">Zurücksetzen</button>
-                        </div>
-                        <div id="patternParamsTable" style="font-size: 0.85rem;"></div>
-                    </div>
-
                     <!-- Impact Analysis -->
                     <div id="impactContainer" style="padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
                         <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
@@ -9847,8 +9836,9 @@
                 const data = await response.json();
                 currentRulesData = data;
 
-                // Pattern select
+                // Pattern select (removed from UI, skip if element not found)
                 const select = document.getElementById('rulePatternSelect');
+                if (\!select) return; // Element removed from Feedback Loop section
                 select.innerHTML = '<option value="">-- Pattern auswählen --</option>';
                 Object.keys(data.params).sort().forEach(pattern => {
                     select.innerHTML += `<option value="${pattern}">${formatPatternType(pattern)}</option>`;
@@ -9861,9 +9851,11 @@
         }
 
         function showPatternParams() {
-            const pattern = document.getElementById('rulePatternSelect').value;
+            const select = document.getElementById('rulePatternSelect');
             const container = document.getElementById('patternParamsTable');
+            if (!select || !container) return; // Elements removed from UI
 
+            const pattern = select.value;
             if (!pattern || !currentRulesData) {
                 container.innerHTML = '';
                 return;
