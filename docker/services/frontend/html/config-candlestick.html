@@ -4391,9 +4391,9 @@
                 const [infoRes, statsRes, trainInfoRes, feedbackRes, revalRes] = await Promise.all([
                     fetch(`${CANDLESTICK_API}/info`).catch(() => null),
                     fetch(`${CANDLESTICK_API}/history/statistics`).catch(() => null),
-                    fetch(`${CANDLESTICK_TRAIN_API}/info`).catch(() => null),
-                    fetch(`${CANDLESTICK_API}/history/feedback/statistics`).catch(() => null),
-                    fetch(`${CANDLESTICK_API}/history/revalidation-statistics`).catch(() => null)
+                    fetch(`${CANDLESTICK_TRAIN_API}/train/jobs`).catch(() => null),
+                    fetch(`${CANDLESTICK_API}/feedback/statistics`).catch(() => null),
+                    fetch(`${CANDLESTICK_API}/feedback/revalidation-statistics`).catch(() => null)
                 ]);
 
                 // Detection KPIs from /info
@@ -4432,7 +4432,7 @@
                     document.getElementById('statusTrainBadge').textContent = 'Online';
                     document.getElementById('statusTrainBadge').style.background = 'rgba(76, 175, 80, 0.2)';
                     document.getElementById('statusTrainBadge').style.color = '#81c784';
-                    document.getElementById('statusTrainJobs').textContent = trainInfo.jobs?.total || '0';
+                    document.getElementById('statusTrainJobs').textContent = trainInfo.count || '0';
                 } else {
                     document.getElementById('statusTrainBadge').textContent = 'Offline';
                     document.getElementById('statusTrainBadge').style.background = 'rgba(244, 67, 54, 0.2)';
@@ -4442,8 +4442,9 @@
                 if (feedbackRes?.ok) {
                     const feedback = await feedbackRes.json();
                     document.getElementById('statusFeedbackTotal').textContent = feedback.total || '0';
-                    document.getElementById('statusFeedbackConfirmed').textContent = feedback.confirmed || '0';
-                    document.getElementById('statusFeedbackCorrected').textContent = feedback.corrected || '0';
+                    document.getElementById('statusFeedbackConfirmed').textContent = feedback.by_type?.confirmed || '0';
+                    document.getElementById('statusFeedbackCorrected').textContent =
+                        ((feedback.by_type?.rejected || 0) + (feedback.by_type?.corrected || 0));
                 }
 
                 // Re-Validation KPIs
