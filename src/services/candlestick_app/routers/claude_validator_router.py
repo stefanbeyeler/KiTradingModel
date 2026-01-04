@@ -699,10 +699,10 @@ async def apply_recommendation(request: ApplyRecommendationRequest):
                 detail=f"Parameter {request.parameter} not found for pattern {request.pattern}"
             )
 
-        # Safety check - don't allow extreme changes (max 2x or 0.5x)
-        # This allows doubling or halving values but prevents more extreme changes
+        # Safety check - allow larger changes for feedback-based recommendations
+        # Recommendations from feedback analysis may need significant adjustments
         change_pct = abs(request.new_value - current_value) / max(current_value, 0.001)
-        max_change = 1.0  # Allow up to 100% change (doubling/halving)
+        max_change = 5.0  # Allow up to 500% change for feedback-based recommendations
         if change_pct > max_change:
             raise HTTPException(
                 status_code=400,
