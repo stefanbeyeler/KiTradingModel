@@ -2528,14 +2528,17 @@
                     return timeB.localeCompare(timeA);
                 });
 
-                // Store full pattern data for click handlers (includes start_time, end_time, pattern_points)
+                // Store full pattern data for click handlers and navigation
                 window.patternHistoryData = {};
                 sortedPatterns.forEach((p, idx) => {
                     window.patternHistoryData[`pattern_${idx}`] = p;
                 });
 
+                // Store pattern list for navigation
+                tcnPatternList = sortedPatterns;
+
                 tbody.innerHTML = sortedPatterns.map((p, idx) => `
-                    <tr class="clickable-row" onclick="showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}', window.patternHistoryData['pattern_${idx}'])">
+                    <tr class="clickable-row" onclick="showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}', window.patternHistoryData['pattern_${idx}'], ${idx})">
                         <td style="font-weight: 500;">${p.symbol}</td>
                         <td><span class="pattern-badge ${p.direction}">${p.pattern_type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span></td>
                         <td><span class="pattern-badge ${p.direction}">${p.direction}</span></td>
@@ -2544,7 +2547,7 @@
                         <td style="color: #888;">${formatLocalDateTime(p.pattern_start_time || p.detected_at)}</td>
                         <td style="font-family: monospace;">${p.price_at_detection ? p.price_at_detection.toLocaleString('de-CH', {maximumFractionDigits: 2}) : '-'}</td>
                         <td style="text-align: center;">
-                            <button type="button" class="btn-chart" onclick="event.stopPropagation(); showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}', window.patternHistoryData['pattern_${idx}'])" title="Chart anzeigen">
+                            <button type="button" class="btn-chart" onclick="event.stopPropagation(); showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}', window.patternHistoryData['pattern_${idx}'], ${idx})" title="Chart anzeigen">
                                 &#128200;
                             </button>
                         </td>
@@ -3285,49 +3288,85 @@
             ctx.fillText('Pattern-Kerze markiert (gelb)', padding.left, height - 5);
         }
 
+        // Store current pattern data for navigation and feedback
+        let currentTcnPatternIndex = 0;
+        let tcnPatternList = [];
+        let currentTcnPatternData = null;
+
         // Show pattern modal with real chart and pattern overlay
-        async function showPatternChart(symbol, timeframe, timestamp, patternType, direction, patternData) {
+        async function showPatternChart(symbol, timeframe, timestamp, patternType, direction, patternData, patternIndex = -1) {
             const modal = document.getElementById('chartModal');
             const chartContainer = document.getElementById('patternChartContainer');
             const svgContainer = document.getElementById('patternSvgContainer');
-            const chartInfo = document.getElementById('chartInfo');
             const loadingEl = document.getElementById('chartLoading');
+            const referenceContainer = document.getElementById('referencePatternContainer');
+
+            // Store current pattern data for feedback
+            currentTcnPatternData = {
+                symbol, timeframe, timestamp, patternType, direction, patternData
+            };
+
+            // Update navigation index
+            if (patternIndex >= 0) {
+                currentTcnPatternIndex = patternIndex;
+            }
 
             // Extract pattern_points from full pattern data (backward compatible)
             const patternPoints = patternData && patternData.pattern_points ? patternData.pattern_points : patternData;
             // Pattern history uses pattern_start_time/pattern_end_time, detection API uses start_time/end_time
             const startTime = patternData && (patternData.pattern_start_time || patternData.start_time) ? (patternData.pattern_start_time || patternData.start_time) : null;
             const endTime = patternData && (patternData.pattern_end_time || patternData.end_time) ? (patternData.pattern_end_time || patternData.end_time) : null;
+            const confidence = patternData && patternData.confidence ? patternData.confidence : 0;
 
             // Get pattern info
             const info = getTcnPatternInfo(patternType);
 
+            // Generate Pattern-ID
+            const patternId = `${symbol}_${timeframe}_${patternType}_${timestamp}`;
+            document.getElementById('chartPatternId').textContent = patternId;
+
             // Set title and badges
-            document.getElementById('chartModalTitle').textContent = `${symbol} - ${info.name}`;
+            document.getElementById('chartModalTitle').textContent = info.name;
             document.getElementById('chartModalBadges').innerHTML = `
-                <span class="pattern-badge ${direction}">${direction}</span>
-                <span class="pattern-badge">${timeframe}</span>
+                <span class="pattern-badge ${direction}">${direction === 'bullish' ? 'BULLISH' : direction === 'bearish' ? 'BEARISH' : 'NEUTRAL'}</span>
             `;
 
-            // Set description
-            document.getElementById('chartPatternDescription').textContent = info.description;
-            const implEl = document.getElementById('chartPatternImplication');
-            implEl.textContent = info.implication;
-            implEl.className = 'modal-implication ' + (direction === 'bullish' ? 'bullish' : direction === 'bearish' ? 'bearish' : 'neutral');
+            // Set description with implication
+            document.getElementById('chartPatternDescription').innerHTML = `
+                ${info.description}<br><br>
+                <strong style="color: ${direction === 'bullish' ? '#81c784' : direction === 'bearish' ? '#ef5350' : '#ffc107'};">Trading-Implikation:</strong> ${info.implication}
+            `;
 
-            // Update chart info
+            // Update info grid
             document.getElementById('chartSymbol').textContent = symbol;
             document.getElementById('chartTimeframe').textContent = timeframe;
             document.getElementById('chartPatternTime').textContent = formatLocalDateTime(timestamp, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            document.getElementById('chartConfidence').textContent = `${(confidence * 100).toFixed(0)}%`;
+
+            // Hidden fields for backward compatibility
             document.getElementById('chartPatternType').textContent = info.name;
             document.getElementById('chartPatternStart').textContent = startTime ? formatLocalDateTime(startTime, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
             document.getElementById('chartPatternEnd').textContent = endTime ? formatLocalDateTime(endTime, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+
+            // Show reference SVG pattern
+            const svg = getPatternSvg(patternType);
+            referenceContainer.innerHTML = `
+                <div style="text-align: center; width: 100%;">
+                    <div style="max-width: 280px; margin: 0 auto;">${svg}</div>
+                    <div style="font-size: 0.75rem; color: #888; margin-top: 0.5rem;">${info.name}</div>
+                </div>
+            `;
+
+            // Update navigation counter
+            updateTcnNavigationCounter();
+
+            // Reset feedback result
+            document.getElementById('tcnFeedbackResult').style.display = 'none';
 
             // Show loading state
             if (loadingEl) loadingEl.style.display = 'flex';
             chartContainer.style.display = 'none';
             svgContainer.style.display = 'none';
-            chartInfo.style.display = 'flex';
 
             // Show modal
             modal.classList.add('show');
@@ -3385,6 +3424,92 @@
                     </div>
                 `;
             }
+        }
+
+        // Update navigation counter
+        function updateTcnNavigationCounter() {
+            const counter = document.getElementById('modalNavCounter');
+            const prevBtn = document.getElementById('modalPrevBtn');
+            const nextBtn = document.getElementById('modalNextBtn');
+
+            if (tcnPatternList.length > 0) {
+                counter.textContent = `${currentTcnPatternIndex + 1} / ${tcnPatternList.length}`;
+                prevBtn.disabled = currentTcnPatternIndex === 0;
+                nextBtn.disabled = currentTcnPatternIndex >= tcnPatternList.length - 1;
+            } else {
+                counter.textContent = '1 / 1';
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+            }
+        }
+
+        // Navigate between patterns
+        function navigateTcnPattern(delta) {
+            const newIndex = currentTcnPatternIndex + delta;
+            if (newIndex >= 0 && newIndex < tcnPatternList.length) {
+                const p = tcnPatternList[newIndex];
+                showPatternChart(p.symbol, p.timeframe, p.detected_at || p.timestamp, p.pattern_type || p.type, p.direction, p, newIndex);
+            }
+        }
+
+        // Copy Pattern ID to clipboard
+        function copyPatternId() {
+            const patternId = document.getElementById('chartPatternId').textContent;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(patternId).then(() => {
+                    showToast('Pattern-ID kopiert: ' + patternId.slice(-20));
+                }).catch(() => {
+                    fallbackCopyToClipboard(patternId);
+                });
+            } else {
+                fallbackCopyToClipboard(patternId);
+            }
+        }
+
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            showToast('Pattern-ID kopiert');
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 0.75rem 1.5rem; border-radius: 8px; z-index: 10001; font-size: 0.9rem;';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        // Feedback functions
+        function confirmTcnPattern() {
+            showTcnFeedback('success', '✓ Pattern als korrekt markiert');
+            // TODO: Send feedback to backend when TCN feedback API is available
+        }
+
+        function rejectTcnPattern() {
+            showTcnFeedback('warning', '✗ Pattern als falsch markiert');
+            // TODO: Send feedback to backend when TCN feedback API is available
+        }
+
+        function markNoPattern() {
+            showTcnFeedback('info', '✗ Kein Pattern erkennbar markiert');
+            // TODO: Send feedback to backend when TCN feedback API is available
+        }
+
+        function showTcnFeedback(type, message) {
+            const resultEl = document.getElementById('tcnFeedbackResult');
+            const colors = {
+                success: '#81c784',
+                warning: '#ffb74d',
+                info: '#64b5f6'
+            };
+            resultEl.style.color = colors[type] || '#fff';
+            resultEl.textContent = message;
+            resultEl.style.display = 'block';
         }
 
         // Get interval in minutes
@@ -4549,66 +4674,105 @@
         }
     </script>
 
-    <!-- Pattern Modal for Pattern Visualization -->
-    <div class="modal-overlay chart-modal" id="chartModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">
-                    <span id="chartModalTitle">Pattern</span>
-                    <span id="chartModalBadges" style="margin-left: 0.5rem;"></span>
-                </h3>
+    <!-- Pattern Detail Modal (Candlestick-Style) -->
+    <div class="modal-overlay" id="chartModal" onclick="if(event.target===this)closeChartModal()">
+        <div class="modal" onclick="event.stopPropagation()" style="max-width: 850px;">
+            <div class="modal-header" style="align-items: flex-start;">
+                <div class="modal-title" style="flex-direction: column; align-items: flex-start;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span id="chartModalTitle">Pattern</span>
+                        <span id="chartModalBadges"></span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; color: #888; font-family: monospace; margin-top: 0.25rem;">
+                        <span id="chartPatternId">-</span>
+                        <button class="btn btn-secondary" style="padding: 0.15rem 0.35rem; font-size: 0.6rem;" onclick="copyPatternId()" title="Pattern-ID kopieren">📋</button>
+                    </div>
+                </div>
                 <button type="button" class="modal-close" onclick="closeChartModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="modal-section">
-                    <div class="modal-section-title">Pattern-Chart</div>
-                    <!-- Loading indicator -->
-                    <div id="chartLoading" style="display: flex; justify-content: center; align-items: center; padding: 2rem; color: #888;">
-                        <span style="margin-right: 0.5rem;">⏳</span> Chart wird geladen...
+                <!-- Chart Comparison (Two Columns) -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; text-align: center;">Erkanntes Pattern</div>
+                        <!-- Loading indicator -->
+                        <div id="chartLoading" style="display: flex; justify-content: center; align-items: center; padding: 2rem; color: #888; min-height: 200px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                            <span style="margin-right: 0.5rem;">⏳</span> Chart wird geladen...
+                        </div>
+                        <!-- Real candlestick chart with pattern overlay -->
+                        <div class="chart-container" id="patternChartContainer" style="display: none; height: 200px; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                            <canvas id="patternCanvas" style="width: 100%; height: 100%;"></canvas>
+                        </div>
+                        <!-- Fallback SVG visualization -->
+                        <div class="chart-container" id="patternSvgContainer" style="display: none; justify-content: center; align-items: center; padding: 1rem; min-height: 200px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                            <!-- SVG wird dynamisch eingefügt -->
+                        </div>
                     </div>
-                    <!-- Real candlestick chart with pattern overlay -->
-                    <div class="chart-container" id="patternChartContainer" style="display: none; height: 320px; padding: 0.5rem;">
-                        <canvas id="patternCanvas" style="width: 100%; height: 100%;"></canvas>
-                    </div>
-                    <!-- Fallback SVG visualization -->
-                    <div class="chart-container" id="patternSvgContainer" style="display: none; justify-content: center; align-items: center; padding: 1rem;">
-                        <!-- SVG wird dynamisch eingefügt -->
-                    </div>
-                    <div class="chart-info" id="chartInfo" style="display: none;">
-                        <div class="chart-info-item">
-                            <span class="chart-info-label">Symbol:</span>
-                            <span class="chart-info-value" id="chartSymbol">-</span>
-                        </div>
-                        <div class="chart-info-item">
-                            <span class="chart-info-label">Timeframe:</span>
-                            <span class="chart-info-value" id="chartTimeframe">-</span>
-                        </div>
-                        <div class="chart-info-item">
-                            <span class="chart-info-label">Erkannt:</span>
-                            <span class="chart-info-value" id="chartPatternTime">-</span>
-                        </div>
-                        <div class="chart-info-item">
-                            <span class="chart-info-label">Typ:</span>
-                            <span class="chart-info-value" id="chartPatternType">-</span>
-                        </div>
-                        <div class="chart-info-item">
-                            <span class="chart-info-label">Start:</span>
-                            <span class="chart-info-value" id="chartPatternStart">-</span>
-                        </div>
-                        <div class="chart-info-item">
-                            <span class="chart-info-label">Ende:</span>
-                            <span class="chart-info-value" id="chartPatternEnd">-</span>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; text-align: center;">Referenz-Beispiel</div>
+                        <div id="referencePatternContainer" style="display: flex; justify-content: center; align-items: center; min-height: 200px; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                            <!-- SVG wird dynamisch eingefügt -->
                         </div>
                     </div>
                 </div>
-                <div class="modal-section">
-                    <div class="modal-section-title">Pattern-Beschreibung</div>
-                    <div class="modal-description" id="chartPatternDescription"></div>
+
+                <!-- Info Grid -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px;">
+                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.25rem;">Symbol</div>
+                        <div style="font-size: 1rem; font-weight: 600;" id="chartSymbol">-</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px;">
+                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.25rem;">Timeframe</div>
+                        <div style="font-size: 1rem; font-weight: 600;" id="chartTimeframe">-</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px;">
+                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.25rem;">Zeitpunkt</div>
+                        <div style="font-size: 1rem; font-weight: 600;" id="chartPatternTime">-</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px;">
+                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.25rem;">Konfidenz</div>
+                        <div style="font-size: 1rem; font-weight: 600;" id="chartConfidence">-</div>
+                    </div>
                 </div>
-                <div class="modal-section">
-                    <div class="modal-section-title">Trading-Implikation</div>
-                    <div class="modal-implication" id="chartPatternImplication"></div>
+
+                <!-- Hidden fields for backward compatibility -->
+                <div style="display: none;">
+                    <span id="chartPatternType">-</span>
+                    <span id="chartPatternStart">-</span>
+                    <span id="chartPatternEnd">-</span>
                 </div>
+
+                <!-- Description -->
+                <div class="modal-description" id="chartPatternDescription" style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px; font-size: 0.9rem; line-height: 1.5;">
+                    Pattern-Beschreibung wird geladen...
+                </div>
+
+                <!-- Feedback Buttons -->
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                        <button class="btn btn-success" onclick="confirmTcnPattern()" style="padding: 0.5rem 1rem;" title="Pattern bestätigen">
+                            ✓ Korrekt
+                        </button>
+                        <button class="btn btn-warning" onclick="rejectTcnPattern()" style="padding: 0.5rem 1rem;" title="Pattern ablehnen">
+                            ✗ Falsches Pattern
+                        </button>
+                        <button class="btn btn-secondary" onclick="markNoPattern()" style="padding: 0.5rem 1rem;" title="Kein Pattern erkennbar">
+                            ✗ Kein Pattern
+                        </button>
+                    </div>
+                    <div id="tcnFeedbackResult" style="margin-top: 0.75rem; font-size: 0.85rem; display: none;"></div>
+                </div>
+            </div>
+            <!-- Navigation Footer -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2);">
+                <button class="btn btn-secondary" id="modalPrevBtn" onclick="navigateTcnPattern(-1)" title="Vorheriges Pattern (←)" style="padding: 0.5rem 1rem;">
+                    ‹ Zurück
+                </button>
+                <span id="modalNavCounter" style="color: #888; font-size: 0.9rem;">1 / 100</span>
+                <button class="btn btn-primary" id="modalNextBtn" onclick="navigateTcnPattern(1)" title="Nächstes Pattern (→)" style="padding: 0.5rem 1rem;">
+                    Weiter ›
+                </button>
             </div>
         </div>
     </div>
