@@ -3356,22 +3356,15 @@
                         </div>
                     </div>
 
-                    <!-- Current Rules -->
+                    <!-- Current Rules - Parameter Section -->
                     <div id="currentRulesContainer" style="padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 200px;">
-                                <h4 style="font-size: 0.85rem; margin-bottom: 0.3rem; color: #64c8ff;">Kürzliche Anpassungen</h4>
-                                <div id="recentAdjustments" style="max-height: 120px; overflow-y: auto; font-size: 0.8rem;"></div>
-                            </div>
-                            <div style="flex: 1; min-width: 200px;">
-                                <h4 style="font-size: 0.85rem; margin-bottom: 0.3rem; color: #64c8ff;">Parameter</h4>
-                                <select id="rulePatternSelect" onchange="showPatternParams()" style="width: 100%; padding: 0.3rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.8rem; margin-bottom: 0.3rem;">
-                                    <option value="">-- Pattern --</option>
-                                </select>
-                                <div id="patternParamsTable" style="font-size: 0.8rem;"></div>
-                            </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                            <select id="rulePatternSelect" onchange="showPatternParams()" style="flex: 1; padding: 0.4rem; background: #1a1a2e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.85rem;">
+                                <option value="">-- Pattern wählen --</option>
+                            </select>
+                            <button class="btn btn-warning btn-sm" onclick="resetAllRules()" title="Alle Parameter zurücksetzen">Zurücksetzen</button>
                         </div>
-                        <button class="btn btn-warning btn-sm" onclick="resetAllRules()" style="margin-top: 0.5rem;">Alle zurücksetzen</button>
+                        <div id="patternParamsTable" style="font-size: 0.85rem;"></div>
                     </div>
 
                     <!-- Impact Analysis -->
@@ -9902,25 +9895,6 @@
                 const data = await response.json();
                 currentRulesData = data;
 
-                // Recent adjustments
-                const adjContainer = document.getElementById('recentAdjustments');
-                if (data.recent_adjustments && data.recent_adjustments.length > 0) {
-                    adjContainer.innerHTML = data.recent_adjustments.map(a => `
-                        <div style="padding: 0.5rem; margin-bottom: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 0.85rem;">
-                            <div>
-                                <span style="color: #64c8ff;">${formatPatternType(a.pattern)}</span>.<span style="color: #aaa;">${a.parameter}</span>
-                            </div>
-                            <div style="color: #888;">
-                                ${a.old_value} → ${a.new_value}
-                                <span style="margin-left: 0.5rem; color: #666;">(${a.reason})</span>
-                            </div>
-                            <div style="font-size: 0.75rem; color: #666;">${new Date(a.timestamp).toLocaleString('de-CH')}</div>
-                        </div>
-                    `).join('');
-                } else {
-                    adjContainer.innerHTML = '<div style="color: #888;">Keine Anpassungen vorhanden</div>';
-                }
-
                 // Pattern select
                 const select = document.getElementById('rulePatternSelect');
                 select.innerHTML = '<option value="">-- Pattern auswählen --</option>';
@@ -9999,7 +9973,6 @@
                 const details = document.getElementById('impactDetails');
                 if (data.details && data.details.length > 0) {
                     details.innerHTML = `
-                        <h4 style="margin-bottom: 0.5rem;">Letzte Anpassungen</h4>
                         ${data.details.map(d => `
                             <div style="padding: 0.5rem; margin-bottom: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 4px;">
                                 <div style="display: flex; justify-content: space-between;">
