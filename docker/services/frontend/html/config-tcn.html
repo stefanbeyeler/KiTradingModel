@@ -1917,44 +1917,15 @@
                 document.getElementById('stat-uptime').textContent = stats.uptime_seconds ? formatUptime(stats.uptime_seconds) : '-';
                 document.getElementById('stat-models').textContent = stats.available_models || 0;
 
-                // Model Info - Training status now comes from TCN-Train service
-                document.getElementById('model-info').innerHTML = `
-                    <table class="data-table">
-                        <tr><td style="color: #888;">Service</td><td>${info.service}</td></tr>
-                        <tr><td style="color: #888;">Version</td><td>${info.version}</td></tr>
-                        <tr><td style="color: #888;">Gestartet</td><td>${formatLocalDateTime(info.started_at, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td></tr>
-                        <tr><td style="color: #888;">Modell geladen</td><td>${info.model?.loaded ? '<span style="color: #4caf50;">Ja</span>' : '<span style="color: #f44336;">Nein</span>'}</td></tr>
-                        <tr><td style="color: #888;">Pattern-Klassen</td><td>${info.num_classes || info.model?.num_classes || '-'}</td></tr>
-                        <tr><td style="color: #888;">Parameter</td><td>${info.model?.parameters?.toLocaleString() || '-'}</td></tr>
-                        <tr><td style="color: #888;">Training aktiv</td><td>${isTraining ? '<span style="color: #ffc107;">Ja</span>' : 'Nein'}</td></tr>
-                    </table>
-                `;
 
-                // Pattern Classes - pattern_classes is at top level in info response
-                const patterns = info.pattern_classes || info.model?.pattern_classes || [];
-                document.getElementById('pattern-classes').innerHTML = patterns.length > 0
-                    ? patterns.map(p => `<span class="pattern-badge ${getPatternType(p)}">${p.replace(/_/g, ' ')}</span>`).join('')
-                    : '<span style="color: #888;">Keine Pattern geladen</span>';
+                // Update status cards in Status tab (elements may not exist if Overview tab was removed)
+                const statusValueEl = document.getElementById('service-status-value');
+                const modelValueEl = document.getElementById('model-status-value');
+                const deviceValueEl = document.getElementById('device-value');
 
-                // Service Status - model info is under stats.model
-                const modelLoaded = stats.model?.loaded || false;
-                document.getElementById('service-status').innerHTML = `
-                    <div class="grid-3">
-                        <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
-                            <div style="font-size: 1.5rem; color: #64c8ff;">${stats.training_history_count || 0}</div>
-                            <div style="color: #888; font-size: 0.85rem;">Training Sessions</div>
-                        </div>
-                        <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
-                            <div style="font-size: 1.5rem; color: ${modelLoaded ? '#4caf50' : '#f44336'};">${modelLoaded ? 'Bereit' : 'Nicht bereit'}</div>
-                            <div style="color: #888; font-size: 0.85rem;">Model Status</div>
-                        </div>
-                        <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
-                            <div style="font-size: 1.5rem; color: #a78bfa;">${stats.available_models || 0}</div>
-                            <div style="color: #888; font-size: 0.85rem;">Verfugbare Modelle</div>
-                        </div>
-                    </div>
-                `;
-
+                if (statusValueEl) statusValueEl.textContent = info.model?.loaded ? 'Online' : 'Offline';
+                if (modelValueEl) modelValueEl.textContent = info.model?.loaded ? 'Geladen' : 'Nicht geladen';
+                if (deviceValueEl) deviceValueEl.textContent = info.model?.device || 'cpu';
             } catch (error) {
                 showToast('Fehler beim Laden der Service-Info', 'error');
                 console.error(error);
