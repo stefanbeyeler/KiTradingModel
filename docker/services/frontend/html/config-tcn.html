@@ -974,7 +974,6 @@
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab-btn active" onclick="showTab('status')">📊 Status</button>
-            <button class="tab-btn" onclick="showTab('overview')">&#128200; Übersicht</button>
             <button class="tab-btn" onclick="showTab('detection')">&#128269; Pattern-Erkennung</button>
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
         </div>
@@ -1327,42 +1326,6 @@
                             <tr><td colspan="6" style="text-align: center; padding: 2rem; color: #888;">Lade letzte Erkennungen...</td></tr>
                         </tbody>
                     </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Overview Tab -->
-        <div id="tab-overview" class="tab-content">
-            <div class="grid-2-equal">
-                <!-- Model Info -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#129302; Modell-Information</h3>
-                        <button class="btn btn-primary btn-sm" onclick="loadInfo()">&#8635; Aktualisieren</button>
-                    </div>
-                    <div id="model-info">
-                        <div class="loading"><div class="spinner"></div></div>
-                    </div>
-                </div>
-
-                <!-- Pattern Classes -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#127919; Erkennbare Pattern</h3>
-                    </div>
-                    <div id="pattern-classes">
-                        <div class="loading"><div class="spinner"></div></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Service Status -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128337; Service Status</h3>
-                </div>
-                <div id="service-status">
-                    <div class="loading"><div class="spinner"></div></div>
                 </div>
             </div>
         </div>
