@@ -227,6 +227,45 @@ class SymbolService:
         # Then try alias lookup
         return await self.get_symbol_by_alias(identifier)
 
+    async def get_easyinsight_symbol(self, identifier: str) -> str:
+        """
+        Get the EasyInsight API symbol for a given identifier.
+
+        Resolves the symbol (by ID or alias) and returns the configured
+        easyinsight_symbol field. Falls back to the original identifier
+        if no mapping is found.
+
+        Args:
+            identifier: Symbol ID or alias (e.g., N225, JP225, BTCUSD)
+
+        Returns:
+            EasyInsight symbol (e.g., JP225 for N225, BTCUSD for BTCUSD)
+        """
+        symbol = await self.resolve_symbol(identifier)
+        if symbol and symbol.easyinsight_symbol:
+            return symbol.easyinsight_symbol
+        # Fallback: return the original identifier
+        return identifier.upper()
+
+    async def get_twelvedata_symbol(self, identifier: str) -> Optional[str]:
+        """
+        Get the TwelveData API symbol for a given identifier.
+
+        Resolves the symbol (by ID or alias) and returns the configured
+        twelvedata_symbol field. Returns None if the symbol is not
+        supported by TwelveData.
+
+        Args:
+            identifier: Symbol ID or alias (e.g., BTCUSD, EURUSD)
+
+        Returns:
+            TwelveData symbol (e.g., BTC/USD) or None if not supported
+        """
+        symbol = await self.resolve_symbol(identifier)
+        if symbol and symbol.twelvedata_symbol:
+            return symbol.twelvedata_symbol
+        return None
+
     async def create_symbol(self, request: SymbolCreateRequest) -> ManagedSymbol:
         """Create a new managed symbol."""
         symbol_id = request.symbol.upper()

@@ -4970,9 +4970,15 @@ async def get_training_data(
     if len(rows) < 50:
         logger.info(f"TwelveData insufficient ({len(rows)} rows), trying EasyInsight fallback for {symbol}/{tf}")
         try:
+            # Resolve EasyInsight symbol from managed symbols config
+            # e.g., N225 -> JP225, BTCUSD -> BTCUSD
+            ei_symbol = await symbol_service.get_easyinsight_symbol(symbol)
+            if ei_symbol != symbol:
+                logger.info(f"Resolved EasyInsight symbol: {symbol} -> {ei_symbol}")
+
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
-                    f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
+                    f"{settings.easyinsight_api_url}/symbol-data-full/{ei_symbol}",
                     params={"limit": limit}
                 )
                 response.raise_for_status()
@@ -4981,13 +4987,13 @@ async def get_training_data(
                 ei_rows = data.get('data', [])
 
                 if ei_rows and len(ei_rows) >= 50:
-                    # Cache EasyInsight data
+                    # Cache EasyInsight data (use original symbol for cache key)
                     if use_cache:
                         training_data_cache.cache_data(symbol, tf, ei_rows, "easyinsight")
                         logger.debug(f"Cached {len(ei_rows)} EasyInsight rows for {symbol}/{tf}")
 
                     return {
-                        "symbol": symbol,
+                        "symbol": symbol,  # Return original symbol in response
                         "timeframe": tf,
                         "source": "easyinsight",
                         "from_cache": False,
