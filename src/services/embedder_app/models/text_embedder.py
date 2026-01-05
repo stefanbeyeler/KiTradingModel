@@ -59,12 +59,22 @@ class TextEmbedder(BaseEmbedder):
             self._embedding_dim = 384
             return
 
+        # Determine actual device to use
+        actual_device = self._device
         try:
-            logger.info(f"Loading text embedder: {self._model_name}")
-            self._model = ST(self._model_name, device=self._device)
+            import torch
+            if self._device == "cuda" and not torch.cuda.is_available():
+                logger.warning("CUDA not available, falling back to CPU for text embedder")
+                actual_device = "cpu"
+        except ImportError:
+            actual_device = "cpu"
+
+        try:
+            logger.info(f"Loading text embedder: {self._model_name} on {actual_device}")
+            self._model = ST(self._model_name, device=actual_device)
             self._embedding_dim = self._model.get_sentence_embedding_dimension()
             self._loaded = True
-            logger.info(f"Text embedder loaded. Dimension: {self._embedding_dim}")
+            logger.info(f"Text embedder loaded. Dimension: {self._embedding_dim}, Device: {actual_device}")
         except Exception as e:
             logger.error(f"Failed to load text embedder: {e}")
             self._embedding_dim = 384
