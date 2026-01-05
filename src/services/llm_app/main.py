@@ -22,9 +22,12 @@ from src.config import settings
 from src.version import VERSION
 from src.api.routes import llm_router, rag_router, trading_router
 from src.services.llm_service import LLMService
-from src.services.rag_service import RAGService
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import get_test_unhealthy_status
+
+# RAG Service is now accessed via HTTP API (Port 3008) instead of direct import
+# This avoids dependency conflicts with sentence-transformers in the NVIDIA base image
+RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://trading-rag:3008")
 
 # Global service instances
 llm_service = None
@@ -83,12 +86,18 @@ async def startup_event():
     logger.info(f"LLM Model: {settings.ollama_model}")
     logger.info(f"Ollama URL: {settings.ollama_host}")
 
-    # Initialize RAG Service
+    # RAG Service is accessed via HTTP API
+    # Check connectivity to RAG service
     try:
-        rag_service = RAGService()
-        logger.info("RAG Service initialized")
+        import httpx
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{RAG_SERVICE_URL}/health")
+            if response.status_code == 200:
+                logger.info(f"RAG Service available at {RAG_SERVICE_URL}")
+            else:
+                logger.warning(f"RAG Service returned status {response.status_code}")
     except Exception as e:
-        logger.error(f"Failed to initialize RAG Service: {e}")
+        logger.warning(f"RAG Service not available at {RAG_SERVICE_URL}: {e}")
 
     # Initialize LLM Service
     try:
@@ -114,14 +123,8 @@ async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down LLM Service...")
 
-    # Cleanup services if needed
-    if rag_service:
-        # Persist RAG database
-        try:
-            rag_service.persist()
-            logger.info("RAG database persisted")
-        except Exception as e:
-            logger.error(f"Failed to persist RAG database: {e}")
+    # RAG Service cleanup is handled by the RAG container (Port 3008)
+    # No local cleanup needed
 
     logger.info("LLM Service stopped")
 
@@ -147,7 +150,8 @@ async def health_check():
         "version": VERSION,
         "llm_model": settings.ollama_model,
         "llm_status": llm_status,
-        "rag_enabled": rag_service is not None
+        "rag_enabled": True,  # RAG is accessed via HTTP API
+        "rag_url": RAG_SERVICE_URL
     }
 
     # Test-Status hinzufügen wenn aktiv

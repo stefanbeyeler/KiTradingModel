@@ -20,10 +20,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy only the LLM app source code (avoid importing other services)
 # ARCHITEKTUR: LLM greift auf Daten NUR über Data Service (Port 3001) zu
+# RAG wird über HTTP API (Port 3008) aufgerufen, nicht direkt importiert
 # twelvedata_service.py und yfinance_service.py werden NICHT kopiert - alle Datenzugriffe über HTTP
 COPY src/services/llm_app/ ./src/services/llm_app/
 COPY src/services/llm_service.py ./src/services/
-COPY src/services/rag_service.py ./src/services/
 COPY src/services/data_gateway_service.py ./src/services/
 COPY src/services/cache_service.py ./src/services/
 COPY src/api/ ./src/api/

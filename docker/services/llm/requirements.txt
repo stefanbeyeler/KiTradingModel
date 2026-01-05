@@ -26,7 +26,3 @@ pandas>=2.0.0
 
 # Caching
 redis>=5.0.0
-
-# RAG dependencies (needed because LLM imports RAGService directly)
-faiss-cpu>=1.7.0
-sentence-transformers>=2.2.0
