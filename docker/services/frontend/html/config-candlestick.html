@@ -2517,12 +2517,40 @@
                     <button class="btn btn-danger" id="btnStopScan" onclick="stopAutoScan()">
                         Auto-Scan stoppen
                     </button>
-                    <button class="btn btn-primary" onclick="triggerManualScan()">
+                    <button class="btn btn-primary" id="btnManualScan" onclick="triggerManualScan()">
                         Jetzt scannen
                     </button>
                     <button class="btn btn-warning" onclick="clearHistory()" title="Löscht alle erkannten Patterns aus der History-Liste. Feedback und Korrekturen bleiben erhalten.">
                         History löschen
                     </button>
+                </div>
+                <!-- Manual Scan Progress -->
+                <div id="manualScanProgress" style="display: none; margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span id="manualScanStatus" style="color: #64c8ff;">Scanne...</span>
+                        <span id="manualScanPercent" style="color: #888;">0%</span>
+                    </div>
+                    <div class="training-progress">
+                        <div class="training-progress-bar" id="manualScanProgressBar" style="width: 0%;"></div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.75rem; font-size: 0.85rem;">
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                            <div id="scanStatSymbols" style="color: #64c8ff; font-weight: bold;">0/0</div>
+                            <div style="color: #888; font-size: 0.75rem;">Symbole</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                            <div id="scanStatPatterns" style="color: #4caf50; font-weight: bold;">0</div>
+                            <div style="color: #888; font-size: 0.75rem;">Patterns</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                            <div id="scanStatNew" style="color: #ffc107; font-weight: bold;">0</div>
+                            <div style="color: #888; font-size: 0.75rem;">Neu</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                            <div id="scanStatCurrent" style="color: #9c27b0; font-weight: bold; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+                            <div style="color: #888; font-size: 0.75rem;">Aktuell</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -4331,32 +4359,93 @@
             }
         }
 
-        // Trigger manual scan
+        // Trigger manual scan with progress indicator
         async function triggerManualScan() {
-            const btn = event.target;
+            const btn = document.getElementById('btnManualScan');
+            const progressDiv = document.getElementById('manualScanProgress');
+            const statusEl = document.getElementById('manualScanStatus');
+            const percentEl = document.getElementById('manualScanPercent');
+            const progressBar = document.getElementById('manualScanProgressBar');
+            const statSymbols = document.getElementById('scanStatSymbols');
+            const statPatterns = document.getElementById('scanStatPatterns');
+            const statNew = document.getElementById('scanStatNew');
+            const statCurrent = document.getElementById('scanStatCurrent');
+
             btn.disabled = true;
             btn.textContent = 'Scanne...';
 
+            // Reset and show progress
+            progressDiv.style.display = 'block';
+            statusEl.textContent = 'Lade Symbole...';
+            percentEl.textContent = '0%';
+            progressBar.style.width = '0%';
+            statSymbols.textContent = '0/0';
+            statPatterns.textContent = '0';
+            statNew.textContent = '0';
+            statCurrent.textContent = '-';
+
+            let totalPatterns = 0;
+            let totalNew = 0;
+
             try {
-                // Try candlestick service
-                const res = await fetch(`${CANDLESTICK_API}/history/scan`, { method: 'POST' });
-                const result = await res.json();
-                showToast(`Scan abgeschlossen: ${result.new_patterns_found || 0} neue Patterns`, 'success');
-                await loadStatistics();
-            } catch (error) {
-                // Try data service fallback
-                try {
-                    const res2 = await fetch(`${DATA_API}/patterns/history/scan`, { method: 'POST' });
-                    const result2 = await res2.json();
-                    showToast(`Scan abgeschlossen: ${result2.new_patterns_found || 0} neue Patterns`, 'success');
-                    await loadStatistics();
-                } catch (e2) {
-                    showToast('Scan fehlgeschlagen', 'error');
-                    console.error('Manual scan failed:', e2);
+                // Get list of symbols to scan
+                const symbolsRes = await fetch(`${CANDLESTICK_API}/history/scan/symbols`);
+                if (!symbolsRes.ok) throw new Error('Failed to get symbols');
+                const symbolsData = await symbolsRes.json();
+                const symbols = symbolsData.symbols || [];
+
+                if (symbols.length === 0) {
+                    statusEl.textContent = 'Keine Symbole konfiguriert';
+                    showToast('Keine Favoriten-Symbole zum Scannen', 'warning');
+                    return;
                 }
+
+                statusEl.textContent = 'Scanne Symbole...';
+                statSymbols.textContent = `0/${symbols.length}`;
+
+                // Scan each symbol
+                for (let i = 0; i < symbols.length; i++) {
+                    const symbol = symbols[i];
+                    statCurrent.textContent = symbol;
+
+                    try {
+                        const res = await fetch(`${CANDLESTICK_API}/history/scan/${symbol}`, { method: 'POST' });
+                        if (res.ok) {
+                            const result = await res.json();
+                            totalPatterns += result.patterns_found || 0;
+                            totalNew += result.new_patterns || 0;
+                        }
+                    } catch (e) {
+                        console.warn(`Scan failed for ${symbol}:`, e);
+                    }
+
+                    // Update progress
+                    const progress = Math.round(((i + 1) / symbols.length) * 100);
+                    percentEl.textContent = `${progress}%`;
+                    progressBar.style.width = `${progress}%`;
+                    statSymbols.textContent = `${i + 1}/${symbols.length}`;
+                    statPatterns.textContent = totalPatterns.toString();
+                    statNew.textContent = totalNew.toString();
+                }
+
+                // Complete
+                statusEl.textContent = 'Scan abgeschlossen';
+                statCurrent.textContent = '✓';
+                showToast(`Scan abgeschlossen: ${totalNew} neue Patterns gefunden`, 'success');
+                await loadStatistics();
+
+            } catch (error) {
+                console.error('Manual scan failed:', error);
+                statusEl.textContent = 'Scan fehlgeschlagen';
+                showToast('Scan fehlgeschlagen', 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Jetzt scannen';
+
+                // Hide progress after 3 seconds
+                setTimeout(() => {
+                    progressDiv.style.display = 'none';
+                }, 3000);
             }
         }
 

@@ -450,6 +450,46 @@ async def trigger_scan():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/history/scan/symbols")
+async def get_scan_symbols():
+    """
+    Get list of symbols that will be scanned.
+
+    Returns the list of favorite symbols available for pattern scanning.
+    """
+    try:
+        symbols = await pattern_history_service.get_scan_symbols()
+
+        return {
+            "symbols": symbols,
+            "count": len(symbols)
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting scan symbols: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/history/scan/{symbol}")
+async def scan_single_symbol(symbol: str):
+    """
+    Scan a single symbol for patterns.
+
+    Scans the specified symbol and adds new patterns to the history.
+
+    Args:
+        symbol: The symbol to scan (e.g., 'BTCUSD', 'EURUSD')
+    """
+    try:
+        result = await pattern_history_service.scan_single_symbol(symbol.upper())
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error scanning symbol {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/history/clear")
 async def clear_history():
     """

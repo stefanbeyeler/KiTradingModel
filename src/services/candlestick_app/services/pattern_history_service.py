@@ -459,6 +459,130 @@ class PatternHistoryService:
             logger.error(f"Error in pattern scan: {e}")
             return 0
 
+    async def get_scan_symbols(self) -> list[str]:
+        """
+        Hole die Liste der zu scannenden Symbole.
+
+        Returns:
+            Liste der Symbol-Namen
+        """
+        return await candlestick_pattern_service._get_symbol_names()
+
+    async def scan_single_symbol(self, symbol: str) -> dict:
+        """
+        Scanne ein einzelnes Symbol nach Patterns.
+
+        Args:
+            symbol: Das zu scannende Symbol
+
+        Returns:
+            Dict mit scan results (patterns_found, new_patterns)
+        """
+        try:
+            scan_time = datetime.now(timezone.utc)
+            patterns_found = 0
+            new_patterns = 0
+
+            # Prüfe ob Daten für die Timeframes verfügbar sind
+            available_timeframes = await self._get_available_timeframes(symbol)
+
+            if not available_timeframes:
+                return {
+                    "symbol": symbol,
+                    "patterns_found": 0,
+                    "new_patterns": 0,
+                    "timeframes_scanned": []
+                }
+
+            # Scanne nur verfügbare Timeframes
+            request = PatternScanRequest(
+                symbol=symbol,
+                timeframes=available_timeframes,
+                lookback_candles=50,
+                min_confidence=0.6,
+                include_weak_patterns=False,
+            )
+
+            response = await candlestick_pattern_service.scan_patterns(request)
+
+            # Sammle alle Patterns aus allen Timeframes
+            all_patterns = (
+                response.result.m5.patterns +
+                response.result.m15.patterns +
+                response.result.h1.patterns +
+                response.result.h4.patterns +
+                response.result.d1.patterns
+            )
+
+            patterns_found = len(all_patterns)
+
+            # Füge nur neue/aktuelle Patterns hinzu (Duplikat-Prüfung)
+            for pattern in all_patterns:
+                pattern_ts = pattern.timestamp.isoformat() if pattern.timestamp else scan_time.isoformat()
+
+                # Prüfe ob dieses Pattern bereits existiert
+                if self._is_duplicate(symbol, pattern.timeframe.value, pattern.pattern_type.value, pattern_ts):
+                    continue
+
+                # Hole OHLC-Daten mit Kontext für Re-Evaluation
+                ohlc_context = await self._fetch_ohlc_context(
+                    symbol=symbol,
+                    timeframe=pattern.timeframe.value,
+                    pattern_timestamp=pattern_ts,
+                    pattern_type=pattern.pattern_type.value,
+                    context_before=5,
+                    context_after=5
+                )
+
+                unique_key = f"{symbol}_{pattern.timeframe.value}_{pattern.pattern_type.value}_{pattern_ts}"
+                entry = PatternHistoryEntry(
+                    id=unique_key,
+                    timestamp=pattern_ts,
+                    detected_at=scan_time.isoformat(),
+                    symbol=symbol,
+                    pattern_type=pattern.pattern_type.value,
+                    category=pattern.category.value,
+                    direction=pattern.direction.value,
+                    strength=pattern.strength.value,
+                    confidence=pattern.confidence,
+                    timeframe=pattern.timeframe.value,
+                    price_at_detection=pattern.price_at_detection,
+                    description=pattern.description,
+                    trading_implication=pattern.trading_implication,
+                    ohlc_context=ohlc_context,
+                )
+                self._history.append(entry)
+                new_patterns += 1
+
+            # Speichern wenn neue Patterns gefunden
+            if new_patterns > 0:
+                self._cleanup_old_entries()
+                self._save_history()
+
+                # Queue for auto-validation if enabled
+                try:
+                    from .auto_optimization_service import auto_optimization_service
+                    new_pattern_dicts = [e.to_dict() for e in self._history[-new_patterns:]]
+                    await auto_optimization_service.queue_patterns_for_validation(new_pattern_dicts)
+                except Exception as e:
+                    logger.debug(f"Auto-optimization not available: {e}")
+
+            return {
+                "symbol": symbol,
+                "patterns_found": patterns_found,
+                "new_patterns": new_patterns,
+                "timeframes_scanned": [tf.value for tf in available_timeframes]
+            }
+
+        except Exception as e:
+            logger.warning(f"Error scanning {symbol}: {e}")
+            return {
+                "symbol": symbol,
+                "patterns_found": 0,
+                "new_patterns": 0,
+                "error": str(e)
+            }
+
     async def _scan_loop(self):
         """Hintergrund-Scan-Loop."""
         while self._running:
