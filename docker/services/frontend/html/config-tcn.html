@@ -939,6 +939,292 @@
             color: #888;
             text-align: center;
         }
+
+        /* Pattern Detail Modal */
+        .pattern-detail-modal .modal {
+            max-width: 900px;
+            width: 95%;
+        }
+
+        .pattern-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .pattern-detail-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .pattern-detail-badges {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .pattern-detail-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 700px) {
+            .pattern-detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pattern-detail-svg-container {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pattern-detail-svg-container svg {
+            width: 100%;
+            max-width: 250px;
+            height: 150px;
+        }
+
+        .pattern-detail-description {
+            color: #ccc;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        .pattern-detail-section {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .pattern-detail-section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64c8ff;
+            margin-bottom: 1rem;
+        }
+
+        /* Komponenten-Karten */
+        .pattern-components {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .pattern-component-card {
+            flex: 1;
+            min-width: 140px;
+            background: rgba(100, 200, 255, 0.08);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .pattern-component-number {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64c8ff;
+            margin-bottom: 0.25rem;
+        }
+
+        .pattern-component-name {
+            font-weight: 600;
+            color: #e8e8e8;
+            margin-bottom: 0.25rem;
+        }
+
+        .pattern-component-desc {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        /* Trading Grid */
+        .pattern-trading-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 500px) {
+            .pattern-trading-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pattern-trading-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .pattern-trading-card.entry {
+            border-left: 3px solid #64c8ff;
+        }
+
+        .pattern-trading-card.target {
+            border-left: 3px solid #81c784;
+        }
+
+        .pattern-trading-card.stoploss {
+            border-left: 3px solid #ef5350;
+        }
+
+        .pattern-trading-card.invalidation {
+            border-left: 3px solid #ffb74d;
+        }
+
+        .pattern-trading-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+
+        .pattern-trading-value {
+            color: #e8e8e8;
+            font-size: 0.9rem;
+        }
+
+        /* Quick Facts Grid */
+        .pattern-facts-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .pattern-facts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .pattern-fact-item {
+            text-align: center;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .pattern-fact-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+
+        .pattern-fact-value {
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .pattern-fact-value.bullish { color: #81c784; }
+        .pattern-fact-value.bearish { color: #ef5350; }
+
+        /* Bedeutung Liste */
+        .pattern-meaning-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .pattern-meaning-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        .pattern-meaning-list li::before {
+            content: "•";
+            color: #64c8ff;
+            font-weight: bold;
+        }
+
+        /* Related Patterns */
+        .related-patterns {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .related-pattern-chip {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .related-pattern-chip:hover {
+            background: rgba(100, 200, 255, 0.2);
+            border-color: rgba(100, 200, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .related-pattern-name {
+            font-weight: 500;
+            color: #e8e8e8;
+            font-size: 0.85rem;
+        }
+
+        .related-pattern-relation {
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 0.25rem;
+        }
+
+        /* Zuverlässigkeits-Sterne */
+        .reliability-stars {
+            color: #ffc107;
+            letter-spacing: 2px;
+        }
+
+        /* Neckline Info */
+        .pattern-neckline-info {
+            color: #ffc107;
+            font-size: 0.85rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        /* Pattern Overview Card Clickable */
+        .pattern-overview-card {
+            cursor: pointer;
+        }
+
+        .pattern-overview-card:hover {
+            border-color: rgba(100, 200, 255, 0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(100, 200, 255, 0.15);
+        }
     </style>
 </head>
 <body>
@@ -1657,6 +1943,649 @@
         const API_BASE = '/tcn/api/v1';
         const TRAIN_API_BASE = '/tcn-train/api/v1';
         let trainingInterval = null;
+
+        // =============================================================================
+        // Pattern Detail Data (basierend auf docs/tcn_patterns/)
+        // =============================================================================
+        let currentPatternDetailKey = null;
+
+        const patternDetailData = {
+            head_and_shoulders: {
+                name: "Head & Shoulders",
+                direction: "bearish",
+                category: "reversal",
+                shortDescription: "Das Head & Shoulders Pattern besteht aus drei aufeinanderfolgenden Gipfeln, wobei der mittlere Gipfel (Kopf) höher ist als die beiden äußeren Gipfel (Schultern). Die Formation wird durch eine Trendlinie verbunden, die die Tiefpunkte zwischen den Gipfeln markiert.",
+                components: [
+                    { number: "1", name: "Erste Schulter", desc: "Lokales Maximum nach starkem Anstieg" },
+                    { number: "2", name: "Kopf (Head)", desc: "Höchster Punkt, überwindet Schulter 1" },
+                    { number: "3", name: "Zweite Schulter", desc: "Drittes Hoch, niedriger als Kopf" }
+                ],
+                neckline: "Die Neckline verbindet die beiden Tiefpunkte zwischen den Schultern und dem Kopf. Sie dient als kritische Unterstützungslinie.",
+                meaning: [
+                    "Eines der zuverlässigsten Umkehrmuster in der technischen Analyse",
+                    "Signalisiert starken Übergang von Kaufdruck zu Verkaufsdruck",
+                    "Sinkende Hochpunkte deuten auf Abschwächen des Aufwärtstrends hin"
+                ],
+                entry: "Bruch unter die Neckline (Bestätigung des Musters)",
+                target: "Kopfhöhe von Neckline subtrahiert",
+                stopLoss: "Oberhalb des Kopfmaximums",
+                invalidation: "Kurs kehrt schnell über die Neckline zurück",
+                patternType: "Bearische Umkehr",
+                reliability: "⭐⭐⭐⭐⭐",
+                reliabilityText: "Sehr Hoch",
+                strength: "Sehr stark",
+                context: "Nach Aufwärtstrend",
+                relatedPatterns: [
+                    { key: "inverse_head_and_shoulders", name: "Inverse H&S", relation: "Gegenstück" },
+                    { key: "double_top", name: "Double Top", relation: "Ähnlich" },
+                    { key: "triple_top", name: "Triple Top", relation: "Stärker" }
+                ]
+            },
+            inverse_head_and_shoulders: {
+                name: "Inverse Head & Shoulders",
+                direction: "bullish",
+                category: "reversal",
+                shortDescription: "Das Inverse Head & Shoulders Pattern ist das bullische Gegenstück zum klassischen Head & Shoulders. Es besteht aus drei aufeinanderfolgenden Tiefpunkten, wobei der mittlere Tiefpunkt (Kopf) tiefer liegt als die beiden äußeren (Schultern).",
+                components: [
+                    { number: "1", name: "Erste Schulter", desc: "Lokales Minimum nach Abwärtsbewegung" },
+                    { number: "2", name: "Kopf (Head)", desc: "Tiefster Punkt des Musters" },
+                    { number: "3", name: "Zweite Schulter", desc: "Drittes Tief, höher als Kopf" }
+                ],
+                neckline: "Die Neckline verbindet die Hochpunkte zwischen den Schultern. Der Bruch darüber aktiviert das Muster.",
+                meaning: [
+                    "Signalisiert das Ende eines Abwärtstrends",
+                    "Steigende Tiefpunkte zeigen zunehmende Kaufkraft",
+                    "Sehr zuverlässiges bullisches Umkehrsignal"
+                ],
+                entry: "Bruch über die Neckline mit erhöhtem Volumen",
+                target: "Kopftiefe von Neckline nach oben addiert",
+                stopLoss: "Unterhalb des Kopfminimums",
+                invalidation: "Kurs fällt unter die Neckline zurück",
+                patternType: "Bullische Umkehr",
+                reliability: "⭐⭐⭐⭐⭐",
+                reliabilityText: "Sehr Hoch",
+                strength: "Sehr stark",
+                context: "Nach Abwärtstrend",
+                relatedPatterns: [
+                    { key: "head_and_shoulders", name: "Head & Shoulders", relation: "Gegenstück" },
+                    { key: "double_bottom", name: "Double Bottom", relation: "Ähnlich" },
+                    { key: "triple_bottom", name: "Triple Bottom", relation: "Stärker" }
+                ]
+            },
+            double_top: {
+                name: "Double Top",
+                direction: "bearish",
+                category: "reversal",
+                shortDescription: "Das Double Top Pattern besteht aus zwei aufeinanderfolgenden Hochpunkten auf nahezu gleichem Niveau mit einem Rückgang dazwischen. Die Formation sieht aus wie ein großes \"M\" und signalisiert den Widerstand des Marktes gegen weitere Anstiege.",
+                components: [
+                    { number: "1", name: "Erste Spitze", desc: "Hochpunkt nach Aufwärtsbewegung" },
+                    { number: "↓", name: "Rückgang", desc: "Pullback zur Neckline" },
+                    { number: "2", name: "Zweite Spitze", desc: "Scheitert am ersten Niveau" }
+                ],
+                neckline: "Die Neckline ist das Unterstützungsniveau zwischen den beiden Spitzen. Ein Bruch darunter aktiviert das Muster.",
+                meaning: [
+                    "Käufer haben zweimal versucht, den Preis zu treiben, aber sind gescheitert",
+                    "Zeigt psychologisches Widerstandsniveau",
+                    "Kontrolle geht von Käufern zu Verkäufern über"
+                ],
+                entry: "Bruch unter die Neckline",
+                target: "Muster-Höhe von Neckline subtrahiert",
+                stopLoss: "Oberhalb der Hochpunkte",
+                invalidation: "Kurs bricht über beide Hochpunkte",
+                patternType: "Bearische Umkehr",
+                reliability: "⭐⭐⭐⭐",
+                reliabilityText: "Hoch",
+                strength: "Stark",
+                context: "Nach Aufwärtstrend",
+                relatedPatterns: [
+                    { key: "double_bottom", name: "Double Bottom", relation: "Gegenstück" },
+                    { key: "triple_top", name: "Triple Top", relation: "Stärker" },
+                    { key: "head_and_shoulders", name: "Head & Shoulders", relation: "Verwandt" }
+                ]
+            },
+            double_bottom: {
+                name: "Double Bottom",
+                direction: "bullish",
+                category: "reversal",
+                shortDescription: "Das Double Bottom Pattern besteht aus zwei aufeinanderfolgenden Tiefpunkten auf nahezu gleichem Niveau mit einem Anstieg dazwischen. Die Formation sieht aus wie ein \"W\" und signalisiert starke Unterstützung.",
+                components: [
+                    { number: "1", name: "Erstes Tief", desc: "Tiefpunkt nach Abwärtsbewegung" },
+                    { number: "↑", name: "Erholung", desc: "Anstieg zur Neckline" },
+                    { number: "2", name: "Zweites Tief", desc: "Test der Unterstützung" }
+                ],
+                neckline: "Die Neckline ist das Widerstandsniveau zwischen den beiden Tiefs. Ein Bruch darüber aktiviert das Muster.",
+                meaning: [
+                    "Verkäufer haben zweimal versucht, den Preis zu drücken, aber sind gescheitert",
+                    "Zeigt starkes Unterstützungsniveau",
+                    "Kontrolle geht von Verkäufern zu Käufern über"
+                ],
+                entry: "Bruch über die Neckline",
+                target: "Muster-Höhe von Neckline addiert",
+                stopLoss: "Unterhalb der Tiefpunkte",
+                invalidation: "Kurs bricht unter beide Tiefpunkte",
+                patternType: "Bullische Umkehr",
+                reliability: "⭐⭐⭐⭐",
+                reliabilityText: "Hoch",
+                strength: "Stark",
+                context: "Nach Abwärtstrend",
+                relatedPatterns: [
+                    { key: "double_top", name: "Double Top", relation: "Gegenstück" },
+                    { key: "triple_bottom", name: "Triple Bottom", relation: "Stärker" },
+                    { key: "inverse_head_and_shoulders", name: "Inverse H&S", relation: "Verwandt" }
+                ]
+            },
+            triple_top: {
+                name: "Triple Top",
+                direction: "bearish",
+                category: "reversal",
+                shortDescription: "Das Triple Top Pattern besteht aus drei aufeinanderfolgenden Hochpunkten auf nahezu gleichem Niveau. Es ist eine verstärkte Version des Double Top und signalisiert einen noch stärkeren Widerstand.",
+                components: [
+                    { number: "1", name: "Erste Spitze", desc: "Erstes Hoch nach Aufwärtstrend" },
+                    { number: "2", name: "Zweite Spitze", desc: "Zweiter Test des Widerstands" },
+                    { number: "3", name: "Dritte Spitze", desc: "Dritter gescheiterter Versuch" }
+                ],
+                neckline: "Die Neckline verbindet die Tiefpunkte zwischen den drei Spitzen und dient als kritische Unterstützung.",
+                meaning: [
+                    "Dreifacher Widerstand ist sehr signifikant",
+                    "Käufer haben drei Mal versagt - starkes Verkaufssignal",
+                    "Seltener als Double Top, aber zuverlässiger"
+                ],
+                entry: "Bruch unter die Neckline mit Volumenbestätigung",
+                target: "Höhe des Musters von Neckline subtrahiert",
+                stopLoss: "Oberhalb der Hochpunkte",
+                invalidation: "Kurs bricht über die drei Hochpunkte",
+                patternType: "Bearische Umkehr",
+                reliability: "⭐⭐⭐⭐⭐",
+                reliabilityText: "Sehr Hoch (Selten)",
+                strength: "Sehr stark",
+                context: "Nach längerem Aufwärtstrend",
+                relatedPatterns: [
+                    { key: "triple_bottom", name: "Triple Bottom", relation: "Gegenstück" },
+                    { key: "double_top", name: "Double Top", relation: "Schwächer" },
+                    { key: "head_and_shoulders", name: "Head & Shoulders", relation: "Verwandt" }
+                ]
+            },
+            triple_bottom: {
+                name: "Triple Bottom",
+                direction: "bullish",
+                category: "reversal",
+                shortDescription: "Das Triple Bottom Pattern besteht aus drei aufeinanderfolgenden Tiefpunkten auf nahezu gleichem Niveau. Es ist eine verstärkte Version des Double Bottom und signalisiert eine noch stärkere Unterstützung.",
+                components: [
+                    { number: "1", name: "Erstes Tief", desc: "Erstes Tief nach Abwärtstrend" },
+                    { number: "2", name: "Zweites Tief", desc: "Zweiter Test der Unterstützung" },
+                    { number: "3", name: "Drittes Tief", desc: "Dritter gescheiterter Durchbruch" }
+                ],
+                neckline: "Die Neckline verbindet die Hochpunkte zwischen den drei Tiefs und dient als Widerstand.",
+                meaning: [
+                    "Dreifache Unterstützung ist sehr signifikant",
+                    "Verkäufer haben drei Mal versagt - starkes Kaufsignal",
+                    "Seltener als Double Bottom, aber zuverlässiger"
+                ],
+                entry: "Bruch über die Neckline mit Volumenbestätigung",
+                target: "Höhe des Musters von Neckline addiert",
+                stopLoss: "Unterhalb der Tiefpunkte",
+                invalidation: "Kurs bricht unter die drei Tiefpunkte",
+                patternType: "Bullische Umkehr",
+                reliability: "⭐⭐⭐⭐⭐",
+                reliabilityText: "Sehr Hoch (Selten)",
+                strength: "Sehr stark",
+                context: "Nach längerem Abwärtstrend",
+                relatedPatterns: [
+                    { key: "triple_top", name: "Triple Top", relation: "Gegenstück" },
+                    { key: "double_bottom", name: "Double Bottom", relation: "Schwächer" },
+                    { key: "inverse_head_and_shoulders", name: "Inverse H&S", relation: "Verwandt" }
+                ]
+            },
+            ascending_triangle: {
+                name: "Ascending Triangle",
+                direction: "bullish",
+                category: "continuation",
+                shortDescription: "Das Ascending Triangle ist eine bullische Fortsetzungsformation mit einer horizontalen Widerstands-Linie (Oberseite) und einer steigenden Trendlinie (Unterseite). Der Kurs bewegt sich in einem dreieckigen Bereich, wobei jedes Tief höher ist als das vorherige.",
+                components: [
+                    { number: "1", name: "Horiz. Widerstand", desc: "Mehrere Hochs auf gleichem Niveau" },
+                    { number: "2", name: "Steigende Linie", desc: "Höhere Tiefpunkte" },
+                    { number: "3", name: "Ausbruch", desc: "Bruch über den Widerstand" }
+                ],
+                neckline: "Die horizontale Widerstandslinie wird durch mehrere Hochpunkte auf nahezu gleichem Niveau gebildet.",
+                meaning: [
+                    "Zeigt zunehmendes Kaufinteresse (höhere Tiefs)",
+                    "Käufer werden stärker, während Verkäufer gleich bleiben",
+                    "Volatilität nimmt ab, Spannung baut sich auf"
+                ],
+                entry: "Bruch über die Widerstandslinie mit erhöhtem Volumen",
+                target: "Höhe des Dreiecks vom Ausbruchspunkt nach oben",
+                stopLoss: "Unter der steigenden Trendlinie",
+                invalidation: "Kurs bricht unter die Trendlinie",
+                patternType: "Bullische Fortsetzung",
+                reliability: "⭐⭐⭐⭐",
+                reliabilityText: "Hoch",
+                strength: "Stark",
+                context: "Aufwärtstrend",
+                relatedPatterns: [
+                    { key: "descending_triangle", name: "Descending Triangle", relation: "Gegenstück" },
+                    { key: "symmetrical_triangle", name: "Symm. Triangle", relation: "Neutral" },
+                    { key: "bull_flag", name: "Bull Flag", relation: "Schneller" }
+                ]
+            },
+            descending_triangle: {
+                name: "Descending Triangle",
+                direction: "bearish",
+                category: "continuation",
+                shortDescription: "Das Descending Triangle Pattern ist eine bärische Fortsetzungsformation mit einer horizontalen Unterstützungs-Linie (Unterseite) und einer fallenden Trendlinie (Oberseite). Der Kurs bewegt sich in einem dreieckigen Bereich, wobei jeder Anstieg niedriger ist als der vorherige.",
+                components: [
+                    { number: "1", name: "Horiz. Support", desc: "Mehrere Tiefs auf gleichem Niveau" },
+                    { number: "2", name: "Fallende Linie", desc: "Niedrigere Hochpunkte" },
+                    { number: "3", name: "Ausbruch", desc: "Bruch unter die Unterstützung" }
+                ],
+                neckline: "Die horizontale Unterstützungslinie wird durch mehrere Tiefpunkte auf nahezu gleichem Niveau gebildet.",
+                meaning: [
+                    "Zeigt zunehmendes Verkaufsinteresse (niedrigere Hochs)",
+                    "Verkäufer werden stärker, während Käufer schwächer werden",
+                    "Der dreieckige Quetsch zeigt abnehmende Volatilität"
+                ],
+                entry: "Bruch unter die Unterstützungslinie mit erhöhtem Volumen",
+                target: "Höhe des Dreiecks vom Ausbruchspunkt nach unten",
+                stopLoss: "Über der fallenden Trendlinie",
+                invalidation: "Kurs bricht über die Trendlinie",
+                patternType: "Bärische Fortsetzung",
+                reliability: "⭐⭐⭐⭐",
+                reliabilityText: "Hoch",
+                strength: "Stark",
+                context: "Abwärtstrend",
+                relatedPatterns: [
+                    { key: "ascending_triangle", name: "Ascending Triangle", relation: "Gegenstück" },
+                    { key: "symmetrical_triangle", name: "Symm. Triangle", relation: "Neutral" },
+                    { key: "bear_flag", name: "Bear Flag", relation: "Schneller" }
+                ]
+            },
+            symmetrical_triangle: {
+                name: "Symmetrical Triangle",
+                direction: "neutral",
+                category: "continuation",
+                shortDescription: "Das Symmetrical Triangle ist eine neutrale Fortsetzungsformation mit konvergierenden Trendlinien - sowohl fallenden Hochs als auch steigenden Tiefs. Der Ausbruch kann in beide Richtungen erfolgen, typischerweise in Richtung des vorherigen Trends.",
+                components: [
+                    { number: "1", name: "Fallende Hochs", desc: "Obere Trendlinie fällt" },
+                    { number: "2", name: "Steigende Tiefs", desc: "Untere Trendlinie steigt" },
+                    { number: "3", name: "Apex", desc: "Konvergenzpunkt der Linien" }
+                ],
+                neckline: "Beide Trendlinien konvergieren zum Apex. Der Ausbruch erfolgt typischerweise vor Erreichen des Apex.",
+                meaning: [
+                    "Zeigt Unentschlossenheit zwischen Käufern und Verkäufern",
+                    "Volatilität nimmt ab, bis ein Ausbruch erfolgt",
+                    "Fortsetzung des vorherigen Trends ist wahrscheinlicher"
+                ],
+                entry: "Bruch über/unter die Trendlinie mit Volumenbestätigung",
+                target: "Breitester Teil des Dreiecks vom Ausbruchspunkt",
+                stopLoss: "Auf der gegenüberliegenden Seite des Dreiecks",
+                invalidation: "Falscher Ausbruch mit schneller Rückkehr",
+                patternType: "Neutrale Fortsetzung",
+                reliability: "⭐⭐⭐",
+                reliabilityText: "Mittel",
+                strength: "Mittel",
+                context: "Trend-Konsolidierung",
+                relatedPatterns: [
+                    { key: "ascending_triangle", name: "Ascending Triangle", relation: "Bullisch" },
+                    { key: "descending_triangle", name: "Descending Triangle", relation: "Bearisch" },
+                    { key: "rectangle", name: "Rectangle", relation: "Ähnlich" }
+                ]
+            },
+            bull_flag: {
+                name: "Bull Flag",
+                direction: "bullish",
+                category: "continuation",
+                shortDescription: "Das Bull Flag Pattern ist eine bullische Fortsetzungsformation bestehend aus zwei Teilen: dem \"Flaggenmast\" (starker Anstieg) und der \"Flagge\" (Konsolidierung mit leichtem Rückgang). Die Formation signalisiert eine Unterbrechung des Aufwärtstrends vor dem Fortgang.",
+                components: [
+                    { number: "1", name: "Flaggenmast", desc: "Steiler, schneller Anstieg" },
+                    { number: "2", name: "Flagge", desc: "Konsolidierung (25-50% Rückgang)" },
+                    { number: "3", name: "Ausbruch", desc: "Fortsetzung nach oben" }
+                ],
+                neckline: "Die Flagge wird von zwei parallelen, leicht nach unten geneigten Trendlinien gebildet.",
+                meaning: [
+                    "Signalisiert Verschnaufpause in starkem Aufwärtstrend",
+                    "Käufer sind nur vorübergehend schwächer",
+                    "Trend bleibt intakt, Volumen sinkt während Flagge"
+                ],
+                entry: "Bruch über die obere Grenze der Flagge",
+                target: "Länge des Mastes vom Ausbruchspunkt nach oben",
+                stopLoss: "Unter der Flagge oder unter dem Flaggen-Tief",
+                invalidation: "Kurs bricht unter die Flagge",
+                patternType: "Bullische Fortsetzung",
+                reliability: "⭐⭐⭐⭐",
+                reliabilityText: "Hoch",
+                strength: "Stark",
+                context: "Starker Aufwärtstrend",
+                relatedPatterns: [
+                    { key: "bear_flag", name: "Bear Flag", relation: "Gegenstück" },
+                    { key: "ascending_triangle", name: "Ascending Triangle", relation: "Verwandt" },
+                    { key: "cup_and_handle", name: "Cup & Handle", relation: "Längerfristig" }
+                ]
+            },
+            bear_flag: {
+                name: "Bear Flag",
+                direction: "bearish",
+                category: "continuation",
+                shortDescription: "Das Bear Flag Pattern ist eine bärische Fortsetzungsformation bestehend aus zwei Teilen: dem \"Flaggenmast\" (starker Abfall) und der \"Flagge\" (Konsolidierung mit leichtem Anstieg). Die Formation signalisiert eine Unterbrechung des Abwärtstrends vor dem Fortgang.",
+                components: [
+                    { number: "1", name: "Flaggenmast", desc: "Steiler, schneller Abfall" },
+                    { number: "2", name: "Flagge", desc: "Konsolidierung (25-50% Erholung)" },
+                    { number: "3", name: "Ausbruch", desc: "Fortsetzung nach unten" }
+                ],
+                neckline: "Die Flagge wird von zwei parallelen, leicht nach oben geneigten Trendlinien gebildet.",
+                meaning: [
+                    "Signalisiert Verschnaufpause in starkem Abwärtstrend",
+                    "Verkäufer sind nur vorübergehend schwächer",
+                    "Trend bleibt intakt, Volumen sinkt während Flagge"
+                ],
+                entry: "Bruch unter die untere Grenze der Flagge",
+                target: "Länge des Mastes vom Ausbruchspunkt nach unten",
+                stopLoss: "Über der Flagge oder über dem Flaggen-Hoch",
+                invalidation: "Kurs bricht über die Flagge",
+                patternType: "Bärische Fortsetzung",
+                reliability: "⭐⭐⭐⭐",
+                reliabilityText: "Hoch",
+                strength: "Stark",
+                context: "Starker Abwärtstrend",
+                relatedPatterns: [
+                    { key: "bull_flag", name: "Bull Flag", relation: "Gegenstück" },
+                    { key: "descending_triangle", name: "Descending Triangle", relation: "Verwandt" },
+                    { key: "head_and_shoulders", name: "Head & Shoulders", relation: "Umkehr" }
+                ]
+            },
+            rising_wedge: {
+                name: "Rising Wedge",
+                direction: "bearish",
+                category: "reversal",
+                shortDescription: "Das Rising Wedge ist eine bärische Umkehrformation mit zwei aufwärts geneigten, konvergierenden Trendlinien. Der Kurs macht höhere Hochs und höhere Tiefs, aber die Dynamik lässt nach.",
+                components: [
+                    { number: "1", name: "Steigende Hochs", desc: "Obere Linie steigt" },
+                    { number: "2", name: "Steigende Tiefs", desc: "Untere Linie steigt steiler" },
+                    { number: "3", name: "Konvergenz", desc: "Linien nähern sich an" }
+                ],
+                neckline: "Beide Trendlinien steigen, aber die untere Linie steigt schneller, was zur Konvergenz führt.",
+                meaning: [
+                    "Zeigt nachlassende Aufwärtsdynamik trotz höherer Kurse",
+                    "Erschöpfungsmuster - Käufer verlieren Kraft",
+                    "Typisch am Ende eines Aufwärtstrends"
+                ],
+                entry: "Bruch unter die untere Trendlinie",
+                target: "Breitester Teil des Wedge nach unten",
+                stopLoss: "Über dem letzten Hochpunkt",
+                invalidation: "Kurs bricht über die obere Linie mit Volumen",
+                patternType: "Bearische Umkehr",
+                reliability: "⭐⭐⭐⭐",
+                reliabilityText: "Hoch",
+                strength: "Stark",
+                context: "Ende eines Aufwärtstrends",
+                relatedPatterns: [
+                    { key: "falling_wedge", name: "Falling Wedge", relation: "Gegenstück" },
+                    { key: "ascending_triangle", name: "Ascending Triangle", relation: "Unterschied" },
+                    { key: "head_and_shoulders", name: "Head & Shoulders", relation: "Ähnlich" }
+                ]
+            },
+            falling_wedge: {
+                name: "Falling Wedge",
+                direction: "bullish",
+                category: "reversal",
+                shortDescription: "Das Falling Wedge ist eine bullische Umkehrformation mit zwei abwärts geneigten, konvergierenden Trendlinien. Der Kurs macht tiefere Tiefs und tiefere Hochs, aber die Dynamik lässt nach.",
+                components: [
+                    { number: "1", name: "Fallende Tiefs", desc: "Untere Linie fällt" },
+                    { number: "2", name: "Fallende Hochs", desc: "Obere Linie fällt steiler" },
+                    { number: "3", name: "Konvergenz", desc: "Linien nähern sich an" }
+                ],
+                neckline: "Beide Trendlinien fallen, aber die obere Linie fällt schneller, was zur Konvergenz führt.",
+                meaning: [
+                    "Zeigt nachlassende Abwärtsdynamik trotz tieferer Kurse",
+                    "Erschöpfungsmuster - Verkäufer verlieren Kraft",
+                    "Typisch am Ende eines Abwärtstrends"
+                ],
+                entry: "Bruch über die obere Trendlinie",
+                target: "Breitester Teil des Wedge nach oben",
+                stopLoss: "Unter dem letzten Tiefpunkt",
+                invalidation: "Kurs bricht unter die untere Linie mit Volumen",
+                patternType: "Bullische Umkehr",
+                reliability: "⭐⭐⭐⭐",
+                reliabilityText: "Hoch",
+                strength: "Stark",
+                context: "Ende eines Abwärtstrends",
+                relatedPatterns: [
+                    { key: "rising_wedge", name: "Rising Wedge", relation: "Gegenstück" },
+                    { key: "descending_triangle", name: "Descending Triangle", relation: "Unterschied" },
+                    { key: "inverse_head_and_shoulders", name: "Inverse H&S", relation: "Ähnlich" }
+                ]
+            },
+            cup_and_handle: {
+                name: "Cup & Handle",
+                direction: "bullish",
+                category: "continuation",
+                shortDescription: "Das Cup & Handle Pattern ist eine bullische Fortsetzungsformation mit einer U-förmigen \"Tasse\" (Cup) gefolgt von einer kleineren Konsolidierungs-Phase genannt \"Henkel\" (Handle). Die Formation tritt nach einem Aufwärtstrend auf und signalisiert eine Pause vor der Fortsetzung.",
+                components: [
+                    { number: "1", name: "Tasse (Cup)", desc: "U-förmiges Muster über Wochen/Monate" },
+                    { number: "2", name: "Henkel (Handle)", desc: "Kleine Konsolidierung (max 50% der Tasse)" },
+                    { number: "3", name: "Ausbruch", desc: "Bruch über den Henkel" }
+                ],
+                neckline: "Das Widerstandsniveau am oberen Rand der Tasse wird durch den ursprünglichen Hochpunkt definiert.",
+                meaning: [
+                    "Verkäufer hatten Gelegenheit zum Verkauf (Tasse), aber Trend setzte sich fort",
+                    "Der Henkel testet das Sentiment ein weiteres Mal",
+                    "Sehr zuverlässig, da mehrere Umkehrversuche gescheitert sind"
+                ],
+                entry: "Bruch über das Hochpunkt des Henkels",
+                target: "Tiefe der Tasse vom Ausbruchspunkt nach oben",
+                stopLoss: "Unter der Henkel-Linie oder unter der Tassen-Unterstützung",
+                invalidation: "Kurs fällt unter die Tassen-Unterstützung",
+                patternType: "Bullische Fortsetzung",
+                reliability: "⭐⭐⭐⭐⭐",
+                reliabilityText: "Sehr Hoch",
+                strength: "Sehr stark",
+                context: "Aufwärtstrend (Wochen/Monate)",
+                relatedPatterns: [
+                    { key: "rounding_bottom", name: "Rounding Bottom", relation: "Ähnlich" },
+                    { key: "ascending_triangle", name: "Ascending Triangle", relation: "Kürzer" },
+                    { key: "bull_flag", name: "Bull Flag", relation: "Schneller" }
+                ]
+            },
+            rectangle: {
+                name: "Rectangle",
+                direction: "neutral",
+                category: "continuation",
+                shortDescription: "Das Rectangle Pattern ist eine neutrale Konsolidierungsformation mit horizontalen Unterstützungs- und Widerstandslinien. Der Kurs pendelt zwischen diesen Linien, bis ein Ausbruch in Richtung des vorherigen Trends erfolgt.",
+                components: [
+                    { number: "1", name: "Widerstand", desc: "Horizontale obere Grenze" },
+                    { number: "2", name: "Unterstützung", desc: "Horizontale untere Grenze" },
+                    { number: "3", name: "Trading Range", desc: "Seitwärtsbewegung dazwischen" }
+                ],
+                neckline: "Beide Linien sind horizontal und definieren die Trading Range. Der Ausbruch in Trendrichtung ist wahrscheinlicher.",
+                meaning: [
+                    "Zeigt eine Pause im Trend - Angebot und Nachfrage im Gleichgewicht",
+                    "Akkumulationsphase (bullisch) oder Distributionsphase (bearisch)",
+                    "Je länger die Konsolidierung, desto stärker der Ausbruch"
+                ],
+                entry: "Bruch über/unter die Range-Grenze mit Volumen",
+                target: "Höhe der Range vom Ausbruchspunkt",
+                stopLoss: "Auf der gegenüberliegenden Seite der Range",
+                invalidation: "Falscher Ausbruch mit Rückkehr in die Range",
+                patternType: "Neutrale Fortsetzung",
+                reliability: "⭐⭐⭐",
+                reliabilityText: "Mittel",
+                strength: "Mittel",
+                context: "Trend-Konsolidierung",
+                relatedPatterns: [
+                    { key: "symmetrical_triangle", name: "Symm. Triangle", relation: "Ähnlich" },
+                    { key: "bull_flag", name: "Bull Flag", relation: "Bullisch" },
+                    { key: "bear_flag", name: "Bear Flag", relation: "Bearisch" }
+                ]
+            },
+            rounding_bottom: {
+                name: "Rounding Bottom",
+                direction: "bullish",
+                category: "reversal",
+                shortDescription: "Das Rounding Bottom (Saucer Bottom) ist eine bullische Umkehrformation mit einer langsamen, U-förmigen Kursbewegung. Der Übergang von Abwärts- zu Aufwärtstrend erfolgt graduell über einen längeren Zeitraum.",
+                components: [
+                    { number: "1", name: "Abstieg", desc: "Langsamer, gradueller Rückgang" },
+                    { number: "2", name: "Boden", desc: "Flacher, gerundeter Tiefpunkt" },
+                    { number: "3", name: "Anstieg", desc: "Langsamer, gradueller Anstieg" }
+                ],
+                neckline: "Das Widerstandsniveau wird durch den Startpunkt der Formation definiert. Ein Bruch darüber bestätigt das Muster.",
+                meaning: [
+                    "Signalisiert langsamen Stimmungswandel von bearisch zu bullisch",
+                    "Institutionelle Akkumulation über längeren Zeitraum",
+                    "Sehr zuverlässig für längerfristige Trendwenden"
+                ],
+                entry: "Bruch über den Widerstand am rechten Rand",
+                target: "Tiefe des Bodens vom Ausbruchspunkt nach oben",
+                stopLoss: "Unter dem tiefsten Punkt des Bodens",
+                invalidation: "Kurs fällt zurück unter den Boden",
+                patternType: "Bullische Umkehr",
+                reliability: "⭐⭐⭐",
+                reliabilityText: "Zuverlässig (Längerfristig)",
+                strength: "Stark",
+                context: "Nach längerem Abwärtstrend",
+                relatedPatterns: [
+                    { key: "cup_and_handle", name: "Cup & Handle", relation: "Mit Henkel" },
+                    { key: "double_bottom", name: "Double Bottom", relation: "Schneller" },
+                    { key: "inverse_head_and_shoulders", name: "Inverse H&S", relation: "Ähnlich" }
+                ]
+            }
+        };
+
+        // =============================================================================
+        // Pattern Detail Modal Functions
+        // =============================================================================
+
+        // Pattern-Key aus Titel ableiten
+        function getPatternKeyFromTitle(title) {
+            const mapping = {
+                'head & shoulders': 'head_and_shoulders',
+                'inv. head & shoulders': 'inverse_head_and_shoulders',
+                'inverse head & shoulders': 'inverse_head_and_shoulders',
+                'double top': 'double_top',
+                'double bottom': 'double_bottom',
+                'triple top': 'triple_top',
+                'triple bottom': 'triple_bottom',
+                'ascending triangle': 'ascending_triangle',
+                'descending triangle': 'descending_triangle',
+                'symmetrical triangle': 'symmetrical_triangle',
+                'bull flag': 'bull_flag',
+                'bear flag': 'bear_flag',
+                'rising wedge': 'rising_wedge',
+                'falling wedge': 'falling_wedge',
+                'cup & handle': 'cup_and_handle',
+                'rectangle': 'rectangle',
+                'rounding bottom': 'rounding_bottom'
+            };
+            return mapping[title.toLowerCase()] || title.toLowerCase().replace(/ /g, '_');
+        }
+
+        // Modal öffnen
+        function showPatternDetail(patternKey) {
+            const data = patternDetailData[patternKey];
+            if (!data) {
+                console.error('Pattern nicht gefunden:', patternKey);
+                showToast('Pattern-Details nicht gefunden', 'error');
+                return;
+            }
+
+            currentPatternDetailKey = patternKey;
+
+            // Title
+            document.getElementById('patternDetailTitle').textContent = data.name;
+
+            // Badges
+            const badgesHtml = `
+                <span class="pattern-overview-badge ${data.direction}">${data.direction === 'bullish' ? 'Bullish' : data.direction === 'bearish' ? 'Bearish' : 'Neutral'}</span>
+                <span class="pattern-overview-badge" style="background: rgba(156, 39, 176, 0.2); color: #ce93d8;">${data.category === 'reversal' ? 'Umkehr' : 'Fortsetzung'}</span>
+            `;
+            document.getElementById('patternDetailBadges').innerHTML = badgesHtml;
+
+            // SVG - größer für Detail-Ansicht
+            const svg = getPatternSvg(patternKey);
+            document.getElementById('patternDetailSvg').innerHTML = svg;
+
+            // Beschreibung
+            document.getElementById('patternDetailDescription').textContent = data.shortDescription;
+
+            // Komponenten
+            const componentsHtml = data.components.map(c => `
+                <div class="pattern-component-card">
+                    <div class="pattern-component-number">${c.number}</div>
+                    <div class="pattern-component-name">${c.name}</div>
+                    <div class="pattern-component-desc">${c.desc}</div>
+                </div>
+            `).join('');
+            document.getElementById('patternDetailComponents').innerHTML = componentsHtml;
+
+            // Neckline/Support Info
+            document.getElementById('patternDetailNeckline').innerHTML = `<strong>ℹ️</strong> ${data.neckline}`;
+
+            // Bedeutung
+            const meaningHtml = data.meaning.map(m => `<li>${m}</li>`).join('');
+            document.getElementById('patternDetailMeaning').innerHTML = meaningHtml;
+
+            // Trading Strategie
+            document.getElementById('patternDetailEntry').textContent = data.entry;
+            document.getElementById('patternDetailTarget').textContent = data.target;
+            document.getElementById('patternDetailStopLoss').textContent = data.stopLoss;
+            document.getElementById('patternDetailInvalidation').textContent = data.invalidation;
+
+            // Quick Facts
+            document.getElementById('patternDetailType').textContent = data.patternType;
+            document.getElementById('patternDetailType').className = `pattern-fact-value ${data.direction}`;
+            document.getElementById('patternDetailReliability').innerHTML = `${data.reliability}<br><span style="font-size: 0.7rem; color: #888;">${data.reliabilityText}</span>`;
+            document.getElementById('patternDetailStrength').textContent = data.strength;
+            document.getElementById('patternDetailContext').textContent = data.context;
+
+            // Related Patterns
+            const relatedHtml = data.relatedPatterns.map(r => `
+                <div class="related-pattern-chip" onclick="showPatternDetail('${r.key}')">
+                    <span class="related-pattern-name">${r.name}</span>
+                    <span class="related-pattern-relation">${r.relation}</span>
+                </div>
+            `).join('');
+            document.getElementById('patternDetailRelated').innerHTML = relatedHtml;
+
+            // Modal anzeigen
+            document.getElementById('patternDetailModal').classList.add('show');
+        }
+
+        // Modal schließen
+        function closePatternDetailModal() {
+            document.getElementById('patternDetailModal').classList.remove('show');
+        }
+
+        // Zu Pattern-Erkennung wechseln
+        function goToPatternDetectionFromDetail() {
+            closePatternDetailModal();
+            // Tab wechseln
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-detection').classList.add('active');
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        }
+
+        // Click-Handler für Pattern-Cards initialisieren
+        function initPatternCardClickHandlers() {
+            document.querySelectorAll('.pattern-overview-card').forEach(card => {
+                const titleElement = card.querySelector('.pattern-overview-title');
+                if (titleElement) {
+                    const title = titleElement.textContent;
+                    const patternKey = getPatternKeyFromTitle(title);
+
+                    card.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showPatternDetail(patternKey);
+                    });
+                }
+            });
+        }
+
+        // Keyboard Navigation für Modal
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('patternDetailModal').classList.contains('show')) {
+                if (e.key === 'Escape') {
+                    closePatternDetailModal();
+                }
+            }
+        });
 
         // Tab Navigation
         function showTab(tabName) {
@@ -2867,6 +3796,9 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Pattern Card Click Handlers for Pattern Detail Modal
+            initPatternCardClickHandlers();
+
             // Load saved pattern filters before loading history
             loadPatternFilters();
 
@@ -4841,6 +5773,128 @@
                 <button class="btn btn-primary" id="modalNextBtn" onclick="navigateTcnPattern(1)" title="Nächstes Pattern (→)" style="padding: 0.5rem 1rem;">
                     Weiter ›
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pattern Detail Modal (Dokumentation) -->
+    <div class="modal-overlay pattern-detail-modal" id="patternDetailModal" onclick="if(event.target===this)closePatternDetailModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span class="modal-title" id="patternDetailTitle">Head & Shoulders</span>
+                    <div class="pattern-detail-badges" id="patternDetailBadges">
+                        <span class="pattern-overview-badge bearish">Bearish</span>
+                        <span class="pattern-overview-badge" style="background: rgba(156, 39, 176, 0.2); color: #ce93d8;">Umkehr</span>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="closePatternDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+
+                <!-- Top Section: SVG + Kurzbeschreibung -->
+                <div class="pattern-detail-grid">
+                    <div class="pattern-detail-svg-container" id="patternDetailSvg">
+                        <!-- SVG wird dynamisch eingefügt -->
+                    </div>
+                    <div>
+                        <h4 style="color: #888; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.5rem;">Kurzbeschreibung</h4>
+                        <p class="pattern-detail-description" id="patternDetailDescription">
+                            <!-- Beschreibung wird dynamisch eingefügt -->
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Aufbau der Formation -->
+                <div class="pattern-detail-section">
+                    <div class="pattern-detail-section-title">
+                        📋 Aufbau der Formation
+                    </div>
+                    <div class="pattern-components" id="patternDetailComponents">
+                        <!-- Komponenten werden dynamisch eingefügt -->
+                    </div>
+                    <div class="pattern-neckline-info" id="patternDetailNeckline">
+                        <!-- Neckline/Support/Resistance Info -->
+                    </div>
+                </div>
+
+                <!-- Bedeutung -->
+                <div class="pattern-detail-section">
+                    <div class="pattern-detail-section-title">
+                        📈 Bedeutung
+                    </div>
+                    <ul class="pattern-meaning-list" id="patternDetailMeaning">
+                        <!-- Bedeutungspunkte werden dynamisch eingefügt -->
+                    </ul>
+                </div>
+
+                <!-- Trading Strategie -->
+                <div class="pattern-detail-section">
+                    <div class="pattern-detail-section-title">
+                        💹 Trading Strategie
+                    </div>
+                    <div class="pattern-trading-grid">
+                        <div class="pattern-trading-card entry">
+                            <div class="pattern-trading-label">▼ Einstieg</div>
+                            <div class="pattern-trading-value" id="patternDetailEntry">-</div>
+                        </div>
+                        <div class="pattern-trading-card target">
+                            <div class="pattern-trading-label">🎯 Preisziel</div>
+                            <div class="pattern-trading-value" id="patternDetailTarget">-</div>
+                        </div>
+                        <div class="pattern-trading-card stoploss">
+                            <div class="pattern-trading-label">🛑 Stop Loss</div>
+                            <div class="pattern-trading-value" id="patternDetailStopLoss">-</div>
+                        </div>
+                        <div class="pattern-trading-card invalidation">
+                            <div class="pattern-trading-label">⚠️ Falscher Alarm</div>
+                            <div class="pattern-trading-value" id="patternDetailInvalidation">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Facts -->
+                <div class="pattern-detail-section">
+                    <div class="pattern-detail-section-title">
+                        📊 Quick Facts
+                    </div>
+                    <div class="pattern-facts-grid">
+                        <div class="pattern-fact-item">
+                            <div class="pattern-fact-label">Pattern-Typ</div>
+                            <div class="pattern-fact-value" id="patternDetailType">-</div>
+                        </div>
+                        <div class="pattern-fact-item">
+                            <div class="pattern-fact-label">Zuverlässigkeit</div>
+                            <div class="pattern-fact-value reliability-stars" id="patternDetailReliability">-</div>
+                        </div>
+                        <div class="pattern-fact-item">
+                            <div class="pattern-fact-label">Stärke</div>
+                            <div class="pattern-fact-value" id="patternDetailStrength">-</div>
+                        </div>
+                        <div class="pattern-fact-item">
+                            <div class="pattern-fact-label">Kontext</div>
+                            <div class="pattern-fact-value" id="patternDetailContext">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Verwandte Patterns -->
+                <div class="pattern-detail-section">
+                    <div class="pattern-detail-section-title">
+                        🔗 Verwandte Patterns
+                    </div>
+                    <div class="related-patterns" id="patternDetailRelated">
+                        <!-- Verwandte Patterns werden dynamisch eingefügt -->
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <button class="btn btn-primary" onclick="goToPatternDetectionFromDetail()">
+                        🔍 In Pattern-Erkennung testen →
+                    </button>
+                </div>
+
             </div>
         </div>
     </div>
