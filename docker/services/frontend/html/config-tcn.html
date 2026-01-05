@@ -4343,35 +4343,95 @@
 
                 console.log(`Fetching OHLC for ${symbol} from ${startDateStr} to ${endDateStr} (pattern at ${timestamp})`);
 
-                const ohlcResponse = await fetch(`/data/api/v1/twelvedata/time_series/${symbol}?interval=${interval}&start_date=${encodeURIComponent(startDateStr)}&end_date=${encodeURIComponent(endDateStr)}&outputsize=100`);
+                let allCandles = [];
+                let dataSource = 'unknown';
 
-                if (!ohlcResponse.ok) {
-                    throw new Error(`OHLC-Daten konnten nicht geladen werden: ${ohlcResponse.status}`);
+                // Try TwelveData first
+                try {
+                    const ohlcResponse = await fetch(`/data/api/v1/twelvedata/time_series/${symbol}?interval=${interval}&start_date=${encodeURIComponent(startDateStr)}&end_date=${encodeURIComponent(endDateStr)}&outputsize=100`);
+
+                    if (ohlcResponse.ok) {
+                        const ohlcData = await ohlcResponse.json();
+
+                        // Check for unsupported symbol or error
+                        if (!ohlcData.unsupported && !ohlcData.error && !ohlcData.detail && ohlcData.status !== 'error') {
+                            const rawCandles = ohlcData.values || ohlcData.candles || ohlcData.data || ohlcData;
+                            if (rawCandles && rawCandles.length > 0) {
+                                allCandles = rawCandles.map(c => ({
+                                    timestamp: c.datetime,
+                                    open: parseFloat(c.open),
+                                    high: parseFloat(c.high),
+                                    low: parseFloat(c.low),
+                                    close: parseFloat(c.close),
+                                    volume: c.volume ? parseFloat(c.volume) : 0
+                                })).reverse();
+                                dataSource = 'TwelveData';
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.log('TwelveData failed, trying EasyInsight fallback...', e.message);
                 }
 
-                const ohlcData = await ohlcResponse.json();
+                // Fallback to EasyInsight if TwelveData failed or returned no data
+                if (allCandles.length === 0) {
+                    console.log(`TwelveData unavailable for ${symbol}, trying EasyInsight...`);
 
-                // Check for error in response
-                if (ohlcData.error || ohlcData.detail || ohlcData.status === 'error') {
-                    throw new Error(ohlcData.error || ohlcData.detail || ohlcData.message || 'Keine Daten verfügbar');
+                    // Map interval to EasyInsight format
+                    const easyInsightIntervalMap = {
+                        '1min': 'm1', '5min': 'm5', '15min': 'm15', '30min': 'm30',
+                        '1h': 'h1', '2h': 'h2', '4h': 'h4',
+                        '1day': 'd1', '1week': 'w1', '1month': 'mn'
+                    };
+                    const eiInterval = easyInsightIntervalMap[interval] || 'h1';
+
+                    try {
+                        const eiResponse = await fetch(`/data/api/v1/easyinsight/ohlcv/${symbol}?interval=${eiInterval}&limit=100`);
+                        if (eiResponse.ok) {
+                            const eiData = await eiResponse.json();
+                            const eiCandles = eiData.data || eiData.values || [];
+
+                            if (eiCandles && eiCandles.length > 0) {
+                                // EasyInsight format has h1_open, h1_high, etc. - extract based on timeframe
+                                const tfPrefix = eiInterval.toLowerCase();
+                                allCandles = eiCandles.map(c => {
+                                    // Try timeframe-specific fields first, then generic
+                                    const open = c[`${tfPrefix}_open`] || c.open || c.h1_open || 0;
+                                    const high = c[`${tfPrefix}_high`] || c.high || c.h1_high || 0;
+                                    const low = c[`${tfPrefix}_low`] || c.low || c.h1_low || 0;
+                                    const close = c[`${tfPrefix}_close`] || c.close || c.h1_close || 0;
+                                    const timestamp = c.import_time || c.datetime || c.timestamp || new Date().toISOString();
+                                    return {
+                                        timestamp: timestamp,
+                                        open: parseFloat(open),
+                                        high: parseFloat(high),
+                                        low: parseFloat(low),
+                                        close: parseFloat(close),
+                                        volume: c.volume || 0
+                                    };
+                                }).filter(c => c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0);
+
+                                // EasyInsight might return newest first, reverse if needed
+                                if (allCandles.length > 1) {
+                                    const first = new Date(allCandles[0].timestamp);
+                                    const last = new Date(allCandles[allCandles.length - 1].timestamp);
+                                    if (first > last) {
+                                        allCandles.reverse();
+                                    }
+                                }
+                                dataSource = 'EasyInsight';
+                            }
+                        }
+                    } catch (e) {
+                        console.error('EasyInsight fallback also failed:', e.message);
+                    }
                 }
 
-                // TwelveData returns data in 'values' array
-                const rawCandles = ohlcData.values || ohlcData.candles || ohlcData.data || ohlcData;
-
-                if (!rawCandles || rawCandles.length === 0) {
-                    throw new Error('Keine Candlestick-Daten verfügbar (Markt geschlossen?)');
+                if (allCandles.length === 0) {
+                    throw new Error('Keine Candlestick-Daten verfügbar (Symbol nicht unterstützt)');
                 }
 
-                // Transform TwelveData format to our standard format and reverse (oldest first)
-                const allCandles = rawCandles.map(c => ({
-                    timestamp: c.datetime,
-                    open: parseFloat(c.open),
-                    high: parseFloat(c.high),
-                    low: parseFloat(c.low),
-                    close: parseFloat(c.close),
-                    volume: c.volume ? parseFloat(c.volume) : 0
-                })).reverse();
+                console.log(`Loaded ${allCandles.length} candles from ${dataSource}`);
 
                 // Find the candle closest to the pattern timestamp
                 let patternIdx = -1;
@@ -5775,28 +5835,42 @@
                 return;
             }
 
-            console.log('renderZoomChart: canvas', width, 'x', height, ', candles:', ohlcData.length);
+            // Get pattern data
+            const patternType = currentTcnPatternData?.patternType || '';
+            const patternPoints = currentTcnPatternData?.patternData?.pattern_points || [];
 
-            // Calculate price range
-            let minPrice = Infinity, maxPrice = -Infinity;
-            ohlcData.forEach(candle => {
-                minPrice = Math.min(minPrice, candle.low);
-                maxPrice = Math.max(maxPrice, candle.high);
-            });
+            console.log('renderZoomChart: canvas', width, 'x', height, ', candles:', ohlcData.length, ', patternType:', patternType, ', points:', patternPoints.length);
 
-            const priceRange = maxPrice - minPrice;
-            const padding = priceRange * 0.1;
-            minPrice -= padding;
-            maxPrice += padding;
+            // Calculate price range - include pattern points for proper scaling
+            const candlePrices = ohlcData.flatMap(c => [c.high, c.low]);
+            const patternPrices = (patternPoints && patternPoints.length > 0)
+                ? patternPoints.map(p => p.price)
+                : [];
+            const allPrices = [...candlePrices, ...patternPrices];
+
+            let minPrice = Math.min(...allPrices);
+            let maxPrice = Math.max(...allPrices);
+            const priceRange = maxPrice - minPrice || 1;
+            const pricePadding = priceRange * 0.1;
+            minPrice -= pricePadding;
+            maxPrice += pricePadding;
 
             // Chart dimensions
-            const chartPadding = { top: 30, right: 80, bottom: 50, left: 20 };
+            const chartPadding = { top: 50, right: 80, bottom: 50, left: 20 };
             const chartWidth = width - chartPadding.left - chartPadding.right;
             const chartHeight = height - chartPadding.top - chartPadding.bottom;
 
             // Candlestick dimensions
             const candleWidth = Math.max(8, Math.min(25, (chartWidth / ohlcData.length) * 0.7));
             const candleSpacing = chartWidth / ohlcData.length;
+
+            // Helper functions for coordinate conversion
+            const priceToY = (price) => {
+                return chartPadding.top + chartHeight - ((price - minPrice) / (maxPrice - minPrice) * chartHeight);
+            };
+            const indexToX = (idx) => {
+                return chartPadding.left + (idx + 0.5) * candleSpacing;
+            };
 
             // Draw grid lines
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
@@ -5816,14 +5890,117 @@
                 ctx.fillText(price.toFixed(price > 100 ? 2 : 5), width - chartPadding.right + 8, y + 4);
             }
 
+            // Draw pattern zone background BEFORE candles (so it's behind)
+            if (patternPoints && patternPoints.length > 0) {
+                // Use same mapping logic as drawPatternOverlay
+                const highPointTypes = ['left_shoulder', 'head', 'right_shoulder', 'first_peak', 'second_peak',
+                    'peak', 'peak1', 'peak2', 'peak3', 'top_1', 'top_2', 'pivot_high',
+                    'resistance_start', 'resistance_end', 'upper_start', 'upper_end',
+                    'pole_start', 'pole_end', 'flag_start', 'flag_end', 'left_rim', 'right_rim', 'handle_start', 'handle_end'];
+                const lowPointTypes = ['first_trough', 'second_trough', 'valley', 'trough1', 'trough2', 'trough3',
+                    'bottom_1', 'bottom_2', 'pivot_low', 'support_start', 'support_end',
+                    'lower_start', 'lower_end', 'cup_bottom', 'neckline_left', 'neckline_right'];
+
+                const isHighPoint = (pointType) => highPointTypes.includes(pointType || '');
+                const isLowPoint = (pointType) => lowPointTypes.includes(pointType || '');
+
+                const findBestCandleForZone = (point, minSearchIdx = 0) => {
+                    const targetPrice = point.price;
+                    const pointType = point.point_type || '';
+                    const isHigh = isHighPoint(pointType);
+                    const isLow = isLowPoint(pointType);
+
+                    const searchStart = Math.max(minSearchIdx, ohlcData.length - 100);
+                    let bestIdx = searchStart;
+                    let bestScore = Infinity;
+
+                    for (let i = searchStart; i < ohlcData.length; i++) {
+                        const candle = ohlcData[i];
+                        let priceDiff;
+
+                        if (isHigh) {
+                            priceDiff = Math.abs(candle.high - targetPrice);
+                        } else if (isLow) {
+                            priceDiff = Math.abs(candle.low - targetPrice);
+                        } else {
+                            priceDiff = Math.min(
+                                Math.abs(candle.high - targetPrice),
+                                Math.abs(candle.low - targetPrice)
+                            );
+                        }
+
+                        if (priceDiff < bestScore) {
+                            bestScore = priceDiff;
+                            bestIdx = i;
+                        }
+                    }
+                    return bestIdx;
+                };
+
+                const sortedForZone = [...patternPoints].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+                const mappedIndices = [];
+                let lastIdx = Math.max(0, ohlcData.length - 100);
+                sortedForZone.forEach(p => {
+                    const idx = findBestCandleForZone(p, lastIdx);
+                    mappedIndices.push(idx);
+                    lastIdx = idx;
+                });
+
+                let patternStartIdx = 0;
+                let patternEndIdx = ohlcData.length - 1;
+                if (mappedIndices.length > 0) {
+                    patternStartIdx = Math.max(0, Math.min(...mappedIndices) - 2);
+                    patternEndIdx = Math.min(ohlcData.length - 1, Math.max(...mappedIndices) + 2);
+                }
+
+                const startX = indexToX(patternStartIdx) - candleSpacing / 2;
+                const endX = indexToX(patternEndIdx) + candleSpacing / 2;
+
+                // Pattern zone fill
+                ctx.fillStyle = 'rgba(255, 193, 7, 0.15)';
+                ctx.fillRect(startX, chartPadding.top, endX - startX, chartHeight);
+
+                // Pattern zone border
+                ctx.strokeStyle = '#ffc107';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(startX, chartPadding.top);
+                ctx.lineTo(startX, chartPadding.top + chartHeight);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(endX, chartPadding.top);
+                ctx.lineTo(endX, chartPadding.top + chartHeight);
+                ctx.stroke();
+
+                // Pattern zone label
+                const labelText = 'Pattern-Formation';
+                ctx.font = 'bold 12px Segoe UI';
+                const labelX = (startX + endX) / 2;
+                const labelWidth = ctx.measureText(labelText).width + 12;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(labelX - labelWidth / 2, chartPadding.top + 5, labelWidth, 20);
+                ctx.fillStyle = '#ffc107';
+                ctx.textAlign = 'center';
+                ctx.fillText(labelText, labelX, chartPadding.top + 19);
+
+                // Start/End markers
+                ctx.font = 'bold 10px Segoe UI';
+                ctx.fillStyle = '#ffc107';
+                ctx.fillText('▼', startX, chartPadding.top + 38);
+                ctx.fillText('Start', startX, chartPadding.top + 52);
+                ctx.fillText('▼', endX, chartPadding.top + 38);
+                ctx.fillText('Ende', endX, chartPadding.top + 52);
+            }
+
             // Draw candlesticks
             ohlcData.forEach((candle, index) => {
-                const x = chartPadding.left + (index + 0.5) * candleSpacing;
+                const x = indexToX(index);
 
-                const openY = chartPadding.top + ((maxPrice - candle.open) / (maxPrice - minPrice)) * chartHeight;
-                const closeY = chartPadding.top + ((maxPrice - candle.close) / (maxPrice - minPrice)) * chartHeight;
-                const highY = chartPadding.top + ((maxPrice - candle.high) / (maxPrice - minPrice)) * chartHeight;
-                const lowY = chartPadding.top + ((maxPrice - candle.low) / (maxPrice - minPrice)) * chartHeight;
+                const openY = priceToY(candle.open);
+                const closeY = priceToY(candle.close);
+                const highY = priceToY(candle.high);
+                const lowY = priceToY(candle.low);
 
                 const isBullish = candle.close >= candle.open;
                 const color = isBullish ? '#4caf50' : '#f44336';
@@ -5847,6 +6024,11 @@
                 ctx.strokeRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
             });
 
+            // Draw pattern overlay lines AFTER candles (so it's on top)
+            if (patternPoints && patternPoints.length > 0) {
+                drawPatternOverlay(ctx, ohlcData, patternPoints, patternType, indexToX, priceToY, chartPadding, chartHeight);
+            }
+
             // Draw time labels
             ctx.fillStyle = '#888';
             ctx.font = '11px Segoe UI';
@@ -5854,7 +6036,7 @@
             const labelStep = Math.ceil(ohlcData.length / 8);
             ohlcData.forEach((candle, index) => {
                 if (index % labelStep === 0 || index === ohlcData.length - 1) {
-                    const x = chartPadding.left + (index + 0.5) * candleSpacing;
+                    const x = indexToX(index);
                     const date = new Date(candle.timestamp);
                     const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
                     const dateStr = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
@@ -5862,32 +6044,6 @@
                     ctx.fillText(timeStr, x, height - chartPadding.bottom + 32);
                 }
             });
-
-            // Draw pattern highlight zone
-            if (currentTcnPatternIndex >= 0) {
-                const highlightStart = Math.max(0, 5); // After context candles
-                const highlightEnd = ohlcData.length - 5; // Before trailing context
-
-                if (highlightStart < highlightEnd) {
-                    const startX = chartPadding.left + highlightStart * candleSpacing;
-                    const endX = chartPadding.left + highlightEnd * candleSpacing;
-
-                    ctx.fillStyle = 'rgba(100, 200, 255, 0.08)';
-                    ctx.fillRect(startX, chartPadding.top, endX - startX, chartHeight);
-
-                    ctx.strokeStyle = 'rgba(100, 200, 255, 0.3)';
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([5, 5]);
-                    ctx.strokeRect(startX, chartPadding.top, endX - startX, chartHeight);
-                    ctx.setLineDash([]);
-
-                    // Label
-                    ctx.fillStyle = '#64c8ff';
-                    ctx.font = 'bold 12px Segoe UI';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('Pattern-Formation', (startX + endX) / 2, chartPadding.top - 10);
-                }
-            }
         }
     </script>
 

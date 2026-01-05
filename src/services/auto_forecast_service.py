@@ -113,31 +113,25 @@ class AutoForecastService:
 
     async def generate_forecast(self, symbol: str, timeframe: str = "H1") -> dict:
         """Generate a forecast for a specific symbol and timeframe."""
-        from datetime import timedelta
         from .forecast_service import forecast_service
-        from . import AnalysisService
+        from .nhits_training_service import nhits_training_service
         from ..models.forecast_data import ForecastConfig
-
-        analysis_service = AnalysisService()
 
         # Determine data requirements based on timeframe
         if timeframe == "M15":
             days_needed = 2
-            interval = "m15"
         elif timeframe == "D1":
             days_needed = 60
-            interval = "d1"
         else:  # H1
             days_needed = 30
-            interval = "h1"
 
         try:
-            # Fetch time series data
-            time_series = await analysis_service._fetch_time_series(
+            # Fetch time series data using nhits_training_service (works in NHITS container)
+            time_series = await nhits_training_service.get_training_data(
                 symbol=symbol,
-                start_date=datetime.now(timezone.utc) - timedelta(days=days_needed),
-                end_date=datetime.now(timezone.utc),
-                interval=interval
+                days=days_needed,
+                timeframe=timeframe,
+                use_cache=True
             )
 
             if not time_series:
