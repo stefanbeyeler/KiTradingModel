@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 from src.config import settings
 from src.version import VERSION
 from src.api.routes import llm_router, rag_router, trading_router
-from src.services import LLMService
+from src.services.llm_service import LLMService
 from src.services.rag_service import RAGService
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import get_test_unhealthy_status
