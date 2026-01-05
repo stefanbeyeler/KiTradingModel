@@ -67,7 +67,7 @@ class RegimeDetectionService:
 
             data = await data_gateway.get_historical_data(
                 symbol=symbol,
-                interval=timeframe,
+                timeframe=timeframe,
                 limit=lookback
             )
 
@@ -154,7 +154,7 @@ class RegimeDetectionService:
 
             data = await data_gateway.get_historical_data(
                 symbol=symbol,
-                interval=timeframe,
+                timeframe=timeframe,
                 limit=limit
             )
 
@@ -309,7 +309,7 @@ class RegimeDetectionService:
 
             data = await data_gateway.get_historical_data(
                 symbol=symbol,
-                interval=timeframe,
+                timeframe=timeframe,
                 limit=limit
             )
 

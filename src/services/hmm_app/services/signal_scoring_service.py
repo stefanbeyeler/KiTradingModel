@@ -61,7 +61,7 @@ class SignalScoringService:
             # Fetch OHLCV data
             data = await data_gateway.get_historical_data(
                 symbol=symbol,
-                interval=timeframe,
+                timeframe=timeframe,
                 limit=100
             )
 
@@ -281,7 +281,7 @@ class SignalScoringService:
 
                 data = await data_gateway.get_historical_data(
                     symbol=symbol,
-                    interval=timeframe,
+                    timeframe=timeframe,
                     limit=limit
                 )
 

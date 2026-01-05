@@ -1,8 +1,17 @@
 """Configuration management for the KI Trading Model service."""
 
-import torch
 from pydantic_settings import BaseSettings
 from pydantic import Field, computed_field
+from typing import Optional
+
+# Optional torch import for services that don't need GPU
+# (e.g., HMM uses hmmlearn/lightgbm, not PyTorch)
+try:
+    import torch
+    _torch_available = True
+except ImportError:
+    torch = None  # type: ignore
+    _torch_available = False
 
 
 class Settings(BaseSettings):
@@ -224,7 +233,7 @@ class Settings(BaseSettings):
         """Automatically detect best available device."""
         if self.embedding_device != "auto":
             return self.embedding_device
-        if torch.cuda.is_available():
+        if _torch_available and torch is not None and torch.cuda.is_available():
             return "cuda"
         return "cpu"
 
@@ -232,12 +241,16 @@ class Settings(BaseSettings):
     @property
     def gpu_available(self) -> bool:
         """Check if CUDA GPU is available."""
+        if not _torch_available or torch is None:
+            return False
         return torch.cuda.is_available()
 
     @computed_field
     @property
     def gpu_name(self) -> str:
         """Get GPU name if available."""
+        if not _torch_available or torch is None:
+            return "None (torch not installed)"
         if torch.cuda.is_available():
             return torch.cuda.get_device_name(0)
         return "None"
@@ -246,6 +259,8 @@ class Settings(BaseSettings):
     @property
     def gpu_memory_gb(self) -> float:
         """Get GPU memory in GB."""
+        if not _torch_available or torch is None:
+            return 0.0
         if torch.cuda.is_available():
             return torch.cuda.get_device_properties(0).total_memory / (1024**3)
         return 0.0
