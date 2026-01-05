@@ -26,6 +26,8 @@ RUN pip install --no-cache-dir faiss-cpu
 # ARCHITEKTUR: RAG greift auf Daten NUR über Data Service (Port 3001) zu
 # twelvedata_service.py und yfinance_service.py werden NICHT kopiert - alle Datenzugriffe über HTTP
 COPY src/services/rag_app/ ./src/services/rag_app/
+COPY src/services/rag_service.py ./src/services/
+COPY src/services/data_fetcher_proxy.py ./src/services/
 COPY src/services/data_gateway_service.py ./src/services/
 COPY src/services/cache_service.py ./src/services/
 COPY src/config/ ./src/config/
