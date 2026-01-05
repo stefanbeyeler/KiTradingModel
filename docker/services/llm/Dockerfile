@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-COPY requirements.txt .
+COPY docker/services/llm/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy only the LLM app source code (avoid importing other services)

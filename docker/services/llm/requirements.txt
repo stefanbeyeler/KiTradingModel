@@ -1,0 +1,25 @@
+# LLM Service Requirements
+
+# Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.0.0
+python-multipart>=0.0.6
+
+# HTTP Client
+httpx>=0.25.0
+aiohttp>=3.9.0
+
+# LLM
+ollama>=0.1.0
+
+# Utilities
+loguru>=0.7.0
+python-dotenv>=1.0.0
+pytz>=2024.1
+numpy>=1.24.0
+psutil>=5.9.0
+
+# Caching
+redis>=5.0.0
