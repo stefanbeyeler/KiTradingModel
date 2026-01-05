@@ -18,8 +18,11 @@ ollama>=0.1.0
 loguru>=0.7.0
 python-dotenv>=1.0.0
 pytz>=2024.1
-numpy>=1.24.0
 psutil>=5.9.0
+
+# Data processing - reinstall to fix binary compatibility with base image
+numpy>=1.24.0
+pandas>=2.0.0
 
 # Caching
 redis>=5.0.0
