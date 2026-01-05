@@ -3677,8 +3677,11 @@ async def get_symbol_live_data(symbol: str):
                     data = response_data
                 if data:
                     ei_snapshot_time = data.get("snapshot_time")
+                    # Determine EasyInsight symbol used
+                    ei_symbol = managed_symbol.easyinsight_symbol if managed_symbol and managed_symbol.easyinsight_symbol else symbol
                     result["easyinsight"] = {
                         "source": "EasyInsight API",
+                        "symbol_used": ei_symbol,
                         "snapshot_time_utc": format_utc_iso(ei_snapshot_time),
                         "snapshot_time_display": format_for_display(ei_snapshot_time),
                         "category": data.get("category"),
