@@ -5682,37 +5682,68 @@
         let zoomChartInstance = null;
 
         function openZoomModal() {
+            console.log('openZoomModal called, OHLC data:', currentPatternOhlcData ? currentPatternOhlcData.length + ' candles' : 'null');
+
             const zoomModal = document.getElementById('zoomModal');
             const zoomCanvas = document.getElementById('zoomCanvas');
+            const zoomSvgContainer = document.getElementById('zoomSvgContainer');
             const zoomPatternInfo = document.getElementById('zoomPatternInfo');
             const zoomTimestamp = document.getElementById('zoomTimestamp');
 
+            if (!zoomModal) {
+                console.error('Zoom modal not found');
+                return;
+            }
+
             // Get current pattern info
-            const patternName = document.getElementById('chartPatternName').textContent;
-            const symbol = document.getElementById('chartSymbol').textContent;
-            const timeframe = document.getElementById('chartTimeframe').textContent;
-            const timestamp = document.getElementById('chartPatternTime').textContent;
-            const confidence = document.getElementById('chartConfidence').textContent;
+            const patternName = document.getElementById('chartPatternName')?.textContent || '-';
+            const symbol = document.getElementById('chartSymbol')?.textContent || '-';
+            const timeframe = document.getElementById('chartTimeframe')?.textContent || '-';
+            const timestamp = document.getElementById('chartPatternTime')?.textContent || '-';
+            const confidence = document.getElementById('chartConfidence')?.textContent || '-';
 
             // Set info text
             zoomPatternInfo.innerHTML = `<strong>${patternName}</strong> · ${symbol} · ${timeframe} · Konfidenz: ${confidence}`;
             zoomTimestamp.textContent = timestamp;
 
-            // Set canvas size for high resolution
-            const containerWidth = Math.min(window.innerWidth * 0.9, 1400);
-            const containerHeight = Math.min(window.innerHeight * 0.7, 700);
-            zoomCanvas.width = containerWidth * window.devicePixelRatio;
-            zoomCanvas.height = containerHeight * window.devicePixelRatio;
-            zoomCanvas.style.width = containerWidth + 'px';
-            zoomCanvas.style.height = containerHeight + 'px';
-
-            // Copy chart data from original canvas
-            if (currentPatternOhlcData && currentPatternOhlcData.length > 0) {
-                renderZoomChart(zoomCanvas, currentPatternOhlcData);
-            }
-
             // Show modal
             zoomModal.style.display = 'flex';
+
+            // Check if we have real OHLC data or need to show SVG fallback
+            if (currentPatternOhlcData && currentPatternOhlcData.length > 0) {
+                // Show canvas, hide SVG container
+                zoomCanvas.style.display = 'block';
+                zoomSvgContainer.style.display = 'none';
+
+                // Set canvas size
+                const containerWidth = Math.min(window.innerWidth * 0.9, 1400);
+                const containerHeight = Math.min(window.innerHeight * 0.7, 700);
+                zoomCanvas.width = containerWidth;
+                zoomCanvas.height = containerHeight;
+                zoomCanvas.style.width = containerWidth + 'px';
+                zoomCanvas.style.height = containerHeight + 'px';
+
+                console.log('Rendering zoom chart with', currentPatternOhlcData.length, 'candles');
+                setTimeout(() => renderZoomChart(zoomCanvas, currentPatternOhlcData), 50);
+            } else {
+                // Show SVG fallback, hide canvas
+                zoomCanvas.style.display = 'none';
+                zoomSvgContainer.style.display = 'flex';
+
+                // Get current pattern type and show enlarged SVG
+                const patternType = currentTcnPatternData?.patternType || 'head_and_shoulders';
+                const svgContent = getPatternSvg(patternType);
+                zoomSvgContainer.innerHTML = `
+                    <div style="text-align: center;">
+                        <div style="transform: scale(2.5); transform-origin: center; margin: 60px auto;">
+                            ${svgContent}
+                        </div>
+                        <p style="color: #888; font-size: 1rem; margin-top: 80px;">
+                            Schematische Darstellung (keine Live-Daten verfügbar)
+                        </p>
+                    </div>
+                `;
+            }
         }
 
         function closeZoomModal() {
@@ -5728,10 +5759,9 @@
 
         function renderZoomChart(canvas, ohlcData) {
             const ctx = canvas.getContext('2d');
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-            const width = canvas.width / window.devicePixelRatio;
-            const height = canvas.height / window.devicePixelRatio;
+            const width = canvas.width;
+            const height = canvas.height;
 
             // Clear canvas
             ctx.fillStyle = 'rgba(10, 10, 26, 1)';
@@ -5739,11 +5769,13 @@
 
             if (!ohlcData || ohlcData.length === 0) {
                 ctx.fillStyle = '#888';
-                ctx.font = '16px Segoe UI';
+                ctx.font = '18px Segoe UI';
                 ctx.textAlign = 'center';
                 ctx.fillText('Keine Daten verfügbar', width / 2, height / 2);
                 return;
             }
+
+            console.log('renderZoomChart: canvas', width, 'x', height, ', candles:', ohlcData.length);
 
             // Calculate price range
             let minPrice = Infinity, maxPrice = -Infinity;
@@ -6093,6 +6125,8 @@
         <div id="zoomPatternInfo" style="color: #64c8ff; font-size: 1.2rem; margin-bottom: 1rem; text-align: center;"></div>
         <div id="zoomChartContainer" onclick="event.stopPropagation()" style="max-width: 95vw; max-height: 80vh; background: rgba(10,10,26,0.9); border-radius: 12px; padding: 1rem; border: 1px solid rgba(100,200,255,0.3);">
             <canvas id="zoomCanvas" style="max-width: 100%; max-height: 100%;"></canvas>
+            <!-- SVG Container für Fallback wenn keine OHLC-Daten -->
+            <div id="zoomSvgContainer" style="display: none; justify-content: center; align-items: center; min-width: 600px; min-height: 400px;"></div>
         </div>
         <div style="color: #888; font-size: 0.85rem; margin-top: 1rem; text-align: center;">
             <span id="zoomTimestamp"></span>
