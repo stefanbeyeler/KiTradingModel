@@ -88,8 +88,24 @@ except ImportError:
 from ..services.query_log_service import query_log_service, QueryLogEntry
 from ..services.symbol_service import symbol_service
 from ..services.event_based_training_service import event_based_training_service
-from ..services.twelvedata_service import twelvedata_service
 from ..utils.timezone_utils import to_utc, format_for_display, format_utc_iso, get_timezone_info
+
+# Optional service imports - only available in Data Service container
+# These services access external APIs directly (TwelveData, Yahoo Finance)
+# Other containers (NHITS, RAG, LLM, etc.) must access data via Data Service HTTP API
+try:
+    from ..services.twelvedata_service import twelvedata_service
+    _twelvedata_available = True
+except ImportError:
+    twelvedata_service = None  # type: ignore
+    _twelvedata_available = False
+
+try:
+    from ..services.yfinance_service import yfinance_service
+    _yfinance_available = True
+except ImportError:
+    yfinance_service = None  # type: ignore
+    _yfinance_available = False
 
 
 # Thematisch gruppierte Router für bessere API-Organisation
@@ -3923,10 +3939,9 @@ async def get_symbol_live_data(symbol: str):
         result["errors"].append(f"TwelveData: {str(e)}")
 
     # Fetch Yahoo Finance data as additional source
+    # Note: yfinance_service is imported conditionally at the top of this file
     try:
-        from ..services.yfinance_service import yfinance_service
-
-        if yfinance_service.is_available():
+        if _yfinance_available and yfinance_service is not None and yfinance_service.is_available():
             # Get daily data for comparison
             yf_data = await yfinance_service.get_time_series(
                 symbol=symbol,
@@ -5396,19 +5411,23 @@ async def get_easyinsight_timeframes():
 
 
 # ==================== Yahoo Finance API ====================
-
-from ..services.yfinance_service import yfinance_service
+# Note: yfinance_service is imported conditionally at the top of this file
+# It will be None if yfinance is not installed in the container
 
 
 @yfinance_router.get("/yfinance/status")
 async def yfinance_status():
     """Get Yahoo Finance service status."""
+    if not _yfinance_available or yfinance_service is None:
+        return {"available": False, "error": "Yahoo Finance service not available in this container"}
     return yfinance_service.get_status()
 
 
 @yfinance_router.get("/yfinance/symbols")
 async def get_yfinance_symbols():
     """Get list of supported Yahoo Finance symbol mappings."""
+    if not _yfinance_available:
+        raise HTTPException(status_code=503, detail="Yahoo Finance service not available in this container")
     from ..services.yfinance_service import SYMBOL_MAPPING
     return {
         "total_mappings": len(SYMBOL_MAPPING),
@@ -5438,6 +5457,8 @@ async def get_yfinance_time_series(
 
     Yahoo Finance is a free data source with extensive historical data.
     """
+    if not _yfinance_available or yfinance_service is None:
+        raise HTTPException(status_code=503, detail="Yahoo Finance service not available in this container")
     if not yfinance_service.is_available():
         raise HTTPException(status_code=503, detail="Yahoo Finance service not available (yfinance not installed)")
 
@@ -5460,6 +5481,8 @@ async def get_yfinance_quote(symbol: str):
 
     Returns latest price data including open, high, low, close, volume.
     """
+    if not _yfinance_available or yfinance_service is None:
+        raise HTTPException(status_code=503, detail="Yahoo Finance service not available in this container")
     if not yfinance_service.is_available():
         raise HTTPException(status_code=503, detail="Yahoo Finance service not available")
 

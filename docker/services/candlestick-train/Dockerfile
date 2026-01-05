@@ -18,8 +18,18 @@ COPY docker/services/candlestick-train/requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code
-COPY src/ /app/src/
+# Copy only the Candlestick Training app source code (avoid importing other services)
+# ARCHITEKTUR: Candlestick-Train greift auf Daten NUR über Data Service (Port 3001) zu
+# twelvedata_service.py und yfinance_service.py werden NICHT kopiert - alle Datenzugriffe über HTTP
+COPY src/services/candlestick_train_app/ ./src/services/candlestick_train_app/
+COPY src/services/data_gateway_service.py ./src/services/
+COPY src/services/cache_service.py ./src/services/
+COPY src/config/ ./src/config/
+COPY src/utils/ ./src/utils/
+COPY src/shared/ ./src/shared/
+
+# Create empty __init__.py files to avoid import issues
+RUN touch ./src/__init__.py ./src/services/__init__.py
 
 # Create directories
 RUN mkdir -p /app/logs /app/models

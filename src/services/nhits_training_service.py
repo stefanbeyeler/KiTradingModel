@@ -436,7 +436,10 @@ class NHITSTrainingService:
         timeframe: str = "D1",
         days: int = 100
     ) -> List[TimeSeriesData]:
-        """Fetch training data from Yahoo Finance as second fallback.
+        """Fetch training data from Yahoo Finance via Data Service as second fallback.
+
+        ARCHITEKTUR-KONFORM: Alle Datenzugriffe erfolgen über den Data Service.
+        Der Data Service (Port 3001) ist das einzige Gateway für Yahoo Finance.
 
         Args:
             symbol: Trading symbol
@@ -446,14 +449,10 @@ class NHITSTrainingService:
         Returns:
             List of TimeSeriesData objects
         """
+        import httpx
+        from datetime import datetime
+
         try:
-            from .yfinance_service import yfinance_service
-            from datetime import datetime
-
-            if not yfinance_service.is_available():
-                logger.warning("Yahoo Finance not available")
-                return []
-
             tf = timeframe.upper()
 
             # Map timeframe to yfinance interval
@@ -471,12 +470,22 @@ class NHITSTrainingService:
             elif tf == "H1":
                 logger.info(f"Yahoo Finance: Hourly data limited to 730 days")
 
-            # Fetch data
-            result = await yfinance_service.get_time_series(
-                symbol=symbol,
-                interval=interval,
-                outputsize=days * 2  # Extra buffer for weekends/holidays
-            )
+            # Fetch data via Data Service (not directly from yfinance)
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.get(
+                    f"{DATA_SERVICE_URL}/api/v1/yfinance/time-series/{symbol}",
+                    params={
+                        "interval": interval,
+                        "outputsize": days * 2  # Extra buffer for weekends/holidays
+                    }
+                )
+
+                if response.status_code == 503:
+                    logger.warning("Yahoo Finance not available via Data Service")
+                    return []
+
+                response.raise_for_status()
+                result = response.json()
 
             if "error" in result:
                 logger.warning(f"Yahoo Finance error for {symbol}: {result['error']}")
@@ -536,6 +545,9 @@ class NHITSTrainingService:
             logger.info(f"Yahoo Finance returned {len(time_series)} data points for {symbol}/{tf}")
             return time_series
 
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Data Service HTTP error for Yahoo Finance {symbol}: {e}")
+            return []
         except Exception as e:
             logger.error(f"Failed to get Yahoo Finance data for {symbol}: {e}")
             return []

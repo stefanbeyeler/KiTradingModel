@@ -26,8 +26,29 @@ RUN pip install --no-cache-dir --pre torch torchvision --index-url https://downl
 # Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code
-COPY src/ /app/src/
+# Copy only the NHITS app source code (avoid importing other services)
+# ARCHITEKTUR: NHITS greift auf Daten NUR über Data Service (Port 3001) zu
+# twelvedata_service.py und yfinance_service.py werden NICHT kopiert - alle Datenzugriffe über HTTP
+COPY src/services/nhits_app/ ./src/services/nhits_app/
+COPY src/services/nhits_training_service.py ./src/services/
+COPY src/services/forecast_service.py ./src/services/
+COPY src/services/training_data_cache_service.py ./src/services/
+COPY src/services/event_based_training_service.py ./src/services/
+COPY src/services/model_improvement_service.py ./src/services/
+COPY src/services/auto_forecast_service.py ./src/services/
+COPY src/services/data_gateway_service.py ./src/services/
+COPY src/services/cache_service.py ./src/services/
+COPY src/api/ ./src/api/
+COPY src/models/ ./src/models/
+COPY src/config/ ./src/config/
+COPY src/utils/ ./src/utils/
+COPY src/shared/ ./src/shared/
+COPY src/version.py ./src/
+
+# Create empty __init__.py files to avoid import issues
+RUN touch ./src/__init__.py ./src/services/__init__.py
+
+# Copy .env for runtime configuration
 COPY .env /app/.env
 
 # Create directories for data (will be mounted as volumes)
