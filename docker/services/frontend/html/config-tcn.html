@@ -2694,7 +2694,11 @@
                     serviceValue.style.color = info.model?.loaded ? '#81c784' : '#e57373';
                 }
                 if (modelValue) {
-                    modelValue.textContent = info.model?.name || 'Nicht geladen';
+                    // Extract model name from path (e.g., "/app/data/models/tcn/latest.pt" -> "latest.pt")
+                    const modelPath = info.model?.path || '';
+                    const modelName = modelPath ? modelPath.split('/').pop() : null;
+                    modelValue.textContent = info.model?.loaded ? (modelName || 'Geladen') : 'Nicht geladen';
+                    modelValue.style.color = info.model?.loaded ? '#81c784' : '#ffb74d';
                 }
                 if (deviceValue) {
                     const device = info.model?.device || 'CPU';
