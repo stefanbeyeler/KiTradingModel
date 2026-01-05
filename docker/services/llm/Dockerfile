@@ -33,8 +33,10 @@ COPY src/utils/ ./src/utils/
 COPY src/shared/ ./src/shared/
 COPY src/version.py ./src/
 
-# Create empty __init__.py files to avoid import issues
-RUN touch ./src/__init__.py ./src/services/__init__.py
+# Create minimal __init__.py files to avoid importing all services
+# This prevents pandas/numpy compatibility issues from other services
+RUN echo '"""LLM Service modules."""' > ./src/__init__.py && \
+    echo '"""LLM Service - minimal init."""' > ./src/services/__init__.py
 
 # Copy .env for runtime configuration
 COPY .env /app/.env

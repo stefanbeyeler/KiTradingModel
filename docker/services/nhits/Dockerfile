@@ -45,8 +45,10 @@ COPY src/utils/ ./src/utils/
 COPY src/shared/ ./src/shared/
 COPY src/version.py ./src/
 
-# Create empty __init__.py files to avoid import issues
-RUN touch ./src/__init__.py ./src/services/__init__.py
+# Create minimal __init__.py files to avoid importing all services
+# This prevents issues from services with different dependencies
+RUN echo '"""NHITS Service modules."""' > ./src/__init__.py && \
+    echo '"""NHITS Service - minimal init."""' > ./src/services/__init__.py
 
 # Copy .env for runtime configuration
 COPY .env /app/.env
