@@ -2550,12 +2550,13 @@ async def get_forecast(
             days_needed = 30
             interval = "h1"
 
-        # Fetch time series data with appropriate interval
-        time_series = await analysis_service._fetch_time_series(
+        # Fetch time series data using nhits_training_service (works in NHITS container)
+        from ..services.nhits_training_service import nhits_training_service
+        time_series = await nhits_training_service.get_training_data(
             symbol=symbol,
-            start_date=datetime.now() - timedelta(days=days_needed),
-            end_date=datetime.now(),
-            interval=interval
+            days=days_needed,
+            timeframe=timeframe,
+            use_cache=True
         )
 
         if not time_series:
