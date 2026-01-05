@@ -2158,10 +2158,41 @@
 </head>
 <body>
     <header>
-        <div class="container">
-            <a href="/index.html" class="back-link">← Dashboard</a>
-            <h1 class="header-title">Candlestick Pattern Konfiguration</h1>
-            <span class="service-badge" id="serviceStatus">Laden...</span>
+        <div class="container" style="flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <a href="/index.html" class="back-link">← Dashboard</a>
+                <h1 class="header-title">Candlestick Pattern Konfiguration</h1>
+                <span class="service-badge" id="serviceStatus">Laden...</span>
+            </div>
+            <!-- Compact Header Status Bar -->
+            <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; font-size: 0.85rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Service-Status">
+                    <span>⏳</span>
+                    <span style="color: #888;">Status:</span>
+                    <strong id="headerStatus" style="color: #4caf50;">Lädt...</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Anzahl erkannter Pattern-Typen">
+                    <span>🕯️</span>
+                    <span style="color: #888;">Pattern-Typen:</span>
+                    <strong id="headerPatternTypes" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Unterstützte Timeframes">
+                    <span>⏱️</span>
+                    <span style="color: #888;">Timeframes:</span>
+                    <strong id="headerTimeframes" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Patterns in History">
+                    <span>📊</span>
+                    <span style="color: #888;">History:</span>
+                    <strong id="headerHistory" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Zeit seit Service-Start">
+                    <span>🕐</span>
+                    <span style="color: #888;">Uptime:</span>
+                    <strong id="headerUptime" style="color: #64c8ff;">-</strong>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="updateHeaderStatus()" style="margin-left: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem;">↻</button>
+            </div>
         </div>
     </header>
 
@@ -4024,6 +4055,63 @@
                 hour: '2-digit',
                 minute: '2-digit'
             });
+        }
+
+        // Format uptime from seconds or from start date
+        function formatUptime(startedAt) {
+            if (!startedAt) return '-';
+            const startDate = new Date(startedAt);
+            const now = new Date();
+            const seconds = Math.floor((now - startDate) / 1000);
+
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+
+            if (days > 0) {
+                return `${days}d ${hours}h ${minutes}m`;
+            } else if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else {
+                return `${minutes}m`;
+            }
+        }
+
+        // Update header status bar
+        async function updateHeaderStatus() {
+            try {
+                const [infoRes, statsRes] = await Promise.all([
+                    fetch(`${CANDLESTICK_API}/info`),
+                    fetch(`${CANDLESTICK_API}/history/statistics`)
+                ]);
+
+                if (infoRes.ok) {
+                    const info = await infoRes.json();
+                    document.getElementById('headerStatus').textContent = 'Online';
+                    document.getElementById('headerStatus').style.color = '#4caf50';
+                    document.getElementById('headerPatternTypes').textContent = info.pattern_types || '-';
+                    document.getElementById('headerTimeframes').textContent = info.supported_timeframes?.join(', ') || '-';
+                    document.getElementById('headerUptime').textContent = formatUptime(info.started_at);
+                    document.getElementById('serviceStatus').textContent = 'Online';
+                    document.getElementById('serviceStatus').classList.remove('offline');
+                    document.getElementById('serviceStatus').classList.add('online');
+                } else {
+                    document.getElementById('headerStatus').textContent = 'Offline';
+                    document.getElementById('headerStatus').style.color = '#f44336';
+                    document.getElementById('serviceStatus').textContent = 'Offline';
+                    document.getElementById('serviceStatus').classList.remove('online');
+                    document.getElementById('serviceStatus').classList.add('offline');
+                }
+
+                if (statsRes.ok) {
+                    const stats = await statsRes.json();
+                    document.getElementById('headerHistory').textContent = stats.total_patterns?.toLocaleString() || '0';
+                }
+            } catch (error) {
+                console.error('Header status update failed:', error);
+                document.getElementById('headerStatus').textContent = 'Offline';
+                document.getElementById('headerStatus').style.color = '#f44336';
+            }
         }
 
         // Format pattern type for display
@@ -9222,6 +9310,7 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
+            await updateHeaderStatus();
             await loadServiceInfo();
             await loadStatistics();
             await updateRevalidationBadge();
