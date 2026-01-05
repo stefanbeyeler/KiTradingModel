@@ -1234,11 +1234,6 @@
                     <span style="color: #888;">Parameter:</span>
                     <strong id="stat-params" style="color: #64c8ff;">-</strong>
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Anzahl verfügbarer trainierter Modelle (.pt Dateien)">
-                    <span>📦</span>
-                    <span style="color: #888;">Modelle:</span>
-                    <strong id="stat-models" style="color: #64c8ff;">-</strong>
-                </div>
                 <div style="display: flex; align-items: center; gap: 0.4rem;" title="Zeit seit Service-Start">
                     <span>⏱️</span>
                     <span style="color: #888;">Uptime:</span>
@@ -1253,7 +1248,7 @@
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('status')">📊 Status</button>
+            <button class="tab-btn active" onclick="showTab('status')">📊 Übersicht</button>
             <button class="tab-btn" onclick="showTab('detection')">&#128269; Pattern-Erkennung</button>
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
         </div>
@@ -2682,7 +2677,6 @@
                 // Update header status bar KPIs
                 document.getElementById('stat-params').textContent = info.model?.parameters ? (info.model.parameters / 1000000).toFixed(2) + 'M' : '-';
                 document.getElementById('stat-uptime').textContent = stats.uptime_seconds ? formatUptime(stats.uptime_seconds) : '-';
-                document.getElementById('stat-models').textContent = stats.available_models || 0;
 
                 // Update header status values
                 const serviceValue = document.getElementById('statusValue-service');
@@ -4225,6 +4219,7 @@
         let currentTcnPatternIndex = 0;
         let tcnPatternList = [];
         let currentTcnPatternData = null;
+        let currentPatternOhlcData = null; // Store OHLC data for zoom modal
 
         // Show pattern modal with real chart and pattern overlay
         async function showPatternChart(symbol, timeframe, timestamp, patternType, direction, patternData, patternIndex = -1) {
@@ -4402,6 +4397,9 @@
 
                 console.log(`Pattern at index ${patternIdx}, showing candles ${startIdx} to ${endIdx} (${candles.length} total)`);
 
+                // Store OHLC data for zoom modal
+                currentPatternOhlcData = candles;
+
                 // Hide loading, show chart
                 if (loadingEl) loadingEl.style.display = 'none';
                 chartContainer.style.display = 'block';
@@ -4411,6 +4409,8 @@
 
             } catch (error) {
                 console.error('Fehler beim Laden des Charts:', error);
+                // Clear OHLC data on error
+                currentPatternOhlcData = null;
                 // Fall back to SVG visualization with error message
                 if (loadingEl) loadingEl.style.display = 'none';
                 chartContainer.style.display = 'none';
@@ -5671,7 +5671,191 @@
                 if (e.key === 'Escape' && modal.classList.contains('show')) {
                     closeChartModal();
                 }
+                // ESC closes zoom modal too
+                if (e.key === 'Escape' && document.getElementById('zoomModal').style.display === 'flex') {
+                    closeZoomModal();
+                }
             });
+        }
+
+        // Zoom Modal Functions
+        let zoomChartInstance = null;
+
+        function openZoomModal() {
+            const zoomModal = document.getElementById('zoomModal');
+            const zoomCanvas = document.getElementById('zoomCanvas');
+            const zoomPatternInfo = document.getElementById('zoomPatternInfo');
+            const zoomTimestamp = document.getElementById('zoomTimestamp');
+
+            // Get current pattern info
+            const patternName = document.getElementById('chartPatternName').textContent;
+            const symbol = document.getElementById('chartSymbol').textContent;
+            const timeframe = document.getElementById('chartTimeframe').textContent;
+            const timestamp = document.getElementById('chartPatternTime').textContent;
+            const confidence = document.getElementById('chartConfidence').textContent;
+
+            // Set info text
+            zoomPatternInfo.innerHTML = `<strong>${patternName}</strong> · ${symbol} · ${timeframe} · Konfidenz: ${confidence}`;
+            zoomTimestamp.textContent = timestamp;
+
+            // Set canvas size for high resolution
+            const containerWidth = Math.min(window.innerWidth * 0.9, 1400);
+            const containerHeight = Math.min(window.innerHeight * 0.7, 700);
+            zoomCanvas.width = containerWidth * window.devicePixelRatio;
+            zoomCanvas.height = containerHeight * window.devicePixelRatio;
+            zoomCanvas.style.width = containerWidth + 'px';
+            zoomCanvas.style.height = containerHeight + 'px';
+
+            // Copy chart data from original canvas
+            if (currentPatternOhlcData && currentPatternOhlcData.length > 0) {
+                renderZoomChart(zoomCanvas, currentPatternOhlcData);
+            }
+
+            // Show modal
+            zoomModal.style.display = 'flex';
+        }
+
+        function closeZoomModal() {
+            const zoomModal = document.getElementById('zoomModal');
+            zoomModal.style.display = 'none';
+
+            // Destroy zoom chart instance
+            if (zoomChartInstance) {
+                zoomChartInstance.destroy();
+                zoomChartInstance = null;
+            }
+        }
+
+        function renderZoomChart(canvas, ohlcData) {
+            const ctx = canvas.getContext('2d');
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            const width = canvas.width / window.devicePixelRatio;
+            const height = canvas.height / window.devicePixelRatio;
+
+            // Clear canvas
+            ctx.fillStyle = 'rgba(10, 10, 26, 1)';
+            ctx.fillRect(0, 0, width, height);
+
+            if (!ohlcData || ohlcData.length === 0) {
+                ctx.fillStyle = '#888';
+                ctx.font = '16px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Keine Daten verfügbar', width / 2, height / 2);
+                return;
+            }
+
+            // Calculate price range
+            let minPrice = Infinity, maxPrice = -Infinity;
+            ohlcData.forEach(candle => {
+                minPrice = Math.min(minPrice, candle.low);
+                maxPrice = Math.max(maxPrice, candle.high);
+            });
+
+            const priceRange = maxPrice - minPrice;
+            const padding = priceRange * 0.1;
+            minPrice -= padding;
+            maxPrice += padding;
+
+            // Chart dimensions
+            const chartPadding = { top: 30, right: 80, bottom: 50, left: 20 };
+            const chartWidth = width - chartPadding.left - chartPadding.right;
+            const chartHeight = height - chartPadding.top - chartPadding.bottom;
+
+            // Candlestick dimensions
+            const candleWidth = Math.max(8, Math.min(25, (chartWidth / ohlcData.length) * 0.7));
+            const candleSpacing = chartWidth / ohlcData.length;
+
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = chartPadding.top + (chartHeight / 5) * i;
+                ctx.beginPath();
+                ctx.moveTo(chartPadding.left, y);
+                ctx.lineTo(width - chartPadding.right, y);
+                ctx.stroke();
+
+                // Price labels
+                const price = maxPrice - ((maxPrice - minPrice) / 5) * i;
+                ctx.fillStyle = '#888';
+                ctx.font = '12px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillText(price.toFixed(price > 100 ? 2 : 5), width - chartPadding.right + 8, y + 4);
+            }
+
+            // Draw candlesticks
+            ohlcData.forEach((candle, index) => {
+                const x = chartPadding.left + (index + 0.5) * candleSpacing;
+
+                const openY = chartPadding.top + ((maxPrice - candle.open) / (maxPrice - minPrice)) * chartHeight;
+                const closeY = chartPadding.top + ((maxPrice - candle.close) / (maxPrice - minPrice)) * chartHeight;
+                const highY = chartPadding.top + ((maxPrice - candle.high) / (maxPrice - minPrice)) * chartHeight;
+                const lowY = chartPadding.top + ((maxPrice - candle.low) / (maxPrice - minPrice)) * chartHeight;
+
+                const isBullish = candle.close >= candle.open;
+                const color = isBullish ? '#4caf50' : '#f44336';
+
+                // Draw wick
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, highY);
+                ctx.lineTo(x, lowY);
+                ctx.stroke();
+
+                // Draw body
+                const bodyTop = Math.min(openY, closeY);
+                const bodyHeight = Math.max(2, Math.abs(closeY - openY));
+
+                ctx.fillStyle = isBullish ? 'rgba(76, 175, 80, 0.9)' : 'rgba(244, 67, 54, 0.9)';
+                ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+            });
+
+            // Draw time labels
+            ctx.fillStyle = '#888';
+            ctx.font = '11px Segoe UI';
+            ctx.textAlign = 'center';
+            const labelStep = Math.ceil(ohlcData.length / 8);
+            ohlcData.forEach((candle, index) => {
+                if (index % labelStep === 0 || index === ohlcData.length - 1) {
+                    const x = chartPadding.left + (index + 0.5) * candleSpacing;
+                    const date = new Date(candle.timestamp);
+                    const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                    const dateStr = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+                    ctx.fillText(dateStr, x, height - chartPadding.bottom + 18);
+                    ctx.fillText(timeStr, x, height - chartPadding.bottom + 32);
+                }
+            });
+
+            // Draw pattern highlight zone
+            if (currentTcnPatternIndex >= 0) {
+                const highlightStart = Math.max(0, 5); // After context candles
+                const highlightEnd = ohlcData.length - 5; // Before trailing context
+
+                if (highlightStart < highlightEnd) {
+                    const startX = chartPadding.left + highlightStart * candleSpacing;
+                    const endX = chartPadding.left + highlightEnd * candleSpacing;
+
+                    ctx.fillStyle = 'rgba(100, 200, 255, 0.08)';
+                    ctx.fillRect(startX, chartPadding.top, endX - startX, chartHeight);
+
+                    ctx.strokeStyle = 'rgba(100, 200, 255, 0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeRect(startX, chartPadding.top, endX - startX, chartHeight);
+                    ctx.setLineDash([]);
+
+                    // Label
+                    ctx.fillStyle = '#64c8ff';
+                    ctx.font = 'bold 12px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Pattern-Formation', (startX + endX) / 2, chartPadding.top - 10);
+                }
+            }
         }
     </script>
 
@@ -5692,20 +5876,20 @@
                 <button type="button" class="modal-close" onclick="closeChartModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <!-- Chart Comparison (Two Columns) -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <!-- Chart Comparison (Two Columns: 2/3 + 1/3) -->
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
-                        <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; text-align: center;">Erkanntes Pattern</div>
+                        <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; text-align: center;">Erkanntes Pattern <span style="font-size: 0.7rem; opacity: 0.7;">(Klick zum Vergrößern)</span></div>
                         <!-- Loading indicator -->
                         <div id="chartLoading" style="display: flex; justify-content: center; align-items: center; padding: 2rem; color: #888; min-height: 200px; background: rgba(0,0,0,0.2); border-radius: 8px;">
                             <span style="margin-right: 0.5rem;">⏳</span> Chart wird geladen...
                         </div>
                         <!-- Real candlestick chart with pattern overlay -->
-                        <div class="chart-container" id="patternChartContainer" style="display: none; height: 200px; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <div class="chart-container" id="patternChartContainer" onclick="openZoomModal()" style="display: none; height: 200px; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 8px; cursor: zoom-in; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 0 15px rgba(100,200,255,0.3)'" onmouseout="this.style.boxShadow='none'">
                             <canvas id="patternCanvas" style="width: 100%; height: 100%;"></canvas>
                         </div>
                         <!-- Fallback SVG visualization -->
-                        <div class="chart-container" id="patternSvgContainer" style="display: none; justify-content: center; align-items: center; padding: 1rem; min-height: 200px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <div class="chart-container" id="patternSvgContainer" onclick="openZoomModal()" style="display: none; justify-content: center; align-items: center; padding: 1rem; min-height: 200px; background: rgba(0,0,0,0.2); border-radius: 8px; cursor: zoom-in; transition: box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 0 15px rgba(100,200,255,0.3)'" onmouseout="this.style.boxShadow='none'">
                             <!-- SVG wird dynamisch eingefügt -->
                         </div>
                     </div>
@@ -5897,6 +6081,21 @@
                 </div>
 
             </div>
+        </div>
+    </div>
+
+    <!-- Zoom Modal für vergrößerte Chart-Ansicht -->
+    <div id="zoomModal" onclick="closeZoomModal()" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 10000; cursor: zoom-out; justify-content: center; align-items: center; flex-direction: column;">
+        <div style="position: absolute; top: 1rem; right: 1rem; display: flex; gap: 1rem; align-items: center;">
+            <span style="color: #888; font-size: 0.85rem;">ESC oder Klick zum Schließen</span>
+            <button onclick="closeZoomModal()" style="background: rgba(255,255,255,0.1); border: none; color: #fff; font-size: 2rem; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center;">&times;</button>
+        </div>
+        <div id="zoomPatternInfo" style="color: #64c8ff; font-size: 1.2rem; margin-bottom: 1rem; text-align: center;"></div>
+        <div id="zoomChartContainer" onclick="event.stopPropagation()" style="max-width: 95vw; max-height: 80vh; background: rgba(10,10,26,0.9); border-radius: 12px; padding: 1rem; border: 1px solid rgba(100,200,255,0.3);">
+            <canvas id="zoomCanvas" style="max-width: 100%; max-height: 100%;"></canvas>
+        </div>
+        <div style="color: #888; font-size: 0.85rem; margin-top: 1rem; text-align: center;">
+            <span id="zoomTimestamp"></span>
         </div>
     </div>
 </body>
