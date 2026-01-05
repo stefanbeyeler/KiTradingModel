@@ -138,29 +138,6 @@
             gap: 0.5rem;
         }
 
-        /* Stats Bar */
-        .stats-bar {
-            display: flex;
-            gap: 2rem;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 600;
-            color: #64c8ff;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            opacity: 0.7;
-        }
-
         /* Buttons */
         .btn {
             padding: 0.6rem 1.2rem;
@@ -1229,33 +1206,50 @@
 </head>
 <body>
     <header>
-        <div class="container">
-            <a href="index.html" class="back-link">&#8592; Dashboard</a>
-            <h1 class="header-title">&#128202; TCN Pattern Service</h1>
-            <span class="service-badge" id="status-badge">Laden...</span>
+        <div class="container" style="flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <a href="index.html" class="back-link">&#8592; Dashboard</a>
+                <h1 class="header-title">&#128202; TCN Pattern Service</h1>
+                <span class="service-badge" id="status-badge">Laden...</span>
+            </div>
+            <!-- Compact Header Status Bar -->
+            <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; font-size: 0.85rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Service-Status">
+                    <span>⏳</span>
+                    <span style="color: #888;">Status:</span>
+                    <strong id="statusValue-service" style="color: #64c8ff;">Lädt...</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Aktuell geladenes Modell">
+                    <span>🧠</span>
+                    <span style="color: #888;">Modell:</span>
+                    <strong id="statusValue-model" style="color: #64c8ff;">Lädt...</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="CPU oder CUDA GPU">
+                    <span>🖥️</span>
+                    <span style="color: #888;">Device:</span>
+                    <strong id="statusValue-device" style="color: #64c8ff;">Lädt...</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Anzahl Modell-Parameter (Komplexität)">
+                    <span>⚙️</span>
+                    <span style="color: #888;">Parameter:</span>
+                    <strong id="stat-params" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Anzahl verfügbarer trainierter Modelle (.pt Dateien)">
+                    <span>📦</span>
+                    <span style="color: #888;">Modelle:</span>
+                    <strong id="stat-models" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Zeit seit Service-Start">
+                    <span>⏱️</span>
+                    <span style="color: #888;">Uptime:</span>
+                    <strong id="stat-uptime" style="color: #64c8ff;">-</strong>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="refreshStatusTab()" style="margin-left: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem;">↻</button>
+            </div>
         </div>
     </header>
 
     <div class="container">
-        <!-- Stats Bar -->
-        <div class="stats-bar" id="stats-bar">
-            <div class="stat-item">
-                <div class="stat-value" id="stat-patterns">-</div>
-                <div class="stat-label">Pattern-Klassen</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="stat-params">-</div>
-                <div class="stat-label">Parameter</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="stat-uptime">-</div>
-                <div class="stat-label">Uptime</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="stat-models">-</div>
-                <div class="stat-label">Modelle</div>
-            </div>
-        </div>
 
         <!-- Tabs -->
         <div class="tabs">
@@ -1264,37 +1258,12 @@
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
         </div>
 
-        <!-- Status Tab (NEW) -->
+        <!-- Status Tab -->
         <div id="tab-status" class="tab-content active">
-            <!-- Live Status Cards -->
-            <div class="status-grid-4">
-                <div class="status-card" id="statusCard-service">
-                    <div class="status-icon">⏳</div>
-                    <div class="status-label">Service Status</div>
-                    <div class="status-value" id="statusValue-service">Lädt...</div>
-                </div>
-                <div class="status-card" id="statusCard-model">
-                    <div class="status-icon">🧠</div>
-                    <div class="status-label">Modell</div>
-                    <div class="status-value" id="statusValue-model">Lädt...</div>
-                </div>
-                <div class="status-card" id="statusCard-device">
-                    <div class="status-icon">🖥️</div>
-                    <div class="status-label">Device</div>
-                    <div class="status-value" id="statusValue-device">Lädt...</div>
-                </div>
-                <div class="status-card" id="statusCard-patterns">
-                    <div class="status-icon">📊</div>
-                    <div class="status-label">Pattern-Typen</div>
-                    <div class="status-value" id="statusValue-patterns">16</div>
-                </div>
-            </div>
-
             <!-- Pattern Overview Card -->
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">📈 Erkennbare Chart-Patterns (16 Typen)</h3>
-                    <button class="btn btn-primary btn-sm" onclick="refreshStatusTab()">↻ Aktualisieren</button>
                 </div>
 
                 <!-- Pattern Stats Bar -->
@@ -1595,79 +1564,75 @@
 
         <!-- Detection Tab -->
         <div id="tab-detection" class="tab-content">
-            <!-- Auto-Scan Status -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128336; Auto-Erkennung</h3>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn btn-success btn-sm" id="btn-start-autoscan" onclick="toggleAutoScan(true)">&#9654; Starten</button>
-                        <button class="btn btn-danger btn-sm" id="btn-stop-autoscan" onclick="toggleAutoScan(false)" disabled>&#9632; Stoppen</button>
+            <!-- Compact Control Bar: Auto-Erkennung + Manuelle Erkennung + Multi-Scan -->
+            <div class="card" style="padding: 1rem;">
+                <div style="display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap;">
+                    <!-- Auto-Erkennung -->
+                    <div style="flex: 1; min-width: 280px;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                            <span style="color: #64c8ff; font-weight: 500;">&#128336; Auto-Erkennung</span>
+                            <button class="btn btn-success btn-sm" id="btn-start-autoscan" onclick="toggleAutoScan(true)" style="padding: 0.3rem 0.6rem;">&#9654; Start</button>
+                            <button class="btn btn-danger btn-sm" id="btn-stop-autoscan" onclick="toggleAutoScan(false)" disabled style="padding: 0.3rem 0.6rem;">&#9632; Stop</button>
+                        </div>
+                        <div style="display: flex; gap: 1rem; font-size: 0.85rem; color: #aaa;">
+                            <span>Status: <strong id="autoscan-status-indicator" style="color: #fff;">-</strong></span>
+                            <span>Patterns: <strong id="autoscan-total" style="color: #64c8ff;">-</strong></span>
+                            <span>Symbole: <strong id="autoscan-symbols" style="color: #a78bfa;">-</strong></span>
+                            <span>Letzter: <strong id="autoscan-lastscan" style="color: #fff;">-</strong></span>
+                        </div>
                     </div>
-                </div>
-                <div id="autoscan-status" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
-                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 1.5rem;" id="autoscan-status-indicator">-</div>
-                        <div style="color: #888; font-size: 0.85rem;">Status</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 1.5rem; color: #64c8ff;" id="autoscan-total">-</div>
-                        <div style="color: #888; font-size: 0.85rem;">Gespeicherte Patterns</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 1.5rem; color: #a78bfa;" id="autoscan-symbols">-</div>
-                        <div style="color: #888; font-size: 0.85rem;">Symbole</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 1rem; color: #fff;" id="autoscan-lastscan">-</div>
-                        <div style="color: #888; font-size: 0.85rem;">Letzter Scan</div>
-                    </div>
-                </div>
-                <div class="info-box" style="margin-top: 1rem;">
-                    Auto-Erkennung scannt alle 5 Minuten alle aktiven Symbole auf den Timeframes 1h, 4h und 1d.
-                    Erkannte Patterns werden 7 Tage gespeichert (max. 2000 Eintraege).
-                </div>
-            </div>
 
-            <div class="grid-2">
-                <!-- Detection Form -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#128269; Manuelle Erkennung</h3>
+                    <!-- Manuelle Erkennung -->
+                    <div style="flex: 1; min-width: 320px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 1.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <span style="color: #64c8ff; font-weight: 500;">&#128269; Manuelle Erkennung</span>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <select class="form-control" id="detect-symbol" style="width: 120px; padding: 0.4rem;">
+                                <option value="">Symbol...</option>
+                            </select>
+                            <select class="form-control" id="detect-timeframe" style="width: 70px; padding: 0.4rem;">
+                                <option value="1h" selected>1h</option>
+                                <option value="4h">4h</option>
+                                <option value="1d">1d</option>
+                            </select>
+                            <input type="number" class="form-control" id="detect-confidence" value="0.5" min="0" max="1" step="0.05" style="width: 70px; padding: 0.4rem;" title="Min. Confidence">
+                            <button class="btn btn-success btn-sm" id="btn-detect" onclick="detectPattern()" style="padding: 0.4rem 0.8rem;">&#128269; Erkennen</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Symbol</label>
-                        <select class="form-control" id="detect-symbol">
-                            <option value="">Lade Symbole...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Timeframe</label>
-                        <select class="form-control" id="detect-timeframe">
-                            <option value="1h" selected>1h</option>
-                            <option value="4h">4h</option>
-                            <option value="1d">1d</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Min. Confidence</label>
-                        <input type="number" class="form-control" id="detect-confidence" value="0.5" min="0" max="1" step="0.05">
-                    </div>
-                    <button class="btn btn-success" id="btn-detect" onclick="detectPattern()">&#128269; Pattern erkennen</button>
 
-                    <div id="detection-result"></div>
-                </div>
-
-                <!-- Scan All -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#128640; Manueller Multi-Symbol Scan</h3>
+                    <!-- Multi-Symbol Scan -->
+                    <div style="flex: 0 0 auto; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 1.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <span style="color: #64c8ff; font-weight: 500;">&#128640; Multi-Scan</span>
+                        </div>
+                        <button class="btn btn-primary btn-sm" id="btn-scan-all" onclick="scanAllAndSave()" style="padding: 0.4rem 0.8rem;">&#128640; Alle scannen</button>
+                        <button class="btn btn-danger btn-sm" id="btn-cancel-scan" onclick="cancelScan()" style="padding: 0.4rem 0.8rem; display: none;">&#9632; Abbrechen</button>
                     </div>
-                    <div class="info-box" style="margin-bottom: 1rem;">
-                        Scannt alle aktiven Symbole sofort nach Patterns und speichert sie in der Historie.
-                    </div>
-                    <button class="btn btn-primary" id="btn-scan-all" onclick="scanAllAndSave()">&#128640; Alle Symbole scannen</button>
-                    <div id="scan-results" style="margin-top: 1rem;"></div>
                 </div>
+                <!-- Detection Result (collapsed by default) -->
+                <div id="detection-result" style="margin-top: 0.75rem;"></div>
+                <!-- Scan Progress -->
+                <div id="scan-progress" style="margin-top: 0.75rem; display: none;">
+                    <div style="background: rgba(100,200,255,0.1); border: 1px solid rgba(100,200,255,0.3); border-radius: 8px; padding: 0.75rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="color: #64c8ff; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></span>
+                                <span id="scan-progress-text">Scanne...</span>
+                            </span>
+                            <span id="scan-progress-percent" style="color: #64c8ff; font-weight: 600;">0%</span>
+                        </div>
+                        <div class="progress-bar" style="height: 6px; margin-bottom: 0.5rem;">
+                            <div id="scan-progress-bar" class="progress-fill" style="width: 0%;"></div>
+                        </div>
+                        <div style="display: flex; gap: 1rem; font-size: 0.8rem; color: #aaa;">
+                            <span>Symbol: <strong id="scan-current-symbol" style="color: #fff;">-</strong></span>
+                            <span>Timeframe: <strong id="scan-current-tf" style="color: #fff;">-</strong></span>
+                            <span>Gefunden: <strong id="scan-patterns-found" style="color: #81c784;">0</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div id="scan-results"></div>
             </div>
 
             <!-- Pattern History Table (moved from Verlauf tab) -->
@@ -2602,69 +2567,8 @@
 
         // Status Tab Functions
         async function refreshStatusTab() {
-            await updateStatusCards();
-        }
-
-        async function updateStatusCards() {
-            try {
-                // Health check
-                const healthRes = await fetch(`${API_BASE.replace('/api/v1', '')}/health`);
-                const healthData = await healthRes.json();
-
-                const serviceCard = document.getElementById('statusCard-service');
-                const serviceValue = document.getElementById('statusValue-service');
-
-                if (healthData.status === 'healthy') {
-                    serviceCard.classList.add('healthy');
-                    serviceCard.classList.remove('unhealthy');
-                    serviceValue.textContent = 'Online';
-                    serviceValue.classList.add('success');
-                    serviceValue.classList.remove('error');
-                } else {
-                    serviceCard.classList.add('unhealthy');
-                    serviceCard.classList.remove('healthy');
-                    serviceValue.textContent = 'Offline';
-                    serviceValue.classList.add('error');
-                    serviceValue.classList.remove('success');
-                }
-
-                // Service Info
-                const infoRes = await fetch(`${API_BASE}/info`);
-                const infoData = await infoRes.json();
-
-                // Model Status
-                const modelCard = document.getElementById('statusCard-model');
-                const modelValue = document.getElementById('statusValue-model');
-                if (infoData.model?.loaded) {
-                    modelValue.textContent = 'Geladen';
-                    modelValue.classList.add('success');
-                    modelCard.classList.add('healthy');
-                } else {
-                    modelValue.textContent = 'Nicht geladen';
-                    modelValue.classList.add('error');
-                }
-
-                // Device Status
-                const deviceCard = document.getElementById('statusCard-device');
-                const deviceValue = document.getElementById('statusValue-device');
-                const device = infoData.model?.device || infoData.device || 'CPU';
-                deviceValue.textContent = device;
-                if (device.toLowerCase().includes('cuda')) {
-                    deviceValue.classList.add('success');
-                    deviceCard.classList.add('healthy');
-                }
-
-                // Pattern Count
-                const patternValue = document.getElementById('statusValue-patterns');
-                patternValue.textContent = infoData.num_classes || infoData.model?.num_classes || '16';
-
-            } catch (error) {
-                console.error('Status update failed:', error);
-                const serviceValue = document.getElementById('statusValue-service');
-                serviceValue.textContent = 'Fehler';
-                serviceValue.classList.add('error');
-                document.getElementById('statusCard-service').classList.add('unhealthy');
-            }
+            // Reload all header status info
+            await loadInfo();
         }
 
         // Pattern Filter Logic for Status Tab
@@ -2717,7 +2621,7 @@
         }
 
         // Format UTC timestamp to local timezone
-        function formatLocalDateTime(timestamp, options = { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) {
+        function formatLocalDateTime(timestamp, options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) {
             const date = parseUTCTimestamp(timestamp);
             if (!date || isNaN(date.getTime())) return '-';
             return date.toLocaleString('de-CH', { timeZone: 'Europe/Zurich', ...options });
@@ -2775,21 +2679,28 @@
                 badge.textContent = info.model?.loaded ? 'Online' : 'Offline';
                 badge.className = `service-badge ${info.model?.loaded ? '' : 'offline'}`;
 
-                // Update stats - info has num_classes at top level, model info under model object
-                document.getElementById('stat-patterns').textContent = info.num_classes || info.model?.num_classes || '-';
+                // Update header status bar KPIs
                 document.getElementById('stat-params').textContent = info.model?.parameters ? (info.model.parameters / 1000000).toFixed(2) + 'M' : '-';
                 document.getElementById('stat-uptime').textContent = stats.uptime_seconds ? formatUptime(stats.uptime_seconds) : '-';
                 document.getElementById('stat-models').textContent = stats.available_models || 0;
 
+                // Update header status values
+                const serviceValue = document.getElementById('statusValue-service');
+                const modelValue = document.getElementById('statusValue-model');
+                const deviceValue = document.getElementById('statusValue-device');
 
-                // Update status cards in Status tab (elements may not exist if Overview tab was removed)
-                const statusValueEl = document.getElementById('service-status-value');
-                const modelValueEl = document.getElementById('model-status-value');
-                const deviceValueEl = document.getElementById('device-value');
-
-                if (statusValueEl) statusValueEl.textContent = info.model?.loaded ? 'Online' : 'Offline';
-                if (modelValueEl) modelValueEl.textContent = info.model?.loaded ? 'Geladen' : 'Nicht geladen';
-                if (deviceValueEl) deviceValueEl.textContent = info.model?.device || 'cpu';
+                if (serviceValue) {
+                    serviceValue.textContent = info.model?.loaded ? 'Online' : 'Offline';
+                    serviceValue.style.color = info.model?.loaded ? '#81c784' : '#e57373';
+                }
+                if (modelValue) {
+                    modelValue.textContent = info.model?.name || 'Nicht geladen';
+                }
+                if (deviceValue) {
+                    const device = info.model?.device || 'CPU';
+                    deviceValue.textContent = device;
+                    deviceValue.style.color = device.toLowerCase().includes('cuda') ? '#81c784' : '#64c8ff';
+                }
             } catch (error) {
                 showToast('Fehler beim Laden der Service-Info', 'error');
                 console.error(error);
@@ -2947,38 +2858,124 @@
             }
         }
 
-        // Scan All Symbols and Save to History
+        // Scan cancellation flag
+        let scanCancelled = false;
+
+        // Cancel ongoing scan
+        function cancelScan() {
+            scanCancelled = true;
+            showToast('Scan wird abgebrochen...', 'warning');
+        }
+
+        // Update scan progress UI
+        function updateScanProgress(current, total, symbol, timeframe, patternsFound) {
+            const percent = Math.round((current / total) * 100);
+            document.getElementById('scan-progress-bar').style.width = `${percent}%`;
+            document.getElementById('scan-progress-percent').textContent = `${percent}%`;
+            document.getElementById('scan-progress-text').textContent = `Scanne ${current}/${total}...`;
+            document.getElementById('scan-current-symbol').textContent = symbol || '-';
+            document.getElementById('scan-current-tf').textContent = timeframe || '-';
+            document.getElementById('scan-patterns-found').textContent = patternsFound;
+        }
+
+        // Scan All Symbols and Save to History (with progress)
         async function scanAllAndSave() {
             const btn = document.getElementById('btn-scan-all');
-            btn.classList.add('btn-loading');
-            btn.disabled = true;
+            const cancelBtn = document.getElementById('btn-cancel-scan');
+            const progressDiv = document.getElementById('scan-progress');
+            const resultsDiv = document.getElementById('scan-results');
+
+            // Reset state
+            scanCancelled = false;
+            btn.style.display = 'none';
+            cancelBtn.style.display = 'inline-flex';
+            progressDiv.style.display = 'block';
+            resultsDiv.innerHTML = '';
+
+            let totalPatternsFound = 0;
+            let totalPatternsAdded = 0;
+            let scannedCount = 0;
 
             try {
-                // Use the history/scan endpoint which saves to history
-                const response = await fetch(`${API_BASE}/history/scan`, { method: 'POST' });
-                if (!response.ok) throw new Error('Scan failed');
+                // Get available symbols
+                const symbolsResponse = await fetch('/data/api/v1/symbols');
+                let symbols = [];
+                if (symbolsResponse.ok) {
+                    const symbolsData = await symbolsResponse.json();
+                    symbols = symbolsData.symbols || symbolsData || [];
+                    if (symbols.length > 0 && typeof symbols[0] === 'object') {
+                        symbols = symbols.map(s => s.symbol || s.name || s);
+                    }
+                }
 
-                const result = await response.json();
-                const results = document.getElementById('scan-results');
+                if (symbols.length === 0) {
+                    // Fallback to default symbols
+                    symbols = ['BTCUSD', 'ETHUSD', 'EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY'];
+                }
 
-                results.innerHTML = `
-                    <div class="info-box" style="background: rgba(76,175,80,0.1); border-color: rgba(76,175,80,0.3); color: #81c784;">
-                        <strong>Scan abgeschlossen</strong><br>
-                        ${result.patterns_found || 0} Patterns gefunden, ${result.patterns_added || 0} neu gespeichert
-                    </div>
-                `;
+                updateScanProgress(0, symbols.length, '-', '-', 0);
 
-                showToast(`Scan: ${result.patterns_found || 0} Patterns gefunden`);
+                // Scan each symbol (all timeframes at once via API)
+                for (const symbol of symbols) {
+                    if (scanCancelled) break;
 
-                // Refresh stats
+                    scannedCount++;
+                    updateScanProgress(scannedCount, symbols.length, symbol, '1h,4h,1d', totalPatternsFound);
+
+                    try {
+                        // Use history/scan endpoint with symbol parameter
+                        const response = await fetch(
+                            `${API_BASE}/history/scan?symbol=${symbol}&timeframes=1h,4h,1d&threshold=0.5`,
+                            { method: 'POST' }
+                        );
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            totalPatternsFound += result.patterns_found || 0;
+                            totalPatternsAdded += result.patterns_added || 0;
+                            updateScanProgress(scannedCount, symbols.length, symbol, '1h,4h,1d', totalPatternsFound);
+                        }
+                    } catch (e) {
+                        console.warn(`Scan failed for ${symbol}:`, e);
+                    }
+                }
+
+                // Show results
+                if (scanCancelled) {
+                    resultsDiv.innerHTML = `
+                        <div class="info-box" style="background: rgba(255,152,0,0.1); border-color: rgba(255,152,0,0.3); color: #ffb74d; margin-top: 0.5rem;">
+                            <strong>Scan abgebrochen</strong><br>
+                            ${scannedCount}/${symbols.length} Symbole gescannt, ${totalPatternsFound} Patterns gefunden, ${totalPatternsAdded} neu
+                        </div>
+                    `;
+                    showToast('Scan abgebrochen', 'warning');
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div class="info-box" style="background: rgba(76,175,80,0.1); border-color: rgba(76,175,80,0.3); color: #81c784; margin-top: 0.5rem;">
+                            <strong>Scan abgeschlossen</strong><br>
+                            ${symbols.length} Symbole gescannt (1h, 4h, 1d), ${totalPatternsFound} Patterns gefunden, ${totalPatternsAdded} neu gespeichert
+                        </div>
+                    `;
+                    showToast(`Scan: ${totalPatternsFound} Patterns gefunden`);
+                }
+
+                // Refresh pattern history and stats
+                loadPatternHistory();
                 loadAutoScanStatus();
 
             } catch (error) {
                 showToast('Fehler beim Scan', 'error');
                 console.error(error);
+                resultsDiv.innerHTML = `
+                    <div class="info-box" style="background: rgba(244,67,54,0.1); border-color: rgba(244,67,54,0.3); color: #e57373; margin-top: 0.5rem;">
+                        <strong>Fehler</strong><br>
+                        ${error.message}
+                    </div>
+                `;
             } finally {
-                btn.classList.remove('btn-loading');
-                btn.disabled = false;
+                btn.style.display = 'inline-flex';
+                cancelBtn.style.display = 'none';
+                progressDiv.style.display = 'none';
             }
         }
 

@@ -103,6 +103,10 @@ async def get_history_statistics():
 
 @router.post("/history/scan")
 async def trigger_pattern_scan(
+    symbol: Optional[str] = Query(
+        default=None,
+        description="Symbol to scan (None = all symbols)"
+    ),
     timeframes: Optional[str] = Query(
         default="1h,4h,1d",
         description="Comma-separated timeframes to scan"
@@ -112,16 +116,25 @@ async def trigger_pattern_scan(
     """
     Trigger a manual pattern scan.
 
-    Scans all available symbols for patterns and adds new detections to history.
+    Scans specified symbol (or all symbols) for patterns and adds new detections to history.
     Duplicate patterns (same symbol/timeframe/type within 4 hours) are skipped.
     """
     try:
         tf_list = [tf.strip() for tf in timeframes.split(",")]
 
-        result = await tcn_pattern_history_service.scan_all_symbols(
-            timeframes=tf_list,
-            threshold=threshold
-        )
+        if symbol:
+            # Scan single symbol
+            result = await tcn_pattern_history_service.scan_single_symbol(
+                symbol=symbol,
+                timeframes=tf_list,
+                threshold=threshold
+            )
+        else:
+            # Scan all symbols
+            result = await tcn_pattern_history_service.scan_all_symbols(
+                timeframes=tf_list,
+                threshold=threshold
+            )
 
         return result
 

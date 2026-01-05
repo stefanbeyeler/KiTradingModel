@@ -484,6 +484,84 @@ class TCNPatternHistoryService:
             logger.error(f"Error during pattern scan: {e}")
             return {"error": str(e)}
 
+    async def scan_single_symbol(
+        self,
+        symbol: str,
+        timeframes: Optional[list[str]] = None,
+        threshold: float = 0.5
+    ) -> dict:
+        """
+        Scan a single symbol for patterns and add to history.
+
+        Args:
+            symbol: Symbol to scan
+            timeframes: Timeframes to scan (default: ["1h", "4h", "1d"])
+            threshold: Minimum confidence threshold
+
+        Returns:
+            Scan result summary
+        """
+        from .pattern_detection_service import pattern_detection_service
+
+        if timeframes is None:
+            timeframes = ["1h", "4h", "1d"]
+
+        patterns_found = 0
+        patterns_added = 0
+
+        for timeframe in timeframes:
+            try:
+                # Detect patterns
+                response = await pattern_detection_service.detect_patterns(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    lookback=200,
+                    threshold=threshold
+                )
+
+                for pattern in response.patterns:
+                    patterns_found += 1
+
+                    # Get current price from market context
+                    price = response.market_context.get("price", 0.0)
+
+                    # Convert pattern_points to dicts if they are Pydantic objects
+                    pattern_points_dicts = None
+                    if pattern.pattern_points:
+                        pattern_points_dicts = [
+                            p.model_dump() if hasattr(p, 'model_dump') else (p.dict() if hasattr(p, 'dict') else p)
+                            for p in pattern.pattern_points
+                        ]
+
+                    # Add to history
+                    entry = self.add_pattern(
+                        symbol=symbol,
+                        timeframe=timeframe,
+                        pattern_type=pattern.pattern_type,
+                        confidence=pattern.confidence,
+                        pattern_start_time=pattern.start_time or "",
+                        pattern_end_time=pattern.end_time or "",
+                        direction=pattern.direction or "neutral",
+                        price_at_detection=price,
+                        price_target=pattern.price_target,
+                        invalidation_level=pattern.invalidation_level,
+                        pattern_height=pattern.pattern_height,
+                        pattern_points=pattern_points_dicts
+                    )
+
+                    if entry:
+                        patterns_added += 1
+
+            except Exception as e:
+                logger.debug(f"Error scanning {symbol}/{timeframe}: {e}")
+
+        return {
+            "symbol": symbol,
+            "timeframes": timeframes,
+            "patterns_found": patterns_found,
+            "patterns_added": patterns_added
+        }
+
     async def _auto_scan_loop(self) -> None:
         """Background loop for automatic scanning."""
         logger.info(f"Starting TCN Pattern auto-scan (interval: {self._scan_interval}s)")
