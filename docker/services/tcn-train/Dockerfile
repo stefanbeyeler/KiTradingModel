@@ -23,10 +23,11 @@ COPY docker/services/tcn-train/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy only the TCN training app source code
+# ARCHITEKTUR: TCN-Train greift auf Daten NUR über Data Service (Port 3001) zu
+# twelvedata_service.py wird NICHT kopiert - alle Datenzugriffe über HTTP
 COPY src/services/tcn_train_app/ ./src/services/tcn_train_app/
 COPY src/services/data_gateway_service.py ./src/services/
 COPY src/services/cache_service.py ./src/services/
-COPY src/services/twelvedata_service.py ./src/services/
 COPY src/config/ ./src/config/
 COPY src/utils/ ./src/utils/
 COPY src/shared/ ./src/shared/

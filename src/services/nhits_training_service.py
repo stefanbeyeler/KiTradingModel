@@ -283,31 +283,25 @@ class NHITSTrainingService:
         timeframe: str = "H1",
         use_cache: bool = True
     ) -> List[TimeSeriesData]:
-        """Fetch training data for a symbol from Twelve Data API.
+        """Fetch training data for a symbol via Data Service (TwelveData endpoint).
 
-        NOTE: This method is deprecated. Training data is now fetched via Data-Service
-        which handles Twelve Data fallback automatically.
+        ARCHITEKTUR-KONFORM: Alle Datenzugriffe erfolgen über den Data Service.
+        Der Data Service (Port 3001) ist das einzige Gateway für TwelveData.
 
         This is used as fallback when EasyInsight doesn't have enough data.
-        Tries multiple symbol formats: original symbol, aliases, and auto-conversion.
+        The Data Service handles symbol format conversion automatically.
 
         Args:
-            symbol: Trading symbol (will be converted to Twelve Data format)
+            symbol: Trading symbol (will be converted to Twelve Data format by Data Service)
             timeframe: Timeframe for OHLCV data (M15, H1, D1)
             use_cache: Whether to use cached data if available
         """
+        import httpx
+        from .forecast_service import forecast_service
+        from .training_data_cache_service import training_data_cache
+
         try:
-            from .twelvedata_service import twelvedata_service
-            from .forecast_service import forecast_service
-            from .symbol_service import symbol_service
-            from .training_data_cache_service import training_data_cache
-
             tf = timeframe.upper()
-
-            # Check if Twelve Data is available
-            if not twelvedata_service.is_available():
-                logger.warning("Twelve Data API not available")
-                return []
 
             # Get timeframe-specific requirements
             tf_config = forecast_service.get_timeframe_config(tf)
@@ -336,78 +330,43 @@ class NHITSTrainingService:
                     logger.info(f"Using cached Twelve Data for {symbol}/{tf}: {len(cached_data)} rows")
                     return self._parse_twelvedata_response(cached_data, symbol, tf)
 
-            # Build list of symbol variants to try (in order of preference)
-            symbols_to_try = [symbol]  # 1. Original symbol first
+            # Fetch via Data Service HTTP API (architekturkonform)
+            logger.info(f"Fetching {symbol}/{tf} via Data Service TwelveData endpoint (interval: {interval})")
 
-            # 2. Get aliases from symbol service
-            managed_symbol = await symbol_service.get_symbol(symbol)
-            if managed_symbol and managed_symbol.aliases:
-                for alias in managed_symbol.aliases:
-                    if alias not in symbols_to_try:
-                        symbols_to_try.append(alias)
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                url = f"{DATA_SERVICE_URL}/api/v1/twelvedata/time_series/{symbol}"
+                params = {
+                    "interval": interval,
+                    "outputsize": outputsize
+                }
 
-            # 3. Auto-generate common format variations
-            # Forex pairs: EURUSD -> EUR/USD
-            if len(symbol) == 6 and symbol.isalpha():
-                forex_variant = f"{symbol[:3]}/{symbol[3:]}"
-                if forex_variant not in symbols_to_try:
-                    symbols_to_try.append(forex_variant)
+                response = await client.get(url, params=params)
 
-            # Crypto pairs: BTCUSD -> BTC/USD
-            crypto_bases = ["USD", "EUR", "GBP", "USDT", "BTC", "ETH"]
-            for base in crypto_bases:
-                if symbol.endswith(base) and len(symbol) > len(base):
-                    crypto = symbol[:-len(base)]
-                    crypto_variant = f"{crypto}/{base}"
-                    if crypto_variant not in symbols_to_try:
-                        symbols_to_try.append(crypto_variant)
+                if response.status_code != 200:
+                    logger.warning(f"Data Service returned {response.status_code} for {symbol}/{tf}")
+                    return []
 
-            # Try each symbol variant until one works
-            last_error = None
-            for td_symbol in symbols_to_try:
-                rate_status = twelvedata_service.get_rate_limiter_status()
-                logger.info(
-                    f"Fetching {symbol}/{tf} from Twelve Data API "
-                    f"(trying: {td_symbol}, interval: {interval}, "
-                    f"API calls remaining: {rate_status['calls_remaining']}/{rate_status['calls_per_minute_limit']})"
-                )
+                data = response.json()
 
-                response = await twelvedata_service.get_time_series(
-                    symbol=td_symbol,
-                    interval=interval,
-                    outputsize=outputsize
-                )
+                # Check for errors or unsupported symbols
+                if data.get("unsupported") or data.get("error"):
+                    logger.warning(f"Data Service: {symbol} not supported by TwelveData")
+                    return []
 
-                if "error" in response:
-                    last_error = response.get('error')
-                    # Check if it's a symbol-related error (try next variant)
-                    error_msg = str(last_error).lower()
-                    if "symbol" in error_msg or "invalid" in error_msg or "not found" in error_msg:
-                        logger.debug(f"Symbol variant {td_symbol} failed: {last_error}, trying next...")
-                        continue
-                    else:
-                        # Non-symbol error (rate limit, etc.) - don't try more variants
-                        logger.warning(f"Twelve Data error for {symbol}/{tf}: {last_error}")
-                        return []
-
-                values = response.get("values", [])
+                values = data.get("values", [])
                 if values:
-                    logger.info(f"Successfully fetched {len(values)} rows for {symbol}/{tf} using symbol: {td_symbol}")
+                    logger.info(f"Data Service returned {len(values)} rows for {symbol}/{tf}")
                     # Cache the data
                     if use_cache:
                         training_data_cache.cache_data(symbol, tf, values, "twelvedata")
                         logger.debug(f"Cached {len(values)} Twelve Data rows for {symbol}/{tf}")
                     return self._parse_twelvedata_response(values, symbol, tf)
 
-            # All variants failed
-            logger.warning(
-                f"No data from Twelve Data for {symbol}/{tf} after trying {len(symbols_to_try)} variants. "
-                f"Last error: {last_error}"
-            )
+            logger.warning(f"No data from Data Service for {symbol}/{tf}")
             return []
 
         except Exception as e:
-            logger.error(f"Failed to get training data from Twelve Data for {symbol}/{tf}: {e}")
+            logger.error(f"Failed to get training data via Data Service for {symbol}/{tf}: {e}")
             return []
 
     def _parse_twelvedata_response(

@@ -360,10 +360,10 @@ class DataGatewayService:
         limit: int
     ) -> list[dict]:
         """
-        Get candle data directly from TwelveData.
+        Get candle data via Data Service (which proxies to TwelveData).
 
-        Used as primary source for all timeframes. Timeframe is automatically
-        normalized to the standard format and converted to TwelveData API format.
+        ARCHITEKTUR-KONFORM: Alle externen Datenzugriffe gehen über den Data Service.
+        Der Data Service (Port 3001) ist das einzige Gateway für TwelveData/EasyInsight.
 
         Args:
             symbol: Trading symbol (e.g., BTCUSD)
@@ -374,8 +374,6 @@ class DataGatewayService:
             List of candle dictionaries with standardized format
         """
         try:
-            from .twelvedata_service import twelvedata_service
-
             # Normalize and convert timeframe to TwelveData format
             tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
             td_interval = to_twelvedata(tf)
@@ -383,25 +381,39 @@ class DataGatewayService:
             # TwelveData max outputsize is 5000
             fetch_limit = min(limit, 5000)
 
-            # Fetch from TwelveData - symbol conversion happens in TwelveDataService
-            td_data = await twelvedata_service.get_time_series(
-                symbol=symbol,
-                interval=td_interval,
-                outputsize=fetch_limit
-            )
+            # Fetch via Data Service HTTP endpoint (architekturkonform)
+            client = await self._get_client()
+            url = f"{self._data_service_url}/twelvedata/time_series/{symbol}"
+            params = {
+                "interval": td_interval,
+                "outputsize": fetch_limit
+            }
 
-            if td_data and td_data.get("values"):
-                # Convert to standardized format
-                converted = self._convert_twelvedata_to_easyinsight(
-                    td_data["values"],
-                    symbol,
-                    tf.value  # Pass normalized timeframe
-                )
-                logger.info(f"TwelveData returned {len(converted)} {tf.value} candles for {symbol}")
-                return converted
+            logger.debug(f"Fetching OHLC from Data Service: {url} params={params}")
+            response = await client.get(url, params=params)
+
+            if response.status_code == 200:
+                td_data = response.json()
+
+                # Check for unsupported symbol or error
+                if td_data.get("unsupported") or td_data.get("error"):
+                    logger.warning(f"Data Service: {symbol} not supported by TwelveData")
+                    return []
+
+                if td_data.get("values"):
+                    # Convert to standardized format
+                    converted = self._convert_twelvedata_to_easyinsight(
+                        td_data["values"],
+                        symbol,
+                        tf.value  # Pass normalized timeframe
+                    )
+                    logger.info(f"Data Service returned {len(converted)} {tf.value} candles for {symbol}")
+                    return converted
+            else:
+                logger.warning(f"Data Service returned {response.status_code} for {symbol}")
 
         except Exception as e:
-            logger.error(f"Failed to get TwelveData candles for {symbol} {timeframe}: {e}")
+            logger.error(f"Failed to get candles via Data Service for {symbol} {timeframe}: {e}")
 
         return []
 

@@ -17,10 +17,11 @@ COPY docker/services/hmm/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy only the HMM app source code (avoid importing other services)
+# ARCHITEKTUR: HMM greift auf Daten NUR über Data Service (Port 3001) zu
+# twelvedata_service.py wird NICHT kopiert - alle Datenzugriffe über HTTP
 COPY src/services/hmm_app/ ./src/services/hmm_app/
 COPY src/services/data_gateway_service.py ./src/services/
 COPY src/services/cache_service.py ./src/services/
-COPY src/services/twelvedata_service.py ./src/services/
 COPY src/config/ ./src/config/
 COPY src/utils/ ./src/utils/
 COPY src/shared/ ./src/shared/
