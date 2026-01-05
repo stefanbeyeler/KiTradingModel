@@ -1152,9 +1152,6 @@
         <div class="container">
             <h1>KI Trading Model</h1>
             <div class="header-status">
-                <a href="/testing.html" class="header-btn">&#128203; Tests</a>
-                <span id="services-count">Services: -/14</span>
-                <span id="endpoints-count">Endpoints: -</span>
                 <span id="last-update">Update: -</span>
             </div>
         </div>
@@ -2505,46 +2502,6 @@
             }
         }
 
-        async function updateTestsInfo() {
-            try {
-                const response = await fetch('/watchdog/api/v1/tests/status');
-                const data = await response.json();
-
-                const statusEl = document.getElementById('tests-status');
-                const lastRunEl = document.getElementById('tests-last-run');
-                const passedEl = document.getElementById('tests-passed');
-                const failedEl = document.getElementById('tests-failed');
-                const skippedEl = document.getElementById('tests-skipped');
-
-                if (data.status === 'running') {
-                    statusEl.textContent = 'RUNNING';
-                    statusEl.style.background = 'rgba(59, 130, 246, 0.2)';
-                    statusEl.style.color = '#60a5fa';
-                } else if (data.summary) {
-                    if (data.summary.failed > 0) {
-                        statusEl.textContent = 'FAILED';
-                        statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
-                        statusEl.style.color = '#f87171';
-                    } else {
-                        statusEl.textContent = 'PASSED';
-                        statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
-                        statusEl.style.color = '#4ade80';
-                    }
-
-                    passedEl.textContent = data.summary.passed || 0;
-                    failedEl.textContent = data.summary.failed || 0;
-                    skippedEl.textContent = data.summary.skipped || 0;
-
-                    if (data.completed_at) {
-                        const date = new Date(data.completed_at);
-                        lastRunEl.textContent = date.toLocaleTimeString('de-CH');
-                    }
-                }
-            } catch (e) {
-                // Tests API not available, keep default state
-            }
-        }
-
         async function updateEasyInsightInfo() {
             // Status already set by updateEasyInsightStatusFromWatchdog()
             // This function only fetches additional details (symbols count, latency)
@@ -2747,27 +2704,6 @@
             }
         }
 
-        async function countEndpoints() {
-            // Count API endpoints from OpenAPI specs of all services
-            const services = ['data', 'nhits', 'tcn', 'tcn-train', 'hmm', 'embedder', 'candlestick', 'candlestick-train', 'nhits-train', 'hmm-train', 'rag', 'llm', 'watchdog'];
-            let count = 0;
-
-            for (const service of services) {
-                try {
-                    const res = await fetch(`/${service}/openapi.json`);
-                    if (res.ok) {
-                        const spec = await res.json();
-                        if (spec.paths) {
-                            count += Object.keys(spec.paths).length;
-                        }
-                    }
-                } catch (e) {
-                    // Service not available, skip
-                }
-            }
-            return count;
-        }
-
         async function refreshStatus() {
             healthyServices = 0;
 
@@ -2795,19 +2731,11 @@
                 updateNhitsTrainInfo(),
                 updateHmmTrainInfo(),
                 updateWatchdogInfo(),
-                updateTestsInfo(),
                 updateEasyInsightInfo(),  // Fetch additional details (symbols, latency)
                 updateSystemMetrics(),
                 updateStorageMetrics()
             ]);
 
-            // Count endpoints (run in background to not block UI)
-            countEndpoints().then(count => {
-                totalEndpoints = count;
-                document.getElementById('endpoints-count').textContent = `Endpoints: ${totalEndpoints}`;
-            });
-
-            document.getElementById('services-count').textContent = `Services: ${healthyServices}/14`;
             document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
         }
 
