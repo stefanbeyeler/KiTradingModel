@@ -4098,6 +4098,39 @@
             };
         }
 
+        // Pattern-specific context candle configuration
+        // Defines how many candles to show before and after the pattern for optimal visualization
+        const tcnPatternContextConfig = {
+            // Reversal patterns - need more context before to show the trend reversal
+            'head_and_shoulders': { before: 10, after: 5 },      // Long pattern, need trend context
+            'inverse_head_and_shoulders': { before: 10, after: 5 },
+            'double_top': { before: 8, after: 5 },               // Medium pattern
+            'double_bottom': { before: 8, after: 5 },
+            'triple_top': { before: 10, after: 5 },              // Longer pattern
+            'triple_bottom': { before: 10, after: 5 },
+            'cup_and_handle': { before: 5, after: 5 },           // Pattern is already long
+            'falling_wedge': { before: 5, after: 5 },
+            'rising_wedge': { before: 5, after: 5 },
+
+            // Continuation patterns - need trend context before the flag/consolidation
+            'bull_flag': { before: 8, after: 3 },                // Show the flagpole (impulse move)
+            'bear_flag': { before: 8, after: 3 },
+
+            // Triangle patterns - need symmetrical context
+            'ascending_triangle': { before: 5, after: 5 },
+            'descending_triangle': { before: 5, after: 5 },
+            'symmetrical_triangle': { before: 5, after: 5 },
+
+            // Channel patterns - need trend context
+            'channel_up': { before: 3, after: 3 },               // Channel is already long
+            'channel_down': { before: 3, after: 3 }
+        };
+
+        // Get context candles for pattern type with fallback
+        function getTcnPatternContext(patternType) {
+            return tcnPatternContextConfig[patternType] || { before: 5, after: 5 };
+        }
+
         // Format price for display
         function formatPrice(price) {
             if (price >= 1000) return price.toFixed(0);
@@ -4522,10 +4555,13 @@
 
                 console.log(`Loaded ${allCandles.length} candles from ${dataSource}`);
 
-                // Slice candles to show only pattern zone with context (5 candles before, 5 after)
-                const contextBefore = 5;
-                const contextAfter = 5;
+                // Get pattern-specific context configuration
+                const patternContext = getTcnPatternContext(patternType);
+                const contextBefore = patternContext.before;
+                const contextAfter = patternContext.after;
                 let candles = allCandles;
+
+                console.log(`[TCN Chart] Pattern type '${patternType}' context: ${contextBefore} before, ${contextAfter} after`);
 
                 // If we have pattern_points, use them to determine the slice range
                 if (patternPoints && patternPoints.length > 0) {
