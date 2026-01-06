@@ -155,13 +155,24 @@ class PatternClassifier:
 
         Characteristics:
         - Left shoulder, head (higher), right shoulder
-        - Neckline connecting the lows
+        - Neckline connecting the lows between shoulders
+        - Head must be significantly higher than shoulders (at least 1.5%)
+        - Shoulders must be at similar heights (within 3%)
+        - Proper spacing between pattern points
         - Bearish reversal pattern
         """
-        swing_highs, swing_lows = self.find_swing_points(highs, lows)
+        # Use larger window for more significant swing points
+        swing_highs, swing_lows = self.find_swing_points(highs, lows, window=7)
 
         if len(swing_highs) < 3 or len(swing_lows) < 2:
             return None
+
+        # Stricter parameters for valid Head and Shoulders
+        MIN_SHOULDER_DISTANCE = 7  # Minimum candles between shoulder and head
+        MAX_PATTERN_SPAN = 80  # Maximum total pattern span
+        MAX_SHOULDER_DIFF_PCT = 0.03  # Shoulders within 3%
+        MIN_HEAD_HEIGHT_PCT = 0.015  # Head must be at least 1.5% above shoulders
+        MIN_NECKLINE_DEPTH_PCT = 0.01  # Neckline must be at least 1% below shoulders
 
         # Look for pattern in recent swings
         for i in range(len(swing_highs) - 2):
@@ -169,70 +180,233 @@ class PatternClassifier:
             head_idx = swing_highs[i + 1]
             right_shoulder_idx = swing_highs[i + 2]
 
+            # Check pattern span
+            pattern_span = right_shoulder_idx - left_shoulder_idx
+            if pattern_span > MAX_PATTERN_SPAN:
+                continue
+
+            # Check minimum distances
+            left_to_head = head_idx - left_shoulder_idx
+            head_to_right = right_shoulder_idx - head_idx
+            if left_to_head < MIN_SHOULDER_DISTANCE or head_to_right < MIN_SHOULDER_DISTANCE:
+                continue
+
             left_shoulder = highs[left_shoulder_idx]
             head = highs[head_idx]
             right_shoulder = highs[right_shoulder_idx]
 
-            # Head should be higher than shoulders
-            if head > left_shoulder and head > right_shoulder:
-                # Shoulders should be similar height (within 5%)
-                shoulder_diff = abs(left_shoulder - right_shoulder) / left_shoulder
-                if shoulder_diff < 0.05:
-                    # Find neckline (lows between shoulders)
-                    neck_lows = [
-                        lows[j] for j in swing_lows
-                        if left_shoulder_idx < j < right_shoulder_idx
-                    ]
+            # Shoulders should be at similar heights (within 3%)
+            shoulder_diff = abs(left_shoulder - right_shoulder) / left_shoulder
+            if shoulder_diff >= MAX_SHOULDER_DIFF_PCT:
+                continue
 
-                    if neck_lows:
-                        neckline = np.mean(neck_lows)
-                        pattern_height = head - neckline
-                        target = neckline - pattern_height
+            avg_shoulder = (left_shoulder + right_shoulder) / 2
 
-                        # Find neckline indices - split into left and right of head
-                        neck_left_indices = [
-                            j for j in swing_lows
-                            if left_shoulder_idx < j < head_idx
-                        ]
-                        neck_right_indices = [
-                            j for j in swing_lows
-                            if head_idx < j < right_shoulder_idx
-                        ]
+            # Head must be significantly higher than shoulders (at least 1.5%)
+            head_height_pct = (head - avg_shoulder) / avg_shoulder
+            if head_height_pct < MIN_HEAD_HEIGHT_PCT:
+                continue
 
-                        # Create pattern points for visualization
-                        pattern_points = [
-                            PatternPoint(left_shoulder_idx, float(left_shoulder), "left_shoulder"),
-                            PatternPoint(head_idx, float(head), "head"),
-                            PatternPoint(right_shoulder_idx, float(right_shoulder), "right_shoulder"),
-                        ]
-                        # Add neckline points - left of head and right of head
-                        if neck_left_indices:
-                            nl_left = neck_left_indices[-1]  # closest to head
-                            pattern_points.append(PatternPoint(nl_left, float(lows[nl_left]), "neckline_left"))
-                        else:
-                            # Fallback: use midpoint between left shoulder and head
-                            mid_left = (left_shoulder_idx + head_idx) // 2
-                            pattern_points.append(PatternPoint(mid_left, float(neckline), "neckline_left"))
+            # Find neckline (lows between shoulders)
+            neck_lows = [
+                lows[j] for j in swing_lows
+                if left_shoulder_idx < j < right_shoulder_idx
+            ]
 
-                        if neck_right_indices:
-                            nl_right = neck_right_indices[0]  # closest to head
-                            pattern_points.append(PatternPoint(nl_right, float(lows[nl_right]), "neckline_right"))
-                        else:
-                            # Fallback: use midpoint between head and right shoulder
-                            mid_right = (head_idx + right_shoulder_idx) // 2
-                            pattern_points.append(PatternPoint(mid_right, float(neckline), "neckline_right"))
+            if not neck_lows:
+                continue
 
-                        return PatternDetection(
-                            pattern_type=PatternType.HEAD_AND_SHOULDERS,
-                            confidence=0.7,
-                            start_index=left_shoulder_idx,
-                            end_index=right_shoulder_idx,
-                            price_target=target,
-                            invalidation_level=head,
-                            pattern_height=pattern_height,
-                            direction="bearish",
-                            pattern_points=pattern_points
-                        )
+            neckline = np.mean(neck_lows)
+
+            # Neckline must be significantly below shoulders
+            neckline_depth_pct = (avg_shoulder - neckline) / avg_shoulder
+            if neckline_depth_pct < MIN_NECKLINE_DEPTH_PCT:
+                continue
+
+            # All shoulders must be above the neckline
+            if left_shoulder <= neckline or right_shoulder <= neckline:
+                continue
+
+            pattern_height = head - neckline
+            target = neckline - pattern_height
+
+            # Find neckline indices - split into left and right of head
+            neck_left_indices = [
+                j for j in swing_lows
+                if left_shoulder_idx < j < head_idx
+            ]
+            neck_right_indices = [
+                j for j in swing_lows
+                if head_idx < j < right_shoulder_idx
+            ]
+
+            # Create pattern points for visualization
+            pattern_points = [
+                PatternPoint(left_shoulder_idx, float(left_shoulder), "left_shoulder"),
+                PatternPoint(head_idx, float(head), "head"),
+                PatternPoint(right_shoulder_idx, float(right_shoulder), "right_shoulder"),
+            ]
+            # Add neckline points - left of head and right of head
+            if neck_left_indices:
+                nl_left = neck_left_indices[-1]  # closest to head
+                pattern_points.append(PatternPoint(nl_left, float(lows[nl_left]), "neckline_left"))
+            else:
+                # Fallback: use midpoint between left shoulder and head
+                mid_left = (left_shoulder_idx + head_idx) // 2
+                pattern_points.append(PatternPoint(mid_left, float(neckline), "neckline_left"))
+
+            if neck_right_indices:
+                nl_right = neck_right_indices[0]  # closest to head
+                pattern_points.append(PatternPoint(nl_right, float(lows[nl_right]), "neckline_right"))
+            else:
+                # Fallback: use midpoint between head and right shoulder
+                mid_right = (head_idx + right_shoulder_idx) // 2
+                pattern_points.append(PatternPoint(mid_right, float(neckline), "neckline_right"))
+
+            return PatternDetection(
+                pattern_type=PatternType.HEAD_AND_SHOULDERS,
+                confidence=0.7,
+                start_index=left_shoulder_idx,
+                end_index=right_shoulder_idx,
+                price_target=target,
+                invalidation_level=head,
+                pattern_height=pattern_height,
+                direction="bearish",
+                pattern_points=pattern_points
+            )
+
+        return None
+
+    def detect_inverse_head_and_shoulders(
+        self,
+        highs: np.ndarray,
+        lows: np.ndarray,
+        closes: np.ndarray
+    ) -> Optional[PatternDetection]:
+        """
+        Detect inverse head and shoulders pattern (bullish reversal).
+
+        Characteristics:
+        - Left shoulder (low), head (lower), right shoulder (low)
+        - Neckline connecting the highs between shoulders
+        - Head must be significantly lower than shoulders (at least 1.5%)
+        - Shoulders must be at similar heights (within 3%)
+        - Proper spacing between pattern points
+        - Bullish reversal pattern
+        """
+        # Use larger window for more significant swing points
+        swing_highs, swing_lows = self.find_swing_points(highs, lows, window=7)
+
+        if len(swing_lows) < 3 or len(swing_highs) < 2:
+            return None
+
+        # Stricter parameters for valid Inverse Head and Shoulders
+        MIN_SHOULDER_DISTANCE = 7  # Minimum candles between shoulder and head
+        MAX_PATTERN_SPAN = 80  # Maximum total pattern span
+        MAX_SHOULDER_DIFF_PCT = 0.03  # Shoulders within 3%
+        MIN_HEAD_DEPTH_PCT = 0.015  # Head must be at least 1.5% below shoulders
+        MIN_NECKLINE_HEIGHT_PCT = 0.01  # Neckline must be at least 1% above shoulders
+
+        # Look for pattern in recent swing lows
+        for i in range(len(swing_lows) - 2):
+            left_shoulder_idx = swing_lows[i]
+            head_idx = swing_lows[i + 1]
+            right_shoulder_idx = swing_lows[i + 2]
+
+            # Check pattern span
+            pattern_span = right_shoulder_idx - left_shoulder_idx
+            if pattern_span > MAX_PATTERN_SPAN:
+                continue
+
+            # Check minimum distances
+            left_to_head = head_idx - left_shoulder_idx
+            head_to_right = right_shoulder_idx - head_idx
+            if left_to_head < MIN_SHOULDER_DISTANCE or head_to_right < MIN_SHOULDER_DISTANCE:
+                continue
+
+            left_shoulder = lows[left_shoulder_idx]
+            head = lows[head_idx]
+            right_shoulder = lows[right_shoulder_idx]
+
+            # Shoulders should be at similar heights (within 3%)
+            shoulder_diff = abs(left_shoulder - right_shoulder) / left_shoulder
+            if shoulder_diff >= MAX_SHOULDER_DIFF_PCT:
+                continue
+
+            avg_shoulder = (left_shoulder + right_shoulder) / 2
+
+            # Head must be significantly lower than shoulders (at least 1.5%)
+            head_depth_pct = (avg_shoulder - head) / avg_shoulder
+            if head_depth_pct < MIN_HEAD_DEPTH_PCT:
+                continue
+
+            # Find neckline (highs between shoulders)
+            neck_highs = [
+                highs[j] for j in swing_highs
+                if left_shoulder_idx < j < right_shoulder_idx
+            ]
+
+            if not neck_highs:
+                continue
+
+            neckline = np.mean(neck_highs)
+
+            # Neckline must be significantly above shoulders
+            neckline_height_pct = (neckline - avg_shoulder) / avg_shoulder
+            if neckline_height_pct < MIN_NECKLINE_HEIGHT_PCT:
+                continue
+
+            # All shoulders must be below the neckline
+            if left_shoulder >= neckline or right_shoulder >= neckline:
+                continue
+
+            pattern_height = neckline - head
+            target = neckline + pattern_height
+
+            # Find neckline indices - split into left and right of head
+            neck_left_indices = [
+                j for j in swing_highs
+                if left_shoulder_idx < j < head_idx
+            ]
+            neck_right_indices = [
+                j for j in swing_highs
+                if head_idx < j < right_shoulder_idx
+            ]
+
+            # Create pattern points for visualization
+            pattern_points = [
+                PatternPoint(left_shoulder_idx, float(left_shoulder), "left_shoulder"),
+                PatternPoint(head_idx, float(head), "head"),
+                PatternPoint(right_shoulder_idx, float(right_shoulder), "right_shoulder"),
+            ]
+            # Add neckline points - left of head and right of head
+            if neck_left_indices:
+                nl_left = neck_left_indices[-1]  # closest to head
+                pattern_points.append(PatternPoint(nl_left, float(highs[nl_left]), "neckline_left"))
+            else:
+                # Fallback: use midpoint between left shoulder and head
+                mid_left = (left_shoulder_idx + head_idx) // 2
+                pattern_points.append(PatternPoint(mid_left, float(neckline), "neckline_left"))
+
+            if neck_right_indices:
+                nl_right = neck_right_indices[0]  # closest to head
+                pattern_points.append(PatternPoint(nl_right, float(highs[nl_right]), "neckline_right"))
+            else:
+                # Fallback: use midpoint between head and right shoulder
+                mid_right = (head_idx + right_shoulder_idx) // 2
+                pattern_points.append(PatternPoint(mid_right, float(neckline), "neckline_right"))
+
+            return PatternDetection(
+                pattern_type=PatternType.INVERSE_HEAD_AND_SHOULDERS,
+                confidence=0.7,
+                start_index=left_shoulder_idx,
+                end_index=right_shoulder_idx,
+                price_target=target,
+                invalidation_level=head,
+                pattern_height=pattern_height,
+                direction="bullish",
+                pattern_points=pattern_points
+            )
 
         return None
 
@@ -499,6 +673,7 @@ class PatternClassifier:
         # Try each pattern detector
         detectors = [
             self.detect_head_and_shoulders,
+            self.detect_inverse_head_and_shoulders,
             self.detect_double_top,
             self.detect_double_bottom,
             self.detect_triangle,
