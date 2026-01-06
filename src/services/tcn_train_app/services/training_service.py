@@ -472,9 +472,10 @@ class TCNTrainingService:
         history = {"train_loss": [], "val_loss": []}
 
         for epoch in range(config.epochs):
-            # Yield to event loop periodically for health check responses
-            if epoch % 5 == 0:
-                await asyncio.sleep(0)
+            # Check for stop request at epoch start
+            if self._stop_requested:
+                logger.info(f"Training stopped by user at epoch {epoch}")
+                break
 
             # Training
             model.train()
@@ -483,7 +484,11 @@ class TCNTrainingService:
             # Shuffle training data
             indices = np.random.permutation(len(train_sequences))
 
-            for i in range(0, len(indices), config.batch_size):
+            for batch_num, i in enumerate(range(0, len(indices), config.batch_size)):
+                # Yield to event loop every 10 batches for API responsiveness
+                if batch_num % 10 == 0:
+                    await asyncio.sleep(0)
+
                 batch_indices = indices[i:i + config.batch_size]
 
                 # Shape: (batch, sequence_length, channels)
