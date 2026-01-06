@@ -846,7 +846,7 @@ class TwelveDataService:
         symbol: str,
         interval: str = "1day",
         period: int = 10,
-        multiplier: float = 3.0,
+        multiplier: int = 3,
         outputsize: int = 100,
     ) -> dict:
         """Get Supertrend indicator."""

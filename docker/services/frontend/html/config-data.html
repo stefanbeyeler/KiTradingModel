@@ -5688,7 +5688,7 @@
             // Update stats
             const stats = data.statistics || {};
             document.getElementById('prefetch-last-run').textContent =
-                stats.last_run ? formatDateTime(stats.last_run) : 'Nie';
+                stats.last_run ? formatPrefetchDateTime(stats.last_run) : 'Nie';
             document.getElementById('prefetch-total-runs').textContent = stats.total_runs || 0;
             document.getElementById('prefetch-symbols').textContent = stats.symbols_fetched || 0;
             document.getElementById('prefetch-entries').textContent = stats.cache_entries_created || 0;
@@ -5709,10 +5709,12 @@
             document.getElementById('pf-tf-1week').checked = timeframes.includes('1week');
         }
 
-        function formatDateTime(isoString) {
+        function formatPrefetchDateTime(isoString) {
             if (!isoString) return '-';
+            // Prefetch timestamps already include timezone info (ISO format)
             const date = new Date(isoString);
             return date.toLocaleString('de-CH', {
+                timeZone: 'Europe/Zurich',
                 hour: '2-digit',
                 minute: '2-digit',
                 day: '2-digit',
