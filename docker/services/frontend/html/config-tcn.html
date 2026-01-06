@@ -3141,7 +3141,11 @@
                 showToast('Training gestartet');
                 document.getElementById('btn-stop-train').disabled = false;
 
-                // Start polling for status
+                // Show progress section immediately
+                document.getElementById('training-progress-section').style.display = 'block';
+
+                // Load status immediately, then start polling
+                await loadTrainingStatus();
                 trainingInterval = setInterval(loadTrainingStatus, 2000);
 
             } catch (error) {
