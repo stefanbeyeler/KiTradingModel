@@ -4631,10 +4631,18 @@
             if (indicators.includes('ma10')) headerHtml += `<th style="${thStyleHighlight('33,150,243')}">MA(10)</th>`;
             if (indicators.includes('ema')) headerHtml += `<th style="${thStyleHighlight('33,150,243')}">EMA(20)</th>`;
             if (indicators.includes('sma')) headerHtml += `<th style="${thStyleHighlight('33,150,243')}">SMA(20)</th>`;
-            if (indicators.includes('supertrend')) headerHtml += `<th style="${thStyleHighlight('33,150,243')}">Supertrend</th><th style="${thStyle}">Dir</th>`;
+            if (indicators.includes('supertrend')) {
+                headerHtml += `<th style="${thStyleHighlight('33,150,243')}">Supertrend</th>`;
+                // Note: TwelveData API doesn't provide direction, only EasyInsight does
+            }
             if (indicators.includes('ichimoku')) {
-                headerHtml += `<th style="${thStyle}">Tenkan</th><th style="${thStyle}">Kijun</th><th style="${thStyle}">Senkou A</th><th style="${thStyle}">Senkou B</th>`;
-                if (source === 'easyinsight') headerHtml += `<th style="${thStyle}">Chikou</th>`;
+                if (source === 'easyinsight') {
+                    // EasyInsight provides all 5 Ichimoku components
+                    headerHtml += `<th style="${thStyle}">Tenkan</th><th style="${thStyle}">Kijun</th><th style="${thStyle}">Senkou A</th><th style="${thStyle}">Senkou B</th><th style="${thStyle}">Chikou</th>`;
+                } else {
+                    // TwelveData only provides Senkou Spans
+                    headerHtml += `<th style="${thStyle}">Senkou A</th><th style="${thStyle}">Senkou B</th>`;
+                }
             }
             if (indicators.includes('ht_trendmode')) headerHtml += `<th style="${thStyle}">HT Trend</th>`;
             if (indicators.includes('linearregslope')) headerHtml += `<th style="${thStyle}">LinReg Slope</th>`;
@@ -4749,17 +4757,22 @@
                     bodyHtml += `<td style="${tdStyle} background: rgba(33,150,243,0.03);">${formatPrice(row.sma)}</td>`;
                 }
                 if (indicators.includes('supertrend')) {
-                    const stColor = row.supertrend_dir === 'up' ? '#4caf50' : '#f44336';
-                    bodyHtml += `<td style="${tdStyle} background: rgba(33,150,243,0.03);">${formatPrice(row.supertrend)}</td>`;
-                    bodyHtml += `<td style="${tdStyle} color: ${stColor};">${row.supertrend_dir || '-'}</td>`;
+                    // Color based on price vs supertrend (above = bullish, below = bearish)
+                    const stColor = row.close > row.supertrend ? '#4caf50' : '#f44336';
+                    bodyHtml += `<td style="${tdStyle} background: rgba(33,150,243,0.03); color: ${stColor};">${formatPrice(row.supertrend)}</td>`;
                 }
                 if (indicators.includes('ichimoku')) {
-                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_tenkan)}</td>`;
-                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_kijun)}</td>`;
-                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_senkou_a)}</td>`;
-                    bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_senkou_b)}</td>`;
                     if (source === 'easyinsight') {
+                        // EasyInsight provides all 5 Ichimoku components
+                        bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_tenkan)}</td>`;
+                        bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_kijun)}</td>`;
+                        bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_senkou_a)}</td>`;
+                        bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_senkou_b)}</td>`;
                         bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_chikou)}</td>`;
+                    } else {
+                        // TwelveData only provides Senkou Spans
+                        bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_senkou_a)}</td>`;
+                        bodyHtml += `<td style="${tdStyle}">${formatPrice(row.ichi_senkou_b)}</td>`;
                     }
                 }
                 if (indicators.includes('ht_trendmode')) {
