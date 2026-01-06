@@ -4296,7 +4296,14 @@
             // Update info grid
             document.getElementById('chartSymbol').textContent = symbol;
             document.getElementById('chartTimeframe').textContent = timeframe;
-            document.getElementById('chartPatternTime').textContent = formatLocalDateTime(timestamp, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            // Show pattern time range (start - end) instead of single timestamp
+            if (startTime && endTime) {
+                const startFormatted = formatLocalDateTime(startTime, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const endFormatted = formatLocalDateTime(endTime, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                document.getElementById('chartPatternTime').textContent = `${startFormatted} - ${endFormatted}`;
+            } else {
+                document.getElementById('chartPatternTime').textContent = formatLocalDateTime(timestamp, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
             document.getElementById('chartConfidence').textContent = `${(confidence * 100).toFixed(0)}%`;
 
             // Hidden fields for backward compatibility
@@ -4335,6 +4342,7 @@
                 // Check if OHLCV data is stored with pattern history (retrospective analysis)
                 if (patternData && patternData.ohlcv_data && patternData.ohlcv_data.length > 0) {
                     console.log(`[TCN Chart] Using stored OHLCV data (${patternData.ohlcv_data.length} candles)`);
+                    const originalLength = patternData.ohlcv_data.length;
                     allCandles = patternData.ohlcv_data.map(c => ({
                         timestamp: c.timestamp,
                         open: parseFloat(c.open),
@@ -4344,8 +4352,24 @@
                         volume: c.volume ? parseFloat(c.volume) : 0
                     })).filter(c => c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0);
 
-                    // Sort chronologically (oldest first) - OHLCV data may be stored newest-first
-                    allCandles.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                    // Check if data is stored newest-first (need to reverse)
+                    const isNewestFirst = allCandles.length > 1 &&
+                        new Date(allCandles[0].timestamp) > new Date(allCandles[allCandles.length - 1].timestamp);
+
+                    if (isNewestFirst) {
+                        console.log(`[TCN Chart] Data is newest-first, reversing to chronological order`);
+                        allCandles.reverse();
+
+                        // Also need to transform pattern_points indices since they refer to newest-first order
+                        // Index i in newest-first = Index (originalLength - 1 - i) in oldest-first
+                        if (patternPoints && patternPoints.length > 0) {
+                            patternPoints = patternPoints.map(p => ({
+                                ...p,
+                                index: originalLength - 1 - p.index
+                            }));
+                            console.log(`[TCN Chart] Transformed pattern points:`, patternPoints.map(p => p.index));
+                        }
+                    }
 
                     dataSource = 'Stored (Pattern History)';
                 } else {
@@ -6205,8 +6229,8 @@
                         <div style="font-size: 1rem; font-weight: 600;" id="chartTimeframe">-</div>
                     </div>
                     <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px;">
-                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.25rem;">Zeitpunkt</div>
-                        <div style="font-size: 1rem; font-weight: 600;" id="chartPatternTime">-</div>
+                        <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.25rem;">Zeitraum</div>
+                        <div style="font-size: 0.9rem; font-weight: 600;" id="chartPatternTime">-</div>
                     </div>
                     <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px;">
                         <div style="font-size: 0.75rem; color: #888; margin-bottom: 0.25rem;">Konfidenz</div>
