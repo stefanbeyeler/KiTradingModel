@@ -429,6 +429,7 @@ services:
       - EMBEDDER_SERVICE_URL=http://trading-embedder:${EMBEDDER_SERVICE_PORT:-3005}
       - TCN_MODEL_PATH=/app/data/models/tcn/latest.pt
       - TCN_AUTO_SCAN=true
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     networks:
       - trading-net
     extra_hosts:
