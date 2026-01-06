@@ -149,7 +149,7 @@ class RegimeDetectionService:
             from src.services.data_gateway_service import data_gateway
 
             # Calculate candles needed
-            candles_per_day = {"1m": 1440, "5m": 288, "15m": 96, "1h": 24, "4h": 6, "1d": 1}
+            candles_per_day = {"1m": 1440, "5m": 288, "15m": 96, "30m": 48, "1h": 24, "4h": 6, "1d": 1}
             limit = days * candles_per_day.get(timeframe, 24)
 
             data = await data_gateway.get_historical_data(
@@ -304,7 +304,7 @@ class RegimeDetectionService:
         try:
             from src.services.data_gateway_service import data_gateway
 
-            candles_per_day = {"1m": 1440, "5m": 288, "15m": 96, "1h": 24, "4h": 6, "1d": 1}
+            candles_per_day = {"1m": 1440, "5m": 288, "15m": 96, "30m": 48, "1h": 24, "4h": 6, "1d": 1}
             limit = lookback_days * candles_per_day.get(timeframe, 24)
 
             data = await data_gateway.get_historical_data(

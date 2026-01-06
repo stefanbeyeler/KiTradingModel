@@ -234,7 +234,7 @@ class TCNTrainingService:
                 logger.info(f"Fetching data for {symbol}")
 
                 # Approximate candle count
-                candles_per_day = {"1m": 1440, "5m": 288, "15m": 96, "1h": 24, "4h": 6, "1d": 1}
+                candles_per_day = {"1m": 1440, "5m": 288, "15m": 96, "30m": 48, "1h": 24, "4h": 6, "1d": 1}
                 limit = lookback_days * candles_per_day.get(timeframe, 24)
 
                 data = await data_gateway.get_historical_data(
