@@ -4281,6 +4281,7 @@
         let tcnPatternList = [];
         let currentTcnPatternData = null;
         let currentPatternOhlcData = null; // Store OHLC data for zoom modal
+        let currentZoomPatternName = null; // Store pattern name for zoom modal title
 
         // Show pattern modal with real chart and pattern overlay
         async function showPatternChart(symbol, timeframe, timestamp, patternType, direction, patternData, patternIndex = -1) {
@@ -5967,11 +5968,14 @@
             }
 
             // Get current pattern info
-            const patternName = document.getElementById('chartPatternName')?.textContent || '-';
+            const patternName = document.getElementById('chartModalTitle')?.textContent || '-';
             const symbol = document.getElementById('chartSymbol')?.textContent || '-';
             const timeframe = document.getElementById('chartTimeframe')?.textContent || '-';
             const timestamp = document.getElementById('chartPatternTime')?.textContent || '-';
             const confidence = document.getElementById('chartConfidence')?.textContent || '-';
+
+            // Store pattern name for zoom chart title
+            currentZoomPatternName = patternName;
 
             // Set info text
             zoomPatternInfo.innerHTML = `<strong>${patternName}</strong> · ${symbol} · ${timeframe} · Konfidenz: ${confidence}`;
@@ -6082,6 +6086,14 @@
             const indexToX = (idx) => {
                 return chartPadding.left + (idx + 0.5) * candleSpacing;
             };
+
+            // Draw pattern name title (top-left corner)
+            if (currentZoomPatternName) {
+                ctx.fillStyle = '#64c8ff';
+                ctx.font = 'bold 16px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillText(currentZoomPatternName, chartPadding.left + 5, 28);
+            }
 
             // Draw grid lines
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
