@@ -35,6 +35,8 @@
       "Bash(rsync:*)",
       "Bash(ls:*)",
       "Bash(cat:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)",
       "Bash(grep:*)",
       "Bash(find:*)",
       "Bash(echo:*)",
