@@ -2633,15 +2633,10 @@
 
             <!-- Pattern History -->
             <div class="card">
-                <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 0.75rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h2 class="card-title" style="margin: 0;">📋 Erkannte Patterns</h2>
-                        <div class="btn-group">
-                            <button class="btn btn-secondary btn-sm" onclick="resetHistoryFilters()" title="Filter zurücksetzen">✕ Filter</button>
-                            <button class="btn btn-primary btn-sm" onclick="loadPatternHistory()">↻ Aktualisieren</button>
-                        </div>
-                    </div>
-                    <!-- Compact Filter Row -->
+                <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 0.5rem;">
+                    <!-- Titel -->
+                    <h2 class="card-title" style="margin: 0;">📋 Erkannte Patterns</h2>
+                    <!-- Filter Row mit Buttons -->
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                         <select id="historyFilterSymbol" onchange="loadPatternHistory()" class="filter-select">
                             <option value="">Alle Symbole</option>
@@ -2681,6 +2676,10 @@
                             <input type="date" id="historyFilterDateFrom" onchange="loadPatternHistory()" class="filter-date" title="Von Datum">
                             <span style="color: #666;">-</span>
                             <input type="date" id="historyFilterDateTo" onchange="loadPatternHistory()" class="filter-date" title="Bis Datum">
+                        </div>
+                        <div style="margin-left: auto; display: flex; gap: 0.25rem;">
+                            <button class="btn btn-secondary btn-sm" onclick="resetHistoryFilters()" title="Filter zurücksetzen">✕ Filter</button>
+                            <button class="btn btn-primary btn-sm" onclick="loadPatternHistory()">↻ Aktualisieren</button>
                         </div>
                     </div>
                 </div>
