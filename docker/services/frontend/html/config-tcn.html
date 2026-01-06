@@ -4328,146 +4328,162 @@
             modal.classList.add('show');
 
             try {
-                // Fetch OHLC data from TwelveData time_series endpoint
-                // Convert timeframe to TwelveData interval format (H1 -> 1h, M5 -> 5min, D1 -> 1day)
-                const intervalMap = {
-                    'M1': '1min', 'M5': '5min', 'M15': '15min', 'M30': '30min',
-                    'H1': '1h', 'H2': '2h', 'H4': '4h',
-                    'D1': '1day', 'W1': '1week', 'MN': '1month',
-                    '5m': '5min', '15m': '15min', '30m': '30min',
-                    '1h': '1h', '4h': '4h', '1d': '1day'
-                };
-                const interval = intervalMap[timeframe] || '1h';
-
-                // Calculate how many hours/days per candle based on timeframe
-                const timeframeHours = {
-                    '1min': 1/60, '5min': 5/60, '15min': 15/60, '30min': 30/60,
-                    '1h': 1, '2h': 2, '4h': 4,
-                    '1day': 24, '1week': 168, '1month': 720
-                };
-                const hoursPerCandle = timeframeHours[interval] || 1;
-
-                // Use pattern_start_time and pattern_end_time if available (historical patterns)
-                // Otherwise fall back to timestamp (detection time)
-                const candlesBefore = 5;  // Context before pattern
-                const candlesAfter = 5;   // Context after pattern
-
-                let startDate, endDate;
-                console.log(`[TCN Chart] patternData:`, patternData);
-                console.log(`[TCN Chart] startTime=${startTime}, endTime=${endTime}`);
-
-                if (startTime && endTime) {
-                    // Historical pattern with defined time range
-                    const patternStartDate = new Date(startTime);
-                    const patternEndDate = new Date(endTime);
-                    // Add buffer before start and after end
-                    startDate = new Date(patternStartDate.getTime() - candlesBefore * hoursPerCandle * 60 * 60 * 1000);
-                    endDate = new Date(patternEndDate.getTime() + candlesAfter * hoursPerCandle * 60 * 60 * 1000);
-                    console.log(`[TCN Chart] Using pattern time range: ${startTime} to ${endTime}`);
-                } else {
-                    // Fallback: use detection timestamp
-                    const patternDate = new Date(timestamp);
-                    startDate = new Date(patternDate.getTime() - 25 * hoursPerCandle * 60 * 60 * 1000);
-                    endDate = new Date(patternDate.getTime() + candlesAfter * hoursPerCandle * 60 * 60 * 1000);
-                    console.log(`[TCN Chart] Using detection timestamp: ${timestamp}`);
-                }
-
-                // Format dates as YYYY-MM-DD HH:mm:ss for TwelveData
-                const formatDate = (d) => {
-                    const year = d.getUTCFullYear();
-                    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-                    const day = String(d.getUTCDate()).padStart(2, '0');
-                    const hours = String(d.getUTCHours()).padStart(2, '0');
-                    const mins = String(d.getUTCMinutes()).padStart(2, '0');
-                    return `${year}-${month}-${day} ${hours}:${mins}:00`;
-                };
-
-                const startDateStr = formatDate(startDate);
-                const endDateStr = formatDate(endDate);
-
-                console.log(`Fetching OHLC for ${symbol} from ${startDateStr} to ${endDateStr} (pattern at ${timestamp})`);
-
                 let allCandles = [];
                 let dataSource = 'unknown';
 
-                // Try TwelveData first
-                try {
-                    const ohlcResponse = await fetch(`/data/api/v1/twelvedata/time_series/${symbol}?interval=${interval}&start_date=${encodeURIComponent(startDateStr)}&end_date=${encodeURIComponent(endDateStr)}&outputsize=100`);
+                // Check if OHLCV data is stored with pattern history (retrospective analysis)
+                if (patternData && patternData.ohlcv_data && patternData.ohlcv_data.length > 0) {
+                    console.log(`[TCN Chart] Using stored OHLCV data (${patternData.ohlcv_data.length} candles)`);
+                    allCandles = patternData.ohlcv_data.map(c => ({
+                        timestamp: c.timestamp,
+                        open: parseFloat(c.open),
+                        high: parseFloat(c.high),
+                        low: parseFloat(c.low),
+                        close: parseFloat(c.close),
+                        volume: c.volume ? parseFloat(c.volume) : 0
+                    })).filter(c => c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0);
+                    dataSource = 'Stored (Pattern History)';
+                } else {
+                    // No stored OHLCV data - fetch from API
+                    console.log(`[TCN Chart] No stored OHLCV data, fetching from API...`);
 
-                    if (ohlcResponse.ok) {
-                        const ohlcData = await ohlcResponse.json();
-
-                        // Check for unsupported symbol or error
-                        if (!ohlcData.unsupported && !ohlcData.error && !ohlcData.detail && ohlcData.status !== 'error') {
-                            const rawCandles = ohlcData.values || ohlcData.candles || ohlcData.data || ohlcData;
-                            if (rawCandles && rawCandles.length > 0) {
-                                allCandles = rawCandles.map(c => ({
-                                    timestamp: c.datetime,
-                                    open: parseFloat(c.open),
-                                    high: parseFloat(c.high),
-                                    low: parseFloat(c.low),
-                                    close: parseFloat(c.close),
-                                    volume: c.volume ? parseFloat(c.volume) : 0
-                                })).reverse();
-                                dataSource = 'TwelveData';
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.log('TwelveData failed, trying EasyInsight fallback...', e.message);
-                }
-
-                // Fallback to EasyInsight if TwelveData failed or returned no data
-                if (allCandles.length === 0) {
-                    console.log(`TwelveData unavailable for ${symbol}, trying EasyInsight...`);
-
-                    // Map interval to EasyInsight format
-                    const easyInsightIntervalMap = {
-                        '1min': 'm1', '5min': 'm5', '15min': 'm15', '30min': 'm30',
-                        '1h': 'h1', '2h': 'h2', '4h': 'h4',
-                        '1day': 'd1', '1week': 'w1', '1month': 'mn'
+                    // Convert timeframe to TwelveData interval format (H1 -> 1h, M5 -> 5min, D1 -> 1day)
+                    const intervalMap = {
+                        'M1': '1min', 'M5': '5min', 'M15': '15min', 'M30': '30min',
+                        'H1': '1h', 'H2': '2h', 'H4': '4h',
+                        'D1': '1day', 'W1': '1week', 'MN': '1month',
+                        '5m': '5min', '15m': '15min', '30m': '30min',
+                        '1h': '1h', '4h': '4h', '1d': '1day'
                     };
-                    const eiInterval = easyInsightIntervalMap[interval] || 'h1';
+                    const interval = intervalMap[timeframe] || '1h';
 
+                    // Calculate how many hours/days per candle based on timeframe
+                    const timeframeHours = {
+                        '1min': 1/60, '5min': 5/60, '15min': 15/60, '30min': 30/60,
+                        '1h': 1, '2h': 2, '4h': 4,
+                        '1day': 24, '1week': 168, '1month': 720
+                    };
+                    const hoursPerCandle = timeframeHours[interval] || 1;
+
+                    // Use pattern_start_time and pattern_end_time if available (historical patterns)
+                    // Otherwise fall back to timestamp (detection time)
+                    const candlesBefore = 5;  // Context before pattern
+                    const candlesAfter = 5;   // Context after pattern
+
+                    let startDate, endDate;
+                    console.log(`[TCN Chart] patternData:`, patternData);
+                    console.log(`[TCN Chart] startTime=${startTime}, endTime=${endTime}`);
+
+                    if (startTime && endTime) {
+                        // Historical pattern with defined time range
+                        const patternStartDate = new Date(startTime);
+                        const patternEndDate = new Date(endTime);
+                        // Add buffer before start and after end
+                        startDate = new Date(patternStartDate.getTime() - candlesBefore * hoursPerCandle * 60 * 60 * 1000);
+                        endDate = new Date(patternEndDate.getTime() + candlesAfter * hoursPerCandle * 60 * 60 * 1000);
+                        console.log(`[TCN Chart] Using pattern time range: ${startTime} to ${endTime}`);
+                    } else {
+                        // Fallback: use detection timestamp
+                        const patternDate = new Date(timestamp);
+                        startDate = new Date(patternDate.getTime() - 25 * hoursPerCandle * 60 * 60 * 1000);
+                        endDate = new Date(patternDate.getTime() + candlesAfter * hoursPerCandle * 60 * 60 * 1000);
+                        console.log(`[TCN Chart] Using detection timestamp: ${timestamp}`);
+                    }
+
+                    // Format dates as YYYY-MM-DD HH:mm:ss for TwelveData
+                    const formatDate = (d) => {
+                        const year = d.getUTCFullYear();
+                        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                        const day = String(d.getUTCDate()).padStart(2, '0');
+                        const hours = String(d.getUTCHours()).padStart(2, '0');
+                        const mins = String(d.getUTCMinutes()).padStart(2, '0');
+                        return `${year}-${month}-${day} ${hours}:${mins}:00`;
+                    };
+
+                    const startDateStr = formatDate(startDate);
+                    const endDateStr = formatDate(endDate);
+
+                    console.log(`Fetching OHLC for ${symbol} from ${startDateStr} to ${endDateStr} (pattern at ${timestamp})`);
+
+                    // Try TwelveData first
                     try {
-                        const eiResponse = await fetch(`/data/api/v1/easyinsight/ohlcv/${symbol}?interval=${eiInterval}&limit=100`);
-                        if (eiResponse.ok) {
-                            const eiData = await eiResponse.json();
-                            const eiCandles = eiData.data || eiData.values || [];
+                        const ohlcResponse = await fetch(`/data/api/v1/twelvedata/time_series/${symbol}?interval=${interval}&start_date=${encodeURIComponent(startDateStr)}&end_date=${encodeURIComponent(endDateStr)}&outputsize=100`);
 
-                            if (eiCandles && eiCandles.length > 0) {
-                                // EasyInsight format has h1_open, h1_high, etc. - extract based on timeframe
-                                const tfPrefix = eiInterval.toLowerCase();
-                                allCandles = eiCandles.map(c => {
-                                    // Try timeframe-specific fields first, then generic
-                                    const open = c[`${tfPrefix}_open`] || c.open || c.h1_open || 0;
-                                    const high = c[`${tfPrefix}_high`] || c.high || c.h1_high || 0;
-                                    const low = c[`${tfPrefix}_low`] || c.low || c.h1_low || 0;
-                                    const close = c[`${tfPrefix}_close`] || c.close || c.h1_close || 0;
-                                    const timestamp = c.import_time || c.datetime || c.timestamp || new Date().toISOString();
-                                    return {
-                                        timestamp: timestamp,
-                                        open: parseFloat(open),
-                                        high: parseFloat(high),
-                                        low: parseFloat(low),
-                                        close: parseFloat(close),
-                                        volume: c.volume || 0
-                                    };
-                                }).filter(c => c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0);
+                        if (ohlcResponse.ok) {
+                            const ohlcData = await ohlcResponse.json();
 
-                                // EasyInsight might return newest first, reverse if needed
-                                if (allCandles.length > 1) {
-                                    const first = new Date(allCandles[0].timestamp);
-                                    const last = new Date(allCandles[allCandles.length - 1].timestamp);
-                                    if (first > last) {
-                                        allCandles.reverse();
-                                    }
+                            // Check for unsupported symbol or error
+                            if (!ohlcData.unsupported && !ohlcData.error && !ohlcData.detail && ohlcData.status !== 'error') {
+                                const rawCandles = ohlcData.values || ohlcData.candles || ohlcData.data || ohlcData;
+                                if (rawCandles && rawCandles.length > 0) {
+                                    allCandles = rawCandles.map(c => ({
+                                        timestamp: c.datetime,
+                                        open: parseFloat(c.open),
+                                        high: parseFloat(c.high),
+                                        low: parseFloat(c.low),
+                                        close: parseFloat(c.close),
+                                        volume: c.volume ? parseFloat(c.volume) : 0
+                                    })).reverse();
+                                    dataSource = 'TwelveData';
                                 }
-                                dataSource = 'EasyInsight';
                             }
                         }
                     } catch (e) {
-                        console.error('EasyInsight fallback also failed:', e.message);
+                        console.log('TwelveData failed, trying EasyInsight fallback...', e.message);
+                    }
+
+                    // Fallback to EasyInsight if TwelveData failed or returned no data
+                    if (allCandles.length === 0) {
+                        console.log(`TwelveData unavailable for ${symbol}, trying EasyInsight...`);
+
+                        // Map interval to EasyInsight format
+                        const easyInsightIntervalMap = {
+                            '1min': 'm1', '5min': 'm5', '15min': 'm15', '30min': 'm30',
+                            '1h': 'h1', '2h': 'h2', '4h': 'h4',
+                            '1day': 'd1', '1week': 'w1', '1month': 'mn'
+                        };
+                        const eiInterval = easyInsightIntervalMap[interval] || 'h1';
+
+                        try {
+                            const eiResponse = await fetch(`/data/api/v1/easyinsight/ohlcv/${symbol}?interval=${eiInterval}&limit=100`);
+                            if (eiResponse.ok) {
+                                const eiData = await eiResponse.json();
+                                const eiCandles = eiData.data || eiData.values || [];
+
+                                if (eiCandles && eiCandles.length > 0) {
+                                    // EasyInsight format has h1_open, h1_high, etc. - extract based on timeframe
+                                    const tfPrefix = eiInterval.toLowerCase();
+                                    allCandles = eiCandles.map(c => {
+                                        // Try timeframe-specific fields first, then generic
+                                        const open = c[`${tfPrefix}_open`] || c.open || c.h1_open || 0;
+                                        const high = c[`${tfPrefix}_high`] || c.high || c.h1_high || 0;
+                                        const low = c[`${tfPrefix}_low`] || c.low || c.h1_low || 0;
+                                        const close = c[`${tfPrefix}_close`] || c.close || c.h1_close || 0;
+                                        const timestamp = c.import_time || c.datetime || c.timestamp || new Date().toISOString();
+                                        return {
+                                            timestamp: timestamp,
+                                            open: parseFloat(open),
+                                            high: parseFloat(high),
+                                            low: parseFloat(low),
+                                            close: parseFloat(close),
+                                            volume: c.volume || 0
+                                        };
+                                    }).filter(c => c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0);
+
+                                    // EasyInsight might return newest first, reverse if needed
+                                    if (allCandles.length > 1) {
+                                        const first = new Date(allCandles[0].timestamp);
+                                        const last = new Date(allCandles[allCandles.length - 1].timestamp);
+                                        if (first > last) {
+                                            allCandles.reverse();
+                                        }
+                                    }
+                                    dataSource = 'EasyInsight';
+                                }
+                            }
+                        } catch (e) {
+                            console.error('EasyInsight fallback also failed:', e.message);
+                        }
                     }
                 }
 

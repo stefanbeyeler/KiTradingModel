@@ -525,6 +525,19 @@ class PatternDetectionService:
             context = self._get_market_context(ohlcv)
             context["data_source"] = source
 
+            # Prepare OHLCV data for storage (keep original data with timestamps)
+            ohlcv_for_storage = []
+            for i, d in enumerate(data):
+                candle = {
+                    "timestamp": timestamps[i] if i < len(timestamps) else None,
+                    "open": d.get('open') or d.get(f'{prefix}_open', 0),
+                    "high": d.get('high') or d.get(f'{prefix}_high', 0),
+                    "low": d.get('low') or d.get(f'{prefix}_low', 0),
+                    "close": d.get('close') or d.get(f'{prefix}_close', 0),
+                    "volume": d.get('volume', 0)
+                }
+                ohlcv_for_storage.append(candle)
+
             return PatternDetectionResponse(
                 symbol=symbol,
                 timeframe=timeframe,
@@ -532,7 +545,8 @@ class PatternDetectionService:
                 patterns=detected,
                 total_patterns=len(detected),
                 market_context=context,
-                model_version=self._model_version
+                model_version=self._model_version,
+                ohlcv_data=ohlcv_for_storage
             )
 
         except Exception as e:

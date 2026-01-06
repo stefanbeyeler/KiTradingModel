@@ -78,6 +78,11 @@ class PatternDetectionResponse(BaseModel):
     total_patterns: int
     market_context: dict
     model_version: str
+    # OHLCV data used for pattern detection (for retrospective analysis)
+    ohlcv_data: Optional[List[dict]] = Field(
+        default=None,
+        description="OHLCV candles used for pattern detection"
+    )
 
 
 class PatternScanRequest(BaseModel):

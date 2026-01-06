@@ -43,6 +43,8 @@ class TCNPatternHistoryEntry:
     category: str                    # reversal, continuation, or trend
     # Pattern geometry - key points for visualization
     pattern_points: Optional[List[dict]] = None  # List of PatternPoint as dicts
+    # OHLCV data used for pattern detection (for retrospective analysis)
+    ohlcv_data: Optional[List[dict]] = None  # List of OHLCV candles with timestamp
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
@@ -220,10 +222,26 @@ class TCNPatternHistoryService:
         price_target: Optional[float] = None,
         invalidation_level: Optional[float] = None,
         pattern_height: Optional[float] = None,
-        pattern_points: Optional[List[dict]] = None
+        pattern_points: Optional[List[dict]] = None,
+        ohlcv_data: Optional[List[dict]] = None
     ) -> Optional[TCNPatternHistoryEntry]:
         """
         Add a detected pattern to history.
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe
+            pattern_type: Pattern type
+            confidence: Detection confidence (0-1)
+            pattern_start_time: When the pattern started forming (ISO 8601)
+            pattern_end_time: When the pattern completed (ISO 8601)
+            direction: bullish, bearish, or neutral
+            price_at_detection: Price when pattern was detected
+            price_target: Projected price target
+            invalidation_level: Level where pattern is invalidated
+            pattern_height: Height of the pattern
+            pattern_points: Key points for visualization
+            ohlcv_data: OHLCV candles used for detection (for retrospective analysis)
 
         Returns the entry if added, None if duplicate.
         """
@@ -250,7 +268,8 @@ class TCNPatternHistoryService:
             invalidation_level=invalidation_level,
             pattern_height=pattern_height,
             category=category,
-            pattern_points=pattern_points
+            pattern_points=pattern_points,
+            ohlcv_data=ohlcv_data
         )
 
         # Check for duplicates
@@ -445,7 +464,7 @@ class TCNPatternHistoryService:
                                     for p in pattern.pattern_points
                                 ]
 
-                            # Add to history
+                            # Add to history (including OHLCV data for retrospective analysis)
                             entry = self.add_pattern(
                                 symbol=symbol,
                                 timeframe=timeframe,
@@ -458,7 +477,8 @@ class TCNPatternHistoryService:
                                 price_target=pattern.price_target,
                                 invalidation_level=pattern.invalidation_level,
                                 pattern_height=pattern.pattern_height,
-                                pattern_points=pattern_points_dicts
+                                pattern_points=pattern_points_dicts,
+                                ohlcv_data=response.ohlcv_data
                             )
 
                             if entry:
@@ -533,7 +553,7 @@ class TCNPatternHistoryService:
                             for p in pattern.pattern_points
                         ]
 
-                    # Add to history
+                    # Add to history (including OHLCV data for retrospective analysis)
                     entry = self.add_pattern(
                         symbol=symbol,
                         timeframe=timeframe,
@@ -546,7 +566,8 @@ class TCNPatternHistoryService:
                         price_target=pattern.price_target,
                         invalidation_level=pattern.invalidation_level,
                         pattern_height=pattern.pattern_height,
-                        pattern_points=pattern_points_dicts
+                        pattern_points=pattern_points_dicts,
+                        ohlcv_data=response.ohlcv_data
                     )
 
                     if entry:
