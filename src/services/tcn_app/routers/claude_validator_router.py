@@ -66,8 +66,8 @@ async def validate_pattern(request: TCNValidationRequest):
     """
     try:
         # Get pattern from history
-        history = tcn_pattern_history_service.get_all_patterns()
-        pattern = next((p for p in history if p.get("id") == request.pattern_id), None)
+        history = tcn_pattern_history_service.get_history(limit=500)
+        pattern = next((p.to_dict() for p in history if p.id == request.pattern_id), None)
 
         if not pattern:
             raise HTTPException(
@@ -193,8 +193,8 @@ async def get_chart_preview(pattern_id: str):
     """
     try:
         # Get pattern from history
-        history = tcn_pattern_history_service.get_all_patterns()
-        pattern = next((p for p in history if p.get("id") == pattern_id), None)
+        history = tcn_pattern_history_service.get_history(limit=500)
+        pattern = next((p.to_dict() for p in history if p.id == pattern_id), None)
 
         if not pattern:
             raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
