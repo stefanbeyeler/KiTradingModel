@@ -1348,7 +1348,53 @@
             border-color: #64c8ff;
         }
 
-        /* Pattern History Styles */
+        /* Compact Filter Styles */
+        .filter-select {
+            padding: 0.4rem 0.6rem;
+            background: rgba(40, 40, 60, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-size: 0.8rem;
+            cursor: pointer;
+            min-width: 100px;
+        }
+
+        .filter-select:hover {
+            border-color: rgba(100, 200, 255, 0.4);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        .filter-select option {
+            background: #252540;
+            color: #fff;
+            padding: 8px 12px;
+        }
+
+        .filter-date {
+            padding: 0.35rem 0.5rem;
+            background: rgba(40, 40, 60, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-size: 0.75rem;
+            width: 110px;
+        }
+
+        .filter-date:hover {
+            border-color: rgba(100, 200, 255, 0.4);
+        }
+
+        .filter-date:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        /* Legacy history-filters (kept for backwards compat) */
         .history-filters {
             display: flex;
             gap: 1rem;
@@ -2587,74 +2633,55 @@
 
             <!-- Pattern History -->
             <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Erkannte Patterns</h2>
-                    <div class="btn-group">
-                        <button class="btn btn-secondary" onclick="resetHistoryFilters()" title="Filter zurücksetzen">✕ Filter</button>
-                        <button class="btn btn-primary" onclick="loadPatternHistory()">Aktualisieren</button>
+                <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2 class="card-title" style="margin: 0;">📋 Erkannte Patterns</h2>
+                        <div class="btn-group">
+                            <button class="btn btn-secondary btn-sm" onclick="resetHistoryFilters()" title="Filter zurücksetzen">✕ Filter</button>
+                            <button class="btn btn-primary btn-sm" onclick="loadPatternHistory()">↻ Aktualisieren</button>
+                        </div>
                     </div>
-                </div>
-
-                <div class="history-filters">
-                    <div class="form-group" style="margin: 0;">
-                        <label style="font-size: 0.75rem;">Pattern</label>
-                        <select id="historyFilterPattern" onchange="loadPatternHistory()">
-                            <option value="">Alle Patterns</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <label style="font-size: 0.75rem;">Symbol</label>
-                        <select id="historyFilterSymbol" onchange="loadPatternHistory()">
+                    <!-- Compact Filter Row -->
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                        <select id="historyFilterSymbol" onchange="loadPatternHistory()" class="filter-select">
                             <option value="">Alle Symbole</option>
                         </select>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <label style="font-size: 0.75rem;">Richtung</label>
-                        <select id="historyFilterDirection" onchange="loadPatternHistory()">
-                            <option value="">Alle</option>
-                            <option value="bullish">Bullish</option>
-                            <option value="bearish">Bearish</option>
-                            <option value="neutral">Neutral</option>
+                        <select id="historyFilterPattern" onchange="loadPatternHistory()" class="filter-select">
+                            <option value="">Alle Patterns</option>
                         </select>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <label style="font-size: 0.75rem;">Timeframe</label>
-                        <select id="historyFilterTimeframe" onchange="loadPatternHistory()">
-                            <option value="">Alle</option>
+                        <select id="historyFilterTimeframe" onchange="loadPatternHistory()" class="filter-select">
+                            <option value="">Alle Timeframes</option>
                             <option value="M5">M5</option>
                             <option value="M15">M15</option>
                             <option value="H1">H1</option>
                             <option value="H4">H4</option>
                             <option value="D1">D1</option>
                         </select>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <label style="font-size: 0.75rem;">Konfidenz</label>
-                        <select id="historyFilterConfidence" onchange="loadPatternHistory()">
-                            <option value="0">Alle</option>
+                        <select id="historyFilterDirection" onchange="loadPatternHistory()" class="filter-select">
+                            <option value="">Alle Richtungen</option>
+                            <option value="bullish">🟢 Bullish</option>
+                            <option value="bearish">🔴 Bearish</option>
+                            <option value="neutral">⚪ Neutral</option>
+                        </select>
+                        <select id="historyFilterConfidence" onchange="loadPatternHistory()" class="filter-select">
+                            <option value="0">Alle Konfidenzen</option>
                             <option value="0.5">≥50%</option>
                             <option value="0.6">≥60%</option>
                             <option value="0.7">≥70%</option>
                             <option value="0.8">≥80%</option>
                         </select>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <label style="font-size: 0.75rem;">Status</label>
-                        <select id="historyFilterStatus" onchange="loadPatternHistory()">
-                            <option value="">Alle</option>
-                            <option value="pending">Ausstehend</option>
-                            <option value="confirmed">Bestätigt</option>
-                            <option value="corrected">Korrigiert</option>
-                            <option value="rejected">Abgelehnt</option>
+                        <select id="historyFilterStatus" onchange="loadPatternHistory()" class="filter-select">
+                            <option value="">Alle Status</option>
+                            <option value="pending">⏳ Ausstehend</option>
+                            <option value="confirmed">✓ Bestätigt</option>
+                            <option value="corrected">✏️ Korrigiert</option>
+                            <option value="rejected">✗ Abgelehnt</option>
                         </select>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <label style="font-size: 0.75rem;">Von</label>
-                        <input type="date" id="historyFilterDateFrom" onchange="loadPatternHistory()" style="padding: 0.4rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #e8e8e8;">
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <label style="font-size: 0.75rem;">Bis</label>
-                        <input type="date" id="historyFilterDateTo" onchange="loadPatternHistory()" style="padding: 0.4rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #e8e8e8;">
+                        <div style="display: flex; gap: 0.25rem; align-items: center;">
+                            <input type="date" id="historyFilterDateFrom" onchange="loadPatternHistory()" class="filter-date" title="Von Datum">
+                            <span style="color: #666;">-</span>
+                            <input type="date" id="historyFilterDateTo" onchange="loadPatternHistory()" class="filter-date" title="Bis Datum">
+                        </div>
                     </div>
                 </div>
 
