@@ -1697,7 +1697,7 @@
                                 <th>Richtung</th>
                                 <th>Konfidenz</th>
                                 <th>Timeframe</th>
-                                <th>Erkannt</th>
+                                <th>Zeitraum</th>
                                 <th>Preis</th>
                                 <th style="text-align: center;">Chart</th>
                             </tr>
@@ -2634,6 +2634,19 @@
             return date.toLocaleString('de-CH', { timeZone: 'Europe/Zurich', ...options });
         }
 
+        // Format pattern time range (start to end)
+        function formatPatternTimeRange(startTime, endTime) {
+            if (!startTime || !endTime) return '-';
+            const startDate = parseUTCTimestamp(startTime);
+            const endDate = parseUTCTimestamp(endTime);
+            if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return '-';
+
+            const options = { day: '2-digit', month: '2-digit', year: '2-digit' };
+            const start = startDate.toLocaleString('de-CH', { timeZone: 'Europe/Zurich', ...options });
+            const end = endDate.toLocaleString('de-CH', { timeZone: 'Europe/Zurich', ...options });
+            return `${start} - ${end}`;
+        }
+
         // Pattern Type Detection
         function getPatternType(pattern) {
             const bullish = ['inverse_head_and_shoulders', 'double_bottom', 'triple_bottom', 'ascending_triangle', 'bull_flag', 'cup_and_handle', 'falling_wedge', 'channel_up'];
@@ -3465,7 +3478,7 @@
                         <td><span class="pattern-badge ${p.direction}">${p.direction}</span></td>
                         <td style="color: ${p.confidence >= 0.7 ? '#4caf50' : p.confidence >= 0.5 ? '#ffc107' : '#f44336'};">${(p.confidence * 100).toFixed(1)}%</td>
                         <td>${p.timeframe}</td>
-                        <td style="color: #888;">${formatLocalDateTime(p.detected_at || p.pattern_start_time)}</td>
+                        <td style="color: #888; font-size: 0.85rem;">${formatPatternTimeRange(p.pattern_start_time, p.pattern_end_time)}</td>
                         <td style="font-family: monospace;">${p.price_at_detection ? p.price_at_detection.toLocaleString('de-CH', {maximumFractionDigits: 2}) : '-'}</td>
                         <td style="text-align: center;">
                             <button type="button" class="btn-chart" onclick="event.stopPropagation(); showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}', window.patternHistoryData['pattern_${idx}'], ${idx})" title="Chart anzeigen">
@@ -4340,6 +4353,9 @@
                 const candlesAfter = 5;   // Context after pattern
 
                 let startDate, endDate;
+                console.log(`[TCN Chart] patternData:`, patternData);
+                console.log(`[TCN Chart] startTime=${startTime}, endTime=${endTime}`);
+
                 if (startTime && endTime) {
                     // Historical pattern with defined time range
                     const patternStartDate = new Date(startTime);
@@ -4347,13 +4363,13 @@
                     // Add buffer before start and after end
                     startDate = new Date(patternStartDate.getTime() - candlesBefore * hoursPerCandle * 60 * 60 * 1000);
                     endDate = new Date(patternEndDate.getTime() + candlesAfter * hoursPerCandle * 60 * 60 * 1000);
-                    console.log(`Using pattern time range: ${startTime} to ${endTime}`);
+                    console.log(`[TCN Chart] Using pattern time range: ${startTime} to ${endTime}`);
                 } else {
                     // Fallback: use detection timestamp
                     const patternDate = new Date(timestamp);
                     startDate = new Date(patternDate.getTime() - 25 * hoursPerCandle * 60 * 60 * 1000);
                     endDate = new Date(patternDate.getTime() + candlesAfter * hoursPerCandle * 60 * 60 * 1000);
-                    console.log(`Using detection timestamp: ${timestamp}`);
+                    console.log(`[TCN Chart] Using detection timestamp: ${timestamp}`);
                 }
 
                 // Format dates as YYYY-MM-DD HH:mm:ss for TwelveData
@@ -4461,29 +4477,11 @@
 
                 console.log(`Loaded ${allCandles.length} candles from ${dataSource}`);
 
-                // Find the candle closest to the pattern timestamp
-                let patternIdx = -1;
-                let minDiff = Infinity;
-                allCandles.forEach((c, i) => {
-                    const candleDate = new Date(c.timestamp);
-                    const diff = Math.abs(candleDate - patternDate);
-                    if (diff < minDiff) {
-                        minDiff = diff;
-                        patternIdx = i;
-                    }
-                });
+                // For historical patterns, we've loaded exactly the right time range
+                // Use all loaded candles (they already have context before/after)
+                const candles = allCandles;
 
-                // If no match found, use middle of array
-                if (patternIdx === -1) {
-                    patternIdx = Math.floor(allCandles.length / 2);
-                }
-
-                // Calculate slice range: 20 before, 5 after
-                const startIdx = Math.max(0, patternIdx - candlesBefore);
-                const endIdx = Math.min(allCandles.length, patternIdx + candlesAfter + 1);
-                const candles = allCandles.slice(startIdx, endIdx);
-
-                console.log(`Pattern at index ${patternIdx}, showing candles ${startIdx} to ${endIdx} (${candles.length} total)`);
+                console.log(`[TCN Chart] Using all ${candles.length} candles (pattern time range already applied)`);
 
                 // Store OHLC data for zoom modal
                 currentPatternOhlcData = candles;
@@ -4496,7 +4494,8 @@
                 drawCandlestickChartWithPattern('patternCanvas', candles, patternType, patternPoints, timestamp);
 
             } catch (error) {
-                console.error('Fehler beim Laden des Charts:', error);
+                console.error('[TCN Chart] Fehler beim Laden des Charts:', error);
+                console.error('[TCN Chart] Error stack:', error.stack);
                 // Clear OHLC data on error
                 currentPatternOhlcData = null;
                 // Fall back to SVG visualization with error message
@@ -4669,39 +4668,17 @@
                 return padding.left + (idx + 0.5) * candleSpacing;
             };
 
-            // Determine pattern range from pattern_points
-            // Use the context buffer (candlesBefore) to determine where the pattern starts in the chart
-            const contextCandles = 5;  // Number of context candles before pattern
-            let patternStartIdx = contextCandles;  // Pattern starts after context
-            let patternEndIdx = candles.length - contextCandles - 1;  // Pattern ends before trailing context
+            // Determine pattern range - since we load data from pattern_start_time to pattern_end_time
+            // with 5 candles context on each side, the pattern zone is simply the middle section
+            const contextCandles = 5;  // Number of context candles on each side
+            let patternStartIdx = contextCandles;  // Pattern starts after leading context
+            let patternEndIdx = Math.max(contextCandles, candles.length - contextCandles - 1);  // Pattern ends before trailing context
 
-            if (patternPoints && patternPoints.length > 0) {
-                // Get min and max indices from pattern points to determine relative positions
-                const pointIndices = patternPoints.map(p => p.index ?? 0).filter(i => i > 0);
-                if (pointIndices.length > 0) {
-                    const minPointIdx = Math.min(...pointIndices);
-                    const maxPointIdx = Math.max(...pointIndices);
-                    const patternSpan = maxPointIdx - minPointIdx;
+            // Ensure bounds are valid
+            patternStartIdx = Math.max(0, Math.min(patternStartIdx, candles.length - 1));
+            patternEndIdx = Math.max(patternStartIdx, Math.min(patternEndIdx, candles.length - 1));
 
-                    // Map the pattern indices to our loaded candle range
-                    // The loaded data should cover: [context] + [pattern] + [context]
-                    // Pattern points are relative, so we need to find where they fall in our data
-                    const totalPatternCandles = candles.length - (2 * contextCandles);
-
-                    if (totalPatternCandles > 0 && patternSpan > 0) {
-                        // Scale pattern indices to our candle range
-                        const scale = totalPatternCandles / patternSpan;
-                        patternStartIdx = contextCandles + Math.floor((Math.min(...pointIndices) - minPointIdx) * scale);
-                        patternEndIdx = contextCandles + Math.floor((Math.max(...pointIndices) - minPointIdx) * scale);
-                    }
-                }
-
-                // Ensure bounds are valid
-                patternStartIdx = Math.max(0, Math.min(patternStartIdx, candles.length - 1));
-                patternEndIdx = Math.max(patternStartIdx, Math.min(patternEndIdx, candles.length - 1));
-
-                console.log(`Pattern zone: candles ${patternStartIdx} to ${patternEndIdx} of ${candles.length}`);
-            }
+            console.log(`[TCN Chart] Pattern zone: candles ${patternStartIdx} to ${patternEndIdx} of ${candles.length}`);
 
             // Draw pattern zone background (highlighting pattern formation period)
             if (patternPoints && patternPoints.length > 0) {
