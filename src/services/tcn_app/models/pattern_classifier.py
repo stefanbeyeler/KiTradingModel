@@ -201,9 +201,10 @@ class PatternClassifier:
                 continue
 
             avg_shoulder = (left_shoulder + right_shoulder) / 2
+            max_shoulder = max(left_shoulder, right_shoulder)
 
-            # Head must be significantly higher than shoulders (at least 1.5%)
-            head_height_pct = (head - avg_shoulder) / avg_shoulder
+            # Head must be significantly higher than BOTH shoulders (at least 1.5% above the higher one)
+            head_height_pct = (head - max_shoulder) / max_shoulder
             if head_height_pct < MIN_HEAD_HEIGHT_PCT:
                 continue
 
@@ -334,9 +335,10 @@ class PatternClassifier:
                 continue
 
             avg_shoulder = (left_shoulder + right_shoulder) / 2
+            min_shoulder = min(left_shoulder, right_shoulder)
 
-            # Head must be significantly lower than shoulders (at least 1.5%)
-            head_depth_pct = (avg_shoulder - head) / avg_shoulder
+            # Head must be significantly lower than BOTH shoulders (at least 1.5% below the lower one)
+            head_depth_pct = (min_shoulder - head) / min_shoulder
             if head_depth_pct < MIN_HEAD_DEPTH_PCT:
                 continue
 
