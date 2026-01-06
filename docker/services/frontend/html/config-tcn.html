@@ -4326,13 +4326,7 @@
                 };
                 const interval = intervalMap[timeframe] || '1h';
 
-                // Calculate date range around the pattern timestamp
-                // We want 20 candles before and 5 after the pattern
-                const patternDate = new Date(timestamp);
-                const candlesBefore = 20;
-                const candlesAfter = 5;
-
-                // Calculate how many hours/days to go back based on timeframe
+                // Calculate how many hours/days per candle based on timeframe
                 const timeframeHours = {
                     '1min': 1/60, '5min': 5/60, '15min': 15/60, '30min': 30/60,
                     '1h': 1, '2h': 2, '4h': 4,
@@ -4340,9 +4334,27 @@
                 };
                 const hoursPerCandle = timeframeHours[interval] || 1;
 
-                // Calculate start and end dates
-                const startDate = new Date(patternDate.getTime() - (candlesBefore + 5) * hoursPerCandle * 60 * 60 * 1000);
-                const endDate = new Date(patternDate.getTime() + (candlesAfter + 5) * hoursPerCandle * 60 * 60 * 1000);
+                // Use pattern_start_time and pattern_end_time if available (historical patterns)
+                // Otherwise fall back to timestamp (detection time)
+                const candlesBefore = 5;  // Context before pattern
+                const candlesAfter = 5;   // Context after pattern
+
+                let startDate, endDate;
+                if (startTime && endTime) {
+                    // Historical pattern with defined time range
+                    const patternStartDate = new Date(startTime);
+                    const patternEndDate = new Date(endTime);
+                    // Add buffer before start and after end
+                    startDate = new Date(patternStartDate.getTime() - candlesBefore * hoursPerCandle * 60 * 60 * 1000);
+                    endDate = new Date(patternEndDate.getTime() + candlesAfter * hoursPerCandle * 60 * 60 * 1000);
+                    console.log(`Using pattern time range: ${startTime} to ${endTime}`);
+                } else {
+                    // Fallback: use detection timestamp
+                    const patternDate = new Date(timestamp);
+                    startDate = new Date(patternDate.getTime() - 25 * hoursPerCandle * 60 * 60 * 1000);
+                    endDate = new Date(patternDate.getTime() + candlesAfter * hoursPerCandle * 60 * 60 * 1000);
+                    console.log(`Using detection timestamp: ${timestamp}`);
+                }
 
                 // Format dates as YYYY-MM-DD HH:mm:ss for TwelveData
                 const formatDate = (d) => {
@@ -4657,72 +4669,38 @@
                 return padding.left + (idx + 0.5) * candleSpacing;
             };
 
-            // Determine pattern range from pattern_points using actual price-based mapping
-            let patternStartIdx = candles.length - 1;
-            let patternEndIdx = candles.length - 1;
+            // Determine pattern range from pattern_points
+            // Use the context buffer (candlesBefore) to determine where the pattern starts in the chart
+            const contextCandles = 5;  // Number of context candles before pattern
+            let patternStartIdx = contextCandles;  // Pattern starts after context
+            let patternEndIdx = candles.length - contextCandles - 1;  // Pattern ends before trailing context
 
             if (patternPoints && patternPoints.length > 0) {
-                // Use the same mapping logic as drawPatternOverlay to find actual candle positions
-                const highPointTypes = ['left_shoulder', 'head', 'right_shoulder', 'first_peak', 'second_peak',
-                    'peak', 'peak1', 'peak2', 'peak3', 'top_1', 'top_2', 'pivot_high',
-                    'resistance_start', 'resistance_end', 'upper_start', 'upper_end',
-                    'pole_start', 'pole_end', 'flag_start', 'flag_end', 'left_rim', 'right_rim', 'handle_start', 'handle_end'];
-                const lowPointTypes = ['first_trough', 'second_trough', 'valley', 'trough1', 'trough2', 'trough3',
-                    'bottom_1', 'bottom_2', 'pivot_low', 'support_start', 'support_end',
-                    'lower_start', 'lower_end', 'cup_bottom', 'neckline_left', 'neckline_right'];
+                // Get min and max indices from pattern points to determine relative positions
+                const pointIndices = patternPoints.map(p => p.index ?? 0).filter(i => i > 0);
+                if (pointIndices.length > 0) {
+                    const minPointIdx = Math.min(...pointIndices);
+                    const maxPointIdx = Math.max(...pointIndices);
+                    const patternSpan = maxPointIdx - minPointIdx;
 
-                const isHighPoint = (pointType) => highPointTypes.includes(pointType || '');
-                const isLowPoint = (pointType) => lowPointTypes.includes(pointType || '');
+                    // Map the pattern indices to our loaded candle range
+                    // The loaded data should cover: [context] + [pattern] + [context]
+                    // Pattern points are relative, so we need to find where they fall in our data
+                    const totalPatternCandles = candles.length - (2 * contextCandles);
 
-                // Find the best matching candle for a pattern point based on price proximity
-                // minSearchIdx ensures temporal order is preserved
-                const findBestCandleForZone = (point, minSearchIdx = 0) => {
-                    const targetPrice = point.price;
-                    const pointType = point.point_type || '';
-                    const isHigh = isHighPoint(pointType);
-                    const isLow = isLowPoint(pointType);
-
-                    const searchStart = Math.max(minSearchIdx, candles.length - 100);
-                    let bestIdx = searchStart;
-                    let bestScore = Infinity;
-
-                    for (let i = searchStart; i < candles.length; i++) {
-                        const candle = candles[i];
-                        let priceDiff;
-
-                        if (isHigh) {
-                            priceDiff = Math.abs(candle.high - targetPrice);
-                        } else if (isLow) {
-                            priceDiff = Math.abs(candle.low - targetPrice);
-                        } else {
-                            priceDiff = Math.min(
-                                Math.abs(candle.high - targetPrice),
-                                Math.abs(candle.low - targetPrice)
-                            );
-                        }
-
-                        if (priceDiff < bestScore) {
-                            bestScore = priceDiff;
-                            bestIdx = i;
-                        }
+                    if (totalPatternCandles > 0 && patternSpan > 0) {
+                        // Scale pattern indices to our candle range
+                        const scale = totalPatternCandles / patternSpan;
+                        patternStartIdx = contextCandles + Math.floor((Math.min(...pointIndices) - minPointIdx) * scale);
+                        patternEndIdx = contextCandles + Math.floor((Math.max(...pointIndices) - minPointIdx) * scale);
                     }
-                    return bestIdx;
-                };
-
-                // Sort pattern points by original index and map preserving temporal order
-                // Use index if available, otherwise fall back to array position
-                const sortedForZone = [...patternPoints].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
-                const mappedIndices = [];
-                let lastIdx = Math.max(0, candles.length - 100);
-                sortedForZone.forEach(p => {
-                    const idx = findBestCandleForZone(p, lastIdx);
-                    mappedIndices.push(idx);
-                    lastIdx = idx;
-                });
-                if (mappedIndices.length > 0) {
-                    patternStartIdx = Math.max(0, Math.min(...mappedIndices) - 2);  // Small buffer before first point
-                    patternEndIdx = Math.min(candles.length - 1, Math.max(...mappedIndices) + 2);  // Small buffer after last point
                 }
+
+                // Ensure bounds are valid
+                patternStartIdx = Math.max(0, Math.min(patternStartIdx, candles.length - 1));
+                patternEndIdx = Math.max(patternStartIdx, Math.min(patternEndIdx, candles.length - 1));
+
+                console.log(`Pattern zone: candles ${patternStartIdx} to ${patternEndIdx} of ${candles.length}`);
             }
 
             // Draw pattern zone background (highlighting pattern formation period)
@@ -4936,7 +4914,8 @@
                 const isLow = isLowPoint(pointType);
 
                 // Search within the pattern formation area, respecting minimum index for temporal order
-                const searchStart = Math.max(minSearchIdx, candles.length - 100);
+                // Now that we load the correct time range, search the full candle array
+                const searchStart = Math.max(minSearchIdx, 0);
                 let bestIdx = searchStart;
                 let bestScore = Infinity;
 
@@ -4973,7 +4952,7 @@
 
             // Pre-calculate best candle index for each pattern point, preserving temporal order
             const pointToCandleMap = new Map();
-            let lastMappedIdx = Math.max(0, candles.length - 100);
+            let lastMappedIdx = 0;  // Start from beginning since we load the correct time range
 
             sortedByOriginalIndex.forEach(p => {
                 const mappedIdx = findBestCandleForPoint(p, lastMappedIdx);
