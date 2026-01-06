@@ -4343,6 +4343,10 @@
                         close: parseFloat(c.close),
                         volume: c.volume ? parseFloat(c.volume) : 0
                     })).filter(c => c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0);
+
+                    // Sort chronologically (oldest first) - OHLCV data may be stored newest-first
+                    allCandles.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
                     dataSource = 'Stored (Pattern History)';
                 } else {
                     // No stored OHLCV data - fetch from API
@@ -4789,13 +4793,21 @@
                 return padding.left + (idx + 0.5) * candleSpacing;
             };
 
-            // Determine pattern range - since we load data from pattern_start_time to pattern_end_time
-            // with 5 candles context on each side, the pattern zone is simply the middle section
-            const contextCandles = 5;  // Number of context candles on each side
-            let patternStartIdx = contextCandles;  // Pattern starts after leading context
-            let patternEndIdx = Math.max(contextCandles, candles.length - contextCandles - 1);  // Pattern ends before trailing context
+            // Determine pattern range from pattern_points indices
+            // The indices in pattern_points refer to the original 200-candle array (oldest=0, newest=199)
+            let patternStartIdx = 0;
+            let patternEndIdx = candles.length - 1;
 
-            // Ensure bounds are valid
+            if (patternPoints && patternPoints.length > 0) {
+                // Get min and max index from pattern points
+                const pointIndices = patternPoints.map(p => p.index).filter(i => typeof i === 'number');
+                if (pointIndices.length > 0) {
+                    patternStartIdx = Math.min(...pointIndices);
+                    patternEndIdx = Math.max(...pointIndices);
+                }
+            }
+
+            // Ensure bounds are valid for the displayed candles
             patternStartIdx = Math.max(0, Math.min(patternStartIdx, candles.length - 1));
             patternEndIdx = Math.max(patternStartIdx, Math.min(patternEndIdx, candles.length - 1));
 
