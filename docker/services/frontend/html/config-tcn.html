@@ -3455,10 +3455,10 @@
                     return;
                 }
 
-                // Sort by detected_at (newest detections first)
+                // Sort by pattern_end_time (newest pattern end dates first)
                 const sortedPatterns = [...data.patterns].sort((a, b) => {
-                    const timeA = a.detected_at || a.pattern_start_time || '';
-                    const timeB = b.detected_at || b.pattern_start_time || '';
+                    const timeA = a.pattern_end_time || a.detected_at || '';
+                    const timeB = b.pattern_end_time || b.detected_at || '';
                     return timeB.localeCompare(timeA);
                 });
 
