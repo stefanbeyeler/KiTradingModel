@@ -1774,15 +1774,24 @@
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label>Timeframes</label>
-                        <div style="display: flex; gap: 1rem; padding-top: 0.5rem;">
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; padding-top: 0.5rem;">
                             <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                <input type="checkbox" id="auto-tf-1h" checked> 1h
+                                <input type="checkbox" id="auto-tf-5m"> M5
                             </label>
                             <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                <input type="checkbox" id="auto-tf-4h" checked> 4h
+                                <input type="checkbox" id="auto-tf-15m"> M15
                             </label>
                             <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                <input type="checkbox" id="auto-tf-1d" checked> 1d
+                                <input type="checkbox" id="auto-tf-30m"> M30
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+                                <input type="checkbox" id="auto-tf-1h" checked> H1
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+                                <input type="checkbox" id="auto-tf-4h" checked> H4
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+                                <input type="checkbox" id="auto-tf-1d" checked> D1
                             </label>
                         </div>
                     </div>
@@ -2942,12 +2951,13 @@
                     if (scanCancelled) break;
 
                     scannedCount++;
-                    updateScanProgress(scannedCount, symbols.length, symbol, '1h,4h,1d', totalPatternsFound);
+                    const allTimeframes = '5m,15m,30m,1h,4h,1d';
+                    updateScanProgress(scannedCount, symbols.length, symbol, allTimeframes, totalPatternsFound);
 
                     try {
                         // Use history/scan endpoint with symbol parameter
                         const response = await fetch(
-                            `${API_BASE}/history/scan?symbol=${symbol}&timeframes=1h,4h,1d&threshold=0.5`,
+                            `${API_BASE}/history/scan?symbol=${symbol}&timeframes=${allTimeframes}&threshold=0.5`,
                             { method: 'POST' }
                         );
 
@@ -2955,7 +2965,7 @@
                             const result = await response.json();
                             totalPatternsFound += result.patterns_found || 0;
                             totalPatternsAdded += result.patterns_added || 0;
-                            updateScanProgress(scannedCount, symbols.length, symbol, '1h,4h,1d', totalPatternsFound);
+                            updateScanProgress(scannedCount, symbols.length, symbol, allTimeframes, totalPatternsFound);
                         }
                     } catch (e) {
                         console.warn(`Scan failed for ${symbol}:`, e);
@@ -2975,7 +2985,7 @@
                     resultsDiv.innerHTML = `
                         <div class="info-box" style="background: rgba(76,175,80,0.1); border-color: rgba(76,175,80,0.3); color: #81c784; margin-top: 0.5rem;">
                             <strong>Scan abgeschlossen</strong><br>
-                            ${symbols.length} Symbole gescannt (1h, 4h, 1d), ${totalPatternsFound} Patterns gefunden, ${totalPatternsAdded} neu gespeichert
+                            ${symbols.length} Symbole gescannt (M5-D1), ${totalPatternsFound} Patterns gefunden, ${totalPatternsAdded} neu gespeichert
                         </div>
                     `;
                     showToast(`Scan: ${totalPatternsFound} Patterns gefunden`);
@@ -3650,6 +3660,9 @@
 
                 // Update timeframe checkboxes
                 const timeframes = data.timeframes || ['1h', '4h', '1d'];
+                document.getElementById('auto-tf-5m').checked = timeframes.includes('5m');
+                document.getElementById('auto-tf-15m').checked = timeframes.includes('15m');
+                document.getElementById('auto-tf-30m').checked = timeframes.includes('30m');
                 document.getElementById('auto-tf-1h').checked = timeframes.includes('1h');
                 document.getElementById('auto-tf-4h').checked = timeframes.includes('4h');
                 document.getElementById('auto-tf-1d').checked = timeframes.includes('1d');
@@ -3738,6 +3751,9 @@
             const scheduled_hour = parseInt(document.getElementById('auto-scheduled-hour').value) || 2;
             const scheduled_minute = parseInt(document.getElementById('auto-scheduled-minute').value) || 0;
             const timeframes = [];
+            if (document.getElementById('auto-tf-5m').checked) timeframes.push('5m');
+            if (document.getElementById('auto-tf-15m').checked) timeframes.push('15m');
+            if (document.getElementById('auto-tf-30m').checked) timeframes.push('30m');
             if (document.getElementById('auto-tf-1h').checked) timeframes.push('1h');
             if (document.getElementById('auto-tf-4h').checked) timeframes.push('4h');
             if (document.getElementById('auto-tf-1d').checked) timeframes.push('1d');
@@ -3769,6 +3785,9 @@
             try {
                 // Get selected timeframes
                 const timeframes = [];
+                if (document.getElementById('auto-tf-5m').checked) timeframes.push('5m');
+                if (document.getElementById('auto-tf-15m').checked) timeframes.push('15m');
+                if (document.getElementById('auto-tf-30m').checked) timeframes.push('30m');
                 if (document.getElementById('auto-tf-1h').checked) timeframes.push('1h');
                 if (document.getElementById('auto-tf-4h').checked) timeframes.push('4h');
                 if (document.getElementById('auto-tf-1d').checked) timeframes.push('1d');
@@ -3801,6 +3820,9 @@
         document.getElementById('auto-interval')?.addEventListener('change', updateAutoTrainingConfig);
         document.getElementById('auto-scheduled-hour')?.addEventListener('change', updateAutoTrainingConfig);
         document.getElementById('auto-scheduled-minute')?.addEventListener('change', updateAutoTrainingConfig);
+        document.getElementById('auto-tf-5m')?.addEventListener('change', updateAutoTrainingConfig);
+        document.getElementById('auto-tf-15m')?.addEventListener('change', updateAutoTrainingConfig);
+        document.getElementById('auto-tf-30m')?.addEventListener('change', updateAutoTrainingConfig);
         document.getElementById('auto-tf-1h')?.addEventListener('change', updateAutoTrainingConfig);
         document.getElementById('auto-tf-4h')?.addEventListener('change', updateAutoTrainingConfig);
         document.getElementById('auto-tf-1d')?.addEventListener('change', updateAutoTrainingConfig);
@@ -4330,6 +4352,7 @@
                     'M1': '1min', 'M5': '5min', 'M15': '15min', 'M30': '30min',
                     'H1': '1h', 'H2': '2h', 'H4': '4h',
                     'D1': '1day', 'W1': '1week', 'MN': '1month',
+                    '5m': '5min', '15m': '15min', '30m': '30min',
                     '1h': '1h', '4h': '4h', '1d': '1day'
                 };
                 const interval = intervalMap[timeframe] || '1h';
