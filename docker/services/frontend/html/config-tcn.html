@@ -4318,6 +4318,7 @@
 
             // Reset feedback result
             document.getElementById('tcnFeedbackResult').style.display = 'none';
+            document.getElementById('claudeValidationResult').style.display = 'none';
 
             // Show loading state
             if (loadingEl) loadingEl.style.display = 'flex';
@@ -4613,6 +4614,110 @@
             };
             resultEl.style.color = colors[type] || '#fff';
             resultEl.textContent = message;
+            resultEl.style.display = 'block';
+        }
+
+        // Claude Vision Validation
+        async function validateWithClaude() {
+            const resultEl = document.getElementById('claudeValidationResult');
+            const btn = document.getElementById('btnClaudeValidate');
+
+            if (!currentTcnPatternData || !currentTcnPatternData.patternData) {
+                showClaudeValidationResult('error', '❌ Keine Pattern-Daten verfügbar');
+                return;
+            }
+
+            const patternData = currentTcnPatternData.patternData;
+            const patternId = patternData.id;
+
+            if (!patternId) {
+                showClaudeValidationResult('error', '❌ Keine Pattern-ID gefunden');
+                return;
+            }
+
+            // Check if OHLCV data is available
+            if (!patternData.ohlcv_data || patternData.ohlcv_data.length === 0) {
+                showClaudeValidationResult('warning', '⚠️ Keine OHLCV-Daten gespeichert. Claude-Validierung nur für Pattern mit gespeicherten OHLC-Daten verfügbar.');
+                return;
+            }
+
+            // Show loading state
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Validiere...';
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = '<span style="color: #a855f7;">⏳ Claude analysiert das Pattern...</span>';
+
+            try {
+                const response = await fetch(`${API_BASE}/claude/validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pattern_id: patternId,
+                        force: false
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const validation = data.validation;
+
+                if (validation.status === 'skipped') {
+                    showClaudeValidationResult('warning', `⚠️ ${validation.claude_reasoning}`);
+                } else if (validation.status === 'error') {
+                    showClaudeValidationResult('error', `❌ Fehler: ${validation.error_message || validation.claude_reasoning}`);
+                } else {
+                    // Show validation result
+                    const agrees = validation.claude_agrees;
+                    const confidence = (validation.claude_confidence * 100).toFixed(0);
+                    const visualQuality = (validation.visual_quality_score * 100).toFixed(0);
+                    const reasoning = validation.claude_reasoning;
+
+                    const color = agrees ? '#81c784' : '#ef5350';
+                    const icon = agrees ? '✓' : '✗';
+                    const status = agrees ? 'BESTÄTIGT' : 'ABGELEHNT';
+
+                    resultEl.innerHTML = `
+                        <div style="padding: 0.75rem; background: rgba(${agrees ? '129, 199, 132' : '239, 83, 80'}, 0.1); border: 1px solid ${color}; border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.2rem; color: ${color};">${icon}</span>
+                                <strong style="color: ${color};">Claude ${status}</strong>
+                                <span style="color: #888; font-size: 0.8rem;">(Konfidenz: ${confidence}%)</span>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #ccc; margin-bottom: 0.5rem;">
+                                ${reasoning}
+                            </div>
+                            <div style="display: flex; gap: 1rem; font-size: 0.75rem; color: #888;">
+                                <span>Visuelle Qualität: ${visualQuality}%</span>
+                                <span>Marktkontext: ${(validation.market_context_score * 100).toFixed(0)}%</span>
+                            </div>
+                        </div>
+                    `;
+                    resultEl.style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('Claude validation error:', error);
+                showClaudeValidationResult('error', `❌ Validierung fehlgeschlagen: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🤖 Claude prüfen';
+            }
+        }
+
+        function showClaudeValidationResult(type, message) {
+            const resultEl = document.getElementById('claudeValidationResult');
+            const colors = {
+                success: '#81c784',
+                warning: '#ffb74d',
+                error: '#ef5350',
+                info: '#64b5f6'
+            };
+            resultEl.style.color = colors[type] || '#fff';
+            resultEl.innerHTML = message;
             resultEl.style.display = 'block';
         }
 
@@ -6121,8 +6226,13 @@
                         <button class="btn btn-secondary" onclick="markNoPattern()" style="padding: 0.5rem 1rem;" title="Kein Pattern erkennbar">
                             ✗ Kein Pattern
                         </button>
+                        <div style="border-left: 1px solid rgba(255,255,255,0.2); height: 24px; margin: 0 0.5rem;"></div>
+                        <button class="btn" id="btnClaudeValidate" onclick="validateWithClaude()" style="padding: 0.5rem 1rem; background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border: none;" title="Mit Claude Vision validieren">
+                            🤖 Claude prüfen
+                        </button>
                     </div>
                     <div id="tcnFeedbackResult" style="margin-top: 0.75rem; font-size: 0.85rem; display: none;"></div>
+                    <div id="claudeValidationResult" style="margin-top: 0.75rem; font-size: 0.85rem; display: none;"></div>
                 </div>
             </div>
             <!-- Navigation Footer -->

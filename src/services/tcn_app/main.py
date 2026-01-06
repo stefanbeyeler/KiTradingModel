@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from .routers import detection_router, system_router, history_router, crt_router
+from .routers.claude_validator_router import router as claude_validator_router
 from .routers.system_router import test_health_router
 from .services.pattern_detection_service import pattern_detection_service
 from .services.tcn_pattern_history_service import tcn_pattern_history_service
@@ -145,6 +146,7 @@ app.include_router(test_health_router, prefix="/api/v1", tags=["1. System & Moni
 app.include_router(detection_router, prefix="/api/v1", tags=["2. Pattern Detection"])
 app.include_router(history_router, prefix="/api/v1", tags=["3. Pattern History"])
 app.include_router(crt_router, prefix="/api/v1", tags=["4. CRT (Candle Range Theory)"])
+app.include_router(claude_validator_router, prefix="/api/v1/claude", tags=["5. Claude Validation"])
 
 
 @app.get("/")
@@ -169,7 +171,10 @@ async def root():
             "crt_signal": "/api/v1/crt/signal/{symbol}",
             "crt_session": "/api/v1/crt/session",
             "crt_scan": "/api/v1/crt/scan",
-            "crt_ranges": "/api/v1/crt/ranges"
+            "crt_ranges": "/api/v1/crt/ranges",
+            "claude_validate": "/api/v1/claude/validate",
+            "claude_history": "/api/v1/claude/history",
+            "claude_statistics": "/api/v1/claude/statistics"
         }
     }
 

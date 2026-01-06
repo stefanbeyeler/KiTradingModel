@@ -161,6 +161,16 @@
             color: #64b5f6;
         }
 
+        .method.put {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        .method.delete {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
         .endpoint-path {
             font-family: 'Consolas', 'Monaco', monospace;
             color: #ffd54f;
@@ -344,14 +354,18 @@
                 verwendet und geben Hinweise auf mögliche Trendwenden oder Fortsetzungen.
             </p>
             <p>
-                Der Service analysiert OHLC-Daten (Open, High, Low, Close) und identifiziert über
-                25 verschiedene Candlestick-Patterns in Echtzeit. Die Erkennung erfolgt für alle
-                konfigurierten Symbole und Timeframes.
+                Der Service analysiert OHLC-Daten (Open, High, Low, Close) und identifiziert 21 verschiedene
+                Candlestick-Patterns in Echtzeit über 5 Timeframes (M5, M15, H1, H4, D1).
             </p>
 
             <div class="info-box success">
-                <strong>Inference Service:</strong> Dieser Service führt die Pattern-Erkennung durch.
-                Das Training der ML-Modelle erfolgt über den separaten Candlestick-Train Service (Port 3016).
+                <strong>Inference Service:</strong> Pattern-Erkennung mit optionaler Claude Vision QA-Validierung.
+                Das Training erfolgt über den separaten Candlestick-Train Service (Port 3016).
+            </div>
+
+            <div class="info-box" style="margin-top: 0.5rem;">
+                <strong>Neu:</strong> Automatische Regeloptimierung basierend auf Nutzer-Feedback und Claude-Validierung.
+                Parameter werden kontinuierlich verbessert, um False-Positives zu reduzieren.
             </div>
         </div>
 
@@ -443,7 +457,7 @@
                 </div>
                 <div class="feature-item">
                     <h4>Multi-Timeframe</h4>
-                    <p>Unterstützt M1 bis MN Timeframes für verschiedene Handelsstile</p>
+                    <p>Unterstützt M5, M15, H1, H4, D1 für verschiedene Handelsstile</p>
                 </div>
                 <div class="feature-item">
                     <h4>Konfidenz-Score</h4>
@@ -451,127 +465,32 @@
                 </div>
                 <div class="feature-item">
                     <h4>Pattern History</h4>
-                    <p>Vollständige Historie aller erkannten Patterns mit Zeitstempel</p>
+                    <p>Vollständige Historie mit Feedback-System und Statistiken</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Claude QA Validierung</h4>
+                    <p>Externe Validierung erkannter Patterns durch Claude Vision AI</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Automatische Regeloptimierung</h4>
+                    <p>ML-gestützte Anpassung der Erkennungsparameter basierend auf Feedback</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Backup & Restore</h4>
+                    <p>Vollständige Konfigurationsbackups mit Import/Export-Funktion</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Pattern-Beispiele</h4>
+                    <p>Synthetisch generierte Referenz-Charts für alle 21 Pattern-Typen</p>
                 </div>
             </div>
         </div>
 
         <!-- API Endpoints -->
         <div class="content-card">
-            <h2>API Endpoints (über 40 Endpoints)</h2>
+            <h2>API Endpoints (75+ Endpoints)</h2>
 
-            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Pattern-Erkennung (6 Endpoints)</h3>
-            <div class="endpoint-list">
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/candlestick/detect</span>
-                    <span class="endpoint-desc">Pattern-Erkennung durchführen</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/candlestick/detect/{symbol}</span>
-                    <span class="endpoint-desc">Patterns für Symbol erkennen</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/candlestick/scan</span>
-                    <span class="endpoint-desc">Multi-Symbol Pattern-Scan</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/candlestick/scan-all</span>
-                    <span class="endpoint-desc">Alle Symbole scannen</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/candlestick/patterns</span>
-                    <span class="endpoint-desc">Alle verfügbaren Pattern-Typen</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/candlestick/patterns/{pattern_type}</span>
-                    <span class="endpoint-desc">Pattern-Details abrufen</span>
-                </div>
-            </div>
-
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Pattern-Historie & Statistiken (5 Endpoints)</h3>
-            <div class="endpoint-list">
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/candlestick/history</span>
-                    <span class="endpoint-desc">Pattern-Historie abrufen</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/candlestick/history/{symbol}</span>
-                    <span class="endpoint-desc">Symbol-spezifische Historie</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/candlestick/statistics</span>
-                    <span class="endpoint-desc">Erkennungsstatistiken</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/candlestick/performance</span>
-                    <span class="endpoint-desc">Pattern-Performance</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/candlestick/feedback</span>
-                    <span class="endpoint-desc">Pattern-Feedback senden</span>
-                </div>
-            </div>
-
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Auto-Scan & Konfiguration (4 Endpoints)</h3>
-            <div class="endpoint-list">
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/candlestick/auto-scan/start</span>
-                    <span class="endpoint-desc">Auto-Scan starten</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/candlestick/auto-scan/stop</span>
-                    <span class="endpoint-desc">Auto-Scan stoppen</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/candlestick/auto-scan/status</span>
-                    <span class="endpoint-desc">Auto-Scan Status</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/candlestick/config</span>
-                    <span class="endpoint-desc">Service-Konfiguration</span>
-                </div>
-            </div>
-
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Pattern-Beispiele (4 Endpoints)</h3>
-            <div class="endpoint-list">
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/examples/list</span>
-                    <span class="endpoint-desc">Alle verfügbaren Pattern-Typen</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/examples/chart/{pattern_type}</span>
-                    <span class="endpoint-desc">Beispiel-Chart für Pattern</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/examples/all</span>
-                    <span class="endpoint-desc">Alle Pattern-Beispiele generieren</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/examples/gallery</span>
-                    <span class="endpoint-desc">Pattern-Galerie mit Filtern</span>
-                </div>
-            </div>
-
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System (4 Endpoints)</h3>
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">1. System (8 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -580,42 +499,412 @@
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/health</span>
+                    <span class="endpoint-desc">Detaillierter Health Check</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/info</span>
                     <span class="endpoint-desc">Service-Informationen</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/candlestick/model</span>
-                    <span class="endpoint-desc">Modell-Informationen</span>
-                </div>
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/candlestick/model/reload</span>
-                    <span class="endpoint-desc">Modell neu laden</span>
-                </div>
-            </div>
-
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Testing & Simulation (3 Endpoints)</h3>
-            <div class="endpoint-list">
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/api/v1/test-unhealthy</span>
-                    <span class="endpoint-desc">Service für 5 Min als unhealthy markieren (Test)</span>
+                    <span class="endpoint-path">/api/v1/stats</span>
+                    <span class="endpoint-desc">Service-Statistiken</span>
                 </div>
                 <div class="endpoint">
                     <span class="method">GET</span>
-                    <span class="endpoint-path">/api/v1/test-unhealthy</span>
-                    <span class="endpoint-desc">Test-Unhealthy-Status abfragen</span>
+                    <span class="endpoint-path">/api/v1/ready</span>
+                    <span class="endpoint-desc">Kubernetes Readiness Probe</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/live</span>
+                    <span class="endpoint-desc">Kubernetes Liveness Probe</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/ai-status</span>
+                    <span class="endpoint-desc">AI Validator Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/ai-reload</span>
+                    <span class="endpoint-desc">AI-Modell neu laden</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">2. Pattern Detection (5 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/scan</span>
+                    <span class="endpoint-desc">Multi-Timeframe Pattern-Scan</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/scan/{symbol}</span>
+                    <span class="endpoint-desc">Pattern-Scan für Symbol</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/scan-all</span>
+                    <span class="endpoint-desc">Alle Symbole scannen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/chart/{symbol}</span>
+                    <span class="endpoint-desc">Chart-Daten für Pattern</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns</span>
+                    <span class="endpoint-desc">Alle Pattern-Typen (21 Typen)</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">3. Pattern History (18 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/history</span>
+                    <span class="endpoint-desc">Pattern-Historie mit Filtern</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/history/statistics</span>
+                    <span class="endpoint-desc">Erkennungsstatistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/history/by-symbol</span>
+                    <span class="endpoint-desc">Historie gruppiert nach Symbol</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/history/{symbol}</span>
+                    <span class="endpoint-desc">Symbol-spezifische Historie</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/history/scan</span>
+                    <span class="endpoint-desc">Manuellen Scan starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/history/scan/symbols</span>
+                    <span class="endpoint-desc">Scan-Symbole abrufen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/history/scan/{symbol}</span>
+                    <span class="endpoint-desc">Einzelnes Symbol scannen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/history/clear</span>
+                    <span class="endpoint-desc">Historie löschen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/scan/status</span>
+                    <span class="endpoint-desc">Auto-Scan Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/scan/start</span>
+                    <span class="endpoint-desc">Auto-Scan starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/scan/stop</span>
+                    <span class="endpoint-desc">Auto-Scan stoppen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/feedback</span>
+                    <span class="endpoint-desc">Pattern-Feedback senden</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/feedback</span>
+                    <span class="endpoint-desc">Feedback abrufen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/feedback/statistics</span>
+                    <span class="endpoint-desc">Feedback-Statistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/feedback/reason-categories</span>
+                    <span class="endpoint-desc">Feedback-Kategorien</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/feedback/pending-revalidation</span>
+                    <span class="endpoint-desc">Ausstehende Re-Validierungen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/feedback/revalidate</span>
+                    <span class="endpoint-desc">Re-Validierung markieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method put">PUT</span>
+                    <span class="endpoint-path">/api/v1/feedback/{feedback_id}</span>
+                    <span class="endpoint-desc">Feedback aktualisieren</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">4. Claude QA - Vision Validierung (12 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/claude/status</span>
+                    <span class="endpoint-desc">Claude Validator Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/claude/validate</span>
+                    <span class="endpoint-desc">Pattern mit Claude validieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/claude/validate-batch</span>
+                    <span class="endpoint-desc">Batch-Validierung</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/claude/history</span>
+                    <span class="endpoint-desc">Validierungshistorie</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/claude/statistics</span>
+                    <span class="endpoint-desc">Validierungsstatistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/claude/chart-preview/{pattern_id}</span>
+                    <span class="endpoint-desc">Chart-Vorschau generieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/claude/problematic-patterns</span>
+                    <span class="endpoint-desc">Häufig abgelehnte Patterns</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/claude/reset-statistics</span>
+                    <span class="endpoint-desc">Statistiken zurücksetzen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/claude/feedback-analysis</span>
+                    <span class="endpoint-desc">Feedback-Analyse</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/claude/recommendations</span>
+                    <span class="endpoint-desc">Parameter-Empfehlungen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/claude/apply-recommendation</span>
+                    <span class="endpoint-desc">Empfehlung anwenden</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/claude/impact-analysis</span>
+                    <span class="endpoint-desc">Auswirkungsanalyse</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">5. Rule Optimizer (18 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/start</span>
+                    <span class="endpoint-desc">Optimierung starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/progress</span>
+                    <span class="endpoint-desc">Fortschritt abrufen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/recommendations</span>
+                    <span class="endpoint-desc">Empfehlungen abrufen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/apply</span>
+                    <span class="endpoint-desc">Empfehlungen anwenden</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/current-params</span>
+                    <span class="endpoint-desc">Aktuelle Parameter</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/set-param</span>
+                    <span class="endpoint-desc">Parameter setzen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/reset</span>
+                    <span class="endpoint-desc">Auf Defaults zurücksetzen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/factory-reset</span>
+                    <span class="endpoint-desc">Factory Reset (alle Daten)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/history</span>
+                    <span class="endpoint-desc">Anpassungshistorie</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/compare</span>
+                    <span class="endpoint-desc">Vergleich: Aktuell vs. Default</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/pattern-stats</span>
+                    <span class="endpoint-desc">Pattern-Erkennungsstatistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/validated-samples</span>
+                    <span class="endpoint-desc">Validierte Samples</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/backup</span>
+                    <span class="endpoint-desc">Backup erstellen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/backups</span>
+                    <span class="endpoint-desc">Backups auflisten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/restore</span>
+                    <span class="endpoint-desc">Backup wiederherstellen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/export</span>
+                    <span class="endpoint-desc">Konfiguration exportieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/import</span>
+                    <span class="endpoint-desc">Konfiguration importieren</span>
                 </div>
                 <div class="endpoint">
                     <span class="method delete">DEL</span>
-                    <span class="endpoint-path">/api/v1/test-unhealthy</span>
-                    <span class="endpoint-desc">Test-Unhealthy-Status zurücksetzen</span>
+                    <span class="endpoint-path">/api/v1/rule-optimizer/backup/{name}</span>
+                    <span class="endpoint-desc">Backup löschen</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">6. Pattern Examples (4 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/examples/list</span>
+                    <span class="endpoint-desc">Alle Pattern-Typen auflisten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/examples/chart/{pattern_type}</span>
+                    <span class="endpoint-desc">Beispiel-Chart generieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/examples/all</span>
+                    <span class="endpoint-desc">Alle Pattern-Beispiele</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/examples/gallery</span>
+                    <span class="endpoint-desc">Pattern-Galerie mit Filter</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">7. Auto-Optimization (12 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/status</span>
+                    <span class="endpoint-desc">Auto-Optimierung Status</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/config</span>
+                    <span class="endpoint-desc">Konfiguration aktualisieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/start</span>
+                    <span class="endpoint-desc">Auto-Optimierung starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/stop</span>
+                    <span class="endpoint-desc">Auto-Optimierung stoppen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/run-cycle</span>
+                    <span class="endpoint-desc">Einzelnen Zyklus ausführen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/history</span>
+                    <span class="endpoint-desc">Optimierungshistorie</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/revalidate</span>
+                    <span class="endpoint-desc">Patterns re-validieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/queue</span>
+                    <span class="endpoint-desc">Validierungs-Queue anzeigen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method delete">DEL</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/queue</span>
+                    <span class="endpoint-desc">Queue leeren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/queue/fill-from-history</span>
+                    <span class="endpoint-desc">Queue aus Historie füllen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/enable</span>
+                    <span class="endpoint-desc">Schnell aktivieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/auto-optimization/disable</span>
+                    <span class="endpoint-desc">Deaktivieren</span>
                 </div>
             </div>
 
             <div class="info-box" style="margin-top: 1.5rem;">
-                <strong>Vollständige API:</strong> Über 40 Endpoints für Candlestick-Pattern-Erkennung.
+                <strong>Vollständige API:</strong> 75+ Endpoints für Candlestick-Pattern-Erkennung, Claude-Validierung und automatische Regeloptimierung.
                 Siehe <a href="/candlestick/docs" target="_blank" style="color: #64c8ff;">/candlestick/docs</a> für die interaktive Swagger-Dokumentation.
             </div>
         </div>
@@ -643,13 +932,13 @@
             <h2>Quick Links</h2>
             <div class="quick-links">
                 <a href="/candlestick/docs" target="_blank">
-                    📚 Swagger API Docs
+                    Swagger API Docs
                 </a>
                 <a href="config-candlestick.html">
-                    ⚙️ Pattern Konfiguration & Galerie
+                    Pattern Konfiguration & Galerie
                 </a>
                 <a href="service-candlestick-train.html">
-                    🎓 Training Service
+                    Training Service
                 </a>
             </div>
         </div>
