@@ -4522,11 +4522,33 @@
 
                 console.log(`Loaded ${allCandles.length} candles from ${dataSource}`);
 
-                // For historical patterns, we've loaded exactly the right time range
-                // Use all loaded candles (they already have context before/after)
-                const candles = allCandles;
+                // Slice candles to show only pattern zone with context (5 candles before, 5 after)
+                const contextBefore = 5;
+                const contextAfter = 5;
+                let candles = allCandles;
 
-                console.log(`[TCN Chart] Using all ${candles.length} candles (pattern time range already applied)`);
+                // If we have pattern_points, use them to determine the slice range
+                if (patternPoints && patternPoints.length > 0) {
+                    const pointIndices = patternPoints.map(p => p.index).filter(i => typeof i === 'number' && i >= 0 && i < allCandles.length);
+                    if (pointIndices.length > 0) {
+                        const minIdx = Math.min(...pointIndices);
+                        const maxIdx = Math.max(...pointIndices);
+                        const sliceStart = Math.max(0, minIdx - contextBefore);
+                        const sliceEnd = Math.min(allCandles.length, maxIdx + contextAfter + 1);
+                        candles = allCandles.slice(sliceStart, sliceEnd);
+
+                        // Adjust pattern_points indices to new slice
+                        const indexOffset = sliceStart;
+                        patternPoints = patternPoints.map(p => ({
+                            ...p,
+                            index: p.index - indexOffset
+                        }));
+
+                        console.log(`[TCN Chart] Sliced to ${candles.length} candles (indices ${sliceStart}-${sliceEnd-1}), pattern points adjusted by -${indexOffset}`);
+                    }
+                }
+
+                console.log(`[TCN Chart] Using ${candles.length} candles for display`);
 
                 // Store OHLC data for zoom modal
                 currentPatternOhlcData = candles;
