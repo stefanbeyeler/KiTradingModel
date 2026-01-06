@@ -4268,7 +4268,7 @@
             }
 
             // Extract pattern_points from full pattern data (backward compatible)
-            const patternPoints = patternData && patternData.pattern_points ? patternData.pattern_points : patternData;
+            let patternPoints = patternData && patternData.pattern_points ? patternData.pattern_points : patternData;
             // Pattern history uses pattern_start_time/pattern_end_time, detection API uses start_time/end_time
             const startTime = patternData && (patternData.pattern_start_time || patternData.start_time) ? (patternData.pattern_start_time || patternData.start_time) : null;
             const endTime = patternData && (patternData.pattern_end_time || patternData.end_time) ? (patternData.pattern_end_time || patternData.end_time) : null;
