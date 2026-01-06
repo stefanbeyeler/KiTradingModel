@@ -4389,19 +4389,43 @@
                     const isNewestFirst = allCandles.length > 1 &&
                         new Date(allCandles[0].timestamp) > new Date(allCandles[allCandles.length - 1].timestamp);
 
+                    console.log(`[TCN Chart] isNewestFirst: ${isNewestFirst}, first: ${allCandles[0]?.timestamp}, last: ${allCandles[allCandles.length-1]?.timestamp}`);
+
                     if (isNewestFirst) {
                         console.log(`[TCN Chart] Data is newest-first, reversing to chronological order`);
                         allCandles.reverse();
+                    }
 
-                        // Also need to transform pattern_points indices since they refer to newest-first order
-                        // Index i in newest-first = Index (originalLength - 1 - i) in oldest-first
-                        if (patternPoints && patternPoints.length > 0) {
-                            patternPoints = patternPoints.map(p => ({
-                                ...p,
-                                index: originalLength - 1 - p.index
-                            }));
-                            console.log(`[TCN Chart] Transformed pattern points:`, patternPoints.map(p => p.index));
+                    // Calculate pattern point indices based on pattern start/end times
+                    // This is more reliable than transforming indices
+                    if (startTime && endTime && allCandles.length > 0) {
+                        const patternStartDate = new Date(startTime).getTime();
+                        const patternEndDate = new Date(endTime).getTime();
+
+                        // Find indices of candles closest to pattern start and end times
+                        let startIdx = -1, endIdx = -1;
+                        for (let i = 0; i < allCandles.length; i++) {
+                            const candleTime = new Date(allCandles[i].timestamp).getTime();
+                            if (startIdx === -1 && candleTime >= patternStartDate) {
+                                startIdx = i;
+                            }
+                            if (candleTime <= patternEndDate) {
+                                endIdx = i;
+                            }
                         }
+
+                        // Fallback if not found
+                        if (startIdx === -1) startIdx = 0;
+                        if (endIdx === -1) endIdx = allCandles.length - 1;
+
+                        // Create synthetic pattern points for visualization based on time
+                        patternPoints = [
+                            { index: startIdx, price: allCandles[startIdx]?.close || 0, point_type: 'start' },
+                            { index: endIdx, price: allCandles[endIdx]?.close || 0, point_type: 'end' }
+                        ];
+
+                        console.log(`[TCN Chart] Pattern time range: ${startTime} to ${endTime}`);
+                        console.log(`[TCN Chart] Mapped to indices: ${startIdx} to ${endIdx} (of ${allCandles.length} candles)`);
                     }
 
                     dataSource = 'Stored (Pattern History)';
