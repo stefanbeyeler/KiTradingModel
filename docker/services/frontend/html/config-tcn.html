@@ -384,14 +384,6 @@
             animation: spin 1s linear infinite;
         }
 
-        /* Detection Result */
-        .detection-result {
-            padding: 1rem;
-            border-radius: 8px;
-            margin-top: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-        }
-
         .confidence-bar {
             height: 8px;
             background: rgba(255, 255, 255, 0.1);
@@ -1605,8 +1597,6 @@
                         <button class="btn btn-danger btn-sm" id="btn-cancel-scan" onclick="cancelScan()" style="padding: 0.4rem 0.8rem; display: none;">&#9632; Abbrechen</button>
                     </div>
                 </div>
-                <!-- Detection Result (collapsed by default) -->
-                <div id="detection-result" style="margin-top: 0.75rem;"></div>
                 <!-- Scan Progress -->
                 <div id="scan-progress" style="margin-top: 0.75rem; display: none;">
                     <div style="background: rgba(100,200,255,0.1); border: 1px solid rgba(100,200,255,0.3); border-radius: 8px; padding: 0.75rem;">
@@ -2711,38 +2701,59 @@
             btn.classList.add('btn-loading');
             btn.disabled = true;
 
-            try {
-                const symbol = document.getElementById('detect-symbol').value;
-                const timeframe = document.getElementById('detect-timeframe').value;
-                const minConfidence = parseFloat(document.getElementById('detect-confidence').value);
+            const symbol = document.getElementById('detect-symbol').value;
+            const timeframe = document.getElementById('detect-timeframe').value;
+            const minConfidence = parseFloat(document.getElementById('detect-confidence').value);
 
+            if (!symbol) {
+                showToast('Bitte Symbol auswählen', 'error');
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+                return;
+            }
+
+            // Show progress bar
+            const progressDiv = document.getElementById('scan-progress');
+            progressDiv.style.display = 'block';
+            document.getElementById('scan-progress-text').textContent = 'Erkenne Patterns...';
+            document.getElementById('scan-progress-percent').textContent = '50%';
+            document.getElementById('scan-progress-bar').style.width = '50%';
+            document.getElementById('scan-current-symbol').textContent = symbol;
+            document.getElementById('scan-current-tf').textContent = timeframe;
+            document.getElementById('scan-patterns-found').textContent = '...';
+
+            try {
                 const response = await fetch(`${API_BASE}/detect/${symbol}?timeframe=${timeframe}&min_confidence=${minConfidence}`);
                 if (!response.ok) throw new Error('Detection failed');
 
                 const data = await response.json();
-                const result = document.getElementById('detection-result');
+                const patternsFound = data.patterns ? data.patterns.length : 0;
 
-                if (data.patterns && data.patterns.length > 0) {
-                    result.innerHTML = data.patterns.map(p => `
-                        <div class="detection-result">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="pattern-badge ${getPatternType(p.pattern_type)}" style="font-size: 0.9rem;">${p.pattern_type.replace(/_/g, ' ')}</span>
-                                <span style="color: #64c8ff; font-weight: 600;">${(p.confidence * 100).toFixed(1)}%</span>
-                            </div>
-                            <div class="confidence-bar">
-                                <div class="confidence-fill ${p.confidence >= 0.8 ? 'high' : p.confidence >= 0.6 ? 'medium' : 'low'}" style="width: ${p.confidence * 100}%"></div>
-                            </div>
-                            ${p.price_target ? `<div style="margin-top: 0.5rem; color: #888;">Ziel: ${p.price_target.toFixed(2)}</div>` : ''}
-                        </div>
-                    `).join('');
+                // Update progress to 100%
+                document.getElementById('scan-progress-percent').textContent = '100%';
+                document.getElementById('scan-progress-bar').style.width = '100%';
+                document.getElementById('scan-patterns-found').textContent = patternsFound;
+                document.getElementById('scan-progress-text').textContent = 'Abgeschlossen';
+
+                // Show result toast
+                if (patternsFound > 0) {
+                    showToast(`${patternsFound} Pattern(s) für ${symbol} erkannt`);
                 } else {
-                    result.innerHTML = '<div class="detection-result" style="color: #888; text-align: center;">Keine Pattern erkannt</div>';
+                    showToast(`Keine Patterns für ${symbol} erkannt`, 'info');
                 }
 
-                showToast(`Pattern-Erkennung für ${symbol} abgeschlossen`);
+                // Refresh the pattern history table
+                await loadPatternHistory();
+
+                // Hide progress after short delay
+                setTimeout(() => {
+                    progressDiv.style.display = 'none';
+                }, 1500);
+
             } catch (error) {
                 showToast('Fehler bei der Pattern-Erkennung', 'error');
                 console.error(error);
+                progressDiv.style.display = 'none';
             } finally {
                 btn.classList.remove('btn-loading');
                 btn.disabled = false;
