@@ -4526,8 +4526,14 @@
                     }
 
                     // Fallback to EasyInsight if TwelveData failed or returned no data
-                    if (allCandles.length === 0) {
-                        console.log(`TwelveData unavailable for ${symbol}, trying EasyInsight...`);
+                    // Note: EasyInsight doesn't support historical date ranges, only recent data
+                    // Only use EasyInsight fallback if pattern is recent (within last 2 weeks)
+                    const patternAgeMs = endTime ? (Date.now() - new Date(endTime).getTime()) : 0;
+                    const twoWeeksMs = 14 * 24 * 60 * 60 * 1000;
+                    const isRecentPattern = patternAgeMs < twoWeeksMs;
+
+                    if (allCandles.length === 0 && isRecentPattern) {
+                        console.log(`TwelveData unavailable for ${symbol}, trying EasyInsight (pattern is recent)...`);
 
                         // Map interval to EasyInsight format
                         const easyInsightIntervalMap = {
@@ -4581,7 +4587,8 @@
                 }
 
                 if (allCandles.length === 0) {
-                    throw new Error('Keine Candlestick-Daten verfügbar (Symbol nicht unterstützt)');
+                    const patternAgeInfo = endTime ? ` Pattern-Alter: ${Math.round((Date.now() - new Date(endTime).getTime()) / (24*60*60*1000))} Tage.` : '';
+                    throw new Error(`Keine Candlestick-Daten für ${symbol} verfügbar.${patternAgeInfo} Historische Daten werden möglicherweise nicht unterstützt.`);
                 }
 
                 console.log(`Loaded ${allCandles.length} candles from ${dataSource}`);
