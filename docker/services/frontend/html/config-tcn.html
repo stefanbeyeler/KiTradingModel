@@ -1737,131 +1737,129 @@
 
         <!-- Training Tab -->
         <div id="tab-training" class="tab-content">
-            <!-- Auto-Training (moved to top) -->
+            <!-- Combined Training Card -->
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">&#128336; Auto-Training</h3>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn btn-success btn-sm" id="btn-enable-auto" onclick="toggleAutoTraining(true)">
-                            &#9654; Aktivieren
-                        </button>
-                        <button class="btn btn-danger btn-sm" id="btn-disable-auto" onclick="toggleAutoTraining(false)" disabled>
-                            &#9632; Deaktivieren
-                        </button>
-                    </div>
-                </div>
-                <div id="auto-training-status">
-                    <div class="loading"><div class="spinner"></div></div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>Intervall</label>
-                        <select class="form-control" id="auto-interval">
-                            <option value="daily">Täglich</option>
-                            <option value="weekly" selected>Wöchentlich</option>
-                            <option value="monthly">Monatlich</option>
-                            <option value="manual">Manuell</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>Startzeit</label>
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <input type="number" class="form-control" id="auto-scheduled-hour" value="2" min="0" max="23" style="width: 60px; text-align: center;">
-                            <span style="color: #888;">:</span>
-                            <input type="number" class="form-control" id="auto-scheduled-minute" value="0" min="0" max="59" style="width: 60px; text-align: center;">
-                            <span style="color: #888; font-size: 0.85rem;">Uhr</span>
-                        </div>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>Timeframes</label>
-                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; padding-top: 0.5rem;">
-                            <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                <input type="checkbox" id="auto-tf-5m"> M5
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                <input type="checkbox" id="auto-tf-15m"> M15
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                <input type="checkbox" id="auto-tf-30m"> M30
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                <input type="checkbox" id="auto-tf-1h" checked> H1
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                <input type="checkbox" id="auto-tf-4h" checked> H4
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                <input type="checkbox" id="auto-tf-1d" checked> D1
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-top: 1rem;">
-                    <button class="btn btn-primary" id="btn-run-now" onclick="runAutoTrainingNow()">
-                        &#9889; Jetzt starten
-                    </button>
-                </div>
-            </div>
-
-            <div class="grid-2-equal">
-                <!-- Training Status -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#9881; Training Status</h3>
-                    </div>
-                    <div id="training-status">
-                        <div class="loading"><div class="spinner"></div></div>
+                    <h3 class="card-title">&#128295; Training</h3>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="auto-training-badge" style="display: none; background: #4caf50; color: #000; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">AUTO</span>
+                        <button class="btn btn-secondary btn-sm" onclick="loadTrainingStatus(); loadAutoTrainingStatus();">Aktualisieren</button>
                     </div>
                 </div>
 
-                <!-- Start Training -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#128295; Manuelles Training</h3>
-                    </div>
-                    <div class="form-group">
-                        <label>Symbole (für Training) <span id="symbols-count" style="color: #888; font-weight: normal;"></span></label>
-                        <select class="form-control" id="train-symbols" multiple style="height: 150px;">
-                            <option disabled>Lade Symbole...</option>
-                        </select>
-                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-                            <button type="button" class="btn btn-secondary" onclick="selectAllSymbols()" style="flex: 1; padding: 0.3rem;">Alle</button>
-                            <button type="button" class="btn btn-secondary" onclick="selectNoSymbols()" style="flex: 1; padding: 0.3rem;">Keine</button>
-                        </div>
-                        <small style="color: #888;">Ctrl+Klick für Mehrfachauswahl</small>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <!-- Training Progress (nur sichtbar wenn Training läuft) -->
+                <div id="training-progress-section" style="display: none;">
+                    <div id="training-status"></div>
+                </div>
+
+                <!-- Training Configuration Grid -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <!-- Left: Manual Training -->
+                    <div>
+                        <h4 style="color: #888; font-size: 0.9rem; margin: 0 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 1px solid #333;">Manuelles Training</h4>
                         <div class="form-group">
-                            <label>Timeframe</label>
-                            <select class="form-control" id="train-timeframe">
-                                <option value="5m">M5</option>
-                                <option value="15m">M15</option>
-                                <option value="30m">M30</option>
-                                <option value="1h" selected>H1</option>
-                                <option value="4h">H4</option>
-                                <option value="1d">D1</option>
+                            <label>Symbole <span id="symbols-count" style="color: #888; font-weight: normal;"></span></label>
+                            <select class="form-control" id="train-symbols" multiple style="height: 120px;">
+                                <option disabled>Lade Symbole...</option>
+                            </select>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                <button type="button" class="btn btn-secondary" onclick="selectAllSymbols()" style="flex: 1; padding: 0.3rem; font-size: 0.8rem;">Alle</button>
+                                <button type="button" class="btn btn-secondary" onclick="selectNoSymbols()" style="flex: 1; padding: 0.3rem; font-size: 0.8rem;">Keine</button>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <div class="form-group">
+                                <label>Timeframe</label>
+                                <select class="form-control" id="train-timeframe">
+                                    <option value="5m">M5</option>
+                                    <option value="15m">M15</option>
+                                    <option value="30m">M30</option>
+                                    <option value="1h" selected>H1</option>
+                                    <option value="4h">H4</option>
+                                    <option value="1d">D1</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Lookback (Tage)</label>
+                                <input type="number" class="form-control" id="train-lookback" value="365" min="30" max="1000">
+                            </div>
+                            <div class="form-group">
+                                <label>Epochen</label>
+                                <input type="number" class="form-control" id="train-epochs" value="100" min="10" max="1000">
+                            </div>
+                            <div class="form-group">
+                                <label>Batch Size</label>
+                                <input type="number" class="form-control" id="train-batch" value="32" min="8" max="128">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Learning Rate</label>
+                            <input type="number" class="form-control" id="train-lr" value="0.0001" min="0.00001" max="0.01" step="0.0001">
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-success" id="btn-train" onclick="startTraining()">&#9654; Training starten</button>
+                            <button class="btn btn-danger" id="btn-stop-train" onclick="stopTraining()" disabled>&#9632; Stoppen</button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Auto-Training -->
+                    <div>
+                        <h4 style="color: #888; font-size: 0.9rem; margin: 0 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 1px solid #333;">Auto-Training</h4>
+                        <div id="auto-training-status" style="margin-bottom: 1rem;">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Intervall</label>
+                            <select class="form-control" id="auto-interval">
+                                <option value="daily">Täglich</option>
+                                <option value="weekly" selected>Wöchentlich</option>
+                                <option value="monthly">Monatlich</option>
+                                <option value="manual">Manuell</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Lookback (Tage)</label>
-                            <input type="number" class="form-control" id="train-lookback" value="365" min="30" max="1000">
+                            <label>Startzeit</label>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <input type="number" class="form-control" id="auto-scheduled-hour" value="2" min="0" max="23" style="width: 60px; text-align: center;">
+                                <span style="color: #888;">:</span>
+                                <input type="number" class="form-control" id="auto-scheduled-minute" value="0" min="0" max="59" style="width: 60px; text-align: center;">
+                                <span style="color: #888; font-size: 0.85rem;">Uhr</span>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label>Epochen</label>
-                            <input type="number" class="form-control" id="train-epochs" value="100" min="10" max="1000">
+                            <label>Timeframes</label>
+                            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; padding-top: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.9rem;">
+                                    <input type="checkbox" id="auto-tf-5m"> M5
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.9rem;">
+                                    <input type="checkbox" id="auto-tf-15m"> M15
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.9rem;">
+                                    <input type="checkbox" id="auto-tf-30m"> M30
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.9rem;">
+                                    <input type="checkbox" id="auto-tf-1h" checked> H1
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.9rem;">
+                                    <input type="checkbox" id="auto-tf-4h" checked> H4
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-size: 0.9rem;">
+                                    <input type="checkbox" id="auto-tf-1d" checked> D1
+                                </label>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Batch Size</label>
-                            <input type="number" class="form-control" id="train-batch" value="32" min="8" max="128">
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn btn-success btn-sm" id="btn-enable-auto" onclick="toggleAutoTraining(true)">
+                                &#9654; Aktivieren
+                            </button>
+                            <button class="btn btn-danger btn-sm" id="btn-disable-auto" onclick="toggleAutoTraining(false)" disabled>
+                                &#9632; Deaktivieren
+                            </button>
+                            <button class="btn btn-primary btn-sm" id="btn-run-now" onclick="runAutoTrainingNow()">
+                                &#9889; Jetzt starten
+                            </button>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Learning Rate</label>
-                        <input type="number" class="form-control" id="train-lr" value="0.0001" min="0.00001" max="0.01" step="0.0001">
-                    </div>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn btn-success" id="btn-train" onclick="startTraining()">&#9654; Training starten</button>
-                        <button class="btn btn-danger" id="btn-stop-train" onclick="stopTraining()" disabled>&#9632; Stoppen</button>
                     </div>
                 </div>
             </div>
@@ -3039,10 +3037,13 @@
 
                 const data = await response.json();
                 const container = document.getElementById('training-status');
+                const progressSection = document.getElementById('training-progress-section');
 
                 const isTraining = data.status === 'training' || data.status === 'preparing';
 
                 if (isTraining) {
+                    // Show progress section when training is active
+                    progressSection.style.display = 'block';
                     document.getElementById('btn-train').disabled = true;
                     document.getElementById('btn-stop-train').disabled = false;
 
@@ -3054,7 +3055,7 @@
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                                 <span style="color: #4caf50; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
                                     <span class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></span>
-                                    Training lauft...
+                                    Training läuft...
                                 </span>
                                 <span style="background: #4caf50; color: #000; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">
                                     ${progressPercent}%
@@ -3063,7 +3064,7 @@
                             <div class="progress-bar" style="height: 8px; margin-bottom: 0.75rem;">
                                 <div class="progress-fill" style="width: ${progressPercent}%; background: linear-gradient(90deg, #4caf50, #81c784);"></div>
                             </div>
-                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.85rem;">
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; font-size: 0.85rem;">
                                 <div style="background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 4px;">
                                     <div style="color: #888;">Epoche</div>
                                     <div style="color: #fff; font-weight: 600;">${data.current_epoch || 0} / ${data.total_epochs || '-'}</div>
@@ -3085,55 +3086,11 @@
                         </div>
                     `;
                 } else {
+                    // Hide progress section when no training
+                    progressSection.style.display = 'none';
                     document.getElementById('btn-train').disabled = false;
                     document.getElementById('btn-stop-train').disabled = true;
-
-                    // Try to get last training info
-                    try {
-                        const histResponse = await fetch(`${TRAIN_API_BASE}/train/history`);
-                        if (histResponse.ok) {
-                            const histData = await histResponse.json();
-                            if (histData.history && histData.history.length > 0) {
-                                // Get most recent training
-                                const lastTraining = [...histData.history].sort((a, b) =>
-                                    new Date(b.started_at) - new Date(a.started_at)
-                                )[0];
-
-                                let duration = '-';
-                                if (lastTraining.started_at && lastTraining.completed_at) {
-                                    const durationSecs = Math.floor((new Date(lastTraining.completed_at) - new Date(lastTraining.started_at)) / 1000);
-                                    duration = formatUptime(durationSecs);
-                                }
-
-                                container.innerHTML = `
-                                    <div style="text-align: center; padding: 1rem; color: #888; margin-bottom: 1rem;">
-                                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">&#9989;</div>
-                                        <div>Bereit für Training</div>
-                                    </div>
-                                    <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 6px; font-size: 0.85rem;">
-                                        <div style="color: #888; margin-bottom: 0.5rem;">Letztes Training:</div>
-                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                                            <div><span style="color: #888;">Status:</span> <span style="color: ${lastTraining.status === 'completed' ? '#4caf50' : '#f44336'};">${lastTraining.status}</span></div>
-                                            <div><span style="color: #888;">Datum:</span> ${formatLocalDateTime(lastTraining.started_at)}</div>
-                                            <div><span style="color: #888;">Epochen:</span> ${lastTraining.current_epoch || 0}/${lastTraining.total_epochs || '-'}</div>
-                                            <div><span style="color: #888;">Loss:</span> ${lastTraining.best_loss?.toFixed(4) || '-'}</div>
-                                        </div>
-                                    </div>
-                                `;
-                                return;
-                            }
-                        }
-                    } catch (e) {
-                        // Ignore error, show default message
-                    }
-
-                    container.innerHTML = `
-                        <div style="text-align: center; padding: 1.5rem; color: #888;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#9989;</div>
-                            <div>Bereit für Training</div>
-                            <div style="font-size: 0.85rem; margin-top: 0.5rem;">Noch keine Trainings durchgeführt</div>
-                        </div>
-                    `;
+                    container.innerHTML = '';
                 }
             } catch (error) {
                 console.error(error);
@@ -3670,6 +3627,12 @@
                 // Update buttons
                 document.getElementById('btn-enable-auto').disabled = data.enabled;
                 document.getElementById('btn-disable-auto').disabled = !data.enabled;
+
+                // Update AUTO badge in header
+                const autoBadge = document.getElementById('auto-training-badge');
+                if (autoBadge) {
+                    autoBadge.style.display = data.enabled ? 'inline-block' : 'none';
+                }
 
                 // Format dates
                 const lastRun = data.last_run ? formatLocalDateTime(data.last_run, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Noch nie';
