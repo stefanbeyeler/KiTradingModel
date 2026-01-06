@@ -19,3 +19,6 @@ numpy>=1.24.0
 loguru>=0.7.0
 python-dotenv>=1.0.0
 python-dateutil>=2.8.0
+
+# Chart rendering for Claude Vision validation
+matplotlib>=3.8.0
