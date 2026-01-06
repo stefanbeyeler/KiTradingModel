@@ -1625,7 +1625,7 @@
                 <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 0.5rem;">
                     <!-- Titel -->
                     <h3 class="card-title" style="margin: 0;">&#128203; Erkannte Patterns</h3>
-                    <!-- Filter Row mit Buttons -->
+                    <!-- Filter Row mit Buttons (Reihenfolge wie Tabellenspalten: Symbol, Pattern, Richtung, Konfidenz, Timeframe) -->
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                         <select class="form-control" id="history-symbol-filter" style="width: auto;">
                             <option value="">Alle Symbole</option>
@@ -1649,18 +1649,6 @@
                             <option value="channel_down">Channel Down</option>
                             <option value="cup_and_handle">Cup &amp; Handle</option>
                         </select>
-                        <select class="form-control" id="history-timeframe-filter" style="width: auto;">
-                            <option value="">Alle Timeframes</option>
-                            <option value="1h">1h</option>
-                            <option value="4h">4h</option>
-                            <option value="1d">1d</option>
-                        </select>
-                        <select class="form-control" id="history-category-filter" style="width: auto;">
-                            <option value="">Alle Kategorien</option>
-                            <option value="reversal">Reversal</option>
-                            <option value="continuation">Continuation</option>
-                            <option value="trend">Trend</option>
-                        </select>
                         <select class="form-control" id="history-direction-filter" style="width: auto;">
                             <option value="">Alle Richtungen</option>
                             <option value="bullish">Bullish</option>
@@ -1673,6 +1661,18 @@
                             <option value="0.7">≥ 70%</option>
                             <option value="0.6">≥ 60%</option>
                             <option value="0.5">≥ 50%</option>
+                        </select>
+                        <select class="form-control" id="history-timeframe-filter" style="width: auto;">
+                            <option value="">Alle Timeframes</option>
+                            <option value="1h">1h</option>
+                            <option value="4h">4h</option>
+                            <option value="1d">1d</option>
+                        </select>
+                        <select class="form-control" id="history-category-filter" style="width: auto;">
+                            <option value="">Alle Kategorien</option>
+                            <option value="reversal">Reversal</option>
+                            <option value="continuation">Continuation</option>
+                            <option value="trend">Trend</option>
                         </select>
                         <div style="margin-left: auto; display: flex; gap: 0.25rem;">
                             <button class="btn btn-secondary btn-sm" id="btn-reset-filters" onclick="resetPatternFilters()" style="display: none;" title="Filter zurücksetzen">
