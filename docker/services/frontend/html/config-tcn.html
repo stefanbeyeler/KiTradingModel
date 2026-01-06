@@ -1697,7 +1697,7 @@
                                 <th>Richtung</th>
                                 <th>Konfidenz</th>
                                 <th>Timeframe</th>
-                                <th>Start</th>
+                                <th>Erkannt</th>
                                 <th>Preis</th>
                                 <th style="text-align: center;">Chart</th>
                             </tr>
@@ -3442,10 +3442,10 @@
                     return;
                 }
 
-                // Sort by pattern_start_time (newest first)
+                // Sort by detected_at (newest detections first)
                 const sortedPatterns = [...data.patterns].sort((a, b) => {
-                    const timeA = a.pattern_start_time || a.detected_at || '';
-                    const timeB = b.pattern_start_time || b.detected_at || '';
+                    const timeA = a.detected_at || a.pattern_start_time || '';
+                    const timeB = b.detected_at || b.pattern_start_time || '';
                     return timeB.localeCompare(timeA);
                 });
 
@@ -3465,7 +3465,7 @@
                         <td><span class="pattern-badge ${p.direction}">${p.direction}</span></td>
                         <td style="color: ${p.confidence >= 0.7 ? '#4caf50' : p.confidence >= 0.5 ? '#ffc107' : '#f44336'};">${(p.confidence * 100).toFixed(1)}%</td>
                         <td>${p.timeframe}</td>
-                        <td style="color: #888;">${formatLocalDateTime(p.pattern_start_time || p.detected_at)}</td>
+                        <td style="color: #888;">${formatLocalDateTime(p.detected_at || p.pattern_start_time)}</td>
                         <td style="font-family: monospace;">${p.price_at_detection ? p.price_at_detection.toLocaleString('de-CH', {maximumFractionDigits: 2}) : '-'}</td>
                         <td style="text-align: center;">
                             <button type="button" class="btn-chart" onclick="event.stopPropagation(); showPatternChart('${p.symbol}', '${p.timeframe}', '${p.detected_at}', '${p.pattern_type}', '${p.direction}', window.patternHistoryData['pattern_${idx}'], ${idx})" title="Chart anzeigen">
