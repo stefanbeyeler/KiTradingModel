@@ -246,34 +246,38 @@ class PatternClassifier:
         Detect double top pattern.
 
         Characteristics:
-        - Two peaks at similar levels
-        - Valley between peaks
+        - Two distinct peaks at similar levels (within 1.5%)
+        - Clear valley between peaks (at least 2% below tops)
+        - Minimum distance between tops (10 candles)
         - Bearish reversal pattern
         """
-        swing_highs, swing_lows = self.find_swing_points(highs, lows)
+        # Use larger window for more significant swing points
+        swing_highs, swing_lows = self.find_swing_points(highs, lows, window=7)
 
         if len(swing_highs) < 2:
             return None
 
-        # Minimum candle distance between tops for valid double top
-        MIN_TOP_DISTANCE = 7
-        # Minimum valley depth as percentage below the tops
-        MIN_VALLEY_DEPTH_PCT = 0.01  # 1.0%
+        # Stricter parameters for valid double top
+        MIN_TOP_DISTANCE = 10  # Minimum candles between tops
+        MAX_TOP_DISTANCE = 50  # Maximum candles
+        MAX_TOP_DIFF_PCT = 0.015  # Tops within 1.5%
+        MIN_VALLEY_DEPTH_PCT = 0.02  # Valley must be 2% below tops
 
         for i in range(len(swing_highs) - 1):
             first_top_idx = swing_highs[i]
             second_top_idx = swing_highs[i + 1]
 
-            # Ensure minimum distance between tops
-            if second_top_idx - first_top_idx < MIN_TOP_DISTANCE:
+            # Ensure proper distance between tops
+            distance = second_top_idx - first_top_idx
+            if distance < MIN_TOP_DISTANCE or distance > MAX_TOP_DISTANCE:
                 continue
 
             first_top = highs[first_top_idx]
             second_top = highs[second_top_idx]
 
-            # Tops should be at similar levels (within 2%)
+            # Tops should be at very similar levels (within 1.5%)
             top_diff = abs(first_top - second_top) / first_top
-            if top_diff < 0.02:
+            if top_diff < MAX_TOP_DIFF_PCT:
                 # Find valley between tops
                 valley_lows = [
                     lows[j] for j in swing_lows
@@ -284,9 +288,13 @@ class PatternClassifier:
                     valley = min(valley_lows)
                     avg_top = (first_top + second_top) / 2
 
-                    # Valley must be significantly below the tops
+                    # Valley must be significantly below the tops (at least 2%)
                     valley_depth_pct = (avg_top - valley) / avg_top
                     if valley_depth_pct < MIN_VALLEY_DEPTH_PCT:
+                        continue
+
+                    # Additional validation: both tops must be above the valley
+                    if first_top <= valley or second_top <= valley:
                         continue
 
                     valley_idx = [j for j in swing_lows if first_top_idx < j < second_top_idx and lows[j] == valley][0] if valley_lows else (first_top_idx + second_top_idx) // 2
@@ -326,34 +334,39 @@ class PatternClassifier:
         Detect double bottom pattern.
 
         Characteristics:
-        - Two troughs at similar levels
-        - Peak between troughs
+        - Two distinct troughs at similar levels (within 1.5%)
+        - Clear peak between troughs (at least 2% above bottoms)
+        - Minimum distance between bottoms (10 candles)
+        - Bottoms must be local minima in their region
         - Bullish reversal pattern
         """
-        swing_highs, swing_lows = self.find_swing_points(highs, lows)
+        # Use larger window for more significant swing points
+        swing_highs, swing_lows = self.find_swing_points(highs, lows, window=7)
 
         if len(swing_lows) < 2:
             return None
 
-        # Minimum candle distance between bottoms for valid double bottom
-        MIN_BOTTOM_DISTANCE = 7
-        # Minimum peak height as percentage above the bottoms
-        MIN_PEAK_HEIGHT_PCT = 0.01  # 1.0%
+        # Stricter parameters for valid double bottom
+        MIN_BOTTOM_DISTANCE = 10  # Minimum candles between bottoms
+        MAX_BOTTOM_DISTANCE = 50  # Maximum candles (pattern shouldn't span too long)
+        MAX_BOTTOM_DIFF_PCT = 0.015  # Bottoms within 1.5%
+        MIN_PEAK_HEIGHT_PCT = 0.02  # Peak must be 2% above bottoms
 
         for i in range(len(swing_lows) - 1):
             first_bottom_idx = swing_lows[i]
             second_bottom_idx = swing_lows[i + 1]
 
-            # Ensure minimum distance between bottoms
-            if second_bottom_idx - first_bottom_idx < MIN_BOTTOM_DISTANCE:
+            # Ensure proper distance between bottoms
+            distance = second_bottom_idx - first_bottom_idx
+            if distance < MIN_BOTTOM_DISTANCE or distance > MAX_BOTTOM_DISTANCE:
                 continue
 
             first_bottom = lows[first_bottom_idx]
             second_bottom = lows[second_bottom_idx]
 
-            # Bottoms should be at similar levels (within 2%)
+            # Bottoms should be at very similar levels (within 1.5%)
             bottom_diff = abs(first_bottom - second_bottom) / first_bottom
-            if bottom_diff < 0.02:
+            if bottom_diff < MAX_BOTTOM_DIFF_PCT:
                 # Find peak between bottoms
                 peak_highs = [
                     highs[j] for j in swing_highs
@@ -364,9 +377,13 @@ class PatternClassifier:
                     peak = max(peak_highs)
                     avg_bottom = (first_bottom + second_bottom) / 2
 
-                    # Peak must be significantly above the bottoms
+                    # Peak must be significantly above the bottoms (at least 2%)
                     peak_height_pct = (peak - avg_bottom) / avg_bottom
                     if peak_height_pct < MIN_PEAK_HEIGHT_PCT:
+                        continue
+
+                    # Additional validation: both bottoms must be below the peak
+                    if first_bottom >= peak or second_bottom >= peak:
                         continue
 
                     peak_idx = [j for j in swing_highs if first_bottom_idx < j < second_bottom_idx and highs[j] == peak][0] if peak_highs else (first_bottom_idx + second_bottom_idx) // 2
