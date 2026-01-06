@@ -1622,8 +1622,10 @@
 
             <!-- Pattern History Table (moved from Verlauf tab) -->
             <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128203; Erkannte Patterns</h3>
+                <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 0.5rem;">
+                    <!-- Titel -->
+                    <h3 class="card-title" style="margin: 0;">&#128203; Erkannte Patterns</h3>
+                    <!-- Filter Row mit Buttons -->
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                         <select class="form-control" id="history-symbol-filter" style="width: auto;">
                             <option value="">Alle Symbole</option>
@@ -1672,10 +1674,12 @@
                             <option value="0.6">≥ 60%</option>
                             <option value="0.5">≥ 50%</option>
                         </select>
-                        <button class="btn btn-secondary btn-sm" id="btn-reset-filters" onclick="resetPatternFilters()" style="display: none;" title="Filter zurücksetzen">
-                            &#10005; Filter
-                        </button>
-                        <button class="btn btn-primary btn-sm" onclick="loadPatternHistory()">&#8635; Aktualisieren</button>
+                        <div style="margin-left: auto; display: flex; gap: 0.25rem;">
+                            <button class="btn btn-secondary btn-sm" id="btn-reset-filters" onclick="resetPatternFilters()" style="display: none;" title="Filter zurücksetzen">
+                                &#10005; Filter
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="loadPatternHistory()">&#8635; Aktualisieren</button>
+                        </div>
                     </div>
                 </div>
                 <div id="pattern-history-table" style="overflow-x: auto;">
