@@ -45,6 +45,36 @@ async def detect_patterns(request: PatternDetectionRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/detect/ml-context/{symbol}")
+async def get_ml_context(
+    symbol: str,
+    timeframe: str = Query(default="1h", description="Timeframe")
+):
+    """
+    Get combined ML context from HMM, NHITS, and Candlestick services.
+
+    Returns regime, forecast, and candlestick pattern data for enhanced analysis.
+    """
+    try:
+        from ..services.data_service_client import data_service_client
+
+        context = await data_service_client.get_ml_context(
+            symbol=symbol,
+            timeframe=timeframe
+        )
+
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "context": context
+        }
+
+    except Exception as e:
+        logger.error(f"ML context error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/detect/{symbol}", response_model=PatternDetectionResponse)
 async def detect_patterns_get(
     symbol: str,

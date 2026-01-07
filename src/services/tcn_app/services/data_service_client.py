@@ -160,6 +160,219 @@ class DataServiceClient:
         except Exception:
             return False
 
+    # =========================================================================
+    # HMM Service Integration
+    # =========================================================================
+
+    async def get_hmm_regime(
+        self,
+        symbol: str,
+        timeframe: str = "1h",
+        lookback: int = 500,
+        include_history: bool = False
+    ) -> Optional[dict]:
+        """
+        Get current market regime from HMM Service.
+
+        Args:
+            symbol: Trading symbol (e.g., BTCUSD)
+            timeframe: Timeframe (1h, 4h, 1d)
+            lookback: Number of candles for analysis
+            include_history: Include regime history
+
+        Returns:
+            Regime detection result or None on error
+        """
+        hmm_url = os.getenv("HMM_SERVICE_URL", "http://trading-hmm:3004")
+
+        try:
+            client = await self._get_client()
+            response = await client.get(
+                f"{hmm_url}/api/v1/regime/detect/{symbol}",
+                params={
+                    "timeframe": timeframe,
+                    "lookback": lookback,
+                    "include_history": include_history
+                }
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                logger.debug(f"Fetched HMM regime for {symbol}: {data.get('regime', 'unknown')}")
+                return data
+            else:
+                logger.warning(f"HMM regime request failed: {response.status_code}")
+                return None
+
+        except httpx.ConnectError as e:
+            logger.debug(f"Cannot connect to HMM Service: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching HMM regime for {symbol}: {e}")
+            return None
+
+    # =========================================================================
+    # NHITS Service Integration
+    # =========================================================================
+
+    async def get_nhits_forecast(
+        self,
+        symbol: str,
+        timeframe: str = "H1",
+        horizon: int = 24
+    ) -> Optional[dict]:
+        """
+        Get price forecast from NHITS Service.
+
+        Args:
+            symbol: Trading symbol (e.g., BTCUSD)
+            timeframe: Timeframe (H1, D1)
+            horizon: Forecast horizon in candles
+
+        Returns:
+            Forecast result or None on error
+        """
+        nhits_url = os.getenv("NHITS_SERVICE_URL", "http://trading-nhits:3002")
+
+        try:
+            client = await self._get_client()
+            response = await client.get(
+                f"{nhits_url}/api/v1/forecast/{symbol}",
+                params={
+                    "timeframe": timeframe,
+                    "horizon": horizon
+                }
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                logger.debug(f"Fetched NHITS forecast for {symbol}: horizon={horizon}")
+                return data
+            else:
+                logger.warning(f"NHITS forecast request failed: {response.status_code}")
+                return None
+
+        except httpx.ConnectError as e:
+            logger.debug(f"Cannot connect to NHITS Service: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching NHITS forecast for {symbol}: {e}")
+            return None
+
+    # =========================================================================
+    # Candlestick Service Integration
+    # =========================================================================
+
+    async def get_candlestick_patterns(
+        self,
+        symbol: str,
+        timeframe: str = "1h",
+        lookback: int = 100
+    ) -> Optional[dict]:
+        """
+        Get candlestick patterns from Candlestick Service.
+
+        Args:
+            symbol: Trading symbol (e.g., BTCUSD)
+            timeframe: Timeframe (1h, 4h, 1d)
+            lookback: Number of candles to analyze
+
+        Returns:
+            Detected candlestick patterns or None on error
+        """
+        candlestick_url = os.getenv("CANDLESTICK_SERVICE_URL", "http://trading-candlestick:3006")
+
+        try:
+            client = await self._get_client()
+            response = await client.get(
+                f"{candlestick_url}/api/v1/detect/{symbol}",
+                params={
+                    "timeframe": timeframe,
+                    "lookback": lookback
+                }
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                patterns = data.get("patterns", [])
+                logger.debug(f"Fetched {len(patterns)} candlestick patterns for {symbol}")
+                return data
+            else:
+                logger.warning(f"Candlestick patterns request failed: {response.status_code}")
+                return None
+
+        except httpx.ConnectError as e:
+            logger.debug(f"Cannot connect to Candlestick Service: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching candlestick patterns for {symbol}: {e}")
+            return None
+
+    # =========================================================================
+    # Combined Context for Enhanced Detection
+    # =========================================================================
+
+    async def get_ml_context(
+        self,
+        symbol: str,
+        timeframe: str = "1h"
+    ) -> dict:
+        """
+        Get combined ML context from all services for enhanced pattern detection.
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe for analysis
+
+        Returns:
+            Combined context with regime, forecast, and candlestick data
+        """
+        import asyncio
+
+        # Fetch all ML data in parallel
+        regime_task = self.get_hmm_regime(symbol, timeframe)
+        forecast_task = self.get_nhits_forecast(symbol, timeframe.upper())
+        candlestick_task = self.get_candlestick_patterns(symbol, timeframe)
+
+        regime, forecast, candlesticks = await asyncio.gather(
+            regime_task, forecast_task, candlestick_task,
+            return_exceptions=True
+        )
+
+        context = {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "regime": None,
+            "forecast": None,
+            "candlesticks": None
+        }
+
+        # Process regime data
+        if isinstance(regime, dict):
+            context["regime"] = {
+                "current": regime.get("regime"),
+                "confidence": regime.get("confidence"),
+                "characteristics": regime.get("characteristics", {})
+            }
+
+        # Process forecast data
+        if isinstance(forecast, dict):
+            context["forecast"] = {
+                "direction": forecast.get("direction"),
+                "target_price": forecast.get("target_price"),
+                "confidence": forecast.get("confidence")
+            }
+
+        # Process candlestick patterns
+        if isinstance(candlesticks, dict):
+            patterns = candlesticks.get("patterns", [])
+            context["candlesticks"] = {
+                "count": len(patterns),
+                "patterns": patterns[:5]  # Top 5 patterns
+            }
+
+        return context
+
 
 # Singleton instance
 data_service_client = DataServiceClient()
