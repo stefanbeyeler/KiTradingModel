@@ -702,7 +702,8 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.4rem;" title="Redis Cache Status">
                     <span>💾</span>
-                    <span style="color: #888;">Cache:</span>
+                    <span style="color: #888;">Redis:</span>
+                    <span id="headerRedisStatus" style="color: #888;">●</span>
                     <strong id="headerCache" style="color: #64c8ff;">-</strong>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.4rem;" title="Pre-Fetch Service">
@@ -944,42 +945,99 @@
 
         <!-- Cache Tab -->
         <div id="cache-tab" class="tab-content">
-            <!-- Cache Status Bar -->
-            <div class="stats-bar" id="cache-stats">
-                <div class="stat-item">
-                    <div class="stat-value" id="cache-backend">-</div>
-                    <div class="stat-label">Backend</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="cache-total-entries">-</div>
-                    <div class="stat-label">Einträge</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="cache-total-symbols">-</div>
-                    <div class="stat-label">Symbole</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="cache-hit-rate">-</div>
-                    <div class="stat-label">Hit Rate</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="cache-memory">-</div>
-                    <div class="stat-label">Speicher</div>
-                </div>
-            </div>
-
-            <!-- Cache Overview Card -->
+            <!-- Cache Overview Card (Compact) -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Cache-Übersicht</h2>
+                    <h2 class="card-title" style="display: flex; align-items: center; gap: 0.75rem;">
+                        Cache-Übersicht
+                        <span id="cache-backend" class="service-badge" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">-</span>
+                    </h2>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn btn-primary" onclick="loadCacheOverview()">Aktualisieren</button>
-                        <button class="btn btn-danger" onclick="confirmClearAllCache()">Cache leeren</button>
+                        <button class="btn btn-primary btn-sm" onclick="loadCacheOverview()">Aktualisieren</button>
+                        <button class="btn btn-danger btn-sm" onclick="confirmClearAllCache()">Cache leeren</button>
                     </div>
                 </div>
 
                 <div id="cache-overview-content">
                     <div class="loading"><div class="spinner"></div><br>Lade Cache-Übersicht...</div>
+                </div>
+            </div>
+
+            <!-- Pre-Fetching Card (Compact) -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title" style="display: flex; align-items: center; gap: 0.75rem;">
+                        Pre-Fetching
+                        <span id="prefetch-status-badge" class="service-badge" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">-</span>
+                    </h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="btn btn-success btn-sm" id="prefetch-start-btn" onclick="startPrefetch()" title="Starten">▶</button>
+                        <button class="btn btn-warning btn-sm" id="prefetch-stop-btn" onclick="stopPrefetch()" title="Stoppen">⏹</button>
+                        <button class="btn btn-primary btn-sm" onclick="triggerPrefetch()" title="Jetzt ausführen">⟳</button>
+                        <button class="btn btn-secondary btn-sm" onclick="togglePrefetchConfig()" id="prefetch-config-toggle">⚙</button>
+                    </div>
+                </div>
+                <div style="padding: 0.75rem 1rem; display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center;">
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                        <div style="text-align: center; min-width: 60px;">
+                            <div style="font-size: 1.1rem; font-weight: 600; color: #64c8ff;" id="prefetch-last-run">-</div>
+                            <div style="font-size: 0.7rem; color: #888;">Letzter Lauf</div>
+                        </div>
+                        <div style="text-align: center; min-width: 50px;">
+                            <div style="font-size: 1.1rem; font-weight: 600; color: #64c8ff;" id="prefetch-total-runs">-</div>
+                            <div style="font-size: 0.7rem; color: #888;">Durchläufe</div>
+                        </div>
+                        <div style="text-align: center; min-width: 50px;">
+                            <div style="font-size: 1.1rem; font-weight: 600; color: #64c8ff;" id="prefetch-symbols">-</div>
+                            <div style="font-size: 0.7rem; color: #888;">Symbole</div>
+                        </div>
+                        <div style="text-align: center; min-width: 50px;">
+                            <div style="font-size: 1.1rem; font-weight: 600; color: #81c784;" id="prefetch-entries">-</div>
+                            <div style="font-size: 0.7rem; color: #888;">Einträge</div>
+                        </div>
+                        <div style="text-align: center; min-width: 50px;">
+                            <div style="font-size: 1.1rem; font-weight: 600;" id="prefetch-errors">-</div>
+                            <div style="font-size: 0.7rem; color: #888;">Fehler</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto; font-size: 0.8rem; color: #888;">
+                        <span>ML-Services:</span>
+                        <span style="color: #ba68c8;">NHITS</span>
+                        <span style="color: #64c8ff;">TCN</span>
+                        <span style="color: #ffb74d;">HMM</span>
+                    </div>
+                </div>
+                <!-- Expandable Config -->
+                <div id="prefetch-config-panel" style="display: none; padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div class="form-row" style="gap: 1rem;">
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label class="form-label" style="font-size: 0.8rem;">Intervall (s)</label>
+                            <input type="number" class="form-input" id="prefetch-interval" value="300" min="60" max="3600" style="padding: 0.4rem;">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label class="form-label" style="font-size: 0.8rem;">Max. Symbole</label>
+                            <input type="number" class="form-input" id="prefetch-max-symbols" value="50" min="1" max="200" style="padding: 0.4rem;">
+                        </div>
+                        <div class="form-group" style="flex: 2; min-width: 200px;">
+                            <label class="form-label" style="font-size: 0.8rem;">Timeframes</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.85rem;">
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-1min"><span>1m</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-5min"><span>5m</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-15min"><span>15m</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-1h" checked><span>1h</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-4h" checked><span>4h</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-1day" checked><span>1d</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-1week"><span>1w</span></label>
+                            </div>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label class="form-label" style="font-size: 0.8rem;">Optionen</label>
+                            <label class="form-checkbox" style="font-size: 0.85rem;"><input type="checkbox" id="pf-favorites-only"><span>Nur Favoriten</span></label>
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: flex-end;">
+                            <button class="btn btn-primary btn-sm" onclick="savePrefetchConfig()">Speichern</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1020,96 +1078,6 @@
                 </div>
             </div>
 
-            <!-- Pre-Fetching Card -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Pre-Fetching für ML-Services</h2>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <span id="prefetch-status-badge" class="service-badge" style="background: rgba(158, 158, 158, 0.2); color: #bbb;">Unbekannt</span>
-                        <button class="btn btn-primary btn-sm" onclick="loadPrefetchStatus()">Aktualisieren</button>
-                    </div>
-                </div>
-
-                <!-- Prefetch Stats Bar -->
-                <div class="stats-bar" id="prefetch-stats" style="margin-top: 1rem;">
-                    <div class="stat-item">
-                        <div class="stat-value" id="prefetch-last-run">-</div>
-                        <div class="stat-label">Letzter Lauf</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="prefetch-total-runs">-</div>
-                        <div class="stat-label">Durchläufe</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="prefetch-symbols">-</div>
-                        <div class="stat-label">Symbole</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="prefetch-entries">-</div>
-                        <div class="stat-label">Cache-Einträge</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="prefetch-errors">-</div>
-                        <div class="stat-label">Fehler</div>
-                    </div>
-                </div>
-
-                <!-- Prefetch Configuration -->
-                <div style="padding: 1rem;">
-                    <h3 style="font-size: 1rem; margin-bottom: 1rem; color: #64c8ff;">Konfiguration</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Status</label>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <button class="btn btn-success btn-sm" id="prefetch-start-btn" onclick="startPrefetch()">Starten</button>
-                                <button class="btn btn-warning btn-sm" id="prefetch-stop-btn" onclick="stopPrefetch()">Stoppen</button>
-                                <button class="btn btn-primary btn-sm" onclick="triggerPrefetch()">Jetzt ausführen</button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Intervall (Sekunden)</label>
-                            <input type="number" class="form-input" id="prefetch-interval" value="300" min="60" max="3600">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Max. Symbole</label>
-                            <input type="number" class="form-input" id="prefetch-max-symbols" value="50" min="1" max="200">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Timeframes</label>
-                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-1h" checked><span>1h</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-4h" checked><span>4h</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-1day" checked><span>1day</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-15min"><span>15min</span></label>
-                                <label class="form-checkbox"><input type="checkbox" id="pf-tf-1week"><span>1week</span></label>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Optionen</label>
-                            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
-                                <label class="form-checkbox"><input type="checkbox" id="pf-favorites-only"><span>Nur Favoriten</span></label>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="margin-top: 1rem;">
-                        <button class="btn btn-primary" onclick="savePrefetchConfig()">Konfiguration speichern</button>
-                    </div>
-                </div>
-
-                <!-- Info Box -->
-                <div style="padding: 0 1rem 1rem 1rem;">
-                    <div style="background: rgba(100, 200, 255, 0.1); border: 1px solid rgba(100, 200, 255, 0.3); border-radius: 8px; padding: 1rem;">
-                        <div style="font-weight: 600; color: #64c8ff; margin-bottom: 0.5rem;">Optimiert für nachgelagerte ML-Services</div>
-                        <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem; color: #bbb;">
-                            <li><strong>NHITS:</strong> Benötigt H1, D1 für Price Forecasting</li>
-                            <li><strong>TCN:</strong> Benötigt M15-D1 für Pattern-Erkennung</li>
-                            <li><strong>HMM:</strong> Benötigt H1, H4, D1 für Regime-Detection</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- External Sources Tab -->
@@ -2168,16 +2136,23 @@
                     const cacheResponse = await fetch(`${API_BASE}/cache/overview`);
                     const cacheData = await cacheResponse.json();
                     const cacheEl = document.getElementById('headerCache');
+                    const redisStatusEl = document.getElementById('headerRedisStatus');
                     // Check redis_available in statistics or summary
                     const redisAvailable = cacheData.statistics?.redis_available || cacheData.summary?.redis_available;
                     if (redisAvailable) {
                         // Memory is in redis.memory_used as string like "87.35M"
                         const memStr = cacheData.redis?.memory_used || '-';
-                        cacheEl.textContent = memStr;
+                        const entries = cacheData.summary?.total_entries || 0;
+                        const hitRate = (cacheData.statistics?.hit_rate_percent || 0).toFixed(1);
+                        cacheEl.textContent = `${entries} | ${hitRate}% | ${memStr}`;
                         cacheEl.style.color = '#4caf50';
+                        redisStatusEl.textContent = '●';
+                        redisStatusEl.style.color = '#4caf50';
                     } else {
                         cacheEl.textContent = 'Offline';
                         cacheEl.style.color = '#f44336';
+                        redisStatusEl.textContent = '●';
+                        redisStatusEl.style.color = '#f44336';
                     }
                 } catch (e) {
                     document.getElementById('headerCache').textContent = '-';
@@ -5600,54 +5575,76 @@
             }
         }
 
-        // Update cache stats bar
+        // Update cache stats (now in header badge)
         function updateCacheStats(data) {
             const backend = data.cache_backend || 'memory';
             const isRedis = data.redis?.connected;
+            const backendEl = document.getElementById('cache-backend');
 
-            document.getElementById('cache-backend').innerHTML =
-                `<span class="cache-status-indicator ${isRedis ? 'connected' : 'disconnected'}"></span>${backend.toUpperCase()}`;
-            document.getElementById('cache-total-entries').textContent = data.summary?.total_entries || 0;
-            document.getElementById('cache-total-symbols').textContent = data.summary?.total_symbol_count || 0;
-            document.getElementById('cache-hit-rate').textContent =
-                (data.statistics?.hit_rate_percent || 0).toFixed(1) + '%';
-            document.getElementById('cache-memory').textContent = data.redis?.memory_used || 'N/A';
+            if (isRedis) {
+                backendEl.innerHTML = `<span style="color: #4caf50;">●</span> REDIS`;
+                backendEl.style.background = 'rgba(76, 175, 80, 0.2)';
+                backendEl.style.color = '#81c784';
+            } else {
+                backendEl.innerHTML = `<span style="color: #f44336;">●</span> ${backend.toUpperCase()}`;
+                backendEl.style.background = 'rgba(244, 67, 54, 0.2)';
+                backendEl.style.color = '#e57373';
+            }
         }
 
-        // Render cache overview content
+        // Render cache overview content (compact layout)
         function renderCacheOverview(data) {
             const overviewContent = document.getElementById('cache-overview-content');
             const stats = data.statistics || {};
+            const summary = data.summary || {};
+            const redis = data.redis || {};
+            const hitRate = (stats.hit_rate_percent || 0).toFixed(1);
 
             overviewContent.innerHTML = `
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
-                    <div class="stat-mini">
-                        <div style="font-size: 1.5rem; font-weight: 600; color: #81c784;">${stats.hits || 0}</div>
-                        <div style="font-size: 0.8rem; color: #888;">Cache Hits</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start;">
+                    <!-- Main Stats Row -->
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; flex: 1; min-width: 400px;">
+                        <div style="text-align: center; min-width: 70px;">
+                            <div style="font-size: 1.3rem; font-weight: 600; color: #64c8ff;">${summary.total_entries || 0}</div>
+                            <div style="font-size: 0.75rem; color: #888;">Einträge</div>
+                        </div>
+                        <div style="text-align: center; min-width: 70px;">
+                            <div style="font-size: 1.3rem; font-weight: 600; color: #64c8ff;">${summary.total_symbol_count || 0}</div>
+                            <div style="font-size: 0.75rem; color: #888;">Symbole</div>
+                        </div>
+                        <div style="text-align: center; min-width: 70px;">
+                            <div style="font-size: 1.3rem; font-weight: 600; color: ${parseFloat(hitRate) >= 30 ? '#81c784' : '#ffb74d'};">${hitRate}%</div>
+                            <div style="font-size: 0.75rem; color: #888;">Hit Rate</div>
+                        </div>
+                        <div style="text-align: center; min-width: 70px;">
+                            <div style="font-size: 1.3rem; font-weight: 600; color: #ba68c8;">${redis.memory_used || 'N/A'}</div>
+                            <div style="font-size: 0.75rem; color: #888;">Speicher</div>
+                        </div>
+                        <div style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 1.5rem; display: flex; gap: 1rem;">
+                            <div style="text-align: center; min-width: 50px;">
+                                <div style="font-size: 1rem; font-weight: 500; color: #81c784;">${stats.hits || 0}</div>
+                                <div style="font-size: 0.7rem; color: #888;">Hits</div>
+                            </div>
+                            <div style="text-align: center; min-width: 50px;">
+                                <div style="font-size: 1rem; font-weight: 500; color: #e57373;">${stats.misses || 0}</div>
+                                <div style="font-size: 0.7rem; color: #888;">Misses</div>
+                            </div>
+                            <div style="text-align: center; min-width: 50px;">
+                                <div style="font-size: 1rem; font-weight: 500; color: #64c8ff;">${stats.sets || 0}</div>
+                                <div style="font-size: 0.7rem; color: #888;">Sets</div>
+                            </div>
+                            <div style="text-align: center; min-width: 50px;">
+                                <div style="font-size: 1rem; font-weight: 500; color: ${stats.redis_errors > 0 ? '#e57373' : '#666'};">${stats.redis_errors || 0}</div>
+                                <div style="font-size: 0.7rem; color: #888;">Fehler</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="stat-mini">
-                        <div style="font-size: 1.5rem; font-weight: 600; color: #e57373;">${stats.misses || 0}</div>
-                        <div style="font-size: 0.8rem; color: #888;">Cache Misses</div>
-                    </div>
-                    <div class="stat-mini">
-                        <div style="font-size: 1.5rem; font-weight: 600; color: #64c8ff;">${stats.sets || 0}</div>
-                        <div style="font-size: 0.8rem; color: #888;">Sets</div>
-                    </div>
-                    <div class="stat-mini">
-                        <div style="font-size: 1.5rem; font-weight: 600; color: #ffb74d;">${formatBytes(stats.bytes_saved || 0)}</div>
-                        <div style="font-size: 0.8rem; color: #888;">Bytes gespart</div>
-                    </div>
-                    <div class="stat-mini">
-                        <div style="font-size: 1.5rem; font-weight: 600; color: ${stats.redis_errors > 0 ? '#e57373' : '#81c784'};">${stats.redis_errors || 0}</div>
-                        <div style="font-size: 0.8rem; color: #888;">Redis Fehler</div>
-                    </div>
-                </div>
-                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <strong style="color: #64c8ff;">Gecachte Timeframes:</strong>
-                    <div style="margin-top: 0.5rem;">
-                        ${(data.summary?.total_timeframes || []).map(tf =>
-                            `<span class="badge" style="background: rgba(76, 175, 80, 0.15); color: #81c784; margin-right: 0.25rem;">${tf}</span>`
-                        ).join('') || '<span style="color: #888;">Keine</span>'}
+                    <!-- Timeframes -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="color: #888; font-size: 0.8rem;">Timeframes:</span>
+                        ${sortTimeframes(summary.total_timeframes || []).map(tf =>
+                            `<span class="badge" style="background: rgba(76, 175, 80, 0.15); color: #81c784; font-size: 0.7rem; padding: 0.15rem 0.4rem;">${tf}</span>`
+                        ).join('') || '<span style="color: #666; font-size: 0.8rem;">Keine</span>'}
                     </div>
                 </div>
             `;
@@ -5798,6 +5795,24 @@
             }
         }
 
+        // Sort timeframes in ascending order (smallest to largest)
+        function sortTimeframes(timeframes) {
+            const order = {
+                'M1': 1, '1m': 1, '1min': 1,
+                'M5': 5, '5m': 5, '5min': 5,
+                'M15': 15, '15m': 15, '15min': 15,
+                'M30': 30, '30m': 30, '30min': 30,
+                'M45': 45, '45m': 45, '45min': 45,
+                'H1': 60, '1h': 60, '1H': 60,
+                'H2': 120, '2h': 120, '2H': 120,
+                'H4': 240, '4h': 240, '4H': 240,
+                'D1': 1440, '1d': 1440, '1D': 1440, '1day': 1440,
+                'W1': 10080, '1w': 10080, '1W': 10080, '1week': 10080,
+                'MN': 43200, '1M': 43200, '1mo': 43200, '1month': 43200
+            };
+            return [...timeframes].sort((a, b) => (order[a] || 9999) - (order[b] || 9999));
+        }
+
         // Format bytes
         function formatBytes(bytes) {
             if (bytes === 0) return '0 B';
@@ -5821,6 +5836,19 @@
         // ============================================
 
         let prefetchData = null;
+
+        // Toggle prefetch config panel visibility
+        function togglePrefetchConfig() {
+            const panel = document.getElementById('prefetch-config-panel');
+            const toggle = document.getElementById('prefetch-config-toggle');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                toggle.style.background = 'rgba(100, 200, 255, 0.3)';
+            } else {
+                panel.style.display = 'none';
+                toggle.style.background = '';
+            }
+        }
 
         async function loadPrefetchStatus() {
             try {
@@ -5854,7 +5882,9 @@
             document.getElementById('prefetch-total-runs').textContent = stats.total_runs || 0;
             document.getElementById('prefetch-symbols').textContent = stats.symbols_fetched || 0;
             document.getElementById('prefetch-entries').textContent = stats.cache_entries_created || 0;
-            document.getElementById('prefetch-errors').textContent = stats.errors || 0;
+            const errorsEl = document.getElementById('prefetch-errors');
+            errorsEl.textContent = stats.errors || 0;
+            errorsEl.style.color = (stats.errors || 0) > 0 ? '#e57373' : '#666';
 
             // Update config fields
             const config = data.config || {};
@@ -5864,10 +5894,12 @@
 
             // Update timeframe checkboxes
             const timeframes = config.timeframes || ['1h', '4h', '1day'];
+            document.getElementById('pf-tf-1min').checked = timeframes.includes('1min');
+            document.getElementById('pf-tf-5min').checked = timeframes.includes('5min');
+            document.getElementById('pf-tf-15min').checked = timeframes.includes('15min');
             document.getElementById('pf-tf-1h').checked = timeframes.includes('1h');
             document.getElementById('pf-tf-4h').checked = timeframes.includes('4h');
             document.getElementById('pf-tf-1day').checked = timeframes.includes('1day');
-            document.getElementById('pf-tf-15min').checked = timeframes.includes('15min');
             document.getElementById('pf-tf-1week').checked = timeframes.includes('1week');
         }
 
@@ -5928,10 +5960,12 @@
             try {
                 // Build timeframes array
                 const timeframes = [];
+                if (document.getElementById('pf-tf-1min').checked) timeframes.push('1min');
+                if (document.getElementById('pf-tf-5min').checked) timeframes.push('5min');
+                if (document.getElementById('pf-tf-15min').checked) timeframes.push('15min');
                 if (document.getElementById('pf-tf-1h').checked) timeframes.push('1h');
                 if (document.getElementById('pf-tf-4h').checked) timeframes.push('4h');
                 if (document.getElementById('pf-tf-1day').checked) timeframes.push('1day');
-                if (document.getElementById('pf-tf-15min').checked) timeframes.push('15min');
                 if (document.getElementById('pf-tf-1week').checked) timeframes.push('1week');
 
                 const interval = parseInt(document.getElementById('prefetch-interval').value) || 300;
