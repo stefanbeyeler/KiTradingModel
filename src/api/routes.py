@@ -1178,7 +1178,9 @@ async def get_prefetch_status():
                 "total_runs": stats["total_runs"],
                 "symbols_fetched": stats["symbols_fetched"],
                 "timeframes_fetched": stats["timeframes_fetched"],
+                "indicators_fetched": stats.get("indicators_fetched", 0),
                 "cache_entries_created": stats["cache_entries_created"],
+                "indicator_entries_created": stats.get("indicator_entries_created", 0),
                 "errors": stats["errors"],
             },
             "timestamp": datetime.utcnow().isoformat()
@@ -1243,6 +1245,8 @@ async def configure_prefetch_service(
     refresh_interval: Optional[int] = None,
     ohlcv_limit: Optional[int] = None,
     api_delay: Optional[float] = None,
+    indicators: Optional[List[str]] = Query(None),
+    indicator_limit: Optional[int] = None,
 ):
     """
     Configure the pre-fetching service.
@@ -1255,6 +1259,8 @@ async def configure_prefetch_service(
         refresh_interval: Interval between pre-fetch runs (seconds)
         ohlcv_limit: Number of OHLCV data points to fetch per request
         api_delay: Delay between API calls for rate limiting (seconds)
+        indicators: List of indicators to pre-fetch (e.g. ["rsi", "macd", "bbands"])
+        indicator_limit: Number of indicator data points to fetch per request
     """
     from ..services.prefetch_service import prefetch_service
 
@@ -1275,6 +1281,10 @@ async def configure_prefetch_service(
             config_updates["ohlcv_limit"] = ohlcv_limit
         if api_delay is not None:
             config_updates["api_delay"] = api_delay
+        if indicators is not None:
+            config_updates["indicators"] = indicators
+        if indicator_limit is not None:
+            config_updates["indicator_limit"] = indicator_limit
 
         if config_updates:
             prefetch_service.configure(**config_updates)

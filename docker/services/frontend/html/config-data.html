@@ -1021,7 +1021,7 @@
                 </div>
                 <!-- Expandable Config -->
                 <div id="prefetch-config-panel" style="display: none; padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <div class="form-row" style="gap: 1rem;">
+                    <div class="form-row" style="gap: 1rem; margin-bottom: 0.75rem;">
                         <div class="form-group" style="flex: 1; min-width: 100px;">
                             <label class="form-label" style="font-size: 0.8rem;">Intervall (s)</label>
                             <input type="number" class="form-input" id="prefetch-interval" value="300" min="60" max="3600" style="padding: 0.4rem;">
@@ -1031,7 +1031,7 @@
                             <input type="number" class="form-input" id="prefetch-max-symbols" value="50" min="1" max="200" style="padding: 0.4rem;">
                         </div>
                         <div class="form-group" style="flex: 2; min-width: 200px;">
-                            <label class="form-label" style="font-size: 0.8rem;">Timeframes</label>
+                            <label class="form-label" style="font-size: 0.8rem;">Timeframes (OHLCV)</label>
                             <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.85rem;">
                                 <label class="form-checkbox"><input type="checkbox" id="pf-tf-1min"><span>1m</span></label>
                                 <label class="form-checkbox"><input type="checkbox" id="pf-tf-5min"><span>5m</span></label>
@@ -1045,6 +1045,24 @@
                         <div class="form-group" style="flex: 1; min-width: 100px;">
                             <label class="form-label" style="font-size: 0.8rem;">Optionen</label>
                             <label class="form-checkbox" style="font-size: 0.85rem;"><input type="checkbox" id="pf-favorites-only"><span>Nur Favoriten</span></label>
+                        </div>
+                    </div>
+                    <!-- Indikatoren Row -->
+                    <div class="form-row" style="gap: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                        <div class="form-group" style="flex: 3; min-width: 300px;">
+                            <label class="form-label" style="font-size: 0.8rem;">Indikatoren (optional - erhöht API-Aufrufe)</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.85rem;">
+                                <label class="form-checkbox"><input type="checkbox" id="pf-ind-rsi"><span>RSI</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-ind-macd"><span>MACD</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-ind-bbands"><span>BBands</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-ind-atr"><span>ATR</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-ind-ema"><span>EMA</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-ind-sma"><span>SMA</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-ind-adx"><span>ADX</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-ind-stoch"><span>Stoch</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-ind-obv"><span>OBV</span></label>
+                                <label class="form-checkbox"><input type="checkbox" id="pf-ind-vwap"><span>VWAP</span></label>
+                            </div>
                         </div>
                         <div class="form-group" style="display: flex; align-items: flex-end;">
                             <button class="btn btn-primary btn-sm" onclick="savePrefetchConfig()">Speichern</button>
@@ -5707,7 +5725,7 @@
                         ` : ''}
                         ${catData.timeframes && catData.timeframes.length > 0 ? `
                             <div class="cache-timeframes-row">
-                                ${catData.timeframes.map(tf => `<span class="tf-tag">${tf}</span>`).join('')}
+                                ${sortTimeframes(catData.timeframes).map(tf => `<span class="tf-tag">${tf}</span>`).join('')}
                             </div>
                         ` : ''}
                     </div>
@@ -5913,6 +5931,19 @@
             document.getElementById('pf-tf-4h').checked = timeframes.includes('4h');
             document.getElementById('pf-tf-1day').checked = timeframes.includes('1day');
             document.getElementById('pf-tf-1week').checked = timeframes.includes('1week');
+
+            // Update indicator checkboxes
+            const indicators = config.indicators || [];
+            document.getElementById('pf-ind-rsi').checked = indicators.includes('rsi');
+            document.getElementById('pf-ind-macd').checked = indicators.includes('macd');
+            document.getElementById('pf-ind-bbands').checked = indicators.includes('bbands');
+            document.getElementById('pf-ind-atr').checked = indicators.includes('atr');
+            document.getElementById('pf-ind-ema').checked = indicators.includes('ema');
+            document.getElementById('pf-ind-sma').checked = indicators.includes('sma');
+            document.getElementById('pf-ind-adx').checked = indicators.includes('adx');
+            document.getElementById('pf-ind-stoch').checked = indicators.includes('stoch');
+            document.getElementById('pf-ind-obv').checked = indicators.includes('obv');
+            document.getElementById('pf-ind-vwap').checked = indicators.includes('vwap');
         }
 
         function formatPrefetchDateTime(isoString) {
@@ -5964,7 +5995,9 @@
                 const config = statusData.config || {};
                 const totalSymbols = config.max_symbols || 50;
                 const totalTimeframes = (config.timeframes || []).length || 3;
-                const totalOperations = totalSymbols * totalTimeframes;
+                const totalIndicators = (config.indicators || []).length || 0;
+                // Operations: OHLCV + (Indikatoren pro Timeframe)
+                const totalOperations = totalSymbols * totalTimeframes * (1 + totalIndicators);
                 const apiDelay = config.api_delay || 0.2;
                 const estimatedDuration = totalOperations * apiDelay * 1000; // in ms
 
@@ -6072,6 +6105,19 @@
                 if (document.getElementById('pf-tf-1day').checked) timeframes.push('1day');
                 if (document.getElementById('pf-tf-1week').checked) timeframes.push('1week');
 
+                // Build indicators array
+                const indicators = [];
+                if (document.getElementById('pf-ind-rsi').checked) indicators.push('rsi');
+                if (document.getElementById('pf-ind-macd').checked) indicators.push('macd');
+                if (document.getElementById('pf-ind-bbands').checked) indicators.push('bbands');
+                if (document.getElementById('pf-ind-atr').checked) indicators.push('atr');
+                if (document.getElementById('pf-ind-ema').checked) indicators.push('ema');
+                if (document.getElementById('pf-ind-sma').checked) indicators.push('sma');
+                if (document.getElementById('pf-ind-adx').checked) indicators.push('adx');
+                if (document.getElementById('pf-ind-stoch').checked) indicators.push('stoch');
+                if (document.getElementById('pf-ind-obv').checked) indicators.push('obv');
+                if (document.getElementById('pf-ind-vwap').checked) indicators.push('vwap');
+
                 const interval = parseInt(document.getElementById('prefetch-interval').value) || 300;
                 const maxSymbols = parseInt(document.getElementById('prefetch-max-symbols').value) || 50;
                 const favoritesOnly = document.getElementById('pf-favorites-only').checked;
@@ -6082,6 +6128,7 @@
                 params.append('max_symbols', maxSymbols);
                 params.append('favorites_only', favoritesOnly);
                 timeframes.forEach(tf => params.append('timeframes', tf));
+                indicators.forEach(ind => params.append('indicators', ind));
 
                 const response = await fetch(`${API_BASE}/prefetch/configure?${params.toString()}`, {
                     method: 'POST'
@@ -6090,7 +6137,8 @@
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                 const data = await response.json();
-                showToast('Pre-Fetch Konfiguration gespeichert', 'success');
+                const indicatorInfo = indicators.length > 0 ? ` + ${indicators.length} Indikatoren` : '';
+                showToast(`Pre-Fetch Konfiguration gespeichert: ${timeframes.length} Timeframes${indicatorInfo}`, 'success');
                 loadPrefetchStatus();
             } catch (error) {
                 console.error('Error saving prefetch config:', error);

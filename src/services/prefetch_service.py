@@ -22,6 +22,20 @@ from .cache_service import cache_service, CacheCategory, TIMEFRAME_TTL, DEFAULT_
 class PrefetchConfig:
     """Konfiguration für Pre-Fetching."""
 
+    # Verfügbare Indikatoren für Pre-Fetching (ML-relevant)
+    AVAILABLE_INDICATORS = [
+        "rsi",      # Relative Strength Index - Momentum
+        "macd",     # Moving Average Convergence Divergence
+        "bbands",   # Bollinger Bands - Volatilität
+        "atr",      # Average True Range - Volatilität
+        "ema",      # Exponential Moving Average
+        "sma",      # Simple Moving Average
+        "adx",      # Average Directional Index - Trend Strength
+        "stoch",    # Stochastic Oscillator
+        "obv",      # On-Balance Volume
+        "vwap",     # Volume Weighted Average Price
+    ]
+
     def __init__(
         self,
         enabled: bool = True,
@@ -37,6 +51,10 @@ class PrefetchConfig:
         ohlcv_limit: int = 500,
         # Verzögerung zwischen API-Aufrufen (Rate Limiting)
         api_delay: float = 0.2,
+        # Welche Indikatoren sollen pre-fetched werden (leer = keine)
+        indicators: list[str] = None,
+        # Output-Size für Indikatoren
+        indicator_limit: int = 100,
     ):
         self.enabled = enabled
         self.timeframes = timeframes or ["1h", "4h", "1day"]
@@ -45,6 +63,12 @@ class PrefetchConfig:
         self.refresh_interval = refresh_interval
         self.ohlcv_limit = ohlcv_limit
         self.api_delay = api_delay
+        # Indikatoren: Nur gültige aus der verfügbaren Liste akzeptieren
+        self.indicators = [
+            ind for ind in (indicators or [])
+            if ind.lower() in self.AVAILABLE_INDICATORS
+        ]
+        self.indicator_limit = indicator_limit
 
 
 class PrefetchService:
@@ -65,9 +89,11 @@ class PrefetchService:
             "last_run": None,
             "symbols_fetched": 0,
             "timeframes_fetched": 0,
+            "indicators_fetched": 0,
             "errors": 0,
             "total_runs": 0,
             "cache_entries_created": 0,
+            "indicator_entries_created": 0,
         }
         self._symbols_cache: list[dict] = []
 
@@ -142,13 +168,15 @@ class PrefetchService:
             # 3. Limitieren
             symbols = symbols[:self._config.max_symbols]
 
+            indicators_info = f", {len(self._config.indicators)} Indikatoren" if self._config.indicators else ""
             logger.info(
                 f"Pre-Fetch gestartet für {len(symbols)} Symbole, "
-                f"{len(self._config.timeframes)} Timeframes"
+                f"{len(self._config.timeframes)} Timeframes{indicators_info}"
             )
 
-            # 4. Daten pre-fetchen
+            # 4. OHLCV-Daten pre-fetchen
             fetched_count = 0
+            indicator_count = 0
             for symbol_data in symbols:
                 # Verwende immer display symbol (BTCUSD) - Konvertierung erfolgt im TwelveDataService
                 symbol = (
@@ -169,14 +197,29 @@ class PrefetchService:
                         logger.error(f"Pre-Fetch Fehler für {symbol}/{timeframe}: {e}")
                         self._stats["errors"] += 1
 
+                    # 5. Indikatoren pre-fetchen (falls konfiguriert)
+                    for indicator in self._config.indicators:
+                        try:
+                            success = await self._prefetch_indicator(symbol, timeframe, indicator)
+                            if success:
+                                indicator_count += 1
+                            # Rate Limiting
+                            await asyncio.sleep(self._config.api_delay)
+                        except Exception as e:
+                            logger.error(f"Pre-Fetch Fehler für {indicator}/{symbol}/{timeframe}: {e}")
+                            self._stats["errors"] += 1
+
             self._stats["last_run"] = start_time.isoformat()
             self._stats["symbols_fetched"] = len(symbols)
             self._stats["timeframes_fetched"] = len(self._config.timeframes)
+            self._stats["indicators_fetched"] = len(self._config.indicators)
             self._stats["cache_entries_created"] = fetched_count
+            self._stats["indicator_entries_created"] = indicator_count
 
             duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+            indicator_info = f", {indicator_count} Indikatoren" if indicator_count else ""
             logger.info(
-                f"Pre-Fetch abgeschlossen: {fetched_count} Einträge in {duration:.1f}s"
+                f"Pre-Fetch abgeschlossen: {fetched_count} OHLCV{indicator_info} in {duration:.1f}s"
             )
 
         except Exception as e:
@@ -294,6 +337,63 @@ class PrefetchService:
 
         return False
 
+    async def _prefetch_indicator(self, symbol: str, timeframe: str, indicator: str) -> bool:
+        """
+        Pre-fetcht einen technischen Indikator für ein Symbol/Timeframe.
+
+        Args:
+            symbol: Trading-Symbol (z.B. BTCUSD)
+            timeframe: Zeitrahmen (z.B. 1h, 4h, 1day)
+            indicator: Indikator-Name (z.B. rsi, macd, bbands)
+
+        Returns:
+            True wenn neue Daten geladen wurden, False wenn bereits gecacht
+        """
+        # Normalize symbol for cache key
+        cache_symbol = symbol.upper().replace("/", "")
+        cache_params = {
+            "interval": timeframe,
+            "outputsize": self._config.indicator_limit,
+            "indicator": indicator.lower()
+        }
+
+        # Prüfe ob Cache noch gültig ist
+        cached = await cache_service.get(
+            CacheCategory.INDICATORS, cache_symbol, timeframe, params=cache_params
+        )
+        if cached:
+            return False
+
+        # Indikator über TwelveData Service abrufen
+        try:
+            from .twelvedata_service import twelvedata_service
+
+            result = await twelvedata_service.get_technical_indicators(
+                symbol=symbol,
+                interval=timeframe,
+                indicator=indicator,
+                outputsize=self._config.indicator_limit,
+            )
+
+            if result and result.get("values") and not result.get("error"):
+                values = result["values"]
+                # Cache the result
+                await cache_service.set(
+                    CacheCategory.INDICATORS,
+                    result,
+                    cache_symbol,
+                    timeframe,
+                    params=cache_params,
+                    ttl=300  # 5 Minuten TTL für Indikatoren
+                )
+                logger.debug(f"Pre-fetched {indicator.upper()} for {symbol}/{timeframe} ({len(values) if isinstance(values, list) else 1} values)")
+                return True
+
+        except Exception as e:
+            logger.warning(f"Pre-Fetch Fehler für {indicator}/{symbol}/{timeframe}: {e}")
+
+        return False
+
     async def prefetch_symbol(self, symbol: str, timeframes: list[str] = None) -> dict:
         """
         Pre-fetcht Daten für ein einzelnes Symbol.
@@ -362,6 +462,8 @@ class PrefetchService:
                 "favorites_only": self._config.favorites_only,
                 "refresh_interval": self._config.refresh_interval,
                 "ohlcv_limit": self._config.ohlcv_limit,
+                "indicators": self._config.indicators,
+                "indicator_limit": self._config.indicator_limit,
             },
             "running": self._running,
         }
@@ -376,6 +478,9 @@ class PrefetchService:
             "refresh_interval": self._config.refresh_interval,
             "ohlcv_limit": self._config.ohlcv_limit,
             "api_delay": self._config.api_delay,
+            "indicators": self._config.indicators,
+            "indicator_limit": self._config.indicator_limit,
+            "available_indicators": PrefetchConfig.AVAILABLE_INDICATORS,
         }
 
 
