@@ -2155,7 +2155,8 @@
                     // API returns array directly, not {symbols: [...]}
                     const symbols = Array.isArray(symbolsData) ? symbolsData : (symbolsData.symbols || []);
                     const totalSymbols = symbols.length;
-                    const activeSymbols = symbols.filter(s => s.is_active).length;
+                    // Check both is_active (legacy) and status === 'active' (current)
+                    const activeSymbols = symbols.filter(s => s.is_active || s.status === 'active').length;
                     document.getElementById('headerSymbols').textContent = `${activeSymbols}/${totalSymbols}`;
                 } catch (e) {
                     document.getElementById('headerSymbols').textContent = '-';
