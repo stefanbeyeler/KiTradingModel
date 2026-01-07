@@ -348,23 +348,35 @@ class DataServiceClient:
         }
 
         # Process regime data
-        if isinstance(regime, dict):
+        if isinstance(regime, dict) and "error" not in regime:
             context["regime"] = {
-                "current": regime.get("regime"),
-                "confidence": regime.get("confidence"),
-                "characteristics": regime.get("characteristics", {})
+                "current": regime.get("current_regime"),
+                "confidence": regime.get("regime_probability"),
+                "duration": regime.get("regime_duration"),
+                "characteristics": regime.get("market_metrics", {})
             }
 
         # Process forecast data
-        if isinstance(forecast, dict):
-            context["forecast"] = {
-                "direction": forecast.get("direction"),
-                "target_price": forecast.get("target_price"),
-                "confidence": forecast.get("confidence")
-            }
+        if isinstance(forecast, dict) and "error" not in forecast:
+            # Extract forecast values
+            predictions = forecast.get("predictions", [])
+            if predictions:
+                last_pred = predictions[-1] if isinstance(predictions[-1], (int, float)) else None
+                context["forecast"] = {
+                    "horizon": forecast.get("horizon"),
+                    "current_price": forecast.get("current_price"),
+                    "predicted_price": last_pred,
+                    "model_version": forecast.get("model_version"),
+                    "predictions_count": len(predictions)
+                }
+            else:
+                context["forecast"] = {
+                    "status": forecast.get("status", "no_predictions"),
+                    "error": forecast.get("error")
+                }
 
         # Process candlestick patterns
-        if isinstance(candlesticks, dict):
+        if isinstance(candlesticks, dict) and "error" not in candlesticks:
             patterns = candlesticks.get("patterns", [])
             context["candlesticks"] = {
                 "count": len(patterns),
