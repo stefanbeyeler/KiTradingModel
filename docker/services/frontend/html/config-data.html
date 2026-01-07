@@ -1007,6 +1007,18 @@
                         <span style="color: #ffb74d;">HMM</span>
                     </div>
                 </div>
+                <!-- Progress Bar for Manual Prefetch -->
+                <div id="prefetch-progress-container" style="display: none; padding: 0 1rem 0.75rem 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="flex: 1; background: rgba(255,255,255,0.1); border-radius: 4px; height: 8px; overflow: hidden;">
+                            <div id="prefetch-progress-bar" style="height: 100%; background: linear-gradient(90deg, #64c8ff, #81c784); width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div style="min-width: 120px; font-size: 0.8rem; color: #888;">
+                            <span id="prefetch-progress-text">0 / 0</span>
+                        </div>
+                        <div style="min-width: 60px; font-size: 0.8rem; font-weight: 600;" id="prefetch-progress-percent">0%</div>
+                    </div>
+                </div>
                 <!-- Expandable Config -->
                 <div id="prefetch-config-panel" style="display: none; padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
                     <div class="form-row" style="gap: 1rem;">
@@ -5942,18 +5954,110 @@
             }
         }
 
+        let prefetchProgressInterval = null;
+
         async function triggerPrefetch() {
             try {
+                // Get current config to estimate total operations
+                const statusResponse = await fetch(`${API_BASE}/prefetch/status`);
+                const statusData = await statusResponse.json();
+                const config = statusData.config || {};
+                const totalSymbols = config.max_symbols || 50;
+                const totalTimeframes = (config.timeframes || []).length || 3;
+                const totalOperations = totalSymbols * totalTimeframes;
+                const apiDelay = config.api_delay || 0.2;
+                const estimatedDuration = totalOperations * apiDelay * 1000; // in ms
+
+                // Show progress bar
+                const container = document.getElementById('prefetch-progress-container');
+                const bar = document.getElementById('prefetch-progress-bar');
+                const text = document.getElementById('prefetch-progress-text');
+                const percent = document.getElementById('prefetch-progress-percent');
+
+                container.style.display = 'block';
+                bar.style.width = '0%';
+                text.textContent = `0 / ${totalOperations}`;
+                percent.textContent = '0%';
+                percent.style.color = '#64c8ff';
+
+                // Start prefetch
                 const response = await fetch(`${API_BASE}/prefetch/run`, { method: 'POST' });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                showToast('Pre-Fetch gestartet (läuft im Hintergrund)', 'success');
-                // Refresh status after a few seconds
-                setTimeout(loadPrefetchStatus, 3000);
+                showToast('Pre-Fetch gestartet...', 'info');
+
+                // Animate progress bar based on estimated duration
+                const startTime = Date.now();
+                const initialEntries = statusData.statistics?.cache_entries_created || 0;
+
+                prefetchProgressInterval = setInterval(async () => {
+                    const elapsed = Date.now() - startTime;
+                    const estimatedProgress = Math.min(elapsed / estimatedDuration, 0.95); // Cap at 95% until confirmed complete
+
+                    // Update progress bar
+                    const currentOps = Math.floor(estimatedProgress * totalOperations);
+                    bar.style.width = `${estimatedProgress * 100}%`;
+                    text.textContent = `~${currentOps} / ${totalOperations}`;
+                    percent.textContent = `${Math.floor(estimatedProgress * 100)}%`;
+
+                    // Check actual status periodically
+                    try {
+                        const checkResponse = await fetch(`${API_BASE}/prefetch/status`);
+                        const checkData = await checkResponse.json();
+                        const currentEntries = checkData.statistics?.cache_entries_created || 0;
+                        const newEntries = currentEntries - initialEntries;
+
+                        // If we have actual new entries, use them for display
+                        if (newEntries > 0) {
+                            const actualProgress = Math.min(newEntries / totalOperations, 1);
+                            bar.style.width = `${actualProgress * 100}%`;
+                            text.textContent = `${newEntries} / ${totalOperations}`;
+                            percent.textContent = `${Math.floor(actualProgress * 100)}%`;
+
+                            // Check if complete (last_run changed)
+                            if (checkData.statistics?.last_run !== statusData.statistics?.last_run) {
+                                completePrefetchProgress(newEntries, totalOperations);
+                            }
+                        }
+
+                        // Timeout after 2x estimated duration
+                        if (elapsed > estimatedDuration * 2) {
+                            completePrefetchProgress(newEntries || currentOps, totalOperations);
+                        }
+                    } catch (e) {
+                        // Ignore check errors
+                    }
+                }, 500);
+
             } catch (error) {
                 console.error('Error triggering prefetch:', error);
                 showToast(`Fehler: ${error.message}`, 'error');
+                document.getElementById('prefetch-progress-container').style.display = 'none';
             }
+        }
+
+        function completePrefetchProgress(completed, total) {
+            if (prefetchProgressInterval) {
+                clearInterval(prefetchProgressInterval);
+                prefetchProgressInterval = null;
+            }
+
+            const bar = document.getElementById('prefetch-progress-bar');
+            const text = document.getElementById('prefetch-progress-text');
+            const percent = document.getElementById('prefetch-progress-percent');
+
+            bar.style.width = '100%';
+            text.textContent = `${completed} / ${total} abgeschlossen`;
+            percent.textContent = '✓';
+            percent.style.color = '#81c784';
+
+            showToast(`Pre-Fetch abgeschlossen: ${completed} Einträge`, 'success');
+            loadPrefetchStatus();
+
+            // Hide progress bar after 3 seconds
+            setTimeout(() => {
+                document.getElementById('prefetch-progress-container').style.display = 'none';
+            }, 3000);
         }
 
         async function savePrefetchConfig() {
