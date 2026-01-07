@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "acceptEdits",
     "allow": [
       "Bash(git:*)",
       "Bash(git add:*)",
@@ -77,14 +76,17 @@
       "Bash(sort:*)",
       "Bash(time:*)",
       "Bash(readlink:*)",
+      "Bach(netstat"
       "Bash(e:/KiTradingModel/venv/Scripts:*)",
       "Bash(/e/KiTradingModel/venv/Scripts:*)",
       "Read(**)",
-      "Edit(**)"
+      "Edit(**)",
+      "Bash(findstr:*)"
     ],
     "deny": [
       "Bash(sudo rm -rf:*)",
       "Bash(rm -rf /:*)"
-    ]
+    ],
+    "defaultMode": "acceptEdits"
   }
 }
