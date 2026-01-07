@@ -2154,8 +2154,10 @@
                 try {
                     const symbolsResponse = await fetch(`${API_BASE}/managed-symbols?favorites_only=false&with_data_only=false`);
                     const symbolsData = await symbolsResponse.json();
-                    const totalSymbols = symbolsData.symbols ? symbolsData.symbols.length : 0;
-                    const activeSymbols = symbolsData.symbols ? symbolsData.symbols.filter(s => s.is_active).length : 0;
+                    // API returns array directly, not {symbols: [...]}
+                    const symbols = Array.isArray(symbolsData) ? symbolsData : (symbolsData.symbols || []);
+                    const totalSymbols = symbols.length;
+                    const activeSymbols = symbols.filter(s => s.is_active).length;
                     document.getElementById('headerSymbols').textContent = `${activeSymbols}/${totalSymbols}`;
                 } catch (e) {
                     document.getElementById('headerSymbols').textContent = '-';
@@ -2166,9 +2168,12 @@
                     const cacheResponse = await fetch(`${API_BASE}/cache/overview`);
                     const cacheData = await cacheResponse.json();
                     const cacheEl = document.getElementById('headerCache');
-                    if (cacheData.redis_available) {
-                        const usedMB = (cacheData.redis_memory_used / 1024 / 1024).toFixed(1);
-                        cacheEl.textContent = `${usedMB}MB`;
+                    // Check redis_available in statistics or summary
+                    const redisAvailable = cacheData.statistics?.redis_available || cacheData.summary?.redis_available;
+                    if (redisAvailable) {
+                        // Memory is in redis.memory_used as string like "87.35M"
+                        const memStr = cacheData.redis?.memory_used || '-';
+                        cacheEl.textContent = memStr;
                         cacheEl.style.color = '#4caf50';
                     } else {
                         cacheEl.textContent = 'Offline';
