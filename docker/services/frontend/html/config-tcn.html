@@ -4588,7 +4588,13 @@
 
                 if (allCandles.length === 0) {
                     const patternAgeInfo = endTime ? ` Pattern-Alter: ${Math.round((Date.now() - new Date(endTime).getTime()) / (24*60*60*1000))} Tage.` : '';
-                    throw new Error(`Keine Candlestick-Daten für ${symbol} verfügbar.${patternAgeInfo} Historische Daten werden möglicherweise nicht unterstützt.`);
+                    // EasyInsight only supports D1, H1, M15 - other timeframes (H4, H2, M30, etc.) are not available
+                    const unsupportedTimeframes = ['H4', 'H2', 'M30', 'M45', 'W1', 'MN', '4h', '2h', '30m', '45m', '1week', '1month'];
+                    const isUnsupportedTimeframe = unsupportedTimeframes.some(tf => timeframe.toUpperCase().includes(tf.toUpperCase()) || timeframe.toLowerCase() === tf.toLowerCase());
+                    const timeframeInfo = isUnsupportedTimeframe
+                        ? ` TwelveData unterstützt ${symbol} nicht, und EasyInsight hat nur D1/H1/M15 Daten (${timeframe} nicht verfügbar).`
+                        : '';
+                    throw new Error(`Keine Candlestick-Daten für ${symbol} verfügbar.${patternAgeInfo}${timeframeInfo} Historische Daten werden möglicherweise nicht unterstützt.`);
                 }
 
                 console.log(`Loaded ${allCandles.length} candles from ${dataSource}`);

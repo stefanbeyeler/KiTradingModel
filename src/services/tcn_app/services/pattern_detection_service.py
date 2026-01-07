@@ -505,6 +505,30 @@ class PatternDetectionService:
                 for d in data
             ], dtype=np.float32)
 
+            # Validate OHLCV data - check if we have actual price data
+            # EasyInsight only supports D1, H1, M15 - other timeframes result in all zeros
+            valid_candles = np.sum(ohlcv[:, 0] > 0)  # Count candles with non-zero open
+            if valid_candles < 50:
+                logger.warning(
+                    f"Insufficient valid OHLCV data for {symbol} {timeframe}: "
+                    f"{valid_candles}/{len(ohlcv)} candles. "
+                    f"Source: {source}. EasyInsight only supports D1, H1, M15 timeframes."
+                )
+                return PatternDetectionResponse(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    timestamp=datetime.now(),
+                    patterns=[],
+                    total_patterns=0,
+                    market_context={
+                        "data_source": source,
+                        "error": f"No valid OHLCV data for {timeframe} timeframe. "
+                                 f"TwelveData does not support {symbol}, "
+                                 f"EasyInsight only supports D1, H1, M15."
+                    },
+                    model_version=self._model_version
+                )
+
             # Calculate proper candle timestamps based on timeframe
             # EasyInsight's snapshot_time is import time, not candle time
             # So we calculate timestamps from the reference time and timeframe
