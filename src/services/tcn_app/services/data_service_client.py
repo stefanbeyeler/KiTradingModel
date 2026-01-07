@@ -285,7 +285,7 @@ class DataServiceClient:
         try:
             client = await self._get_client()
             response = await client.get(
-                f"{candlestick_url}/api/v1/detect/{symbol}",
+                f"{candlestick_url}/api/v1/scan/{symbol}",
                 params={
                     "timeframe": timeframe,
                     "lookback": lookback
@@ -358,22 +358,20 @@ class DataServiceClient:
 
         # Process forecast data
         if isinstance(forecast, dict) and "error" not in forecast:
-            # Extract forecast values
-            predictions = forecast.get("predictions", [])
-            if predictions:
-                last_pred = predictions[-1] if isinstance(predictions[-1], (int, float)) else None
-                context["forecast"] = {
-                    "horizon": forecast.get("horizon"),
-                    "current_price": forecast.get("current_price"),
-                    "predicted_price": last_pred,
-                    "model_version": forecast.get("model_version"),
-                    "predictions_count": len(predictions)
-                }
-            else:
-                context["forecast"] = {
-                    "status": forecast.get("status", "no_predictions"),
-                    "error": forecast.get("error")
-                }
+            # NHITS returns predicted_prices array
+            predictions = forecast.get("predicted_prices", [])
+            context["forecast"] = {
+                "horizon_hours": forecast.get("horizon_hours"),
+                "current_price": forecast.get("current_price"),
+                "predicted_price_1h": forecast.get("predicted_price_1h"),
+                "predicted_price_4h": forecast.get("predicted_price_4h"),
+                "predicted_price_24h": forecast.get("predicted_price_24h"),
+                "predicted_change_1h": forecast.get("predicted_change_percent_1h"),
+                "predicted_change_24h": forecast.get("predicted_change_percent_24h"),
+                "trend_up_probability": forecast.get("trend_up_probability"),
+                "model_confidence": forecast.get("model_confidence"),
+                "predictions_count": len(predictions)
+            }
 
         # Process candlestick patterns
         if isinstance(candlesticks, dict) and "error" not in candlesticks:
