@@ -677,10 +677,46 @@
 </head>
 <body>
     <header>
-        <div class="container">
-            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
-            <span class="header-title">Data Service Konfiguration</span>
-            <span class="service-badge">Port 3001</span>
+        <div class="container" style="flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <a href="/" class="back-link">← Dashboard</a>
+                <h1 class="header-title">📊 Data Service</h1>
+                <span class="service-badge" id="serviceStatus">Laden...</span>
+            </div>
+            <!-- Compact Header Status Bar -->
+            <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; font-size: 0.85rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Service-Status">
+                    <span>⏳</span>
+                    <span style="color: #888;">Status:</span>
+                    <strong id="headerStatus" style="color: #4caf50;">Lädt...</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Service-Version">
+                    <span>📦</span>
+                    <span style="color: #888;">Version:</span>
+                    <strong id="headerVersion" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Verwaltete Symbole">
+                    <span>📈</span>
+                    <span style="color: #888;">Symbole:</span>
+                    <strong id="headerSymbols" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Redis Cache Status">
+                    <span>💾</span>
+                    <span style="color: #888;">Cache:</span>
+                    <strong id="headerCache" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Pre-Fetch Service">
+                    <span>🔄</span>
+                    <span style="color: #888;">Pre-Fetch:</span>
+                    <strong id="headerPrefetch" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Zeit seit Service-Start">
+                    <span>🕐</span>
+                    <span style="color: #888;">Uptime:</span>
+                    <strong id="headerUptime" style="color: #64c8ff;">-</strong>
+                </div>
+                <button class="btn btn-primary" onclick="updateHeaderStatus()" style="margin-left: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem;">↻</button>
+            </div>
         </div>
     </header>
 
@@ -2074,6 +2110,114 @@
         let allSymbols = [];
         let allStrategies = [];
         let allIndicators = [];
+        let serviceStartTime = null;
+
+        // ==================== Header Status Functions ====================
+
+        async function updateHeaderStatus() {
+            try {
+                // Fetch health info
+                const healthResponse = await fetch('/data/health');
+                const healthData = await healthResponse.json();
+
+                // Update status
+                const statusEl = document.getElementById('headerStatus');
+                const badgeEl = document.getElementById('serviceStatus');
+                if (healthData.status === 'healthy') {
+                    statusEl.textContent = 'Online';
+                    statusEl.style.color = '#4caf50';
+                    badgeEl.textContent = 'Online';
+                    badgeEl.style.background = 'rgba(76, 175, 80, 0.2)';
+                    badgeEl.style.color = '#81c784';
+                } else {
+                    statusEl.textContent = 'Offline';
+                    statusEl.style.color = '#f44336';
+                    badgeEl.textContent = 'Offline';
+                    badgeEl.style.background = 'rgba(244, 67, 54, 0.2)';
+                    badgeEl.style.color = '#e57373';
+                }
+
+                // Update version
+                document.getElementById('headerVersion').textContent = healthData.version || '-';
+
+                // Update prefetch status
+                const prefetchEl = document.getElementById('headerPrefetch');
+                if (healthData.prefetch_service_status === 'running') {
+                    prefetchEl.textContent = 'Aktiv';
+                    prefetchEl.style.color = '#4caf50';
+                } else {
+                    prefetchEl.textContent = 'Gestoppt';
+                    prefetchEl.style.color = '#ff9800';
+                }
+
+                // Fetch symbol count
+                try {
+                    const symbolsResponse = await fetch(`${API_BASE}/managed-symbols?favorites_only=false&with_data_only=false`);
+                    const symbolsData = await symbolsResponse.json();
+                    const totalSymbols = symbolsData.symbols ? symbolsData.symbols.length : 0;
+                    const activeSymbols = symbolsData.symbols ? symbolsData.symbols.filter(s => s.is_active).length : 0;
+                    document.getElementById('headerSymbols').textContent = `${activeSymbols}/${totalSymbols}`;
+                } catch (e) {
+                    document.getElementById('headerSymbols').textContent = '-';
+                }
+
+                // Fetch cache status
+                try {
+                    const cacheResponse = await fetch(`${API_BASE}/cache/overview`);
+                    const cacheData = await cacheResponse.json();
+                    const cacheEl = document.getElementById('headerCache');
+                    if (cacheData.redis_available) {
+                        const usedMB = (cacheData.redis_memory_used / 1024 / 1024).toFixed(1);
+                        cacheEl.textContent = `${usedMB}MB`;
+                        cacheEl.style.color = '#4caf50';
+                    } else {
+                        cacheEl.textContent = 'Offline';
+                        cacheEl.style.color = '#f44336';
+                    }
+                } catch (e) {
+                    document.getElementById('headerCache').textContent = '-';
+                }
+
+                // Calculate uptime (store start time on first successful call)
+                if (!serviceStartTime) {
+                    serviceStartTime = Date.now();
+                }
+                updateUptime();
+
+            } catch (error) {
+                console.error('Error updating header status:', error);
+                document.getElementById('headerStatus').textContent = 'Offline';
+                document.getElementById('headerStatus').style.color = '#f44336';
+                document.getElementById('serviceStatus').textContent = 'Offline';
+                document.getElementById('serviceStatus').style.background = 'rgba(244, 67, 54, 0.2)';
+                document.getElementById('serviceStatus').style.color = '#e57373';
+            }
+        }
+
+        function updateUptime() {
+            if (!serviceStartTime) return;
+            const diff = Date.now() - serviceStartTime;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            let uptimeStr;
+            if (days > 0) {
+                uptimeStr = `${days}d ${hours % 24}h`;
+            } else if (hours > 0) {
+                uptimeStr = `${hours}h ${minutes % 60}m`;
+            } else {
+                uptimeStr = `${minutes}m ${seconds % 60}s`;
+            }
+            document.getElementById('headerUptime').textContent = uptimeStr;
+        }
+
+        // Update uptime every second
+        setInterval(updateUptime, 1000);
+
+        // Initial header status load
+        updateHeaderStatus();
 
         // Subcategory mapping per category (using backend enum values)
         const SUBCATEGORIES = {

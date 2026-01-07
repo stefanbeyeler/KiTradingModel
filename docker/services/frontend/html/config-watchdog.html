@@ -901,10 +901,46 @@
 </head>
 <body>
     <header>
-        <div class="container">
-            <a href="/" class="back-link">&#8592; Dashboard</a>
-            <span class="header-title">Watchdog Service - Konfiguration</span>
-            <span class="service-badge" id="service-status">Laden...</span>
+        <div class="container" style="flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <a href="/" class="back-link">← Dashboard</a>
+                <h1 class="header-title">👁️ Watchdog Service</h1>
+                <span class="service-badge" id="service-status">Laden...</span>
+            </div>
+            <!-- Compact Header Status Bar -->
+            <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; font-size: 0.85rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Service-Status">
+                    <span>⏳</span>
+                    <span style="color: #888;">Status:</span>
+                    <strong id="headerStatus" style="color: #4caf50;">Lädt...</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Service-Version">
+                    <span>📦</span>
+                    <span style="color: #888;">Version:</span>
+                    <strong id="headerVersion" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Services Online">
+                    <span>🟢</span>
+                    <span style="color: #888;">Services:</span>
+                    <strong id="headerServices" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Telegram Bot Status">
+                    <span>📱</span>
+                    <span style="color: #888;">Telegram:</span>
+                    <strong id="headerTelegram" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Aktives Training">
+                    <span>🏋️</span>
+                    <span style="color: #888;">Training:</span>
+                    <strong id="headerTraining" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Zeit seit Service-Start">
+                    <span>🕐</span>
+                    <span style="color: #888;">Uptime:</span>
+                    <strong id="headerUptime" style="color: #64c8ff;">-</strong>
+                </div>
+                <button class="btn btn-primary" onclick="updateHeaderStatus()" style="margin-left: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem;">↻</button>
+            </div>
         </div>
     </header>
 
@@ -1442,6 +1478,104 @@
 
     <script>
         const API_BASE = '/watchdog/api/v1';
+        let serviceStartTime = null;
+
+        // ==================== Header Status Functions ====================
+
+        async function updateHeaderStatus() {
+            try {
+                // Fetch health info
+                const healthResponse = await fetch(`${API_BASE.replace('/api/v1', '')}/health`);
+                const healthData = await healthResponse.json();
+
+                // Update status
+                const statusEl = document.getElementById('headerStatus');
+                const badgeEl = document.getElementById('service-status');
+                if (healthData.status === 'healthy') {
+                    statusEl.textContent = 'Online';
+                    statusEl.style.color = '#4caf50';
+                    badgeEl.textContent = 'Online';
+                    badgeEl.classList.remove('offline');
+                } else {
+                    statusEl.textContent = 'Offline';
+                    statusEl.style.color = '#f44336';
+                    badgeEl.textContent = 'Offline';
+                    badgeEl.classList.add('offline');
+                }
+
+                // Update version
+                document.getElementById('headerVersion').textContent = healthData.version || '-';
+
+                // Update services count from health data
+                const servicesEl = document.getElementById('headerServices');
+                if (healthData.services_status) {
+                    const total = Object.keys(healthData.services_status).length;
+                    const healthy = Object.values(healthData.services_status).filter(s => s === 'healthy').length;
+                    servicesEl.textContent = `${healthy}/${total}`;
+                    servicesEl.style.color = healthy === total ? '#4caf50' : '#ff9800';
+                } else {
+                    servicesEl.textContent = '-';
+                }
+
+                // Update Telegram status
+                const telegramEl = document.getElementById('headerTelegram');
+                if (healthData.telegram_enabled) {
+                    telegramEl.textContent = 'Aktiv';
+                    telegramEl.style.color = '#4caf50';
+                } else {
+                    telegramEl.textContent = 'Aus';
+                    telegramEl.style.color = '#888';
+                }
+
+                // Update Training status
+                const trainingEl = document.getElementById('headerTraining');
+                if (healthData.training_active) {
+                    trainingEl.textContent = 'Aktiv';
+                    trainingEl.style.color = '#ff9800';
+                } else {
+                    trainingEl.textContent = 'Idle';
+                    trainingEl.style.color = '#4caf50';
+                }
+
+                // Calculate uptime
+                if (!serviceStartTime) {
+                    serviceStartTime = Date.now();
+                }
+                updateUptime();
+
+            } catch (error) {
+                console.error('Error updating header status:', error);
+                document.getElementById('headerStatus').textContent = 'Offline';
+                document.getElementById('headerStatus').style.color = '#f44336';
+                document.getElementById('service-status').textContent = 'Offline';
+                document.getElementById('service-status').classList.add('offline');
+            }
+        }
+
+        function updateUptime() {
+            if (!serviceStartTime) return;
+            const diff = Date.now() - serviceStartTime;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            let uptimeStr;
+            if (days > 0) {
+                uptimeStr = `${days}d ${hours % 24}h`;
+            } else if (hours > 0) {
+                uptimeStr = `${hours}h ${minutes % 60}m`;
+            } else {
+                uptimeStr = `${minutes}m ${seconds % 60}s`;
+            }
+            document.getElementById('headerUptime').textContent = uptimeStr;
+        }
+
+        // Update uptime every second
+        setInterval(updateUptime, 1000);
+
+        // Initial header status load
+        updateHeaderStatus();
 
         // Service Alert Configuration mit Ports für direkten Test-Endpoint-Aufruf
         const SERVICE_ALERT_CONFIG = {
