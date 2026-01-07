@@ -1374,7 +1374,8 @@
                 try {
                     const modelsResponse = await fetch(`${API_BASE}/forecast/models`);
                     const modelsData = await modelsResponse.json();
-                    const modelCount = modelsData.models ? modelsData.models.length : 0;
+                    // API returns array directly, not {models: [...]}
+                    const modelCount = Array.isArray(modelsData) ? modelsData.length : (modelsData.models?.length ?? 0);
                     document.getElementById('headerModels').textContent = modelCount;
                 } catch (e) {
                     document.getElementById('headerModels').textContent = '-';
