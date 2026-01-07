@@ -571,20 +571,22 @@
 
         .config-item {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: 0.3rem;
             padding: 0.75rem;
             background: rgba(0, 0, 0, 0.2);
             border-radius: 8px;
+            text-align: center;
         }
 
         .config-item .label {
             opacity: 0.7;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
         .config-item .value {
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 1rem;
             color: #64c8ff;
         }
     </style>
