@@ -169,9 +169,6 @@ class PrefetchService:
             logger.warning("PrefetchService läuft bereits")
             return
 
-        # Versuche gespeicherte Konfiguration zu laden
-        await self.load_config()
-
         if not self._config.enabled:
             logger.info("PrefetchService ist deaktiviert")
             return

@@ -324,18 +324,26 @@ async def startup_event():
         await cache_service.connect()
         logger.info("Cache service connected")
 
-        # Configure pre-fetch based on environment
+        # Configure pre-fetch based on environment (only if no saved config exists)
         prefetch_enabled = os.getenv("PREFETCH_ENABLED", "true").lower() == "true"
         prefetch_interval = int(os.getenv("PREFETCH_INTERVAL", "300"))  # 5 minutes default
         prefetch_favorites_only = os.getenv("PREFETCH_FAVORITES_ONLY", "false").lower() == "true"
 
-        prefetch_service.configure(
-            enabled=prefetch_enabled,
-            refresh_interval=prefetch_interval,
-            favorites_only=prefetch_favorites_only,
-        )
+        # Try to load saved config from Redis first
+        config_loaded = await prefetch_service.load_config()
 
-        if prefetch_enabled:
+        if not config_loaded:
+            # No saved config - apply environment defaults
+            await prefetch_service.configure(
+                enabled=prefetch_enabled,
+                refresh_interval=prefetch_interval,
+                favorites_only=prefetch_favorites_only,
+            )
+            logger.info("Using default pre-fetch configuration from environment")
+        else:
+            logger.info("Loaded pre-fetch configuration from Redis")
+
+        if prefetch_service._config.enabled:
             await prefetch_service.start()
             logger.info(
                 f"Pre-fetch service started "
