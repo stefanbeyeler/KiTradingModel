@@ -958,19 +958,26 @@
                     // Update model
                     document.getElementById('headerModel').textContent = status.model || '-';
 
-                    // Update Ollama status
+                    // Update Ollama status - API uses 'available' field
                     const ollamaEl = document.getElementById('headerOllama');
-                    if (status.ollama_available) {
+                    if (status.available) {
                         ollamaEl.textContent = 'OK';
                         ollamaEl.style.color = '#4caf50';
                     } else {
                         ollamaEl.textContent = 'Offline';
                         ollamaEl.style.color = '#f44336';
                     }
+                } catch (e) {
+                    document.getElementById('headerModel').textContent = '-';
+                    document.getElementById('headerOllama').textContent = '-';
+                }
 
-                    // Update RAG status
+                // Fetch RAG status separately
+                try {
+                    const ragRes = await fetch(`${API_BASE}/rag/health`);
+                    const ragHealth = await ragRes.json();
                     const ragEl = document.getElementById('headerRag');
-                    if (status.rag_available) {
+                    if (ragHealth.status === 'healthy' || ragHealth.status === 'ok') {
                         ragEl.textContent = 'OK';
                         ragEl.style.color = '#4caf50';
                     } else {
@@ -978,9 +985,8 @@
                         ragEl.style.color = '#f44336';
                     }
                 } catch (e) {
-                    document.getElementById('headerModel').textContent = '-';
-                    document.getElementById('headerOllama').textContent = '-';
-                    document.getElementById('headerRag').textContent = '-';
+                    document.getElementById('headerRag').textContent = 'Offline';
+                    document.getElementById('headerRag').style.color = '#f44336';
                 }
 
                 // Calculate uptime
