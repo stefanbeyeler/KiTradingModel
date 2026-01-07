@@ -16,6 +16,8 @@
       "Bash(git rebase:*)",
       "Bash(git -C:*)",
       "Bash(docker:*)",
+      "Bash(docker ps:*)"
+      "Bash(docker exec:*)",
       "Bash(docker-compose:*)",
       "Bash(docker compose:*)",
       "Bash(sudo docker:*)",
@@ -42,6 +44,7 @@
       "Bash(mkdir:*)",
       "Bash(mv:*)",
       "Bash(cp:*)",
+      "Bash(cd:*)",
       "Bash(rm:*)",
       "Bash(chmod:*)",
       "Bash(chown:*)",

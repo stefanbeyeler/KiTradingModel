@@ -156,7 +156,7 @@ class TCNTrainingService:
         Returns:
             Tuple of (sequences, labels)
         """
-        from src.services.data_gateway_service import data_gateway
+        from .data_service_client import data_service_client
 
         all_sequences = []
         all_labels = []
@@ -169,7 +169,7 @@ class TCNTrainingService:
                 candles_per_day = {"1m": 1440, "5m": 288, "15m": 96, "30m": 48, "1h": 24, "4h": 6, "1d": 1}
                 limit = lookback_days * candles_per_day.get(timeframe, 24)
 
-                data = await data_gateway.get_historical_data(
+                data, _ = await data_service_client.get_historical_data(
                     symbol=symbol,
                     timeframe=timeframe,
                     limit=limit

@@ -89,9 +89,9 @@ async def scan_symbols(request: PatternScanRequest):
         if request.symbols:
             symbols = request.symbols
         else:
-            # Fetch active symbols from data service
-            from src.services.data_gateway_service import data_gateway
-            symbols_data = await data_gateway.get_available_symbols()
+            # Fetch active symbols from Data Service (only gateway for external data)
+            from ..services.data_service_client import data_service_client
+            symbols_data = await data_service_client.get_available_symbols()
             symbols = [s.get('symbol', s) if isinstance(s, dict) else s for s in symbols_data[:20]]  # Limit
 
         results = await pattern_detection_service.scan_symbols(
@@ -139,10 +139,10 @@ async def scan_all_symbols(
     Returns symbols with detected patterns above threshold.
     """
     try:
-        from src.services.data_gateway_service import data_gateway
+        from ..services.data_service_client import data_service_client
 
-        # Get active symbols
-        symbols_data = await data_gateway.get_available_symbols()
+        # Get active symbols from Data Service (only gateway for external data)
+        symbols_data = await data_service_client.get_available_symbols()
         symbols = [s.get('symbol', s) if isinstance(s, dict) else s for s in symbols_data]
 
         results = await pattern_detection_service.scan_symbols(

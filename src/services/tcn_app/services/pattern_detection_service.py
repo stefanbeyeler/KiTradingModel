@@ -457,10 +457,10 @@ class PatternDetectionService:
             PatternDetectionResponse with detected patterns
         """
         try:
-            # Fetch OHLCV data via TwelveData (primary source for pattern analysis)
-            from src.services.data_gateway_service import data_gateway
+            # Fetch OHLCV data via Data Service (the only gateway for external data)
+            from .data_service_client import data_service_client
 
-            data, source = await data_gateway.get_historical_data_with_fallback(
+            data, source = await data_service_client.get_historical_data(
                 symbol=symbol,
                 timeframe=timeframe,
                 limit=lookback

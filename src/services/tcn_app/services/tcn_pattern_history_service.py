@@ -419,7 +419,7 @@ class TCNPatternHistoryService:
         Returns:
             Scan result summary
         """
-        from src.services.data_gateway_service import data_gateway
+        from .data_service_client import data_service_client
         from .pattern_detection_service import pattern_detection_service
 
         if timeframes is None:
@@ -428,8 +428,8 @@ class TCNPatternHistoryService:
         self._last_scan = datetime.now(timezone.utc)
 
         try:
-            # Get available symbols
-            symbols_data = await data_gateway.get_available_symbols()
+            # Get available symbols from Data Service (not directly from EasyInsight)
+            symbols_data = await data_service_client.get_available_symbols()
             symbols = [s.get("symbol", s) if isinstance(s, dict) else s for s in symbols_data]
 
             if not symbols:
