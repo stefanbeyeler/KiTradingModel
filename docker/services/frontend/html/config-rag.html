@@ -1079,8 +1079,12 @@
                 try {
                     const statsRes = await fetch(`${API_BASE}/rag/stats`);
                     const stats = await statsRes.json();
-                    document.getElementById('headerDocs').textContent = stats.total_documents || '0';
-                    document.getElementById('headerTypes').textContent = stats.document_types ? Object.keys(stats.document_types).length : '-';
+                    // API uses 'document_count' not 'total_documents'
+                    const docCount = stats.document_count ?? stats.total_documents ?? 0;
+                    document.getElementById('headerDocs').textContent = docCount.toLocaleString();
+                    // API uses 'documents_by_type' not 'document_types'
+                    const types = stats.documents_by_type || stats.document_types;
+                    document.getElementById('headerTypes').textContent = types ? Object.keys(types).length : '-';
                     document.getElementById('headerDimension').textContent = stats.embedding_dimension || '-';
                 } catch (e) {
                     document.getElementById('headerDocs').textContent = '-';
