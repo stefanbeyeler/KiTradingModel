@@ -1287,11 +1287,11 @@ async def configure_prefetch_service(
             config_updates["indicator_limit"] = indicator_limit
 
         if config_updates:
-            prefetch_service.configure(**config_updates)
+            await prefetch_service.configure(**config_updates)
 
         return {
             "status": "ok",
-            "message": "Pre-fetch configuration updated",
+            "message": "Pre-fetch configuration updated and saved to Redis",
             "updated": config_updates,
             "config": prefetch_service.get_config(),
             "timestamp": datetime.utcnow().isoformat()

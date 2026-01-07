@@ -81,6 +81,9 @@ class PrefetchService:
     - HMM: Benötigt H1, H4, D1 für Regime-Detection
     """
 
+    # Redis-Key für persistente Konfiguration
+    CONFIG_CACHE_KEY = "prefetch_config"
+
     def __init__(self):
         self._config = PrefetchConfig()
         self._running = False
@@ -97,12 +100,68 @@ class PrefetchService:
         }
         self._symbols_cache: list[dict] = []
 
-    def configure(self, **kwargs) -> None:
-        """Aktualisiert die Pre-Fetch-Konfiguration."""
+    async def load_config(self) -> bool:
+        """
+        Lädt die Konfiguration aus Redis beim Start.
+
+        Returns:
+            True wenn Konfiguration geladen wurde, False sonst
+        """
+        try:
+            cached_config = await cache_service.get(
+                CacheCategory.METADATA, self.CONFIG_CACHE_KEY
+            )
+            if cached_config and isinstance(cached_config, dict):
+                # Konfiguration anwenden
+                for key, value in cached_config.items():
+                    if hasattr(self._config, key) and key != "AVAILABLE_INDICATORS":
+                        setattr(self._config, key, value)
+                logger.info(f"PrefetchService Konfiguration aus Redis geladen: {cached_config}")
+                return True
+        except Exception as e:
+            logger.warning(f"Fehler beim Laden der Pre-Fetch-Konfiguration: {e}")
+        return False
+
+    async def save_config(self) -> bool:
+        """
+        Speichert die aktuelle Konfiguration in Redis.
+
+        Returns:
+            True wenn erfolgreich gespeichert, False sonst
+        """
+        try:
+            config_dict = {
+                "enabled": self._config.enabled,
+                "timeframes": self._config.timeframes,
+                "max_symbols": self._config.max_symbols,
+                "favorites_only": self._config.favorites_only,
+                "refresh_interval": self._config.refresh_interval,
+                "ohlcv_limit": self._config.ohlcv_limit,
+                "api_delay": self._config.api_delay,
+                "indicators": self._config.indicators,
+                "indicator_limit": self._config.indicator_limit,
+            }
+            # Lange TTL für Konfiguration (30 Tage)
+            await cache_service.set(
+                CacheCategory.METADATA,
+                config_dict,
+                self.CONFIG_CACHE_KEY,
+                ttl=2592000  # 30 Tage
+            )
+            logger.info("PrefetchService Konfiguration in Redis gespeichert")
+            return True
+        except Exception as e:
+            logger.error(f"Fehler beim Speichern der Pre-Fetch-Konfiguration: {e}")
+            return False
+
+    async def configure(self, **kwargs) -> None:
+        """Aktualisiert die Pre-Fetch-Konfiguration und speichert sie."""
         for key, value in kwargs.items():
             if hasattr(self._config, key):
                 setattr(self._config, key, value)
         logger.info(f"PrefetchService konfiguriert: {kwargs}")
+        # Konfiguration persistent speichern
+        await self.save_config()
 
     async def start(self) -> None:
         """Startet den Pre-Fetching Service."""
@@ -110,14 +169,18 @@ class PrefetchService:
             logger.warning("PrefetchService läuft bereits")
             return
 
+        # Versuche gespeicherte Konfiguration zu laden
+        await self.load_config()
+
         if not self._config.enabled:
             logger.info("PrefetchService ist deaktiviert")
             return
 
         self._running = True
+        indicators_info = f", Indikatoren: {self._config.indicators}" if self._config.indicators else ""
         logger.info(
             f"PrefetchService gestartet - Timeframes: {self._config.timeframes}, "
-            f"Intervall: {self._config.refresh_interval}s"
+            f"Intervall: {self._config.refresh_interval}s{indicators_info}"
         )
 
         # Initial Pre-Fetch
