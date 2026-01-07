@@ -848,10 +848,7 @@
                     badgeEl.classList.add('offline');
                 }
 
-                // Update version
-                document.getElementById('headerVersion').textContent = healthData.version || '-';
-
-                // Fetch info and stats
+                // Fetch info and stats for version and other data
                 try {
                     const [infoRes, statsRes] = await Promise.all([
                         fetch(`${API_BASE}/info`),
@@ -860,9 +857,14 @@
                     const info = await infoRes.json();
                     const stats = await statsRes.json();
 
-                    document.getElementById('headerModels').textContent = stats.total_models || '-';
-                    document.getElementById('headerFeatures').textContent = info.features_count || '-';
+                    // Version from info endpoint
+                    document.getElementById('headerVersion').textContent = info.version || '-';
+                    // Models count from stats
+                    document.getElementById('headerModels').textContent = stats.hmm_models_count ?? '-';
+                    // Features from info.components.scorer.feature_count
+                    document.getElementById('headerFeatures').textContent = info.components?.scorer?.feature_count ?? '-';
                 } catch (e) {
+                    document.getElementById('headerVersion').textContent = '-';
                     document.getElementById('headerModels').textContent = '-';
                     document.getElementById('headerFeatures').textContent = '-';
                 }
