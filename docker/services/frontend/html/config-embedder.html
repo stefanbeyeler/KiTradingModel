@@ -859,7 +859,10 @@ Bitcoin bearish Signal</textarea>
                 try {
                     const modelsRes = await fetch(`${API_BASE}/models`);
                     const modelsData = await modelsRes.json();
-                    document.getElementById('headerModels').textContent = modelsData.models ? modelsData.models.length : '-';
+                    // API returns object with model names as keys
+                    const modelCount = Object.keys(modelsData).length;
+                    const loadedCount = Object.values(modelsData).filter(m => m.loaded).length;
+                    document.getElementById('headerModels').textContent = `${loadedCount}/${modelCount}`;
                 } catch (e) {
                     document.getElementById('headerModels').textContent = '-';
                 }
@@ -868,8 +871,10 @@ Bitcoin bearish Signal</textarea>
                 try {
                     const cacheRes = await fetch(`${API_BASE}/cache/stats`);
                     const cacheData = await cacheRes.json();
-                    document.getElementById('headerCache').textContent = cacheData.cache_entries || '0';
-                    const hitRate = cacheData.hit_rate ? `${(cacheData.hit_rate * 100).toFixed(1)}%` : '-';
+                    // API uses 'entries' not 'cache_entries'
+                    document.getElementById('headerCache').textContent = cacheData.entries ?? '0';
+                    // hit_rate is already a decimal (0.0-1.0)
+                    const hitRate = cacheData.hit_rate !== undefined ? `${(cacheData.hit_rate * 100).toFixed(1)}%` : '-';
                     document.getElementById('headerHitRate').textContent = hitRate;
                 } catch (e) {
                     document.getElementById('headerCache').textContent = '-';
