@@ -624,6 +624,16 @@
                     <span style="color: #888;">Dimension:</span>
                     <strong id="headerDimension" style="color: #64c8ff;">-</strong>
                 </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Anzahl Symbole">
+                    <span>💹</span>
+                    <span style="color: #888;">Symbole:</span>
+                    <strong id="headerSymbols" style="color: #64c8ff;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Letzte Aktualisierung">
+                    <span>🔄</span>
+                    <span style="color: #888;">Update:</span>
+                    <strong id="headerLastUpdate" style="color: #ff9800;">-</strong>
+                </div>
                 <div style="display: flex; align-items: center; gap: 0.4rem;" title="Zeit seit Service-Start">
                     <span>🕐</span>
                     <span style="color: #888;">Uptime:</span>
@@ -646,30 +656,6 @@
 
         <!-- Overview Tab -->
         <div id="tab-overview" class="tab-content active">
-            <!-- Stats Bar -->
-            <div class="stats-bar">
-                <div class="stat-item">
-                    <div class="stat-value" id="total-docs">-</div>
-                    <div class="stat-label">Dokumente</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="total-types">-</div>
-                    <div class="stat-label">Dokumenttypen</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="total-symbols">-</div>
-                    <div class="stat-label">Symbole</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="embedding-dim">-</div>
-                    <div class="stat-label">Embedding Dimension</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="last-update" style="font-size: 1.25rem;">-</div>
-                    <div class="stat-label">Letzte Aktualisierung</div>
-                </div>
-            </div>
-
             <div class="grid-2">
                 <!-- Document Types -->
                 <div class="card">
@@ -1086,10 +1072,32 @@
                     const types = stats.documents_by_type || stats.document_types;
                     document.getElementById('headerTypes').textContent = types ? Object.keys(types).length : '-';
                     document.getElementById('headerDimension').textContent = stats.embedding_dimension || '-';
+                    // Symbole aus documents_by_symbol
+                    const symbols = stats.documents_by_symbol || {};
+                    document.getElementById('headerSymbols').textContent = Object.keys(symbols).length;
                 } catch (e) {
                     document.getElementById('headerDocs').textContent = '-';
                     document.getElementById('headerTypes').textContent = '-';
                     document.getElementById('headerDimension').textContent = '-';
+                    document.getElementById('headerSymbols').textContent = '-';
+                }
+
+                // Fetch scheduler status for last update time
+                try {
+                    const schedRes = await fetch(`${API_BASE}/rag/scheduler/status`);
+                    const schedData = await schedRes.json();
+                    const lastFetch = schedData.scheduler?.last_fetch;
+                    if (lastFetch) {
+                        const d = new Date(lastFetch);
+                        document.getElementById('headerLastUpdate').textContent = d.toLocaleString('de-DE', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    } else {
+                        document.getElementById('headerLastUpdate').textContent = '-';
+                    }
+                } catch (e) {
+                    document.getElementById('headerLastUpdate').textContent = '-';
                 }
 
                 // Calculate uptime
@@ -1173,29 +1181,8 @@
                 const res = await fetch(`${API_BASE}/rag/stats`);
                 const data = await res.json();
 
-                // Update stats bar
-                document.getElementById('total-docs').textContent = data.document_count || 0;
-                document.getElementById('total-types').textContent = Object.keys(data.documents_by_type || {}).length;
-                document.getElementById('total-symbols').textContent = Object.keys(data.documents_by_symbol || {}).length;
-                document.getElementById('embedding-dim').textContent = data.embedding_dimension || '-';
-
-                // Fetch scheduler status for last update time
-                try {
-                    const schedRes = await fetch(`${API_BASE}/rag/scheduler/status`);
-                    const schedData = await schedRes.json();
-                    const lastFetch = schedData.scheduler?.last_fetch;
-                    if (lastFetch) {
-                        const d = new Date(lastFetch);
-                        document.getElementById('last-update').textContent = d.toLocaleString('de-DE', {
-                            day: '2-digit', month: '2-digit', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit'
-                        });
-                    } else {
-                        document.getElementById('last-update').textContent = '-';
-                    }
-                } catch (e) {
-                    document.getElementById('last-update').textContent = '-';
-                }
+                // Update header (also refreshes stats in header bar)
+                updateHeaderStatus();
 
                 // Update config
                 const modelParts = (data.embedding_model || '').split('/');
