@@ -329,9 +329,19 @@ class DataServiceClient:
         """
         import asyncio
 
+        # Map timeframe to NHITS format (1h -> H1, 4h -> H4, 1d -> D1)
+        nhits_timeframe_map = {
+            "1h": "H1", "4h": "H4", "1d": "D1",
+            "h1": "H1", "h4": "H4", "d1": "D1",
+            "1H": "H1", "4H": "H4", "1D": "D1",
+            "H1": "H1", "H4": "H4", "D1": "D1",
+            "15m": "M15", "m15": "M15", "M15": "M15"
+        }
+        nhits_tf = nhits_timeframe_map.get(timeframe, "H1")
+
         # Fetch all ML data in parallel
         regime_task = self.get_hmm_regime(symbol, timeframe)
-        forecast_task = self.get_nhits_forecast(symbol, timeframe.upper())
+        forecast_task = self.get_nhits_forecast(symbol, nhits_tf)
         candlestick_task = self.get_candlestick_patterns(symbol, timeframe)
 
         regime, forecast, candlesticks = await asyncio.gather(
