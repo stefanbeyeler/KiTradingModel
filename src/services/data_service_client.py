@@ -18,18 +18,34 @@ from ..config import settings
 class DataServiceClient:
     """HTTP client for Data Service external sources API."""
 
-    def __init__(self, base_url: Optional[str] = None, candlestick_url: Optional[str] = None):
+    def __init__(
+        self,
+        base_url: Optional[str] = None,
+        candlestick_url: Optional[str] = None,
+        tcn_url: Optional[str] = None,
+        hmm_url: Optional[str] = None,
+        nhits_url: Optional[str] = None
+    ):
         """Initialize the client.
 
         Args:
             base_url: Data Service URL, defaults to settings.data_service_url
             candlestick_url: Candlestick Service URL, defaults to settings.candlestick_service_url
+            tcn_url: TCN Service URL, defaults to trading-tcn:3003
+            hmm_url: HMM Service URL, defaults to trading-hmm:3004
+            nhits_url: NHITS Service URL, defaults to trading-nhits:3002
         """
         self._base_url = base_url or getattr(settings, 'data_service_url', 'http://localhost:3001')
         self._candlestick_url = candlestick_url or getattr(settings, 'candlestick_service_url', 'http://trading-candlestick:3006')
+        self._tcn_url = tcn_url or getattr(settings, 'tcn_service_url', 'http://trading-tcn:3003')
+        self._hmm_url = hmm_url or getattr(settings, 'hmm_service_url', 'http://trading-hmm:3004')
+        self._nhits_url = nhits_url or getattr(settings, 'nhits_service_url', 'http://trading-nhits:3002')
         self._timeout = 30.0
         logger.info(f"DataServiceClient initialized with base URL: {self._base_url}")
         logger.info(f"DataServiceClient using Candlestick Service: {self._candlestick_url}")
+        logger.info(f"DataServiceClient using TCN Service: {self._tcn_url}")
+        logger.info(f"DataServiceClient using HMM Service: {self._hmm_url}")
+        logger.info(f"DataServiceClient using NHITS Service: {self._nhits_url}")
 
     async def _get(self, endpoint: str, params: Optional[dict] = None) -> dict:
         """Make GET request to Data Service."""
@@ -59,6 +75,51 @@ class DataServiceClient:
             return {"error": str(e), "status_code": e.response.status_code}
         except Exception as e:
             logger.error(f"Error calling Candlestick Service: {e}")
+            return {"error": str(e)}
+
+    async def _get_tcn(self, endpoint: str, params: Optional[dict] = None) -> dict:
+        """Make GET request to TCN Service."""
+        url = f"{self._tcn_url}/api/v1{endpoint}"
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from TCN Service: {e.response.status_code} - {e.response.text}")
+            return {"error": str(e), "status_code": e.response.status_code}
+        except Exception as e:
+            logger.error(f"Error calling TCN Service: {e}")
+            return {"error": str(e)}
+
+    async def _get_hmm(self, endpoint: str, params: Optional[dict] = None) -> dict:
+        """Make GET request to HMM Service."""
+        url = f"{self._hmm_url}/api/v1{endpoint}"
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from HMM Service: {e.response.status_code} - {e.response.text}")
+            return {"error": str(e), "status_code": e.response.status_code}
+        except Exception as e:
+            logger.error(f"Error calling HMM Service: {e}")
+            return {"error": str(e)}
+
+    async def _get_nhits(self, endpoint: str, params: Optional[dict] = None) -> dict:
+        """Make GET request to NHITS Service."""
+        url = f"{self._nhits_url}/api/v1{endpoint}"
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:  # Longer timeout for forecasts
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from NHITS Service: {e.response.status_code} - {e.response.text}")
+            return {"error": str(e), "status_code": e.response.status_code}
+        except Exception as e:
+            logger.error(f"Error calling NHITS Service: {e}")
             return {"error": str(e)}
 
     async def _post(self, endpoint: str, json: Optional[dict] = None) -> dict:
@@ -420,6 +481,106 @@ class DataServiceClient:
         if direction:
             params["direction"] = direction
         return await self._get_candlestick("/history", params)
+
+    # -------------------------------------------------------------------------
+    # TCN Pattern Detection Methods (Port 3003)
+    # -------------------------------------------------------------------------
+
+    async def get_tcn_patterns(
+        self,
+        symbol: str,
+        timeframe: str = "1h",
+        lookback: int = 200,
+        threshold: float = 0.5
+    ) -> dict:
+        """Detect chart patterns using TCN deep learning model.
+
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSD")
+            timeframe: Timeframe (1m, 5m, 15m, 1h, 4h, 1d)
+            lookback: Number of candles for analysis
+            threshold: Confidence threshold (0.0-1.0)
+
+        Returns:
+            Dict with detected patterns
+        """
+        params = {
+            "timeframe": timeframe,
+            "lookback": lookback,
+            "threshold": threshold,
+        }
+        return await self._get_tcn(f"/detect/{symbol}", params)
+
+    async def get_tcn_supported_patterns(self) -> dict:
+        """Get list of supported TCN pattern types."""
+        return await self._get_tcn("/detect/patterns")
+
+    # -------------------------------------------------------------------------
+    # HMM Regime Detection Methods (Port 3004)
+    # -------------------------------------------------------------------------
+
+    async def get_hmm_regime(
+        self,
+        symbol: str,
+        timeframe: str = "1h",
+        lookback: int = 500,
+        include_history: bool = False
+    ) -> dict:
+        """Detect current market regime using HMM model.
+
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSD")
+            timeframe: Timeframe (1h, 4h, 1d)
+            lookback: Number of candles for analysis
+            include_history: Include historical regime changes
+
+        Returns:
+            Dict with regime classification (bull_trend, bear_trend, sideways, high_volatility)
+        """
+        params = {
+            "timeframe": timeframe,
+            "lookback": lookback,
+            "include_history": include_history,
+        }
+        return await self._get_hmm(f"/regime/detect/{symbol}", params)
+
+    async def get_hmm_regime_types(self) -> dict:
+        """Get list of supported regime types with descriptions."""
+        return await self._get_hmm("/regime/regimes")
+
+    # -------------------------------------------------------------------------
+    # NHITS Forecast Methods (Port 3002)
+    # -------------------------------------------------------------------------
+
+    async def get_nhits_forecast(
+        self,
+        symbol: str,
+        timeframe: str = "H1",
+        horizon: int = 24
+    ) -> dict:
+        """Generate NHITS price forecast for a symbol.
+
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSD")
+            timeframe: Timeframe - M15 (2h), H1 (24h), D1 (7d)
+            horizon: Forecast horizon (overridden by timeframe config)
+
+        Returns:
+            Dict with predicted prices and confidence intervals
+        """
+        params = {
+            "timeframe": timeframe,
+            "horizon": horizon,
+        }
+        return await self._get_nhits(f"/forecast/{symbol}", params)
+
+    async def get_nhits_models(self) -> dict:
+        """Get list of available NHITS models."""
+        return await self._get_nhits("/forecast/models")
+
+    async def get_nhits_status(self) -> dict:
+        """Get NHITS service status."""
+        return await self._get_nhits("/forecast/status")
 
 
 # Singleton instance

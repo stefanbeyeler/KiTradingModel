@@ -454,6 +454,24 @@ async def fetch_external_sources_task():
                     total_stored += pattern_stored
                     if pattern_stored > 0:
                         logger.info(f"Fetched and stored {pattern_stored} candlestick patterns for {symbol}")
+
+                    # Fetch TCN chart patterns
+                    tcn_stored = await fetch_and_store_tcn_patterns(symbol)
+                    total_stored += tcn_stored
+                    if tcn_stored > 0:
+                        logger.info(f"Fetched and stored {tcn_stored} TCN patterns for {symbol}")
+
+                    # Fetch HMM regime detection
+                    hmm_stored = await fetch_and_store_hmm_regime(symbol)
+                    total_stored += hmm_stored
+                    if hmm_stored > 0:
+                        logger.info(f"Fetched and stored {hmm_stored} HMM regime docs for {symbol}")
+
+                    # Fetch NHITS forecasts
+                    nhits_stored = await fetch_and_store_nhits_forecast(symbol)
+                    total_stored += nhits_stored
+                    if nhits_stored > 0:
+                        logger.info(f"Fetched and stored {nhits_stored} NHITS forecast docs for {symbol}")
                 except Exception as e:
                     logger.error(f"Error fetching external sources for {symbol}: {e}")
 
@@ -592,6 +610,160 @@ async def fetch_and_store_candlestick_patterns(symbol: str) -> int:
 
     except Exception as e:
         logger.error(f"Error fetching candlestick patterns from Data Service: {e}")
+        return 0
+
+
+async def fetch_and_store_tcn_patterns(symbol: str) -> int:
+    """Fetch TCN chart patterns for a symbol and store in RAG."""
+    if not data_fetcher or not rag_service:
+        return 0
+
+    try:
+        # Fetch TCN patterns from TCN Service via DataFetcherProxy
+        results = await data_fetcher.fetch_tcn_patterns(
+            symbol=symbol,
+            timeframes=["1h", "4h", "1d"],
+            threshold=0.5
+        )
+
+        if not results:
+            return 0
+
+        # Store each pattern in RAG (duplicates are automatically skipped)
+        stored_count = 0
+        skipped_count = 0
+        for result in results:
+            try:
+                if hasattr(result, 'to_rag_document'):
+                    doc = result.to_rag_document()
+                elif isinstance(result, dict):
+                    doc = result
+                else:
+                    continue
+
+                doc_id = await rag_service.add_custom_document(
+                    content=doc.get("content", str(result)),
+                    document_type=doc.get("document_type", "tcn_patterns"),
+                    symbol=doc.get("symbol", symbol),
+                    metadata=doc.get("metadata", {}),
+                    skip_duplicates=True
+                )
+                if doc_id:
+                    stored_count += 1
+                else:
+                    skipped_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to store TCN pattern: {e}")
+
+        if skipped_count > 0:
+            logger.debug(f"Skipped {skipped_count} duplicate TCN patterns for {symbol}")
+
+        return stored_count
+
+    except Exception as e:
+        logger.error(f"Error fetching TCN patterns from TCN Service: {e}")
+        return 0
+
+
+async def fetch_and_store_hmm_regime(symbol: str) -> int:
+    """Fetch HMM regime detection for a symbol and store in RAG."""
+    if not data_fetcher or not rag_service:
+        return 0
+
+    try:
+        # Fetch HMM regime from HMM Service via DataFetcherProxy
+        results = await data_fetcher.fetch_hmm_regime(
+            symbol=symbol,
+            timeframes=["1h", "4h", "1d"]
+        )
+
+        if not results:
+            return 0
+
+        # Store each regime doc in RAG (duplicates are automatically skipped)
+        stored_count = 0
+        skipped_count = 0
+        for result in results:
+            try:
+                if hasattr(result, 'to_rag_document'):
+                    doc = result.to_rag_document()
+                elif isinstance(result, dict):
+                    doc = result
+                else:
+                    continue
+
+                doc_id = await rag_service.add_custom_document(
+                    content=doc.get("content", str(result)),
+                    document_type=doc.get("document_type", "hmm_regime"),
+                    symbol=doc.get("symbol", symbol),
+                    metadata=doc.get("metadata", {}),
+                    skip_duplicates=True
+                )
+                if doc_id:
+                    stored_count += 1
+                else:
+                    skipped_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to store HMM regime: {e}")
+
+        if skipped_count > 0:
+            logger.debug(f"Skipped {skipped_count} duplicate HMM regime docs for {symbol}")
+
+        return stored_count
+
+    except Exception as e:
+        logger.error(f"Error fetching HMM regime from HMM Service: {e}")
+        return 0
+
+
+async def fetch_and_store_nhits_forecast(symbol: str) -> int:
+    """Fetch NHITS price forecast for a symbol and store in RAG."""
+    if not data_fetcher or not rag_service:
+        return 0
+
+    try:
+        # Fetch NHITS forecast from NHITS Service via DataFetcherProxy
+        results = await data_fetcher.fetch_nhits_forecast(
+            symbol=symbol,
+            timeframes=["H1", "D1"]
+        )
+
+        if not results:
+            return 0
+
+        # Store each forecast doc in RAG (duplicates are automatically skipped)
+        stored_count = 0
+        skipped_count = 0
+        for result in results:
+            try:
+                if hasattr(result, 'to_rag_document'):
+                    doc = result.to_rag_document()
+                elif isinstance(result, dict):
+                    doc = result
+                else:
+                    continue
+
+                doc_id = await rag_service.add_custom_document(
+                    content=doc.get("content", str(result)),
+                    document_type=doc.get("document_type", "nhits_forecast"),
+                    symbol=doc.get("symbol", symbol),
+                    metadata=doc.get("metadata", {}),
+                    skip_duplicates=True
+                )
+                if doc_id:
+                    stored_count += 1
+                else:
+                    skipped_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to store NHITS forecast: {e}")
+
+        if skipped_count > 0:
+            logger.debug(f"Skipped {skipped_count} duplicate NHITS forecasts for {symbol}")
+
+        return stored_count
+
+    except Exception as e:
+        logger.error(f"Error fetching NHITS forecast from NHITS Service: {e}")
         return 0
 
 

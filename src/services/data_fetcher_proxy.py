@@ -35,6 +35,9 @@ class DataFetcherProxy:
             {"type": "correlations", "name": "CORRELATIONS", "description": "Asset correlations (cross-asset, divergences, hedge recommendations)"},
             {"type": "volatility_regime", "name": "VOLATILITY_REGIME", "description": "Volatility regime (VIX, ATR, Bollinger, position sizing)"},
             {"type": "institutional_flow", "name": "INSTITUTIONAL_FLOW", "description": "Institutional flows (COT reports, ETF flows, whale tracking)"},
+            {"type": "tcn_patterns", "name": "TCN_PATTERNS", "description": "TCN chart pattern detection (head & shoulders, triangles, flags, etc.)"},
+            {"type": "hmm_regime", "name": "HMM_REGIME", "description": "HMM market regime detection (bull/bear trend, sideways, high volatility)"},
+            {"type": "nhits_forecast", "name": "NHITS_FORECAST", "description": "NHITS price forecasts (24h, 7d predictions with confidence intervals)"},
         ]
 
     async def fetch_all(
@@ -302,6 +305,235 @@ Trading Implication: {trading_implication}"""
         """Create RAG documents from all sources via Data Service."""
         results = await self.fetch_all(symbol, source_types)
         return [r.to_rag_document() for r in results]
+
+    # -------------------------------------------------------------------------
+    # TCN Pattern Detection (Port 3003)
+    # -------------------------------------------------------------------------
+
+    async def fetch_tcn_patterns(
+        self,
+        symbol: str,
+        timeframes: Optional[list[str]] = None,
+        threshold: float = 0.5
+    ) -> list:
+        """Fetch TCN chart patterns for a symbol.
+
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSD")
+            timeframes: List of timeframes (e.g., ["1h", "4h", "1d"])
+            threshold: Confidence threshold (0.0-1.0)
+
+        Returns:
+            List of ProxyResult objects containing detected patterns
+        """
+        if timeframes is None:
+            timeframes = ["1h", "4h", "1d"]
+
+        documents = []
+        for tf in timeframes:
+            result = await self._client.get_tcn_patterns(
+                symbol=symbol,
+                timeframe=tf,
+                threshold=threshold
+            )
+            if "error" in result:
+                logger.warning(f"Error fetching TCN patterns for {symbol}/{tf}: {result['error']}")
+                continue
+
+            # Extract patterns from response
+            patterns = result.get("patterns", [])
+            for pattern in patterns:
+                content = self._format_tcn_pattern_content(symbol, tf, pattern)
+                doc = {
+                    "content": content,
+                    "document_type": "tcn_patterns",
+                    "symbol": symbol,
+                    "metadata": {
+                        "timeframe": tf,
+                        "pattern_type": pattern.get("pattern_type"),
+                        "direction": pattern.get("direction"),
+                        "confidence": pattern.get("confidence"),
+                        "target_price": pattern.get("target_price"),
+                        "stop_loss": pattern.get("stop_loss"),
+                        "priority": "high" if pattern.get("confidence", 0) >= 0.7 else "medium",
+                    }
+                }
+                documents.append(ProxyResult(doc))
+
+        return documents
+
+    def _format_tcn_pattern_content(self, symbol: str, timeframe: str, pattern: dict) -> str:
+        """Format a TCN pattern into readable content for RAG."""
+        pattern_type = pattern.get("pattern_type", "Unknown")
+        direction = pattern.get("direction", "neutral")
+        confidence = pattern.get("confidence", 0)
+        target = pattern.get("target_price")
+        stop = pattern.get("stop_loss")
+
+        content = f"""TCN Chart Pattern: {pattern_type}
+Symbol: {symbol}
+Timeframe: {timeframe}
+Direction: {direction}
+Confidence: {confidence:.1%}"""
+
+        if target:
+            content += f"\nTarget Price: {target}"
+        if stop:
+            content += f"\nStop Loss: {stop}"
+
+        return content
+
+    # -------------------------------------------------------------------------
+    # HMM Regime Detection (Port 3004)
+    # -------------------------------------------------------------------------
+
+    async def fetch_hmm_regime(
+        self,
+        symbol: str,
+        timeframes: Optional[list[str]] = None
+    ) -> list:
+        """Fetch HMM regime detection for a symbol.
+
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSD")
+            timeframes: List of timeframes (e.g., ["1h", "4h", "1d"])
+
+        Returns:
+            List of ProxyResult objects containing regime classifications
+        """
+        if timeframes is None:
+            timeframes = ["1h", "4h", "1d"]
+
+        documents = []
+        for tf in timeframes:
+            result = await self._client.get_hmm_regime(
+                symbol=symbol,
+                timeframe=tf,
+                include_history=False
+            )
+            if "error" in result:
+                logger.warning(f"Error fetching HMM regime for {symbol}/{tf}: {result['error']}")
+                continue
+
+            content = self._format_hmm_regime_content(symbol, tf, result)
+            doc = {
+                "content": content,
+                "document_type": "hmm_regime",
+                "symbol": symbol,
+                "metadata": {
+                    "timeframe": tf,
+                    "regime": result.get("current_regime"),
+                    "probability": result.get("regime_probability"),
+                    "duration": result.get("regime_duration"),
+                    "trading_bias": result.get("trading_bias"),
+                    "priority": "high",
+                }
+            }
+            documents.append(ProxyResult(doc))
+
+        return documents
+
+    def _format_hmm_regime_content(self, symbol: str, timeframe: str, regime_data: dict) -> str:
+        """Format HMM regime data into readable content for RAG."""
+        regime = regime_data.get("current_regime", "unknown")
+        probability = regime_data.get("regime_probability", 0)
+        duration = regime_data.get("regime_duration", 0)
+        bias = regime_data.get("trading_bias", "neutral")
+
+        regime_names = {
+            "bull_trend": "Bull Trend (Aufwärtstrend)",
+            "bear_trend": "Bear Trend (Abwärtstrend)",
+            "sideways": "Sideways (Seitwärtsbewegung)",
+            "high_volatility": "High Volatility (Hohe Volatilität)"
+        }
+        regime_name = regime_names.get(regime, regime)
+
+        return f"""Market Regime Analysis (HMM)
+Symbol: {symbol}
+Timeframe: {timeframe}
+Current Regime: {regime_name}
+Probability: {probability:.1%}
+Duration: {duration} candles
+Trading Bias: {bias}"""
+
+    # -------------------------------------------------------------------------
+    # NHITS Forecast (Port 3002)
+    # -------------------------------------------------------------------------
+
+    async def fetch_nhits_forecast(
+        self,
+        symbol: str,
+        timeframes: Optional[list[str]] = None
+    ) -> list:
+        """Fetch NHITS price forecast for a symbol.
+
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSD")
+            timeframes: List of timeframes (e.g., ["H1", "D1"])
+
+        Returns:
+            List of ProxyResult objects containing forecasts
+        """
+        if timeframes is None:
+            timeframes = ["H1", "D1"]
+
+        documents = []
+        for tf in timeframes:
+            result = await self._client.get_nhits_forecast(
+                symbol=symbol,
+                timeframe=tf
+            )
+            if "error" in result:
+                logger.warning(f"Error fetching NHITS forecast for {symbol}/{tf}: {result['error']}")
+                continue
+
+            content = self._format_nhits_forecast_content(symbol, tf, result)
+            doc = {
+                "content": content,
+                "document_type": "nhits_forecast",
+                "symbol": symbol,
+                "metadata": {
+                    "timeframe": tf,
+                    "horizon": result.get("horizon"),
+                    "direction": result.get("direction"),
+                    "price_change_percent": result.get("price_change_percent"),
+                    "current_price": result.get("current_price"),
+                    "predicted_price": result.get("predicted_price"),
+                    "confidence_lower": result.get("confidence_lower"),
+                    "confidence_upper": result.get("confidence_upper"),
+                    "priority": "high",
+                }
+            }
+            documents.append(ProxyResult(doc))
+
+        return documents
+
+    def _format_nhits_forecast_content(self, symbol: str, timeframe: str, forecast_data: dict) -> str:
+        """Format NHITS forecast data into readable content for RAG."""
+        horizon = forecast_data.get("horizon", "?")
+        current = forecast_data.get("current_price", 0)
+        predicted = forecast_data.get("predicted_price", 0)
+        lower = forecast_data.get("confidence_lower", 0)
+        upper = forecast_data.get("confidence_upper", 0)
+        direction = forecast_data.get("direction", "neutral")
+        change_pct = forecast_data.get("price_change_percent", 0)
+
+        timeframe_labels = {
+            "M15": "2 Stunden",
+            "H1": "24 Stunden",
+            "D1": "7 Tage"
+        }
+        horizon_label = timeframe_labels.get(timeframe, f"{horizon} Perioden")
+
+        return f"""NHITS Price Forecast
+Symbol: {symbol}
+Timeframe: {timeframe}
+Forecast Horizon: {horizon_label}
+Current Price: {current:.2f}
+Predicted Price: {predicted:.2f}
+Expected Change: {change_pct:+.2f}%
+Direction: {direction}
+Confidence Range: {lower:.2f} - {upper:.2f}"""
 
 
 class ProxyResult:
