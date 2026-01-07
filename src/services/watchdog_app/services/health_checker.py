@@ -116,7 +116,7 @@ class HealthChecker:
             "tcn": {
                 "url": "http://trading-tcn:3003/health",
                 "criticality": "high",
-                "startup_grace": 40,
+                "startup_grace": 150,  # Erhöht: TCN hängt von Embedder ab (120s)
                 "dependencies": ["data", "embedder"]
             },
             "hmm": {

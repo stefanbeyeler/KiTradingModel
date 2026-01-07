@@ -32,7 +32,7 @@ from src.shared.health import get_test_unhealthy_status
 # Configuration
 VERSION = "1.0.0"
 SERVICE_NAME = "tcn-pattern"
-SERVICE_PORT = int(os.getenv("PORT", "3005"))
+SERVICE_PORT = int(os.getenv("PORT", "3003"))
 ROOT_PATH = os.getenv("ROOT_PATH", "")
 
 # Logging setup
