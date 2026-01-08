@@ -3595,32 +3595,36 @@ async def get_symbol_data_stats(symbol: str):
 
                     # Get sample of recent data points for visualization (all timeframes)
                     result["sample_data"] = {
+                        "source": "EasyInsight",
                         "M15": [
                             {
-                                "timestamp": row.get("snapshot_time"),
-                                "close": row.get("m15_close"),
+                                "datetime": row.get("snapshot_time"),
+                                "open": row.get("m15_open"),
                                 "high": row.get("m15_high"),
                                 "low": row.get("m15_low"),
+                                "close": row.get("m15_close"),
                             }
                             for row in data_list[:200]  # More points for M15
                             if row.get("m15_close") is not None
                         ],
                         "H1": [
                             {
-                                "timestamp": row.get("snapshot_time"),
-                                "close": row.get("h1_close"),
+                                "datetime": row.get("snapshot_time"),
+                                "open": row.get("h1_open"),
                                 "high": row.get("h1_high"),
                                 "low": row.get("h1_low"),
+                                "close": row.get("h1_close"),
                             }
                             for row in data_list[:100]
                             if row.get("h1_close") is not None
                         ],
                         "D1": [
                             {
-                                "timestamp": row.get("snapshot_time"),
-                                "close": row.get("d1_close"),
+                                "datetime": row.get("snapshot_time"),
+                                "open": row.get("d1_open"),
                                 "high": row.get("d1_high"),
                                 "low": row.get("d1_low"),
+                                "close": row.get("d1_close"),
                             }
                             for row in data_list[:100]
                             if row.get("d1_close") is not None

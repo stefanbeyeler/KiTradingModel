@@ -3792,7 +3792,12 @@
                 ${data.sample_data && (data.sample_data.M15?.length > 0 || data.sample_data.H1?.length > 0 || data.sample_data.D1?.length > 0) ? `
                 <div style="background: rgba(30,30,30,0.5); border-radius: 12px; padding: 1rem; border: 1px solid rgba(255,255,255,0.1);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h4 style="color: #64c8ff; font-size: 1rem; margin: 0;">&#128200; Letzte Datenpunkte (Vorschau)</h4>
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <h4 style="color: #64c8ff; font-size: 1rem; margin: 0;">&#128200; Letzte Datenpunkte (Vorschau)</h4>
+                            <span style="background: rgba(76, 175, 80, 0.2); color: #4caf50; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; border: 1px solid rgba(76, 175, 80, 0.3);">
+                                Quelle: ${data.sample_data.source || 'EasyInsight'}
+                            </span>
+                        </div>
                         <div class="chart-timeframe-tabs" style="display: flex; gap: 0.25rem;">
                             <button class="chart-tf-btn active" data-tf="M15" onclick="switchChartTimeframe('M15')"
                                     style="padding: 0.3rem 0.75rem; border: 1px solid rgba(100, 200, 255, 0.3); background: rgba(100, 200, 255, 0.2); color: #64c8ff; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
