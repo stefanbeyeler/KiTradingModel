@@ -342,18 +342,22 @@ class TimescaleDBService:
             async with self.connection() as conn:
                 rows = await conn.fetch(query, symbol, tf.value, indicator_name, limit)
 
-            return [
-                {
+            results = []
+            for row in rows:
+                values = row["values"]
+                if isinstance(values, str):
+                    values = json.loads(values)
+                result = {
                     "timestamp": row["timestamp"].isoformat(),
                     "symbol": symbol,
                     "timeframe": tf.value,
                     "indicator": indicator_name,
-                    **json.loads(row["values"]) if isinstance(row["values"], str) else row["values"],
                     "parameters": row["parameters"],
                     "source": row["source"],
                 }
-                for row in rows
-            ]
+                result.update(values)
+                results.append(result)
+            return results
         except Exception as e:
             logger.error(f"Failed to get indicators for {symbol}/{tf.value}: {e}")
             return []
