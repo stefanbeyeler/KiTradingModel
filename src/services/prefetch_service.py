@@ -180,11 +180,20 @@ class PrefetchService:
             f"Intervall: {self._config.refresh_interval}s{indicators_info}"
         )
 
-        # Initial Pre-Fetch
-        await self._run_prefetch()
+        # Initial Pre-Fetch und periodisches Pre-Fetch als Background-Task
+        # Damit der Application Startup nicht blockiert wird
+        self._task = asyncio.create_task(self._initial_and_periodic_prefetch())
+
+    async def _initial_and_periodic_prefetch(self) -> None:
+        """Initial Pre-Fetch und dann periodisches Pre-Fetching im Hintergrund."""
+        try:
+            # Initial Pre-Fetch
+            await self._run_prefetch()
+        except Exception as e:
+            logger.error(f"Initial Pre-Fetch fehlgeschlagen: {e}")
 
         # Periodisches Pre-Fetch
-        self._task = asyncio.create_task(self._periodic_prefetch())
+        await self._periodic_prefetch()
 
     async def stop(self) -> None:
         """Stoppt den Pre-Fetching Service."""
