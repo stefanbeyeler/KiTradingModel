@@ -3820,7 +3820,14 @@ async def get_symbol_live_data(symbol: str):
                     pass
 
             # Use M1 data for real-time OHLC if available, fallback to quote (daily)
-            td_datetime = quote.get("datetime")
+            # IMPORTANT: TwelveData returns datetimes in Exchange timezone (EST for Forex),
+            # NOT in UTC. Use Unix timestamps (last_quote_at) when available for accuracy.
+            td_datetime = None
+            # Prefer Unix timestamp from quote (last_quote_at) - this is unambiguous
+            if quote.get("last_quote_at"):
+                from datetime import datetime as dt
+                td_datetime = dt.fromtimestamp(quote.get("last_quote_at"), tz=timezone.utc)
+
             m1_ohlc = None
             m1_datetime = None
 
@@ -3828,7 +3835,8 @@ async def get_symbol_live_data(symbol: str):
                 m1_values = m1_data["values"]
                 if m1_values and len(m1_values) > 0:
                     latest_m1 = m1_values[0]
-                    m1_datetime = latest_m1.get("datetime")
+                    # M1 datetime is in Exchange timezone - for now, use quote timestamp
+                    # as it's more reliable (Unix timestamp)
                     m1_ohlc = {
                         "open": latest_m1.get("open"),
                         "high": latest_m1.get("high"),
@@ -3836,8 +3844,8 @@ async def get_symbol_live_data(symbol: str):
                         "close": latest_m1.get("close"),
                     }
 
-            # Use M1 datetime if available (more current), otherwise quote datetime
-            display_datetime = m1_datetime or td_datetime
+            # Use quote timestamp (derived from Unix timestamp) as it's timezone-unambiguous
+            display_datetime = td_datetime
 
             result["twelvedata"] = {
                 "source": "Twelve Data API",
@@ -3898,19 +3906,19 @@ async def get_symbol_live_data(symbol: str):
                 return_exceptions=True
             )
 
-            # Process results and extract timestamp from first successful result
-            indicator_datetime = None
+            # Process results - use the same timestamp as the quote for consistency
+            # NOTE: TwelveData indicator datetimes are in Exchange timezone (not UTC),
+            # so we use the quote's Unix timestamp which is timezone-unambiguous.
+            if display_datetime:
+                result["twelvedata"]["indicator_datetime_utc"] = format_utc_iso(display_datetime)
+                result["twelvedata"]["indicator_datetime_display"] = format_for_display(display_datetime)
+
             for name, res in zip(indicator_tasks.keys(), indicator_results):
                 if isinstance(res, Exception):
                     continue
                 if res and "error" not in res and res.get("values"):
                     values = res["values"]
                     latest = values[0] if isinstance(values, list) and values else values
-                    # Extract datetime from first successful indicator
-                    if indicator_datetime is None and latest.get("datetime"):
-                        indicator_datetime = latest.get("datetime")
-                        result["twelvedata"]["indicator_datetime_utc"] = format_utc_iso(indicator_datetime)
-                        result["twelvedata"]["indicator_datetime_display"] = format_for_display(indicator_datetime)
 
                     if name == "rsi":
                         result["twelvedata"]["indicators"]["rsi"] = float(latest.get("rsi", 0)) if latest.get("rsi") else None
