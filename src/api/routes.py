@@ -3624,17 +3624,32 @@ async def get_symbol_data_stats(symbol: str):
                     if td_response.status_code == 200:
                         td_data = td_response.json()
                         if "values" in td_data:
-                            sample_data[tf] = [
-                                {
-                                    "datetime": v.get("datetime"),
+                            from zoneinfo import ZoneInfo
+                            est_tz = ZoneInfo("America/New_York")
+                            utc_tz = ZoneInfo("UTC")
+
+                            candles = []
+                            for v in td_data["values"]:
+                                if not v.get("close"):
+                                    continue
+                                # Convert TwelveData EST timestamp to UTC ISO format
+                                dt_str = v.get("datetime", "")
+                                try:
+                                    dt_naive = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+                                    dt_est = dt_naive.replace(tzinfo=est_tz)
+                                    dt_utc = dt_est.astimezone(utc_tz)
+                                    iso_datetime = dt_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+                                except:
+                                    iso_datetime = dt_str
+
+                                candles.append({
+                                    "datetime": iso_datetime,
                                     "open": float(v.get("open")) if v.get("open") else None,
                                     "high": float(v.get("high")) if v.get("high") else None,
                                     "low": float(v.get("low")) if v.get("low") else None,
                                     "close": float(v.get("close")) if v.get("close") else None,
-                                }
-                                for v in td_data["values"]
-                                if v.get("close")
-                            ]
+                                })
+                            sample_data[tf] = candles
                 except Exception as e:
                     logger.warning(f"Failed to fetch TwelveData {tf} for {symbol}: {e}")
 
