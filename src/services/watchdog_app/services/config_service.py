@@ -308,6 +308,7 @@ class ConfigService:
     def _get_default_service_alerts(self) -> Dict[str, bool]:
         """Gibt die Standard-Alarm-Einstellungen pro Service zurück."""
         return {
+            # Inference Services
             "frontend": True,
             "data": True,
             "nhits": True,
@@ -316,13 +317,17 @@ class ConfigService:
             "embedder": True,
             "candlestick": True,
             "redis": True,
+            "rag": True,
+            "llm": True,
+            # Training Services (Standard: deaktiviert)
             "nhits-train": False,
             "tcn-train": False,
             "hmm-train": False,
             "candlestick-train": False,
-            "rag": True,
-            "llm": True,
+            # External Services
             "easyinsight": True,
+            "twelvedata": True,
+            "yahoo": True,
         }
 
     def get_service_alert_config(self) -> Dict[str, Any]:

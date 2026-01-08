@@ -648,6 +648,36 @@ class TimescaleDBService:
                     dict(r) for r in await conn.fetch(levels_query, symbol, tf.value, limit)
                 ]
 
+                # Generic JSONB indicators table (TwelveData + EasyInsight)
+                generic_query = """
+                    SELECT indicator_name, timestamp, values, source
+                    FROM indicators
+                    WHERE symbol = $1 AND timeframe = $2
+                    ORDER BY timestamp DESC
+                    LIMIT $3
+                """
+                generic_rows = await conn.fetch(generic_query, symbol, tf.value, limit * 10)
+
+                # Group by indicator name
+                generic_indicators = {}
+                for row in generic_rows:
+                    ind_name = row["indicator_name"]
+                    if ind_name not in generic_indicators:
+                        generic_indicators[ind_name] = []
+
+                    values = row["values"]
+                    if isinstance(values, str):
+                        values = json.loads(values)
+
+                    entry = {
+                        "timestamp": row["timestamp"].isoformat() if row["timestamp"] else None,
+                        "source": row["source"],
+                    }
+                    entry.update(values if isinstance(values, dict) else {ind_name: values})
+                    generic_indicators[ind_name].append(entry)
+
+                results["generic"] = generic_indicators
+
             return results
 
         except Exception as e:

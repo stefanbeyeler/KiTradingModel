@@ -3468,6 +3468,26 @@ async def cleanup_redundant_aliases():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@symbol_router.post("/managed-symbols/migrate-json-to-db")
+async def migrate_json_to_db():
+    """
+    Migrate all symbols from JSON file to TimescaleDB.
+
+    This will read the existing symbols from data/symbols/symbols.json
+    and insert/update them in the TimescaleDB symbols table.
+
+    Returns:
+        Migration result with counts and any errors.
+    """
+    try:
+        result = await symbol_service.migrate_from_json()
+        logger.info(f"JSON to DB migration completed: {result['migrated']} symbols migrated")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to migrate JSON to DB: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== Data Statistics ====================
 # NOTE: This route MUST be defined BEFORE the generic {symbol_id:path} routes
 

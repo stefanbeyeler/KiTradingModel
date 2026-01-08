@@ -555,10 +555,13 @@ async def update_service_alert(
     ## Verfügbare Services
 
     **Inference Services (Standard: aktiviert):**
-    - frontend, data, nhits, tcn, hmm, embedder, candlestick, redis, rag, llm, easyinsight
+    - frontend, data, nhits, tcn, hmm, embedder, candlestick, redis, rag, llm
 
     **Training Services (Standard: deaktiviert):**
     - nhits-train, tcn-train, hmm-train, candlestick-train
+
+    **External Services (Standard: aktiviert):**
+    - easyinsight, twelvedata, yahoo
     """
     config_service = _get_config_service()
 
