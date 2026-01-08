@@ -117,7 +117,8 @@ class HealthChecker:
                 "url": "http://trading-tcn:3003/health",
                 "criticality": "high",
                 "startup_grace": 150,  # Erhöht: TCN hängt von Embedder ab (120s)
-                "dependencies": ["data", "embedder"]
+                "dependencies": ["data", "embedder"],
+                "timeout": 15  # Erhöht: TCN kann während Auto-Scan langsamer antworten
             },
             "hmm": {
                 "url": "http://trading-hmm:3004/health",
@@ -237,7 +238,9 @@ class HealthChecker:
             return await self._check_yahoo(name, config, start_time)
 
         try:
-            async with httpx.AsyncClient(timeout=self.settings.timeout_seconds) as client:
+            # Service-spezifischer Timeout oder global setting
+            timeout = config.get("timeout", self.settings.timeout_seconds)
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.get(config["url"])
                 response_time_ms = (
                     datetime.now(timezone.utc) - start_time
