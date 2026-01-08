@@ -149,6 +149,8 @@ CREATE INDEX IF NOT EXISTS idx_ohlcv_{timeframe}_source
 
 ### 2.3 Technische Indikatoren
 
+#### 2.3.1 Haupt-Indikatoren-Tabelle (JSONB für Flexibilität)
+
 ```sql
 CREATE TABLE indicators (
     timestamp       TIMESTAMPTZ NOT NULL,
@@ -174,9 +176,305 @@ SELECT create_hypertable('indicators', 'timestamp',
 
 CREATE INDEX idx_indicators_lookup
     ON indicators (symbol, timeframe, indicator_name, timestamp DESC);
+
+-- Partial Index für häufig abgefragte Indikatoren
+CREATE INDEX idx_indicators_rsi
+    ON indicators (symbol, timeframe, timestamp DESC)
+    WHERE indicator_name = 'RSI';
+
+CREATE INDEX idx_indicators_macd
+    ON indicators (symbol, timeframe, timestamp DESC)
+    WHERE indicator_name = 'MACD';
 ```
 
-**JSONB `values` Beispiele:**
+#### 2.3.2 Optimierte Tabellen für häufig genutzte Indikatoren
+
+Für Performance-kritische Indikatoren separate Tabellen mit festen Spalten:
+
+```sql
+-- Moving Averages (SMA, EMA, WMA, etc.)
+CREATE TABLE indicators_ma (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    timeframe       VARCHAR(10) NOT NULL,
+
+    -- SMA
+    sma_20          DECIMAL(20, 8),
+    sma_50          DECIMAL(20, 8),
+    sma_200         DECIMAL(20, 8),
+
+    -- EMA
+    ema_12          DECIMAL(20, 8),
+    ema_26          DECIMAL(20, 8),
+    ema_50          DECIMAL(20, 8),
+    ema_200         DECIMAL(20, 8),
+
+    -- WMA, DEMA, TEMA
+    wma_20          DECIMAL(20, 8),
+    dema_20         DECIMAL(20, 8),
+    tema_20         DECIMAL(20, 8),
+
+    -- VWAP
+    vwap            DECIMAL(20, 8),
+
+    source          VARCHAR(20) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_ma', 'timestamp',
+    chunk_time_interval => INTERVAL '7 days',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX idx_indicators_ma_lookup
+    ON indicators_ma (symbol, timeframe, timestamp DESC);
+```
+
+```sql
+-- Momentum-Indikatoren
+CREATE TABLE indicators_momentum (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    timeframe       VARCHAR(10) NOT NULL,
+
+    -- RSI Varianten
+    rsi_14          DECIMAL(10, 4),
+    rsi_7           DECIMAL(10, 4),
+    rsi_21          DECIMAL(10, 4),
+    stoch_rsi       DECIMAL(10, 4),
+    connors_rsi     DECIMAL(10, 4),
+
+    -- Stochastic
+    stoch_k         DECIMAL(10, 4),
+    stoch_d         DECIMAL(10, 4),
+
+    -- MACD
+    macd_line       DECIMAL(20, 8),
+    macd_signal     DECIMAL(20, 8),
+    macd_histogram  DECIMAL(20, 8),
+
+    -- Weitere Momentum
+    cci             DECIMAL(10, 4),
+    williams_r      DECIMAL(10, 4),
+    roc             DECIMAL(10, 4),
+    momentum        DECIMAL(20, 8),
+
+    -- ADX Familie
+    adx             DECIMAL(10, 4),
+    plus_di         DECIMAL(10, 4),
+    minus_di        DECIMAL(10, 4),
+
+    -- MFI (Money Flow Index)
+    mfi             DECIMAL(10, 4),
+
+    source          VARCHAR(20) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_momentum', 'timestamp',
+    chunk_time_interval => INTERVAL '7 days',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX idx_indicators_momentum_lookup
+    ON indicators_momentum (symbol, timeframe, timestamp DESC);
+```
+
+```sql
+-- Volatilitäts-Indikatoren
+CREATE TABLE indicators_volatility (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    timeframe       VARCHAR(10) NOT NULL,
+
+    -- Bollinger Bands
+    bb_upper        DECIMAL(20, 8),
+    bb_middle       DECIMAL(20, 8),
+    bb_lower        DECIMAL(20, 8),
+    bb_width        DECIMAL(10, 6),
+    bb_percent_b    DECIMAL(10, 6),
+
+    -- ATR
+    atr_14          DECIMAL(20, 8),
+    atr_7           DECIMAL(20, 8),
+    natr            DECIMAL(10, 6),        -- Normalized ATR (%)
+    true_range      DECIMAL(20, 8),
+
+    -- Keltner Channel
+    kc_upper        DECIMAL(20, 8),
+    kc_middle       DECIMAL(20, 8),
+    kc_lower        DECIMAL(20, 8),
+
+    -- Donchian Channel
+    dc_upper        DECIMAL(20, 8),
+    dc_middle       DECIMAL(20, 8),
+    dc_lower        DECIMAL(20, 8),
+
+    source          VARCHAR(20) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_volatility', 'timestamp',
+    chunk_time_interval => INTERVAL '7 days',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX idx_indicators_volatility_lookup
+    ON indicators_volatility (symbol, timeframe, timestamp DESC);
+```
+
+```sql
+-- Trend-Indikatoren
+CREATE TABLE indicators_trend (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    timeframe       VARCHAR(10) NOT NULL,
+
+    -- Ichimoku Cloud
+    ichimoku_tenkan     DECIMAL(20, 8),
+    ichimoku_kijun      DECIMAL(20, 8),
+    ichimoku_senkou_a   DECIMAL(20, 8),
+    ichimoku_senkou_b   DECIMAL(20, 8),
+    ichimoku_chikou     DECIMAL(20, 8),
+
+    -- Supertrend
+    supertrend          DECIMAL(20, 8),
+    supertrend_direction INTEGER,          -- 1 = Up, -1 = Down
+
+    -- Parabolic SAR
+    psar                DECIMAL(20, 8),
+    psar_direction      INTEGER,           -- 1 = Up, -1 = Down
+
+    -- Aroon
+    aroon_up            DECIMAL(10, 4),
+    aroon_down          DECIMAL(10, 4),
+    aroon_oscillator    DECIMAL(10, 4),
+
+    -- Linear Regression
+    linreg_slope        DECIMAL(20, 8),
+    linreg_intercept    DECIMAL(20, 8),
+    linreg_r_squared    DECIMAL(10, 6),
+
+    -- Hilbert Transform
+    ht_trendmode        INTEGER,           -- 0 = Range, 1 = Trend
+
+    source          VARCHAR(20) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_trend', 'timestamp',
+    chunk_time_interval => INTERVAL '7 days',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX idx_indicators_trend_lookup
+    ON indicators_trend (symbol, timeframe, timestamp DESC);
+```
+
+```sql
+-- Volumen-Indikatoren
+CREATE TABLE indicators_volume (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    timeframe       VARCHAR(10) NOT NULL,
+
+    -- On-Balance Volume
+    obv             DECIMAL(30, 8),
+
+    -- Accumulation/Distribution
+    ad_line         DECIMAL(30, 8),
+    ad_oscillator   DECIMAL(20, 8),
+
+    -- Chaikin
+    chaikin_mf      DECIMAL(10, 6),        -- Money Flow
+
+    -- Volume MA
+    volume_sma_20   DECIMAL(30, 8),
+    volume_ratio    DECIMAL(10, 4),        -- Current / SMA
+
+    source          VARCHAR(20) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_volume', 'timestamp',
+    chunk_time_interval => INTERVAL '7 days',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX idx_indicators_volume_lookup
+    ON indicators_volume (symbol, timeframe, timestamp DESC);
+```
+
+#### 2.3.3 Pivot Points & Support/Resistance
+
+```sql
+CREATE TABLE indicators_levels (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    timeframe       VARCHAR(10) NOT NULL,
+
+    -- Classic Pivot Points
+    pivot           DECIMAL(20, 8),
+    r1              DECIMAL(20, 8),
+    r2              DECIMAL(20, 8),
+    r3              DECIMAL(20, 8),
+    s1              DECIMAL(20, 8),
+    s2              DECIMAL(20, 8),
+    s3              DECIMAL(20, 8),
+
+    -- Fibonacci Pivot Points
+    fib_r1          DECIMAL(20, 8),
+    fib_r2          DECIMAL(20, 8),
+    fib_r3          DECIMAL(20, 8),
+    fib_s1          DECIMAL(20, 8),
+    fib_s2          DECIMAL(20, 8),
+    fib_s3          DECIMAL(20, 8),
+
+    -- Camarilla Pivot Points
+    cam_r1          DECIMAL(20, 8),
+    cam_r2          DECIMAL(20, 8),
+    cam_r3          DECIMAL(20, 8),
+    cam_r4          DECIMAL(20, 8),
+    cam_s1          DECIMAL(20, 8),
+    cam_s2          DECIMAL(20, 8),
+    cam_s3          DECIMAL(20, 8),
+    cam_s4          DECIMAL(20, 8),
+
+    source          VARCHAR(20) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_levels', 'timestamp',
+    chunk_time_interval => INTERVAL '30 days',
+    if_not_exists => TRUE
+);
+```
+
+#### 2.3.4 Indikator-Kategorien Übersicht
+
+| Tabelle | Indikatoren | Beschreibung |
+|---------|-------------|--------------|
+| `indicators` | Alle (JSONB) | Flexible Speicherung für seltene Indikatoren |
+| `indicators_ma` | SMA, EMA, WMA, DEMA, TEMA, VWAP | Moving Averages |
+| `indicators_momentum` | RSI, MACD, Stoch, CCI, ADX, MFI | Momentum & Oszillatoren |
+| `indicators_volatility` | BBands, ATR, Keltner, Donchian | Volatilität & Channels |
+| `indicators_trend` | Ichimoku, Supertrend, PSAR, Aroon | Trend-Erkennung |
+| `indicators_volume` | OBV, A/D, Chaikin | Volumen-Analyse |
+| `indicators_levels` | Pivot Points, Fibonacci | Support/Resistance |
+
+#### 2.3.5 JSONB `values` Beispiele (für `indicators` Tabelle)
 
 ```json
 // RSI
@@ -186,7 +484,7 @@ CREATE INDEX idx_indicators_lookup
 {"macd": 0.0045, "signal": 0.0032, "histogram": 0.0013}
 
 // Bollinger Bands
-{"upper": 1.0850, "middle": 1.0800, "lower": 1.0750}
+{"upper": 1.0850, "middle": 1.0800, "lower": 1.0750, "width": 0.0093, "percent_b": 0.72}
 
 // Ichimoku
 {
@@ -196,6 +494,63 @@ CREATE INDEX idx_indicators_lookup
     "senkou_span_b": 1.0780,
     "chikou_span": 1.0825
 }
+
+// Connors RSI (3 Komponenten)
+{"crsi": 58.3, "rsi": 62.1, "streak_rsi": 55.4, "pct_rank": 57.2}
+
+// Supertrend
+{"value": 1.0750, "direction": 1, "is_uptrend": true}
+
+// Linear Regression
+{"slope": 0.00125, "intercept": 1.0650, "r_squared": 0.87, "forecast": 1.0812}
+```
+
+#### 2.3.6 Retention Policies für Indikatoren
+
+```sql
+-- Alte Indikator-Daten automatisch löschen (optional)
+-- M1 Indikatoren: 7 Tage
+SELECT add_retention_policy('indicators', INTERVAL '30 days',
+    if_not_exists => TRUE);
+
+-- Optimierte Tabellen: Längere Retention
+SELECT add_retention_policy('indicators_ma', INTERVAL '180 days',
+    if_not_exists => TRUE);
+SELECT add_retention_policy('indicators_momentum', INTERVAL '180 days',
+    if_not_exists => TRUE);
+SELECT add_retention_policy('indicators_volatility', INTERVAL '180 days',
+    if_not_exists => TRUE);
+SELECT add_retention_policy('indicators_trend', INTERVAL '180 days',
+    if_not_exists => TRUE);
+
+-- Pivot Points: 1 Jahr (für Backtesting)
+SELECT add_retention_policy('indicators_levels', INTERVAL '365 days',
+    if_not_exists => TRUE);
+```
+
+#### 2.3.7 Kompression für Indikatoren
+
+```sql
+-- Kompression nach 7 Tagen für alle Indikator-Tabellen
+ALTER TABLE indicators SET (
+    timescaledb.compress,
+    timescaledb.compress_segmentby = 'symbol,timeframe,indicator_name'
+);
+SELECT add_compression_policy('indicators', INTERVAL '7 days');
+
+ALTER TABLE indicators_ma SET (
+    timescaledb.compress,
+    timescaledb.compress_segmentby = 'symbol,timeframe'
+);
+SELECT add_compression_policy('indicators_ma', INTERVAL '7 days');
+
+ALTER TABLE indicators_momentum SET (
+    timescaledb.compress,
+    timescaledb.compress_segmentby = 'symbol,timeframe'
+);
+SELECT add_compression_policy('indicators_momentum', INTERVAL '7 days');
+
+-- Analog für andere Tabellen...
 ```
 
 ### 2.4 Marktdaten (Echtzeit-Snapshots)
@@ -607,7 +962,7 @@ class TimescaleDBService:
 
         return row["latest"] if row else None
 
-    # === Indikatoren Methoden ===
+    # === Indikatoren Methoden (JSONB-Tabelle) ===
 
     async def get_indicators(
         self,
@@ -616,7 +971,7 @@ class TimescaleDBService:
         indicator_name: str,
         limit: int = 100
     ) -> List[Dict[str, Any]]:
-        """Technische Indikatoren abrufen."""
+        """Technische Indikatoren aus JSONB-Tabelle abrufen."""
         tf = normalize_timeframe(timeframe)
 
         query = """
@@ -654,7 +1009,7 @@ class TimescaleDBService:
         parameters: Dict[str, Any],
         source: str
     ) -> int:
-        """Indikatoren einfügen oder aktualisieren."""
+        """Indikatoren in JSONB-Tabelle einfügen oder aktualisieren."""
         if not data:
             return 0
 
@@ -686,7 +1041,369 @@ class TimescaleDBService:
                         source
                     )
 
+        # Freshness aktualisieren
+        await self._update_freshness(
+            symbol, tf.value, f"indicator_{indicator_name.lower()}", len(data), source
+        )
+
         return len(data)
+
+    # === Optimierte Indikator-Tabellen ===
+
+    async def get_momentum_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        limit: int = 100,
+        indicators: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Momentum-Indikatoren aus optimierter Tabelle abrufen.
+
+        Args:
+            symbol: Trading-Symbol
+            timeframe: Timeframe
+            limit: Max. Anzahl Datenpunkte
+            indicators: Optionale Liste spezifischer Indikatoren
+                       ['rsi_14', 'macd_line', 'stoch_k', etc.]
+        """
+        tf = normalize_timeframe(timeframe)
+
+        # Spalten auswählen
+        if indicators:
+            columns = ", ".join(indicators)
+        else:
+            columns = """
+                rsi_14, rsi_7, rsi_21, stoch_rsi, connors_rsi,
+                stoch_k, stoch_d,
+                macd_line, macd_signal, macd_histogram,
+                cci, williams_r, roc, momentum,
+                adx, plus_di, minus_di, mfi
+            """
+
+        query = f"""
+            SELECT timestamp, {columns}, source
+            FROM indicators_momentum
+            WHERE symbol = $1 AND timeframe = $2
+            ORDER BY timestamp DESC
+            LIMIT $3
+        """
+
+        async with self.connection() as conn:
+            rows = await conn.fetch(query, symbol, tf.value, limit)
+
+        return [dict(row) for row in rows]
+
+    async def upsert_momentum_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        data: List[Dict[str, Any]],
+        source: str
+    ) -> int:
+        """Momentum-Indikatoren in optimierte Tabelle speichern."""
+        if not data:
+            return 0
+
+        tf = normalize_timeframe(timeframe)
+
+        # Dynamisch Spalten aus Daten extrahieren
+        sample = data[0]
+        columns = [k for k in sample.keys() if k != "timestamp"]
+        placeholders = ", ".join([f"${i+3}" for i in range(len(columns))])
+        column_names = ", ".join(columns)
+
+        update_clause = ", ".join([f"{col} = EXCLUDED.{col}" for col in columns])
+
+        query = f"""
+            INSERT INTO indicators_momentum
+                (timestamp, symbol, timeframe, {column_names}, source)
+            VALUES ($1, $2, '{tf.value}', {placeholders}, ${len(columns)+3})
+            ON CONFLICT (timestamp, symbol, timeframe)
+            DO UPDATE SET {update_clause}, source = EXCLUDED.source
+        """
+
+        async with self.connection() as conn:
+            async with conn.transaction():
+                for row in data:
+                    values = [row["timestamp"], symbol] + [row.get(c) for c in columns] + [source]
+                    await conn.execute(query, *values)
+
+        await self._update_freshness(symbol, tf.value, "indicators_momentum", len(data), source)
+        return len(data)
+
+    async def get_volatility_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """Volatilitäts-Indikatoren aus optimierter Tabelle abrufen."""
+        tf = normalize_timeframe(timeframe)
+
+        query = """
+            SELECT
+                timestamp,
+                bb_upper, bb_middle, bb_lower, bb_width, bb_percent_b,
+                atr_14, atr_7, natr, true_range,
+                kc_upper, kc_middle, kc_lower,
+                dc_upper, dc_middle, dc_lower,
+                source
+            FROM indicators_volatility
+            WHERE symbol = $1 AND timeframe = $2
+            ORDER BY timestamp DESC
+            LIMIT $3
+        """
+
+        async with self.connection() as conn:
+            rows = await conn.fetch(query, symbol, tf.value, limit)
+
+        return [dict(row) for row in rows]
+
+    async def get_trend_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """Trend-Indikatoren aus optimierter Tabelle abrufen."""
+        tf = normalize_timeframe(timeframe)
+
+        query = """
+            SELECT
+                timestamp,
+                ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a,
+                ichimoku_senkou_b, ichimoku_chikou,
+                supertrend, supertrend_direction,
+                psar, psar_direction,
+                aroon_up, aroon_down, aroon_oscillator,
+                linreg_slope, linreg_intercept, linreg_r_squared,
+                ht_trendmode,
+                source
+            FROM indicators_trend
+            WHERE symbol = $1 AND timeframe = $2
+            ORDER BY timestamp DESC
+            LIMIT $3
+        """
+
+        async with self.connection() as conn:
+            rows = await conn.fetch(query, symbol, tf.value, limit)
+
+        return [dict(row) for row in rows]
+
+    async def get_ma_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """Moving Average Indikatoren aus optimierter Tabelle abrufen."""
+        tf = normalize_timeframe(timeframe)
+
+        query = """
+            SELECT
+                timestamp,
+                sma_20, sma_50, sma_200,
+                ema_12, ema_26, ema_50, ema_200,
+                wma_20, dema_20, tema_20,
+                vwap,
+                source
+            FROM indicators_ma
+            WHERE symbol = $1 AND timeframe = $2
+            ORDER BY timestamp DESC
+            LIMIT $3
+        """
+
+        async with self.connection() as conn:
+            rows = await conn.fetch(query, symbol, tf.value, limit)
+
+        return [dict(row) for row in rows]
+
+    async def get_all_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        limit: int = 100
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Alle Indikatoren aus allen optimierten Tabellen abrufen.
+
+        Returns:
+            Dict mit Kategorien als Keys und Indikator-Listen als Values
+        """
+        tf = normalize_timeframe(timeframe)
+
+        results = {}
+
+        # Parallel alle Tabellen abfragen
+        async with self.connection() as conn:
+            # MA Indikatoren
+            ma_query = """
+                SELECT * FROM indicators_ma
+                WHERE symbol = $1 AND timeframe = $2
+                ORDER BY timestamp DESC LIMIT $3
+            """
+            results["moving_averages"] = [
+                dict(r) for r in await conn.fetch(ma_query, symbol, tf.value, limit)
+            ]
+
+            # Momentum
+            mom_query = """
+                SELECT * FROM indicators_momentum
+                WHERE symbol = $1 AND timeframe = $2
+                ORDER BY timestamp DESC LIMIT $3
+            """
+            results["momentum"] = [
+                dict(r) for r in await conn.fetch(mom_query, symbol, tf.value, limit)
+            ]
+
+            # Volatility
+            vol_query = """
+                SELECT * FROM indicators_volatility
+                WHERE symbol = $1 AND timeframe = $2
+                ORDER BY timestamp DESC LIMIT $3
+            """
+            results["volatility"] = [
+                dict(r) for r in await conn.fetch(vol_query, symbol, tf.value, limit)
+            ]
+
+            # Trend
+            trend_query = """
+                SELECT * FROM indicators_trend
+                WHERE symbol = $1 AND timeframe = $2
+                ORDER BY timestamp DESC LIMIT $3
+            """
+            results["trend"] = [
+                dict(r) for r in await conn.fetch(trend_query, symbol, tf.value, limit)
+            ]
+
+            # Volume
+            vol_ind_query = """
+                SELECT * FROM indicators_volume
+                WHERE symbol = $1 AND timeframe = $2
+                ORDER BY timestamp DESC LIMIT $3
+            """
+            results["volume"] = [
+                dict(r) for r in await conn.fetch(vol_ind_query, symbol, tf.value, limit)
+            ]
+
+            # Levels
+            levels_query = """
+                SELECT * FROM indicators_levels
+                WHERE symbol = $1 AND timeframe = $2
+                ORDER BY timestamp DESC LIMIT $3
+            """
+            results["levels"] = [
+                dict(r) for r in await conn.fetch(levels_query, symbol, tf.value, limit)
+            ]
+
+        return results
+
+    async def upsert_all_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        indicators_data: Dict[str, Any],
+        source: str
+    ) -> Dict[str, int]:
+        """
+        Alle Indikatoren auf einmal speichern.
+
+        Args:
+            symbol: Trading-Symbol
+            timeframe: Timeframe
+            indicators_data: Dict mit Indikator-Werten:
+                {
+                    "timestamp": "2024-01-15T10:00:00Z",
+                    "rsi_14": 65.4,
+                    "macd_line": 0.0045,
+                    "bb_upper": 1.0850,
+                    ...
+                }
+            source: Datenquelle
+
+        Returns:
+            Dict mit Anzahl der gespeicherten Zeilen pro Tabelle
+        """
+        tf = normalize_timeframe(timeframe)
+        timestamp = indicators_data.get("timestamp")
+        counts = {}
+
+        async with self.connection() as conn:
+            async with conn.transaction():
+                # MA Indikatoren
+                ma_fields = ["sma_20", "sma_50", "sma_200", "ema_12", "ema_26",
+                            "ema_50", "ema_200", "wma_20", "dema_20", "tema_20", "vwap"]
+                ma_values = {k: indicators_data.get(k) for k in ma_fields if k in indicators_data}
+                if ma_values:
+                    await self._upsert_indicator_row(
+                        conn, "indicators_ma", symbol, tf.value, timestamp, ma_values, source
+                    )
+                    counts["ma"] = 1
+
+                # Momentum Indikatoren
+                mom_fields = ["rsi_14", "rsi_7", "rsi_21", "stoch_rsi", "connors_rsi",
+                             "stoch_k", "stoch_d", "macd_line", "macd_signal", "macd_histogram",
+                             "cci", "williams_r", "roc", "momentum", "adx", "plus_di", "minus_di", "mfi"]
+                mom_values = {k: indicators_data.get(k) for k in mom_fields if k in indicators_data}
+                if mom_values:
+                    await self._upsert_indicator_row(
+                        conn, "indicators_momentum", symbol, tf.value, timestamp, mom_values, source
+                    )
+                    counts["momentum"] = 1
+
+                # Volatility Indikatoren
+                vol_fields = ["bb_upper", "bb_middle", "bb_lower", "bb_width", "bb_percent_b",
+                             "atr_14", "atr_7", "natr", "true_range",
+                             "kc_upper", "kc_middle", "kc_lower", "dc_upper", "dc_middle", "dc_lower"]
+                vol_values = {k: indicators_data.get(k) for k in vol_fields if k in indicators_data}
+                if vol_values:
+                    await self._upsert_indicator_row(
+                        conn, "indicators_volatility", symbol, tf.value, timestamp, vol_values, source
+                    )
+                    counts["volatility"] = 1
+
+                # Trend Indikatoren
+                trend_fields = ["ichimoku_tenkan", "ichimoku_kijun", "ichimoku_senkou_a",
+                               "ichimoku_senkou_b", "ichimoku_chikou", "supertrend",
+                               "supertrend_direction", "psar", "psar_direction",
+                               "aroon_up", "aroon_down", "aroon_oscillator",
+                               "linreg_slope", "linreg_intercept", "linreg_r_squared", "ht_trendmode"]
+                trend_values = {k: indicators_data.get(k) for k in trend_fields if k in indicators_data}
+                if trend_values:
+                    await self._upsert_indicator_row(
+                        conn, "indicators_trend", symbol, tf.value, timestamp, trend_values, source
+                    )
+                    counts["trend"] = 1
+
+        return counts
+
+    async def _upsert_indicator_row(
+        self,
+        conn,
+        table: str,
+        symbol: str,
+        timeframe: str,
+        timestamp,
+        values: Dict[str, Any],
+        source: str
+    ) -> None:
+        """Helper: Einzelne Zeile in Indikator-Tabelle einfügen/aktualisieren."""
+        columns = list(values.keys())
+        placeholders = ", ".join([f"${i+4}" for i in range(len(columns))])
+        column_names = ", ".join(columns)
+        update_clause = ", ".join([f"{col} = EXCLUDED.{col}" for col in columns])
+
+        query = f"""
+            INSERT INTO {table}
+                (timestamp, symbol, timeframe, {column_names}, source)
+            VALUES ($1, $2, $3, {placeholders}, ${len(columns)+4})
+            ON CONFLICT (timestamp, symbol, timeframe)
+            DO UPDATE SET {update_clause}, source = EXCLUDED.source
+        """
+
+        params = [timestamp, symbol, timeframe] + list(values.values()) + [source]
+        await conn.execute(query, *params)
 
     # === Freshness Tracking ===
 
@@ -1246,7 +1963,11 @@ BEGIN
     END LOOP;
 END $$;
 
--- Indicators Tabelle
+-- =====================================================
+-- INDIKATOREN-TABELLEN
+-- =====================================================
+
+-- Flexible JSONB-Tabelle für seltene/custom Indikatoren
 CREATE TABLE IF NOT EXISTS indicators (
     timestamp       TIMESTAMPTZ NOT NULL,
     symbol          VARCHAR(20) NOT NULL,
@@ -1266,6 +1987,214 @@ SELECT create_hypertable('indicators', 'timestamp',
 
 CREATE INDEX IF NOT EXISTS idx_indicators_lookup
     ON indicators (symbol, timeframe, indicator_name, timestamp DESC);
+
+-- Partial Indexes für häufig abgefragte Indikatoren
+CREATE INDEX IF NOT EXISTS idx_indicators_rsi
+    ON indicators (symbol, timeframe, timestamp DESC)
+    WHERE indicator_name = 'RSI';
+
+CREATE INDEX IF NOT EXISTS idx_indicators_macd
+    ON indicators (symbol, timeframe, timestamp DESC)
+    WHERE indicator_name = 'MACD';
+
+-- =====================================================
+-- OPTIMIERTE INDIKATOR-TABELLEN (Performance-kritisch)
+-- =====================================================
+
+-- Moving Averages
+CREATE TABLE IF NOT EXISTS indicators_ma (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    timeframe       VARCHAR(10) NOT NULL,
+    sma_20          DECIMAL(20, 8),
+    sma_50          DECIMAL(20, 8),
+    sma_200         DECIMAL(20, 8),
+    ema_12          DECIMAL(20, 8),
+    ema_26          DECIMAL(20, 8),
+    ema_50          DECIMAL(20, 8),
+    ema_200         DECIMAL(20, 8),
+    wma_20          DECIMAL(20, 8),
+    dema_20         DECIMAL(20, 8),
+    tema_20         DECIMAL(20, 8),
+    vwap            DECIMAL(20, 8),
+    source          VARCHAR(20) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_ma', 'timestamp',
+    chunk_time_interval => INTERVAL '7 days',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_indicators_ma_lookup
+    ON indicators_ma (symbol, timeframe, timestamp DESC);
+
+-- Momentum-Indikatoren
+CREATE TABLE IF NOT EXISTS indicators_momentum (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    timeframe       VARCHAR(10) NOT NULL,
+    rsi_14          DECIMAL(10, 4),
+    rsi_7           DECIMAL(10, 4),
+    rsi_21          DECIMAL(10, 4),
+    stoch_rsi       DECIMAL(10, 4),
+    connors_rsi     DECIMAL(10, 4),
+    stoch_k         DECIMAL(10, 4),
+    stoch_d         DECIMAL(10, 4),
+    macd_line       DECIMAL(20, 8),
+    macd_signal     DECIMAL(20, 8),
+    macd_histogram  DECIMAL(20, 8),
+    cci             DECIMAL(10, 4),
+    williams_r      DECIMAL(10, 4),
+    roc             DECIMAL(10, 4),
+    momentum        DECIMAL(20, 8),
+    adx             DECIMAL(10, 4),
+    plus_di         DECIMAL(10, 4),
+    minus_di        DECIMAL(10, 4),
+    mfi             DECIMAL(10, 4),
+    source          VARCHAR(20) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_momentum', 'timestamp',
+    chunk_time_interval => INTERVAL '7 days',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_indicators_momentum_lookup
+    ON indicators_momentum (symbol, timeframe, timestamp DESC);
+
+-- Volatilitäts-Indikatoren
+CREATE TABLE IF NOT EXISTS indicators_volatility (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    timeframe       VARCHAR(10) NOT NULL,
+    bb_upper        DECIMAL(20, 8),
+    bb_middle       DECIMAL(20, 8),
+    bb_lower        DECIMAL(20, 8),
+    bb_width        DECIMAL(10, 6),
+    bb_percent_b    DECIMAL(10, 6),
+    atr_14          DECIMAL(20, 8),
+    atr_7           DECIMAL(20, 8),
+    natr            DECIMAL(10, 6),
+    true_range      DECIMAL(20, 8),
+    kc_upper        DECIMAL(20, 8),
+    kc_middle       DECIMAL(20, 8),
+    kc_lower        DECIMAL(20, 8),
+    dc_upper        DECIMAL(20, 8),
+    dc_middle       DECIMAL(20, 8),
+    dc_lower        DECIMAL(20, 8),
+    source          VARCHAR(20) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_volatility', 'timestamp',
+    chunk_time_interval => INTERVAL '7 days',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_indicators_volatility_lookup
+    ON indicators_volatility (symbol, timeframe, timestamp DESC);
+
+-- Trend-Indikatoren
+CREATE TABLE IF NOT EXISTS indicators_trend (
+    timestamp           TIMESTAMPTZ NOT NULL,
+    symbol              VARCHAR(20) NOT NULL,
+    timeframe           VARCHAR(10) NOT NULL,
+    ichimoku_tenkan     DECIMAL(20, 8),
+    ichimoku_kijun      DECIMAL(20, 8),
+    ichimoku_senkou_a   DECIMAL(20, 8),
+    ichimoku_senkou_b   DECIMAL(20, 8),
+    ichimoku_chikou     DECIMAL(20, 8),
+    supertrend          DECIMAL(20, 8),
+    supertrend_direction INTEGER,
+    psar                DECIMAL(20, 8),
+    psar_direction      INTEGER,
+    aroon_up            DECIMAL(10, 4),
+    aroon_down          DECIMAL(10, 4),
+    aroon_oscillator    DECIMAL(10, 4),
+    linreg_slope        DECIMAL(20, 8),
+    linreg_intercept    DECIMAL(20, 8),
+    linreg_r_squared    DECIMAL(10, 6),
+    ht_trendmode        INTEGER,
+    source              VARCHAR(20) NOT NULL,
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_trend', 'timestamp',
+    chunk_time_interval => INTERVAL '7 days',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_indicators_trend_lookup
+    ON indicators_trend (symbol, timeframe, timestamp DESC);
+
+-- Volumen-Indikatoren
+CREATE TABLE IF NOT EXISTS indicators_volume (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    timeframe       VARCHAR(10) NOT NULL,
+    obv             DECIMAL(30, 8),
+    ad_line         DECIMAL(30, 8),
+    ad_oscillator   DECIMAL(20, 8),
+    chaikin_mf      DECIMAL(10, 6),
+    volume_sma_20   DECIMAL(30, 8),
+    volume_ratio    DECIMAL(10, 4),
+    source          VARCHAR(20) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_volume', 'timestamp',
+    chunk_time_interval => INTERVAL '7 days',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_indicators_volume_lookup
+    ON indicators_volume (symbol, timeframe, timestamp DESC);
+
+-- Pivot Points & Levels
+CREATE TABLE IF NOT EXISTS indicators_levels (
+    timestamp       TIMESTAMPTZ NOT NULL,
+    symbol          VARCHAR(20) NOT NULL,
+    timeframe       VARCHAR(10) NOT NULL,
+    pivot           DECIMAL(20, 8),
+    r1              DECIMAL(20, 8),
+    r2              DECIMAL(20, 8),
+    r3              DECIMAL(20, 8),
+    s1              DECIMAL(20, 8),
+    s2              DECIMAL(20, 8),
+    s3              DECIMAL(20, 8),
+    fib_r1          DECIMAL(20, 8),
+    fib_r2          DECIMAL(20, 8),
+    fib_r3          DECIMAL(20, 8),
+    fib_s1          DECIMAL(20, 8),
+    fib_s2          DECIMAL(20, 8),
+    fib_s3          DECIMAL(20, 8),
+    cam_r1          DECIMAL(20, 8),
+    cam_r2          DECIMAL(20, 8),
+    cam_r3          DECIMAL(20, 8),
+    cam_r4          DECIMAL(20, 8),
+    cam_s1          DECIMAL(20, 8),
+    cam_s2          DECIMAL(20, 8),
+    cam_s3          DECIMAL(20, 8),
+    cam_s4          DECIMAL(20, 8),
+    source          VARCHAR(20) NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (timestamp, symbol, timeframe)
+);
+
+SELECT create_hypertable('indicators_levels', 'timestamp',
+    chunk_time_interval => INTERVAL '30 days',
+    if_not_exists => TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_indicators_levels_lookup
+    ON indicators_levels (symbol, timeframe, timestamp DESC);
 
 -- Data Freshness Tracking
 CREATE TABLE IF NOT EXISTS data_freshness (
@@ -1395,6 +2324,206 @@ async def sync_symbol_data(
     """
     # Implementierung: Bulk-Sync von historischen Daten
     pass
+
+
+# =====================================================
+# INDIKATOR-ENDPOINTS
+# =====================================================
+
+@router.get("/indicators/{symbol}")
+async def get_indicators_from_db(
+    symbol: str,
+    timeframe: str = Query(default="H1"),
+    category: str = Query(
+        default="all",
+        description="Kategorie: all, momentum, volatility, trend, ma, volume, levels"
+    ),
+    limit: int = Query(default=100, ge=1, le=1000),
+    force_refresh: bool = Query(default=False)
+):
+    """
+    Technische Indikatoren aus TimescaleDB abrufen.
+
+    Kategorien:
+    - all: Alle Indikatoren aus allen Tabellen
+    - momentum: RSI, MACD, Stochastic, ADX, etc.
+    - volatility: Bollinger Bands, ATR, Keltner, etc.
+    - trend: Ichimoku, Supertrend, PSAR, Aroon, etc.
+    - ma: Moving Averages (SMA, EMA, WMA, etc.)
+    - volume: OBV, A/D, Chaikin, etc.
+    - levels: Pivot Points, Fibonacci, Camarilla
+    """
+    if category == "all":
+        data = await timescaledb_service.get_all_indicators(symbol, timeframe, limit)
+        return {"symbol": symbol, "timeframe": timeframe, "indicators": data}
+
+    method_map = {
+        "momentum": timescaledb_service.get_momentum_indicators,
+        "volatility": timescaledb_service.get_volatility_indicators,
+        "trend": timescaledb_service.get_trend_indicators,
+        "ma": timescaledb_service.get_ma_indicators,
+        "volume": lambda s, t, l: timescaledb_service.get_all_indicators(s, t, l).get("volume", []),
+        "levels": lambda s, t, l: timescaledb_service.get_all_indicators(s, t, l).get("levels", []),
+    }
+
+    if category not in method_map:
+        raise HTTPException(status_code=400, detail=f"Unknown category: {category}")
+
+    data = await method_map[category](symbol, timeframe, limit)
+    return {
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "category": category,
+        "count": len(data),
+        "data": data
+    }
+
+
+@router.get("/indicators/{symbol}/momentum")
+async def get_momentum_indicators(
+    symbol: str,
+    timeframe: str = Query(default="H1"),
+    limit: int = Query(default=100, ge=1, le=1000),
+    indicators: Optional[List[str]] = Query(
+        default=None,
+        description="Spezifische Indikatoren: rsi_14, macd_line, stoch_k, etc."
+    )
+):
+    """
+    Momentum-Indikatoren abrufen.
+
+    Verfügbare Indikatoren:
+    - rsi_14, rsi_7, rsi_21, stoch_rsi, connors_rsi
+    - stoch_k, stoch_d
+    - macd_line, macd_signal, macd_histogram
+    - cci, williams_r, roc, momentum
+    - adx, plus_di, minus_di, mfi
+    """
+    data = await timescaledb_service.get_momentum_indicators(
+        symbol, timeframe, limit, indicators
+    )
+    return {
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "category": "momentum",
+        "count": len(data),
+        "data": data
+    }
+
+
+@router.get("/indicators/{symbol}/volatility")
+async def get_volatility_indicators(
+    symbol: str,
+    timeframe: str = Query(default="H1"),
+    limit: int = Query(default=100, ge=1, le=1000)
+):
+    """
+    Volatilitäts-Indikatoren abrufen.
+
+    Enthält: Bollinger Bands, ATR, Keltner Channel, Donchian Channel
+    """
+    data = await timescaledb_service.get_volatility_indicators(symbol, timeframe, limit)
+    return {
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "category": "volatility",
+        "count": len(data),
+        "data": data
+    }
+
+
+@router.get("/indicators/{symbol}/trend")
+async def get_trend_indicators(
+    symbol: str,
+    timeframe: str = Query(default="H1"),
+    limit: int = Query(default=100, ge=1, le=1000)
+):
+    """
+    Trend-Indikatoren abrufen.
+
+    Enthält: Ichimoku, Supertrend, Parabolic SAR, Aroon, Linear Regression
+    """
+    data = await timescaledb_service.get_trend_indicators(symbol, timeframe, limit)
+    return {
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "category": "trend",
+        "count": len(data),
+        "data": data
+    }
+
+
+@router.get("/indicators/{symbol}/ma")
+async def get_ma_indicators(
+    symbol: str,
+    timeframe: str = Query(default="H1"),
+    limit: int = Query(default=100, ge=1, le=1000)
+):
+    """
+    Moving Average Indikatoren abrufen.
+
+    Enthält: SMA (20, 50, 200), EMA (12, 26, 50, 200), WMA, DEMA, TEMA, VWAP
+    """
+    data = await timescaledb_service.get_ma_indicators(symbol, timeframe, limit)
+    return {
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "category": "moving_averages",
+        "count": len(data),
+        "data": data
+    }
+
+
+@router.post("/indicators/{symbol}/sync")
+async def sync_indicators(
+    symbol: str,
+    timeframe: str = Query(default="H1"),
+    categories: List[str] = Query(
+        default=["momentum", "volatility", "trend"],
+        description="Zu synchronisierende Kategorien"
+    ),
+    days_back: int = Query(default=30, ge=1, le=365)
+):
+    """
+    Indikatoren für Symbol synchronisieren.
+
+    Berechnet Indikatoren aus OHLCV-Daten und speichert sie in TimescaleDB.
+    """
+    # Implementierung: Indikator-Berechnung + Speicherung
+    results = {}
+    for category in categories:
+        # 1. OHLCV-Daten laden
+        # 2. Indikatoren berechnen
+        # 3. In DB speichern
+        results[category] = {"status": "pending", "records": 0}
+
+    return {
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "sync_results": results
+    }
+
+
+@router.get("/indicators/freshness/{symbol}")
+async def get_indicator_freshness(
+    symbol: str,
+    timeframe: str = Query(default="H1")
+):
+    """Aktualitätsstatus aller Indikator-Kategorien abrufen."""
+    categories = ["indicators_ma", "indicators_momentum", "indicators_volatility",
+                  "indicators_trend", "indicators_volume", "indicators_levels"]
+
+    freshness = {}
+    for cat in categories:
+        data = await timescaledb_service.get_freshness(symbol, timeframe, cat)
+        if data:
+            freshness[cat.replace("indicators_", "")] = data
+
+    return {
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "freshness": freshness
+    }
 ```
 
 ---
