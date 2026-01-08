@@ -589,7 +589,7 @@ CREATE INDEX IF NOT EXISTS idx_economic_events_lookup
 -- Sentiment Data
 CREATE TABLE IF NOT EXISTS sentiment_data (
     timestamp           TIMESTAMPTZ NOT NULL,
-    symbol              VARCHAR(20),
+    symbol              VARCHAR(20) NOT NULL DEFAULT 'MARKET',
     fear_greed_index    INTEGER,
     social_sentiment    DECIMAL(5, 2),
     news_sentiment      DECIMAL(5, 2),
@@ -598,7 +598,7 @@ CREATE TABLE IF NOT EXISTS sentiment_data (
     raw_data            JSONB,
     source              VARCHAR(50),
     created_at          TIMESTAMPTZ DEFAULT NOW(),
-    PRIMARY KEY (timestamp, COALESCE(symbol, 'MARKET'))
+    PRIMARY KEY (timestamp, symbol)
 );
 
 SELECT create_hypertable('sentiment_data', 'timestamp',
@@ -718,6 +718,8 @@ SELECT add_compression_policy('indicators_trend', INTERVAL '7 days', if_not_exis
 -- DONE
 -- =====================================================
 
--- Grant permissions to trading user
-GRANT ALL ON ALL TABLES IN SCHEMA public TO trading;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO trading;
+-- Grant permissions to trading user (optional - only if role exists)
+-- Uncomment these lines if you have created a 'trading' role:
+-- CREATE ROLE trading WITH LOGIN PASSWORD 'your_password';
+-- GRANT ALL ON ALL TABLES IN SCHEMA public TO trading;
+-- GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO trading;
