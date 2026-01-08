@@ -3609,10 +3609,11 @@ async def get_symbol_data_stats(symbol: str):
                 td_symbol = f"{symbol[:3]}/{symbol[3:]}"
 
             # Fetch OHLCV for each timeframe from TwelveData
-            for tf, td_interval, limit in [("M15", "15min", 50), ("H1", "1h", 50), ("D1", "1day", 50)]:
+            td_base_url = "https://api.twelvedata.com"
+            for tf, td_interval, limit in [("M15", "15min", 50), ("H1", "1h", 50), ("D1", "1day", 30)]:
                 try:
                     td_response = await client.get(
-                        f"{settings.twelvedata_base_url}/time_series",
+                        f"{td_base_url}/time_series",
                         params={
                             "symbol": td_symbol,
                             "interval": td_interval,
