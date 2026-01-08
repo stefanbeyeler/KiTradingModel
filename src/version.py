@@ -1,5 +1,6 @@
-"""Version configuration for KI Trading Model - derived from Git."""
+"""Version configuration for KI Trading Model - derived from Git or environment."""
 
+import os
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -12,12 +13,43 @@ _git_info_cache = None
 
 
 def _get_git_info() -> dict:
-    """Get version info from git repository."""
+    """Get version info from git repository or environment variables.
+
+    Priority:
+    1. Environment variables (BUILD_VERSION, BUILD_COMMIT, BUILD_DATE, BUILD_NUMBER)
+       - Set during Docker build or CI/CD
+    2. Git repository (if available)
+    3. Fallback values
+    """
     global _git_info_cache
 
     if _git_info_cache is not None:
         return _git_info_cache
 
+    # Check for environment variables first (Docker/CI builds)
+    env_commit = os.environ.get("BUILD_COMMIT")
+    env_date = os.environ.get("BUILD_DATE")
+    env_count = os.environ.get("BUILD_NUMBER")
+    env_tag = os.environ.get("BUILD_TAG")
+
+    if env_commit:
+        # Use environment variables
+        commit_date = None
+        if env_date:
+            try:
+                commit_date = datetime.fromisoformat(env_date.replace("Z", "+00:00"))
+            except ValueError:
+                pass
+
+        _git_info_cache = {
+            "commit_hash": env_commit,
+            "commit_date": commit_date,
+            "tag": env_tag,
+            "commit_count": env_count or "0"
+        }
+        return _git_info_cache
+
+    # Fall back to Git if available
     try:
         # Get the repository root (where .git is located)
         repo_root = Path(__file__).parent.parent
@@ -90,7 +122,12 @@ def _get_git_info() -> dict:
 
 
 def _build_version() -> str:
-    """Build version string from git info."""
+    """Build version string from git info or environment."""
+    # Check for pre-built version from environment (highest priority)
+    env_version = os.environ.get("BUILD_VERSION")
+    if env_version:
+        return env_version.lstrip("v")
+
     git_info = _get_git_info()
 
     # If there's a tag, use it

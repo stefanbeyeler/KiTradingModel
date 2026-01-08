@@ -174,3 +174,47 @@ deploy-watchdog:
 		src/services/watchdog_app/ \
 		sbeyeler@10.1.19.101:~/KiTradingModel/src/services/watchdog_app/
 	ssh sbeyeler@10.1.19.101 "cd ~/KiTradingModel && docker-compose -f docker-compose.watchdog.yml up -d --build"
+
+# =============================================================================
+# Docker Build with Version Info
+# =============================================================================
+
+# Export Git version info for docker-compose
+export-version:
+	@echo "BUILD_VERSION=$$(git describe --tags 2>/dev/null || echo '1.0.0').$$(git rev-list --count HEAD 2>/dev/null || echo '0')+$$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+	@echo "BUILD_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+	@echo "BUILD_DATE=$$(git log -1 --format=%cI 2>/dev/null || date -Iseconds)"
+	@echo "BUILD_NUMBER=$$(git rev-list --count HEAD 2>/dev/null || echo '0')"
+
+# Build and start microservices with version info
+up:
+	@export BUILD_VERSION=$$(git describe --tags 2>/dev/null || echo '1.0.0').$$(git rev-list --count HEAD 2>/dev/null || echo '0')+$$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown') && \
+	export BUILD_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown') && \
+	export BUILD_DATE=$$(git log -1 --format=%cI 2>/dev/null || date -Iseconds) && \
+	export BUILD_NUMBER=$$(git rev-list --count HEAD 2>/dev/null || echo '0') && \
+	docker-compose -f docker-compose.microservices.yml up -d
+
+# Rebuild and start microservices with version info
+up-build:
+	@export BUILD_VERSION=$$(git describe --tags 2>/dev/null || echo '1.0.0').$$(git rev-list --count HEAD 2>/dev/null || echo '0')+$$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown') && \
+	export BUILD_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown') && \
+	export BUILD_DATE=$$(git log -1 --format=%cI 2>/dev/null || date -Iseconds) && \
+	export BUILD_NUMBER=$$(git rev-list --count HEAD 2>/dev/null || echo '0') && \
+	docker-compose -f docker-compose.microservices.yml up -d --build
+
+# Stop microservices
+down:
+	docker-compose -f docker-compose.microservices.yml down
+
+# Restart a specific service with version info
+restart-service:
+ifndef SERVICE
+	@echo "Fehler: SERVICE nicht angegeben"
+	@echo "Verwendung: make restart-service SERVICE=data"
+	@exit 1
+endif
+	@export BUILD_VERSION=$$(git describe --tags 2>/dev/null || echo '1.0.0').$$(git rev-list --count HEAD 2>/dev/null || echo '0')+$$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown') && \
+	export BUILD_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown') && \
+	export BUILD_DATE=$$(git log -1 --format=%cI 2>/dev/null || date -Iseconds) && \
+	export BUILD_NUMBER=$$(git rev-list --count HEAD 2>/dev/null || echo '0') && \
+	docker-compose -f docker-compose.microservices.yml up -d $(SERVICE)-service

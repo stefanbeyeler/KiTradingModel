@@ -25,6 +25,14 @@
 # Remaining for system: ~47 GB RAM
 # =============================================================================
 
+# Build version info - set via environment or defaults
+# Usage: BUILD_VERSION=1.0.0.123+abc1234 docker-compose up --build
+x-build-info: &build-info
+  BUILD_VERSION: ${BUILD_VERSION:-}
+  BUILD_COMMIT: ${BUILD_COMMIT:-}
+  BUILD_DATE: ${BUILD_DATE:-}
+  BUILD_NUMBER: ${BUILD_NUMBER:-}
+
 services:
   # =========================================================================
   # INFRASTRUCTURE SERVICES - Redis Cache
@@ -135,6 +143,11 @@ services:
       - OLLAMA_HOST=http://host.docker.internal:11434
       - FAISS_PERSIST_DIRECTORY=/app/data/faiss
       - REDIS_URL=redis://trading-redis:6379
+      # Build version info
+      - BUILD_VERSION=${BUILD_VERSION:-}
+      - BUILD_COMMIT=${BUILD_COMMIT:-}
+      - BUILD_DATE=${BUILD_DATE:-}
+      - BUILD_NUMBER=${BUILD_NUMBER:-}
     depends_on:
       - redis
     networks:
@@ -269,6 +282,11 @@ services:
       - EMBEDDING_DEVICE=cuda
       - FAISS_PERSIST_DIRECTORY=/app/data/faiss
       - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      # Build version info
+      - BUILD_VERSION=${BUILD_VERSION:-}
+      - BUILD_COMMIT=${BUILD_COMMIT:-}
+      - BUILD_DATE=${BUILD_DATE:-}
+      - BUILD_NUMBER=${BUILD_NUMBER:-}
     networks:
       - trading-net
     extra_hosts:
@@ -318,6 +336,11 @@ services:
       - FAISS_USE_GPU=1
       - EMBEDDING_DEVICE=cuda
       - EASYINSIGHT_API_URL=${EASYINSIGHT_API_URL:-http://10.1.19.102:3000/api}
+      # Build version info
+      - BUILD_VERSION=${BUILD_VERSION:-}
+      - BUILD_COMMIT=${BUILD_COMMIT:-}
+      - BUILD_DATE=${BUILD_DATE:-}
+      - BUILD_NUMBER=${BUILD_NUMBER:-}
     networks:
       - trading-net
     extra_hosts:
@@ -379,6 +402,11 @@ services:
       - MKL_NUM_THREADS=4
       - OPENBLAS_NUM_THREADS=4
       - NUMEXPR_MAX_THREADS=4
+      # Build version info
+      - BUILD_VERSION=${BUILD_VERSION:-}
+      - BUILD_COMMIT=${BUILD_COMMIT:-}
+      - BUILD_DATE=${BUILD_DATE:-}
+      - BUILD_NUMBER=${BUILD_NUMBER:-}
     networks:
       - trading-net
     extra_hosts:
