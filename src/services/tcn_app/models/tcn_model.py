@@ -264,17 +264,45 @@ class TCNPatternClassifier:
 
         self._model.eval()
         self._loaded = True
-        logger.info(f"TCN Pattern Classifier initialized on {self._device}")
+
+        # Cache parameter count to avoid slow GPU iteration on every info request
+        self._cached_num_parameters = sum(p.numel() for p in self._model.parameters())
+
+        # GPU warmup: Run a dummy inference to initialize CUDA context
+        # This prevents 30+ second delay on first API request
+        self._warmup_gpu()
+
+        logger.info(f"TCN Pattern Classifier initialized on {self._device} ({self._cached_num_parameters:,} parameters)")
+
+    def _warmup_gpu(self):
+        """Perform GPU warmup with dummy inference to initialize CUDA context."""
+        if self._model is None or self._device is None:
+            return
+
+        try:
+            import numpy as np
+            # Create dummy input matching expected shape (batch, seq_len, channels)
+            dummy_input = np.random.randn(1, 200, 5).astype(np.float32)
+            dummy_input = self._normalize(dummy_input)
+
+            with torch.no_grad():
+                x_tensor = torch.tensor(dummy_input, dtype=torch.float32).to(self._device)
+                _ = self._model(x_tensor)
+                # Ensure CUDA operations complete
+                if self._device.type == 'cuda':
+                    torch.cuda.synchronize()
+
+            logger.debug("GPU warmup completed")
+        except Exception as e:
+            logger.warning(f"GPU warmup failed (non-critical): {e}")
 
     def is_loaded(self) -> bool:
         """Check if model is loaded."""
         return self._loaded
 
     def get_num_parameters(self) -> int:
-        """Get number of model parameters."""
-        if self._model is None:
-            return 0
-        return sum(p.numel() for p in self._model.parameters())
+        """Get cached number of model parameters (fast)."""
+        return getattr(self, '_cached_num_parameters', 0)
 
     def predict(self, x: np.ndarray, threshold: float = 0.5) -> Dict[str, float]:
         """
