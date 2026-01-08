@@ -15,40 +15,54 @@ Externe APIs (EasyInsight, TwelveData, Yahoo Finance)
               │     (Port 3001)     │
               └──────────┬──────────┘
                          │
-                         ▼
-              ┌─────────────────────┐
-              │    REDIS CACHE      │  ◄── Zentraler Cache für alle Services
-              │     (Port 6379)     │      512MB, LRU-Eviction, Persistenz
-              └──────────┬──────────┘
-                         │
-     ┌───────┬───────┬───┴───┬───────┬───────┐
-     ▼       ▼       ▼       ▼       ▼       ▼
-  NHITS    TCN     HMM   Embedder  RAG     LLM
- :3002   :3003   :3004   :3005   :3008   :3009
-                                           │
-                                      Watchdog
-                                       :3010
+         ┌───────────────┴───────────────┐
+         ▼                               ▼
+┌─────────────────────┐       ┌─────────────────────┐
+│    REDIS CACHE      │       │   TIMESCALEDB       │
+│     (Port 6379)     │       │   (10.1.19.102)     │
+│   Hot Data (TTL)    │       │  Persistent Storage │
+└──────────┬──────────┘       └─────────────────────┘
+           │
+     ┌─────┴─────┬───────┬───────┬───────┬───────┐
+     ▼           ▼       ▼       ▼       ▼       ▼
+  NHITS        TCN     HMM   Embedder  RAG     LLM
+ :3002       :3003   :3004   :3005   :3008   :3009
+                                               │
+                                          Watchdog
+                                           :3010
+```
+
+### 3-Layer-Caching-Strategie
+
+```text
+Anfrage → 1. Redis Cache → 2. TimescaleDB → 3. Externe APIs
+                ↓              ↓                 ↓
+            (Hot Data)    (Persistent)     (Fresh Data)
 ```
 
 ### Verbindliche Regeln
 
-1. **Kein direkter Datenbankzugriff**
-   - KEIN `asyncpg`, `psycopg2` oder andere DB-Treiber
-   - EasyInsight TimescaleDB nur über die EasyInsight REST API
+1. **Datenbankzugriff nur im Data Service**
+   - NUR der Data Service verwendet `asyncpg` für TimescaleDB
+   - Andere Services greifen auf Daten NUR über den Data Service HTTP API zu
+   - Verwende `DataRepository` für 3-Layer-Caching
 
 2. **Data Service als einziges Gateway**
    - NHITS, RAG und LLM Services greifen auf externe Daten NUR über den Data Service zu
    - Verwende `DataGatewayService` (src/services/data_gateway_service.py) als Singleton
 
 3. **Datenquellen-Hierarchie im Data Service**
-   - **TwelveData** (primär): OHLC-Daten für alle Timeframes (M1-MN)
-   - **EasyInsight** (1. Fallback): Zusätzliche Indikatoren und TimescaleDB-Daten
-   - **Yahoo Finance** (2. Fallback): Kostenlose historische Daten
+   - **Redis Cache** (Layer 1): Schneller Zugriff auf Hot Data
+   - **TimescaleDB** (Layer 2): Persistente Speicherung aller historischen Daten
+   - **TwelveData** (Layer 3 primär): OHLC-Daten für alle Timeframes (M1-MN)
+   - **EasyInsight** (Layer 3 Fallback): Zusätzliche Indikatoren
+   - **Yahoo Finance** (Layer 3 Fallback 2): Kostenlose historische Daten
 
-4. **Caching über Redis**
-   - Alle Daten werden im Redis-Cache zwischengespeichert
-   - Verwende `CacheService` (`src/services/cache_service.py`) für Cache-Zugriffe
-   - TTL-Werte sind kategoriebasiert (siehe Caching-Architektur unten)
+4. **Caching über Redis + TimescaleDB**
+   - Hot Data wird im Redis-Cache zwischengespeichert (TTL-basiert)
+   - Alle Daten werden in TimescaleDB persistent gespeichert
+   - Verwende `DataRepository` (`src/services/data_repository.py`) für 3-Layer-Zugriff
+   - Verwende `CacheService` (`src/services/cache_service.py`) für reine Cache-Zugriffe
 
 ### Beispiele
 
@@ -70,30 +84,44 @@ class NHITSTrainingService:
 
 ## Caching-Architektur (VERBINDLICH)
 
-### Architektur-Übersicht
+### Architektur-Übersicht (3-Layer)
 
 ```text
-                    ┌─────────────────────┐
-                    │   Redis Cache       │  ◄── Zentraler Cache (Port 6379)
-                    │  (trading-redis)    │      512MB, LRU-Eviction
-                    └──────────┬──────────┘
-                               │
-              ┌────────────────┼────────────────┐
-              │                │                │
-              ▼                ▼                ▼
-       ┌──────────┐     ┌──────────┐     ┌──────────┐
-       │  Data    │     │  NHITS   │     │   RAG    │
-       │ Service  │     │ Service  │     │ Service  │
-       └──────────┘     └──────────┘     └──────────┘
+┌───────────────────────────────────────────────────────┐
+│                    DATA SERVICE                        │
+│                     (Port 3001)                        │
+└───────────────────────────┬───────────────────────────┘
+                            │
+         ┌──────────────────┼──────────────────┐
+         ▼                  ▼                  ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│  REDIS CACHE    │ │  TIMESCALEDB    │ │ EXTERNE APIs    │
+│  (Layer 1)      │ │  (Layer 2)      │ │ (Layer 3)       │
+│  Hot Data       │ │  Persistent     │ │ Fresh Data      │
+│  trading-redis  │ │  10.1.19.102    │ │ TwelveData, etc │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+        │
+┌───────┴───────┬───────┬───────┬───────┬───────┐
+▼               ▼       ▼       ▼       ▼       ▼
+NHITS          TCN     HMM   Embedder  RAG     LLM
 ```
 
-### Caching-Strategie
+### 3-Layer-Caching-Strategie
 
-**Data Service als Gateway + Cache:**
-- Daten werden beim ersten Abruf von externen APIs geholt
-- Nach Abruf werden Daten in Redis gecacht
-- Nachfolgende Anfragen werden aus dem Cache bedient
+**Layer 1: Redis Cache (Hot Data)**
+- Schneller Zugriff auf häufig abgerufene Daten
 - TTL-basierte automatische Invalidierung
+- 512MB LRU-Eviction
+
+**Layer 2: TimescaleDB (Persistent)**
+- Persistente Speicherung aller historischen Daten
+- Hypertables für optimierte Zeitreihenspeicherung
+- Automatische Kompression und Retention
+
+**Layer 3: Externe APIs (Fresh Data)**
+- TwelveData, EasyInsight, Yahoo Finance
+- Nur bei Cache-Miss und DB-Miss abgerufen
+- Daten werden nach Abruf in Layer 1 & 2 gespeichert
 
 ### Cache-Kategorien und TTL
 

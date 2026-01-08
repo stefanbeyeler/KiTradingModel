@@ -45,6 +45,15 @@ from src.api.routes import (
 # These endpoints belong to the NHITS Service (Port 3002)
 from src.api.testing_routes import testing_router
 from src.services.training_data_cache_service import training_data_cache
+
+# TimescaleDB API routes
+try:
+    from src.services.data_app.api.db_routes import router as db_router
+    _db_routes_available = True
+except ImportError:
+    db_router = None
+    _db_routes_available = False
+    logger.warning("DB routes not available - asyncpg not installed")
 from src.service_registry import register_service
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import is_test_unhealthy, get_test_unhealthy_status
@@ -181,6 +190,16 @@ openapi_tags = [
 - **Contract Tests**: API-Schema-Validierung mit Pydantic
 - **Unit Tests**: Isolierte Tests ohne Service-Abhängigkeiten"""
     },
+    {
+        "name": "5. Database",
+        "description": """TimescaleDB persistente Datenspeicherung.
+
+**Funktionen:**
+- OHLCV-Daten aus TimescaleDB (alle Timeframes)
+- Technische Indikatoren (Momentum, Volatilität, Trend, etc.)
+- Data Freshness Tracking und Synchronisation
+- 3-Layer-Caching: Redis → TimescaleDB → External APIs"""
+    },
 ]
 
 # Create FastAPI application
@@ -232,7 +251,10 @@ app.include_router(general_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(symbol_router, prefix="/api/v1", tags=["2. Symbol Management"])
 app.include_router(strategy_router, prefix="/api/v1", tags=["3. Trading Strategies"])
 app.include_router(config_router, prefix="/api/v1", tags=["4. Config Export/Import"])
-app.include_router(twelvedata_router, prefix="/api/v1", tags=["5. Twelve Data API"])
+# Include DB router if available (requires asyncpg)
+if _db_routes_available and db_router:
+    app.include_router(db_router, prefix="/api/v1", tags=["5. Database"])
+app.include_router(twelvedata_router, prefix="/api/v1", tags=["6. Twelve Data API"])
 app.include_router(easyinsight_router, prefix="/api/v1", tags=["6. EasyInsight API"])
 app.include_router(yfinance_router, prefix="/api/v1", tags=["7. Yahoo Finance"])
 # Note: patterns_router has been moved to Candlestick Service (Port 3006)
@@ -394,7 +416,7 @@ async def shutdown_event():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    """Health check endpoint with Redis and TimescaleDB status."""
     service_name = "data"
 
     # Prüfe Test-Unhealthy-Status
@@ -413,13 +435,43 @@ async def health_check():
     except Exception:
         pass
 
+    # Get Redis cache status
+    redis_status = {"status": "unknown"}
+    try:
+        from src.services.cache_service import cache_service
+        redis_health = await cache_service.health_check()
+        redis_status = {
+            "status": redis_health.get("status", "unknown"),
+            "connected": redis_health.get("redis_connected", False),
+            "memory_used": redis_health.get("redis_memory_used", "N/A"),
+        }
+    except Exception as e:
+        redis_status = {"status": "error", "error": str(e)}
+
+    # Get TimescaleDB status
+    timescale_status = {"status": "disabled"}
+    try:
+        from src.services.timescaledb_service import timescaledb_service
+        if timescaledb_service.is_available:
+            db_health = await timescaledb_service.health_check()
+            timescale_status = {
+                "status": db_health.get("status", "unknown"),
+                "available": db_health.get("available", False),
+                "host": db_health.get("host", "N/A"),
+                "database": db_health.get("database", "N/A"),
+            }
+    except Exception as e:
+        timescale_status = {"status": "error", "error": str(e)}
+
     response = {
         "service": service_name,
         "status": "unhealthy" if is_unhealthy else "healthy",
         "version": VERSION,
         "easyinsight_api": settings.easyinsight_api_url,
         "sync_service_status": sync_status,
-        "prefetch_service_status": prefetch_status
+        "prefetch_service_status": prefetch_status,
+        "redis": redis_status,
+        "timescaledb": timescale_status,
     }
 
     # Test-Status hinzufügen wenn aktiv

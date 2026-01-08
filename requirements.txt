@@ -30,3 +30,6 @@ psutil>=5.9.0
 
 # Caching
 redis>=5.0.0
+
+# Database (TimescaleDB/PostgreSQL)
+asyncpg>=0.29.0

@@ -8,8 +8,12 @@ Dieser Service ist das einzige Gateway für den Zugriff auf externe Datenquellen
 Alle anderen Services (NHITS, RAG, LLM, Analysis) MÜSSEN diesen Service
 für externe Datenzugriffe verwenden.
 
+Datenfluss (3-Layer-Caching):
+1. Redis Cache → 2. TimescaleDB → 3. Externe APIs
+
 Caching:
 - Redis als primärer Cache (verteilt, persistent)
+- TimescaleDB als persistente Speicherung (wenn verfügbar)
 - In-Memory Fallback wenn Redis nicht verfügbar
 - Kategorisierte TTL-Werte für verschiedene Datentypen
 
@@ -37,6 +41,7 @@ from ..config.timeframes import (
     TIMEFRAME_TO_TWELVEDATA,
 )
 from .cache_service import cache_service, CacheCategory
+from .data_repository import data_repository
 
 
 class DataGatewayService:
@@ -67,16 +72,18 @@ class DataGatewayService:
         return self._http_client
 
     async def close(self):
-        """Close HTTP client and cache connection."""
+        """Close HTTP client, cache connection, and repository."""
         if self._http_client and not self._http_client.is_closed:
             await self._http_client.aclose()
             self._http_client = None
         await cache_service.disconnect()
+        await data_repository.close()
 
     async def _ensure_cache_connected(self):
-        """Ensure cache service is connected."""
+        """Ensure cache service and repository are connected."""
         if not self._cache_initialized:
             await cache_service.connect()
+            await data_repository.initialize()
             self._cache_initialized = True
 
     # ==================== Symbol Management ====================
@@ -163,15 +170,19 @@ class DataGatewayService:
         self,
         symbol: str,
         limit: int = 500,
-        timeframe: str = "H1"
+        timeframe: str = "H1",
+        force_refresh: bool = False,
     ) -> list[dict]:
         """
         Get historical OHLCV data for a symbol.
+
+        Uses 3-layer caching: Redis → TimescaleDB → External APIs
 
         Args:
             symbol: Trading symbol (e.g., BTCUSD)
             limit: Number of data points to fetch
             timeframe: Timeframe in beliebigem Format (wird automatisch normalisiert)
+            force_refresh: Skip cache and fetch fresh data
 
         Returns:
             List of OHLCV dictionaries with standardized timeframe field
@@ -182,13 +193,19 @@ class DataGatewayService:
         tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
         tf_str = tf.value  # Standard format: H1, D1, etc.
 
-        # Check Redis cache first (OHLCV TTL: 300s)
-        cache_params = {"limit": limit, "timeframe": tf_str}
-        cached = await cache_service.get(CacheCategory.OHLCV, symbol, params=cache_params)
-        if cached:
-            logger.debug(f"Returning {len(cached)} cached OHLCV points for {symbol} {tf_str}")
-            return cached
+        # 1. Try Repository (Redis + TimescaleDB)
+        data, source = await data_repository.get_ohlcv(
+            symbol=symbol,
+            timeframe=tf_str,
+            limit=limit,
+            force_refresh=force_refresh,
+        )
 
+        if data:
+            logger.debug(f"Repository returned {len(data)} rows from {source} for {symbol}/{tf_str}")
+            return data
+
+        # 2. Fetch from external API
         try:
             client = await self._get_client()
             # Use internal training-data endpoint
@@ -198,15 +215,20 @@ class DataGatewayService:
             )
             response.raise_for_status()
 
-            data = response.json()
-            rows = data.get('data', [])
+            result = response.json()
+            rows = result.get('data', [])
 
             # Standardize timeframe in response data
             rows = self._standardize_timeframe_in_data(rows, tf)
 
-            # Cache the result with standardized timeframe
+            # 3. Save to repository (TimescaleDB + Redis)
             if rows:
-                await cache_service.set(CacheCategory.OHLCV, rows, symbol, params=cache_params)
+                await data_repository.save_ohlcv(
+                    symbol=symbol,
+                    timeframe=tf_str,
+                    data=rows,
+                    source="easyinsight",
+                )
 
             logger.debug(f"Fetched {len(rows)} historical data points for {symbol} {tf_str}")
             return rows
@@ -250,10 +272,13 @@ class DataGatewayService:
         self,
         symbol: str,
         limit: int = 500,
-        timeframe: str = "H1"
+        timeframe: str = "H1",
+        force_refresh: bool = False,
     ) -> tuple[list[dict], str]:
         """
         Get historical data with TwelveData as primary source.
+
+        Data flow: 1. Repository (Cache+DB) → 2. TwelveData → 3. EasyInsight
 
         TwelveData is used exclusively for pattern analysis to ensure consistent
         OHLC data across all timeframes. Timeframe is automatically normalized
@@ -276,25 +301,46 @@ class DataGatewayService:
             symbol: Trading symbol
             limit: Number of data points
             timeframe: Timeframe in beliebigem Format (wird automatisch normalisiert)
+            force_refresh: Skip cache and fetch fresh data
 
         Returns:
-            Tuple of (data_list, source) where source is 'twelvedata' or 'easyinsight'
+            Tuple of (data_list, source) where source is 'cache', 'db', 'twelvedata' or 'easyinsight'
             Data contains standardized 'timeframe' field in format: M1, H1, D1, etc.
         """
+        await self._ensure_cache_connected()
+
         # Normalize timeframe to standard format
         tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
         tf_str = tf.value
 
-        # Use TwelveData as primary source for all timeframes (pattern analysis)
+        # 1. Try Repository (Redis + TimescaleDB)
+        if not force_refresh:
+            data, source = await data_repository.get_ohlcv(
+                symbol=symbol,
+                timeframe=tf_str,
+                limit=limit,
+            )
+            if data:
+                logger.debug(f"Repository returned {len(data)} rows from {source}")
+                return data, source
+
+        # 2. Use TwelveData as primary external source for all timeframes (pattern analysis)
         td_data = await self._get_twelvedata_candles(symbol, tf_str, limit)
         if td_data:
             # Ensure standardized timeframe in data
             td_data = self._standardize_timeframe_in_data(td_data, tf)
+            # Save to repository
+            await data_repository.save_ohlcv(
+                symbol=symbol,
+                timeframe=tf_str,
+                data=td_data,
+                source="twelvedata",
+            )
             return td_data, "twelvedata"
 
-        # Fallback to EasyInsight only if TwelveData fails
+        # 3. Fallback to EasyInsight only if TwelveData fails
         logger.warning(f"TwelveData failed for {symbol} {tf_str}, trying EasyInsight fallback")
-        data = await self.get_historical_data(symbol, limit, tf_str)
+        data = await self.get_historical_data(symbol, limit, tf_str, force_refresh=True)
         return data, "easyinsight"
 
     def _convert_twelvedata_to_easyinsight(

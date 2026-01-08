@@ -165,6 +165,50 @@ class Settings(BaseSettings):
         description="Combined datetime format for display (strftime format)"
     )
 
+    # TimescaleDB Configuration
+    timescale_host: str = Field(
+        default="10.1.19.102",
+        description="TimescaleDB server host"
+    )
+    timescale_port: int = Field(
+        default=5432,
+        description="TimescaleDB server port"
+    )
+    timescale_database: str = Field(
+        default="tradingdataservice",
+        description="TimescaleDB database name"
+    )
+    timescale_user: str = Field(
+        default="trading",
+        description="TimescaleDB username"
+    )
+    timescale_password: str = Field(
+        default="",
+        description="TimescaleDB password"
+    )
+    timescale_pool_min: int = Field(
+        default=5,
+        description="Minimum connections in TimescaleDB pool"
+    )
+    timescale_pool_max: int = Field(
+        default=20,
+        description="Maximum connections in TimescaleDB pool"
+    )
+    timescale_enabled: bool = Field(
+        default=True,
+        description="Enable TimescaleDB persistence layer"
+    )
+
+    @computed_field
+    @property
+    def timescale_dsn(self) -> str:
+        """Build TimescaleDB connection string."""
+        return (
+            f"postgresql://{self.timescale_user}:{self.timescale_password}"
+            f"@{self.timescale_host}:{self.timescale_port}"
+            f"/{self.timescale_database}"
+        )
+
     # NHITS Neural Forecasting Configuration
     nhits_enabled: bool = Field(
         default=True,

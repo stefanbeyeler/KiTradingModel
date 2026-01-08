@@ -143,6 +143,15 @@ services:
       - OLLAMA_HOST=http://host.docker.internal:11434
       - FAISS_PERSIST_DIRECTORY=/app/data/faiss
       - REDIS_URL=redis://trading-redis:6379
+      # TimescaleDB Configuration
+      - TIMESCALE_HOST=${TIMESCALE_HOST:-10.1.19.102}
+      - TIMESCALE_PORT=${TIMESCALE_PORT:-5432}
+      - TIMESCALE_DATABASE=${TIMESCALE_DATABASE:-tradingdataservice}
+      - TIMESCALE_USER=${TIMESCALE_USER:-trading}
+      - TIMESCALE_PASSWORD=${TIMESCALE_PASSWORD:-}
+      - TIMESCALE_POOL_MIN=${TIMESCALE_POOL_MIN:-5}
+      - TIMESCALE_POOL_MAX=${TIMESCALE_POOL_MAX:-20}
+      - TIMESCALE_ENABLED=${TIMESCALE_ENABLED:-true}
       # Build version info
       - BUILD_VERSION=${BUILD_VERSION:-}
       - BUILD_COMMIT=${BUILD_COMMIT:-}
