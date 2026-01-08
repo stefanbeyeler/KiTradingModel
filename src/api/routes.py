@@ -3593,47 +3593,48 @@ async def get_symbol_data_stats(symbol: str):
                         result["timeframes"]["H1"]["coverage_pct"] = round(min(100, (h1_count / range_hours) * 100), 1)
                         result["timeframes"]["D1"]["coverage_pct"] = round(min(100, (d1_count / (range_hours / 24)) * 100), 1)
 
-                    # Get sample of recent data points for visualization (all timeframes)
-                    result["sample_data"] = {
-                        "source": "EasyInsight",
-                        "M15": [
-                            {
-                                "datetime": row.get("snapshot_time"),
-                                "open": row.get("m15_open"),
-                                "high": row.get("m15_high"),
-                                "low": row.get("m15_low"),
-                                "close": row.get("m15_close"),
-                            }
-                            for row in data_list[:200]  # More points for M15
-                            if row.get("m15_close") is not None
-                        ],
-                        "H1": [
-                            {
-                                "datetime": row.get("snapshot_time"),
-                                "open": row.get("h1_open"),
-                                "high": row.get("h1_high"),
-                                "low": row.get("h1_low"),
-                                "close": row.get("h1_close"),
-                            }
-                            for row in data_list[:100]
-                            if row.get("h1_close") is not None
-                        ],
-                        "D1": [
-                            {
-                                "datetime": row.get("snapshot_time"),
-                                "open": row.get("d1_open"),
-                                "high": row.get("d1_high"),
-                                "low": row.get("d1_low"),
-                                "close": row.get("d1_close"),
-                            }
-                            for row in data_list[:100]
-                            if row.get("d1_close") is not None
-                        ],
-                    }
-
     except Exception as e:
         logger.error(f"Failed to get data stats for {symbol}: {e}")
         result["errors"].append(str(e))
+
+    # Fetch sample data from TwelveData for chart visualization
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            sample_data = {"source": "TwelveData", "M15": [], "H1": [], "D1": []}
+
+            # Fetch OHLCV for each timeframe from TwelveData
+            for tf, td_interval, limit in [("M15", "15min", 50), ("H1", "1h", 50), ("D1", "1day", 50)]:
+                try:
+                    td_response = await client.get(
+                        f"{settings.twelvedata_base_url}/time_series",
+                        params={
+                            "symbol": symbol,
+                            "interval": td_interval,
+                            "outputsize": limit,
+                            "apikey": settings.twelvedata_api_key,
+                        }
+                    )
+                    if td_response.status_code == 200:
+                        td_data = td_response.json()
+                        if "values" in td_data:
+                            sample_data[tf] = [
+                                {
+                                    "datetime": v.get("datetime"),
+                                    "open": float(v.get("open")) if v.get("open") else None,
+                                    "high": float(v.get("high")) if v.get("high") else None,
+                                    "low": float(v.get("low")) if v.get("low") else None,
+                                    "close": float(v.get("close")) if v.get("close") else None,
+                                }
+                                for v in td_data["values"]
+                                if v.get("close")
+                            ]
+                except Exception as e:
+                    logger.warning(f"Failed to fetch TwelveData {tf} for {symbol}: {e}")
+
+            result["sample_data"] = sample_data
+    except Exception as e:
+        logger.warning(f"Failed to fetch TwelveData sample data for {symbol}: {e}")
+        result["sample_data"] = {"source": "TwelveData", "M15": [], "H1": [], "D1": []}
 
     return result
 

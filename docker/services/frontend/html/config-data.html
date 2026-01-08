@@ -3881,28 +3881,32 @@
 
             if (candles.length < 2) return '<div style="text-align: center; color: #888; padding: 2rem;">Zu wenige Datenpunkte</div>';
 
-            // Calculate price range
+            // Calculate price range with 5% padding
             const allHighs = candles.map(c => c.high);
             const allLows = candles.map(c => c.low);
-            const minPrice = Math.min(...allLows);
-            const maxPrice = Math.max(...allHighs);
-            const range = maxPrice - minPrice || 1;
-            const priceDecimals = minPrice < 10 ? 5 : 2;
+            const dataMin = Math.min(...allLows);
+            const dataMax = Math.max(...allHighs);
+            const dataRange = dataMax - dataMin || 1;
+            const padding = dataRange * 0.05;
+            const minPrice = dataMin - padding;
+            const maxPrice = dataMax + padding;
+            const range = maxPrice - minPrice;
+            const priceDecimals = dataMin < 10 ? 5 : 2;
 
-            // SVG dimensions
-            const svgWidth = 800;
-            const svgHeight = 180;
-            const marginLeft = 70;
-            const marginRight = 15;
-            const marginTop = 10;
-            const marginBottom = 35;
+            // SVG dimensions - larger for better quality
+            const svgWidth = 900;
+            const svgHeight = 200;
+            const marginLeft = 75;
+            const marginRight = 20;
+            const marginTop = 15;
+            const marginBottom = 30;
             const chartWidth = svgWidth - marginLeft - marginRight;
             const chartHeight = svgHeight - marginTop - marginBottom;
 
-            // Candle dimensions
-            const candleSpacing = chartWidth / candles.length;
-            const candleWidth = Math.max(2, candleSpacing * 0.7);
-            const wickWidth = 1;
+            // Candle dimensions - fixed width with gaps
+            const totalCandleSpace = chartWidth / candles.length;
+            const candleWidth = Math.min(12, Math.max(4, totalCandleSpace * 0.75));
+            const candleGap = totalCandleSpace - candleWidth;
 
             // Price to Y coordinate
             const priceToY = (price) => marginTop + chartHeight - ((price - minPrice) / range * chartHeight);
@@ -3910,66 +3914,71 @@
             // Generate candles SVG
             let candlesSvg = '';
             candles.forEach((candle, i) => {
-                const x = marginLeft + (i + 0.5) * candleSpacing;
+                const x = marginLeft + (i * totalCandleSpace) + (totalCandleSpace / 2);
                 const isBullish = candle.close >= candle.open;
-                const color = isBullish ? '#4caf50' : '#f44336';
+                const bodyColor = isBullish ? '#26a69a' : '#ef5350';
+                const wickColor = isBullish ? '#26a69a' : '#ef5350';
 
-                // Wick (high to low)
+                // Wick (high to low) - thin line
                 const wickTop = priceToY(candle.high);
                 const wickBottom = priceToY(candle.low);
-                candlesSvg += `<line x1="${x}" y1="${wickTop}" x2="${x}" y2="${wickBottom}" stroke="${color}" stroke-width="${wickWidth}" />`;
+                candlesSvg += `<line x1="${x}" y1="${wickTop}" x2="${x}" y2="${wickBottom}" stroke="${wickColor}" stroke-width="1.5" />`;
 
                 // Body (open to close)
                 const bodyTop = priceToY(Math.max(candle.open, candle.close));
                 const bodyBottom = priceToY(Math.min(candle.open, candle.close));
-                const bodyHeight = Math.max(1, bodyBottom - bodyTop);
-                candlesSvg += `<rect x="${x - candleWidth/2}" y="${bodyTop}" width="${candleWidth}" height="${bodyHeight}" fill="${color}" />`;
+                const bodyHeight = Math.max(2, bodyBottom - bodyTop);
+
+                // Bullish: filled, Bearish: filled with different color
+                candlesSvg += `<rect x="${x - candleWidth/2}" y="${bodyTop}" width="${candleWidth}" height="${bodyHeight}" fill="${bodyColor}" stroke="${bodyColor}" stroke-width="1" rx="1" />`;
             });
 
-            // Y-axis labels (price)
-            const priceSteps = 5;
+            // Y-axis labels (price) - 4 steps for cleaner look
+            const priceSteps = 4;
             let yAxisLabels = '';
             for (let i = 0; i <= priceSteps; i++) {
                 const price = minPrice + (range * i / priceSteps);
                 const y = priceToY(price);
-                yAxisLabels += `<text x="${marginLeft - 5}" y="${y + 4}" text-anchor="end" fill="#888" font-size="10">${price.toFixed(priceDecimals)}</text>`;
-                yAxisLabels += `<line x1="${marginLeft}" y1="${y}" x2="${svgWidth - marginRight}" y2="${y}" stroke="#333" stroke-width="0.5" stroke-dasharray="2,2" />`;
+                yAxisLabels += `<text x="${marginLeft - 8}" y="${y + 4}" text-anchor="end" fill="#9e9e9e" font-size="11" font-family="monospace">${price.toFixed(priceDecimals)}</text>`;
+                yAxisLabels += `<line x1="${marginLeft}" y1="${y}" x2="${svgWidth - marginRight}" y2="${y}" stroke="#333" stroke-width="0.5" opacity="0.5" />`;
             }
 
-            // X-axis labels (datetime) - show ~5-7 labels
+            // X-axis labels (datetime) - show 5 labels max
             let xAxisLabels = '';
-            const labelInterval = Math.ceil(candles.length / 6);
-            candles.forEach((candle, i) => {
-                if (i % labelInterval === 0 || i === candles.length - 1) {
-                    const x = marginLeft + (i + 0.5) * candleSpacing;
-                    let label = '';
-                    if (candle.datetime) {
-                        // Parse datetime and format nicely
-                        const dt = candle.datetime.includes('T') ? candle.datetime : candle.datetime.replace(' ', 'T');
-                        const date = new Date(dt);
-                        if (!isNaN(date.getTime())) {
-                            if (timeframe === 'D1') {
-                                label = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-                            } else {
-                                label = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                            }
+            const labelCount = Math.min(5, candles.length);
+            const labelInterval = Math.floor(candles.length / labelCount);
+            for (let i = 0; i < candles.length; i += labelInterval) {
+                const candle = candles[i];
+                const x = marginLeft + (i * totalCandleSpace) + (totalCandleSpace / 2);
+                let label = '';
+                if (candle.datetime) {
+                    // Parse datetime - TwelveData format is "YYYY-MM-DD HH:MM:SS"
+                    const dt = candle.datetime.includes('T') ? candle.datetime : candle.datetime.replace(' ', 'T');
+                    const date = new Date(dt);
+                    if (!isNaN(date.getTime())) {
+                        if (timeframe === 'D1') {
+                            label = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+                        } else {
+                            label = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
                         }
                     }
-                    if (label) {
-                        xAxisLabels += `<text x="${x}" y="${svgHeight - 8}" text-anchor="middle" fill="#888" font-size="10">${label}</text>`;
-                    }
                 }
-            });
+                if (label) {
+                    xAxisLabels += `<text x="${x}" y="${svgHeight - 8}" text-anchor="middle" fill="#9e9e9e" font-size="10">${label}</text>`;
+                }
+            }
 
             // Trend indicator
             const firstClose = candles[0].close;
             const lastClose = candles[candles.length - 1].close;
             const trendPct = ((lastClose - firstClose) / firstClose * 100).toFixed(2);
-            const trendColor = lastClose >= firstClose ? '#4caf50' : '#f44336';
+            const trendColor = lastClose >= firstClose ? '#26a69a' : '#ef5350';
             const trendSymbol = lastClose >= firstClose ? '▲' : '▼';
 
             return `
                 <svg viewBox="0 0 ${svgWidth} ${svgHeight}" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%;">
+                    <!-- Background -->
+                    <rect x="${marginLeft}" y="${marginTop}" width="${chartWidth}" height="${chartHeight}" fill="#1a1a2e" rx="4" />
                     <!-- Grid lines -->
                     ${yAxisLabels}
                     <!-- Candles -->
@@ -3977,9 +3986,9 @@
                     <!-- X-axis labels -->
                     ${xAxisLabels}
                     <!-- Chart border -->
-                    <rect x="${marginLeft}" y="${marginTop}" width="${chartWidth}" height="${chartHeight}" fill="none" stroke="#444" stroke-width="1" />
+                    <rect x="${marginLeft}" y="${marginTop}" width="${chartWidth}" height="${chartHeight}" fill="none" stroke="#333" stroke-width="1" rx="4" />
                 </svg>
-                <div style="position: absolute; top: 5px; right: 10px; font-size: 0.8rem; color: ${trendColor}; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: 4px;">
+                <div style="position: absolute; top: 8px; right: 15px; font-size: 0.85rem; color: ${trendColor}; background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 4px; font-weight: 500;">
                     ${trendSymbol} ${trendPct}%
                 </div>
             `;
