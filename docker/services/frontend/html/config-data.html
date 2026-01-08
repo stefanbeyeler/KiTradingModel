@@ -3808,11 +3808,11 @@
                             </button>
                         </div>
                     </div>
-                    <div id="mini-chart-container" style="height: 120px; position: relative; overflow: hidden;">
-                        ${renderMiniChart(data.sample_data.M15, 'M15')}
+                    <div id="mini-chart-container" style="height: 200px; position: relative; overflow: hidden;">
+                        ${renderCandlestickChart(data.sample_data.M15, 'M15')}
                     </div>
                     <div id="chart-info" style="font-size: 0.75rem; color: #888; margin-top: 0.5rem; text-align: center;">
-                        Zeigt die letzten ${data.sample_data.M15?.length || 0} M15-Schlusskurse
+                        Zeigt die letzten ${data.sample_data.M15?.length || 0} M15-Kerzen
                     </div>
                 </div>
                 ` : ''}
@@ -3849,77 +3849,133 @@
             const info = document.getElementById('chart-info');
 
             if (window.currentChartData && window.currentChartData[tf]) {
-                container.innerHTML = renderMiniChart(window.currentChartData[tf], tf);
+                container.innerHTML = renderCandlestickChart(window.currentChartData[tf], tf);
                 const count = window.currentChartData[tf].length;
-                const tfLabels = { 'M15': '15-Minuten', 'H1': 'Stunden', 'D1': 'Tages' };
-                info.textContent = `Zeigt die letzten ${count} ${tfLabels[tf]}-Schlusskurse`;
+                const tfLabels = { 'M15': 'M15', 'H1': 'H1', 'D1': 'D1' };
+                info.textContent = `Zeigt die letzten ${count} ${tfLabels[tf]}-Kerzen`;
             } else {
                 container.innerHTML = '<div style="text-align: center; color: #888; padding: 2rem;">Keine Daten für diesen Zeitrahmen verfügbar</div>';
                 info.textContent = '';
             }
         }
 
-        function renderMiniChart(sampleData, timeframe = 'M15') {
+        function renderCandlestickChart(sampleData, timeframe = 'M15') {
             if (!sampleData || sampleData.length === 0) return '<div style="text-align: center; color: #888; padding: 2rem;">Keine Daten verfügbar</div>';
 
-            // Get close prices
-            const prices = sampleData
-                .filter(d => d.close !== null && d.close !== undefined)
-                .map(d => parseFloat(d.close))
-                .reverse(); // Oldest first
+            // Filter valid OHLC data and reverse to oldest first
+            const candles = sampleData
+                .filter(d => d.open !== null && d.high !== null && d.low !== null && d.close !== null)
+                .map(d => ({
+                    open: parseFloat(d.open),
+                    high: parseFloat(d.high),
+                    low: parseFloat(d.low),
+                    close: parseFloat(d.close),
+                    datetime: d.datetime || d.timestamp || ''
+                }))
+                .reverse();
 
-            if (prices.length < 2) return '<div style="text-align: center; color: #888; padding: 2rem;">Zu wenige Datenpunkte</div>';
+            if (candles.length < 2) return '<div style="text-align: center; color: #888; padding: 2rem;">Zu wenige Datenpunkte</div>';
 
-            const minPrice = Math.min(...prices);
-            const maxPrice = Math.max(...prices);
+            // Calculate price range
+            const allHighs = candles.map(c => c.high);
+            const allLows = candles.map(c => c.low);
+            const minPrice = Math.min(...allLows);
+            const maxPrice = Math.max(...allHighs);
             const range = maxPrice - minPrice || 1;
-            const width = 100 / (prices.length - 1);
+            const priceDecimals = minPrice < 10 ? 5 : 2;
 
-            // Create SVG path
-            let path = '';
-            let areaPath = `M 0,100 `;
-            prices.forEach((price, i) => {
-                const x = (i * width);
-                const y = 100 - ((price - minPrice) / range * 80 + 10); // Leave margins
-                if (i === 0) {
-                    path = `M ${x},${y}`;
-                    areaPath += `L ${x},${y} `;
-                } else {
-                    path += ` L ${x},${y}`;
-                    areaPath += `L ${x},${y} `;
+            // SVG dimensions
+            const svgWidth = 800;
+            const svgHeight = 180;
+            const marginLeft = 70;
+            const marginRight = 15;
+            const marginTop = 10;
+            const marginBottom = 35;
+            const chartWidth = svgWidth - marginLeft - marginRight;
+            const chartHeight = svgHeight - marginTop - marginBottom;
+
+            // Candle dimensions
+            const candleSpacing = chartWidth / candles.length;
+            const candleWidth = Math.max(2, candleSpacing * 0.7);
+            const wickWidth = 1;
+
+            // Price to Y coordinate
+            const priceToY = (price) => marginTop + chartHeight - ((price - minPrice) / range * chartHeight);
+
+            // Generate candles SVG
+            let candlesSvg = '';
+            candles.forEach((candle, i) => {
+                const x = marginLeft + (i + 0.5) * candleSpacing;
+                const isBullish = candle.close >= candle.open;
+                const color = isBullish ? '#4caf50' : '#f44336';
+
+                // Wick (high to low)
+                const wickTop = priceToY(candle.high);
+                const wickBottom = priceToY(candle.low);
+                candlesSvg += `<line x1="${x}" y1="${wickTop}" x2="${x}" y2="${wickBottom}" stroke="${color}" stroke-width="${wickWidth}" />`;
+
+                // Body (open to close)
+                const bodyTop = priceToY(Math.max(candle.open, candle.close));
+                const bodyBottom = priceToY(Math.min(candle.open, candle.close));
+                const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+                candlesSvg += `<rect x="${x - candleWidth/2}" y="${bodyTop}" width="${candleWidth}" height="${bodyHeight}" fill="${color}" />`;
+            });
+
+            // Y-axis labels (price)
+            const priceSteps = 5;
+            let yAxisLabels = '';
+            for (let i = 0; i <= priceSteps; i++) {
+                const price = minPrice + (range * i / priceSteps);
+                const y = priceToY(price);
+                yAxisLabels += `<text x="${marginLeft - 5}" y="${y + 4}" text-anchor="end" fill="#888" font-size="10">${price.toFixed(priceDecimals)}</text>`;
+                yAxisLabels += `<line x1="${marginLeft}" y1="${y}" x2="${svgWidth - marginRight}" y2="${y}" stroke="#333" stroke-width="0.5" stroke-dasharray="2,2" />`;
+            }
+
+            // X-axis labels (datetime) - show ~5-7 labels
+            let xAxisLabels = '';
+            const labelInterval = Math.ceil(candles.length / 6);
+            candles.forEach((candle, i) => {
+                if (i % labelInterval === 0 || i === candles.length - 1) {
+                    const x = marginLeft + (i + 0.5) * candleSpacing;
+                    let label = '';
+                    if (candle.datetime) {
+                        // Parse datetime and format nicely
+                        const dt = candle.datetime.includes('T') ? candle.datetime : candle.datetime.replace(' ', 'T');
+                        const date = new Date(dt);
+                        if (!isNaN(date.getTime())) {
+                            if (timeframe === 'D1') {
+                                label = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+                            } else {
+                                label = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                            }
+                        }
+                    }
+                    if (label) {
+                        xAxisLabels += `<text x="${x}" y="${svgHeight - 8}" text-anchor="middle" fill="#888" font-size="10">${label}</text>`;
+                    }
                 }
             });
-            areaPath += `L 100,100 Z`;
 
-            // Determine color based on trend
-            const trendColor = prices[prices.length - 1] >= prices[0] ? '#4caf50' : '#f44336';
-
-            // Timeframe-specific colors
-            const tfColors = { 'M15': '#64c8ff', 'H1': '#4caf50', 'D1': '#9c27b0' };
-            const lineColor = tfColors[timeframe] || trendColor;
-
-            // Generate unique gradient ID to avoid conflicts
-            const gradientId = `chartGradient_${timeframe}_${Date.now()}`;
+            // Trend indicator
+            const firstClose = candles[0].close;
+            const lastClose = candles[candles.length - 1].close;
+            const trendPct = ((lastClose - firstClose) / firstClose * 100).toFixed(2);
+            const trendColor = lastClose >= firstClose ? '#4caf50' : '#f44336';
+            const trendSymbol = lastClose >= firstClose ? '▲' : '▼';
 
             return `
-                <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width: 100%; height: 100%;">
-                    <defs>
-                        <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" style="stop-color:${lineColor};stop-opacity:0.3" />
-                            <stop offset="100%" style="stop-color:${lineColor};stop-opacity:0" />
-                        </linearGradient>
-                    </defs>
-                    <path d="${areaPath}" fill="url(#${gradientId})" />
-                    <path d="${path}" fill="none" stroke="${lineColor}" stroke-width="0.5" />
+                <svg viewBox="0 0 ${svgWidth} ${svgHeight}" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%;">
+                    <!-- Grid lines -->
+                    ${yAxisLabels}
+                    <!-- Candles -->
+                    ${candlesSvg}
+                    <!-- X-axis labels -->
+                    ${xAxisLabels}
+                    <!-- Chart border -->
+                    <rect x="${marginLeft}" y="${marginTop}" width="${chartWidth}" height="${chartHeight}" fill="none" stroke="#444" stroke-width="1" />
                 </svg>
-                <div style="position: absolute; top: 5px; left: 10px; font-size: 0.75rem; color: #888;">
-                    High: ${maxPrice.toFixed(maxPrice < 10 ? 5 : 2)}
-                </div>
-                <div style="position: absolute; bottom: 5px; left: 10px; font-size: 0.75rem; color: #888;">
-                    Low: ${minPrice.toFixed(minPrice < 10 ? 5 : 2)}
-                </div>
-                <div style="position: absolute; top: 5px; right: 10px; font-size: 0.75rem; color: ${trendColor};">
-                    ${prices[prices.length - 1] >= prices[0] ? '▲' : '▼'} ${((prices[prices.length - 1] - prices[0]) / prices[0] * 100).toFixed(2)}%
+                <div style="position: absolute; top: 5px; right: 10px; font-size: 0.8rem; color: ${trendColor}; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: 4px;">
+                    ${trendSymbol} ${trendPct}%
                 </div>
             `;
         }
