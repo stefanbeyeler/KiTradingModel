@@ -2068,13 +2068,13 @@
 
     <!-- Live Data Modal -->
     <div class="modal-overlay" id="live-data-modal">
-        <div class="modal" style="max-width: 1100px; max-height: 90vh;">
-            <div class="modal-header">
+        <div class="modal" style="max-width: 1100px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="flex-shrink: 0;">
                 <h3 class="modal-title" id="live-data-modal-title">Live-Daten</h3>
                 <button class="modal-close" onclick="closeLiveDataModal()">&times;</button>
             </div>
-            <div style="padding: 1rem;">
-                <div id="live-data-content">
+            <div style="padding: 1rem; flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+                <div id="live-data-content" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
                     <div class="loading"><div class="spinner"></div><br>Lade Live-Daten...</div>
                 </div>
             </div>
@@ -4017,33 +4017,36 @@
             }
 
             let html = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <span style="color: #888;">Abgerufen: ${new Date(data.timestamp).toLocaleString('de-DE')}</span>
-                    <button class="btn btn-secondary btn-sm" onclick="showLiveData('${data.symbol}')">&#8635; Aktualisieren</button>
-                </div>
-                ${errors}
+                <!-- Fixed Header Section -->
+                <div style="flex-shrink: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <span style="color: #888;">Abgerufen: ${new Date(data.timestamp).toLocaleString('de-DE')}</span>
+                        <button class="btn btn-secondary btn-sm" onclick="showLiveData('${data.symbol}')">&#8635; Aktualisieren</button>
+                    </div>
+                    ${errors}
 
-                <!-- Timestamp Info -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                    <div style="background: rgba(33, 150, 243, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
-                        <div style="color: #2196f3; font-weight: bold; margin-bottom: 0.25rem;">&#128202; EasyInsight${ei?.symbol_used ? ` (${ei.symbol_used})` : ''}</div>
-                        <div style="color: #888; font-size: 0.8rem;">${ei?.snapshot_time_display || 'Keine Daten'}</div>
-                    </div>
-                    <div style="background: rgba(156, 39, 176, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
-                        <div style="color: #9c27b0; font-weight: bold; margin-bottom: 0.25rem;">&#128200; TwelveData${td?.symbol_used ? ` (${td.symbol_used})` : ''}</div>
-                        <div style="color: #888; font-size: 0.8rem;">${td?.indicator_datetime_display || td?.datetime_display || 'Keine Daten'}</div>
-                    </div>
-                    <div style="background: rgba(255, 152, 0, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
-                        <div style="color: #ff9800; font-weight: bold; margin-bottom: 0.25rem;">&#128200; Yahoo Finance${yf?.symbol_used ? ` (${yf.symbol_used})` : ''}</div>
-                        <div style="color: #888; font-size: 0.8rem;">${yf?.datetime_display || 'Keine Daten'}</div>
+                    <!-- Timestamp Info -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="background: rgba(33, 150, 243, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                            <div style="color: #2196f3; font-weight: bold; margin-bottom: 0.25rem;">&#128202; EasyInsight${ei?.symbol_used ? ` (${ei.symbol_used})` : ''}</div>
+                            <div style="color: #888; font-size: 0.8rem;">${ei?.snapshot_time_display || 'Keine Daten'}</div>
+                        </div>
+                        <div style="background: rgba(156, 39, 176, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                            <div style="color: #9c27b0; font-weight: bold; margin-bottom: 0.25rem;">&#128200; TwelveData${td?.symbol_used ? ` (${td.symbol_used})` : ''}</div>
+                            <div style="color: #888; font-size: 0.8rem;">${td?.indicator_datetime_display || td?.datetime_display || 'Keine Daten'}</div>
+                        </div>
+                        <div style="background: rgba(255, 152, 0, 0.1); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                            <div style="color: #ff9800; font-weight: bold; margin-bottom: 0.25rem;">&#128200; Yahoo Finance${yf?.symbol_used ? ` (${yf.symbol_used})` : ''}</div>
+                            <div style="color: #888; font-size: 0.8rem;">${yf?.datetime_display || 'Keine Daten'}</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Comparison Table -->
-                <div style="background: rgba(30,30,30,0.5); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+                <!-- Scrollable Table Section -->
+                <div style="flex: 1; overflow-y: auto; background: rgba(30,30,30,0.5); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
                     <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-                        <thead>
-                            <tr style="background: rgba(255,255,255,0.05);">
+                        <thead style="position: sticky; top: 0; z-index: 1;">
+                            <tr style="background: rgba(40,40,40,1);">
                                 <th style="text-align: left; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); width: 20%;">Indikator</th>
                                 <th style="text-align: right; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); color: #2196f3; width: 22%;">EasyInsight</th>
                                 <th style="text-align: right; padding: 12px; border-bottom: 2px solid rgba(255,255,255,0.1); color: #9c27b0; width: 22%;">TwelveData</th>
@@ -4142,8 +4145,8 @@
                     </table>
                 </div>
 
-                <!-- Legend -->
-                <div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; font-size: 0.75rem; color: #888;">
+                <!-- Fixed Legend Footer -->
+                <div style="flex-shrink: 0; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1); display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; font-size: 0.75rem; color: #888;">
                     <span><span style="color: #2196f3;">&#9632;</span> EasyInsight</span>
                     <span><span style="color: #9c27b0;">&#9632;</span> TwelveData</span>
                     <span><span style="color: #ff9800;">&#9632;</span> Yahoo Finance</span>
