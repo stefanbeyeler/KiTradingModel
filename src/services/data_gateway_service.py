@@ -532,6 +532,56 @@ class DataGatewayService:
             logger.error(f"Failed to fetch all latest market data: {e}")
             return []
 
+    async def get_easyinsight_historical(
+        self,
+        symbol: str,
+        timeframe: str = "H1",
+        limit: int = 500,
+    ) -> list[dict]:
+        """
+        Get historical data with indicators from EasyInsight API.
+
+        EasyInsight provides OHLCV data along with pre-calculated indicators:
+        - rsi, macd_main, macd_signal, cci
+        - adx_main, adx_plusdi, adx_minusdi
+        - atr_d1, atr_pct_d1
+        - bb_base, bb_lower, bb_upper
+        - sto_main, sto_signal
+        - ichimoku_* (tenkan, kijun, senkoua, senkoub, chikou)
+        - ma_10, strength_1d, strength_1w, strength_4h
+
+        Args:
+            symbol: Trading symbol (e.g., BTCUSD)
+            timeframe: Timeframe (default H1 - EasyInsight provides best indicator data for H1)
+            limit: Number of data points
+
+        Returns:
+            List of OHLCV dictionaries with indicator data
+        """
+        try:
+            client = await self._get_client()
+            response = await client.get(
+                f"{self._easyinsight_url}/symbol-data-full",
+                params={
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "limit": limit,
+                }
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            rows = data.get('data', [])
+
+            if rows:
+                logger.debug(f"Fetched {len(rows)} EasyInsight rows with indicators for {symbol}/{timeframe}")
+
+            return rows
+
+        except Exception as e:
+            logger.error(f"Failed to fetch EasyInsight historical data for {symbol}: {e}")
+            return []
+
     # ==================== API Health ====================
 
     async def check_easyinsight_health(self) -> bool:

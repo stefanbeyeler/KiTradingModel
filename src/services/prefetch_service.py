@@ -659,11 +659,11 @@ class PrefetchService:
         cache_symbol = symbol.upper().replace("/", "")
 
         try:
-            from .easyinsight_service import easyinsight_service
+            from .data_gateway_service import data_gateway
             from .data_repository import data_repository
 
-            # EasyInsight OHLCV mit Indikatoren abrufen
-            data = await easyinsight_service.get_ohlcv(
+            # EasyInsight OHLCV mit Indikatoren abrufen über Data Gateway
+            data = await data_gateway.get_easyinsight_historical(
                 symbol=symbol,
                 timeframe="H1",
                 limit=self._config.easyinsight_limit

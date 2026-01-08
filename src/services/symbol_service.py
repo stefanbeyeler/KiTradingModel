@@ -33,7 +33,7 @@ class SymbolService:
 
     def __init__(self):
         self._pool: Optional[asyncpg.Pool] = None
-        self._db_url = f"postgresql://postgres:postgres@{settings.timescaledb_host}:{settings.timescaledb_port}/tradingdataservice"
+        self._db_url = f"postgresql://postgres:postgres@{settings.timescale_host}:{settings.timescale_port}/tradingdataservice"
         self._cache: dict[str, ManagedSymbol] = {}
         self._cache_loaded = False
         # Fallback to JSON file if DB not available
@@ -49,7 +49,7 @@ class SymbolService:
                     max_size=5,
                     command_timeout=30,
                 )
-                logger.info(f"Connected to TimescaleDB: {settings.timescaledb_host}")
+                logger.info(f"Connected to TimescaleDB: {settings.timescale_host}")
             except Exception as e:
                 logger.warning(f"Failed to connect to TimescaleDB: {e}")
                 return None
