@@ -2502,6 +2502,41 @@
             }
         }
 
+        // Sync Watchdog panel dots directly from cached Watchdog status
+        // This ensures dots reflect Watchdog's authoritative status, not individual service timeouts
+        function syncWatchdogPanelDotsFromCache() {
+            const services = ['data', 'nhits', 'tcn', 'hmm', 'embedder', 'candlestick', 'rag', 'llm'];
+            const dotMapping = {
+                'data': 'wp-dot-data',
+                'nhits': 'wp-dot-nhits',
+                'tcn': 'wp-dot-tcn',
+                'hmm': 'wp-dot-hmm',
+                'embedder': 'wp-dot-embedder',
+                'candlestick': 'wp-dot-candlestick',
+                'rag': 'wp-dot-rag',
+                'llm': 'wp-dot-llm'
+            };
+
+            for (const service of services) {
+                const dotId = dotMapping[service];
+                const dotEl = document.getElementById(dotId);
+                const serviceData = watchdogServicesStatus[service];
+
+                if (dotEl) {
+                    dotEl.classList.remove('loading', 'healthy', 'unhealthy');
+                    if (serviceData && serviceData.state === 'HEALTHY') {
+                        dotEl.classList.add('healthy');
+                    } else if (serviceData && serviceData.state === 'DEGRADED') {
+                        dotEl.classList.add('unhealthy');
+                    } else if (serviceData) {
+                        dotEl.classList.add('unhealthy');
+                    } else {
+                        dotEl.classList.add('loading');
+                    }
+                }
+            }
+        }
+
         async function updateEasyInsightInfo() {
             // Status already set by updateEasyInsightStatusFromWatchdog()
             // This function only fetches additional details (symbols count, latency)
@@ -2735,6 +2770,10 @@
                 updateSystemMetrics(),
                 updateStorageMetrics()
             ]);
+
+            // Final sync: Ensure Watchdog panel dots match cached Watchdog status
+            // This corrects any inconsistencies from parallel updates or timeouts
+            syncWatchdogPanelDotsFromCache();
 
             document.getElementById('last-update').textContent = `Update: ${new Date().toLocaleTimeString('de-DE')}`;
         }
