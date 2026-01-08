@@ -332,8 +332,9 @@ class TCNPatternHistoryService:
         if min_confidence > 0:
             filtered = [e for e in filtered if e.confidence >= min_confidence]
 
-        # Sort by detected_at (newest first)
-        filtered.sort(key=lambda x: x.detected_at, reverse=True)
+        # Sort by pattern_end_time (newest pattern end dates first)
+        # This shows patterns with the most recent "Bis Datum" at the top
+        filtered.sort(key=lambda x: x.pattern_end_time or x.detected_at, reverse=True)
 
         return filtered[:limit]
 
@@ -348,9 +349,12 @@ class TCNPatternHistoryService:
             if len(result[entry.symbol]) < limit_per_symbol:
                 result[entry.symbol].append(entry.to_dict())
 
-        # Sort each symbol's patterns by detected_at
+        # Sort each symbol's patterns by pattern_end_time (newest first)
         for symbol in result:
-            result[symbol].sort(key=lambda x: x["detected_at"], reverse=True)
+            result[symbol].sort(
+                key=lambda x: x.get("pattern_end_time") or x.get("detected_at", ""),
+                reverse=True
+            )
 
         return result
 
