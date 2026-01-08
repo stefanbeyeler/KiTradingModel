@@ -39,8 +39,12 @@ class PrefetchConfig:
     def __init__(
         self,
         enabled: bool = True,
-        # Welche Timeframes sollen pre-fetched werden
+        # Welche Timeframes sollen pre-fetched werden (langsam, alle 10 Min)
         timeframes: list[str] = None,
+        # Schnelle Timeframes (M1-M30, jede Minute)
+        fast_timeframes: list[str] = None,
+        # Intervall für schnelle Timeframes (Sekunden)
+        fast_refresh_interval: int = 60,
         # Maximale Anzahl Symbole für Pre-Fetch
         max_symbols: int = 50,
         # Nur Favoriten pre-fetchen
@@ -48,7 +52,7 @@ class PrefetchConfig:
         # Intervall für periodisches Pre-Fetching (Sekunden)
         refresh_interval: int = 300,
         # Output-Size für OHLCV-Daten
-        ohlcv_limit: int = 500,
+        ohlcv_limit: int = 5000,
         # Verzögerung zwischen API-Aufrufen (Rate Limiting)
         api_delay: float = 0.2,
         # Welche Indikatoren sollen pre-fetched werden (leer = keine)
@@ -60,6 +64,8 @@ class PrefetchConfig:
     ):
         self.enabled = enabled
         self.timeframes = timeframes or ["1h", "4h", "1day"]
+        self.fast_timeframes = fast_timeframes or ["1min", "5min", "15min", "30min"]
+        self.fast_refresh_interval = fast_refresh_interval
         self.max_symbols = max_symbols
         self.favorites_only = favorites_only
         self.refresh_interval = refresh_interval
@@ -91,14 +97,19 @@ class PrefetchService:
         self._config = PrefetchConfig()
         self._running = False
         self._task: Optional[asyncio.Task] = None
+        self._fast_task: Optional[asyncio.Task] = None  # Task für schnelle Timeframes
         self._stats = {
             "last_run": None,
+            "last_fast_run": None,
             "symbols_fetched": 0,
             "timeframes_fetched": 0,
+            "fast_timeframes_fetched": 0,
             "indicators_fetched": 0,
             "errors": 0,
             "total_runs": 0,
+            "total_fast_runs": 0,
             "cache_entries_created": 0,
+            "fast_cache_entries_created": 0,
             "indicator_entries_created": 0,
         }
         self._symbols_cache: list[dict] = []
@@ -136,6 +147,8 @@ class PrefetchService:
             config_dict = {
                 "enabled": self._config.enabled,
                 "timeframes": self._config.timeframes,
+                "fast_timeframes": self._config.fast_timeframes,
+                "fast_refresh_interval": self._config.fast_refresh_interval,
                 "max_symbols": self._config.max_symbols,
                 "favorites_only": self._config.favorites_only,
                 "refresh_interval": self._config.refresh_interval,
@@ -180,14 +193,19 @@ class PrefetchService:
         self._running = True
         indicators_info = f", Indikatoren: {self._config.indicators}" if self._config.indicators else ""
         db_sync_info = " (DB-Sync: aktiviert)" if self._config.db_sync_enabled else " (DB-Sync: deaktiviert)"
+        fast_tf_info = f", Fast-TFs: {self._config.fast_timeframes} @ {self._config.fast_refresh_interval}s" if self._config.fast_timeframes else ""
         logger.info(
             f"PrefetchService gestartet - Timeframes: {self._config.timeframes}, "
-            f"Intervall: {self._config.refresh_interval}s{indicators_info}{db_sync_info}"
+            f"Intervall: {self._config.refresh_interval}s{fast_tf_info}{indicators_info}{db_sync_info}"
         )
 
         # Initial Pre-Fetch und periodisches Pre-Fetch als Background-Task
         # Damit der Application Startup nicht blockiert wird
         self._task = asyncio.create_task(self._initial_and_periodic_prefetch())
+
+        # Schneller Task für M1-M30 Timeframes (jede Minute)
+        if self._config.fast_timeframes:
+            self._fast_task = asyncio.create_task(self._fast_periodic_prefetch())
 
     async def _initial_and_periodic_prefetch(self) -> None:
         """Initial Pre-Fetch und dann periodisches Pre-Fetching im Hintergrund."""
@@ -209,6 +227,12 @@ class PrefetchService:
                 await self._task
             except asyncio.CancelledError:
                 pass
+        if self._fast_task:
+            self._fast_task.cancel()
+            try:
+                await self._fast_task
+            except asyncio.CancelledError:
+                pass
         logger.info("PrefetchService gestoppt")
 
     async def _periodic_prefetch(self) -> None:
@@ -223,6 +247,69 @@ class PrefetchService:
             except Exception as e:
                 logger.error(f"Fehler im periodischen Pre-Fetch: {e}")
                 self._stats["errors"] += 1
+
+    async def _fast_periodic_prefetch(self) -> None:
+        """Schnelles periodisches Pre-Fetching für M1-M30 Timeframes (jede Minute)."""
+        # Initial kurz warten, damit der normale Prefetch zuerst startet
+        await asyncio.sleep(5)
+
+        while self._running:
+            try:
+                if self._running and self._config.fast_timeframes:
+                    await self._run_fast_prefetch()
+                await asyncio.sleep(self._config.fast_refresh_interval)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Fehler im schnellen Pre-Fetch: {e}")
+                self._stats["errors"] += 1
+
+    async def _run_fast_prefetch(self) -> None:
+        """Führt einen schnellen Pre-Fetch-Durchlauf für M1-M30 durch."""
+        start_time = datetime.now(timezone.utc)
+        self._stats["total_fast_runs"] += 1
+
+        try:
+            # Symbole laden (aus Cache)
+            symbols = await self._get_symbols()
+            if not symbols:
+                return
+
+            # Nach Priorität sortieren und limitieren
+            symbols = self._prioritize_symbols(symbols)
+            symbols = symbols[:self._config.max_symbols]
+
+            fetched_count = 0
+            for symbol_data in symbols:
+                symbol = symbol_data.get("symbol") or symbol_data.get("name", "")
+                if not symbol:
+                    continue
+
+                for timeframe in self._config.fast_timeframes:
+                    try:
+                        success = await self._prefetch_ohlcv(symbol, timeframe)
+                        if success:
+                            fetched_count += 1
+                        # Kürzeres Rate Limiting für schnelle Timeframes
+                        await asyncio.sleep(self._config.api_delay / 2)
+                    except Exception as e:
+                        logger.error(f"Fast Pre-Fetch Fehler für {symbol}/{timeframe}: {e}")
+                        self._stats["errors"] += 1
+
+            self._stats["last_fast_run"] = start_time.isoformat()
+            self._stats["fast_timeframes_fetched"] = len(self._config.fast_timeframes)
+            self._stats["fast_cache_entries_created"] = fetched_count
+
+            if fetched_count > 0:
+                duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+                logger.info(
+                    f"Fast Pre-Fetch abgeschlossen: {fetched_count} OHLCV für "
+                    f"{self._config.fast_timeframes} in {duration:.1f}s"
+                )
+
+        except Exception as e:
+            logger.error(f"Fast Pre-Fetch Durchlauf fehlgeschlagen: {e}")
+            self._stats["errors"] += 1
 
     async def _run_prefetch(self) -> None:
         """Führt einen Pre-Fetch-Durchlauf durch."""
@@ -585,6 +672,8 @@ class PrefetchService:
             "config": {
                 "enabled": self._config.enabled,
                 "timeframes": self._config.timeframes,
+                "fast_timeframes": self._config.fast_timeframes,
+                "fast_refresh_interval": self._config.fast_refresh_interval,
                 "max_symbols": self._config.max_symbols,
                 "favorites_only": self._config.favorites_only,
                 "refresh_interval": self._config.refresh_interval,
@@ -594,6 +683,7 @@ class PrefetchService:
                 "db_sync_enabled": self._config.db_sync_enabled,
             },
             "running": self._running,
+            "fast_task_running": self._fast_task is not None and not self._fast_task.done() if self._fast_task else False,
         }
 
     def get_config(self) -> dict:
@@ -601,6 +691,8 @@ class PrefetchService:
         return {
             "enabled": self._config.enabled,
             "timeframes": self._config.timeframes,
+            "fast_timeframes": self._config.fast_timeframes,
+            "fast_refresh_interval": self._config.fast_refresh_interval,
             "max_symbols": self._config.max_symbols,
             "favorites_only": self._config.favorites_only,
             "refresh_interval": self._config.refresh_interval,
