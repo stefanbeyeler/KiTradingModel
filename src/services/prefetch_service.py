@@ -61,6 +61,10 @@ class PrefetchConfig:
         indicator_limit: int = 100,
         # TimescaleDB Sync aktivieren (schreibt Daten persistent in DB)
         db_sync_enabled: bool = True,
+        # EasyInsight Indikatoren aktivieren (H1 only)
+        easyinsight_indicators_enabled: bool = True,
+        # EasyInsight Indikator-Limit
+        easyinsight_limit: int = 500,
     ):
         self.enabled = enabled
         self.timeframes = timeframes or ["1h", "4h", "1day"]
@@ -78,6 +82,8 @@ class PrefetchConfig:
         ]
         self.indicator_limit = indicator_limit
         self.db_sync_enabled = db_sync_enabled
+        self.easyinsight_indicators_enabled = easyinsight_indicators_enabled
+        self.easyinsight_limit = easyinsight_limit
 
 
 class PrefetchService:
@@ -111,6 +117,7 @@ class PrefetchService:
             "cache_entries_created": 0,
             "fast_cache_entries_created": 0,
             "indicator_entries_created": 0,
+            "easyinsight_indicators_created": 0,
         }
         self._symbols_cache: list[dict] = []
 
@@ -157,6 +164,8 @@ class PrefetchService:
                 "indicators": self._config.indicators,
                 "indicator_limit": self._config.indicator_limit,
                 "db_sync_enabled": self._config.db_sync_enabled,
+                "easyinsight_indicators_enabled": self._config.easyinsight_indicators_enabled,
+                "easyinsight_limit": self._config.easyinsight_limit,
             }
             # Lange TTL für Konfiguration (30 Tage)
             await cache_service.set(
@@ -370,17 +379,36 @@ class PrefetchService:
                             logger.error(f"Pre-Fetch Fehler für {indicator}/{symbol}/{timeframe}: {e}")
                             self._stats["errors"] += 1
 
+            # 6. EasyInsight-Indikatoren pre-fetchen (falls aktiviert)
+            easyinsight_count = 0
+            if self._config.easyinsight_indicators_enabled and self._config.db_sync_enabled:
+                logger.info(f"Pre-Fetch EasyInsight Indikatoren für {len(symbols)} Symbole...")
+                for symbol_data in symbols:
+                    symbol = symbol_data.get("symbol") or symbol_data.get("name", "")
+                    if not symbol:
+                        continue
+
+                    try:
+                        saved = await self._prefetch_easyinsight_indicators(symbol)
+                        easyinsight_count += saved
+                        # Rate Limiting (weniger streng, da lokaler Service)
+                        await asyncio.sleep(0.1)
+                    except Exception as e:
+                        logger.debug(f"EasyInsight Prefetch Fehler für {symbol}: {e}")
+
             self._stats["last_run"] = start_time.isoformat()
             self._stats["symbols_fetched"] = len(symbols)
             self._stats["timeframes_fetched"] = len(self._config.timeframes)
             self._stats["indicators_fetched"] = len(self._config.indicators)
             self._stats["cache_entries_created"] = fetched_count
             self._stats["indicator_entries_created"] = indicator_count
+            self._stats["easyinsight_indicators_created"] = easyinsight_count
 
             duration = (datetime.now(timezone.utc) - start_time).total_seconds()
-            indicator_info = f", {indicator_count} Indikatoren" if indicator_count else ""
+            indicator_info = f", {indicator_count} TwelveData-Indikatoren" if indicator_count else ""
+            easyinsight_info = f", {easyinsight_count} EasyInsight-Indikatoren" if easyinsight_count else ""
             logger.info(
-                f"Pre-Fetch abgeschlossen: {fetched_count} OHLCV{indicator_info} in {duration:.1f}s"
+                f"Pre-Fetch abgeschlossen: {fetched_count} OHLCV{indicator_info}{easyinsight_info} in {duration:.1f}s"
             )
 
         except Exception as e:
@@ -608,6 +636,95 @@ class PrefetchService:
 
         return False
 
+    async def _prefetch_easyinsight_indicators(self, symbol: str) -> int:
+        """
+        Pre-fetcht EasyInsight-Indikatoren für ein Symbol und speichert sie in TimescaleDB.
+
+        EasyInsight liefert H1-Daten mit vorberechneten Indikatoren wie:
+        - rsi, macd_main, macd_signal, cci, sto_main, sto_signal
+        - adx_main, adx_plusdi, adx_minusdi, atr_d1
+        - bb_base, bb_lower, bb_upper
+        - ichimoku_* (alle 5 Linien)
+        - ma_10, strength_1d, strength_1w, strength_4h
+
+        Args:
+            symbol: Trading-Symbol (z.B. BTCUSD)
+
+        Returns:
+            Anzahl der gespeicherten Indikator-Datensätze
+        """
+        if not self._config.db_sync_enabled:
+            return 0
+
+        cache_symbol = symbol.upper().replace("/", "")
+
+        try:
+            from .easyinsight_service import easyinsight_service
+            from .data_repository import data_repository
+
+            # EasyInsight OHLCV mit Indikatoren abrufen
+            data = await easyinsight_service.get_ohlcv(
+                symbol=symbol,
+                timeframe="H1",
+                limit=self._config.easyinsight_limit
+            )
+
+            if not data:
+                return 0
+
+            # Indikator-Felder aus den Daten extrahieren
+            # EasyInsight liefert diese im gleichen Response wie OHLCV
+            indicator_fields = [
+                "rsi", "macd_main", "macd_signal", "cci",
+                "adx_main", "adx_plusdi", "adx_minusdi",
+                "atr_d1", "atr_pct_d1",
+                "bb_base", "bb_lower", "bb_upper",
+                "sto_main", "sto_signal",
+                "ichimoku_tenkan", "ichimoku_kijun", "ichimoku_senkoua",
+                "ichimoku_senkoub", "ichimoku_chikou",
+                "ma_10", "strength_1d", "strength_1w", "strength_4h",
+            ]
+
+            saved_total = 0
+
+            # Jeden Indikator einzeln speichern
+            for indicator_name in indicator_fields:
+                # Daten für diesen Indikator extrahieren
+                indicator_data = []
+                for row in data:
+                    if indicator_name in row and row[indicator_name] is not None:
+                        timestamp = row.get("snapshot_time") or row.get("timestamp")
+                        if timestamp:
+                            indicator_data.append({
+                                "timestamp": timestamp,
+                                indicator_name: row[indicator_name]
+                            })
+
+                if indicator_data:
+                    try:
+                        saved_count = await data_repository.save_indicators(
+                            symbol=cache_symbol,
+                            timeframe="H1",
+                            indicator_name=indicator_name,
+                            data=indicator_data,
+                            parameters={},
+                            source="easyinsight",
+                        )
+                        saved_total += saved_count
+                    except Exception as e:
+                        logger.debug(f"Failed to save EasyInsight {indicator_name}: {e}")
+
+            if saved_total > 0:
+                logger.debug(
+                    f"Saved {saved_total} EasyInsight indicator values for {symbol}/H1"
+                )
+
+            return saved_total
+
+        except Exception as e:
+            logger.warning(f"EasyInsight indicator prefetch failed for {symbol}: {e}")
+            return 0
+
     async def prefetch_symbol(self, symbol: str, timeframes: list[str] = None) -> dict:
         """
         Pre-fetcht Daten für ein einzelnes Symbol.
@@ -701,6 +818,8 @@ class PrefetchService:
             "indicators": self._config.indicators,
             "indicator_limit": self._config.indicator_limit,
             "db_sync_enabled": self._config.db_sync_enabled,
+            "easyinsight_indicators_enabled": self._config.easyinsight_indicators_enabled,
+            "easyinsight_limit": self._config.easyinsight_limit,
             "available_indicators": PrefetchConfig.AVAILABLE_INDICATORS,
         }
 
