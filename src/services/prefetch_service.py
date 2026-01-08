@@ -55,6 +55,8 @@ class PrefetchConfig:
         indicators: list[str] = None,
         # Output-Size für Indikatoren
         indicator_limit: int = 100,
+        # TimescaleDB Sync aktivieren (schreibt Daten persistent in DB)
+        db_sync_enabled: bool = True,
     ):
         self.enabled = enabled
         self.timeframes = timeframes or ["1h", "4h", "1day"]
@@ -69,6 +71,7 @@ class PrefetchConfig:
             if ind.lower() in self.AVAILABLE_INDICATORS
         ]
         self.indicator_limit = indicator_limit
+        self.db_sync_enabled = db_sync_enabled
 
 
 class PrefetchService:
@@ -140,6 +143,7 @@ class PrefetchService:
                 "api_delay": self._config.api_delay,
                 "indicators": self._config.indicators,
                 "indicator_limit": self._config.indicator_limit,
+                "db_sync_enabled": self._config.db_sync_enabled,
             }
             # Lange TTL für Konfiguration (30 Tage)
             await cache_service.set(
@@ -175,9 +179,10 @@ class PrefetchService:
 
         self._running = True
         indicators_info = f", Indikatoren: {self._config.indicators}" if self._config.indicators else ""
+        db_sync_info = " (DB-Sync: aktiviert)" if self._config.db_sync_enabled else " (DB-Sync: deaktiviert)"
         logger.info(
             f"PrefetchService gestartet - Timeframes: {self._config.timeframes}, "
-            f"Intervall: {self._config.refresh_interval}s{indicators_info}"
+            f"Intervall: {self._config.refresh_interval}s{indicators_info}{db_sync_info}"
         )
 
         # Initial Pre-Fetch und periodisches Pre-Fetch als Background-Task
@@ -372,7 +377,8 @@ class PrefetchService:
         Pre-fetcht OHLCV-Daten für ein Symbol/Timeframe.
 
         Prüft zuerst, ob bereits gültige Daten im Cache sind.
-        Nutzt TwelveData Service direkt (gleicher Container).
+        Wenn db_sync_enabled: Nutzt DataGateway (speichert automatisch in TimescaleDB)
+        Sonst: Nutzt TwelveData Service direkt (nur Cache).
         """
         # Normalize symbol for cache key
         cache_symbol = symbol.upper().replace("/", "")
@@ -386,20 +392,38 @@ class PrefetchService:
             # Bereits im Cache - kein Fetch nötig
             return False
 
-        # Daten direkt über TwelveData Service abrufen
         try:
-            from .twelvedata_service import twelvedata_service
+            if self._config.db_sync_enabled:
+                # DataGateway verwenden - speichert automatisch in TimescaleDB
+                from .data_gateway_service import data_gateway
 
-            result = await twelvedata_service.get_time_series(
-                symbol=symbol,
-                interval=timeframe,
-                outputsize=self._config.ohlcv_limit,
-            )
+                data, source = await data_gateway.get_historical_data_with_fallback(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    limit=self._config.ohlcv_limit,
+                    force_refresh=False,  # Cache nutzen wenn vorhanden
+                )
 
-            if result and result.get("values"):
-                values = result["values"]
-                logger.debug(f"Pre-fetched {len(values)} rows for {symbol}/{timeframe}")
-                return True
+                if data:
+                    logger.debug(
+                        f"Pre-fetched {len(data)} rows for {symbol}/{timeframe} "
+                        f"from {source} (DB-Sync: enabled)"
+                    )
+                    return True
+            else:
+                # Direkt über TwelveData Service abrufen (nur Cache)
+                from .twelvedata_service import twelvedata_service
+
+                result = await twelvedata_service.get_time_series(
+                    symbol=symbol,
+                    interval=timeframe,
+                    outputsize=self._config.ohlcv_limit,
+                )
+
+                if result and result.get("values"):
+                    values = result["values"]
+                    logger.debug(f"Pre-fetched {len(values)} rows for {symbol}/{timeframe}")
+                    return True
 
         except Exception as e:
             logger.warning(f"Pre-Fetch Fehler für {symbol}/{timeframe}: {e}")
@@ -409,6 +433,8 @@ class PrefetchService:
     async def _prefetch_indicator(self, symbol: str, timeframe: str, indicator: str) -> bool:
         """
         Pre-fetcht einen technischen Indikator für ein Symbol/Timeframe.
+
+        Wenn db_sync_enabled: Speichert Indikatoren auch in TimescaleDB.
 
         Args:
             symbol: Trading-Symbol (z.B. BTCUSD)
@@ -446,6 +472,7 @@ class PrefetchService:
 
             if result and result.get("values") and not result.get("error"):
                 values = result["values"]
+
                 # Cache the result
                 await cache_service.set(
                     CacheCategory.INDICATORS,
@@ -455,7 +482,38 @@ class PrefetchService:
                     params=cache_params,
                     ttl=300  # 5 Minuten TTL für Indikatoren
                 )
-                logger.debug(f"Pre-fetched {indicator.upper()} for {symbol}/{timeframe} ({len(values) if isinstance(values, list) else 1} values)")
+
+                # In TimescaleDB speichern wenn aktiviert
+                if self._config.db_sync_enabled:
+                    try:
+                        from .data_repository import data_repository
+
+                        # Indikator-spezifische Parameter extrahieren
+                        params = {}
+                        for key in ["time_period", "fast_period", "slow_period", "signal_period", "sd"]:
+                            if key in result:
+                                params[key] = result[key]
+
+                        saved_count = await data_repository.save_indicators(
+                            symbol=cache_symbol,
+                            timeframe=timeframe,
+                            indicator_name=indicator.lower(),
+                            data=values if isinstance(values, list) else [values],
+                            parameters=params,
+                            source="twelvedata",
+                        )
+                        if saved_count > 0:
+                            logger.debug(
+                                f"Saved {saved_count} {indicator.upper()} values to TimescaleDB "
+                                f"for {symbol}/{timeframe}"
+                            )
+                    except Exception as db_err:
+                        logger.warning(f"Failed to save {indicator} to TimescaleDB: {db_err}")
+
+                logger.debug(
+                    f"Pre-fetched {indicator.upper()} for {symbol}/{timeframe} "
+                    f"({len(values) if isinstance(values, list) else 1} values)"
+                )
                 return True
 
         except Exception as e:
@@ -533,6 +591,7 @@ class PrefetchService:
                 "ohlcv_limit": self._config.ohlcv_limit,
                 "indicators": self._config.indicators,
                 "indicator_limit": self._config.indicator_limit,
+                "db_sync_enabled": self._config.db_sync_enabled,
             },
             "running": self._running,
         }
@@ -549,6 +608,7 @@ class PrefetchService:
             "api_delay": self._config.api_delay,
             "indicators": self._config.indicators,
             "indicator_limit": self._config.indicator_limit,
+            "db_sync_enabled": self._config.db_sync_enabled,
             "available_indicators": PrefetchConfig.AVAILABLE_INDICATORS,
         }
 
