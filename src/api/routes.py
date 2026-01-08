@@ -3602,13 +3602,19 @@ async def get_symbol_data_stats(symbol: str):
         async with httpx.AsyncClient(timeout=30.0) as client:
             sample_data = {"source": "TwelveData", "M15": [], "H1": [], "D1": []}
 
+            # Convert symbol format for TwelveData (AUDUSD -> AUD/USD for Forex)
+            td_symbol = symbol
+            forex_pairs = ["AUD", "EUR", "GBP", "USD", "CHF", "JPY", "CAD", "NZD"]
+            if len(symbol) == 6 and symbol[:3] in forex_pairs and symbol[3:] in forex_pairs:
+                td_symbol = f"{symbol[:3]}/{symbol[3:]}"
+
             # Fetch OHLCV for each timeframe from TwelveData
             for tf, td_interval, limit in [("M15", "15min", 50), ("H1", "1h", 50), ("D1", "1day", 50)]:
                 try:
                     td_response = await client.get(
                         f"{settings.twelvedata_base_url}/time_series",
                         params={
-                            "symbol": symbol,
+                            "symbol": td_symbol,
                             "interval": td_interval,
                             "outputsize": limit,
                             "apikey": settings.twelvedata_api_key,
