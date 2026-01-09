@@ -599,9 +599,9 @@
             </ul>
 
             <div class="info-box warning">
-                <strong>Hinweis:</strong> Der Data Service speichert keine Marktdaten selbst, sondern leitet
-                diese von der EasyInsight API weiter. Strategien und Symbole werden lokal in einer
-                SQLite-Datenbank persistiert.
+                <strong>Hinweis:</strong> Der Data Service verwendet eine 3-Layer-Caching-Architektur:
+                Redis (Hot Data) → TimescaleDB (Persistent) → Externe APIs (TwelveData, EasyInsight).
+                Alle OHLCV-Daten und Indikatoren werden in TimescaleDB persistent gespeichert.
             </div>
         </div>
 
@@ -898,7 +898,8 @@
                 <span class="tech-tag">Python 3.11</span>
                 <span class="tech-tag">FastAPI</span>
                 <span class="tech-tag">Redis</span>
-                <span class="tech-tag">SQLite</span>
+                <span class="tech-tag">TimescaleDB</span>
+                <span class="tech-tag">asyncpg</span>
                 <span class="tech-tag">Pydantic</span>
                 <span class="tech-tag">httpx</span>
                 <span class="tech-tag">uvicorn</span>
