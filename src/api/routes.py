@@ -3693,17 +3693,54 @@ async def get_symbol_data_stats(symbol: str):
                 except Exception as e:
                     logger.warning(f"Failed to analyze H1 gaps for {symbol}: {e}")
 
-            # Fetch sample data for chart visualization from TimescaleDB
+            # Fetch sample data for chart visualization from TwelveData (primary)
+            # TwelveData provides properly aggregated OHLCV candles with correct timestamps
             sample_timeframes = ["M15", "H1", "D1"]
             sample_limits = {"M15": 50, "H1": 50, "D1": 30}
 
+            # TwelveData interval mapping
+            tf_to_interval = {"M15": "15min", "H1": "1h", "D1": "1day"}
+
+            # Get TwelveData symbol format (with slash for forex)
+            td_symbol = symbol
+            if "/" not in symbol and len(symbol) == 6:
+                # Forex pair without slash - add it
+                td_symbol = f"{symbol[:3]}/{symbol[3:]}"
+
             for tf in sample_timeframes:
                 try:
+                    limit = sample_limits.get(tf, 50)
+                    interval = tf_to_interval.get(tf, "1h")
+
+                    # Try TwelveData first for accurate candle data
+                    try:
+                        td_data = await twelvedata_service.get_time_series(
+                            symbol=td_symbol,
+                            interval=interval,
+                            outputsize=limit,
+                        )
+
+                        if td_data and td_data.get("values"):
+                            candles = []
+                            # TwelveData returns newest first, so reverse for chronological order
+                            for row in reversed(td_data["values"]):
+                                candles.append({
+                                    "datetime": row.get("datetime", ""),
+                                    "open": float(row["open"]) if row.get("open") else None,
+                                    "high": float(row["high"]) if row.get("high") else None,
+                                    "low": float(row["low"]) if row.get("low") else None,
+                                    "close": float(row["close"]) if row.get("close") else None,
+                                })
+                            result["sample_data"][tf] = candles
+                            result["sample_data"]["source"] = "TwelveData"
+                            continue
+                    except Exception as e:
+                        logger.debug(f"TwelveData sample fetch failed for {symbol}/{tf}: {e}")
+
+                    # Fallback to TimescaleDB if TwelveData fails
                     if result["timeframes"][tf]["count"] > 0:
                         table_name = get_ohlcv_table_name(tf)
-                        limit = sample_limits.get(tf, 50)
 
-                        # Get newest data first, then reverse for chronological order
                         sample_query = f"""
                             SELECT timestamp, open, high, low, close
                             FROM (
@@ -3718,7 +3755,7 @@ async def get_symbol_data_stats(symbol: str):
                         rows = await conn.fetch(sample_query, symbol, limit)
 
                         candles = []
-                        for row in rows:  # Already in chronological order (oldest first)
+                        for row in rows:
                             candles.append({
                                 "datetime": row["timestamp"].isoformat() + "Z",
                                 "open": float(row["open"]) if row["open"] else None,
