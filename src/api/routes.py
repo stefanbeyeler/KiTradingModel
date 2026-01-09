@@ -3703,17 +3703,22 @@ async def get_symbol_data_stats(symbol: str):
                         table_name = get_ohlcv_table_name(tf)
                         limit = sample_limits.get(tf, 50)
 
+                        # Get newest data first, then reverse for chronological order
                         sample_query = f"""
                             SELECT timestamp, open, high, low, close
-                            FROM {table_name}
-                            WHERE symbol = $1
-                            ORDER BY timestamp DESC
-                            LIMIT $2
+                            FROM (
+                                SELECT timestamp, open, high, low, close
+                                FROM {table_name}
+                                WHERE symbol = $1
+                                ORDER BY timestamp DESC
+                                LIMIT $2
+                            ) sub
+                            ORDER BY timestamp ASC
                         """
                         rows = await conn.fetch(sample_query, symbol, limit)
 
                         candles = []
-                        for row in reversed(rows):  # Reverse to get chronological order
+                        for row in rows:  # Already in chronological order (oldest first)
                             candles.append({
                                 "datetime": row["timestamp"].isoformat() + "Z",
                                 "open": float(row["open"]) if row["open"] else None,
