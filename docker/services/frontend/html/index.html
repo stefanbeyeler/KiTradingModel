@@ -2628,7 +2628,7 @@
         // Sync Watchdog panel dots directly from cached Watchdog status
         // This ensures dots reflect Watchdog's authoritative status, not individual service timeouts
         function syncWatchdogPanelDotsFromCache() {
-            const services = ['data', 'nhits', 'tcn', 'hmm', 'embedder', 'candlestick', 'rag', 'llm'];
+            const services = ['data', 'nhits', 'tcn', 'hmm', 'embedder', 'candlestick', 'cnn-lstm', 'rag', 'llm'];
             const dotMapping = {
                 'data': 'wp-dot-data',
                 'nhits': 'wp-dot-nhits',
