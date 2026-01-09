@@ -2083,12 +2083,12 @@
 
     <!-- Data Stats Modal -->
     <div class="modal-overlay" id="data-stats-modal">
-        <div class="modal" style="max-width: 1000px; max-height: 90vh;">
+        <div class="modal" style="max-width: 1000px; max-height: 90vh; overflow: hidden;">
             <div class="modal-header">
                 <h3 class="modal-title" id="data-stats-modal-title">Datenpunkte</h3>
                 <button class="modal-close" onclick="closeDataStatsModal()">&times;</button>
             </div>
-            <div style="padding: 1rem; overflow-y: auto; max-height: calc(90vh - 80px);">
+            <div style="padding: 1rem; overflow-y: auto; max-height: calc(90vh - 60px);">
                 <div id="data-stats-content">
                     <div class="loading"><div class="spinner"></div><br>Lade Datenstatistiken...</div>
                 </div>
