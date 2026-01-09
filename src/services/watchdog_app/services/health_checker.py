@@ -138,6 +138,12 @@ class HealthChecker:
                 "startup_grace": 30,
                 "dependencies": ["data"]
             },
+            "cnn-lstm": {
+                "url": "http://trading-cnn-lstm:3007/health",
+                "criticality": "high",
+                "startup_grace": 40,
+                "dependencies": ["data"]
+            },
             "redis": {
                 "url": "http://trading-redis:6379",
                 "criticality": "critical",
@@ -165,6 +171,12 @@ class HealthChecker:
             },
             "candlestick-train": {
                 "url": "http://trading-candlestick-train:3016/health",
+                "criticality": "medium",
+                "startup_grace": 60,
+                "dependencies": ["data"]
+            },
+            "cnn-lstm-train": {
+                "url": "http://trading-cnn-lstm-train:3017/health",
                 "criticality": "medium",
                 "startup_grace": 60,
                 "dependencies": ["data"]
