@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNN-LSTM Multi-Task Konfiguration - KI Trading Model</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e8e8e8;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .service-badge {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .service-badge.train {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-description {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-value.success { color: #81c784; }
+        .stat-value.warning { color: #ffb74d; }
+        .stat-value.error { color: #e57373; }
+        .stat-value.purple { color: #a78bfa; }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-purple {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            border: 1px solid rgba(167, 139, 250, 0.3);
+        }
+
+        .btn-purple:hover {
+            background: rgba(167, 139, 250, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+
+        .tab:hover {
+            color: #64c8ff;
+            background: rgba(100, 200, 255, 0.05);
+        }
+
+        .tab.active {
+            color: #64c8ff;
+            border-bottom-color: #64c8ff;
+            background: rgba(100, 200, 255, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Prediction Grid */
+        .prediction-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .prediction-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .prediction-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .prediction-card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #a78bfa;
+        }
+
+        .prediction-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .prediction-badge.bullish {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .prediction-badge.bearish {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        .prediction-badge.neutral {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        /* Price Forecasts */
+        .price-forecasts {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .forecast-item {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .forecast-label {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .forecast-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .forecast-change {
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .forecast-change.positive { color: #81c784; }
+        .forecast-change.negative { color: #e57373; }
+
+        /* Patterns List */
+        .patterns-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .pattern-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+        }
+
+        .pattern-name {
+            font-weight: 500;
+        }
+
+        .pattern-confidence {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .confidence-bar {
+            width: 60px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: #a78bfa;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .confidence-value {
+            font-size: 0.8rem;
+            color: #a78bfa;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* Regime Display */
+        .regime-display {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .regime-current {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .regime-icon {
+            font-size: 2rem;
+        }
+
+        .regime-info {
+            flex: 1;
+        }
+
+        .regime-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .regime-probability {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .regime-transitions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+        }
+
+        .transition-item {
+            text-align: center;
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .transition-label {
+            font-size: 0.65rem;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+
+        .transition-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* Symbol Input */
+        .symbol-input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .symbol-input {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 0.95rem;
+        }
+
+        .symbol-input:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        .timeframe-select {
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .timeframe-select option {
+            background: #1a1a2e;
+        }
+
+        /* Model Info */
+        .model-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .model-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .model-info-label {
+            color: #888;
+        }
+
+        .model-info-value {
+            color: #64c8ff;
+            font-weight: 500;
+        }
+
+        /* Training Status */
+        .training-status {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.idle { background: #888; }
+        .status-indicator.running { background: #81c784; animation: pulse 2s infinite; }
+        .status-indicator.error { background: #e57373; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Training Form */
+        .training-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .form-label {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .form-input, .form-select {
+            padding: 0.6rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        .form-select option {
+            background: #1a1a2e;
+        }
+
+        /* Feature Table */
+        .feature-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .feature-table th,
+        .feature-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .feature-table th {
+            color: #64c8ff;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .feature-table tr:hover {
+            background: rgba(100, 200, 255, 0.05);
+        }
+
+        .feature-category {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .feature-category.ohlcv { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .feature-category.returns { background: rgba(33, 150, 243, 0.2); color: #64b5f6; }
+        .feature-category.trend { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
+        .feature-category.momentum { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
+        .feature-category.volatility { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+        .feature-category.volume { background: rgba(0, 150, 136, 0.2); color: #4db6ac; }
+        .feature-category.position { background: rgba(63, 81, 181, 0.2); color: #7986cb; }
+        .feature-category.meta { background: rgba(121, 85, 72, 0.2); color: #a1887f; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            z-index: 2000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success { background: #2e7d32; }
+        .toast-error { background: #c62828; }
+        .toast-info { background: #1565c0; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(100, 200, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #64c8ff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Recommendation Box */
+        .recommendation-box {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .recommendation-box.buy {
+            background: rgba(76, 175, 80, 0.15);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .recommendation-box.sell {
+            background: rgba(244, 67, 54, 0.15);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .recommendation-box.hold {
+            background: rgba(255, 152, 0, 0.15);
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .recommendation-icon {
+            font-size: 2rem;
+        }
+
+        .recommendation-info {
+            flex: 1;
+        }
+
+        .recommendation-action {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .recommendation-score {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Timeframe Table */
+        .timeframe-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .timeframe-table th,
+        .timeframe-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .timeframe-table th {
+            background: rgba(0, 0, 0, 0.3);
+            color: #64c8ff;
+            font-weight: 600;
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .quick-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        .quick-links a:hover {
+            background: rgba(100, 200, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
+            <span class="header-title">CNN-LSTM Multi-Task Konfiguration</span>
+            <div style="display: flex; gap: 0.5rem;">
+                <span class="service-badge">Inference: 3007</span>
+                <span class="service-badge train">Training: 3017</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-model-status">-</div>
+                <div class="stat-label">Modell-Status</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value purple" id="stat-model-version">-</div>
+                <div class="stat-label">Version</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-inference-time">-</div>
+                <div class="stat-label">Inferenz (ms)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-features">25</div>
+                <div class="stat-label">Input Features</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value purple" id="stat-patterns">16</div>
+                <div class="stat-label">Pattern-Klassen</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-regimes">4</div>
+                <div class="stat-label">Regime-Typen</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('predictions')">&#127919; Live Predictions</button>
+            <button class="tab" onclick="switchTab('training')">&#128203; Training</button>
+            <button class="tab" onclick="switchTab('features')">&#128200; Features</button>
+            <button class="tab" onclick="switchTab('model')">&#129516; Modell-Info</button>
+        </div>
+
+        <!-- Live Predictions Tab -->
+        <div id="tab-predictions" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#127919; Multi-Task Vorhersage</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="loadPrediction()">&#128260; Aktualisieren</button>
+                        <button class="btn btn-purple" onclick="loadAnalysis()">&#128202; Analyse</button>
+                    </div>
+                </div>
+                <p class="card-description">
+                    Kombinierte Vorhersage aus Preis-Forecast, Pattern-Erkennung und Regime-Klassifikation.
+                </p>
+
+                <div class="symbol-input-group">
+                    <input type="text" class="symbol-input" id="prediction-symbol" placeholder="Symbol (z.B. BTCUSD, EURUSD)" value="BTCUSD">
+                    <select class="timeframe-select" id="prediction-timeframe">
+                        <option value="M1">M1</option>
+                        <option value="M5">M5</option>
+                        <option value="M15">M15</option>
+                        <option value="M30">M30</option>
+                        <option value="H1" selected>H1</option>
+                        <option value="H4">H4</option>
+                        <option value="D1">D1</option>
+                        <option value="W1">W1</option>
+                        <option value="MN">MN</option>
+                    </select>
+                    <button class="btn btn-success" onclick="loadPrediction()">Vorhersage</button>
+                </div>
+
+                <div id="prediction-content">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#129516;</div>
+                        <p>Klicke auf "Vorhersage" um eine Multi-Task Prediction zu laden</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Tab -->
+        <div id="tab-training" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128203; Training starten</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="checkTrainingStatus()">&#128260; Status</button>
+                    </div>
+                </div>
+
+                <div class="training-status" id="training-status">
+                    <div class="status-indicator idle" id="training-indicator"></div>
+                    <div>
+                        <strong>Status:</strong> <span id="training-status-text">Idle</span>
+                    </div>
+                </div>
+
+                <div class="training-form">
+                    <div class="form-group">
+                        <label class="form-label">Symbole (kommagetrennt)</label>
+                        <input type="text" class="form-input" id="train-symbols" value="BTCUSD,EURUSD,AAPL" placeholder="BTCUSD,EURUSD">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Timeframes</label>
+                        <select class="form-select" id="train-timeframe">
+                            <option value="H1">H1 (1 Stunde)</option>
+                            <option value="H4">H4 (4 Stunden)</option>
+                            <option value="D1">D1 (1 Tag)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Epochen</label>
+                        <input type="number" class="form-input" id="train-epochs" value="50" min="1" max="500">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Batch Size</label>
+                        <select class="form-select" id="train-batch-size">
+                            <option value="16">16</option>
+                            <option value="32" selected>32</option>
+                            <option value="64">64</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="startTraining()">&#9654; Training starten</button>
+                    <button class="btn btn-danger" onclick="cancelTraining()">&#9632; Abbrechen</button>
+                    <button class="btn btn-warning" onclick="queueViaWatchdog()">&#128230; Via Watchdog</button>
+                </div>
+
+                <div id="training-progress" style="margin-top: 1rem; display: none;">
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Fortschritt</span>
+                            <span id="training-progress-text">0%</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div id="training-progress-bar" style="background: #a78bfa; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128202; Training-Historie</h2>
+                    <button class="btn btn-primary" onclick="loadTrainingHistory()">&#128260; Laden</button>
+                </div>
+                <div id="training-history">
+                    <div class="empty-state">
+                        <p>Klicke auf "Laden" um die Training-Historie anzuzeigen</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Tab -->
+        <div id="tab-features" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128200; Input-Features (25 Dimensionen)</h2>
+                </div>
+                <p class="card-description">
+                    Das CNN-LSTM Modell verarbeitet 25 technische Features als Input.
+                </p>
+
+                <table class="feature-table">
+                    <thead>
+                        <tr>
+                            <th>Kategorie</th>
+                            <th>Feature</th>
+                            <th>Beschreibung</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Open</td><td>Eröffnungspreis</td></tr>
+                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>High</td><td>Höchstpreis</td></tr>
+                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Low</td><td>Tiefstpreis</td></tr>
+                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Close</td><td>Schlusspreis</td></tr>
+                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Volume</td><td>Handelsvolumen</td></tr>
+                        <tr><td><span class="feature-category returns">Returns</span></td><td>Log Return</td><td>Logarithmische Rendite</td></tr>
+                        <tr><td><span class="feature-category returns">Returns</span></td><td>Volatility 20</td><td>20-Perioden Volatilität</td></tr>
+                        <tr><td><span class="feature-category trend">Trend</span></td><td>SMA 20</td><td>Simple Moving Average (20)</td></tr>
+                        <tr><td><span class="feature-category trend">Trend</span></td><td>EMA 12</td><td>Exponential MA (12)</td></tr>
+                        <tr><td><span class="feature-category trend">Trend</span></td><td>EMA 26</td><td>Exponential MA (26)</td></tr>
+                        <tr><td><span class="feature-category trend">Trend</span></td><td>MACD</td><td>Moving Average Convergence</td></tr>
+                        <tr><td><span class="feature-category trend">Trend</span></td><td>MACD Signal</td><td>MACD Signal Line</td></tr>
+                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>RSI 14</td><td>Relative Strength Index</td></tr>
+                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>Stochastic K</td><td>Stochastic %K</td></tr>
+                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>Stochastic D</td><td>Stochastic %D</td></tr>
+                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>CCI 14</td><td>Commodity Channel Index</td></tr>
+                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>ATR 14</td><td>Average True Range</td></tr>
+                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>BB Upper</td><td>Bollinger Band Oben</td></tr>
+                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>BB Middle</td><td>Bollinger Band Mitte</td></tr>
+                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>BB Lower</td><td>Bollinger Band Unten</td></tr>
+                        <tr><td><span class="feature-category volume">Volume</span></td><td>OBV</td><td>On-Balance Volume (norm.)</td></tr>
+                        <tr><td><span class="feature-category volume">Volume</span></td><td>A/D Line</td><td>Accumulation/Distribution</td></tr>
+                        <tr><td><span class="feature-category position">Position</span></td><td>Price vs SMA</td><td>Preis relativ zu SMA</td></tr>
+                        <tr><td><span class="feature-category position">Position</span></td><td>BB Position</td><td>Position in Bollinger (0-1)</td></tr>
+                        <tr><td><span class="feature-category meta">Meta</span></td><td>Timeframe Enc</td><td>Timeframe-Kodierung</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128337; Sequenzlängen pro Timeframe</h2>
+                </div>
+                <table class="timeframe-table">
+                    <thead>
+                        <tr>
+                            <th>Timeframe</th>
+                            <th>Sequenz</th>
+                            <th>Entspricht</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>M1</td><td>480</td><td>8 Stunden</td></tr>
+                        <tr><td>M5</td><td>288</td><td>24 Stunden</td></tr>
+                        <tr><td>M15</td><td>192</td><td>48 Stunden</td></tr>
+                        <tr><td>M30</td><td>192</td><td>4 Tage</td></tr>
+                        <tr><td>H1</td><td>168</td><td>1 Woche</td></tr>
+                        <tr><td>H4</td><td>168</td><td>4 Wochen</td></tr>
+                        <tr><td>D1</td><td>120</td><td>~6 Monate</td></tr>
+                        <tr><td>W1</td><td>52</td><td>1 Jahr</td></tr>
+                        <tr><td>MN</td><td>24</td><td>2 Jahre</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Model Info Tab -->
+        <div id="tab-model" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#129516; Modell-Architektur</h2>
+                    <button class="btn btn-primary" onclick="loadModelInfo()">&#128260; Aktualisieren</button>
+                </div>
+
+                <div id="model-info-content">
+                    <div class="model-info-grid">
+                        <div class="model-info-item">
+                            <span class="model-info-label">CNN Encoder</span>
+                            <span class="model-info-value">3 Conv1d Layers</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">CNN Channels</span>
+                            <span class="model-info-value">25 → 64 → 128 → 256</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">LSTM Typ</span>
+                            <span class="model-info-value">Bidirectional</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">LSTM Hidden</span>
+                            <span class="model-info-value">128 × 2 = 256</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">LSTM Layers</span>
+                            <span class="model-info-value">2</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">Attention</span>
+                            <span class="model-info-value">Self-Attention</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">Price Head</span>
+                            <span class="model-info-value">256 → 128 → 4</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">Pattern Head</span>
+                            <span class="model-info-value">256 → 128 → 16</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">Regime Head</span>
+                            <span class="model-info-value">256 → 128 → 4</span>
+                        </div>
+                        <div class="model-info-item">
+                            <span class="model-info-label">Dropout</span>
+                            <span class="model-info-value">0.2 (CNN) / 0.3 (LSTM)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(167, 139, 250, 0.1); border-left: 3px solid #a78bfa; border-radius: 0 8px 8px 0;">
+                    <strong style="color: #a78bfa;">Multi-Task Loss:</strong>
+                    <code style="margin-left: 0.5rem;">Total = 0.4×Price_MSE + 0.35×Pattern_BCE + 0.25×Regime_CE</code>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128279; Verfügbare Modelle</h2>
+                    <button class="btn btn-primary" onclick="loadModels()">&#128260; Laden</button>
+                </div>
+                <div id="models-list">
+                    <div class="empty-state">
+                        <p>Klicke auf "Laden" um verfügbare Modelle anzuzeigen</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128640; Schnellzugriff</h2>
+                </div>
+                <div class="quick-links">
+                    <a href="/cnn-lstm/docs" target="_blank">&#128196; Inference API</a>
+                    <a href="/cnn-lstm-train/docs" target="_blank">&#128196; Training API</a>
+                    <a href="/cnn-lstm/health" target="_blank">&#128154; Health Check</a>
+                    <a href="/cnn-lstm/api/v1/models" target="_blank">&#128230; Modelle</a>
+                    <a href="/service-cnn-lstm.html">&#128214; Dokumentation</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Tab Switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        // Toast Notifications
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Load Prediction
+        async function loadPrediction() {
+            const symbol = document.getElementById('prediction-symbol').value.toUpperCase();
+            const timeframe = document.getElementById('prediction-timeframe').value;
+            const container = document.getElementById('prediction-content');
+
+            if (!symbol) {
+                showToast('Bitte Symbol eingeben', 'error');
+                return;
+            }
+
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Lade Vorhersage...</p></div>';
+
+            try {
+                const response = await fetch(`/cnn-lstm/api/v1/predict/${symbol}?timeframe=${timeframe}`);
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Prediction failed');
+                }
+
+                const data = await response.json();
+                renderPrediction(data);
+
+                // Update stats
+                document.getElementById('stat-model-status').textContent = 'Aktiv';
+                document.getElementById('stat-model-status').className = 'stat-value success';
+                document.getElementById('stat-model-version').textContent = data.model_version?.split('-').slice(-1)[0] || '-';
+                document.getElementById('stat-inference-time').textContent = data.inference_time_ms?.toFixed(1) || '-';
+
+            } catch (error) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#9888;</div><p>${error.message}</p></div>`;
+                showToast(error.message, 'error');
+            }
+        }
+
+        // Render Prediction
+        function renderPrediction(data) {
+            const container = document.getElementById('prediction-content');
+            const { predictions } = data;
+            const { price, patterns, regime } = predictions;
+
+            const directionClass = price.direction === 'bullish' ? 'bullish' :
+                                   price.direction === 'bearish' ? 'bearish' : 'neutral';
+
+            const regimeIcons = {
+                'bull_trend': '&#128200;',
+                'bear_trend': '&#128201;',
+                'sideways': '&#8596;',
+                'high_volatility': '&#9889;'
+            };
+
+            const regimeNames = {
+                'bull_trend': 'Aufwärtstrend',
+                'bear_trend': 'Abwärtstrend',
+                'sideways': 'Seitwärts',
+                'high_volatility': 'Hohe Volatilität'
+            };
+
+            container.innerHTML = `
+                <div class="prediction-grid">
+                    <!-- Price Prediction -->
+                    <div class="prediction-card">
+                        <div class="prediction-card-header">
+                            <span class="prediction-card-title">&#128176; Preis-Vorhersage</span>
+                            <span class="prediction-badge ${directionClass}">${price.direction.toUpperCase()}</span>
+                        </div>
+                        <div class="price-forecasts">
+                            <div class="forecast-item">
+                                <div class="forecast-label">Aktuell</div>
+                                <div class="forecast-value">${formatPrice(price.current)}</div>
+                            </div>
+                            <div class="forecast-item">
+                                <div class="forecast-label">1h</div>
+                                <div class="forecast-value">${formatPrice(price.forecast_1h)}</div>
+                                <div class="forecast-change ${price.change_percent_1h >= 0 ? 'positive' : 'negative'}">
+                                    ${price.change_percent_1h >= 0 ? '+' : ''}${price.change_percent_1h?.toFixed(2) || '0'}%
+                                </div>
+                            </div>
+                            <div class="forecast-item">
+                                <div class="forecast-label">4h</div>
+                                <div class="forecast-value">${formatPrice(price.forecast_4h)}</div>
+                            </div>
+                            <div class="forecast-item">
+                                <div class="forecast-label">1d</div>
+                                <div class="forecast-value">${formatPrice(price.forecast_1d)}</div>
+                                <div class="forecast-change ${price.change_percent_1d >= 0 ? 'positive' : 'negative'}">
+                                    ${price.change_percent_1d >= 0 ? '+' : ''}${price.change_percent_1d?.toFixed(2) || '0'}%
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                            <span style="color: #888;">Konfidenz:</span>
+                            <strong style="color: #a78bfa; margin-left: 0.5rem;">${(price.confidence * 100).toFixed(0)}%</strong>
+                        </div>
+                    </div>
+
+                    <!-- Pattern Detection -->
+                    <div class="prediction-card">
+                        <div class="prediction-card-header">
+                            <span class="prediction-card-title">&#128202; Erkannte Patterns</span>
+                            <span class="prediction-badge neutral">${patterns.length} gefunden</span>
+                        </div>
+                        <div class="patterns-list">
+                            ${patterns.length > 0 ? patterns.map(p => `
+                                <div class="pattern-item">
+                                    <span class="pattern-name">${formatPatternName(p.type)}</span>
+                                    <div class="pattern-confidence">
+                                        <span class="prediction-badge ${p.direction}">${p.direction}</span>
+                                        <div class="confidence-bar">
+                                            <div class="confidence-fill" style="width: ${p.confidence * 100}%"></div>
+                                        </div>
+                                        <span class="confidence-value">${(p.confidence * 100).toFixed(0)}%</span>
+                                    </div>
+                                </div>
+                            `).join('') : '<div style="text-align: center; padding: 1rem; color: #888;">Keine Patterns erkannt (Konfidenz &lt; 50%)</div>'}
+                        </div>
+                    </div>
+
+                    <!-- Regime Prediction -->
+                    <div class="prediction-card">
+                        <div class="prediction-card-header">
+                            <span class="prediction-card-title">&#127919; Markt-Regime</span>
+                        </div>
+                        <div class="regime-display">
+                            <div class="regime-current">
+                                <div class="regime-icon">${regimeIcons[regime.current] || '?'}</div>
+                                <div class="regime-info">
+                                    <div class="regime-name">${regimeNames[regime.current] || regime.current}</div>
+                                    <div class="regime-probability">Wahrscheinlichkeit: ${(regime.probability * 100).toFixed(0)}%</div>
+                                </div>
+                            </div>
+                            <div class="regime-transitions">
+                                <div class="transition-item">
+                                    <div class="transition-label">Bull</div>
+                                    <div class="transition-value" style="color: #81c784;">${(regime.transition_probs.bull_trend * 100).toFixed(0)}%</div>
+                                </div>
+                                <div class="transition-item">
+                                    <div class="transition-label">Bear</div>
+                                    <div class="transition-value" style="color: #e57373;">${(regime.transition_probs.bear_trend * 100).toFixed(0)}%</div>
+                                </div>
+                                <div class="transition-item">
+                                    <div class="transition-label">Sideways</div>
+                                    <div class="transition-value" style="color: #ffb74d;">${(regime.transition_probs.sideways * 100).toFixed(0)}%</div>
+                                </div>
+                                <div class="transition-item">
+                                    <div class="transition-label">High Vol</div>
+                                    <div class="transition-value" style="color: #64b5f6;">${(regime.transition_probs.high_volatility * 100).toFixed(0)}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load Analysis
+        async function loadAnalysis() {
+            const symbol = document.getElementById('prediction-symbol').value.toUpperCase();
+            const timeframe = document.getElementById('prediction-timeframe').value;
+
+            if (!symbol) {
+                showToast('Bitte Symbol eingeben', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/cnn-lstm/api/v1/analysis/${symbol}?timeframe=${timeframe}`);
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Analysis failed');
+                }
+
+                const data = await response.json();
+                renderAnalysis(data);
+                showToast('Analyse geladen', 'success');
+
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        // Render Analysis with Recommendation
+        function renderAnalysis(data) {
+            const container = document.getElementById('prediction-content');
+            const { recommendation, insights } = data;
+
+            const actionColors = {
+                'STRONG_BUY': 'buy',
+                'BUY': 'buy',
+                'HOLD': 'hold',
+                'SELL': 'sell',
+                'STRONG_SELL': 'sell'
+            };
+
+            const actionIcons = {
+                'STRONG_BUY': '&#128640;',
+                'BUY': '&#128200;',
+                'HOLD': '&#9202;',
+                'SELL': '&#128201;',
+                'STRONG_SELL': '&#128683;'
+            };
+
+            const existingContent = container.innerHTML;
+
+            container.innerHTML = existingContent + `
+                <div class="recommendation-box ${actionColors[recommendation.action]}">
+                    <div class="recommendation-icon">${actionIcons[recommendation.action]}</div>
+                    <div class="recommendation-info">
+                        <div class="recommendation-action">${recommendation.action.replace('_', ' ')}</div>
+                        <div class="recommendation-score">Score: ${recommendation.score} | Konfidenz: ${(recommendation.confidence * 100).toFixed(0)}% | Risiko: ${recommendation.risk_level}</div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                    <strong style="color: #64c8ff;">Insights:</strong>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        ${insights.map(i => `<li style="margin-bottom: 0.25rem;">${i}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Training Functions
+        async function startTraining() {
+            const symbols = document.getElementById('train-symbols').value.split(',').map(s => s.trim());
+            const timeframe = document.getElementById('train-timeframe').value;
+            const epochs = parseInt(document.getElementById('train-epochs').value);
+            const batchSize = parseInt(document.getElementById('train-batch-size').value);
+
+            try {
+                const response = await fetch('/cnn-lstm-train/api/v1/train', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbols: symbols,
+                        timeframes: [timeframe],
+                        epochs: epochs,
+                        batch_size: batchSize
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Training start failed');
+                }
+
+                showToast('Training gestartet', 'success');
+                document.getElementById('training-progress').style.display = 'block';
+                pollTrainingStatus();
+
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function cancelTraining() {
+            try {
+                const response = await fetch('/cnn-lstm-train/api/v1/train/cancel', { method: 'POST' });
+                if (response.ok) {
+                    showToast('Training abgebrochen', 'info');
+                    document.getElementById('training-indicator').className = 'status-indicator idle';
+                    document.getElementById('training-status-text').textContent = 'Abgebrochen';
+                }
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function checkTrainingStatus() {
+            try {
+                const response = await fetch('/cnn-lstm-train/api/v1/train/status');
+                const data = await response.json();
+
+                const indicator = document.getElementById('training-indicator');
+                const statusText = document.getElementById('training-status-text');
+
+                if (data.is_training) {
+                    indicator.className = 'status-indicator running';
+                    statusText.textContent = `Training... Epoche ${data.current_epoch || 0}/${data.total_epochs || '?'}`;
+                    document.getElementById('training-progress').style.display = 'block';
+
+                    const progress = data.total_epochs ? (data.current_epoch / data.total_epochs * 100) : 0;
+                    document.getElementById('training-progress-bar').style.width = progress + '%';
+                    document.getElementById('training-progress-text').textContent = progress.toFixed(0) + '%';
+                } else {
+                    indicator.className = 'status-indicator idle';
+                    statusText.textContent = data.status || 'Idle';
+                    document.getElementById('training-progress').style.display = 'none';
+                }
+
+                showToast('Status aktualisiert', 'info');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function queueViaWatchdog() {
+            const symbols = document.getElementById('train-symbols').value.split(',').map(s => s.trim());
+
+            try {
+                const response = await fetch('/watchdog/api/v1/training/queue', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        service: 'cnn-lstm',
+                        symbols: symbols,
+                        priority: 'normal'
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Queue failed');
+                }
+
+                showToast('Training via Watchdog eingereiht', 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        function pollTrainingStatus() {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch('/cnn-lstm-train/api/v1/train/status');
+                    const data = await response.json();
+
+                    if (!data.is_training) {
+                        clearInterval(interval);
+                        document.getElementById('training-indicator').className = 'status-indicator idle';
+                        document.getElementById('training-status-text').textContent = 'Abgeschlossen';
+                        document.getElementById('training-progress-bar').style.width = '100%';
+                        document.getElementById('training-progress-text').textContent = '100%';
+                        showToast('Training abgeschlossen!', 'success');
+                        return;
+                    }
+
+                    const progress = data.total_epochs ? (data.current_epoch / data.total_epochs * 100) : 0;
+                    document.getElementById('training-progress-bar').style.width = progress + '%';
+                    document.getElementById('training-progress-text').textContent = progress.toFixed(0) + '%';
+                    document.getElementById('training-status-text').textContent = `Epoche ${data.current_epoch}/${data.total_epochs}`;
+
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 5000);
+        }
+
+        async function loadTrainingHistory() {
+            try {
+                const response = await fetch('/cnn-lstm-train/api/v1/train/history');
+                const data = await response.json();
+
+                const container = document.getElementById('training-history');
+
+                if (!data.history || data.history.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>Keine Training-Historie vorhanden</p></div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="feature-table">
+                        <thead>
+                            <tr>
+                                <th>Datum</th>
+                                <th>Symbole</th>
+                                <th>Epochen</th>
+                                <th>Loss</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.history.map(h => `
+                                <tr>
+                                    <td>${new Date(h.started_at).toLocaleString('de-DE')}</td>
+                                    <td>${h.symbols?.join(', ') || '-'}</td>
+                                    <td>${h.epochs || '-'}</td>
+                                    <td>${h.final_loss?.toFixed(4) || '-'}</td>
+                                    <td><span class="prediction-badge ${h.status === 'completed' ? 'bullish' : 'bearish'}">${h.status}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        // Model Functions
+        async function loadModels() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/models');
+                const data = await response.json();
+
+                const container = document.getElementById('models-list');
+
+                if (!data.models || data.models.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>Keine Modelle verfügbar. Starte ein Training!</p></div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="feature-table">
+                        <thead>
+                            <tr>
+                                <th>Modell-ID</th>
+                                <th>Version</th>
+                                <th>Erstellt</th>
+                                <th>Parameter</th>
+                                <th>Aktiv</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.models.map(m => `
+                                <tr>
+                                    <td>${m.model_id}</td>
+                                    <td>${m.version}</td>
+                                    <td>${new Date(m.created_at).toLocaleString('de-DE')}</td>
+                                    <td>${m.total_parameters?.toLocaleString() || '-'}</td>
+                                    <td>${m.is_active ? '<span style="color: #81c784;">&#10003;</span>' : ''}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function loadModelInfo() {
+            try {
+                const response = await fetch('/cnn-lstm/health');
+                const data = await response.json();
+
+                document.getElementById('stat-model-status').textContent = data.model_loaded ? 'Aktiv' : 'Nicht geladen';
+                document.getElementById('stat-model-status').className = `stat-value ${data.model_loaded ? 'success' : 'error'}`;
+                document.getElementById('stat-model-version').textContent = data.model_version?.split('-').slice(-1)[0] || '-';
+
+                showToast('Modell-Info aktualisiert', 'info');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        // Utility Functions
+        function formatPrice(value) {
+            if (value == null) return '-';
+            if (value >= 1000) return value.toFixed(0);
+            if (value >= 1) return value.toFixed(2);
+            return value.toFixed(5);
+        }
+
+        function formatPatternName(type) {
+            return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+
+        // Initial Load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadModelInfo();
+        });
+    </script>
+</body>
+</html>
