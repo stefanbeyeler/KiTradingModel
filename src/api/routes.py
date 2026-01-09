@@ -5137,7 +5137,9 @@ async def get_training_data(
             rows = []
 
     # FALLBACK 1: If TwelveData has insufficient data, try EasyInsight
-    if len(rows) < 50:
+    # WICHTIG: EasyInsight liefert nur H1-Daten via /symbol-data-full
+    # Daher nur als Fallback für H1 verwenden, sonst werden falsche Daten gespeichert
+    if len(rows) < 50 and tf == "H1":
         logger.info(f"TwelveData insufficient ({len(rows)} rows), trying EasyInsight fallback for {symbol}/{tf}")
         try:
             # Resolve EasyInsight symbol from managed symbols config
@@ -5173,6 +5175,8 @@ async def get_training_data(
 
         except Exception as e:
             logger.warning(f"EasyInsight API fallback failed for {symbol}: {e}")
+    elif len(rows) < 50:
+        logger.warning(f"TwelveData insufficient for {symbol}/{tf}, EasyInsight fallback only available for H1")
 
     # Return whatever we have (might be empty or partial)
     source = "twelvedata" if rows else "none"

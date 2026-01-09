@@ -336,10 +336,15 @@ class DataGatewayService:
             )
             return td_data, "twelvedata"
 
-        # 3. Fallback to EasyInsight only if TwelveData fails
-        logger.warning(f"TwelveData failed for {symbol} {tf_str}, trying EasyInsight fallback")
-        data = await self.get_historical_data(symbol, limit, tf_str, force_refresh=True)
-        return data, "easyinsight"
+        # 3. Fallback to EasyInsight only for H1 (EasyInsight only provides H1 data)
+        # For other timeframes, return empty data - don't use H1 data for D1/W1/etc.
+        if tf_str == "H1":
+            logger.warning(f"TwelveData failed for {symbol} {tf_str}, trying EasyInsight fallback")
+            data = await self.get_historical_data(symbol, limit, tf_str, force_refresh=True)
+            return data, "easyinsight"
+        else:
+            logger.warning(f"TwelveData failed for {symbol} {tf_str}, no fallback available (EasyInsight only supports H1)")
+            return [], "none"
 
     def _convert_twelvedata_to_easyinsight(
         self,

@@ -698,6 +698,99 @@ services:
       retries: 3
       start_period: 10s
 
+  # CNN-LSTM Multi-Task Service - Hybrid CNN-LSTM for Multi-Task Predictions (Port 3007)
+  # Combines CNN for local features with LSTM for sequential processing
+  cnn-lstm-service:
+    build:
+      context: .
+      dockerfile: docker/services/cnn-lstm/Dockerfile
+      args:
+        - SERVICE_PORT=${CNN_LSTM_SERVICE_PORT:-3007}
+    container_name: trading-cnn-lstm
+    ports:
+      - "${CNN_LSTM_SERVICE_PORT:-3007}:${CNN_LSTM_SERVICE_PORT:-3007}"
+    volumes:
+      - cnn-lstm-models:/app/data/models/cnn-lstm
+      - symbols-data:/app/data/symbols
+      - logs-data:/app/logs
+    environment:
+      - SERVICE_NAME=cnn-lstm
+      - PORT=${CNN_LSTM_SERVICE_PORT:-3007}
+      - ROOT_PATH=/cnn-lstm
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - MODEL_DIR=/app/data/models/cnn-lstm
+      # Limit CPU threads
+      - OMP_NUM_THREADS=2
+      - MKL_NUM_THREADS=2
+      - OPENBLAS_NUM_THREADS=2
+      - NUMEXPR_MAX_THREADS=2
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 6G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CNN_LSTM_SERVICE_PORT:-3007}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # CNN-LSTM Training Service - Dedicated training container (LOW PRIORITY)
+  # Port 3017 - Trains CNN-LSTM Multi-Task models
+  cnn-lstm-train-service:
+    build:
+      context: .
+      dockerfile: docker/services/cnn-lstm-train/Dockerfile
+      args:
+        - SERVICE_PORT=${CNN_LSTM_TRAIN_SERVICE_PORT:-3017}
+    container_name: trading-cnn-lstm-train
+    ports:
+      - "${CNN_LSTM_TRAIN_SERVICE_PORT:-3017}:${CNN_LSTM_TRAIN_SERVICE_PORT:-3017}"
+    volumes:
+      - cnn-lstm-models:/app/data/models/cnn-lstm
+      - symbols-data:/app/data/symbols
+      - logs-data:/app/logs
+    environment:
+      - SERVICE_NAME=cnn-lstm-train
+      - PORT=${CNN_LSTM_TRAIN_SERVICE_PORT:-3017}
+      - ROOT_PATH=/cnn-lstm-train
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - CNN_LSTM_SERVICE_URL=http://trading-cnn-lstm:${CNN_LSTM_SERVICE_PORT:-3007}
+      - MODEL_DIR=/app/data/models/cnn-lstm
+      - NICE_PRIORITY=19
+      # Limit CPU threads for training
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+      - OPENBLAS_NUM_THREADS=4
+      - NUMEXPR_MAX_THREADS=4
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+      - cnn-lstm-service
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 12G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CNN_LSTM_TRAIN_SERVICE_PORT:-3017}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   # HMM Training Service - Dedicated training container (LOW PRIORITY)
   # Port 3014 - Trains HMM regime detection and LightGBM scorer models
   hmm-train-service:
@@ -773,6 +866,7 @@ services:
       - TCN_TRAIN_URL=http://trading-tcn-train:${TCN_TRAIN_SERVICE_PORT:-3013}
       - HMM_TRAIN_URL=http://trading-hmm-train:${HMM_TRAIN_SERVICE_PORT:-3014}
       - CANDLESTICK_TRAIN_URL=http://trading-candlestick-train:${CANDLESTICK_TRAIN_SERVICE_PORT:-3016}
+      - CNN_LSTM_TRAIN_URL=http://trading-cnn-lstm-train:${CNN_LSTM_TRAIN_SERVICE_PORT:-3017}
       # Monitoring service URLs
       - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
       - NHITS_SERVICE_URL=http://trading-nhits:${NHITS_SERVICE_PORT:-3002}
@@ -839,6 +933,10 @@ volumes:
 
   # HMM Service Volumes
   hmm-models:
+    driver: local
+
+  # CNN-LSTM Service Volumes
+  cnn-lstm-models:
     driver: local
 
   # Embedder Service Volumes

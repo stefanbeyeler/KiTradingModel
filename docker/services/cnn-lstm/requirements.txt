@@ -1,0 +1,19 @@
+# CNN-LSTM Inference Service Requirements
+
+# PyTorch (CPU version - GPU support pending for sm_110)
+torch>=2.0.0
+numpy>=1.24.0
+
+# FastAPI
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+pydantic>=2.0.0
+
+# HTTP Client
+httpx>=0.24.0
+
+# Logging
+loguru>=0.7.0
+
+# Utils
+python-dotenv>=1.0.0

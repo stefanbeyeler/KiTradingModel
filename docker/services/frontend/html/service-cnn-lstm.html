@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNN-LSTM Multi-Task Service - Service Dokumentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .service-badge {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .service-badge.train {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        .subtitle {
+            opacity: 0.7;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .content-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-card p {
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .content-card ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .content-card li {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tech-tag {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(167, 139, 250, 0.3);
+        }
+
+        .endpoint-list {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .endpoint {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .endpoint:last-child {
+            border-bottom: none;
+        }
+
+        .method {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .method.post {
+            background: rgba(33, 150, 243, 0.2);
+            color: #64b5f6;
+        }
+
+        .endpoint-path {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #ffd54f;
+        }
+
+        .endpoint-desc {
+            opacity: 0.7;
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .info-box {
+            background: rgba(100, 200, 255, 0.1);
+            border-left: 3px solid #64c8ff;
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+
+        .info-box.warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+        }
+
+        .info-box.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-left-color: #4caf50;
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .quick-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        .quick-links a:hover {
+            background: rgba(100, 200, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid #a78bfa;
+        }
+
+        .feature-item h4 {
+            color: #a78bfa;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .feature-item p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 0;
+        }
+
+        /* Task Cards */
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .task-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .task-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s;
+        }
+
+        .task-card:hover {
+            border-color: rgba(100, 200, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .task-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .task-card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .task-card-badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .task-card-badge.regression {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .task-card-badge.classification {
+            background: rgba(33, 150, 243, 0.2);
+            color: #64b5f6;
+        }
+
+        .task-card-desc {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            opacity: 0.85;
+            margin-bottom: 1rem;
+        }
+
+        .task-card-outputs {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem;
+        }
+
+        .task-card-outputs h5 {
+            font-size: 0.75rem;
+            color: #ffc107;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .task-card-outputs ul {
+            margin: 0;
+            padding-left: 1rem;
+            font-size: 0.8rem;
+        }
+
+        .task-card-outputs li {
+            margin-bottom: 0.25rem;
+            opacity: 0.8;
+        }
+
+        /* Architecture Diagram */
+        .architecture-diagram {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            overflow-x: auto;
+        }
+
+        .architecture-diagram pre {
+            margin: 0;
+            white-space: pre;
+        }
+
+        .arch-input {
+            color: #81c784;
+        }
+
+        .arch-cnn {
+            color: #64b5f6;
+        }
+
+        .arch-lstm {
+            color: #ffd54f;
+        }
+
+        .arch-output {
+            color: #ef5350;
+        }
+
+        /* Timeframe Table */
+        .timeframe-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .timeframe-table th,
+        .timeframe-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .timeframe-table th {
+            background: rgba(0, 0, 0, 0.3);
+            color: #64c8ff;
+            font-weight: 600;
+        }
+
+        .timeframe-table td {
+            font-size: 0.9rem;
+        }
+
+        .timeframe-table tr:hover {
+            background: rgba(100, 200, 255, 0.05);
+        }
+
+        /* Port badges */
+        .port-badges {
+            display: flex;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
+            <div class="port-badges">
+                <span class="service-badge">Inference: 3007</span>
+                <span class="service-badge train">Training: 3017</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>CNN-LSTM Multi-Task Service</h1>
+        <p class="subtitle">Hybrid Deep Learning - Kombiniert CNN Feature-Extraktion mit LSTM Sequenzverarbeitung</p>
+
+        <div class="content-card">
+            <h2>&#129504; Beschreibung</h2>
+            <p>
+                Der CNN-LSTM Multi-Task Service kombiniert <strong>Convolutional Neural Networks (CNN)</strong> für
+                lokale Feature-Extraktion mit <strong>Long Short-Term Memory (LSTM)</strong> Netzwerken für sequenzielle
+                Musterverarbeitung. Diese Hybrid-Architektur ermöglicht die gleichzeitige Lösung von drei Aufgaben
+                in einem einzigen Modell.
+            </p>
+            <p>
+                Das Multi-Task Learning teilt gemeinsame Repräsentationen zwischen verwandten Aufgaben, was zu
+                besserer Generalisierung und effizienterer Nutzung der Trainingsdaten führt. Der Service
+                verarbeitet 25 technische Features über variable Sequenzlängen je nach Timeframe.
+            </p>
+        </div>
+
+        <div class="content-card">
+            <h2>&#127919; Multi-Task Vorhersagen</h2>
+            <p>Der Service löst drei zusammenhängende Aufgaben gleichzeitig:</p>
+
+            <div class="task-grid">
+                <!-- Price Prediction -->
+                <div class="task-card">
+                    <div class="task-card-header">
+                        <span class="task-card-title">Preis-Vorhersage</span>
+                        <span class="task-card-badge regression">Regression</span>
+                    </div>
+                    <p class="task-card-desc">
+                        Vorhersage der erwarteten Preisänderung für 4 verschiedene Zeithorizonte
+                        relativ zum aktuellen Preis.
+                    </p>
+                    <div class="task-card-outputs">
+                        <h5>Outputs</h5>
+                        <ul>
+                            <li>1h Forecast</li>
+                            <li>4h Forecast</li>
+                            <li>1d Forecast</li>
+                            <li>Direction & Confidence</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Pattern Classification -->
+                <div class="task-card">
+                    <div class="task-card-header">
+                        <span class="task-card-title">Pattern-Klassifikation</span>
+                        <span class="task-card-badge classification">Multi-Label</span>
+                    </div>
+                    <p class="task-card-desc">
+                        Erkennung von 16 klassischen Chart-Patterns mit Wahrscheinlichkeiten
+                        für jedes Pattern (Multi-Label).
+                    </p>
+                    <div class="task-card-outputs">
+                        <h5>16 Patterns</h5>
+                        <ul>
+                            <li>Head & Shoulders</li>
+                            <li>Double/Triple Top/Bottom</li>
+                            <li>Triangles, Wedges, Flags</li>
+                            <li>Cup & Handle, Rectangle</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Regime Prediction -->
+                <div class="task-card">
+                    <div class="task-card-header">
+                        <span class="task-card-title">Regime-Vorhersage</span>
+                        <span class="task-card-badge classification">4-Klassen</span>
+                    </div>
+                    <p class="task-card-desc">
+                        Klassifikation des aktuellen Marktregimes in eine von
+                        vier Kategorien mit Wahrscheinlichkeiten.
+                    </p>
+                    <div class="task-card-outputs">
+                        <h5>Regime-Typen</h5>
+                        <ul>
+                            <li>Bull Trend</li>
+                            <li>Bear Trend</li>
+                            <li>Sideways/Range</li>
+                            <li>High Volatility</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128230; Modell-Architektur</h2>
+            <p>Die Hybrid CNN-LSTM Architektur besteht aus drei Hauptkomponenten:</p>
+
+            <div class="architecture-diagram">
+<pre>
+<span class="arch-input">Input: (batch, seq_len, 25 features)</span>
+              │
+              ▼
+┌─────────────────────────────────────┐
+│         <span class="arch-cnn">CNN ENCODER</span>                 │
+│  ┌─────────────────────────────┐    │
+│  │ Conv1d(25→64, k=3) + BN     │    │
+│  │ ReLU + Dropout(0.2)         │    │
+│  ├─────────────────────────────┤    │
+│  │ Conv1d(64→128, k=3) + BN    │    │
+│  │ ReLU + Dropout(0.2)         │    │
+│  ├─────────────────────────────┤    │
+│  │ Conv1d(128→256, k=3) + BN   │    │
+│  │ ReLU + Dropout(0.2)         │    │
+│  └─────────────────────────────┘    │
+└─────────────────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────┐
+│         <span class="arch-lstm">LSTM ENCODER</span>                │
+│  ┌─────────────────────────────┐    │
+│  │ BiLSTM(256→128, layers=2)   │    │
+│  │ Dropout(0.3)                │    │
+│  ├─────────────────────────────┤    │
+│  │ Attention Mechanism         │    │
+│  │ Output: 256-dim vector      │    │
+│  └─────────────────────────────┘    │
+└─────────────────────────────────────┘
+              │
+    ┌─────────┼─────────┐
+    ▼         ▼         ▼
+<span class="arch-output">┌───────┐ ┌───────┐ ┌───────┐</span>
+<span class="arch-output">│ Price │ │Pattern│ │Regime │</span>
+<span class="arch-output">│ Head  │ │ Head  │ │ Head  │</span>
+<span class="arch-output">│ (4)   │ │ (16)  │ │ (4)   │</span>
+<span class="arch-output">└───────┘ └───────┘ └───────┘</span>
+</pre>
+            </div>
+
+            <div class="info-box">
+                <strong>Multi-Task Loss:</strong>
+                <code>Total = 0.4×Price_MSE + 0.35×Pattern_BCE + 0.25×Regime_CE</code>
+                <br>Die Gewichtung balanciert die verschiedenen Aufgaben für optimales gemeinsames Lernen.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128200; Input-Features (25 Dimensionen)</h2>
+            <p>Das Modell verarbeitet 25 technische Indikatoren als Input:</p>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>OHLCV (5)</h4>
+                    <p>Open, High, Low, Close, Volume - Basis-Preisdaten</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Returns (2)</h4>
+                    <p>Log-Return, Volatility (20-Perioden)</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Trend (5)</h4>
+                    <p>SMA_20, EMA_12, EMA_26, MACD, MACD_Signal</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Momentum (4)</h4>
+                    <p>RSI_14, Stochastic_K, Stochastic_D, CCI_14</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Volatility (4)</h4>
+                    <p>ATR_14, BB_Upper, BB_Middle, BB_Lower</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Volume (2)</h4>
+                    <p>OBV_normalized, A/D Line</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Position (2)</h4>
+                    <p>Price vs SMA, BB Position (0-1)</p>
+                </div>
+                <div class="feature-item">
+                    <h4>Meta (1)</h4>
+                    <p>Timeframe Encoding</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128337; Sequenzlängen pro Timeframe</h2>
+            <p>Die Sequenzlänge ist für jeden Timeframe optimiert:</p>
+
+            <table class="timeframe-table">
+                <thead>
+                    <tr>
+                        <th>Timeframe</th>
+                        <th>Sequenz</th>
+                        <th>Entspricht</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>M1</td><td>480</td><td>8 Stunden</td></tr>
+                    <tr><td>M5</td><td>288</td><td>24 Stunden</td></tr>
+                    <tr><td>M15</td><td>192</td><td>48 Stunden</td></tr>
+                    <tr><td>M30</td><td>192</td><td>4 Tage</td></tr>
+                    <tr><td>H1</td><td>168</td><td>1 Woche</td></tr>
+                    <tr><td>H4</td><td>168</td><td>4 Wochen</td></tr>
+                    <tr><td>D1</td><td>120</td><td>~6 Monate</td></tr>
+                    <tr><td>W1</td><td>52</td><td>1 Jahr</td></tr>
+                    <tr><td>MN</td><td>24</td><td>2 Jahre</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128279; API-Endpunkte - Inference Service (Port 3007)</h2>
+
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Prediction Endpoints</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/predict/{symbol}</span>
+                    <span class="endpoint-desc">Kombinierte Multi-Task Vorhersage</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/price/{symbol}</span>
+                    <span class="endpoint-desc">Nur Preis-Vorhersage</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/patterns/{symbol}</span>
+                    <span class="endpoint-desc">Nur Pattern-Klassifikation</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/regime/{symbol}</span>
+                    <span class="endpoint-desc">Nur Regime-Vorhersage</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/batch</span>
+                    <span class="endpoint-desc">Batch-Vorhersage für mehrere Symbole</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System Endpoints</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/health</span>
+                    <span class="endpoint-desc">Service Health Check</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/models</span>
+                    <span class="endpoint-desc">Verfügbare Modelle auflisten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/models/reload</span>
+                    <span class="endpoint-desc">Modelle neu laden</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128279; API-Endpunkte - Training Service (Port 3017)</h2>
+
+            <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; opacity: 0.8;">Training Endpoints</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/train</span>
+                    <span class="endpoint-desc">Training starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/train/status</span>
+                    <span class="endpoint-desc">Training-Status abfragen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/train/cancel</span>
+                    <span class="endpoint-desc">Training abbrechen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/train/history</span>
+                    <span class="endpoint-desc">Training-Historie</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System Endpoints</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/health</span>
+                    <span class="endpoint-desc">Service Health Check</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/models</span>
+                    <span class="endpoint-desc">Trainierte Modelle auflisten</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#9881;&#65039; Funktionsweise</h2>
+            <p>Der CNN-LSTM Algorithmus funktioniert durch:</p>
+            <ul>
+                <li><strong>CNN Feature-Extraktion:</strong> Erkennt lokale Muster wie Kerzenformationen und kurzfristige Trends</li>
+                <li><strong>Batch Normalization:</strong> Stabilisiert das Training und beschleunigt die Konvergenz</li>
+                <li><strong>Bidirectionales LSTM:</strong> Verarbeitet Sequenzen vorwärts und rückwärts für vollständigen Kontext</li>
+                <li><strong>Attention Mechanism:</strong> Fokussiert auf die wichtigsten Zeitpunkte in der Sequenz</li>
+                <li><strong>Multi-Task Heads:</strong> Spezialisierte Ausgabeschichten für jede Aufgabe</li>
+            </ul>
+
+            <div class="info-box success">
+                <strong>CPU-Optimiert:</strong> Der Service ist für CPU-Inferenz optimiert mit Thread-Limiting
+                (OMP_NUM_THREADS=2). GPU-Support wird mit PyTorch 2.6+ für NVIDIA Thor (sm_110) verfügbar.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128295; Technologie-Stack</h2>
+            <div class="tech-stack">
+                <span class="tech-tag">Python 3.11</span>
+                <span class="tech-tag">PyTorch</span>
+                <span class="tech-tag">CNN</span>
+                <span class="tech-tag">BiLSTM</span>
+                <span class="tech-tag">Attention</span>
+                <span class="tech-tag">FastAPI</span>
+                <span class="tech-tag">NumPy</span>
+                <span class="tech-tag">httpx</span>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128230; Docker-Konfiguration</h2>
+            <p>Ressourcen-Allokation für die Container:</p>
+
+            <table class="timeframe-table">
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Container</th>
+                        <th>CPU</th>
+                        <th>RAM</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Inference</td>
+                        <td>trading-cnn-lstm</td>
+                        <td>2 Cores</td>
+                        <td>6 GB</td>
+                    </tr>
+                    <tr>
+                        <td>Training</td>
+                        <td>trading-cnn-lstm-train</td>
+                        <td>4 Cores</td>
+                        <td>12 GB</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="info-box warning">
+                <strong>Training Priorität:</strong> Der Training-Container läuft mit <code>NICE_PRIORITY=19</code>
+                (niedrigste CPU-Priorität) um Inference-Services nicht zu beeinträchtigen.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128640; Schnellzugriff</h2>
+            <div class="quick-links">
+                <a href="/cnn-lstm/docs" target="_blank">&#128196; Inference API Docs</a>
+                <a href="/cnn-lstm-train/docs" target="_blank">&#128196; Training API Docs</a>
+                <a href="/cnn-lstm/health" target="_blank">&#128154; Inference Health</a>
+                <a href="/cnn-lstm-train/health" target="_blank">&#128154; Training Health</a>
+                <a href="/" class="back-link">&#127968; Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        KI Trading Model - Service Dokumentation | CNN-LSTM Multi-Task Service
+    </footer>
+</body>
+</html>

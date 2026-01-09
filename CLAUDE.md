@@ -377,6 +377,7 @@ Ein **Three Inside Down** Pattern (3 Kerzen) wird angezeigt als:
 | HMM-Regime Service | 3004 | /docs | - | Regime Detection (Inference) |
 | Embedder Service | 3005 | /docs | CUDA | Feature Embeddings |
 | Candlestick Service | 3006 | /docs | - | Candlestick Patterns (Inference) |
+| **CNN-LSTM Service** | **3007** | /docs | - | Multi-Task Predictions (Inference) |
 | **Redis Cache** | **6379** | - | - | Zentraler Cache |
 | RAG Service | 3008 | /docs | CUDA | Vector Search |
 | LLM Service | 3009 | /docs | CUDA | LLM Analysis |
@@ -390,31 +391,32 @@ Ein **Three Inside Down** Pattern (3 Kerzen) wird angezeigt als:
 | TCN-Train Service | 3013 | /docs | CUDA | TCN Pattern Training |
 | HMM-Train Service | 3014 | /docs | - | HMM + LightGBM Training |
 | Candlestick-Train Service | 3016 | /docs | - | Candlestick Pattern Training |
+| **CNN-LSTM-Train Service** | **3017** | /docs | - | CNN-LSTM Multi-Task Training |
 
 ### Training-Architektur
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│                   WATCHDOG SERVICE                       │
-│                 Training Orchestrator                    │
-│                     (Port 3010)                          │
-└────────────────────────┬────────────────────────────────┘
-                         │
-         ┌───────────────┼───────────────┬───────────────┐
-         ▼               ▼               ▼               ▼
-   ┌───────────┐   ┌───────────┐   ┌───────────┐   ┌───────────┐
-   │  NHITS    │   │   TCN     │   │   HMM     │   │Candlestick│
-   │  TRAIN    │   │  TRAIN    │   │  TRAIN    │   │  TRAIN    │
-   │  :3012    │   │  :3013    │   │  :3014    │   │  :3016    │
-   └─────┬─────┘   └─────┬─────┘   └─────┬─────┘   └─────┬─────┘
-         │               │               │               │
-         │ Shared Volume │               │               │
-         ▼               ▼               ▼               ▼
-   ┌───────────┐   ┌───────────┐   ┌───────────┐   ┌───────────┐
-   │  NHITS    │   │   TCN     │   │   HMM     │   │Candlestick│
-   │ INFERENCE │   │ INFERENCE │   │ INFERENCE │   │ INFERENCE │
-   │  :3002    │   │  :3003    │   │  :3004    │   │  :3006    │
-   └───────────┘   └───────────┘   └───────────┘   └───────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                        WATCHDOG SERVICE                               │
+│                      Training Orchestrator                            │
+│                          (Port 3010)                                  │
+└────────────────────────────────┬─────────────────────────────────────┘
+                                 │
+         ┌───────────────┬───────┼───────┬───────────────┬─────────────┐
+         ▼               ▼       ▼       ▼               ▼             ▼
+   ┌───────────┐   ┌───────────┐ ┌───────────┐   ┌───────────┐   ┌───────────┐
+   │  NHITS    │   │   TCN     │ │   HMM     │   │Candlestick│   │ CNN-LSTM  │
+   │  TRAIN    │   │  TRAIN    │ │  TRAIN    │   │  TRAIN    │   │  TRAIN    │
+   │  :3012    │   │  :3013    │ │  :3014    │   │  :3016    │   │  :3017    │
+   └─────┬─────┘   └─────┬─────┘ └─────┬─────┘   └─────┬─────┘   └─────┬─────┘
+         │               │             │               │               │
+         │ Shared Volume │             │               │               │
+         ▼               ▼             ▼               ▼               ▼
+   ┌───────────┐   ┌───────────┐ ┌───────────┐   ┌───────────┐   ┌───────────┐
+   │  NHITS    │   │   TCN     │ │   HMM     │   │Candlestick│   │ CNN-LSTM  │
+   │ INFERENCE │   │ INFERENCE │ │ INFERENCE │   │ INFERENCE │   │ INFERENCE │
+   │  :3002    │   │  :3003    │ │  :3004    │   │  :3006    │   │  :3007    │
+   └───────────┘   └───────────┘ └───────────┘   └───────────┘   └───────────┘
 ```
 
 **Vorteile der separaten Training-Container:**
@@ -422,6 +424,50 @@ Ein **Three Inside Down** Pattern (3 Kerzen) wird angezeigt als:
 - Unabhängige Skalierung von Training und Inference
 - Low-Priority (`nice -n 19`) für Training-Prozesse
 - Zentrale Koordination über Watchdog Orchestrator
+
+### CNN-LSTM Multi-Task Service
+
+Der CNN-LSTM Service kombiniert CNN für lokale Feature-Extraktion mit BiLSTM für sequenzielle Verarbeitung.
+
+**Architektur:**
+```text
+Input (batch, seq_len, 25 features)
+         │
+    CNN Encoder
+    ├── Conv1d(25→64, k=3) + BN + ReLU
+    ├── Conv1d(64→128, k=3) + BN + ReLU
+    └── Conv1d(128→256, k=3) + BN + ReLU
+         │
+   BiLSTM Encoder
+    └── BiLSTM(256→128, layers=2) + Attention
+         │
+    ┌────┼────┐
+    ▼    ▼    ▼
+  Price Pattern Regime
+  (4)   (16)   (4)
+```
+
+**Multi-Task Outputs:**
+| Task | Typ | Output | Beschreibung |
+|------|-----|--------|--------------|
+| Price | Regression | 4 Horizonte | 1h, 4h, 1d Preisänderung + Direction |
+| Patterns | Multi-Label | 16 Klassen | Chart-Patterns mit Wahrscheinlichkeiten |
+| Regime | Multi-Class | 4 Klassen | Bull, Bear, Sideways, HighVol |
+
+**Input-Features (25 Dimensionen):**
+- OHLCV (5): Open, High, Low, Close, Volume
+- Returns (2): Log-Return, Volatility_20
+- Trend (5): SMA_20, EMA_12, EMA_26, MACD, MACD_Signal
+- Momentum (4): RSI_14, Stoch_K, Stoch_D, CCI_14
+- Volatility (4): ATR_14, BB_Upper, BB_Middle, BB_Lower
+- Volume (2): OBV_normalized, AD_Line
+- Position (2): Price_vs_SMA, BB_Position
+- Meta (1): Timeframe_Encoding
+
+**Multi-Task Loss:**
+```python
+Total Loss = 0.4 × Price_MSE + 0.35 × Pattern_BCE + 0.25 × Regime_CE
+```
 
 ## GPU-Konfiguration (NVIDIA Thor / Jetson)
 
@@ -505,6 +551,9 @@ Alle Services sind via Nginx-Proxy unter folgenden Pfaden erreichbar:
 | TCN-Pattern Service | http://10.1.19.101:3000/tcn/docs | /tcn/* |
 | HMM-Regime Service | http://10.1.19.101:3000/hmm/docs | /hmm/* |
 | Embedder Service | http://10.1.19.101:3000/embedder/docs | /embedder/* |
+| Candlestick Service | http://10.1.19.101:3000/candlestick/docs | /candlestick/* |
+| CNN-LSTM Service | http://10.1.19.101:3000/cnn-lstm/docs | /cnn-lstm/* |
+| CNN-LSTM-Train Service | http://10.1.19.101:3000/cnn-lstm-train/docs | /cnn-lstm-train/* |
 | RAG Service | http://10.1.19.101:3000/rag/docs | /rag/* |
 | LLM Service | http://10.1.19.101:3000/llm/docs | /llm/* |
 | Watchdog Service | http://10.1.19.101:3000/watchdog/docs | /watchdog/* |
@@ -659,6 +708,7 @@ curl http://10.1.19.101:3010/api/v1/training/services
 | **tcn** | Temporal CNN | Chart-Pattern-Erkennung |
 | **hmm** | HMM + LightGBM | Regime-Detection + Signal Scorer |
 | **candlestick** | CNN | Candlestick-Pattern-Erkennung |
+| **cnn-lstm** | CNN-LSTM Hybrid | Multi-Task: Preis, Patterns, Regime |
 
 ### Priority-Levels
 
@@ -693,7 +743,7 @@ curl http://10.1.19.101:3010/api/v1/training/schedules
 ```
 
 Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`
-Scopes: `nhits`, `tcn`, `hmm`, `embedder`, `rag`, `llm`, `data`, `watchdog`, `frontend`, `api`, `config`, `docker`
+Scopes: `nhits`, `tcn`, `hmm`, `embedder`, `rag`, `llm`, `data`, `watchdog`, `frontend`, `api`, `config`, `docker`, `cnn-lstm`, `candlestick`
 
 ## Zeitzonen-Handling (VERBINDLICH)
 
@@ -753,6 +803,7 @@ Jeder Service hat eine Info-Seite unter `docker/services/frontend/html/service-{
 | HMM-Regime Service | `service-hmm.html` |
 | Embedder Service | `service-embedder.html` |
 | Candlestick Service | `service-candlestick.html` |
+| CNN-LSTM Service | `service-cnn-lstm.html` |
 | RAG Service | `service-rag.html` |
 | LLM Service | `service-llm.html` |
 | Watchdog Service | `service-watchdog.html` |

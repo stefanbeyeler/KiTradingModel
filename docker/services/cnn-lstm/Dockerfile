@@ -1,0 +1,49 @@
+# CNN-LSTM Multi-Task Inference Service
+# Port: 3007
+
+FROM python:3.11-slim
+
+ARG SERVICE_PORT=3007
+
+WORKDIR /app
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for caching
+COPY docker/services/cnn-lstm/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY src/services/cnn_lstm_app/ ./src/services/cnn_lstm_app/
+COPY src/config/ ./src/config/
+COPY src/utils/ ./src/utils/
+
+# Create __init__.py files
+RUN touch ./src/__init__.py ./src/services/__init__.py
+
+# Create directories
+RUN mkdir -p /app/data/models/cnn-lstm /app/logs
+
+# Environment
+ENV PYTHONPATH=/app
+ENV SERVICE_NAME=cnn-lstm
+ENV PORT=${SERVICE_PORT}
+ENV PYTHONUNBUFFERED=1
+
+# Limit threads for CPU efficiency
+ENV OMP_NUM_THREADS=2
+ENV MKL_NUM_THREADS=2
+ENV OPENBLAS_NUM_THREADS=2
+ENV NUMEXPR_MAX_THREADS=2
+
+EXPOSE ${SERVICE_PORT}
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:${SERVICE_PORT}/health || exit 1
+
+# Run service
+CMD ["sh", "-c", "python -m uvicorn src.services.cnn_lstm_app.main:app --host 0.0.0.0 --port ${PORT:-3007}"]
