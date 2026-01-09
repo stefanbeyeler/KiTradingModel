@@ -3585,12 +3585,22 @@ async def get_symbol_data_stats(symbol: str):
                             if global_last is None or last_ts > global_last:
                                 global_last = last_ts
 
-                        # Calculate coverage percentage
+                        # Calculate coverage percentage (accounting for weekends)
                         if first_ts and last_ts:
                             range_days = (last_ts - first_ts).total_seconds() / 86400
                             if range_days > 0:
                                 candles_per_day = TIMEFRAME_CANDLES_PER_DAY.get(Timeframe[tf], 1)
-                                expected_candles = range_days * candles_per_day
+
+                                # For intraday timeframes (M1-H4), subtract weekend hours
+                                # Forex markets are closed ~48h per week (Sat+Sun)
+                                if tf in ["M1", "M5", "M15", "M30", "H1", "H4"]:
+                                    # ~5/7 of time is trading time (weekdays only)
+                                    trading_days = range_days * (5 / 7)
+                                    expected_candles = trading_days * candles_per_day
+                                else:
+                                    # D1, W1, MN - no weekend adjustment needed
+                                    expected_candles = range_days * candles_per_day
+
                                 coverage = min(100, (count / max(1, expected_candles)) * 100)
                                 result["timeframes"][tf]["coverage_pct"] = round(coverage, 1)
 

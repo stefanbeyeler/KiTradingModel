@@ -59,6 +59,21 @@ class PrefetchConfig:
         "vwap",         # Volume Weighted Average Price
     ]
 
+    # Optimierte Limits pro Timeframe für 1 Jahr Abdeckung
+    # Berechnung: Tage * Kerzen/Tag * (5/7 für Wochenenden bei Intraday)
+    # TwelveData max: 5000 pro Request
+    TIMEFRAME_LIMITS: dict[str, int] = {
+        "1min": 5000,    # ~3.5 Trading-Tage (1440 * 5/7 = 1028/Tag)
+        "5min": 5000,    # ~17 Trading-Tage (288 * 5/7 = 206/Tag)
+        "15min": 5000,   # ~52 Trading-Tage (96 * 5/7 = 69/Tag)
+        "30min": 5000,   # ~104 Trading-Tage (48 * 5/7 = 34/Tag)
+        "1h": 5000,      # ~208 Trading-Tage (~10 Monate)
+        "4h": 5000,      # ~833 Trading-Tage (~3.3 Jahre)
+        "1day": 1000,    # 1000 Tage (~2.7 Jahre)
+        "1week": 520,    # 520 Wochen (~10 Jahre)
+        "1month": 240,   # 240 Monate (~20 Jahre)
+    }
+
     def __init__(
         self,
         enabled: bool = True,
@@ -74,7 +89,7 @@ class PrefetchConfig:
         favorites_only: bool = False,
         # Intervall für periodisches Pre-Fetching (Sekunden)
         refresh_interval: int = 300,
-        # Output-Size für OHLCV-Daten
+        # Output-Size für OHLCV-Daten (Fallback, wird pro Timeframe überschrieben)
         ohlcv_limit: int = 5000,
         # Verzögerung zwischen API-Aufrufen (Rate Limiting)
         api_delay: float = 0.2,
@@ -107,6 +122,10 @@ class PrefetchConfig:
         self.db_sync_enabled = db_sync_enabled
         self.easyinsight_indicators_enabled = easyinsight_indicators_enabled
         self.easyinsight_limit = easyinsight_limit
+
+    def get_limit_for_timeframe(self, timeframe: str) -> int:
+        """Gibt das optimierte Limit für einen Timeframe zurück."""
+        return self.TIMEFRAME_LIMITS.get(timeframe, self.ohlcv_limit)
 
 
 class PrefetchService:
@@ -540,7 +559,10 @@ class PrefetchService:
         """
         # Normalize symbol for cache key
         cache_symbol = symbol.upper().replace("/", "")
-        cache_params = {"interval": timeframe, "outputsize": self._config.ohlcv_limit}
+
+        # Dynamisches Limit pro Timeframe für optimale Abdeckung
+        limit = self._config.get_limit_for_timeframe(timeframe)
+        cache_params = {"interval": timeframe, "outputsize": limit}
 
         # Prüfe ob Cache noch gültig ist
         cached = await cache_service.get(
@@ -558,7 +580,7 @@ class PrefetchService:
                 data, source = await data_gateway.get_historical_data_with_fallback(
                     symbol=symbol,
                     timeframe=timeframe,
-                    limit=self._config.ohlcv_limit,
+                    limit=limit,
                     force_refresh=False,  # Cache nutzen wenn vorhanden
                 )
 
@@ -575,7 +597,7 @@ class PrefetchService:
                 result = await twelvedata_service.get_time_series(
                     symbol=symbol,
                     interval=timeframe,
-                    outputsize=self._config.ohlcv_limit,
+                    outputsize=limit,
                 )
 
                 if result and result.get("values"):
@@ -951,6 +973,7 @@ class PrefetchService:
             "favorites_only": self._config.favorites_only,
             "refresh_interval": self._config.refresh_interval,
             "ohlcv_limit": self._config.ohlcv_limit,
+            "timeframe_limits": PrefetchConfig.TIMEFRAME_LIMITS,
             "api_delay": self._config.api_delay,
             "indicators": self._config.indicators,
             "indicator_limit": self._config.indicator_limit,
