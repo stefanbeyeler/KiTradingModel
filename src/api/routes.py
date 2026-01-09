@@ -1175,12 +1175,18 @@ async def get_prefetch_status():
             "config": config,
             "statistics": {
                 "last_run": stats["last_run"],
+                "last_fast_run": stats.get("last_fast_run"),
                 "total_runs": stats["total_runs"],
+                "total_fast_runs": stats.get("total_fast_runs", 0),
                 "symbols_fetched": stats["symbols_fetched"],
                 "timeframes_fetched": stats["timeframes_fetched"],
+                "fast_timeframes_fetched": stats.get("fast_timeframes_fetched", 0),
                 "indicators_fetched": stats.get("indicators_fetched", 0),
                 "cache_entries_created": stats["cache_entries_created"],
+                "fast_cache_entries_created": stats.get("fast_cache_entries_created", 0),
                 "indicator_entries_created": stats.get("indicator_entries_created", 0),
+                "easyinsight_indicators_created": stats.get("easyinsight_indicators_created", 0),
+                "pivot_points_calculated": stats.get("pivot_points_calculated", 0),
                 "errors": stats["errors"],
             },
             "timestamp": datetime.utcnow().isoformat()
