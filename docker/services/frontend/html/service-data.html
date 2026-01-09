@@ -259,6 +259,156 @@
             opacity: 0.8;
             margin-bottom: 0;
         }
+
+        /* Architecture Diagram Styles */
+        .architecture-diagram {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            overflow-x: auto;
+        }
+
+        .arch-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0.5rem 0;
+        }
+
+        .arch-box {
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 120px;
+            font-weight: 500;
+        }
+
+        .arch-box.external {
+            background: rgba(255, 152, 0, 0.2);
+            border: 2px solid rgba(255, 152, 0, 0.5);
+            color: #ffb74d;
+        }
+
+        .arch-box.service {
+            background: rgba(33, 150, 243, 0.2);
+            border: 2px solid rgba(33, 150, 243, 0.5);
+            color: #64b5f6;
+        }
+
+        .arch-box.cache {
+            background: rgba(244, 67, 54, 0.2);
+            border: 2px solid rgba(244, 67, 54, 0.5);
+            color: #e57373;
+        }
+
+        .arch-box.db {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid rgba(76, 175, 80, 0.5);
+            color: #81c784;
+        }
+
+        .arch-box.ml {
+            background: rgba(156, 39, 176, 0.2);
+            border: 2px solid rgba(156, 39, 176, 0.5);
+            color: #ba68c8;
+        }
+
+        .arch-arrow {
+            color: #64c8ff;
+            font-size: 1.2rem;
+            margin: 0 0.5rem;
+        }
+
+        .arch-arrow.down {
+            display: block;
+            text-align: center;
+            margin: 0.3rem 0;
+        }
+
+        .arch-label {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-top: 0.2rem;
+        }
+
+        .arch-services-row {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin: 0.5rem 0;
+        }
+
+        .arch-box.small {
+            min-width: 80px;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.75rem;
+        }
+
+        .storage-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .storage-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .storage-card h4 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .storage-card.redis h4 {
+            color: #e57373;
+        }
+
+        .storage-card.postgres h4 {
+            color: #81c784;
+        }
+
+        .storage-table {
+            width: 100%;
+            font-size: 0.8rem;
+        }
+
+        .storage-table td {
+            padding: 0.3rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .storage-table td:first-child {
+            opacity: 0.7;
+            width: 40%;
+        }
+
+        .storage-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        @media (max-width: 700px) {
+            .storage-grid {
+                grid-template-columns: 1fr;
+            }
+            .arch-services-row {
+                gap: 0.3rem;
+            }
+            .arch-box.small {
+                min-width: 60px;
+                font-size: 0.65rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -285,6 +435,128 @@
                 TwelveData (primär) → EasyInsight (1. Fallback) → Yahoo Finance (2. Fallback).
                 Zusätzlich bietet er Symbol-Management, Indicator-Berechnungen und Trading-Strategien.
             </p>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128421; Datenfluss-Architektur</h2>
+            <p>
+                Der Data Service implementiert eine <strong>3-Layer-Caching-Architektur</strong> für optimale
+                Performance und Datenverfügbarkeit. Anfragen durchlaufen die Layer in folgender Reihenfolge:
+            </p>
+
+            <div class="architecture-diagram">
+                <!-- External APIs Row -->
+                <div class="arch-row">
+                    <div class="arch-box external">
+                        TwelveData
+                        <div class="arch-label">OHLCV, Indikatoren</div>
+                    </div>
+                    <div class="arch-box external">
+                        EasyInsight
+                        <div class="arch-label">MT5 Integration</div>
+                    </div>
+                    <div class="arch-box external">
+                        Yahoo Finance
+                        <div class="arch-label">Fallback</div>
+                    </div>
+                </div>
+
+                <div class="arch-arrow down">&#8595; Layer 3: Externe APIs (Fresh Data)</div>
+
+                <!-- Data Service Row -->
+                <div class="arch-row">
+                    <div class="arch-box service" style="min-width: 300px;">
+                        <strong>DATA SERVICE</strong>
+                        <div class="arch-label">Port 3001 - Zentrales Gateway</div>
+                    </div>
+                </div>
+
+                <div class="arch-arrow down">&#8595; &#8593;</div>
+
+                <!-- Storage Row -->
+                <div class="arch-row">
+                    <div class="arch-box cache">
+                        Redis Cache
+                        <div class="arch-label">Layer 1: Hot Data (TTL)</div>
+                    </div>
+                    <span class="arch-arrow">&#8596;</span>
+                    <div class="arch-box db">
+                        TimescaleDB
+                        <div class="arch-label">Layer 2: Persistent</div>
+                    </div>
+                </div>
+
+                <div class="arch-arrow down">&#8595; Daten-Bereitstellung</div>
+
+                <!-- ML Services Row -->
+                <div class="arch-services-row">
+                    <div class="arch-box ml small">NHITS :3002</div>
+                    <div class="arch-box ml small">TCN :3003</div>
+                    <div class="arch-box ml small">HMM :3004</div>
+                    <div class="arch-box ml small">Embedder :3005</div>
+                    <div class="arch-box ml small">RAG :3008</div>
+                    <div class="arch-box ml small">LLM :3009</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Datenfluss:</strong> Anfragen werden zuerst im Redis-Cache geprüft (Layer 1).
+                Bei Cache-Miss wird TimescaleDB abgefragt (Layer 2). Nur wenn beide leer sind,
+                werden externe APIs kontaktiert (Layer 3) und die Daten in allen Layern gespeichert.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128451; Datenspeicherung</h2>
+            <p>
+                Alle Marktdaten werden persistent in <strong>TimescaleDB</strong> (PostgreSQL-Erweiterung für Zeitreihen)
+                gespeichert und durch <strong>Redis</strong> als Hot-Cache beschleunigt.
+            </p>
+
+            <div class="storage-grid">
+                <div class="storage-card redis">
+                    <h4>&#9889; Redis Cache (Port 6379)</h4>
+                    <table class="storage-table">
+                        <tr><td>Typ</td><td>In-Memory Key-Value Store</td></tr>
+                        <tr><td>Max Memory</td><td>512 MB (LRU Eviction)</td></tr>
+                        <tr><td>Persistenz</td><td>AOF aktiviert</td></tr>
+                        <tr><td>Zweck</td><td>Hot Data mit TTL</td></tr>
+                    </table>
+                    <h5 style="margin-top: 0.75rem; font-size: 0.85rem; opacity: 0.8;">Cache-Kategorien:</h5>
+                    <table class="storage-table">
+                        <tr><td>MARKET_DATA</td><td>60s TTL</td></tr>
+                        <tr><td>OHLCV</td><td>60s - 6h (nach Timeframe)</td></tr>
+                        <tr><td>INDICATORS</td><td>5 min TTL</td></tr>
+                        <tr><td>SYMBOLS</td><td>1h TTL</td></tr>
+                        <tr><td>SENTIMENT</td><td>15 min TTL</td></tr>
+                        <tr><td>TRAINING</td><td>6h TTL</td></tr>
+                    </table>
+                </div>
+
+                <div class="storage-card postgres">
+                    <h4>&#128024; TimescaleDB (Port 5432)</h4>
+                    <table class="storage-table">
+                        <tr><td>Basis</td><td>PostgreSQL 16</td></tr>
+                        <tr><td>Host</td><td>10.1.19.102</td></tr>
+                        <tr><td>Datenbank</td><td>tradingdataservice</td></tr>
+                        <tr><td>Zweck</td><td>Persistente Zeitreihen</td></tr>
+                    </table>
+                    <h5 style="margin-top: 0.75rem; font-size: 0.85rem; opacity: 0.8;">OHLCV-Tabellen (Hypertables):</h5>
+                    <table class="storage-table">
+                        <tr><td>ohlcv_m1, m5, m15, m30</td><td>Minuten-Kerzen</td></tr>
+                        <tr><td>ohlcv_h1, h4</td><td>Stunden-Kerzen</td></tr>
+                        <tr><td>ohlcv_d1, w1, mn</td><td>Tages/Wochen/Monats</td></tr>
+                    </table>
+                    <h5 style="margin-top: 0.75rem; font-size: 0.85rem; opacity: 0.8;">Indikator-Tabellen:</h5>
+                    <table class="storage-table">
+                        <tr><td>indicators_momentum</td><td>RSI, MACD, ADX, CCI</td></tr>
+                        <tr><td>indicators_volatility</td><td>ATR, BBands, Keltner</td></tr>
+                        <tr><td>indicators_ma</td><td>SMA, EMA, WMA, VWAP</td></tr>
+                        <tr><td>indicators_volume</td><td>OBV, A/D, Chaikin</td></tr>
+                        <tr><td>indicators_trend</td><td>Ichimoku, Supertrend</td></tr>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <div class="content-card">
@@ -596,20 +868,15 @@
                 <li><strong>ManagedSymbol:</strong> Symbol, Exchange, Intervall, Status, Erstellungsdatum</li>
                 <li><strong>Strategy:</strong> Name, Beschreibung, Regeln, Parameter, Backtest-Ergebnisse</li>
                 <li><strong>SyncStatus:</strong> Status, letzter Sync, nachster Sync, Fehlerlog</li>
+                <li><strong>OHLCV:</strong> Timestamp, Open, High, Low, Close, Volume (pro Timeframe-Tabelle)</li>
+                <li><strong>Indicators:</strong> Momentum, Volatility, MA, Volume, Trend (optimierte Tabellen)</li>
             </ul>
-
-            <div class="info-box warning">
-                <strong>Hinweis:</strong> Der Data Service verwendet eine 3-Layer-Caching-Architektur:
-                Redis (Hot Data) → TimescaleDB (Persistent) → Externe APIs (TwelveData, EasyInsight).
-                Alle OHLCV-Daten und Indikatoren werden in TimescaleDB persistent gespeichert.
-            </div>
         </div>
 
         <div class="content-card">
-            <h2>&#128640; Redis Caching</h2>
+            <h2>&#128640; Cache-Strategien</h2>
             <p>
-                Der Data Service nutzt <strong>Redis</strong> als zentralen Cache für alle Marktdaten.
-                Dies reduziert API-Aufrufe zu externen Quellen und verbessert die Response-Zeiten erheblich.
+                Der Redis-Cache verwendet <strong>timeframe-spezifische TTLs</strong> für optimale Frische:
             </p>
 
             <div class="feature-grid">
