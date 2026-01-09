@@ -1249,6 +1249,14 @@
                                     <span class="node-port">:3014</span>
                                 </div>
                             </div>
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                                <span class="node-status loading" id="df-cnn-lstm-train-status"></span>
+                                <span class="node-icon">&#127891;</span>
+                                <div class="node-info">
+                                    <span class="node-name">LSTM-Train</span>
+                                    <span class="node-port">:3017</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1296,6 +1304,14 @@
                                 <div class="node-info">
                                     <span class="node-name">Candlestick</span>
                                     <span class="node-port">:3006</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-cnn-lstm-status"></span>
+                                <span class="node-icon">&#129516;</span>
+                                <div class="node-info">
+                                    <span class="node-name">CNN-LSTM</span>
+                                    <span class="node-port">:3007</span>
                                 </div>
                             </div>
                         </div>
@@ -2000,6 +2016,8 @@
             'candlestick-train': 'df-candlestick-train-status',
             'nhits-train': 'df-nhits-train-status',
             'hmm-train': 'df-hmm-train-status',
+            'cnn-lstm': 'df-cnn-lstm-status',
+            'cnn-lstm-train': 'df-cnn-lstm-train-status',
             'rag': 'df-rag-status',
             'llm': 'df-llm-status',
             'watchdog': 'df-watchdog-status',
