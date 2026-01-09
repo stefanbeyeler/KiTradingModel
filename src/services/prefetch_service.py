@@ -24,16 +24,39 @@ class PrefetchConfig:
 
     # Verfügbare Indikatoren für Pre-Fetching (ML-relevant)
     AVAILABLE_INDICATORS = [
-        "rsi",      # Relative Strength Index - Momentum
-        "macd",     # Moving Average Convergence Divergence
-        "bbands",   # Bollinger Bands - Volatilität
-        "atr",      # Average True Range - Volatilität
-        "ema",      # Exponential Moving Average
-        "sma",      # Simple Moving Average
-        "adx",      # Average Directional Index - Trend Strength
-        "stoch",    # Stochastic Oscillator
-        "obv",      # On-Balance Volume
-        "vwap",     # Volume Weighted Average Price
+        # Momentum (-> indicators_momentum)
+        "rsi",          # Relative Strength Index
+        "macd",         # Moving Average Convergence Divergence
+        "adx",          # Average Directional Index
+        "stoch",        # Stochastic Oscillator
+        "cci",          # Commodity Channel Index
+        "willr",        # Williams %R
+        "roc",          # Rate of Change
+        "mom",          # Momentum
+        # Volatility (-> indicators_volatility)
+        "bbands",       # Bollinger Bands
+        "atr",          # Average True Range
+        "natr",         # Normalized ATR
+        # Moving Averages (-> indicators_ma)
+        "ema",          # Exponential Moving Average
+        "sma",          # Simple Moving Average
+        "wma",          # Weighted Moving Average
+        "dema",         # Double EMA
+        "tema",         # Triple EMA
+        # Volume (-> indicators_volume)
+        "obv",          # On-Balance Volume
+        "ad",           # Accumulation/Distribution
+        "adosc",        # A/D Oscillator
+        # Trend (-> indicators_trend)
+        "supertrend",   # Supertrend
+        "ichimoku",     # Ichimoku Cloud
+        "sar",          # Parabolic SAR
+        "aroon",        # Aroon Up/Down
+        "aroonosc",     # Aroon Oscillator
+        # Levels (-> indicators_levels)
+        "pivot_points_hl",  # Pivot Points High/Low
+        # Other
+        "vwap",         # Volume Weighted Average Price
     ]
 
     def __init__(
