@@ -3494,16 +3494,28 @@ async def migrate_json_to_db():
 @symbol_router.get("/managed-symbols/data-stats/{symbol:path}")
 async def get_symbol_data_stats(symbol: str):
     """
-    Get detailed data statistics for a symbol including data range and counts per timeframe.
+    Get detailed data statistics for a symbol from TimescaleDB.
 
     Returns:
         - First and last data timestamp
         - Total record count
-        - Data points per timeframe (M15, H1, D1)
-        - Data gaps analysis
+        - Data points per timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)
+        - Data gaps analysis (based on H1 timeframe)
         - Data coverage percentage
+        - Sample chart data from TimescaleDB
     """
-    import httpx
+    from ..services.timescaledb_service import timescaledb_service
+    from ..config.database import OHLCV_CONFIGS, get_ohlcv_table_name
+    from ..config.timeframes import Timeframe, TIMEFRAME_CANDLES_PER_DAY
+
+    # All supported timeframes in order
+    all_timeframes = ["M1", "M5", "M15", "M30", "H1", "H4", "D1", "W1", "MN"]
+
+    # Initialize result with all timeframes
+    timeframes_init = {
+        tf: {"count": 0, "first": None, "last": None, "coverage_pct": 0}
+        for tf in all_timeframes
+    }
 
     result = {
         "symbol": symbol,
@@ -3512,171 +3524,167 @@ async def get_symbol_data_stats(symbol: str):
         "first_timestamp": None,
         "last_timestamp": None,
         "total_records": 0,
-        "timeframes": {
-            "M15": {"count": 0, "first": None, "last": None, "coverage_pct": 0},
-            "H1": {"count": 0, "first": None, "last": None, "coverage_pct": 0},
-            "D1": {"count": 0, "first": None, "last": None, "coverage_pct": 0},
-        },
+        "timeframes": timeframes_init,
         "data_quality": {
             "gaps_detected": 0,
             "avg_gap_hours": 0,
             "max_gap_hours": 0,
             "completeness_pct": 0,
         },
-        "sample_data": [],
+        "sample_data": {"source": "TimescaleDB"},
         "errors": []
     }
 
+    # Check if TimescaleDB is available
+    if not timescaledb_service.is_available:
+        result["errors"].append("TimescaleDB nicht verfügbar")
+        return result
+
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            # Get symbol info with count
-            response = await client.get(f"{settings.easyinsight_api_url}/symbols")
-            if response.status_code == 200:
-                symbols_data = response.json()
-                symbol_info = next((s for s in symbols_data if s.get("symbol") == symbol.upper()), None)
-                if symbol_info:
-                    result["total_records"] = symbol_info.get("count", 0)
-                    result["first_timestamp"] = symbol_info.get("earliest")
-                    result["last_timestamp"] = symbol_info.get("latest")
-                    result["has_data"] = result["total_records"] > 0
+        # Initialize connection if needed
+        await timescaledb_service.initialize()
 
-            # Get sample data with timestamps to analyze gaps
-            response = await client.get(
-                f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
-                params={"limit": 1000}  # Get last 1000 records for analysis
-            )
+        async with timescaledb_service.connection() as conn:
+            total_count = 0
+            global_first = None
+            global_last = None
 
-            if response.status_code == 200:
-                response_data = response.json()
-                data_list = []
-                if isinstance(response_data, dict) and "data" in response_data:
-                    data_list = response_data.get("data", [])
-                elif isinstance(response_data, list):
-                    data_list = response_data
+            # Query each timeframe table
+            for tf in all_timeframes:
+                try:
+                    table_name = get_ohlcv_table_name(tf)
 
-                if data_list:
-                    result["has_data"] = True
+                    # Get count, first and last timestamp for this timeframe
+                    query = f"""
+                        SELECT
+                            COUNT(*) as count,
+                            MIN(timestamp) as first_ts,
+                            MAX(timestamp) as last_ts
+                        FROM {table_name}
+                        WHERE symbol = $1
+                    """
+                    row = await conn.fetchrow(query, symbol)
 
-                    # Analyze timestamps
-                    timestamps = []
-                    for row in data_list:
-                        ts = row.get("snapshot_time")
-                        if ts:
-                            try:
-                                if isinstance(ts, str):
-                                    # Parse ISO format
-                                    ts_dt = datetime.fromisoformat(ts.replace("Z", "+00:00").replace("+01:00", "+00:00").replace("+00:00", ""))
-                                else:
-                                    ts_dt = ts
-                                timestamps.append(ts_dt)
-                            except:
-                                pass
+                    if row and row["count"] > 0:
+                        count = row["count"]
+                        first_ts = row["first_ts"]
+                        last_ts = row["last_ts"]
 
-                    if timestamps:
-                        timestamps.sort()
-                        result["first_timestamp"] = timestamps[0].isoformat() if not result["first_timestamp"] else result["first_timestamp"]
-                        result["last_timestamp"] = timestamps[-1].isoformat() if not result["last_timestamp"] else result["last_timestamp"]
+                        result["timeframes"][tf]["count"] = count
+                        result["timeframes"][tf]["first"] = first_ts.isoformat() if first_ts else None
+                        result["timeframes"][tf]["last"] = last_ts.isoformat() if last_ts else None
 
-                        # Analyze gaps (looking for gaps > 2 hours)
-                        gaps = []
-                        for i in range(1, len(timestamps)):
-                            gap = (timestamps[i] - timestamps[i-1]).total_seconds() / 3600
-                            if gap > 2:  # More than 2 hours gap
-                                gaps.append(gap)
+                        total_count += count
 
-                        if gaps:
-                            result["data_quality"]["gaps_detected"] = len(gaps)
-                            result["data_quality"]["avg_gap_hours"] = round(sum(gaps) / len(gaps), 2)
-                            result["data_quality"]["max_gap_hours"] = round(max(gaps), 2)
+                        # Track global first/last
+                        if first_ts:
+                            if global_first is None or first_ts < global_first:
+                                global_first = first_ts
+                        if last_ts:
+                            if global_last is None or last_ts > global_last:
+                                global_last = last_ts
 
-                        # Calculate completeness (expected vs actual hourly data points)
-                        if len(timestamps) >= 2:
-                            total_hours = (timestamps[-1] - timestamps[0]).total_seconds() / 3600
-                            expected_points = max(1, int(total_hours))
-                            result["data_quality"]["completeness_pct"] = round(
-                                min(100, (len(timestamps) / expected_points) * 100), 1
-                            )
+                        # Calculate coverage percentage
+                        if first_ts and last_ts:
+                            range_days = (last_ts - first_ts).total_seconds() / 86400
+                            if range_days > 0:
+                                candles_per_day = TIMEFRAME_CANDLES_PER_DAY.get(Timeframe[tf], 1)
+                                expected_candles = range_days * candles_per_day
+                                coverage = min(100, (count / max(1, expected_candles)) * 100)
+                                result["timeframes"][tf]["coverage_pct"] = round(coverage, 1)
 
-                    # Count data by timeframe (check which OHLC fields are populated)
-                    m15_count = sum(1 for row in data_list if row.get("m15_close") is not None)
-                    h1_count = sum(1 for row in data_list if row.get("h1_close") is not None)
-                    d1_count = sum(1 for row in data_list if row.get("d1_close") is not None)
+                except Exception as e:
+                    logger.warning(f"Failed to query {tf} for {symbol}: {e}")
 
-                    result["timeframes"]["M15"]["count"] = m15_count
-                    result["timeframes"]["H1"]["count"] = h1_count
-                    result["timeframes"]["D1"]["count"] = d1_count
+            # Set global stats
+            result["total_records"] = total_count
+            result["has_data"] = total_count > 0
+            if global_first:
+                result["first_timestamp"] = global_first.isoformat()
+            if global_last:
+                result["last_timestamp"] = global_last.isoformat()
 
-                    # Calculate coverage percentages based on data range
-                    if timestamps and len(timestamps) >= 2:
-                        range_hours = max(1, (timestamps[-1] - timestamps[0]).total_seconds() / 3600)
-                        result["timeframes"]["M15"]["coverage_pct"] = round(min(100, (m15_count / (range_hours * 4)) * 100), 1)
-                        result["timeframes"]["H1"]["coverage_pct"] = round(min(100, (h1_count / range_hours) * 100), 1)
-                        result["timeframes"]["D1"]["coverage_pct"] = round(min(100, (d1_count / (range_hours / 24)) * 100), 1)
+            # Analyze data quality based on H1 timeframe (best balance of granularity)
+            if result["timeframes"]["H1"]["count"] > 0:
+                try:
+                    h1_table = get_ohlcv_table_name("H1")
+                    gap_query = f"""
+                        WITH timestamps AS (
+                            SELECT timestamp
+                            FROM {h1_table}
+                            WHERE symbol = $1
+                            ORDER BY timestamp
+                        ),
+                        gaps AS (
+                            SELECT
+                                timestamp,
+                                LAG(timestamp) OVER (ORDER BY timestamp) as prev_ts,
+                                EXTRACT(EPOCH FROM (timestamp - LAG(timestamp) OVER (ORDER BY timestamp))) / 3600 as gap_hours
+                            FROM timestamps
+                        )
+                        SELECT
+                            COUNT(*) FILTER (WHERE gap_hours > 2) as gaps_detected,
+                            COALESCE(AVG(gap_hours) FILTER (WHERE gap_hours > 2), 0) as avg_gap,
+                            COALESCE(MAX(gap_hours) FILTER (WHERE gap_hours > 2), 0) as max_gap
+                        FROM gaps
+                        WHERE gap_hours IS NOT NULL
+                    """
+                    gap_row = await conn.fetchrow(gap_query, symbol)
+
+                    if gap_row:
+                        result["data_quality"]["gaps_detected"] = gap_row["gaps_detected"] or 0
+                        result["data_quality"]["avg_gap_hours"] = round(float(gap_row["avg_gap"] or 0), 2)
+                        result["data_quality"]["max_gap_hours"] = round(float(gap_row["max_gap"] or 0), 2)
+
+                    # Calculate completeness based on H1
+                    if global_first and global_last:
+                        range_hours = (global_last - global_first).total_seconds() / 3600
+                        h1_count = result["timeframes"]["H1"]["count"]
+                        if range_hours > 0:
+                            completeness = min(100, (h1_count / max(1, range_hours)) * 100)
+                            result["data_quality"]["completeness_pct"] = round(completeness, 1)
+
+                except Exception as e:
+                    logger.warning(f"Failed to analyze H1 gaps for {symbol}: {e}")
+
+            # Fetch sample data for chart visualization from TimescaleDB
+            sample_timeframes = ["M15", "H1", "D1"]
+            sample_limits = {"M15": 50, "H1": 50, "D1": 30}
+
+            for tf in sample_timeframes:
+                try:
+                    if result["timeframes"][tf]["count"] > 0:
+                        table_name = get_ohlcv_table_name(tf)
+                        limit = sample_limits.get(tf, 50)
+
+                        sample_query = f"""
+                            SELECT timestamp, open, high, low, close
+                            FROM {table_name}
+                            WHERE symbol = $1
+                            ORDER BY timestamp DESC
+                            LIMIT $2
+                        """
+                        rows = await conn.fetch(sample_query, symbol, limit)
+
+                        candles = []
+                        for row in reversed(rows):  # Reverse to get chronological order
+                            candles.append({
+                                "datetime": row["timestamp"].isoformat() + "Z",
+                                "open": float(row["open"]) if row["open"] else None,
+                                "high": float(row["high"]) if row["high"] else None,
+                                "low": float(row["low"]) if row["low"] else None,
+                                "close": float(row["close"]) if row["close"] else None,
+                            })
+                        result["sample_data"][tf] = candles
+                    else:
+                        result["sample_data"][tf] = []
+                except Exception as e:
+                    logger.warning(f"Failed to fetch sample data {tf} for {symbol}: {e}")
+                    result["sample_data"][tf] = []
 
     except Exception as e:
         logger.error(f"Failed to get data stats for {symbol}: {e}")
         result["errors"].append(str(e))
-
-    # Fetch sample data from TwelveData for chart visualization
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            sample_data = {"source": "TwelveData", "M15": [], "H1": [], "D1": []}
-
-            # Convert symbol format for TwelveData (AUDUSD -> AUD/USD for Forex)
-            td_symbol = symbol
-            forex_pairs = ["AUD", "EUR", "GBP", "USD", "CHF", "JPY", "CAD", "NZD"]
-            if len(symbol) == 6 and symbol[:3] in forex_pairs and symbol[3:] in forex_pairs:
-                td_symbol = f"{symbol[:3]}/{symbol[3:]}"
-
-            # Fetch OHLCV for each timeframe from TwelveData
-            td_base_url = "https://api.twelvedata.com"
-            for tf, td_interval, limit in [("M15", "15min", 50), ("H1", "1h", 50), ("D1", "1day", 30)]:
-                try:
-                    td_response = await client.get(
-                        f"{td_base_url}/time_series",
-                        params={
-                            "symbol": td_symbol,
-                            "interval": td_interval,
-                            "outputsize": limit,
-                            "apikey": settings.twelvedata_api_key,
-                        }
-                    )
-                    if td_response.status_code == 200:
-                        td_data = td_response.json()
-                        if "values" in td_data:
-                            from zoneinfo import ZoneInfo
-                            est_tz = ZoneInfo("America/New_York")
-                            utc_tz = ZoneInfo("UTC")
-
-                            candles = []
-                            for v in td_data["values"]:
-                                if not v.get("close"):
-                                    continue
-                                # Convert TwelveData EST timestamp to UTC ISO format
-                                dt_str = v.get("datetime", "")
-                                try:
-                                    dt_naive = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
-                                    dt_est = dt_naive.replace(tzinfo=est_tz)
-                                    dt_utc = dt_est.astimezone(utc_tz)
-                                    iso_datetime = dt_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
-                                except:
-                                    iso_datetime = dt_str
-
-                                candles.append({
-                                    "datetime": iso_datetime,
-                                    "open": float(v.get("open")) if v.get("open") else None,
-                                    "high": float(v.get("high")) if v.get("high") else None,
-                                    "low": float(v.get("low")) if v.get("low") else None,
-                                    "close": float(v.get("close")) if v.get("close") else None,
-                                })
-                            sample_data[tf] = candles
-                except Exception as e:
-                    logger.warning(f"Failed to fetch TwelveData {tf} for {symbol}: {e}")
-
-            result["sample_data"] = sample_data
-    except Exception as e:
-        logger.warning(f"Failed to fetch TwelveData sample data for {symbol}: {e}")
-        result["sample_data"] = {"source": "TwelveData", "M15": [], "H1": [], "D1": []}
 
     return result
 

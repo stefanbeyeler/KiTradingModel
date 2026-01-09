@@ -53,8 +53,8 @@ class PrefetchConfig:
         "sar",          # Parabolic SAR
         "aroon",        # Aroon Up/Down
         "aroonosc",     # Aroon Oscillator
-        # Levels (-> indicators_levels)
-        "pivot_points_hl",  # Pivot Points High/Low
+        # Levels (-> indicators_levels): Lokal berechnet via pivot_calculator.py
+        # (pivot_points_hl requires TwelveData Pro plan)
         # Other
         "vwap",         # Volume Weighted Average Price
     ]
@@ -141,6 +141,7 @@ class PrefetchService:
             "fast_cache_entries_created": 0,
             "indicator_entries_created": 0,
             "easyinsight_indicators_created": 0,
+            "pivot_points_calculated": 0,
         }
         self._symbols_cache: list[dict] = []
 
@@ -419,6 +420,23 @@ class PrefetchService:
                     except Exception as e:
                         logger.debug(f"EasyInsight Prefetch Fehler für {symbol}: {e}")
 
+            # 7. Pivot Points lokal berechnen und speichern (falls DB-Sync aktiviert)
+            pivot_count = 0
+            if self._config.db_sync_enabled:
+                logger.info(f"Berechne Pivot Points für {len(symbols)} Symbole...")
+                for symbol_data in symbols:
+                    symbol = symbol_data.get("symbol") or symbol_data.get("name", "")
+                    if not symbol:
+                        continue
+
+                    # Pivot Points für D1 und W1 berechnen (sinnvollste Timeframes)
+                    for timeframe in ["1day", "1week"]:
+                        try:
+                            saved = await self._calculate_and_store_pivots(symbol, timeframe)
+                            pivot_count += saved
+                        except Exception as e:
+                            logger.debug(f"Pivot-Berechnung fehlgeschlagen für {symbol}/{timeframe}: {e}")
+
             self._stats["last_run"] = start_time.isoformat()
             self._stats["symbols_fetched"] = len(symbols)
             self._stats["timeframes_fetched"] = len(self._config.timeframes)
@@ -426,12 +444,14 @@ class PrefetchService:
             self._stats["cache_entries_created"] = fetched_count
             self._stats["indicator_entries_created"] = indicator_count
             self._stats["easyinsight_indicators_created"] = easyinsight_count
+            self._stats["pivot_points_calculated"] = pivot_count
 
             duration = (datetime.now(timezone.utc) - start_time).total_seconds()
             indicator_info = f", {indicator_count} TwelveData-Indikatoren" if indicator_count else ""
             easyinsight_info = f", {easyinsight_count} EasyInsight-Indikatoren" if easyinsight_count else ""
+            pivot_info = f", {pivot_count} Pivot-Points" if pivot_count else ""
             logger.info(
-                f"Pre-Fetch abgeschlossen: {fetched_count} OHLCV{indicator_info}{easyinsight_info} in {duration:.1f}s"
+                f"Pre-Fetch abgeschlossen: {fetched_count} OHLCV{indicator_info}{easyinsight_info}{pivot_info} in {duration:.1f}s"
             )
 
         except Exception as e:
@@ -776,6 +796,70 @@ class PrefetchService:
 
         except Exception as e:
             logger.warning(f"EasyInsight indicator prefetch failed for {symbol}: {e}")
+            return 0
+
+    async def _calculate_and_store_pivots(self, symbol: str, timeframe: str) -> int:
+        """
+        Berechnet Pivot Points lokal aus OHLCV-Daten und speichert sie in TimescaleDB.
+
+        Diese Methode ersetzt den TwelveData pivot_points_hl Indikator, der nur im
+        Pro-Plan verfügbar ist. Die Berechnung erfolgt lokal aus bereits gecachten
+        OHLCV-Daten.
+
+        Berechnet:
+        - Standard (Floor Trader) Pivot Points: P, R1-R3, S1-S3
+        - Fibonacci Pivot Points: P, fib_R1-R3, fib_S1-S3
+        - Camarilla Pivot Points: cam_R1-R4, cam_S1-S4
+
+        Args:
+            symbol: Trading-Symbol (z.B. BTCUSD)
+            timeframe: Zeitrahmen (z.B. 1day, 1week)
+
+        Returns:
+            Anzahl der gespeicherten Pivot Point Datensätze
+        """
+        if not self._config.db_sync_enabled:
+            return 0
+
+        cache_symbol = symbol.upper().replace("/", "")
+
+        try:
+            from .data_gateway_service import data_gateway
+            from .pivot_calculator import pivot_calculator
+            from .timescaledb_service import timescaledb_service
+            from src.config.timeframes import normalize_timeframe
+
+            # OHLCV-Daten abrufen (sollten bereits im Cache sein)
+            ohlcv_data, source = await data_gateway.get_historical_data_with_fallback(
+                symbol=symbol,
+                timeframe=timeframe,
+                limit=100,  # Letzte 100 Kerzen für Pivot-Berechnung
+                force_refresh=False,
+            )
+
+            if not ohlcv_data or len(ohlcv_data) < 2:
+                return 0
+
+            # Normalisierter Timeframe für DB
+            normalized_tf = normalize_timeframe(timeframe).value
+
+            # Pivot Points berechnen und speichern
+            saved_count = await pivot_calculator.calculate_and_store_pivots(
+                symbol=cache_symbol,
+                timeframe=normalized_tf,
+                ohlcv_data=ohlcv_data,
+                timescaledb_service=timescaledb_service,
+            )
+
+            if saved_count > 0:
+                logger.debug(
+                    f"Calculated and stored {saved_count} pivot points for {symbol}/{timeframe}"
+                )
+
+            return saved_count
+
+        except Exception as e:
+            logger.warning(f"Pivot calculation failed for {symbol}/{timeframe}: {e}")
             return 0
 
     async def prefetch_symbol(self, symbol: str, timeframes: list[str] = None) -> dict:

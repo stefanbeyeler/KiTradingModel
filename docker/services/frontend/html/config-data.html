@@ -3686,6 +3686,47 @@
                 return '#f44336';
             }
 
+            // Timeframe display names and colors
+            const timeframeConfig = {
+                'M1':  { name: 'M1 (1 Min)',      color: '#e91e63' },
+                'M5':  { name: 'M5 (5 Min)',      color: '#ff5722' },
+                'M15': { name: 'M15 (15 Min)',    color: '#64c8ff' },
+                'M30': { name: 'M30 (30 Min)',    color: '#03a9f4' },
+                'H1':  { name: 'H1 (Stündlich)',  color: '#4caf50' },
+                'H4':  { name: 'H4 (4 Stunden)',  color: '#8bc34a' },
+                'D1':  { name: 'D1 (Täglich)',    color: '#9c27b0' },
+                'W1':  { name: 'W1 (Wöchentlich)', color: '#673ab7' },
+                'MN':  { name: 'MN (Monatlich)',  color: '#3f51b5' }
+            };
+
+            // Render timeframe cards dynamically
+            function renderTimeframeCards(timeframes) {
+                // Filter to only show timeframes with data
+                const timeframeOrder = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'];
+                let cards = '';
+
+                for (const tf of timeframeOrder) {
+                    const tfData = timeframes[tf];
+                    if (!tfData) continue;
+
+                    const config = timeframeConfig[tf] || { name: tf, color: '#888' };
+                    const hasData = tfData.count > 0;
+
+                    cards += `
+                        <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem; ${!hasData ? 'opacity: 0.5;' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 500;">${config.name}</span>
+                                <span style="color: ${hasData ? config.color : '#666'}; font-weight: bold;">${tfData.count.toLocaleString()}</span>
+                            </div>
+                            ${progressBar(tfData.coverage_pct || 0, config.color)}
+                            <div style="font-size: 0.75rem; color: #888; margin-top: 4px;">Abdeckung: ${tfData.coverage_pct || 0}%</div>
+                        </div>
+                    `;
+                }
+
+                return cards || '<div style="color: #888;">Keine Daten verfügbar</div>';
+            }
+
             let html = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <span style="color: #888;">Abgerufen: ${new Date(data.timestamp).toLocaleString('de-DE')}</span>
@@ -3740,30 +3781,7 @@
                 <div style="background: rgba(30,30,30,0.5); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
                     <h4 style="color: #64c8ff; margin-bottom: 1rem; font-size: 1rem;">&#128202; Datenpunkte pro Zeitrahmen</h4>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                        <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 500;">M15 (15 Min)</span>
-                                <span style="color: #64c8ff; font-weight: bold;">${data.timeframes.M15.count.toLocaleString()}</span>
-                            </div>
-                            ${progressBar(data.timeframes.M15.coverage_pct)}
-                            <div style="font-size: 0.75rem; color: #888; margin-top: 4px;">Abdeckung: ${data.timeframes.M15.coverage_pct}%</div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 500;">H1 (Stündlich)</span>
-                                <span style="color: #4caf50; font-weight: bold;">${data.timeframes.H1.count.toLocaleString()}</span>
-                            </div>
-                            ${progressBar(data.timeframes.H1.coverage_pct, '#4caf50')}
-                            <div style="font-size: 0.75rem; color: #888; margin-top: 4px;">Abdeckung: ${data.timeframes.H1.coverage_pct}%</div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 500;">D1 (Täglich)</span>
-                                <span style="color: #9c27b0; font-weight: bold;">${data.timeframes.D1.count.toLocaleString()}</span>
-                            </div>
-                            ${progressBar(data.timeframes.D1.coverage_pct, '#9c27b0')}
-                            <div style="font-size: 0.75rem; color: #888; margin-top: 4px;">Abdeckung: ${data.timeframes.D1.coverage_pct}%</div>
-                        </div>
+                        ${renderTimeframeCards(data.timeframes)}
                     </div>
                 </div>
 
