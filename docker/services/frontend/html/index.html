@@ -1689,6 +1689,29 @@
                 </div>
             </div>
 
+            <!-- CNN-LSTM Multi-Task Service (Inference) -->
+            <div class="service-card" id="cnn-lstm-card">
+                <div class="service-header">
+                    <h2>CNN-LSTM</h2>
+                    <span class="status-badge status-loading" id="cnn-lstm-status">Laden...</span>
+                </div>
+                <p>Hybrid CNN-LSTM Multi-Task - Preis, Pattern und Regime Vorhersagen in einem Modell.</p>
+                <div class="service-info" id="cnn-lstm-info">
+                    <div><span class="label">Port</span><span>3007</span></div>
+                    <div><span class="label">Tasks</span><span id="cnn-lstm-tasks">3 Multi-Task</span></div>
+                    <div><span class="label">Model</span><span id="cnn-lstm-model-status">-</span></div>
+                </div>
+                <div class="service-resources">
+                    <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                    <div class="service-resource ram"><span class="value">6 GB</span><span class="label">RAM Limit</span></div>
+                    <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
+                </div>
+                <div class="service-links">
+                    <a href="/service-cnn-lstm.html" target="_blank">Info</a>
+                    <a href="/cnn-lstm/docs" target="_blank">API Docs</a>
+                </div>
+            </div>
+
             <!-- Embedder Service -->
             <div class="service-card" id="embedder-card">
                 <div class="service-header">
@@ -1854,6 +1877,29 @@
                     <div class="service-links">
                         <a href="/service-tcn-train.html" target="_blank">Info</a>
                         <a href="/tcn-train/docs" target="_blank" class="training-link">API Docs</a>
+                    </div>
+                </div>
+
+                <!-- CNN-LSTM Training Service -->
+                <div class="service-card training-card" id="cnn-lstm-train-card">
+                    <div class="service-header">
+                        <h2>CNN-LSTM-Training</h2>
+                        <span class="status-badge status-loading" id="cnn-lstm-train-status">Laden...</span>
+                    </div>
+                    <p>Dedizierter Training-Container - Multi-Task CNN-LSTM Modelle. Low Priority.</p>
+                    <div class="service-info" id="cnn-lstm-train-info">
+                        <div><span class="label">Port</span><span>3017</span></div>
+                        <div><span class="label">Training</span><span id="cnn-lstm-train-active">-</span></div>
+                        <div><span class="label">Epoch</span><span id="cnn-lstm-train-epoch">-</span></div>
+                    </div>
+                    <div class="service-resources">
+                        <div class="service-resource cpu"><span class="value">4 CPU</span><span class="label">CPU Limit</span></div>
+                        <div class="service-resource ram"><span class="value">12 GB</span><span class="label">RAM Limit</span></div>
+                        <div class="service-resource net"><span class="value">LOW</span><span class="label">Priority</span></div>
+                    </div>
+                    <div class="service-links">
+                        <a href="/service-cnn-lstm.html" target="_blank">Info</a>
+                        <a href="/cnn-lstm-train/docs" target="_blank" class="training-link">API Docs</a>
                     </div>
                 </div>
             </div>
@@ -2371,6 +2417,58 @@
             }
         }
 
+        async function updateCnnLstmInfo() {
+            const data = await checkHealth('cnn-lstm', 3007, 'cnn-lstm-status');
+            if (data) {
+                const modelEl = document.getElementById('cnn-lstm-model-status');
+                if (data.model_loaded) {
+                    modelEl.textContent = 'Geladen';
+                    modelEl.style.color = '#81c784';
+                } else {
+                    modelEl.textContent = 'Nicht geladen';
+                    modelEl.style.color = '#ffd54f';
+                }
+            }
+        }
+
+        async function updateCnnLstmTrainInfo() {
+            const data = await checkHealth('cnn-lstm-train', 3017, 'cnn-lstm-train-status');
+            if (data) {
+                const activeEl = document.getElementById('cnn-lstm-train-active');
+                const epochEl = document.getElementById('cnn-lstm-train-epoch');
+
+                // Get detailed training status with timeout
+                try {
+                    const statusRes = await fetchWithTimeout('/cnn-lstm-train/api/v1/train/status', 5000);
+                    if (statusRes.ok) {
+                        const statusData = await statusRes.json();
+
+                        if (statusData.status === 'training') {
+                            activeEl.textContent = 'Training...';
+                            activeEl.style.color = '#ffd54f';
+                            if (statusData.current_epoch) {
+                                const progress = Math.round((statusData.current_epoch / statusData.total_epochs) * 100);
+                                epochEl.textContent = `${statusData.current_epoch}/${statusData.total_epochs} (${progress}%)`;
+                            } else {
+                                epochEl.textContent = 'Vorbereitung...';
+                            }
+                        } else if (statusData.status === 'preparing') {
+                            activeEl.textContent = 'Vorbereitung';
+                            activeEl.style.color = '#ffd54f';
+                            epochEl.textContent = 'Daten laden...';
+                        } else {
+                            activeEl.textContent = 'Inaktiv';
+                            activeEl.style.color = '';
+                            epochEl.textContent = '-';
+                        }
+                    }
+                } catch (e) {
+                    activeEl.textContent = data.training_in_progress ? 'Aktiv' : 'Inaktiv';
+                    epochEl.textContent = e.name === 'AbortError' ? 'Timeout' : '-';
+                }
+            }
+        }
+
         async function updateWatchdogInfo() {
             const data = await checkHealth('watchdog', 3010, 'watchdog-status');
             const statusEl = document.getElementById('watchdog-status');
@@ -2765,6 +2863,8 @@
                 updateCandlestickTrainInfo(),
                 updateNhitsTrainInfo(),
                 updateHmmTrainInfo(),
+                updateCnnLstmInfo(),
+                updateCnnLstmTrainInfo(),
                 updateWatchdogInfo(),
                 updateEasyInsightInfo(),  // Fetch additional details (symbols, latency)
                 updateSystemMetrics(),

@@ -8,6 +8,7 @@ Training Services:
     - TCN-Train (Port 3013): Chart pattern models
     - HMM-Train (Port 3014): Market regime models
     - Candlestick-Train (Port 3016): Candlestick pattern models
+    - CNN-LSTM-Train (Port 3017): Multi-task hybrid models (price, pattern, regime)
 """
 
 import os
@@ -28,6 +29,7 @@ class TrainingServiceType(str, Enum):
     TCN = "tcn"
     HMM = "hmm"
     CANDLESTICK = "candlestick"
+    CNN_LSTM = "cnn-lstm"
 
 
 class JobStatus(str, Enum):
@@ -143,6 +145,13 @@ class TrainingOrchestrator:
             service_type=TrainingServiceType.CANDLESTICK,
             url=os.getenv("CANDLESTICK_TRAIN_URL", "http://trading-candlestick-train:3016"),
             port=3016,
+            default_priority=JobPriority.LOW
+        ),
+        TrainingServiceType.CNN_LSTM: TrainingServiceConfig(
+            name="CNN-LSTM Training",
+            service_type=TrainingServiceType.CNN_LSTM,
+            url=os.getenv("CNN_LSTM_TRAIN_URL", "http://trading-cnn-lstm-train:3017"),
+            port=3017,
             default_priority=JobPriority.LOW
         ),
     }
