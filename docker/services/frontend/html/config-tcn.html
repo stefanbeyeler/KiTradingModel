@@ -4535,10 +4535,10 @@
                     if (allCandles.length === 0 && isRecentPattern) {
                         console.log(`TwelveData unavailable for ${symbol}, trying EasyInsight (pattern is recent)...`);
 
-                        // Map interval to EasyInsight format
+                        // Map interval to EasyInsight format (supported: M1, M5, M15, M30, H1, H4, D1, W1, MN)
                         const easyInsightIntervalMap = {
                             '1min': 'm1', '5min': 'm5', '15min': 'm15', '30min': 'm30',
-                            '1h': 'h1', '2h': 'h2', '4h': 'h4',
+                            '1h': 'h1', '4h': 'h4',
                             '1day': 'd1', '1week': 'w1', '1month': 'mn'
                         };
                         const eiInterval = easyInsightIntervalMap[interval] || 'h1';

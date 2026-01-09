@@ -139,9 +139,7 @@ CREATE INDEX IF NOT EXISTS idx_ohlcv_{timeframe}_source
 | `ohlcv_m5` | 1 day | 5-Minuten-Kerzen |
 | `ohlcv_m15` | 7 days | 15-Minuten-Kerzen |
 | `ohlcv_m30` | 7 days | 30-Minuten-Kerzen |
-| `ohlcv_m45` | 7 days | 45-Minuten-Kerzen |
 | `ohlcv_h1` | 7 days | 1-Stunden-Kerzen |
-| `ohlcv_h2` | 14 days | 2-Stunden-Kerzen |
 | `ohlcv_h4` | 30 days | 4-Stunden-Kerzen |
 | `ohlcv_d1` | 365 days | Tageskerzen |
 | `ohlcv_w1` | 365 days | Wochenkerzen |
@@ -1692,9 +1690,7 @@ class DataRepository:
             Timeframe.M5: timedelta(minutes=10),
             Timeframe.M15: timedelta(minutes=30),
             Timeframe.M30: timedelta(hours=1),
-            Timeframe.M45: timedelta(hours=2),
             Timeframe.H1: timedelta(hours=2),
-            Timeframe.H2: timedelta(hours=4),
             Timeframe.H4: timedelta(hours=8),
             Timeframe.D1: timedelta(days=1),
             Timeframe.W1: timedelta(days=7),
@@ -1922,9 +1918,7 @@ BEGIN
             ('m5', '1 day'),
             ('m15', '7 days'),
             ('m30', '7 days'),
-            ('m45', '7 days'),
             ('h1', '7 days'),
-            ('h2', '14 days'),
             ('h4', '30 days'),
             ('d1', '365 days'),
             ('w1', '365 days'),
