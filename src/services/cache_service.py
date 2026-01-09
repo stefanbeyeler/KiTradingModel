@@ -87,9 +87,7 @@ TIMEFRAME_TTL = {
     "M5": 120,
     "M15": 300,
     "M30": 600,
-    "M45": 900,
     "H1": 900,
-    "H2": 1800,
     "H4": 3600,
     "D1": 7200,
     "W1": 14400,
@@ -589,8 +587,8 @@ class CacheService:
             if len(parts) >= 4:
                 potential_timeframe = parts[3]
                 # Bekannte Timeframe-Formate prüfen
-                valid_timeframes = ["M1", "M5", "M15", "M30", "M45", "H1", "H2", "H4", "D1", "W1", "MN",
-                                   "1min", "5min", "15min", "30min", "45min", "1h", "2h", "4h", "1day", "1week", "1month"]
+                valid_timeframes = ["M1", "M5", "M15", "M30", "H1", "H4", "D1", "W1", "MN",
+                                   "1min", "5min", "15min", "30min", "1h", "4h", "1day", "1week", "1month"]
                 if potential_timeframe in valid_timeframes:
                     category_stats[category]["timeframes"].add(potential_timeframe)
 

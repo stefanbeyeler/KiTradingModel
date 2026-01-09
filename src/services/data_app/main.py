@@ -112,7 +112,7 @@ openapi_tags = [
         "name": "5. Twelve Data API",
         "description": """TwelveData API - Primäre Datenquelle für OHLC-Daten aller Timeframes.
 
-**Unterstützte Timeframes:** M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
+**Unterstützte Timeframes:** M1, M5, M15, M30, H1, H4, D1, W1, MN
 
 **Technical Indicators:**
 - **Trend:** SMA, EMA, WMA, DEMA, TEMA, KAMA, Ichimoku, SAR, Supertrend, VWAP

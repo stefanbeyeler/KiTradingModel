@@ -19,7 +19,7 @@ Caching:
 
 Timeframes:
 - Alle Timeframes werden beim Laden standardisiert (siehe src/config/timeframes.py)
-- Standard-Format: M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
+- Standard-Format: M1, M5, M15, M30, H1, H4, D1, W1, MN
 - Downstream-Services erhalten immer konsistente Timeframe-Bezeichnungen
 
 Siehe: DEVELOPMENT_GUIDELINES.md - Datenzugriff-Architektur
@@ -289,9 +289,7 @@ class DataGatewayService:
             - M5, 5m, 5min: 5 minutes
             - M15, 15m, 15min: 15 minutes
             - M30, 30m, 30min: 30 minutes
-            - M45, 45m, 45min: 45 minutes
             - H1, 1h, 1hour: 1 hour
-            - H2, 2h: 2 hours
             - H4, 4h: 4 hours
             - D1, 1d, 1day, daily: 1 day
             - W1, 1wk, 1week, weekly: 1 week
@@ -476,7 +474,7 @@ class DataGatewayService:
 
         Args:
             symbol: Trading symbol
-            timeframe: Timeframe (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN)
+            timeframe: Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)
             min_points: Minimum required data points
 
         Returns:

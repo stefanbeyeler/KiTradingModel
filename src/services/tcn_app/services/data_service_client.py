@@ -108,11 +108,11 @@ class DataServiceClient:
         timeframe_map = {
             # Standard format (M1, H1, D1)
             "M1": "1min", "M5": "5min", "M15": "15min", "M30": "30min",
-            "M45": "45min", "H1": "1h", "H2": "2h", "H4": "4h",
+            "H1": "1h", "H4": "4h",
             "D1": "1day", "W1": "1week", "MN": "1month",
             # TwelveData format (1min, 1h, 1day) - pass through
             "1MIN": "1min", "5MIN": "5min", "15MIN": "15min", "30MIN": "30min",
-            "45MIN": "45min", "1H": "1h", "2H": "2h", "4H": "4h",
+            "1H": "1h", "4H": "4h",
             "1DAY": "1day", "1WEEK": "1week", "1MONTH": "1month",
             # Lowercase variants (1d, 1h) - common mistake
             "1D": "1day", "1W": "1week", "1M": "1min",

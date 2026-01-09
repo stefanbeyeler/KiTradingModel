@@ -141,8 +141,8 @@ class PatternDetectionService:
         """
         # Normalize timeframe to match TIMEFRAME_INTERVALS keys
         tf_map = {
-            "M1": "1m", "M5": "5m", "M15": "15m", "M30": "30m", "M45": "45m",
-            "H1": "1h", "H2": "2h", "H4": "4h",
+            "M1": "1m", "M5": "5m", "M15": "15m", "M30": "30m",
+            "H1": "1h", "H4": "4h",
             "D1": "1d", "1D": "1d",
             "W1": "1w",
             "MN": "1M"

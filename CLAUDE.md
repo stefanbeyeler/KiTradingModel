@@ -194,9 +194,7 @@ Der Data Service normalisiert alle Timeframes beim Laden und stellt den nachgela
 | 5 Minuten | `M5` | `5m`, `5min`, `5minutes` |
 | 15 Minuten | `M15` | `15m`, `15min`, `15minutes` |
 | 30 Minuten | `M30` | `30m`, `30min`, `30minutes` |
-| 45 Minuten | `M45` | `45m`, `45min`, `45minutes` |
 | 1 Stunde | `H1` | `1h`, `1hour`, `60m` |
-| 2 Stunden | `H2` | `2h`, `2hour` |
 | 4 Stunden | `H4` | `4h`, `4hour` |
 | 1 Tag | `D1` | `1d`, `1day`, `daily` |
 | 1 Woche | `W1` | `1wk`, `1week`, `weekly` |

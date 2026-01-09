@@ -4979,11 +4979,11 @@ async def get_training_data(
     2. **EasyInsight API** (1. Fallback) - Indikatoren und zusätzliche Daten
     3. **Yahoo Finance** (2. Fallback) - Kostenlose historische Daten
 
-    Supported timeframes: M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
+    Supported timeframes: M1, M5, M15, M30, H1, H4, D1, W1, MN
 
     Args:
         symbol: Trading symbol (e.g., BTCUSD, EURUSD)
-        timeframe: Timeframe for data (M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN)
+        timeframe: Timeframe for data (M1, M5, M15, M30, H1, H4, D1, W1, MN)
         days: Number of days of data to fetch
         use_cache: Whether to use cached data if available
 
@@ -5089,7 +5089,7 @@ async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache
     Fetch training data from TwelveData API (primary source for OHLC data).
 
     Uses central timeframe configuration for consistent mapping.
-    Supports all timeframes: M1, M5, M15, M30, M45, H1, H2, H4, D1, W1, MN
+    Supports all timeframes: M1, M5, M15, M30, H1, H4, D1, W1, MN
     """
     from ..services.training_data_cache_service import training_data_cache
     from ..services.symbol_service import symbol_service

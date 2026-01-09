@@ -17,8 +17,8 @@ class Timeframe(str, Enum):
     Standard-Timeframes für das gesamte System.
 
     Format: {Einheit}{Anzahl}
-    - M = Minuten (M1, M5, M15, M30, M45)
-    - H = Stunden (H1, H2, H4)
+    - M = Minuten (M1, M5, M15, M30)
+    - H = Stunden (H1, H4)
     - D = Tage (D1)
     - W = Wochen (W1)
     - MN = Monat (MN)
@@ -27,9 +27,7 @@ class Timeframe(str, Enum):
     M5 = "M5"
     M15 = "M15"
     M30 = "M30"
-    M45 = "M45"
     H1 = "H1"
-    H2 = "H2"
     H4 = "H4"
     D1 = "D1"
     W1 = "W1"
@@ -43,9 +41,7 @@ TIMEFRAME_ALIASES: Dict[str, Timeframe] = {
     "M5": Timeframe.M5,
     "M15": Timeframe.M15,
     "M30": Timeframe.M30,
-    "M45": Timeframe.M45,
     "H1": Timeframe.H1,
-    "H2": Timeframe.H2,
     "H4": Timeframe.H4,
     "D1": Timeframe.D1,
     "W1": Timeframe.W1,
@@ -56,9 +52,7 @@ TIMEFRAME_ALIASES: Dict[str, Timeframe] = {
     "m5": Timeframe.M5,
     "m15": Timeframe.M15,
     "m30": Timeframe.M30,
-    "m45": Timeframe.M45,
     "h1": Timeframe.H1,
-    "h2": Timeframe.H2,
     "h4": Timeframe.H4,
     "d1": Timeframe.D1,
     "w1": Timeframe.W1,
@@ -69,9 +63,7 @@ TIMEFRAME_ALIASES: Dict[str, Timeframe] = {
     "5min": Timeframe.M5,
     "15min": Timeframe.M15,
     "30min": Timeframe.M30,
-    "45min": Timeframe.M45,
     "1h": Timeframe.H1,
-    "2h": Timeframe.H2,
     "4h": Timeframe.H4,
     "1day": Timeframe.D1,
     "1week": Timeframe.W1,
@@ -83,7 +75,6 @@ TIMEFRAME_ALIASES: Dict[str, Timeframe] = {
     "15m": Timeframe.M15,
     "30m": Timeframe.M30,
     "60m": Timeframe.H1,
-    "90m": Timeframe.H1,  # Fallback auf H1
     "1d": Timeframe.D1,
     "1wk": Timeframe.W1,
     "1mo": Timeframe.MN,
@@ -96,10 +87,7 @@ TIMEFRAME_ALIASES: Dict[str, Timeframe] = {
     "15minutes": Timeframe.M15,
     "30minute": Timeframe.M30,
     "30minutes": Timeframe.M30,
-    "45minute": Timeframe.M45,
-    "45minutes": Timeframe.M45,
     "1hour": Timeframe.H1,
-    "2hour": Timeframe.H2,
     "4hour": Timeframe.H4,
     "daily": Timeframe.D1,
     "day": Timeframe.D1,
@@ -115,9 +103,7 @@ TIMEFRAME_TO_TWELVEDATA: Dict[Timeframe, str] = {
     Timeframe.M5: "5min",
     Timeframe.M15: "15min",
     Timeframe.M30: "30min",
-    Timeframe.M45: "45min",
     Timeframe.H1: "1h",
-    Timeframe.H2: "2h",
     Timeframe.H4: "4h",
     Timeframe.D1: "1day",
     Timeframe.W1: "1week",
@@ -130,9 +116,7 @@ TIMEFRAME_TO_YFINANCE: Dict[Timeframe, str] = {
     Timeframe.M5: "5m",
     Timeframe.M15: "15m",
     Timeframe.M30: "30m",
-    Timeframe.M45: "30m",  # Yahoo hat kein 45m, Fallback auf 30m
     Timeframe.H1: "1h",
-    Timeframe.H2: "1h",    # Yahoo hat kein 2h, Fallback auf 1h
     Timeframe.H4: "1h",    # Yahoo hat kein 4h, Fallback auf 1h
     Timeframe.D1: "1d",
     Timeframe.W1: "1wk",
@@ -141,8 +125,6 @@ TIMEFRAME_TO_YFINANCE: Dict[Timeframe, str] = {
 
 # Yahoo Finance Fallback-Hinweise (für Logging/Warnungen)
 YFINANCE_FALLBACK_INFO: Dict[Timeframe, Tuple[str, str]] = {
-    Timeframe.M45: ("30m", "Yahoo Finance unterstützt kein 45-Minuten-Intervall"),
-    Timeframe.H2: ("1h", "Yahoo Finance unterstützt kein 2-Stunden-Intervall"),
     Timeframe.H4: ("1h", "Yahoo Finance unterstützt kein 4-Stunden-Intervall"),
 }
 
@@ -152,9 +134,7 @@ TIMEFRAME_TO_EASYINSIGHT: Dict[Timeframe, str] = {
     Timeframe.M5: "m5",
     Timeframe.M15: "m15",
     Timeframe.M30: "m30",
-    Timeframe.M45: "m45",
     Timeframe.H1: "h1",
-    Timeframe.H2: "h2",
     Timeframe.H4: "h4",
     Timeframe.D1: "d1",
     Timeframe.W1: "w1",
@@ -167,9 +147,7 @@ TIMEFRAME_CANDLES_PER_DAY: Dict[Timeframe, float] = {
     Timeframe.M5: 288.0,     # 12 * 24
     Timeframe.M15: 96.0,     # 4 * 24
     Timeframe.M30: 48.0,     # 2 * 24
-    Timeframe.M45: 32.0,     # ~1.33 * 24
     Timeframe.H1: 24.0,      # 1 * 24
-    Timeframe.H2: 12.0,      # 0.5 * 24
     Timeframe.H4: 6.0,       # 0.25 * 24
     Timeframe.D1: 1.0,       # 1 pro Tag
     Timeframe.W1: 0.142857,  # 1/7 pro Tag
@@ -182,9 +160,7 @@ TIMEFRAME_DURATION: Dict[Timeframe, timedelta] = {
     Timeframe.M5: timedelta(minutes=5),
     Timeframe.M15: timedelta(minutes=15),
     Timeframe.M30: timedelta(minutes=30),
-    Timeframe.M45: timedelta(minutes=45),
     Timeframe.H1: timedelta(hours=1),
-    Timeframe.H2: timedelta(hours=2),
     Timeframe.H4: timedelta(hours=4),
     Timeframe.D1: timedelta(days=1),
     Timeframe.W1: timedelta(weeks=1),
@@ -197,9 +173,7 @@ TIMEFRAME_MINUTES: Dict[Timeframe, int] = {
     Timeframe.M5: 5,
     Timeframe.M15: 15,
     Timeframe.M30: 30,
-    Timeframe.M45: 45,
     Timeframe.H1: 60,
-    Timeframe.H2: 120,
     Timeframe.H4: 240,
     Timeframe.D1: 1440,
     Timeframe.W1: 10080,
@@ -230,9 +204,7 @@ TIMEFRAME_ORDER: List[Timeframe] = [
     Timeframe.M5,
     Timeframe.M15,
     Timeframe.M30,
-    Timeframe.M45,
     Timeframe.H1,
-    Timeframe.H2,
     Timeframe.H4,
     Timeframe.D1,
     Timeframe.W1,

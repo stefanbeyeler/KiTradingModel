@@ -45,9 +45,7 @@ OHLCV_CONFIGS = {
     "M5": TimeframeConfig("m5", "1 day", 90, 7),
     "M15": TimeframeConfig("m15", "7 days", 180, 14),
     "M30": TimeframeConfig("m30", "7 days", 180, 14),
-    "M45": TimeframeConfig("m45", "7 days", 180, 14),
     "H1": TimeframeConfig("h1", "7 days", None, 30),
-    "H2": TimeframeConfig("h2", "14 days", None, 30),
     "H4": TimeframeConfig("h4", "30 days", None, 60),
     "D1": TimeframeConfig("d1", "365 days", None, 90),
     "W1": TimeframeConfig("w1", "365 days", None, 90),
@@ -131,9 +129,7 @@ FRESHNESS_THRESHOLDS = {
     "M5": 600,      # 10 minutes
     "M15": 1800,    # 30 minutes
     "M30": 3600,    # 1 hour
-    "M45": 5400,    # 1.5 hours
     "H1": 7200,     # 2 hours
-    "H2": 14400,    # 4 hours
     "H4": 28800,    # 8 hours
     "D1": 86400,    # 1 day
     "W1": 604800,   # 1 week

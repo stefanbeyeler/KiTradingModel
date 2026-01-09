@@ -44,9 +44,7 @@ DAYS_BACK = {
     "M5": 14,      # 2 weeks for M5
     "M15": 30,     # 1 month for M15
     "M30": 60,     # 2 months for M30
-    "M45": 60,     # 2 months for M45
     "H1": 180,     # 6 months for H1
-    "H2": 180,     # 6 months for H2
     "H4": 365,     # 1 year for H4
     "D1": 730,     # 2 years for D1
     "W1": 1095,    # 3 years for W1

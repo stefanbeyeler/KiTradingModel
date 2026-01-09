@@ -59,9 +59,7 @@ class TrainingDataCacheService:
         Timeframe.M5.value: 2,     # 2 hours
         Timeframe.M15.value: 6,    # 6 hours - reasonable for intraday retraining
         Timeframe.M30.value: 8,    # 8 hours
-        Timeframe.M45.value: 8,    # 8 hours
         Timeframe.H1.value: 12,    # 12 hours - covers multiple training runs per day
-        Timeframe.H2.value: 12,    # 12 hours
         Timeframe.H4.value: 24,    # 24 hours
         Timeframe.D1.value: 48,    # 48 hours - D1 data changes slowly (1 new candle/day)
         Timeframe.W1.value: 168,   # 1 week

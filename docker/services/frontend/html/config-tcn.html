@@ -4443,7 +4443,7 @@
                     // Convert timeframe to TwelveData interval format (H1 -> 1h, M5 -> 5min, D1 -> 1day)
                     const intervalMap = {
                         'M1': '1min', 'M5': '5min', 'M15': '15min', 'M30': '30min',
-                        'H1': '1h', 'H2': '2h', 'H4': '4h',
+                        'H1': '1h', 'H4': '4h',
                         'D1': '1day', 'W1': '1week', 'MN': '1month',
                         '5m': '5min', '15m': '15min', '30m': '30min',
                         '1h': '1h', '4h': '4h', '1d': '1day'
@@ -4453,7 +4453,7 @@
                     // Calculate how many hours/days per candle based on timeframe
                     const timeframeHours = {
                         '1min': 1/60, '5min': 5/60, '15min': 15/60, '30min': 30/60,
-                        '1h': 1, '2h': 2, '4h': 4,
+                        '1h': 1, '4h': 4,
                         '1day': 24, '1week': 168, '1month': 720
                     };
                     const hoursPerCandle = timeframeHours[interval] || 1;
@@ -4588,8 +4588,8 @@
 
                 if (allCandles.length === 0) {
                     const patternAgeInfo = endTime ? ` Pattern-Alter: ${Math.round((Date.now() - new Date(endTime).getTime()) / (24*60*60*1000))} Tage.` : '';
-                    // EasyInsight only supports D1, H1, M15 - other timeframes (H4, H2, M30, etc.) are not available
-                    const unsupportedTimeframes = ['H4', 'H2', 'M30', 'M45', 'W1', 'MN', '4h', '2h', '30m', '45m', '1week', '1month'];
+                    // EasyInsight only supports D1, H1, M15 - other timeframes (H4, M30, etc.) are not available
+                    const unsupportedTimeframes = ['H4', 'M30', 'W1', 'MN', '4h', '30m', '1week', '1month'];
                     const isUnsupportedTimeframe = unsupportedTimeframes.some(tf => timeframe.toUpperCase().includes(tf.toUpperCase()) || timeframe.toLowerCase() === tf.toLowerCase());
                     const timeframeInfo = isUnsupportedTimeframe
                         ? ` TwelveData unterstützt ${symbol} nicht, und EasyInsight hat nur D1/H1/M15 Daten (${timeframe} nicht verfügbar).`
