@@ -265,6 +265,42 @@ http {
             proxy_connect_timeout 5s;
         }
 
+        # CNN-LSTM Multi-Task Service - Direct Access (Inference)
+        location /cnn-lstm/ {
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $cnn_lstm_upstream trading-cnn-lstm:3007;
+            rewrite ^/cnn-lstm/(.*)$ /$1 break;
+            proxy_pass http://$cnn_lstm_upstream;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+            proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
+        }
+
+        # CNN-LSTM Training Service - Direct Access (Training)
+        location /cnn-lstm-train/ {
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $cnn_lstm_train_upstream trading-cnn-lstm-train:3017;
+            rewrite ^/cnn-lstm-train/(.*)$ /$1 break;
+            proxy_pass http://$cnn_lstm_train_upstream;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+            proxy_read_timeout 600s;
+            proxy_connect_timeout 5s;
+        }
+
         # HMM-Regime Service - Direct Access
         location /hmm/ {
             proxy_pass http://hmm-backend/;
