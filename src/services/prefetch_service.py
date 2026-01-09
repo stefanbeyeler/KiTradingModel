@@ -67,7 +67,7 @@ class PrefetchConfig:
         easyinsight_limit: int = 500,
     ):
         self.enabled = enabled
-        self.timeframes = timeframes or ["1h", "4h", "1day"]
+        self.timeframes = timeframes or ["1h", "4h", "1day", "1week", "1month"]
         self.fast_timeframes = fast_timeframes or ["1min", "5min", "15min", "30min"]
         self.fast_refresh_interval = fast_refresh_interval
         self.max_symbols = max_symbols
