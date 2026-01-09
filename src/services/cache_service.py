@@ -70,14 +70,13 @@ DEFAULT_TTL = {
 }
 
 # Timeframe-spezifische TTL für OHLCV (kleinere Timeframes = kürzere TTL)
+# Nur unterstützte Timeframes: M1, M5, M15, M30, H1, H4, D1, W1, MN
 TIMEFRAME_TTL = {
     "1min": 60,       # 1m - neue Kerze jede Minute
     "5min": 120,      # 2m - neue Kerze alle 5 Minuten
     "15min": 300,     # 5m - neue Kerze alle 15 Minuten
     "30min": 600,     # 10m - neue Kerze alle 30 Minuten
-    "45min": 900,     # 15m - neue Kerze alle 45 Minuten
     "1h": 900,        # 15m - neue Kerze jede Stunde
-    "2h": 1800,       # 30m - neue Kerze alle 2 Stunden
     "4h": 3600,       # 1h - neue Kerze alle 4 Stunden
     "1day": 7200,     # 2h - neue Kerze täglich
     "1week": 14400,   # 4h - neue Kerze wöchentlich

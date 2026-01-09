@@ -7,15 +7,14 @@ from dateutil import parser as date_parser
 import numpy as np
 from loguru import logger
 
-# Expected candle intervals for gap detection - all supported timeframes
+# Expected candle intervals for gap detection - supported timeframes only
+# Supported: M1, M5, M15, M30, H1, H4, D1, W1, MN (no M45/H2)
 TIMEFRAME_INTERVALS = {
     "1m": timedelta(minutes=1),
     "5m": timedelta(minutes=5),
     "15m": timedelta(minutes=15),
     "30m": timedelta(minutes=30),
-    "45m": timedelta(minutes=45),
     "1h": timedelta(hours=1),
-    "2h": timedelta(hours=2),
     "4h": timedelta(hours=4),
     "1d": timedelta(days=1),
     "1w": timedelta(weeks=1),
@@ -477,15 +476,13 @@ class PatternDetectionService:
                     model_version=self._model_version
                 )
 
-            # Map timeframe to field prefix - all supported timeframes
+            # Map timeframe to field prefix - supported timeframes only (no M45/H2)
             tf_map = {
                 "m1": "m1", "1m": "m1",
                 "m5": "m5", "5m": "m5",
                 "m15": "m15", "15m": "m15",
                 "m30": "m30", "30m": "m30",
-                "m45": "m45", "45m": "m45",
                 "h1": "h1", "1h": "h1",
-                "h2": "h2", "2h": "h2",
                 "h4": "h4", "4h": "h4",
                 "d1": "d1", "1d": "d1",
                 "w1": "w1", "1w": "w1",
