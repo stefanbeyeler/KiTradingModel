@@ -41,8 +41,8 @@ class AlertManager:
                 logger.debug(f"Alert for {service_name} disabled via service config")
                 return False
         except Exception as e:
-            logger.warning(f"Could not check service alert config: {e}")
-            # Bei Fehler: Fallback auf Kritikalitäts-Prüfung
+            logger.warning(f"Could not check service alert config: {e} - suppressing alert (fail-safe)")
+            return False  # Fail-safe: Bei Fehler keine Alerts senden
 
         # Dann Kritikalitätsstufe prüfen
         if criticality == "critical" and self.settings.alert_on_critical:
@@ -94,12 +94,12 @@ class AlertManager:
             HealthState.UNHEALTHY, HealthState.DEGRADED
         ]:
             # Prüfe ob Service-Alarmierung aktiviert ist
-            service_alert_enabled = True
+            service_alert_enabled = False  # Fail-safe: Default ist AUS
             try:
                 from .config_service import config_service
                 service_alert_enabled = config_service.is_service_alert_enabled(service_name)
             except Exception as e:
-                logger.warning(f"Could not check service alert config for recovery: {e}")
+                logger.warning(f"Could not check service alert config for recovery: {e} - suppressing alert (fail-safe)")
 
             if not service_alert_enabled:
                 logger.debug(f"Recovery alert for {service_name} suppressed (service alerts disabled)")
