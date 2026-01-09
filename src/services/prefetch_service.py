@@ -542,8 +542,7 @@ class PrefetchService:
 
         except Exception as e:
             import traceback
-            logger.warning(f"Pre-Fetch Fehler für {symbol}/{timeframe}: {e}")
-            logger.debug(f"Pre-Fetch Traceback: {traceback.format_exc()}")
+            logger.warning(f"Pre-Fetch Fehler für {symbol}/{timeframe}: {e}\n{traceback.format_exc()}")
 
         return False
 
