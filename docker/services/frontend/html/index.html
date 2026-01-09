@@ -1218,14 +1218,6 @@
                             </div>
                             <span class="dataflow-stage-label" style="margin-top: 0.3rem;">Training</span>
                             <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
-                                <span class="node-status loading" id="df-tcn-train-status"></span>
-                                <span class="node-icon">&#127891;</span>
-                                <div class="node-info">
-                                    <span class="node-name">TCN-Train</span>
-                                    <span class="node-port">:3013</span>
-                                </div>
-                            </div>
-                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
                                 <span class="node-status loading" id="df-candlestick-train-status"></span>
                                 <span class="node-icon">&#127891;</span>
                                 <div class="node-info">
@@ -1234,11 +1226,11 @@
                                 </div>
                             </div>
                             <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
-                                <span class="node-status loading" id="df-nhits-train-status"></span>
+                                <span class="node-status loading" id="df-cnn-lstm-train-status"></span>
                                 <span class="node-icon">&#127891;</span>
                                 <div class="node-info">
-                                    <span class="node-name">NHITS-Train</span>
-                                    <span class="node-port">:3012</span>
+                                    <span class="node-name">CNN-LSTM-Train</span>
+                                    <span class="node-port">:3017</span>
                                 </div>
                             </div>
                             <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
@@ -1250,11 +1242,19 @@
                                 </div>
                             </div>
                             <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
-                                <span class="node-status loading" id="df-cnn-lstm-train-status"></span>
+                                <span class="node-status loading" id="df-nhits-train-status"></span>
                                 <span class="node-icon">&#127891;</span>
                                 <div class="node-info">
-                                    <span class="node-name">LSTM-Train</span>
-                                    <span class="node-port">:3017</span>
+                                    <span class="node-name">NHITS-Train</span>
+                                    <span class="node-port">:3012</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                                <span class="node-status loading" id="df-tcn-train-status"></span>
+                                <span class="node-icon">&#127891;</span>
+                                <div class="node-info">
+                                    <span class="node-name">TCN-Train</span>
+                                    <span class="node-port">:3013</span>
                                 </div>
                             </div>
                         </div>
@@ -1266,38 +1266,6 @@
                     <div class="dataflow-stage">
                         <span class="dataflow-stage-label">ML Inference</span>
                         <div class="dataflow-nodes-vertical">
-                            <div class="dataflow-node ml">
-                                <span class="node-status loading" id="df-nhits-status"></span>
-                                <span class="node-icon">&#128202;</span>
-                                <div class="node-info">
-                                    <span class="node-name">NHITS</span>
-                                    <span class="node-port">:3002</span>
-                                </div>
-                            </div>
-                            <div class="dataflow-node ml">
-                                <span class="node-status loading" id="df-tcn-status"></span>
-                                <span class="node-icon">&#128200;</span>
-                                <div class="node-info">
-                                    <span class="node-name">TCN</span>
-                                    <span class="node-port">:3003</span>
-                                </div>
-                            </div>
-                            <div class="dataflow-node ml">
-                                <span class="node-status loading" id="df-hmm-status"></span>
-                                <span class="node-icon">&#128201;</span>
-                                <div class="node-info">
-                                    <span class="node-name">HMM</span>
-                                    <span class="node-port">:3004</span>
-                                </div>
-                            </div>
-                            <div class="dataflow-node ml">
-                                <span class="node-status loading" id="df-embedder-status"></span>
-                                <span class="node-icon">&#129302;</span>
-                                <div class="node-info">
-                                    <span class="node-name">Embedder</span>
-                                    <span class="node-port">:3005</span>
-                                </div>
-                            </div>
                             <div class="dataflow-node ml">
                                 <span class="node-status loading" id="df-candlestick-status"></span>
                                 <span class="node-icon">&#128293;</span>
@@ -1312,6 +1280,38 @@
                                 <div class="node-info">
                                     <span class="node-name">CNN-LSTM</span>
                                     <span class="node-port">:3007</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-embedder-status"></span>
+                                <span class="node-icon">&#129302;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Embedder</span>
+                                    <span class="node-port">:3005</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-hmm-status"></span>
+                                <span class="node-icon">&#128201;</span>
+                                <div class="node-info">
+                                    <span class="node-name">HMM</span>
+                                    <span class="node-port">:3004</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-nhits-status"></span>
+                                <span class="node-icon">&#128202;</span>
+                                <div class="node-info">
+                                    <span class="node-name">NHITS</span>
+                                    <span class="node-port">:3002</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node ml">
+                                <span class="node-status loading" id="df-tcn-status"></span>
+                                <span class="node-icon">&#128200;</span>
+                                <div class="node-info">
+                                    <span class="node-name">TCN</span>
+                                    <span class="node-port">:3003</span>
                                 </div>
                             </div>
                         </div>
