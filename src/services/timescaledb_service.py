@@ -684,6 +684,508 @@ class TimescaleDBService:
             logger.error(f"Failed to get all indicators for {symbol}/{tf.value}: {e}")
             return {}
 
+    # ==================== Optimized Indicator Upserts ====================
+
+    async def upsert_momentum_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        data: list[dict[str, Any]],
+        source: str,
+    ) -> int:
+        """
+        Upsert momentum indicators into optimized table.
+
+        Supported columns: rsi_14, rsi_7, rsi_21, stoch_rsi, connors_rsi,
+        stoch_k, stoch_d, macd_line, macd_signal, macd_histogram,
+        cci, williams_r, roc, momentum, adx, plus_di, minus_di, mfi
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe (H1, D1, etc.)
+            data: List of indicator dictionaries with timestamp and values
+            source: Data source identifier
+
+        Returns:
+            Number of rows inserted/updated
+        """
+        if not data or not self.is_available:
+            return 0
+
+        tf = normalize_timeframe(timeframe)
+
+        # Valid columns for this table
+        valid_columns = {
+            "rsi_14", "rsi_7", "rsi_21", "stoch_rsi", "connors_rsi",
+            "stoch_k", "stoch_d", "macd_line", "macd_signal", "macd_histogram",
+            "cci", "williams_r", "roc", "momentum", "adx", "plus_di", "minus_di", "mfi"
+        }
+
+        try:
+            async with self.connection() as conn:
+                count = 0
+                async with conn.transaction():
+                    for row in data:
+                        # Extract timestamp
+                        ts = row.get("timestamp") or row.get("datetime")
+                        if isinstance(ts, str):
+                            ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+                        if not ts:
+                            continue
+
+                        # Build dynamic column list and values
+                        columns = ["timestamp", "symbol", "timeframe", "source", "created_at"]
+                        values = [ts, symbol, tf.value, source, datetime.now(timezone.utc)]
+                        placeholders = ["$1", "$2", "$3", "$4", "$5"]
+                        update_parts = []
+                        idx = 6
+
+                        for col in valid_columns:
+                            if col in row and row[col] is not None:
+                                columns.append(col)
+                                values.append(float(row[col]))
+                                placeholders.append(f"${idx}")
+                                update_parts.append(f"{col} = EXCLUDED.{col}")
+                                idx += 1
+
+                        if len(columns) <= 5:
+                            # No indicator values, skip
+                            continue
+
+                        query = f"""
+                            INSERT INTO indicators_momentum ({', '.join(columns)})
+                            VALUES ({', '.join(placeholders)})
+                            ON CONFLICT (timestamp, symbol, timeframe)
+                            DO UPDATE SET {', '.join(update_parts)}, source = EXCLUDED.source
+                        """
+
+                        await conn.execute(query, *values)
+                        count += 1
+
+                await self._update_freshness(symbol, tf.value, "indicators_momentum", count, source)
+                logger.debug(f"Upserted {count} momentum indicators for {symbol}/{tf.value}")
+                return count
+
+        except Exception as e:
+            logger.error(f"Failed to upsert momentum indicators for {symbol}/{tf.value}: {e}")
+            return 0
+
+    async def upsert_volatility_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        data: list[dict[str, Any]],
+        source: str,
+    ) -> int:
+        """
+        Upsert volatility indicators into optimized table.
+
+        Supported columns: bb_upper, bb_middle, bb_lower, bb_width, bb_percent_b,
+        atr_14, atr_7, natr, true_range, kc_upper, kc_middle, kc_lower,
+        dc_upper, dc_middle, dc_lower
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe
+            data: List of indicator dictionaries
+            source: Data source identifier
+
+        Returns:
+            Number of rows inserted/updated
+        """
+        if not data or not self.is_available:
+            return 0
+
+        tf = normalize_timeframe(timeframe)
+
+        valid_columns = {
+            "bb_upper", "bb_middle", "bb_lower", "bb_width", "bb_percent_b",
+            "atr_14", "atr_7", "natr", "true_range",
+            "kc_upper", "kc_middle", "kc_lower",
+            "dc_upper", "dc_middle", "dc_lower"
+        }
+
+        try:
+            async with self.connection() as conn:
+                count = 0
+                async with conn.transaction():
+                    for row in data:
+                        ts = row.get("timestamp") or row.get("datetime")
+                        if isinstance(ts, str):
+                            ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+                        if not ts:
+                            continue
+
+                        columns = ["timestamp", "symbol", "timeframe", "source", "created_at"]
+                        values = [ts, symbol, tf.value, source, datetime.now(timezone.utc)]
+                        placeholders = ["$1", "$2", "$3", "$4", "$5"]
+                        update_parts = []
+                        idx = 6
+
+                        for col in valid_columns:
+                            if col in row and row[col] is not None:
+                                columns.append(col)
+                                values.append(float(row[col]))
+                                placeholders.append(f"${idx}")
+                                update_parts.append(f"{col} = EXCLUDED.{col}")
+                                idx += 1
+
+                        if len(columns) <= 5:
+                            continue
+
+                        query = f"""
+                            INSERT INTO indicators_volatility ({', '.join(columns)})
+                            VALUES ({', '.join(placeholders)})
+                            ON CONFLICT (timestamp, symbol, timeframe)
+                            DO UPDATE SET {', '.join(update_parts)}, source = EXCLUDED.source
+                        """
+
+                        await conn.execute(query, *values)
+                        count += 1
+
+                await self._update_freshness(symbol, tf.value, "indicators_volatility", count, source)
+                logger.debug(f"Upserted {count} volatility indicators for {symbol}/{tf.value}")
+                return count
+
+        except Exception as e:
+            logger.error(f"Failed to upsert volatility indicators for {symbol}/{tf.value}: {e}")
+            return 0
+
+    async def upsert_trend_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        data: list[dict[str, Any]],
+        source: str,
+    ) -> int:
+        """
+        Upsert trend indicators into optimized table.
+
+        Supported columns: ichimoku_tenkan, ichimoku_kijun, ichimoku_senkou_a,
+        ichimoku_senkou_b, ichimoku_chikou, supertrend, supertrend_direction,
+        psar, psar_direction, aroon_up, aroon_down, aroon_oscillator,
+        linreg_slope, linreg_intercept, linreg_r_squared, ht_trendmode
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe
+            data: List of indicator dictionaries
+            source: Data source identifier
+
+        Returns:
+            Number of rows inserted/updated
+        """
+        if not data or not self.is_available:
+            return 0
+
+        tf = normalize_timeframe(timeframe)
+
+        valid_columns = {
+            "ichimoku_tenkan", "ichimoku_kijun", "ichimoku_senkou_a",
+            "ichimoku_senkou_b", "ichimoku_chikou",
+            "supertrend", "supertrend_direction",
+            "psar", "psar_direction",
+            "aroon_up", "aroon_down", "aroon_oscillator",
+            "linreg_slope", "linreg_intercept", "linreg_r_squared",
+            "ht_trendmode"
+        }
+
+        # Integer columns
+        int_columns = {"supertrend_direction", "psar_direction", "ht_trendmode"}
+
+        try:
+            async with self.connection() as conn:
+                count = 0
+                async with conn.transaction():
+                    for row in data:
+                        ts = row.get("timestamp") or row.get("datetime")
+                        if isinstance(ts, str):
+                            ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+                        if not ts:
+                            continue
+
+                        columns = ["timestamp", "symbol", "timeframe", "source", "created_at"]
+                        values = [ts, symbol, tf.value, source, datetime.now(timezone.utc)]
+                        placeholders = ["$1", "$2", "$3", "$4", "$5"]
+                        update_parts = []
+                        idx = 6
+
+                        for col in valid_columns:
+                            if col in row and row[col] is not None:
+                                columns.append(col)
+                                if col in int_columns:
+                                    values.append(int(row[col]))
+                                else:
+                                    values.append(float(row[col]))
+                                placeholders.append(f"${idx}")
+                                update_parts.append(f"{col} = EXCLUDED.{col}")
+                                idx += 1
+
+                        if len(columns) <= 5:
+                            continue
+
+                        query = f"""
+                            INSERT INTO indicators_trend ({', '.join(columns)})
+                            VALUES ({', '.join(placeholders)})
+                            ON CONFLICT (timestamp, symbol, timeframe)
+                            DO UPDATE SET {', '.join(update_parts)}, source = EXCLUDED.source
+                        """
+
+                        await conn.execute(query, *values)
+                        count += 1
+
+                await self._update_freshness(symbol, tf.value, "indicators_trend", count, source)
+                logger.debug(f"Upserted {count} trend indicators for {symbol}/{tf.value}")
+                return count
+
+        except Exception as e:
+            logger.error(f"Failed to upsert trend indicators for {symbol}/{tf.value}: {e}")
+            return 0
+
+    async def upsert_ma_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        data: list[dict[str, Any]],
+        source: str,
+    ) -> int:
+        """
+        Upsert moving average indicators into optimized table.
+
+        Supported columns: sma_20, sma_50, sma_200, ema_12, ema_26, ema_50,
+        ema_200, wma_20, dema_20, tema_20, vwap
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe
+            data: List of indicator dictionaries
+            source: Data source identifier
+
+        Returns:
+            Number of rows inserted/updated
+        """
+        if not data or not self.is_available:
+            return 0
+
+        tf = normalize_timeframe(timeframe)
+
+        valid_columns = {
+            "sma_20", "sma_50", "sma_200",
+            "ema_12", "ema_26", "ema_50", "ema_200",
+            "wma_20", "dema_20", "tema_20", "vwap"
+        }
+
+        try:
+            async with self.connection() as conn:
+                count = 0
+                async with conn.transaction():
+                    for row in data:
+                        ts = row.get("timestamp") or row.get("datetime")
+                        if isinstance(ts, str):
+                            ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+                        if not ts:
+                            continue
+
+                        columns = ["timestamp", "symbol", "timeframe", "source", "created_at"]
+                        values = [ts, symbol, tf.value, source, datetime.now(timezone.utc)]
+                        placeholders = ["$1", "$2", "$3", "$4", "$5"]
+                        update_parts = []
+                        idx = 6
+
+                        for col in valid_columns:
+                            if col in row and row[col] is not None:
+                                columns.append(col)
+                                values.append(float(row[col]))
+                                placeholders.append(f"${idx}")
+                                update_parts.append(f"{col} = EXCLUDED.{col}")
+                                idx += 1
+
+                        if len(columns) <= 5:
+                            continue
+
+                        query = f"""
+                            INSERT INTO indicators_ma ({', '.join(columns)})
+                            VALUES ({', '.join(placeholders)})
+                            ON CONFLICT (timestamp, symbol, timeframe)
+                            DO UPDATE SET {', '.join(update_parts)}, source = EXCLUDED.source
+                        """
+
+                        await conn.execute(query, *values)
+                        count += 1
+
+                await self._update_freshness(symbol, tf.value, "indicators_ma", count, source)
+                logger.debug(f"Upserted {count} MA indicators for {symbol}/{tf.value}")
+                return count
+
+        except Exception as e:
+            logger.error(f"Failed to upsert MA indicators for {symbol}/{tf.value}: {e}")
+            return 0
+
+    async def upsert_volume_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        data: list[dict[str, Any]],
+        source: str,
+    ) -> int:
+        """
+        Upsert volume indicators into optimized table.
+
+        Supported columns: obv, ad_line, ad_oscillator, chaikin_mf,
+        volume_sma_20, volume_ratio
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe
+            data: List of indicator dictionaries
+            source: Data source identifier
+
+        Returns:
+            Number of rows inserted/updated
+        """
+        if not data or not self.is_available:
+            return 0
+
+        tf = normalize_timeframe(timeframe)
+
+        valid_columns = {
+            "obv", "ad_line", "ad_oscillator", "chaikin_mf",
+            "volume_sma_20", "volume_ratio"
+        }
+
+        try:
+            async with self.connection() as conn:
+                count = 0
+                async with conn.transaction():
+                    for row in data:
+                        ts = row.get("timestamp") or row.get("datetime")
+                        if isinstance(ts, str):
+                            ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+                        if not ts:
+                            continue
+
+                        columns = ["timestamp", "symbol", "timeframe", "source", "created_at"]
+                        values = [ts, symbol, tf.value, source, datetime.now(timezone.utc)]
+                        placeholders = ["$1", "$2", "$3", "$4", "$5"]
+                        update_parts = []
+                        idx = 6
+
+                        for col in valid_columns:
+                            if col in row and row[col] is not None:
+                                columns.append(col)
+                                values.append(float(row[col]))
+                                placeholders.append(f"${idx}")
+                                update_parts.append(f"{col} = EXCLUDED.{col}")
+                                idx += 1
+
+                        if len(columns) <= 5:
+                            continue
+
+                        query = f"""
+                            INSERT INTO indicators_volume ({', '.join(columns)})
+                            VALUES ({', '.join(placeholders)})
+                            ON CONFLICT (timestamp, symbol, timeframe)
+                            DO UPDATE SET {', '.join(update_parts)}, source = EXCLUDED.source
+                        """
+
+                        await conn.execute(query, *values)
+                        count += 1
+
+                await self._update_freshness(symbol, tf.value, "indicators_volume", count, source)
+                logger.debug(f"Upserted {count} volume indicators for {symbol}/{tf.value}")
+                return count
+
+        except Exception as e:
+            logger.error(f"Failed to upsert volume indicators for {symbol}/{tf.value}: {e}")
+            return 0
+
+    async def upsert_levels_indicators(
+        self,
+        symbol: str,
+        timeframe: str,
+        data: list[dict[str, Any]],
+        source: str,
+    ) -> int:
+        """
+        Upsert pivot/level indicators into optimized table.
+
+        Supported columns: pivot, r1, r2, r3, s1, s2, s3,
+        fib_r1, fib_r2, fib_r3, fib_s1, fib_s2, fib_s3,
+        cam_r1, cam_r2, cam_r3, cam_r4, cam_s1, cam_s2, cam_s3, cam_s4
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe
+            data: List of indicator dictionaries
+            source: Data source identifier
+
+        Returns:
+            Number of rows inserted/updated
+        """
+        if not data or not self.is_available:
+            return 0
+
+        tf = normalize_timeframe(timeframe)
+
+        valid_columns = {
+            "pivot", "r1", "r2", "r3", "s1", "s2", "s3",
+            "fib_r1", "fib_r2", "fib_r3", "fib_s1", "fib_s2", "fib_s3",
+            "cam_r1", "cam_r2", "cam_r3", "cam_r4",
+            "cam_s1", "cam_s2", "cam_s3", "cam_s4"
+        }
+
+        try:
+            async with self.connection() as conn:
+                count = 0
+                async with conn.transaction():
+                    for row in data:
+                        ts = row.get("timestamp") or row.get("datetime")
+                        if isinstance(ts, str):
+                            ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+                        if not ts:
+                            continue
+
+                        columns = ["timestamp", "symbol", "timeframe", "source", "created_at"]
+                        values = [ts, symbol, tf.value, source, datetime.now(timezone.utc)]
+                        placeholders = ["$1", "$2", "$3", "$4", "$5"]
+                        update_parts = []
+                        idx = 6
+
+                        for col in valid_columns:
+                            if col in row and row[col] is not None:
+                                columns.append(col)
+                                values.append(float(row[col]))
+                                placeholders.append(f"${idx}")
+                                update_parts.append(f"{col} = EXCLUDED.{col}")
+                                idx += 1
+
+                        if len(columns) <= 5:
+                            continue
+
+                        query = f"""
+                            INSERT INTO indicators_levels ({', '.join(columns)})
+                            VALUES ({', '.join(placeholders)})
+                            ON CONFLICT (timestamp, symbol, timeframe)
+                            DO UPDATE SET {', '.join(update_parts)}, source = EXCLUDED.source
+                        """
+
+                        await conn.execute(query, *values)
+                        count += 1
+
+                await self._update_freshness(symbol, tf.value, "indicators_levels", count, source)
+                logger.debug(f"Upserted {count} level indicators for {symbol}/{tf.value}")
+                return count
+
+        except Exception as e:
+            logger.error(f"Failed to upsert level indicators for {symbol}/{tf.value}: {e}")
+            return 0
+
     # ==================== Freshness Tracking ====================
 
     async def _update_freshness(

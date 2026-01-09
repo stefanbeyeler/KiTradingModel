@@ -2370,3 +2370,306 @@ CATEGORY_DESCRIPTIONS: Dict[IndicatorCategory, str] = {
     IndicatorCategory.ML_FEATURES: "Spezielle Features für Machine Learning",
     IndicatorCategory.PATTERN: "Pattern-Erkennungs-Indikatoren",
 }
+
+
+# =============================================================================
+# TIMESCALEDB INDICATOR TABLE MAPPING
+# =============================================================================
+# Maps API indicator names to optimized TimescaleDB table columns.
+# This is the SINGLE SOURCE OF TRUTH for indicator-to-table routing.
+
+class IndicatorTableType(str, Enum):
+    """Target table types for indicators in TimescaleDB."""
+    MOMENTUM = "indicators_momentum"
+    VOLATILITY = "indicators_volatility"
+    TREND = "indicators_trend"
+    MA = "indicators_ma"
+    VOLUME = "indicators_volume"
+    LEVELS = "indicators_levels"
+    GENERIC = "indicators"  # JSONB fallback table
+
+
+# Mapping: API indicator name -> (table type, DB column name(s))
+# Format: "api_name": (IndicatorTableType, {"api_field": "db_column", ...})
+INDICATOR_TABLE_MAPPING: Dict[str, tuple[IndicatorTableType, Dict[str, str]]] = {
+    # =========================================================================
+    # MOMENTUM INDICATORS -> indicators_momentum table
+    # =========================================================================
+    "rsi": (IndicatorTableType.MOMENTUM, {
+        "rsi": "rsi_14",  # Default RSI period 14
+    }),
+    "rsi_7": (IndicatorTableType.MOMENTUM, {"rsi": "rsi_7"}),
+    "rsi_14": (IndicatorTableType.MOMENTUM, {"rsi": "rsi_14"}),
+    "rsi_21": (IndicatorTableType.MOMENTUM, {"rsi": "rsi_21"}),
+
+    "stochrsi": (IndicatorTableType.MOMENTUM, {
+        "stochrsi": "stoch_rsi",
+    }),
+    "crsi": (IndicatorTableType.MOMENTUM, {
+        "crsi": "connors_rsi",
+    }),
+
+    "stoch": (IndicatorTableType.MOMENTUM, {
+        "slow_k": "stoch_k",
+        "slow_d": "stoch_d",
+    }),
+    "sto_main": (IndicatorTableType.MOMENTUM, {"sto_main": "stoch_k"}),
+    "sto_signal": (IndicatorTableType.MOMENTUM, {"sto_signal": "stoch_d"}),
+
+    "macd": (IndicatorTableType.MOMENTUM, {
+        "macd": "macd_line",
+        "macd_signal": "macd_signal",
+        "macd_hist": "macd_histogram",
+    }),
+    "macd_main": (IndicatorTableType.MOMENTUM, {"macd_main": "macd_line"}),
+    "macd_signal": (IndicatorTableType.MOMENTUM, {"macd_signal": "macd_signal"}),
+
+    "cci": (IndicatorTableType.MOMENTUM, {"cci": "cci"}),
+
+    "willr": (IndicatorTableType.MOMENTUM, {"willr": "williams_r"}),
+
+    "roc": (IndicatorTableType.MOMENTUM, {"roc": "roc"}),
+
+    "mom": (IndicatorTableType.MOMENTUM, {"mom": "momentum"}),
+
+    "adx": (IndicatorTableType.MOMENTUM, {"adx": "adx"}),
+    "adx_main": (IndicatorTableType.MOMENTUM, {"adx_main": "adx"}),
+
+    "plus_di": (IndicatorTableType.MOMENTUM, {"plus_di": "plus_di"}),
+    "adx_plusdi": (IndicatorTableType.MOMENTUM, {"adx_plusdi": "plus_di"}),
+
+    "minus_di": (IndicatorTableType.MOMENTUM, {"minus_di": "minus_di"}),
+    "adx_minusdi": (IndicatorTableType.MOMENTUM, {"adx_minusdi": "minus_di"}),
+
+    "mfi": (IndicatorTableType.MOMENTUM, {"mfi": "mfi"}),
+
+    # =========================================================================
+    # VOLATILITY INDICATORS -> indicators_volatility table
+    # =========================================================================
+    "bbands": (IndicatorTableType.VOLATILITY, {
+        "upper_band": "bb_upper",
+        "middle_band": "bb_middle",
+        "lower_band": "bb_lower",
+    }),
+    "bb_upper": (IndicatorTableType.VOLATILITY, {"bb_upper": "bb_upper"}),
+    "bb_base": (IndicatorTableType.VOLATILITY, {"bb_base": "bb_middle"}),
+    "bb_lower": (IndicatorTableType.VOLATILITY, {"bb_lower": "bb_lower"}),
+
+    "percent_b": (IndicatorTableType.VOLATILITY, {"percent_b": "bb_percent_b"}),
+
+    "atr": (IndicatorTableType.VOLATILITY, {"atr": "atr_14"}),
+    "atr_d1": (IndicatorTableType.VOLATILITY, {"atr_d1": "atr_14"}),
+    "atr_pct_d1": (IndicatorTableType.VOLATILITY, {"atr_pct_d1": "natr"}),
+
+    "natr": (IndicatorTableType.VOLATILITY, {"natr": "natr"}),
+
+    "trange": (IndicatorTableType.VOLATILITY, {"trange": "true_range"}),
+
+    # Keltner Channel (wenn verfügbar)
+    "kc": (IndicatorTableType.VOLATILITY, {
+        "upper": "kc_upper",
+        "middle": "kc_middle",
+        "lower": "kc_lower",
+    }),
+
+    # Donchian Channel (wenn verfügbar)
+    "dc": (IndicatorTableType.VOLATILITY, {
+        "upper": "dc_upper",
+        "middle": "dc_middle",
+        "lower": "dc_lower",
+    }),
+
+    # =========================================================================
+    # TREND INDICATORS -> indicators_trend table
+    # =========================================================================
+    "ichimoku": (IndicatorTableType.TREND, {
+        "tenkan_sen": "ichimoku_tenkan",
+        "kijun_sen": "ichimoku_kijun",
+        "senkou_span_a": "ichimoku_senkou_a",
+        "senkou_span_b": "ichimoku_senkou_b",
+        "chikou_span": "ichimoku_chikou",
+    }),
+    "ichimoku_tenkan": (IndicatorTableType.TREND, {"ichimoku_tenkan": "ichimoku_tenkan"}),
+    "ichimoku_kijun": (IndicatorTableType.TREND, {"ichimoku_kijun": "ichimoku_kijun"}),
+    "ichimoku_senkoua": (IndicatorTableType.TREND, {"ichimoku_senkoua": "ichimoku_senkou_a"}),
+    "ichimoku_senkoub": (IndicatorTableType.TREND, {"ichimoku_senkoub": "ichimoku_senkou_b"}),
+    "ichimoku_chikou": (IndicatorTableType.TREND, {"ichimoku_chikou": "ichimoku_chikou"}),
+
+    "supertrend": (IndicatorTableType.TREND, {
+        "supertrend": "supertrend",
+        "supertrend_direction": "supertrend_direction",
+    }),
+
+    "sar": (IndicatorTableType.TREND, {
+        "sar": "psar",
+    }),
+
+    "aroon": (IndicatorTableType.TREND, {
+        "aroon_up": "aroon_up",
+        "aroon_down": "aroon_down",
+    }),
+    "aroonosc": (IndicatorTableType.TREND, {"aroonosc": "aroon_oscillator"}),
+
+    "linearregslope": (IndicatorTableType.TREND, {"linearregslope": "linreg_slope"}),
+    "linearregintercept": (IndicatorTableType.TREND, {"linearregintercept": "linreg_intercept"}),
+    "linearreg_r2": (IndicatorTableType.TREND, {"r_squared": "linreg_r_squared"}),
+
+    "ht_trendmode": (IndicatorTableType.TREND, {"ht_trendmode": "ht_trendmode"}),
+
+    # =========================================================================
+    # MOVING AVERAGES -> indicators_ma table
+    # =========================================================================
+    "sma": (IndicatorTableType.MA, {
+        "sma": "sma_20",  # Default, will be overridden by period
+    }),
+    "sma_20": (IndicatorTableType.MA, {"sma": "sma_20"}),
+    "sma_50": (IndicatorTableType.MA, {"sma": "sma_50"}),
+    "sma_200": (IndicatorTableType.MA, {"sma": "sma_200"}),
+
+    "ema": (IndicatorTableType.MA, {
+        "ema": "ema_26",  # Default
+    }),
+    "ema_12": (IndicatorTableType.MA, {"ema": "ema_12"}),
+    "ema_26": (IndicatorTableType.MA, {"ema": "ema_26"}),
+    "ema_50": (IndicatorTableType.MA, {"ema": "ema_50"}),
+    "ema_200": (IndicatorTableType.MA, {"ema": "ema_200"}),
+
+    "wma": (IndicatorTableType.MA, {"wma": "wma_20"}),
+    "dema": (IndicatorTableType.MA, {"dema": "dema_20"}),
+    "tema": (IndicatorTableType.MA, {"tema": "tema_20"}),
+
+    "vwap": (IndicatorTableType.MA, {"vwap": "vwap"}),
+
+    "ma_10": (IndicatorTableType.MA, {"ma_10": "sma_20"}),  # EasyInsight MA_10 -> closest match
+
+    # =========================================================================
+    # VOLUME INDICATORS -> indicators_volume table
+    # =========================================================================
+    "obv": (IndicatorTableType.VOLUME, {"obv": "obv"}),
+
+    "ad": (IndicatorTableType.VOLUME, {"ad": "ad_line"}),
+
+    "adosc": (IndicatorTableType.VOLUME, {"adosc": "ad_oscillator"}),
+
+    "cmf": (IndicatorTableType.VOLUME, {"cmf": "chaikin_mf"}),
+
+    # =========================================================================
+    # LEVELS/PIVOTS -> indicators_levels table
+    # =========================================================================
+    "pivot_points_hl": (IndicatorTableType.LEVELS, {
+        "pivot": "pivot",
+        "r1": "r1", "r2": "r2", "r3": "r3",
+        "s1": "s1", "s2": "s2", "s3": "s3",
+    }),
+    "fibonacci_pivots": (IndicatorTableType.LEVELS, {
+        "fib_r1": "fib_r1", "fib_r2": "fib_r2", "fib_r3": "fib_r3",
+        "fib_s1": "fib_s1", "fib_s2": "fib_s2", "fib_s3": "fib_s3",
+    }),
+    "camarilla_pivots": (IndicatorTableType.LEVELS, {
+        "cam_r1": "cam_r1", "cam_r2": "cam_r2", "cam_r3": "cam_r3", "cam_r4": "cam_r4",
+        "cam_s1": "cam_s1", "cam_s2": "cam_s2", "cam_s3": "cam_s3", "cam_s4": "cam_s4",
+    }),
+}
+
+
+def get_indicator_table_mapping(indicator_name: str) -> Optional[tuple[IndicatorTableType, Dict[str, str]]]:
+    """
+    Get the TimescaleDB table mapping for an indicator.
+
+    Args:
+        indicator_name: The API indicator name (e.g., "rsi", "macd", "bbands")
+
+    Returns:
+        Tuple of (table_type, field_mapping) or None if not found
+    """
+    return INDICATOR_TABLE_MAPPING.get(indicator_name.lower())
+
+
+def get_indicator_table_type(indicator_name: str) -> IndicatorTableType:
+    """
+    Get the target table type for an indicator.
+
+    Args:
+        indicator_name: The API indicator name
+
+    Returns:
+        IndicatorTableType (defaults to GENERIC if not found)
+    """
+    mapping = get_indicator_table_mapping(indicator_name)
+    if mapping:
+        return mapping[0]
+    return IndicatorTableType.GENERIC
+
+
+def map_indicator_fields(
+    indicator_name: str,
+    data: Dict[str, Any],
+    period: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    Map API indicator fields to TimescaleDB column names.
+
+    Args:
+        indicator_name: The API indicator name
+        data: The indicator data dictionary with API field names
+        period: Optional period parameter (for SMA/EMA with different periods)
+
+    Returns:
+        Dictionary with DB column names as keys
+    """
+    mapping = get_indicator_table_mapping(indicator_name)
+    if not mapping:
+        # No mapping found, return data as-is for JSONB storage
+        return data
+
+    table_type, field_mapping = mapping
+
+    # Handle period-specific mappings for MAs
+    if period and indicator_name.lower() in ("sma", "ema"):
+        period_suffix = {20: "_20", 50: "_50", 200: "_200", 12: "_12", 26: "_26"}
+        suffix = period_suffix.get(period, "_20")
+        indicator_with_period = f"{indicator_name.lower()}{suffix}"
+        period_mapping = get_indicator_table_mapping(indicator_with_period)
+        if period_mapping:
+            field_mapping = period_mapping[1]
+
+    # Map fields
+    result = {}
+    for api_field, db_column in field_mapping.items():
+        if api_field in data:
+            result[db_column] = data[api_field]
+        # Also check for exact db column name in data (passthrough)
+        elif db_column in data:
+            result[db_column] = data[db_column]
+
+    # Preserve timestamp
+    if "timestamp" in data:
+        result["timestamp"] = data["timestamp"]
+    elif "datetime" in data:
+        result["timestamp"] = data["datetime"]
+
+    return result
+
+
+def get_all_table_columns(table_type: IndicatorTableType) -> set[str]:
+    """
+    Get all valid column names for a table type.
+
+    Args:
+        table_type: The table type
+
+    Returns:
+        Set of valid column names
+    """
+    columns = set()
+    for mapping in INDICATOR_TABLE_MAPPING.values():
+        if mapping[0] == table_type:
+            columns.update(mapping[1].values())
+    return columns
+
+
+# All indicators that should go to optimized tables (not JSONB)
+OPTIMIZED_INDICATORS = {
+    name for name, mapping in INDICATOR_TABLE_MAPPING.items()
+    if mapping[0] != IndicatorTableType.GENERIC
+}

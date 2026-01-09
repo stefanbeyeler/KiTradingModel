@@ -647,6 +647,12 @@ class PrefetchService:
         - ichimoku_* (alle 5 Linien)
         - ma_10, strength_1d, strength_1w, strength_4h
 
+        Diese werden automatisch in die optimierten Tabellen geroutet:
+        - indicators_momentum: rsi, macd, cci, stoch, adx
+        - indicators_volatility: atr, bb_*
+        - indicators_trend: ichimoku_*
+        - indicators_ma: ma_10
+
         Args:
             symbol: Trading-Symbol (z.B. BTCUSD)
 
@@ -685,11 +691,10 @@ class PrefetchService:
                 "ma_10", "strength_1d", "strength_1w", "strength_4h",
             ]
 
-            saved_total = 0
+            # Gruppieren der Indikatoren für Batch-Speicherung
+            indicators_batch: dict[str, list[dict]] = {}
 
-            # Jeden Indikator einzeln speichern
             for indicator_name in indicator_fields:
-                # Daten für diesen Indikator extrahieren
                 indicator_data = []
                 for row in data:
                     if indicator_name in row and row[indicator_name] is not None:
@@ -701,6 +706,36 @@ class PrefetchService:
                             })
 
                 if indicator_data:
+                    indicators_batch[indicator_name] = indicator_data
+
+            if not indicators_batch:
+                return 0
+
+            # Batch-Speicherung - automatisch in optimierte Tabellen geroutet
+            try:
+                results = await data_repository.save_indicators_batch(
+                    symbol=cache_symbol,
+                    timeframe="H1",
+                    indicators_data=indicators_batch,
+                    source="easyinsight",
+                )
+
+                saved_total = sum(results.values())
+
+                if saved_total > 0:
+                    logger.debug(
+                        f"Saved {saved_total} EasyInsight indicator values for {symbol}/H1 "
+                        f"(batches: {results})"
+                    )
+
+                return saved_total
+
+            except Exception as e:
+                logger.warning(f"Batch save failed for {symbol}, falling back to individual: {e}")
+
+                # Fallback: Jeden Indikator einzeln speichern
+                saved_total = 0
+                for indicator_name, indicator_data in indicators_batch.items():
                     try:
                         saved_count = await data_repository.save_indicators(
                             symbol=cache_symbol,
@@ -711,15 +746,10 @@ class PrefetchService:
                             source="easyinsight",
                         )
                         saved_total += saved_count
-                    except Exception as e:
-                        logger.debug(f"Failed to save EasyInsight {indicator_name}: {e}")
+                    except Exception as ind_err:
+                        logger.debug(f"Failed to save EasyInsight {indicator_name}: {ind_err}")
 
-            if saved_total > 0:
-                logger.debug(
-                    f"Saved {saved_total} EasyInsight indicator values for {symbol}/H1"
-                )
-
-            return saved_total
+                return saved_total
 
         except Exception as e:
             logger.warning(f"EasyInsight indicator prefetch failed for {symbol}: {e}")

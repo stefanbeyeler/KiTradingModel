@@ -228,7 +228,12 @@ class DataRepository:
         parameters: dict[str, Any],
         source: str,
     ) -> int:
-        """Save indicators to DB + invalidate cache."""
+        """
+        Save indicators to DB + invalidate cache.
+
+        Automatically routes to optimized tables (indicators_momentum,
+        indicators_volatility, etc.) or falls back to JSONB table.
+        """
         if not data:
             return 0
 
@@ -237,7 +242,8 @@ class DataRepository:
         count = 0
 
         if self._db.is_available:
-            count = await self._db.upsert_indicators(
+            # Route to optimized table based on indicator type
+            count = await self._save_to_optimized_table(
                 symbol=symbol,
                 timeframe=tf.value,
                 indicator_name=indicator_name,
@@ -252,6 +258,231 @@ class DataRepository:
         )
 
         return count
+
+    async def _save_to_optimized_table(
+        self,
+        symbol: str,
+        timeframe: str,
+        indicator_name: str,
+        data: list[dict[str, Any]],
+        parameters: dict[str, Any],
+        source: str,
+    ) -> int:
+        """
+        Route indicator data to the appropriate optimized TimescaleDB table.
+
+        Uses the INDICATOR_TABLE_MAPPING from src/config/indicators.py to
+        determine the target table and map API field names to DB columns.
+        """
+        from ..config.indicators import (
+            get_indicator_table_type,
+            get_indicator_table_mapping,
+            map_indicator_fields,
+            IndicatorTableType,
+        )
+
+        table_type = get_indicator_table_type(indicator_name)
+        mapping = get_indicator_table_mapping(indicator_name)
+
+        # Get period from parameters for MA indicators
+        period = parameters.get("time_period") or parameters.get("period")
+
+        # Map data fields to DB column names
+        mapped_data = []
+        for row in data:
+            mapped_row = map_indicator_fields(indicator_name, row, period)
+            if mapped_row:
+                mapped_data.append(mapped_row)
+
+        if not mapped_data:
+            mapped_data = data  # Fallback to original data
+
+        # Route to appropriate table
+        if table_type == IndicatorTableType.MOMENTUM:
+            return await self._db.upsert_momentum_indicators(
+                symbol=symbol,
+                timeframe=timeframe,
+                data=mapped_data,
+                source=source,
+            )
+        elif table_type == IndicatorTableType.VOLATILITY:
+            return await self._db.upsert_volatility_indicators(
+                symbol=symbol,
+                timeframe=timeframe,
+                data=mapped_data,
+                source=source,
+            )
+        elif table_type == IndicatorTableType.TREND:
+            return await self._db.upsert_trend_indicators(
+                symbol=symbol,
+                timeframe=timeframe,
+                data=mapped_data,
+                source=source,
+            )
+        elif table_type == IndicatorTableType.MA:
+            return await self._db.upsert_ma_indicators(
+                symbol=symbol,
+                timeframe=timeframe,
+                data=mapped_data,
+                source=source,
+            )
+        elif table_type == IndicatorTableType.VOLUME:
+            return await self._db.upsert_volume_indicators(
+                symbol=symbol,
+                timeframe=timeframe,
+                data=mapped_data,
+                source=source,
+            )
+        elif table_type == IndicatorTableType.LEVELS:
+            return await self._db.upsert_levels_indicators(
+                symbol=symbol,
+                timeframe=timeframe,
+                data=mapped_data,
+                source=source,
+            )
+        else:
+            # GENERIC: Use JSONB table
+            return await self._db.upsert_indicators(
+                symbol=symbol,
+                timeframe=timeframe,
+                indicator_name=indicator_name,
+                data=data,
+                parameters=parameters,
+                source=source,
+            )
+
+    async def save_indicators_batch(
+        self,
+        symbol: str,
+        timeframe: str,
+        indicators_data: dict[str, list[dict[str, Any]]],
+        source: str,
+    ) -> dict[str, int]:
+        """
+        Save multiple indicators efficiently in a single batch.
+
+        Groups indicators by target table and performs bulk inserts.
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe
+            indicators_data: Dict mapping indicator names to their data
+            source: Data source identifier
+
+        Returns:
+            Dict mapping indicator names to number of rows saved
+        """
+        if not indicators_data:
+            return {}
+
+        await self._ensure_initialized()
+        tf = normalize_timeframe(timeframe)
+        results = {}
+
+        if not self._db.is_available:
+            return results
+
+        from ..config.indicators import (
+            get_indicator_table_type,
+            map_indicator_fields,
+            IndicatorTableType,
+        )
+
+        # Group indicators by target table
+        table_groups: dict[IndicatorTableType, list[dict]] = {
+            IndicatorTableType.MOMENTUM: [],
+            IndicatorTableType.VOLATILITY: [],
+            IndicatorTableType.TREND: [],
+            IndicatorTableType.MA: [],
+            IndicatorTableType.VOLUME: [],
+            IndicatorTableType.LEVELS: [],
+        }
+
+        # Process each indicator
+        for indicator_name, data in indicators_data.items():
+            if not data:
+                continue
+
+            table_type = get_indicator_table_type(indicator_name)
+
+            # Map fields and add to appropriate group
+            for row in data:
+                mapped_row = map_indicator_fields(indicator_name, row)
+                if mapped_row and table_type != IndicatorTableType.GENERIC:
+                    table_groups[table_type].append(mapped_row)
+                elif table_type == IndicatorTableType.GENERIC:
+                    # Save to JSONB table individually
+                    count = await self._db.upsert_indicators(
+                        symbol=symbol,
+                        timeframe=tf.value,
+                        indicator_name=indicator_name,
+                        data=[row],
+                        parameters={},
+                        source=source,
+                    )
+                    results[indicator_name] = results.get(indicator_name, 0) + count
+
+        # Batch insert for each optimized table
+        if table_groups[IndicatorTableType.MOMENTUM]:
+            count = await self._db.upsert_momentum_indicators(
+                symbol=symbol,
+                timeframe=tf.value,
+                data=table_groups[IndicatorTableType.MOMENTUM],
+                source=source,
+            )
+            results["momentum_batch"] = count
+
+        if table_groups[IndicatorTableType.VOLATILITY]:
+            count = await self._db.upsert_volatility_indicators(
+                symbol=symbol,
+                timeframe=tf.value,
+                data=table_groups[IndicatorTableType.VOLATILITY],
+                source=source,
+            )
+            results["volatility_batch"] = count
+
+        if table_groups[IndicatorTableType.TREND]:
+            count = await self._db.upsert_trend_indicators(
+                symbol=symbol,
+                timeframe=tf.value,
+                data=table_groups[IndicatorTableType.TREND],
+                source=source,
+            )
+            results["trend_batch"] = count
+
+        if table_groups[IndicatorTableType.MA]:
+            count = await self._db.upsert_ma_indicators(
+                symbol=symbol,
+                timeframe=tf.value,
+                data=table_groups[IndicatorTableType.MA],
+                source=source,
+            )
+            results["ma_batch"] = count
+
+        if table_groups[IndicatorTableType.VOLUME]:
+            count = await self._db.upsert_volume_indicators(
+                symbol=symbol,
+                timeframe=tf.value,
+                data=table_groups[IndicatorTableType.VOLUME],
+                source=source,
+            )
+            results["volume_batch"] = count
+
+        if table_groups[IndicatorTableType.LEVELS]:
+            count = await self._db.upsert_levels_indicators(
+                symbol=symbol,
+                timeframe=tf.value,
+                data=table_groups[IndicatorTableType.LEVELS],
+                source=source,
+            )
+            results["levels_batch"] = count
+
+        # Invalidate cache
+        await self._cache.delete_pattern(
+            f"*:{CacheCategory.INDICATORS.value}:{symbol}:{tf.value}:*"
+        )
+
+        return results
 
     # ==================== Optimized Indicator Access ====================
 
