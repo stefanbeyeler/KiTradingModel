@@ -3632,18 +3632,19 @@ async def get_symbol_data_stats(symbol: str):
                             FROM timestamps
                         )
                         SELECT
-                            -- Count gaps > 2h that are NOT weekend gaps (weekend = prev_dow 5 (Fri) and gap 40-72h)
+                            -- Count gaps > 2h that are NOT weekend gaps
+                            -- Weekend: prev_dow in (5=Fri, 6=Sat) with gap 40-75h (Fri evening to Sun evening/Mon morning)
                             COUNT(*) FILTER (
                                 WHERE gap_hours > 2
-                                AND NOT (prev_dow = 5 AND gap_hours BETWEEN 40 AND 72)
+                                AND NOT (prev_dow IN (5, 6) AND gap_hours BETWEEN 40 AND 75)
                             ) as gaps_detected,
                             COALESCE(AVG(gap_hours) FILTER (
                                 WHERE gap_hours > 2
-                                AND NOT (prev_dow = 5 AND gap_hours BETWEEN 40 AND 72)
+                                AND NOT (prev_dow IN (5, 6) AND gap_hours BETWEEN 40 AND 75)
                             ), 0) as avg_gap,
                             COALESCE(MAX(gap_hours) FILTER (
                                 WHERE gap_hours > 2
-                                AND NOT (prev_dow = 5 AND gap_hours BETWEEN 40 AND 72)
+                                AND NOT (prev_dow IN (5, 6) AND gap_hours BETWEEN 40 AND 75)
                             ), 0) as max_gap
                         FROM gaps
                         WHERE gap_hours IS NOT NULL
