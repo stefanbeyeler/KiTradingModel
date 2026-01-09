@@ -3723,114 +3723,71 @@
             }
 
             let html = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <span style="color: #888;">Abgerufen: ${new Date(data.timestamp).toLocaleString('de-DE')}</span>
-                    <button class="btn btn-secondary btn-sm" onclick="showDataStats('${data.symbol}')">&#8635; Aktualisieren</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <span style="color: #888; font-size: 0.8rem;">Abgerufen: ${new Date(data.timestamp).toLocaleString('de-DE')}</span>
+                    <button class="btn btn-secondary btn-sm" onclick="showDataStats('${data.symbol}')" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">&#8635; Aktualisieren</button>
                 </div>
                 ${errors}
 
-                <!-- Overview Cards -->
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-                    <div style="background: rgba(100, 200, 255, 0.1); border-radius: 8px; padding: 1rem; text-align: center;">
-                        <div style="font-size: 1.8rem; font-weight: bold; color: #64c8ff;">${data.total_records.toLocaleString()}</div>
-                        <div style="color: #888; font-size: 0.85rem;">Gesamt Datenpunkte</div>
+                <!-- Overview Cards - kompakter -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <div style="background: rgba(100, 200, 255, 0.1); border-radius: 6px; padding: 0.5rem; text-align: center;">
+                        <div style="font-size: 1.3rem; font-weight: bold; color: #64c8ff;">${data.total_records.toLocaleString()}</div>
+                        <div style="color: #888; font-size: 0.7rem;">Datenpunkte</div>
                     </div>
-                    <div style="background: rgba(76, 175, 80, 0.1); border-radius: 8px; padding: 1rem; text-align: center;">
-                        <div style="font-size: 1.8rem; font-weight: bold; color: #4caf50;">${dataRangeDays}</div>
-                        <div style="color: #888; font-size: 0.85rem;">Tage Datenbereich</div>
+                    <div style="background: rgba(76, 175, 80, 0.1); border-radius: 6px; padding: 0.5rem; text-align: center;">
+                        <div style="font-size: 1.3rem; font-weight: bold; color: #4caf50;">${dataRangeDays}</div>
+                        <div style="color: #888; font-size: 0.7rem;">Tage</div>
                     </div>
-                    <div style="background: rgba(156, 39, 176, 0.1); border-radius: 8px; padding: 1rem; text-align: center;">
-                        <div style="font-size: 1.8rem; font-weight: bold; color: ${qualityColor(data.data_quality.completeness_pct)};">${data.data_quality.completeness_pct}%</div>
-                        <div style="color: #888; font-size: 0.85rem;">Vollständigkeit</div>
+                    <div style="background: rgba(156, 39, 176, 0.1); border-radius: 6px; padding: 0.5rem; text-align: center;">
+                        <div style="font-size: 1.3rem; font-weight: bold; color: ${qualityColor(data.data_quality.completeness_pct)};">${data.data_quality.completeness_pct}%</div>
+                        <div style="color: #888; font-size: 0.7rem;">Vollständig</div>
                     </div>
-                    <div style="background: rgba(255, 152, 0, 0.1); border-radius: 8px; padding: 1rem; text-align: center;">
-                        <div style="font-size: 1.8rem; font-weight: bold; color: ${data.data_quality.gaps_detected > 5 ? '#f44336' : '#ffc107'};">${data.data_quality.gaps_detected}</div>
-                        <div style="color: #888; font-size: 0.85rem;">Datenlücken</div>
-                    </div>
-                </div>
-
-                <!-- Date Range -->
-                <div style="background: rgba(30,30,30,0.5); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
-                    <h4 style="color: #64c8ff; margin-bottom: 1rem; font-size: 1rem;">&#128197; Datenbereich</h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                        <div>
-                            <div style="color: #888; font-size: 0.85rem;">Erster Datenpunkt</div>
-                            <div style="font-size: 1.1rem; color: #fff;">${firstDate}</div>
-                        </div>
-                        <div>
-                            <div style="color: #888; font-size: 0.85rem;">Letzter Datenpunkt</div>
-                            <div style="font-size: 1.1rem; color: #fff;">${lastDate}</div>
-                        </div>
-                    </div>
-                    <!-- Timeline Visualization -->
-                    <div style="margin-top: 1rem; position: relative;">
-                        <div style="background: rgba(100, 200, 255, 0.2); height: 24px; border-radius: 12px; position: relative; overflow: hidden;">
-                            <div style="background: linear-gradient(90deg, #64c8ff 0%, #4caf50 100%); height: 100%; width: 100%; opacity: 0.8;"></div>
-                            <div style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #fff;">Start</div>
-                            <div style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #fff;">Aktuell</div>
-                        </div>
+                    <div style="background: rgba(255, 152, 0, 0.1); border-radius: 6px; padding: 0.5rem; text-align: center;">
+                        <div style="font-size: 1.3rem; font-weight: bold; color: ${data.data_quality.gaps_detected > 5 ? '#f44336' : data.data_quality.gaps_detected > 0 ? '#ffc107' : '#4caf50'};">${data.data_quality.gaps_detected}</div>
+                        <div style="color: #888; font-size: 0.7rem;">Lücken</div>
                     </div>
                 </div>
 
-                <!-- Timeframe Breakdown -->
-                <div style="background: rgba(30,30,30,0.5); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
-                    <h4 style="color: #64c8ff; margin-bottom: 1rem; font-size: 1rem;">&#128202; Datenpunkte pro Zeitrahmen</h4>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                <!-- Date Range - inline kompakt -->
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(30,30,30,0.5); border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: #888; font-size: 0.75rem;">Von:</span>
+                        <span style="color: #fff; font-size: 0.85rem;">${firstDate}</span>
+                    </div>
+                    <div style="flex: 1; margin: 0 1rem; background: rgba(100, 200, 255, 0.2); height: 4px; border-radius: 2px;">
+                        <div style="background: linear-gradient(90deg, #64c8ff, #4caf50); height: 100%; width: 100%; border-radius: 2px;"></div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: #888; font-size: 0.75rem;">Bis:</span>
+                        <span style="color: #fff; font-size: 0.85rem;">${lastDate}</span>
+                    </div>
+                </div>
+
+                <!-- Timeframe Breakdown - kompakter -->
+                <div style="background: rgba(30,30,30,0.5); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.1);">
+                    <h4 style="color: #64c8ff; margin-bottom: 0.5rem; font-size: 0.85rem;">Datenpunkte pro Zeitrahmen</h4>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
                         ${renderTimeframeCards(data.timeframes)}
                     </div>
                 </div>
 
-                <!-- Data Quality -->
-                <div style="background: rgba(30,30,30,0.5); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
-                    <h4 style="color: #64c8ff; margin-bottom: 1rem; font-size: 1rem;">&#128270; Datenqualität</h4>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                        <div>
-                            <div style="color: #888; font-size: 0.85rem;">Erkannte Lücken (&gt;2h)</div>
-                            <div style="font-size: 1.2rem; font-weight: bold; color: ${data.data_quality.gaps_detected > 5 ? '#f44336' : data.data_quality.gaps_detected > 0 ? '#ffc107' : '#4caf50'};">
-                                ${data.data_quality.gaps_detected}
-                            </div>
-                        </div>
-                        <div>
-                            <div style="color: #888; font-size: 0.85rem;">Durchschn. Lücke</div>
-                            <div style="font-size: 1.2rem; font-weight: 500;">${data.data_quality.avg_gap_hours}h</div>
-                        </div>
-                        <div>
-                            <div style="color: #888; font-size: 0.85rem;">Max. Lücke</div>
-                            <div style="font-size: 1.2rem; font-weight: 500; color: ${data.data_quality.max_gap_hours > 24 ? '#f44336' : '#fff'};">${data.data_quality.max_gap_hours}h</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mini Chart (if sample data available) -->
+                <!-- Mini Chart (if sample data available) - kompakter -->
                 ${data.sample_data && (data.sample_data.M15?.length > 0 || data.sample_data.H1?.length > 0 || data.sample_data.D1?.length > 0) ? `
-                <div style="background: rgba(30,30,30,0.5); border-radius: 12px; padding: 1rem; border: 1px solid rgba(255,255,255,0.1);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <h4 style="color: #64c8ff; font-size: 1rem; margin: 0;">&#128200; Letzte Datenpunkte (Vorschau)</h4>
-                            <span style="background: rgba(76, 175, 80, 0.2); color: #4caf50; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; border: 1px solid rgba(76, 175, 80, 0.3);">
-                                Quelle: ${data.sample_data.source || 'EasyInsight'}
-                            </span>
+                <div style="background: rgba(30,30,30,0.5); border-radius: 8px; padding: 0.75rem; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: #64c8ff; font-size: 0.85rem; font-weight: 500;">Vorschau</span>
+                            <span style="background: rgba(76, 175, 80, 0.2); color: #4caf50; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.65rem;">${data.sample_data.source || 'DB'}</span>
                         </div>
-                        <div class="chart-timeframe-tabs" style="display: flex; gap: 0.25rem;">
-                            <button class="chart-tf-btn active" data-tf="M15" onclick="switchChartTimeframe('M15')"
-                                    style="padding: 0.3rem 0.75rem; border: 1px solid rgba(100, 200, 255, 0.3); background: rgba(100, 200, 255, 0.2); color: #64c8ff; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                                M15
-                            </button>
-                            <button class="chart-tf-btn" data-tf="H1" onclick="switchChartTimeframe('H1')"
-                                    style="padding: 0.3rem 0.75rem; border: 1px solid rgba(255, 255, 255, 0.1); background: transparent; color: #888; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                                H1
-                            </button>
-                            <button class="chart-tf-btn" data-tf="D1" onclick="switchChartTimeframe('D1')"
-                                    style="padding: 0.3rem 0.75rem; border: 1px solid rgba(255, 255, 255, 0.1); background: transparent; color: #888; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                                D1
-                            </button>
+                        <div style="display: flex; gap: 0.2rem;">
+                            <button class="chart-tf-btn active" data-tf="M15" onclick="switchChartTimeframe('M15')" style="padding: 0.2rem 0.5rem; border: 1px solid rgba(100, 200, 255, 0.3); background: rgba(100, 200, 255, 0.2); color: #64c8ff; border-radius: 3px; cursor: pointer; font-size: 0.7rem;">M15</button>
+                            <button class="chart-tf-btn" data-tf="H1" onclick="switchChartTimeframe('H1')" style="padding: 0.2rem 0.5rem; border: 1px solid rgba(255, 255, 255, 0.1); background: transparent; color: #888; border-radius: 3px; cursor: pointer; font-size: 0.7rem;">H1</button>
+                            <button class="chart-tf-btn" data-tf="D1" onclick="switchChartTimeframe('D1')" style="padding: 0.2rem 0.5rem; border: 1px solid rgba(255, 255, 255, 0.1); background: transparent; color: #888; border-radius: 3px; cursor: pointer; font-size: 0.7rem;">D1</button>
                         </div>
                     </div>
-                    <div id="mini-chart-container" style="height: 200px; position: relative; overflow: hidden;">
+                    <div id="mini-chart-container" style="height: 150px; position: relative; overflow: hidden;">
                         ${renderCandlestickChart(data.sample_data.M15, 'M15')}
-                    </div>
-                    <div id="chart-info" style="font-size: 0.75rem; color: #888; margin-top: 0.5rem; text-align: center;">
-                        Zeigt die letzten ${data.sample_data.M15?.length || 0} M15-Kerzen
                     </div>
                 </div>
                 ` : ''}
@@ -3880,7 +3837,7 @@
         function renderCandlestickChart(sampleData, timeframe = 'M15') {
             if (!sampleData || sampleData.length === 0) return '<div style="text-align: center; color: #888; padding: 2rem;">Keine Daten verfügbar</div>';
 
-            // Filter valid OHLC data and reverse to oldest first
+            // Filter valid OHLC data (already in chronological order from backend)
             const candles = sampleData
                 .filter(d => d.open !== null && d.high !== null && d.low !== null && d.close !== null)
                 .map(d => ({
@@ -3889,8 +3846,7 @@
                     low: parseFloat(d.low),
                     close: parseFloat(d.close),
                     datetime: d.datetime || d.timestamp || ''
-                }))
-                .reverse();
+                }));
 
             if (candles.length < 2) return '<div style="text-align: center; color: #888; padding: 2rem;">Zu wenige Datenpunkte</div>';
 
