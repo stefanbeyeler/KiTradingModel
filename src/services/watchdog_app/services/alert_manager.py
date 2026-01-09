@@ -93,6 +93,30 @@ class AlertManager:
         if new_state == HealthState.HEALTHY and old_state in [
             HealthState.UNHEALTHY, HealthState.DEGRADED
         ]:
+            # Prüfe ob Service-Alarmierung aktiviert ist
+            service_alert_enabled = True
+            try:
+                from .config_service import config_service
+                service_alert_enabled = config_service.is_service_alert_enabled(service_name)
+            except Exception as e:
+                logger.warning(f"Could not check service alert config for recovery: {e}")
+
+            if not service_alert_enabled:
+                logger.debug(f"Recovery alert for {service_name} suppressed (service alerts disabled)")
+                self._record_alert(
+                    service_name=service_name,
+                    alert_type="RECOVERY",
+                    criticality=criticality,
+                    old_state=old_state.value,
+                    new_state=new_state.value,
+                    error=None,
+                    telegram_sent=False,
+                    message=f"Recovery-Alert unterdrückt (Service-Alarmierung deaktiviert)",
+                    suppressed=True,
+                    suppressed_reason="service_disabled"
+                )
+                return
+
             if self.settings.alert_on_recovery:
                 sent = await self._send_alert(
                     service_name=service_name,
