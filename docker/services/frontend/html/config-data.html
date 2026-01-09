@@ -3662,13 +3662,8 @@
             const firstDate = data.first_timestamp ? new Date(data.first_timestamp).toLocaleString('de-DE') : '-';
             const lastDate = data.last_timestamp ? new Date(data.last_timestamp).toLocaleString('de-DE') : '-';
 
-            // Calculate data range in days
-            let dataRangeDays = 0;
-            if (data.first_timestamp && data.last_timestamp) {
-                const first = new Date(data.first_timestamp);
-                const last = new Date(data.last_timestamp);
-                dataRangeDays = Math.round((last - first) / (1000 * 60 * 60 * 24));
-            }
+            // Use pre-calculated data range days from backend (based on H1 timeframe)
+            const dataRangeDays = data.data_range_days || 0;
 
             // Create progress bar helper
             function progressBar(pct, color = '#64c8ff') {

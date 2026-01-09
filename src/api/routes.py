@@ -3524,6 +3524,7 @@ async def get_symbol_data_stats(symbol: str):
         "first_timestamp": None,
         "last_timestamp": None,
         "total_records": 0,
+        "data_range_days": 0,  # Based on H1 timeframe for accuracy
         "timeframes": timeframes_init,
         "data_quality": {
             "gaps_detected": 0,
@@ -3605,9 +3606,14 @@ async def get_symbol_data_stats(symbol: str):
                 result["last_timestamp"] = global_last.isoformat()
 
             # Analyze data quality based on H1 timeframe (best balance of granularity)
+            # Use H1's own time range for accurate completeness calculation
             if result["timeframes"]["H1"]["count"] > 0:
                 try:
                     h1_table = get_ohlcv_table_name("H1")
+
+                    # Gap analysis: Ignore weekends (Forex markets closed Sat/Sun)
+                    # A gap is only counted if it's > 2 hours AND not a weekend gap
+                    # Weekend gaps are typically 48-50 hours (Friday close to Sunday open)
                     gap_query = f"""
                         WITH timestamps AS (
                             SELECT timestamp
@@ -3619,13 +3625,26 @@ async def get_symbol_data_stats(symbol: str):
                             SELECT
                                 timestamp,
                                 LAG(timestamp) OVER (ORDER BY timestamp) as prev_ts,
-                                EXTRACT(EPOCH FROM (timestamp - LAG(timestamp) OVER (ORDER BY timestamp))) / 3600 as gap_hours
+                                EXTRACT(EPOCH FROM (timestamp - LAG(timestamp) OVER (ORDER BY timestamp))) / 3600 as gap_hours,
+                                -- Check if gap spans a weekend (prev is Friday, current is Sunday/Monday)
+                                EXTRACT(DOW FROM LAG(timestamp) OVER (ORDER BY timestamp)) as prev_dow,
+                                EXTRACT(DOW FROM timestamp) as curr_dow
                             FROM timestamps
                         )
                         SELECT
-                            COUNT(*) FILTER (WHERE gap_hours > 2) as gaps_detected,
-                            COALESCE(AVG(gap_hours) FILTER (WHERE gap_hours > 2), 0) as avg_gap,
-                            COALESCE(MAX(gap_hours) FILTER (WHERE gap_hours > 2), 0) as max_gap
+                            -- Count gaps > 2h that are NOT weekend gaps (weekend = prev_dow 5 (Fri) and gap 40-72h)
+                            COUNT(*) FILTER (
+                                WHERE gap_hours > 2
+                                AND NOT (prev_dow = 5 AND gap_hours BETWEEN 40 AND 72)
+                            ) as gaps_detected,
+                            COALESCE(AVG(gap_hours) FILTER (
+                                WHERE gap_hours > 2
+                                AND NOT (prev_dow = 5 AND gap_hours BETWEEN 40 AND 72)
+                            ), 0) as avg_gap,
+                            COALESCE(MAX(gap_hours) FILTER (
+                                WHERE gap_hours > 2
+                                AND NOT (prev_dow = 5 AND gap_hours BETWEEN 40 AND 72)
+                            ), 0) as max_gap
                         FROM gaps
                         WHERE gap_hours IS NOT NULL
                     """
@@ -3636,12 +3655,28 @@ async def get_symbol_data_stats(symbol: str):
                         result["data_quality"]["avg_gap_hours"] = round(float(gap_row["avg_gap"] or 0), 2)
                         result["data_quality"]["max_gap_hours"] = round(float(gap_row["max_gap"] or 0), 2)
 
-                    # Calculate completeness based on H1
-                    if global_first and global_last:
-                        range_hours = (global_last - global_first).total_seconds() / 3600
+                    # Calculate completeness based on H1's OWN time range (not global)
+                    h1_first = result["timeframes"]["H1"].get("first")
+                    h1_last = result["timeframes"]["H1"].get("last")
+                    if h1_first and h1_last:
+                        from datetime import datetime as dt
+                        h1_first_dt = dt.fromisoformat(h1_first.replace("+00:00", ""))
+                        h1_last_dt = dt.fromisoformat(h1_last.replace("+00:00", ""))
+                        h1_range_hours = (h1_last_dt - h1_first_dt).total_seconds() / 3600
+                        h1_range_days = h1_range_hours / 24
+
+                        # Update primary timestamps to H1 range (more meaningful for trading)
+                        result["first_timestamp"] = h1_first
+                        result["last_timestamp"] = h1_last
+                        result["data_range_days"] = round(h1_range_days)
+
+                        # Subtract weekend hours (~48h per week) for Forex pairs
+                        weekend_hours = (h1_range_days / 7) * 48  # ~48h closed per week
+                        trading_hours = h1_range_hours - weekend_hours
+
                         h1_count = result["timeframes"]["H1"]["count"]
-                        if range_hours > 0:
-                            completeness = min(100, (h1_count / max(1, range_hours)) * 100)
+                        if trading_hours > 0:
+                            completeness = min(100, (h1_count / max(1, trading_hours)) * 100)
                             result["data_quality"]["completeness_pct"] = round(completeness, 1)
 
                 except Exception as e:
