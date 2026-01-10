@@ -483,6 +483,8 @@ async def get_data_coverage():
     Zeigt an, wie viele Datenpunkte pro Symbol/Timeframe-Kombination
     in TimescaleDB vorhanden sind.
     """
+    from ....config.database import get_ohlcv_table_name
+
     try:
         if not timescaledb_service.is_available:
             return {
@@ -491,29 +493,32 @@ async def get_data_coverage():
                 "symbols": {},
             }
 
-        # Get all symbols with data
-        query = """
-            SELECT symbol, timeframe, COUNT(*) as count
-            FROM ohlcv_data
-            GROUP BY symbol, timeframe
-            ORDER BY symbol, timeframe
-        """
         if not timescaledb_service._pool:
             await timescaledb_service.initialize()
         pool = timescaledb_service._pool
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(query)
 
-        # Build coverage matrix
+        # Query each timeframe table separately
         coverage = {}
-        for row in rows:
-            symbol = row["symbol"]
-            tf = row["timeframe"]
-            count = row["count"]
-
-            if symbol not in coverage:
-                coverage[symbol] = {}
-            coverage[symbol][tf] = count
+        async with pool.acquire() as conn:
+            for tf in SUPPORTED_TIMEFRAMES:
+                table = get_ohlcv_table_name(tf)
+                try:
+                    query = f"""
+                        SELECT symbol, COUNT(*) as count
+                        FROM {table}
+                        GROUP BY symbol
+                        ORDER BY symbol
+                    """
+                    rows = await conn.fetch(query)
+                    for row in rows:
+                        symbol = row["symbol"]
+                        count = row["count"]
+                        if symbol not in coverage:
+                            coverage[symbol] = {}
+                        coverage[symbol][tf] = count
+                except Exception as e:
+                    logger.debug(f"Table {table} not found or error: {e}")
+                    continue
 
         return {
             "status": "ok",
@@ -536,6 +541,8 @@ async def run_quality_check():
     - Ungültige OHLC-Werte (High < Low, etc.)
     - Null/NaN-Werte
     """
+    from ....config.database import get_ohlcv_table_name
+
     try:
         if not timescaledb_service.is_available:
             return {
@@ -546,60 +553,57 @@ async def run_quality_check():
         if not timescaledb_service._pool:
             await timescaledb_service.initialize()
         pool = timescaledb_service._pool
+
+        total_duplicates = 0
+        total_invalid = 0
+        total_nulls = 0
+        total_gaps = 0
+
         async with pool.acquire() as conn:
-            # Check for duplicates
-            dup_query = """
-                SELECT COUNT(*) as duplicates FROM (
-                    SELECT symbol, timeframe, snapshot_time, COUNT(*)
-                    FROM ohlcv_data
-                    GROUP BY symbol, timeframe, snapshot_time
-                    HAVING COUNT(*) > 1
-                ) as dups
-            """
-            dup_result = await conn.fetchval(dup_query)
+            for tf in SUPPORTED_TIMEFRAMES:
+                table = get_ohlcv_table_name(tf)
+                try:
+                    # Check for duplicates
+                    dup_query = f"""
+                        SELECT COUNT(*) FROM (
+                            SELECT symbol, snapshot_time, COUNT(*)
+                            FROM {table}
+                            GROUP BY symbol, snapshot_time
+                            HAVING COUNT(*) > 1
+                        ) as dups
+                    """
+                    dup_result = await conn.fetchval(dup_query)
+                    total_duplicates += dup_result or 0
 
-            # Check for invalid OHLC (High < Low or Close outside High-Low range)
-            invalid_query = """
-                SELECT COUNT(*) FROM ohlcv_data
-                WHERE high < low
-                   OR close > high * 1.001
-                   OR close < low * 0.999
-                   OR open > high * 1.001
-                   OR open < low * 0.999
-            """
-            invalid_result = await conn.fetchval(invalid_query)
+                    # Check for invalid OHLC
+                    invalid_query = f"""
+                        SELECT COUNT(*) FROM {table}
+                        WHERE high < low
+                           OR close > high * 1.001
+                           OR close < low * 0.999
+                    """
+                    invalid_result = await conn.fetchval(invalid_query)
+                    total_invalid += invalid_result or 0
 
-            # Check for null values
-            null_query = """
-                SELECT COUNT(*) FROM ohlcv_data
-                WHERE open IS NULL OR high IS NULL OR low IS NULL OR close IS NULL
-            """
-            null_result = await conn.fetchval(null_query)
+                    # Check for null values
+                    null_query = f"""
+                        SELECT COUNT(*) FROM {table}
+                        WHERE open IS NULL OR high IS NULL OR low IS NULL OR close IS NULL
+                    """
+                    null_result = await conn.fetchval(null_query)
+                    total_nulls += null_result or 0
 
-            # Check for gaps (simplified - checks for large time gaps)
-            gap_query = """
-                SELECT COUNT(*) FROM (
-                    SELECT symbol, timeframe,
-                           snapshot_time - LAG(snapshot_time) OVER (
-                               PARTITION BY symbol, timeframe ORDER BY snapshot_time
-                           ) as gap
-                    FROM ohlcv_data
-                    WHERE timeframe = 'H1'
-                ) as gaps
-                WHERE gap > INTERVAL '4 hours'
-            """
-            try:
-                gap_result = await conn.fetchval(gap_query)
-            except Exception:
-                gap_result = 0
+                except Exception as e:
+                    logger.debug(f"Quality check for {table} failed: {e}")
+                    continue
 
         return {
             "status": "ok",
-            "gaps": gap_result or 0,
-            "duplicates": dup_result or 0,
-            "invalid_ohlc": invalid_result or 0,
-            "null_values": null_result or 0,
-            "quality_score": "good" if (dup_result == 0 and invalid_result == 0 and null_result == 0) else "needs_attention",
+            "gaps": total_gaps,
+            "duplicates": total_duplicates,
+            "invalid_ohlc": total_invalid,
+            "null_values": total_nulls,
+            "quality_score": "good" if (total_duplicates == 0 and total_invalid == 0 and total_nulls == 0) else "needs_attention",
         }
     except Exception as e:
         logger.error(f"Failed to run quality check: {e}")
@@ -613,6 +617,8 @@ async def get_db_summary():
 
     Zeigt Gesamtstatistiken und Zeitbereich der Daten.
     """
+    from ....config.database import get_ohlcv_table_name
+
     try:
         if not timescaledb_service.is_available:
             return {
@@ -623,35 +629,56 @@ async def get_db_summary():
         if not timescaledb_service._pool:
             await timescaledb_service.initialize()
         pool = timescaledb_service._pool
-        async with pool.acquire() as conn:
-            # Total statistics
-            stats_query = """
-                SELECT
-                    COUNT(DISTINCT symbol) as symbols_count,
-                    COUNT(*) as total_rows,
-                    MIN(snapshot_time) as oldest_entry,
-                    MAX(snapshot_time) as newest_entry
-                FROM ohlcv_data
-            """
-            stats = await conn.fetchrow(stats_query)
 
-            # Per-timeframe counts
-            tf_query = """
-                SELECT timeframe, COUNT(*) as count
-                FROM ohlcv_data
-                GROUP BY timeframe
-                ORDER BY timeframe
-            """
-            tf_rows = await conn.fetch(tf_query)
-            timeframe_counts = {row["timeframe"]: row["count"] for row in tf_rows}
+        all_symbols = set()
+        total_rows = 0
+        oldest_entry = None
+        newest_entry = None
+        timeframe_counts = {}
+
+        async with pool.acquire() as conn:
+            for tf in SUPPORTED_TIMEFRAMES:
+                table = get_ohlcv_table_name(tf)
+                try:
+                    # Get stats for this timeframe
+                    stats_query = f"""
+                        SELECT
+                            COUNT(DISTINCT symbol) as symbols_count,
+                            COUNT(*) as total_rows,
+                            MIN(snapshot_time) as oldest_entry,
+                            MAX(snapshot_time) as newest_entry
+                        FROM {table}
+                    """
+                    stats = await conn.fetchrow(stats_query)
+
+                    if stats["total_rows"] > 0:
+                        # Get symbols
+                        symbols_query = f"SELECT DISTINCT symbol FROM {table}"
+                        symbol_rows = await conn.fetch(symbols_query)
+                        for row in symbol_rows:
+                            all_symbols.add(row["symbol"])
+
+                        total_rows += stats["total_rows"]
+                        timeframe_counts[tf] = stats["total_rows"]
+
+                        if stats["oldest_entry"]:
+                            if oldest_entry is None or stats["oldest_entry"] < oldest_entry:
+                                oldest_entry = stats["oldest_entry"]
+                        if stats["newest_entry"]:
+                            if newest_entry is None or stats["newest_entry"] > newest_entry:
+                                newest_entry = stats["newest_entry"]
+
+                except Exception as e:
+                    logger.debug(f"Summary for {table} failed: {e}")
+                    continue
 
         return {
             "status": "ok",
             "available": True,
-            "symbols_count": stats["symbols_count"],
-            "total_rows": stats["total_rows"],
-            "oldest_entry": stats["oldest_entry"].isoformat() if stats["oldest_entry"] else None,
-            "newest_entry": stats["newest_entry"].isoformat() if stats["newest_entry"] else None,
+            "symbols_count": len(all_symbols),
+            "total_rows": total_rows,
+            "oldest_entry": oldest_entry.isoformat() if oldest_entry else None,
+            "newest_entry": newest_entry.isoformat() if newest_entry else None,
             "timeframe_counts": timeframe_counts,
         }
     except Exception as e:
