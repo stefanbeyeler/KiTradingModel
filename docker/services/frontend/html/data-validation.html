@@ -390,10 +390,10 @@
         /* Filter Controls */
         .filter-controls {
             display: flex;
-            gap: 1rem;
+            gap: 1.5rem;
             margin-bottom: 1rem;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-start;
         }
 
         .filter-controls label {
@@ -415,6 +415,159 @@
         .filter-controls input:focus {
             outline: none;
             border-color: #3b82f6;
+        }
+
+        /* Symbol Selection Box */
+        .selection-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .selection-box h4 {
+            font-size: 0.9rem;
+            color: #e8e8e8;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .selection-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .selection-actions button {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: #a0a0a0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .selection-actions button:hover {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border-color: #64c8ff;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .checkbox-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .checkbox-grid::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .checkbox-grid::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+
+        .checkbox-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            accent-color: #3b82f6;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            color: #d0d0d0;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .checkbox-item.category-header {
+            background: rgba(100, 200, 255, 0.1);
+            color: #64c8ff;
+            font-weight: 600;
+            grid-column: 1 / -1;
+            justify-content: center;
+            cursor: default;
+        }
+
+        .timeframe-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .timeframe-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.4rem 0.6rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .timeframe-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .timeframe-item input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            accent-color: #3b82f6;
+        }
+
+        .timeframe-item label {
+            cursor: pointer;
+            color: #d0d0d0;
+            font-size: 0.8rem;
+        }
+
+        .selection-count {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-left: auto;
+        }
+
+        .loading-symbols {
+            color: #6b7280;
+            font-style: italic;
+            padding: 1rem;
+            text-align: center;
         }
 
         /* Responsive */
@@ -477,6 +630,165 @@
 
         .validation-item:last-child {
             border-bottom: none;
+        }
+
+        /* Error Details Modal */
+        .error-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            backdrop-filter: blur(4px);
+        }
+
+        .error-modal-content {
+            background: #1a1a2e;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .error-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 12px 12px 0 0;
+        }
+
+        .error-modal-header h3 {
+            color: #ef4444;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .error-modal-close {
+            background: none;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .error-modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ef4444;
+        }
+
+        .error-modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .error-summary {
+            background: rgba(239, 68, 68, 0.15);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #ef4444;
+        }
+
+        .error-group {
+            margin-bottom: 1rem;
+        }
+
+        .error-group-header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s;
+            color: #e8e8e8;
+        }
+
+        .error-group-header:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .error-group-items {
+            padding-left: 1rem;
+        }
+
+        .error-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .error-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .error-item-header {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            align-items: center;
+        }
+
+        .error-symbol {
+            font-weight: 600;
+            color: #64c8ff;
+            min-width: 80px;
+        }
+
+        .error-timeframe {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #a0a0a0;
+        }
+
+        .error-message {
+            color: #ef4444;
+            flex: 1;
+            font-size: 0.9rem;
+        }
+
+        .error-item-details {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.85rem;
+        }
+
+        .error-detail-row {
+            margin-bottom: 0.5rem;
+        }
+
+        .error-detail-row pre {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.5rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+            color: #d0d0d0;
         }
     </style>
 </head>
@@ -577,28 +889,62 @@
                 </div>
 
                 <div class="filter-controls">
-                    <label>Symbole:</label>
-                    <select id="td-symbols" multiple style="min-width: 200px; height: 80px;">
-                        <option value="EURUSD" selected>EUR/USD</option>
-                        <option value="GBPUSD" selected>GBP/USD</option>
-                        <option value="USDJPY" selected>USD/JPY</option>
-                        <option value="BTCUSD" selected>BTC/USD</option>
-                        <option value="ETHUSD" selected>ETH/USD</option>
-                        <option value="AAPL">AAPL</option>
-                        <option value="MSFT">MSFT</option>
-                        <option value="GOOGL">GOOGL</option>
-                    </select>
-                    <label>Timeframes:</label>
-                    <select id="td-timeframes" multiple style="min-width: 150px; height: 80px;">
-                        <option value="M1">M1</option>
-                        <option value="M5" selected>M5</option>
-                        <option value="M15" selected>M15</option>
-                        <option value="M30">M30</option>
-                        <option value="H1" selected>H1</option>
-                        <option value="H4" selected>H4</option>
-                        <option value="D1" selected>D1</option>
-                        <option value="W1">W1</option>
-                    </select>
+                    <div class="selection-box">
+                        <h4>&#128200; Symbole <span class="selection-count" id="td-symbols-count">(0 ausgewählt)</span></h4>
+                        <div class="selection-actions">
+                            <button onclick="selectAllSymbols('td')">Alle</button>
+                            <button onclick="selectNoneSymbols('td')">Keine</button>
+                            <button onclick="selectCategorySymbols('td', 'forex')">Forex</button>
+                            <button onclick="selectCategorySymbols('td', 'crypto')">Crypto</button>
+                            <button onclick="selectCategorySymbols('td', 'indices')">Indizes</button>
+                            <button onclick="selectCategorySymbols('td', 'stocks')">Aktien</button>
+                        </div>
+                        <div class="checkbox-grid" id="td-symbols-grid">
+                            <div class="loading-symbols">Lade Symbole...</div>
+                        </div>
+                    </div>
+                    <div class="selection-box" style="min-width: 200px; flex: 0;">
+                        <h4>&#128337; Timeframes <span class="selection-count" id="td-tf-count">(0 ausgewählt)</span></h4>
+                        <div class="selection-actions">
+                            <button onclick="selectAllTimeframes('td')">Alle</button>
+                            <button onclick="selectNoneTimeframes('td')">Keine</button>
+                            <button onclick="selectDefaultTimeframes('td')">Standard</button>
+                        </div>
+                        <div class="timeframe-grid" id="td-timeframes-grid">
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="td-tf-M1" value="M1">
+                                <label for="td-tf-M1">M1</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="td-tf-M5" value="M5" checked>
+                                <label for="td-tf-M5">M5</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="td-tf-M15" value="M15" checked>
+                                <label for="td-tf-M15">M15</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="td-tf-M30" value="M30">
+                                <label for="td-tf-M30">M30</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="td-tf-H1" value="H1" checked>
+                                <label for="td-tf-H1">H1</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="td-tf-H4" value="H4" checked>
+                                <label for="td-tf-H4">H4</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="td-tf-D1" value="D1" checked>
+                                <label for="td-tf-D1">D1</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="td-tf-W1" value="W1">
+                                <label for="td-tf-W1">W1</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="progress-container">
@@ -668,26 +1014,61 @@
                 </div>
 
                 <div class="filter-controls">
-                    <label>Symbole:</label>
-                    <select id="ei-symbols" multiple style="min-width: 200px; height: 80px;">
-                        <option value="EURUSD" selected>EUR/USD</option>
-                        <option value="GBPUSD" selected>GBP/USD</option>
-                        <option value="USDJPY" selected>USD/JPY</option>
-                        <option value="BTCUSD" selected>BTC/USD</option>
-                        <option value="ETHUSD" selected>ETH/USD</option>
-                        <option value="XAUUSD" selected>XAU/USD (Gold)</option>
-                    </select>
-                    <label>Timeframes:</label>
-                    <select id="ei-timeframes" multiple style="min-width: 150px; height: 80px;">
-                        <option value="M1" selected>M1</option>
-                        <option value="M5" selected>M5</option>
-                        <option value="M15" selected>M15</option>
-                        <option value="M30" selected>M30</option>
-                        <option value="H1" selected>H1</option>
-                        <option value="H4" selected>H4</option>
-                        <option value="D1" selected>D1</option>
-                        <option value="W1" selected>W1</option>
-                    </select>
+                    <div class="selection-box">
+                        <h4>&#128200; Symbole <span class="selection-count" id="ei-symbols-count">(0 ausgewählt)</span></h4>
+                        <div class="selection-actions">
+                            <button onclick="selectAllSymbols('ei')">Alle</button>
+                            <button onclick="selectNoneSymbols('ei')">Keine</button>
+                            <button onclick="selectCategorySymbols('ei', 'forex')">Forex</button>
+                            <button onclick="selectCategorySymbols('ei', 'crypto')">Crypto</button>
+                            <button onclick="selectCategorySymbols('ei', 'commodities')">Rohstoffe</button>
+                        </div>
+                        <div class="checkbox-grid" id="ei-symbols-grid">
+                            <div class="loading-symbols">Lade Symbole...</div>
+                        </div>
+                    </div>
+                    <div class="selection-box" style="min-width: 200px; flex: 0;">
+                        <h4>&#128337; Timeframes <span class="selection-count" id="ei-tf-count">(0 ausgewählt)</span></h4>
+                        <div class="selection-actions">
+                            <button onclick="selectAllTimeframes('ei')">Alle</button>
+                            <button onclick="selectNoneTimeframes('ei')">Keine</button>
+                            <button onclick="selectDefaultTimeframes('ei')">Standard</button>
+                        </div>
+                        <div class="timeframe-grid" id="ei-timeframes-grid">
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="ei-tf-M1" value="M1" checked>
+                                <label for="ei-tf-M1">M1</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="ei-tf-M5" value="M5" checked>
+                                <label for="ei-tf-M5">M5</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="ei-tf-M15" value="M15" checked>
+                                <label for="ei-tf-M15">M15</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="ei-tf-M30" value="M30" checked>
+                                <label for="ei-tf-M30">M30</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="ei-tf-H1" value="H1" checked>
+                                <label for="ei-tf-H1">H1</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="ei-tf-H4" value="H4" checked>
+                                <label for="ei-tf-H4">H4</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="ei-tf-D1" value="D1" checked>
+                                <label for="ei-tf-D1">D1</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="ei-tf-W1" value="W1" checked>
+                                <label for="ei-tf-W1">W1</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="progress-container">
@@ -756,26 +1137,53 @@
                 </div>
 
                 <div class="filter-controls">
-                    <label>Symbole:</label>
-                    <select id="yf-symbols" multiple style="min-width: 200px; height: 80px;">
-                        <option value="AAPL" selected>AAPL</option>
-                        <option value="MSFT" selected>MSFT</option>
-                        <option value="GOOGL" selected>GOOGL</option>
-                        <option value="AMZN" selected>AMZN</option>
-                        <option value="BTC-USD" selected>BTC-USD</option>
-                        <option value="ETH-USD" selected>ETH-USD</option>
-                        <option value="EURUSD=X">EUR/USD</option>
-                        <option value="GC=F">Gold Futures</option>
-                    </select>
-                    <label>Perioden:</label>
-                    <select id="yf-periods" multiple style="min-width: 150px; height: 80px;">
-                        <option value="1d" selected>1 Tag</option>
-                        <option value="5d" selected>5 Tage</option>
-                        <option value="1mo" selected>1 Monat</option>
-                        <option value="3mo" selected>3 Monate</option>
-                        <option value="1y">1 Jahr</option>
-                        <option value="5y">5 Jahre</option>
-                    </select>
+                    <div class="selection-box">
+                        <h4>&#128200; Symbole <span class="selection-count" id="yf-symbols-count">(0 ausgewählt)</span></h4>
+                        <div class="selection-actions">
+                            <button onclick="selectAllSymbols('yf')">Alle</button>
+                            <button onclick="selectNoneSymbols('yf')">Keine</button>
+                            <button onclick="selectCategorySymbols('yf', 'stocks')">Aktien</button>
+                            <button onclick="selectCategorySymbols('yf', 'crypto')">Crypto</button>
+                            <button onclick="selectCategorySymbols('yf', 'forex')">Forex</button>
+                        </div>
+                        <div class="checkbox-grid" id="yf-symbols-grid">
+                            <div class="loading-symbols">Lade Symbole...</div>
+                        </div>
+                    </div>
+                    <div class="selection-box" style="min-width: 200px; flex: 0;">
+                        <h4>&#128337; Perioden <span class="selection-count" id="yf-tf-count">(0 ausgewählt)</span></h4>
+                        <div class="selection-actions">
+                            <button onclick="selectAllTimeframes('yf')">Alle</button>
+                            <button onclick="selectNoneTimeframes('yf')">Keine</button>
+                            <button onclick="selectDefaultTimeframes('yf')">Standard</button>
+                        </div>
+                        <div class="timeframe-grid" id="yf-timeframes-grid">
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="yf-tf-1d" value="1d" checked>
+                                <label for="yf-tf-1d">1 Tag</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="yf-tf-5d" value="5d" checked>
+                                <label for="yf-tf-5d">5 Tage</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="yf-tf-1mo" value="1mo" checked>
+                                <label for="yf-tf-1mo">1 Monat</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="yf-tf-3mo" value="3mo" checked>
+                                <label for="yf-tf-3mo">3 Monate</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="yf-tf-1y" value="1y">
+                                <label for="yf-tf-1y">1 Jahr</label>
+                            </div>
+                            <div class="timeframe-item">
+                                <input type="checkbox" id="yf-tf-5y" value="5y">
+                                <label for="yf-tf-5y">5 Jahre</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="progress-container">
@@ -1010,11 +1418,394 @@
         </div>
     </div>
 
+    <!-- Error Details Modal -->
+    <div id="error-details-modal" class="error-modal" style="display: none;">
+        <div class="error-modal-content">
+            <div class="error-modal-header">
+                <h3>Fehlerdetails</h3>
+                <button class="error-modal-close" onclick="closeErrorModal()">&times;</button>
+            </div>
+            <div id="error-details-content" class="error-modal-body">
+                <p>Keine Fehler aufgetreten</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Global state
         let testRunning = false;
         let abortController = null;
         const BASE_URL = '';
+
+        // Detaillierte Fehler-Sammlung für Inspektion
+        let errorDetails = [];
+
+        // TwelveData Interval-Konvertierung (H1 -> 1h, D1 -> 1day, etc.)
+        const TWELVEDATA_INTERVAL_MAP = {
+            'M1': '1min',
+            'M5': '5min',
+            'M15': '15min',
+            'M30': '30min',
+            'M45': '45min',
+            'H1': '1h',
+            'H2': '2h',
+            'H4': '4h',
+            'H8': '8h',
+            'D1': '1day',
+            'W1': '1week',
+            'MN': '1month'
+        };
+
+        function toTwelveDataInterval(timeframe) {
+            return TWELVEDATA_INTERVAL_MAP[timeframe] || timeframe;
+        }
+
+        // Fehler speichern für detaillierte Ansicht
+        function addErrorDetail(source, symbol, timeframe, error, responseData = null) {
+            errorDetails.push({
+                timestamp: new Date().toISOString(),
+                source: source,
+                symbol: symbol,
+                timeframe: timeframe,
+                error: error,
+                responseData: responseData
+            });
+        }
+
+        // Fehler-Details anzeigen
+        function showErrorDetails() {
+            const modal = document.getElementById('error-details-modal');
+            const content = document.getElementById('error-details-content');
+
+            if (errorDetails.length === 0) {
+                content.innerHTML = '<p style="color: #6b7280;">Keine Fehler aufgetreten</p>';
+            } else {
+                let html = `<div class="error-summary">
+                    <strong>Gesamt: ${errorDetails.length} Fehler</strong>
+                </div>`;
+
+                // Gruppiere nach Quelle
+                const bySource = {};
+                errorDetails.forEach(e => {
+                    if (!bySource[e.source]) bySource[e.source] = [];
+                    bySource[e.source].push(e);
+                });
+
+                for (const [source, errors] of Object.entries(bySource)) {
+                    html += `<div class="error-group">
+                        <h4 class="error-group-header" onclick="toggleErrorGroup(this)">${source} (${errors.length} Fehler) ▼</h4>
+                        <div class="error-group-items">`;
+
+                    errors.forEach((e, idx) => {
+                        html += `<div class="error-item" onclick="toggleErrorDetails(this)">
+                            <div class="error-item-header">
+                                <span class="error-symbol">${e.symbol}</span>
+                                <span class="error-timeframe">${e.timeframe}</span>
+                                <span class="error-message">${e.error}</span>
+                            </div>
+                            <div class="error-item-details" style="display: none;">
+                                <div class="error-detail-row"><strong>Zeit:</strong> ${e.timestamp}</div>
+                                ${e.responseData ? `<div class="error-detail-row"><strong>Response:</strong> <pre>${JSON.stringify(e.responseData, null, 2)}</pre></div>` : ''}
+                            </div>
+                        </div>`;
+                    });
+
+                    html += `</div></div>`;
+                }
+
+                content.innerHTML = html;
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function toggleErrorGroup(header) {
+            const items = header.nextElementSibling;
+            const isHidden = items.style.display === 'none';
+            items.style.display = isHidden ? 'block' : 'none';
+            header.textContent = header.textContent.replace(isHidden ? '▶' : '▼', isHidden ? '▼' : '▶');
+        }
+
+        function toggleErrorDetails(item) {
+            const details = item.querySelector('.error-item-details');
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function closeErrorModal() {
+            document.getElementById('error-details-modal').style.display = 'none';
+        }
+
+        function clearErrorDetails() {
+            errorDetails = [];
+        }
+
+        // Cached symbols data from Data Service
+        let cachedManagedSymbols = null;
+
+        // Symbol display name map (symbol -> display_name)
+        const symbolDisplayNames = {};
+
+        // Yahoo Finance symbol format mapping (unchanged for yfinance)
+        const YF_SYMBOLS = {
+            stocks: [
+                { symbol: 'AAPL', name: 'Apple' },
+                { symbol: 'MSFT', name: 'Microsoft' },
+                { symbol: 'GOOGL', name: 'Alphabet' },
+                { symbol: 'AMZN', name: 'Amazon' },
+                { symbol: 'NVDA', name: 'NVIDIA' },
+                { symbol: 'TSLA', name: 'Tesla' },
+                { symbol: 'META', name: 'Meta' },
+                { symbol: 'JPM', name: 'JP Morgan' },
+                { symbol: 'V', name: 'Visa' },
+                { symbol: 'WMT', name: 'Walmart' },
+            ],
+            crypto: [
+                { symbol: 'BTC-USD', name: 'Bitcoin' },
+                { symbol: 'ETH-USD', name: 'Ethereum' },
+                { symbol: 'XRP-USD', name: 'Ripple' },
+                { symbol: 'SOL-USD', name: 'Solana' },
+                { symbol: 'ADA-USD', name: 'Cardano' },
+                { symbol: 'DOGE-USD', name: 'Dogecoin' },
+            ],
+            forex: [
+                { symbol: 'EURUSD=X', name: 'EUR/USD' },
+                { symbol: 'GBPUSD=X', name: 'GBP/USD' },
+                { symbol: 'JPY=X', name: 'USD/JPY' },
+                { symbol: 'CHFUSD=X', name: 'CHF/USD' },
+            ],
+            commodities: [
+                { symbol: 'GC=F', name: 'Gold Futures' },
+                { symbol: 'SI=F', name: 'Silver Futures' },
+                { symbol: 'CL=F', name: 'Crude Oil' },
+                { symbol: 'NG=F', name: 'Natural Gas' },
+            ],
+        };
+
+        // Load ALL symbols from Data Service /managed-symbols endpoint
+        async function loadSymbolsFromAPI() {
+            try {
+                const response = await fetchWithTimeout(`${BASE_URL}/data/api/v1/managed-symbols`, {}, 10000);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        cachedManagedSymbols = {};
+
+                        // Group by category and build display name map
+                        data.forEach(s => {
+                            const cat = s.category?.toLowerCase() || 'other';
+                            if (!cachedManagedSymbols[cat]) cachedManagedSymbols[cat] = [];
+
+                            // Use display_name from Data Service, fallback to description or symbol
+                            const displayName = s.display_name || s.description || s.symbol;
+                            symbolDisplayNames[s.symbol] = displayName;
+
+                            cachedManagedSymbols[cat].push({
+                                symbol: s.symbol,
+                                name: displayName,
+                                description: s.description,
+                                is_favorite: s.is_favorite,
+                                has_data: s.has_timescaledb_data
+                            });
+                        });
+
+                        // Sort categories in preferred order
+                        const orderedSymbols = {};
+                        const categoryOrder = ['forex', 'crypto', 'index', 'commodity', 'stock', 'other'];
+                        categoryOrder.forEach(cat => {
+                            if (cachedManagedSymbols[cat]) {
+                                orderedSymbols[cat] = cachedManagedSymbols[cat];
+                            }
+                        });
+                        // Add any remaining categories
+                        Object.keys(cachedManagedSymbols).forEach(cat => {
+                            if (!orderedSymbols[cat]) {
+                                orderedSymbols[cat] = cachedManagedSymbols[cat];
+                            }
+                        });
+
+                        console.log(`Loaded ${data.length} symbols from Data Service`);
+                        return orderedSymbols;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load symbols from Data Service:', e);
+            }
+            return null;
+        }
+
+        // Get display name for a symbol
+        function getSymbolDisplayName(symbol) {
+            return symbolDisplayNames[symbol] || symbol;
+        }
+
+        // Render symbol checkboxes with display names
+        function renderSymbolCheckboxes(prefix, symbols, defaultSelected = []) {
+            const grid = document.getElementById(`${prefix}-symbols-grid`);
+            if (!grid) return;
+
+            grid.innerHTML = '';
+            let count = 0;
+
+            for (const [category, symbolList] of Object.entries(symbols)) {
+                // Category header with count
+                const categoryNames = {
+                    forex: 'Forex',
+                    crypto: 'Kryptowährungen',
+                    index: 'Indizes',
+                    indices: 'Indizes',
+                    commodity: 'Rohstoffe',
+                    commodities: 'Rohstoffe',
+                    stock: 'Aktien',
+                    stocks: 'Aktien',
+                    other: 'Andere'
+                };
+
+                const header = document.createElement('div');
+                header.className = 'checkbox-item category-header';
+                header.textContent = `${categoryNames[category] || category} (${symbolList.length})`;
+                grid.appendChild(header);
+
+                // Symbol checkboxes - show display name from Data Service
+                symbolList.forEach(s => {
+                    const isChecked = defaultSelected.includes(s.symbol);
+                    if (isChecked) count++;
+
+                    const item = document.createElement('div');
+                    item.className = 'checkbox-item';
+                    item.dataset.category = category;
+                    // Use the display name from Data Service
+                    const displayLabel = s.name !== s.symbol ? s.name : s.symbol;
+                    const tooltipText = s.description || s.name || s.symbol;
+                    item.innerHTML = `
+                        <input type="checkbox" id="${prefix}-sym-${s.symbol}" value="${s.symbol}" ${isChecked ? 'checked' : ''}>
+                        <label for="${prefix}-sym-${s.symbol}" title="${tooltipText}">${displayLabel}</label>
+                    `;
+                    item.querySelector('input').addEventListener('change', () => updateSymbolCount(prefix));
+                    grid.appendChild(item);
+                });
+            }
+
+            updateSymbolCount(prefix);
+        }
+
+        // Update selection count
+        function updateSymbolCount(prefix) {
+            const grid = document.getElementById(`${prefix}-symbols-grid`);
+            const countEl = document.getElementById(`${prefix}-symbols-count`);
+            if (!grid || !countEl) return;
+
+            const checked = grid.querySelectorAll('input[type="checkbox"]:checked').length;
+            countEl.textContent = `(${checked} ausgewählt)`;
+        }
+
+        function updateTimeframeCount(prefix) {
+            const grid = document.getElementById(`${prefix}-timeframes-grid`);
+            const countEl = document.getElementById(`${prefix}-tf-count`);
+            if (!grid || !countEl) return;
+
+            const checked = grid.querySelectorAll('input[type="checkbox"]:checked').length;
+            countEl.textContent = `(${checked} ausgewählt)`;
+        }
+
+        // Selection helper functions
+        function selectAllSymbols(prefix) {
+            const grid = document.getElementById(`${prefix}-symbols-grid`);
+            grid.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+            updateSymbolCount(prefix);
+        }
+
+        function selectNoneSymbols(prefix) {
+            const grid = document.getElementById(`${prefix}-symbols-grid`);
+            grid.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateSymbolCount(prefix);
+        }
+
+        function selectCategorySymbols(prefix, category) {
+            const grid = document.getElementById(`${prefix}-symbols-grid`);
+            grid.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            grid.querySelectorAll(`.checkbox-item[data-category="${category}"] input[type="checkbox"]`).forEach(cb => cb.checked = true);
+            updateSymbolCount(prefix);
+        }
+
+        function selectAllTimeframes(prefix) {
+            const grid = document.getElementById(`${prefix}-timeframes-grid`);
+            grid.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+            updateTimeframeCount(prefix);
+        }
+
+        function selectNoneTimeframes(prefix) {
+            const grid = document.getElementById(`${prefix}-timeframes-grid`);
+            grid.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateTimeframeCount(prefix);
+        }
+
+        function selectDefaultTimeframes(prefix) {
+            const defaults = {
+                'td': ['M5', 'M15', 'H1', 'H4', 'D1'],
+                'ei': ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1'],
+                'yf': ['1d', '5d', '1mo', '3mo']
+            };
+            const grid = document.getElementById(`${prefix}-timeframes-grid`);
+            grid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = (defaults[prefix] || []).includes(cb.value);
+            });
+            updateTimeframeCount(prefix);
+        }
+
+        // Get selected values
+        function getSelectedSymbols(prefix) {
+            const grid = document.getElementById(`${prefix}-symbols-grid`);
+            return Array.from(grid.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        }
+
+        function getSelectedTimeframes(prefix) {
+            const grid = document.getElementById(`${prefix}-timeframes-grid`);
+            return Array.from(grid.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        }
+
+        // Initialize symbols on page load - load ALL from Data Service
+        async function initializeSymbols() {
+            // Show loading state
+            ['td', 'ei'].forEach(prefix => {
+                const grid = document.getElementById(`${prefix}-symbols-grid`);
+                if (grid) grid.innerHTML = '<div class="loading-symbols">Lade Symbole vom Data Service...</div>';
+            });
+
+            // Load symbols from Data Service /managed-symbols endpoint
+            const apiSymbols = await loadSymbolsFromAPI();
+
+            if (apiSymbols) {
+                // TwelveData - use ALL symbols from Data Service
+                const tdDefaults = ['EURUSD', 'GBPUSD', 'BTCUSD', 'ETHUSD', 'XAUUSD'];
+                renderSymbolCheckboxes('td', apiSymbols, tdDefaults);
+
+                // EasyInsight - same symbols from Data Service
+                const eiDefaults = ['EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSD', 'ETHUSD', 'XAUUSD'];
+                renderSymbolCheckboxes('ei', apiSymbols, eiDefaults);
+            } else {
+                // Fallback: show error message
+                ['td', 'ei'].forEach(prefix => {
+                    const grid = document.getElementById(`${prefix}-symbols-grid`);
+                    if (grid) grid.innerHTML = '<div class="loading-symbols" style="color: #ef4444;">Fehler beim Laden der Symbole vom Data Service</div>';
+                });
+            }
+
+            // Yahoo Finance - uses different symbol format (unchanged)
+            const yfDefaults = ['AAPL', 'MSFT', 'GOOGL', 'BTC-USD', 'ETH-USD'];
+            renderSymbolCheckboxes('yf', YF_SYMBOLS, yfDefaults);
+
+            // Update timeframe counts
+            ['td', 'ei', 'yf'].forEach(prefix => {
+                updateTimeframeCount(prefix);
+                // Add event listeners to timeframe checkboxes
+                const grid = document.getElementById(`${prefix}-timeframes-grid`);
+                if (grid) {
+                    grid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                        cb.addEventListener('change', () => updateTimeframeCount(prefix));
+                    });
+                }
+            });
+        }
 
         // Tab switching
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1051,11 +1842,32 @@
             }
         }
 
-        function setCellStatus(cellId, status, tooltip = '') {
+        function setCellStatus(cellId, status, tooltip = '', dataCount = null) {
             const cell = document.getElementById(cellId);
             if (!cell) return;
             cell.className = `cell-${status}`;
-            cell.textContent = status === 'ok' ? '✓' : status === 'error' ? '✗' : status === 'running' ? '...' : '-';
+
+            // Show data count if available, otherwise show status symbol
+            if (dataCount !== null && status === 'ok') {
+                cell.textContent = dataCount;
+            } else if (status === 'ok') {
+                // Extract count from tooltip if present
+                const countMatch = tooltip.match(/(\d+)\s*(Datenpunkte|Werte|Einträge)/);
+                if (countMatch) {
+                    cell.textContent = countMatch[1];
+                } else {
+                    cell.textContent = '✓';
+                }
+            } else if (status === 'error') {
+                cell.textContent = '✗';
+            } else if (status === 'warning') {
+                cell.textContent = '⚠';
+            } else if (status === 'running') {
+                cell.textContent = '...';
+            } else {
+                cell.textContent = '-';
+            }
+
             if (tooltip) cell.title = tooltip;
         }
 
@@ -1075,13 +1887,15 @@
             }
         }
 
-        // Initialize matrices
+        // Initialize matrices with display names
         function initMatrix(bodyId, symbols, cols, prefix) {
             const body = document.getElementById(bodyId);
             body.innerHTML = '';
             symbols.forEach(symbol => {
                 const row = document.createElement('tr');
-                row.innerHTML = `<td>${symbol}</td>` + cols.map(col =>
+                // Use display name from Data Service
+                const displayName = getSymbolDisplayName(symbol);
+                row.innerHTML = `<td title="${symbol}">${displayName}</td>` + cols.map(col =>
                     `<td id="${prefix}-${symbol}-${col}" class="cell-pending">-</td>`
                 ).join('');
                 body.appendChild(row);
@@ -1111,8 +1925,8 @@
             clearLog('td-log');
             log('td-log', 'Starte TwelveData Tests...', 'info');
 
-            const symbols = Array.from(document.getElementById('td-symbols').selectedOptions).map(o => o.value);
-            const timeframes = Array.from(document.getElementById('td-timeframes').selectedOptions).map(o => o.value);
+            const symbols = getSelectedSymbols('td');
+            const timeframes = getSelectedTimeframes('td');
             const indicators = ['rsi', 'macd', 'bbands', 'stoch', 'adx', 'atr', 'ema', 'sma'];
 
             // Initialize matrices
@@ -1127,26 +1941,38 @@
             for (const symbol of symbols) {
                 for (const tf of timeframes) {
                     setCellStatus(`td-ohlcv-${symbol}-${tf}`, 'running');
+                    // Konvertiere Timeframe zum TwelveData-Format (H1 -> 1h, D1 -> 1day, etc.)
+                    const tdInterval = toTwelveDataInterval(tf);
                     try {
                         const response = await fetchWithTimeout(
-                            `${BASE_URL}/data/api/v1/twelvedata/time_series/${symbol}?interval=${tf}&outputsize=5`
+                            `${BASE_URL}/data/api/v1/twelvedata/time_series/${symbol}?interval=${tdInterval}&outputsize=5`
                         );
                         if (response.ok) {
                             const data = await response.json();
                             const count = data.values?.length || 0;
-                            const status = count > 0 ? 'ok' : 'warning';
-                            setCellStatus(`td-ohlcv-${symbol}-${tf}`, status, `${count} Datenpunkte`);
-                            log('td-log', `${symbol}/${tf}: ${count} Datenpunkte`, status);
-                            stats[status]++;
+                            if (count > 0) {
+                                setCellStatus(`td-ohlcv-${symbol}-${tf}`, 'ok', `${count} Datenpunkte`);
+                                log('td-log', `${symbol}@${tf}: ${count} Datenpunkte`, 'ok');
+                                stats.ok++;
+                            } else {
+                                // Prüfe ob es einen Fehler in der Response gibt
+                                const errorMsg = data.error || 'Keine Daten';
+                                setCellStatus(`td-ohlcv-${symbol}-${tf}`, 'warning', errorMsg);
+                                log('td-log', `${symbol}@${tf}: ${errorMsg}`, 'warning');
+                                stats.warning++;
+                                addErrorDetail('TwelveData OHLCV', symbol, tf, errorMsg, data);
+                            }
                         } else {
                             setCellStatus(`td-ohlcv-${symbol}-${tf}`, 'error', `HTTP ${response.status}`);
-                            log('td-log', `${symbol}/${tf}: HTTP ${response.status}`, 'error');
+                            log('td-log', `${symbol}@${tf}: HTTP ${response.status}`, 'error');
                             stats.error++;
+                            addErrorDetail('TwelveData OHLCV', symbol, tf, `HTTP ${response.status}`);
                         }
                     } catch (e) {
                         setCellStatus(`td-ohlcv-${symbol}-${tf}`, 'error', e.message);
-                        log('td-log', `${symbol}/${tf}: ${e.message}`, 'error');
+                        log('td-log', `${symbol}@${tf}: ${e.message}`, 'error');
                         stats.error++;
+                        addErrorDetail('TwelveData OHLCV', symbol, tf, e.message);
                     }
                     completed++;
                     updateProgress('td-progress', (completed / totalTests) * 100);
@@ -1164,16 +1990,24 @@
                         if (response.ok) {
                             const data = await response.json();
                             const count = data.values?.length || 0;
-                            const status = count > 0 ? 'ok' : 'warning';
-                            setCellStatus(`td-ind-${symbol}-${ind}`, status, `${count} Werte`);
-                            stats[status]++;
+                            if (count > 0) {
+                                setCellStatus(`td-ind-${symbol}-${ind}`, 'ok', `${count} Werte`);
+                                stats.ok++;
+                            } else {
+                                const errorMsg = data.error || 'Keine Daten';
+                                setCellStatus(`td-ind-${symbol}-${ind}`, 'warning', errorMsg);
+                                stats.warning++;
+                                addErrorDetail('TwelveData Indicators', symbol, ind, errorMsg, data);
+                            }
                         } else {
                             setCellStatus(`td-ind-${symbol}-${ind}`, 'error', `HTTP ${response.status}`);
                             stats.error++;
+                            addErrorDetail('TwelveData Indicators', symbol, ind, `HTTP ${response.status}`);
                         }
                     } catch (e) {
                         setCellStatus(`td-ind-${symbol}-${ind}`, 'error', e.message);
                         stats.error++;
+                        addErrorDetail('TwelveData Indicators', symbol, ind, e.message);
                     }
                     completed++;
                     updateProgress('td-progress', (completed / totalTests) * 100);
@@ -1193,8 +2027,8 @@
             clearLog('ei-log');
             log('ei-log', 'Starte EasyInsight Tests...', 'info');
 
-            const symbols = Array.from(document.getElementById('ei-symbols').selectedOptions).map(o => o.value);
-            const timeframes = Array.from(document.getElementById('ei-timeframes').selectedOptions).map(o => o.value);
+            const symbols = getSelectedSymbols('ei');
+            const timeframes = getSelectedTimeframes('ei');
             const indicators = ['rsi', 'macd', 'bbands', 'stoch', 'adx', 'atr', 'strength'];
 
             // Initialize matrices
@@ -1216,19 +2050,28 @@
                         if (response.ok) {
                             const data = await response.json();
                             const count = data.values?.length || data.count || 0;
-                            const status = count > 0 ? 'ok' : 'warning';
-                            setCellStatus(`ei-ohlcv-${symbol}-${tf}`, status, `${count} Datenpunkte`);
-                            log('ei-log', `${symbol}/${tf}: ${count} Datenpunkte`, status);
-                            stats[status]++;
+                            if (count > 0) {
+                                setCellStatus(`ei-ohlcv-${symbol}-${tf}`, 'ok', `${count} Datenpunkte`);
+                                log('ei-log', `${symbol}@${tf}: ${count} Datenpunkte`, 'ok');
+                                stats.ok++;
+                            } else {
+                                const errorMsg = data.error || 'Keine Daten';
+                                setCellStatus(`ei-ohlcv-${symbol}-${tf}`, 'warning', errorMsg);
+                                log('ei-log', `${symbol}@${tf}: ${errorMsg}`, 'warning');
+                                stats.warning++;
+                                addErrorDetail('EasyInsight OHLCV', symbol, tf, errorMsg, data);
+                            }
                         } else {
                             setCellStatus(`ei-ohlcv-${symbol}-${tf}`, 'error', `HTTP ${response.status}`);
-                            log('ei-log', `${symbol}/${tf}: HTTP ${response.status}`, 'error');
+                            log('ei-log', `${symbol}@${tf}: HTTP ${response.status}`, 'error');
                             stats.error++;
+                            addErrorDetail('EasyInsight OHLCV', symbol, tf, `HTTP ${response.status}`);
                         }
                     } catch (e) {
                         setCellStatus(`ei-ohlcv-${symbol}-${tf}`, 'error', e.message);
-                        log('ei-log', `${symbol}/${tf}: ${e.message}`, 'error');
+                        log('ei-log', `${symbol}@${tf}: ${e.message}`, 'error');
                         stats.error++;
+                        addErrorDetail('EasyInsight OHLCV', symbol, tf, e.message);
                     }
                     completed++;
                     updateProgress('ei-progress', (completed / totalTests) * 100);
@@ -1246,16 +2089,24 @@
                         if (response.ok) {
                             const data = await response.json();
                             const count = data.values?.length || 0;
-                            const status = count > 0 ? 'ok' : 'warning';
-                            setCellStatus(`ei-ind-${symbol}-${ind}`, status, `${count} Werte`);
-                            stats[status]++;
+                            if (count > 0) {
+                                setCellStatus(`ei-ind-${symbol}-${ind}`, 'ok', `${count} Werte`);
+                                stats.ok++;
+                            } else {
+                                const errorMsg = data.error || 'Keine Daten';
+                                setCellStatus(`ei-ind-${symbol}-${ind}`, 'warning', errorMsg);
+                                stats.warning++;
+                                addErrorDetail('EasyInsight Indicators', symbol, ind, errorMsg, data);
+                            }
                         } else {
                             setCellStatus(`ei-ind-${symbol}-${ind}`, 'error', `HTTP ${response.status}`);
                             stats.error++;
+                            addErrorDetail('EasyInsight Indicators', symbol, ind, `HTTP ${response.status}`);
                         }
                     } catch (e) {
                         setCellStatus(`ei-ind-${symbol}-${ind}`, 'error', e.message);
                         stats.error++;
+                        addErrorDetail('EasyInsight Indicators', symbol, ind, e.message);
                     }
                     completed++;
                     updateProgress('ei-progress', (completed / totalTests) * 100);
@@ -1275,8 +2126,8 @@
             clearLog('yf-log');
             log('yf-log', 'Starte Yahoo Finance Tests...', 'info');
 
-            const symbols = Array.from(document.getElementById('yf-symbols').selectedOptions).map(o => o.value);
-            const periods = Array.from(document.getElementById('yf-periods').selectedOptions).map(o => o.value);
+            const symbols = getSelectedSymbols('yf');
+            const periods = getSelectedTimeframes('yf');
 
             // Initialize matrix
             initMatrix('yf-ohlcv-body', symbols, ['1d', '5d', '1mo', '3mo', '1y', '5y'], 'yf-ohlcv');
@@ -1295,19 +2146,34 @@
                         if (response.ok) {
                             const data = await response.json();
                             const count = data.data?.length || data.count || 0;
-                            const status = count > 0 ? 'ok' : 'warning';
-                            setCellStatus(`yf-ohlcv-${symbol}-${period}`, status, `${count} Datenpunkte`);
-                            log('yf-log', `${symbol}/${period}: ${count} Datenpunkte`, status);
-                            stats[status]++;
+                            if (count > 0) {
+                                setCellStatus(`yf-ohlcv-${symbol}-${period}`, 'ok', `${count} Datenpunkte`);
+                                log('yf-log', `${symbol}@${period}: ${count} Datenpunkte`, 'ok');
+                                stats.ok++;
+                            } else {
+                                const errorMsg = data.error || data.message || 'Keine Daten';
+                                setCellStatus(`yf-ohlcv-${symbol}-${period}`, 'warning', errorMsg);
+                                log('yf-log', `${symbol}@${period}: ${errorMsg}`, 'warning');
+                                stats.warning++;
+                                addErrorDetail('Yahoo Finance', symbol, period, errorMsg, data);
+                            }
                         } else {
-                            setCellStatus(`yf-ohlcv-${symbol}-${period}`, 'error', `HTTP ${response.status}`);
-                            log('yf-log', `${symbol}/${period}: HTTP ${response.status}`, 'error');
+                            const errorText = await response.text();
+                            let errorMsg = `HTTP ${response.status}`;
+                            try {
+                                const errorData = JSON.parse(errorText);
+                                errorMsg = errorData.detail || errorData.error || errorMsg;
+                            } catch (e) {}
+                            setCellStatus(`yf-ohlcv-${symbol}-${period}`, 'error', errorMsg);
+                            log('yf-log', `${symbol}@${period}: ${errorMsg}`, 'error');
                             stats.error++;
+                            addErrorDetail('Yahoo Finance', symbol, period, errorMsg);
                         }
                     } catch (e) {
                         setCellStatus(`yf-ohlcv-${symbol}-${period}`, 'error', e.message);
-                        log('yf-log', `${symbol}/${period}: ${e.message}`, 'error');
+                        log('yf-log', `${symbol}@${period}: ${e.message}`, 'error');
                         stats.error++;
+                        addErrorDetail('Yahoo Finance', symbol, period, e.message);
                     }
                     completed++;
                     updateProgress('yf-progress', (completed / totalTests) * 100);
@@ -1613,6 +2479,7 @@
             if (testRunning) return;
 
             resetTestResults();
+            clearErrorDetails(); // Reset error details for new test run
             clearLog('main-log');
             log('main-log', 'Starte vollständige Validierung...', 'info');
             updateProgress('overall-progress', 0, 'Initialisiere...');
@@ -1761,6 +2628,13 @@
                         </tr>
                     </tbody>
                 </table>
+                ${(totalWarning + totalError) > 0 ? `
+                <div style="margin-top: 1.5rem; text-align: center;">
+                    <button class="btn btn-danger" onclick="showErrorDetails()" style="padding: 0.75rem 2rem;">
+                        &#128269; Fehlerdetails anzeigen (${errorDetails.length} Einträge)
+                    </button>
+                </div>
+                ` : ''}
             `;
         }
 
@@ -1791,6 +2665,9 @@
 
         // Run initial check on load
         checkInitialStatus();
+
+        // Initialize symbols
+        initializeSymbols();
     </script>
 </body>
 </html>
