@@ -798,34 +798,6 @@
     </header>
 
     <div class="container">
-        <!-- Stats Overview -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="stat-model-status">-</div>
-                <div class="stat-label">Modell-Status</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value purple" id="stat-model-version">-</div>
-                <div class="stat-label">Version</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="stat-inference-time">-</div>
-                <div class="stat-label">Inferenz (ms)</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="stat-features">25</div>
-                <div class="stat-label">Input Features</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value purple" id="stat-patterns">16</div>
-                <div class="stat-label">Pattern-Klassen</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="stat-regimes">4</div>
-                <div class="stat-label">Regime-Typen</div>
-            </div>
-        </div>
-
         <!-- Tabs -->
         <div class="tabs">
             <button class="tab active" onclick="switchTab('predictions')">&#127919; Live Predictions</button>
@@ -1563,15 +1535,12 @@
             }
         }
 
-        // Format uptime from started_at timestamp
-        function formatUptime(startedAt) {
-            if (!startedAt) return '-';
-            const start = new Date(startedAt);
-            const now = new Date();
-            const diffMs = now - start;
-            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        // Format uptime from seconds
+        function formatUptimeSeconds(seconds) {
+            if (!seconds) return '-';
+            const days = Math.floor(seconds / (60 * 60 * 24));
+            const hours = Math.floor((seconds % (60 * 60 * 24)) / (60 * 60));
+            const minutes = Math.floor((seconds % (60 * 60)) / 60);
 
             if (days > 0) {
                 return `${days}d ${hours}h ${minutes}m`;
@@ -1585,14 +1554,14 @@
         // Update header status bar
         async function updateHeaderStatus() {
             try {
-                const response = await fetch('/cnn-lstm/health');
+                const response = await fetch('/cnn-lstm/api/v1/info');
 
                 if (response.ok) {
                     const data = await response.json();
                     document.getElementById('headerStatus').textContent = 'Online';
                     document.getElementById('headerStatus').style.color = '#4caf50';
-                    document.getElementById('headerVersion').textContent = data.model_version?.split('-').slice(-1)[0] || '-';
-                    document.getElementById('headerUptime').textContent = formatUptime(data.started_at);
+                    document.getElementById('headerVersion').textContent = data.model?.version || '-';
+                    document.getElementById('headerUptime').textContent = formatUptimeSeconds(data.runtime?.uptime_seconds);
                     document.getElementById('serviceStatus').textContent = 'Online';
                     document.getElementById('serviceStatus').style.background = 'rgba(76, 175, 80, 0.2)';
                     document.getElementById('serviceStatus').style.color = '#81c784';
@@ -1613,21 +1582,6 @@
             }
         }
 
-        async function loadModelInfo() {
-            try {
-                const response = await fetch('/cnn-lstm/health');
-                const data = await response.json();
-
-                document.getElementById('stat-model-status').textContent = data.model_loaded ? 'Aktiv' : 'Nicht geladen';
-                document.getElementById('stat-model-status').className = `stat-value ${data.model_loaded ? 'success' : 'error'}`;
-                document.getElementById('stat-model-version').textContent = data.model_version?.split('-').slice(-1)[0] || '-';
-
-                showToast('Modell-Info aktualisiert', 'info');
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        }
-
         // Utility Functions
         function formatPrice(value) {
             if (value == null) return '-';
@@ -1643,7 +1597,6 @@
         // Initial Load
         document.addEventListener('DOMContentLoaded', () => {
             updateHeaderStatus();
-            loadModelInfo();
         });
     </script>
 </body>
