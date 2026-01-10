@@ -759,12 +759,40 @@
 </head>
 <body>
     <header>
-        <div class="container">
-            <a href="/" class="back-link">&#8592; Zurück zum Dashboard</a>
-            <span class="header-title">CNN-LSTM Multi-Task Konfiguration</span>
-            <div style="display: flex; gap: 0.5rem;">
-                <span class="service-badge">Inference: 3007</span>
-                <span class="service-badge train">Training: 3017</span>
+        <div class="container" style="flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <a href="/index.html" class="back-link">&#8592; Dashboard</a>
+                <h1 class="header-title">CNN-LSTM Multi-Task Konfiguration</h1>
+                <span class="service-badge" id="serviceStatus">Laden...</span>
+            </div>
+            <!-- Compact Header Status Bar -->
+            <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; font-size: 0.85rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Service-Status">
+                    <span>&#9889;</span>
+                    <span style="color: #888;">Status:</span>
+                    <strong id="headerStatus" style="color: #4caf50;">Lädt...</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Modell-Version">
+                    <span>&#129516;</span>
+                    <span style="color: #888;">Version:</span>
+                    <strong id="headerVersion" style="color: #a78bfa;">-</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Multi-Task Outputs">
+                    <span>&#127919;</span>
+                    <span style="color: #888;">Tasks:</span>
+                    <strong id="headerTasks" style="color: #64c8ff;">Price, Pattern, Regime</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Input Features">
+                    <span>&#128202;</span>
+                    <span style="color: #888;">Features:</span>
+                    <strong id="headerFeatures" style="color: #64c8ff;">25</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;" title="Zeit seit Service-Start">
+                    <span>&#128336;</span>
+                    <span style="color: #888;">Uptime:</span>
+                    <strong id="headerUptime" style="color: #64c8ff;">-</strong>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="updateHeaderStatus()" style="margin-left: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem;">&#8635;</button>
             </div>
         </div>
     </header>
@@ -1535,6 +1563,56 @@
             }
         }
 
+        // Format uptime from started_at timestamp
+        function formatUptime(startedAt) {
+            if (!startedAt) return '-';
+            const start = new Date(startedAt);
+            const now = new Date();
+            const diffMs = now - start;
+            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            if (days > 0) {
+                return `${days}d ${hours}h ${minutes}m`;
+            } else if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else {
+                return `${minutes}m`;
+            }
+        }
+
+        // Update header status bar
+        async function updateHeaderStatus() {
+            try {
+                const response = await fetch('/cnn-lstm/health');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('headerStatus').textContent = 'Online';
+                    document.getElementById('headerStatus').style.color = '#4caf50';
+                    document.getElementById('headerVersion').textContent = data.model_version?.split('-').slice(-1)[0] || '-';
+                    document.getElementById('headerUptime').textContent = formatUptime(data.started_at);
+                    document.getElementById('serviceStatus').textContent = 'Online';
+                    document.getElementById('serviceStatus').style.background = 'rgba(76, 175, 80, 0.2)';
+                    document.getElementById('serviceStatus').style.color = '#81c784';
+                } else {
+                    document.getElementById('headerStatus').textContent = 'Offline';
+                    document.getElementById('headerStatus').style.color = '#f44336';
+                    document.getElementById('serviceStatus').textContent = 'Offline';
+                    document.getElementById('serviceStatus').style.background = 'rgba(244, 67, 54, 0.2)';
+                    document.getElementById('serviceStatus').style.color = '#e57373';
+                }
+            } catch (error) {
+                console.error('Header status update failed:', error);
+                document.getElementById('headerStatus').textContent = 'Offline';
+                document.getElementById('headerStatus').style.color = '#f44336';
+                document.getElementById('serviceStatus').textContent = 'Offline';
+                document.getElementById('serviceStatus').style.background = 'rgba(244, 67, 54, 0.2)';
+                document.getElementById('serviceStatus').style.color = '#e57373';
+            }
+        }
+
         async function loadModelInfo() {
             try {
                 const response = await fetch('/cnn-lstm/health');
@@ -1564,6 +1642,7 @@
 
         // Initial Load
         document.addEventListener('DOMContentLoaded', () => {
+            updateHeaderStatus();
             loadModelInfo();
         });
     </script>
