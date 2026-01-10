@@ -5749,18 +5749,28 @@ async def get_easyinsight_timeframes():
 
 
 # New individual indicator endpoints for EasyInsight
+# All endpoints normalize interval to TwelveData format (1min, 5min, 1h, 1day, etc.)
+
+
+def _normalize_interval(interval: str) -> str:
+    """Normalize interval to TwelveData format for EasyInsight API."""
+    tf = normalize_timeframe_safe(interval, Timeframe.H1)
+    return to_twelvedata(tf)
+
+
 @easyinsight_router.get("/easyinsight/rsi/{symbol}")
 async def get_easyinsight_rsi(
     symbol: str,
-    interval: str = Query("1h", description="Timeframe"),
+    interval: str = Query("1h", description="Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)"),
     time_period: int = Query(14, ge=2, le=100, description="RSI period"),
     outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
 ):
     """Get RSI indicator from EasyInsight API."""
     from ..services.easyinsight_service import easyinsight_service
 
+    td_interval = _normalize_interval(interval)
     result = await easyinsight_service.get_rsi(
-        symbol=symbol, interval=interval, time_period=time_period, outputsize=outputsize
+        symbol=symbol, interval=td_interval, time_period=time_period, outputsize=outputsize
     )
     if result.get("status") == "error":
         raise HTTPException(status_code=502, detail=result.get("error"))
@@ -5770,7 +5780,7 @@ async def get_easyinsight_rsi(
 @easyinsight_router.get("/easyinsight/macd/{symbol}")
 async def get_easyinsight_macd(
     symbol: str,
-    interval: str = Query("1h", description="Timeframe"),
+    interval: str = Query("1h", description="Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)"),
     fast_period: int = Query(12, ge=2, le=100, description="Fast EMA period"),
     slow_period: int = Query(26, ge=2, le=100, description="Slow EMA period"),
     signal_period: int = Query(9, ge=2, le=100, description="Signal period"),
@@ -5779,8 +5789,9 @@ async def get_easyinsight_macd(
     """Get MACD indicator from EasyInsight API."""
     from ..services.easyinsight_service import easyinsight_service
 
+    td_interval = _normalize_interval(interval)
     result = await easyinsight_service.get_macd(
-        symbol=symbol, interval=interval,
+        symbol=symbol, interval=td_interval,
         fast_period=fast_period, slow_period=slow_period, signal_period=signal_period,
         outputsize=outputsize
     )
@@ -5792,7 +5803,7 @@ async def get_easyinsight_macd(
 @easyinsight_router.get("/easyinsight/bbands/{symbol}")
 async def get_easyinsight_bbands(
     symbol: str,
-    interval: str = Query("1h", description="Timeframe"),
+    interval: str = Query("1h", description="Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)"),
     time_period: int = Query(20, ge=2, le=100, description="SMA period"),
     sd: float = Query(2.0, ge=0.1, le=5.0, description="Standard deviation"),
     outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
@@ -5800,8 +5811,9 @@ async def get_easyinsight_bbands(
     """Get Bollinger Bands indicator from EasyInsight API."""
     from ..services.easyinsight_service import easyinsight_service
 
+    td_interval = _normalize_interval(interval)
     result = await easyinsight_service.get_bollinger_bands(
-        symbol=symbol, interval=interval, time_period=time_period, sd=sd, outputsize=outputsize
+        symbol=symbol, interval=td_interval, time_period=time_period, sd=sd, outputsize=outputsize
     )
     if result.get("status") == "error":
         raise HTTPException(status_code=502, detail=result.get("error"))
@@ -5811,7 +5823,7 @@ async def get_easyinsight_bbands(
 @easyinsight_router.get("/easyinsight/stoch/{symbol}")
 async def get_easyinsight_stoch(
     symbol: str,
-    interval: str = Query("1h", description="Timeframe"),
+    interval: str = Query("1h", description="Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)"),
     fast_k_period: int = Query(14, ge=1, le=100, description="Fast %K period"),
     slow_k_period: int = Query(3, ge=1, le=100, description="Slow %K period"),
     slow_d_period: int = Query(3, ge=1, le=100, description="Slow %D period"),
@@ -5820,8 +5832,9 @@ async def get_easyinsight_stoch(
     """Get Stochastic Oscillator from EasyInsight API."""
     from ..services.easyinsight_service import easyinsight_service
 
+    td_interval = _normalize_interval(interval)
     result = await easyinsight_service.get_stochastic(
-        symbol=symbol, interval=interval,
+        symbol=symbol, interval=td_interval,
         fast_k_period=fast_k_period, slow_k_period=slow_k_period, slow_d_period=slow_d_period,
         outputsize=outputsize
     )
@@ -5833,15 +5846,16 @@ async def get_easyinsight_stoch(
 @easyinsight_router.get("/easyinsight/adx/{symbol}")
 async def get_easyinsight_adx(
     symbol: str,
-    interval: str = Query("1h", description="Timeframe"),
+    interval: str = Query("1h", description="Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)"),
     time_period: int = Query(14, ge=2, le=100, description="ADX period"),
     outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
 ):
     """Get ADX indicator from EasyInsight API."""
     from ..services.easyinsight_service import easyinsight_service
 
+    td_interval = _normalize_interval(interval)
     result = await easyinsight_service.get_adx(
-        symbol=symbol, interval=interval, time_period=time_period, outputsize=outputsize
+        symbol=symbol, interval=td_interval, time_period=time_period, outputsize=outputsize
     )
     if result.get("status") == "error":
         raise HTTPException(status_code=502, detail=result.get("error"))
@@ -5851,15 +5865,16 @@ async def get_easyinsight_adx(
 @easyinsight_router.get("/easyinsight/atr/{symbol}")
 async def get_easyinsight_atr(
     symbol: str,
-    interval: str = Query("1h", description="Timeframe"),
+    interval: str = Query("1h", description="Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)"),
     time_period: int = Query(14, ge=2, le=100, description="ATR period"),
     outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
 ):
     """Get ATR indicator from EasyInsight API."""
     from ..services.easyinsight_service import easyinsight_service
 
+    td_interval = _normalize_interval(interval)
     result = await easyinsight_service.get_atr(
-        symbol=symbol, interval=interval, time_period=time_period, outputsize=outputsize
+        symbol=symbol, interval=td_interval, time_period=time_period, outputsize=outputsize
     )
     if result.get("status") == "error":
         raise HTTPException(status_code=502, detail=result.get("error"))
@@ -5869,7 +5884,7 @@ async def get_easyinsight_atr(
 @easyinsight_router.get("/easyinsight/strength/{symbol}")
 async def get_easyinsight_strength(
     symbol: str,
-    interval: str = Query("1h", description="Timeframe"),
+    interval: str = Query("1h", description="Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)"),
     outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
 ):
     """
@@ -5880,8 +5895,12 @@ async def get_easyinsight_strength(
     """
     from ..services.easyinsight_service import easyinsight_service
 
+    # Normalize timeframe to TwelveData format
+    tf = normalize_timeframe_safe(interval, Timeframe.H1)
+    td_interval = to_twelvedata(tf)
+
     result = await easyinsight_service.get_strength(
-        symbol=symbol, interval=interval, outputsize=outputsize
+        symbol=symbol, interval=td_interval, outputsize=outputsize
     )
     if result.get("status") == "error":
         raise HTTPException(status_code=502, detail=result.get("error"))
