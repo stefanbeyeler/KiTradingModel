@@ -683,13 +683,20 @@ class EasyInsightService:
         """
         Get EasyInsight API status.
 
+        Tries /health endpoint first, then falls back to /status.
+
         Returns:
             Dictionary with API status information
         """
         try:
             client = await self._get_client()
 
-            response = await client.get(f"{self._api_url}/status", timeout=5.0)
+            # Try /health endpoint first (more common)
+            response = await client.get(f"{self._api_url}/health", timeout=5.0)
+
+            if response.status_code == 404:
+                # Fallback to /status endpoint
+                response = await client.get(f"{self._api_url}/status", timeout=5.0)
 
             if response.status_code != 200:
                 return {
@@ -718,7 +725,10 @@ class EasyInsightService:
         """Check if EasyInsight API is accessible."""
         try:
             client = await self._get_client()
-            response = await client.get(f"{self._api_url}/status", timeout=5.0)
+            # Try /health first, fallback to /status
+            response = await client.get(f"{self._api_url}/health", timeout=5.0)
+            if response.status_code == 404:
+                response = await client.get(f"{self._api_url}/status", timeout=5.0)
             return response.status_code == 200
         except Exception:
             return False
