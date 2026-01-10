@@ -5526,7 +5526,7 @@ async def get_easyinsight_symbols(
 @easyinsight_router.get("/easyinsight/time-series/{symbol}")
 async def get_easyinsight_time_series(
     symbol: str,
-    interval: str = Query("1h", description="Timeframe: 1min, 5min, 15min, 30min, 1h, 4h, 1day, 1week, 1month"),
+    interval: str = Query("1h", description="Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)"),
     outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
     start_date: str = Query(None, description="Start date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)"),
     end_date: str = Query(None, description="End date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)"),
@@ -5539,7 +5539,7 @@ async def get_easyinsight_time_series(
 
     Args:
         symbol: Trading symbol (e.g., BTCUSD, EURUSD)
-        interval: Timeframe (1min, 5min, 15min, 30min, 1h, 4h, 1day, 1week, 1month)
+        interval: Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)
         outputsize: Number of data points to fetch (max 5000)
         start_date: Optional start date filter
         end_date: Optional end date filter
@@ -5549,9 +5549,13 @@ async def get_easyinsight_time_series(
     from ..services.easyinsight_service import easyinsight_service
 
     try:
+        # Normalize interval to TwelveData format
+        tf = normalize_timeframe_safe(interval, Timeframe.H1)
+        td_interval = to_twelvedata(tf)
+
         result = await easyinsight_service.get_time_series(
             symbol=symbol,
-            interval=interval,
+            interval=td_interval,
             outputsize=outputsize,
             start_date=start_date,
             end_date=end_date,
@@ -5565,7 +5569,8 @@ async def get_easyinsight_time_series(
 
         return {
             "symbol": symbol.upper(),
-            "interval": interval,
+            "interval": td_interval,
+            "timeframe": tf.value,
             "source": "easyinsight",
             "count": len(result.get("values", [])),
             "meta": result.get("meta", {}),
@@ -5581,7 +5586,7 @@ async def get_easyinsight_time_series(
 @easyinsight_router.get("/easyinsight/ohlcv/{symbol}")
 async def get_easyinsight_ohlcv(
     symbol: str,
-    interval: str = Query("1h", description="Timeframe: 1min, 5min, 15min, 30min, 1h, 4h, 1day, 1week, 1month"),
+    interval: str = Query("1h", description="Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)"),
     limit: int = Query(500, ge=1, le=5000, description="Number of data points"),
 ):
     """
@@ -5592,7 +5597,7 @@ async def get_easyinsight_ohlcv(
 
     Args:
         symbol: Trading symbol (e.g., BTCUSD, EURUSD)
-        interval: Timeframe (1h default)
+        interval: Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)
         limit: Number of data points to fetch (max 5000)
 
     Returns historical OHLCV data.
@@ -5600,9 +5605,13 @@ async def get_easyinsight_ohlcv(
     from ..services.easyinsight_service import easyinsight_service
 
     try:
+        # Normalize interval to TwelveData format
+        tf = normalize_timeframe_safe(interval, Timeframe.H1)
+        td_interval = to_twelvedata(tf)
+
         result = await easyinsight_service.get_time_series(
             symbol=symbol,
-            interval=interval,
+            interval=td_interval,
             outputsize=limit,
         )
 
@@ -5614,7 +5623,8 @@ async def get_easyinsight_ohlcv(
 
         return {
             "symbol": symbol.upper(),
-            "interval": interval,
+            "interval": td_interval,
+            "timeframe": tf.value,
             "source": "easyinsight",
             "count": len(result.get("values", [])),
             "data": result.get("values", []),
@@ -5661,7 +5671,7 @@ async def get_easyinsight_latest(symbol: str):
 async def get_easyinsight_indicators(
     symbol: str,
     indicators: str = Query("rsi,macd,bbands", description="Comma-separated list of indicators"),
-    interval: str = Query("1h", description="Timeframe: 1min, 5min, 15min, 30min, 1h, 4h, 1day"),
+    interval: str = Query("1h", description="Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)"),
     outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
 ):
     """
@@ -5695,10 +5705,14 @@ async def get_easyinsight_indicators(
     try:
         indicator_list = [i.strip().lower() for i in indicators.split(",")]
 
+        # Normalize interval to TwelveData format
+        tf = normalize_timeframe_safe(interval, Timeframe.H1)
+        td_interval = to_twelvedata(tf)
+
         result = await easyinsight_service.get_multiple_indicators(
             symbol=symbol,
             indicators=indicator_list,
-            interval=interval,
+            interval=td_interval,
             outputsize=outputsize,
         )
 
@@ -5707,7 +5721,8 @@ async def get_easyinsight_indicators(
 
         return {
             "symbol": symbol.upper(),
-            "interval": interval,
+            "interval": td_interval,
+            "timeframe": tf.value,
             "source": "easyinsight",
             "available_indicators": list(result.get("indicators", {}).keys()),
             "indicators": result.get("indicators", {}),
