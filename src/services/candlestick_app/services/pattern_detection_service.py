@@ -1589,10 +1589,26 @@ class CandlestickPatternService:
         ai_confidence: Optional[float] = None,
         ai_prediction: Optional[str] = None,
         ai_agreement: Optional[bool] = None,
-        validation_method: str = "rule"
+        validation_method: str = "rule",
+        pattern_candles: Optional[list[CandleData]] = None
     ) -> DetectedPattern:
         """Create a DetectedPattern object."""
         info = self._pattern_descriptions.get(pattern_type, {})
+
+        # Convert pattern candles to dict format for storage
+        pattern_candles_dict = None
+        if pattern_candles:
+            pattern_candles_dict = [
+                {
+                    "datetime": c.timestamp.isoformat() if hasattr(c.timestamp, 'isoformat') else str(c.timestamp),
+                    "open": c.open,
+                    "high": c.high,
+                    "low": c.low,
+                    "close": c.close,
+                    "volume": c.volume
+                }
+                for c in pattern_candles
+            ]
 
         return DetectedPattern(
             pattern_type=pattern_type,
@@ -1612,6 +1628,7 @@ class CandlestickPatternService:
             trend_context=trend_context,
             description=info.get("description", ""),
             trading_implication=info.get("implication", ""),
+            pattern_candles=pattern_candles_dict,
         )
 
     def _get_strength(self, confidence: float) -> PatternStrength:
@@ -1816,6 +1833,10 @@ class CandlestickPatternService:
                 if confidence >= min_confidence:
                     strength = self._get_strength(confidence)
                     if include_weak or strength != PatternStrength.WEAK:
+                        # Extract the pattern candles (oldest to newest)
+                        pattern_start_idx = max(0, i - candles_count + 1)
+                        pattern_candles_list = candles[pattern_start_idx:i + 1]
+
                         patterns.append(self._create_pattern(
                             pattern_type=pattern_type,
                             candle=current,
@@ -1823,6 +1844,7 @@ class CandlestickPatternService:
                             confidence=confidence,
                             candles_involved=candles_count,
                             trend_context=trend,
+                            pattern_candles=pattern_candles_list,
                         ))
 
         return patterns
@@ -2015,6 +2037,11 @@ class CandlestickPatternService:
                 if final_confidence >= min_confidence:
                     strength = self._get_strength(final_confidence)
                     if include_weak or strength != PatternStrength.WEAK:
+                        # Extract the pattern candles (oldest to newest)
+                        # i is the index of the last candle, candles_count is how many candles form the pattern
+                        pattern_start_idx = max(0, i - candles_count + 1)
+                        pattern_candles_list = candles[pattern_start_idx:i + 1]
+
                         patterns.append(self._create_pattern(
                             pattern_type=pattern_type,
                             candle=current,
@@ -2027,6 +2054,7 @@ class CandlestickPatternService:
                             ai_prediction=validation.ai_prediction,
                             ai_agreement=validation.ai_agreement,
                             validation_method=validation.validation_method,
+                            pattern_candles=pattern_candles_list,
                         ))
 
         return patterns

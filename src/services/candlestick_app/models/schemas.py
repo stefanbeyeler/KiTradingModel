@@ -254,6 +254,12 @@ class DetectedPattern(BaseModel):
         description="Trading implication and recommended action"
     )
 
+    # Pattern OHLC data - stored at detection time to ensure consistency
+    pattern_candles: Optional[list[dict]] = Field(
+        default=None,
+        description="OHLC data of the pattern candles at detection time (oldest to newest)"
+    )
+
 
 class TimeframePatterns(BaseModel):
     """Patterns detected in a specific timeframe."""

@@ -404,15 +404,30 @@ class PatternHistoryService:
                         if self._is_duplicate(symbol, pattern.timeframe.value, pattern.pattern_type.value, pattern_ts):
                             continue
 
-                        # Hole OHLC-Daten mit Kontext fuer Re-Evaluation
-                        ohlc_context = await self._fetch_ohlc_context(
-                            symbol=symbol,
-                            timeframe=pattern.timeframe.value,
-                            pattern_timestamp=pattern_ts,
-                            pattern_type=pattern.pattern_type.value,
-                            context_before=5,
-                            context_after=5
-                        )
+                        # Build ohlc_context: use pattern_candles if available (consistent data)
+                        # Otherwise fall back to fetching from API (legacy behavior)
+                        ohlc_context = None
+                        if pattern.pattern_candles:
+                            # Use the pattern candles stored at detection time
+                            # This ensures consistency between detection and display
+                            candle_count = len(pattern.pattern_candles)
+                            ohlc_context = {
+                                "candles": pattern.pattern_candles,
+                                "pattern_start_idx": 0,  # Pattern starts at index 0
+                                "pattern_end_idx": candle_count - 1,  # Pattern ends at last candle
+                                "candle_count": candle_count
+                            }
+                            logger.debug(f"Using stored pattern_candles for {unique_key} ({candle_count} candles)")
+                        else:
+                            # Fallback: Hole OHLC-Daten mit Kontext fuer Re-Evaluation
+                            ohlc_context = await self._fetch_ohlc_context(
+                                symbol=symbol,
+                                timeframe=pattern.timeframe.value,
+                                pattern_timestamp=pattern_ts,
+                                pattern_type=pattern.pattern_type.value,
+                                context_before=5,
+                                context_after=5
+                            )
 
                         entry = PatternHistoryEntry(
                             id=unique_key,
@@ -524,15 +539,29 @@ class PatternHistoryService:
                 if self._is_duplicate(symbol, pattern.timeframe.value, pattern.pattern_type.value, pattern_ts):
                     continue
 
-                # Hole OHLC-Daten mit Kontext für Re-Evaluation
-                ohlc_context = await self._fetch_ohlc_context(
-                    symbol=symbol,
-                    timeframe=pattern.timeframe.value,
-                    pattern_timestamp=pattern_ts,
-                    pattern_type=pattern.pattern_type.value,
-                    context_before=5,
-                    context_after=5
-                )
+                # Build ohlc_context: use pattern_candles if available (consistent data)
+                # Otherwise fall back to fetching from API (legacy behavior)
+                ohlc_context = None
+                if pattern.pattern_candles:
+                    # Use the pattern candles stored at detection time
+                    candle_count = len(pattern.pattern_candles)
+                    ohlc_context = {
+                        "candles": pattern.pattern_candles,
+                        "pattern_start_idx": 0,
+                        "pattern_end_idx": candle_count - 1,
+                        "candle_count": candle_count
+                    }
+                    logger.debug(f"Using stored pattern_candles ({candle_count} candles)")
+                else:
+                    # Fallback: Hole OHLC-Daten mit Kontext für Re-Evaluation
+                    ohlc_context = await self._fetch_ohlc_context(
+                        symbol=symbol,
+                        timeframe=pattern.timeframe.value,
+                        pattern_timestamp=pattern_ts,
+                        pattern_type=pattern.pattern_type.value,
+                        context_before=5,
+                        context_after=5
+                    )
 
                 unique_key = f"{symbol}_{pattern.timeframe.value}_{pattern.pattern_type.value}_{pattern_ts}"
                 entry = PatternHistoryEntry(
