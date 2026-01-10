@@ -5480,18 +5480,36 @@ async def get_easyinsight_symbols(
     try:
         result = await easyinsight_service.get_symbols(symbol_type=symbol_type)
 
-        if result.get("status") == "error":
-            raise HTTPException(status_code=502, detail=result.get("error", "Unknown error"))
+        # Handle both dict and list responses
+        if isinstance(result, list):
+            symbols = result
+        elif isinstance(result, dict):
+            if result.get("status") == "error":
+                raise HTTPException(status_code=502, detail=result.get("error", "Unknown error"))
+            symbols = result.get("data", result.get("symbols", []))
+            # If it's a dict without data/symbols, it might be the symbols itself
+            if not symbols and "symbol" in result:
+                symbols = [result]
+        else:
+            symbols = []
 
-        symbols = result.get("data", [])
+        # Ensure symbols is a list
+        if not isinstance(symbols, list):
+            symbols = []
 
         # Group by category/type
         categories = {}
         for s in symbols:
-            cat = s.get("type", s.get("category", "unknown"))
-            if cat not in categories:
-                categories[cat] = []
-            categories[cat].append(s.get("symbol"))
+            if isinstance(s, dict):
+                cat = s.get("type", s.get("category", "unknown"))
+                if cat not in categories:
+                    categories[cat] = []
+                categories[cat].append(s.get("symbol", s.get("name", "unknown")))
+            elif isinstance(s, str):
+                # Simple string symbol
+                if "unknown" not in categories:
+                    categories["unknown"] = []
+                categories["unknown"].append(s)
 
         return {
             "total": len(symbols),

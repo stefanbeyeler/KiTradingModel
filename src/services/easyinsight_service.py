@@ -40,6 +40,7 @@ class EasyInsightService:
 
     def __init__(self):
         self._api_url: str = settings.easyinsight_api_url
+        self._data_service_url: str = "http://trading-data:3001"  # Fallback for managed symbols
         self._http_client: Optional[httpx.AsyncClient] = None
         self._cache_initialized: bool = False
         self._total_calls: int = 0
@@ -635,13 +636,41 @@ class EasyInsightService:
             if symbol_type:
                 params["type"] = symbol_type
 
+            # Try new /symbols endpoint first
             response = await client.get(f"{self._api_url}/symbols", params=params)
+
+            if response.status_code == 404:
+                # Fallback to old /symbols endpoint (managed symbols from data service)
+                try:
+                    response = await client.get(f"{self._data_service_url}/api/v1/managed-symbols")
+                    if response.status_code == 200:
+                        symbols_data = response.json()
+                        # Convert to standard format
+                        symbols = []
+                        for s in symbols_data if isinstance(symbols_data, list) else symbols_data.get("data", []):
+                            symbols.append({
+                                "symbol": s.get("symbol"),
+                                "name": s.get("description", s.get("symbol")),
+                                "type": s.get("category", "unknown"),
+                                "currency": "USD",
+                            })
+                        return {"data": symbols, "count": len(symbols)}
+                except Exception as fallback_error:
+                    logger.warning(f"Fallback to managed-symbols failed: {fallback_error}")
 
             if response.status_code != 200:
                 return {"status": "error", "error": f"HTTP {response.status_code}"}
 
             data = response.json()
-            logger.info(f"EasyInsight: Retrieved {data.get('count', len(data.get('data', [])))} symbols")
+
+            # Normalize response to always have 'data' field
+            if isinstance(data, list):
+                data = {"data": data, "count": len(data)}
+            elif isinstance(data, dict) and "data" not in data and "symbols" in data:
+                data = {"data": data["symbols"], "count": len(data["symbols"])}
+
+            count = data.get("count", len(data.get("data", [])))
+            logger.info(f"EasyInsight: Retrieved {count} symbols")
             return data
 
         except Exception as e:
