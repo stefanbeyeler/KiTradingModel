@@ -498,7 +498,9 @@ async def get_data_coverage():
             GROUP BY symbol, timeframe
             ORDER BY symbol, timeframe
         """
-        pool = await timescaledb_service._get_pool()
+        if not timescaledb_service._pool:
+            await timescaledb_service.initialize()
+        pool = timescaledb_service._pool
         async with pool.acquire() as conn:
             rows = await conn.fetch(query)
 
@@ -541,7 +543,9 @@ async def run_quality_check():
                 "message": "TimescaleDB is not available",
             }
 
-        pool = await timescaledb_service._get_pool()
+        if not timescaledb_service._pool:
+            await timescaledb_service.initialize()
+        pool = timescaledb_service._pool
         async with pool.acquire() as conn:
             # Check for duplicates
             dup_query = """
@@ -616,7 +620,9 @@ async def get_db_summary():
                 "available": False,
             }
 
-        pool = await timescaledb_service._get_pool()
+        if not timescaledb_service._pool:
+            await timescaledb_service.initialize()
+        pool = timescaledb_service._pool
         async with pool.acquire() as conn:
             # Total statistics
             stats_query = """
