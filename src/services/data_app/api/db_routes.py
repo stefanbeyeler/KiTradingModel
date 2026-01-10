@@ -471,3 +471,183 @@ async def get_supported_timeframes():
         "timeframes": SUPPORTED_TIMEFRAMES,
         "count": len(SUPPORTED_TIMEFRAMES),
     }
+
+
+# ==================== Data Validation Endpoints ====================
+
+@router.get("/coverage")
+async def get_data_coverage():
+    """
+    Datenabdeckung pro Symbol und Timeframe abrufen.
+
+    Zeigt an, wie viele Datenpunkte pro Symbol/Timeframe-Kombination
+    in TimescaleDB vorhanden sind.
+    """
+    try:
+        if not timescaledb_service.is_available:
+            return {
+                "status": "unavailable",
+                "message": "TimescaleDB is not available",
+                "symbols": {},
+            }
+
+        # Get all symbols with data
+        query = """
+            SELECT symbol, timeframe, COUNT(*) as count
+            FROM ohlcv_data
+            GROUP BY symbol, timeframe
+            ORDER BY symbol, timeframe
+        """
+        pool = await timescaledb_service._get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(query)
+
+        # Build coverage matrix
+        coverage = {}
+        for row in rows:
+            symbol = row["symbol"]
+            tf = row["timeframe"]
+            count = row["count"]
+
+            if symbol not in coverage:
+                coverage[symbol] = {}
+            coverage[symbol][tf] = count
+
+        return {
+            "status": "ok",
+            "symbols_count": len(coverage),
+            "symbols": coverage,
+        }
+    except Exception as e:
+        logger.error(f"Failed to get data coverage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/quality-check")
+async def run_quality_check():
+    """
+    Datenqualitätsprüfung durchführen.
+
+    Prüft auf:
+    - Lücken in Zeitreihen
+    - Duplikate
+    - Ungültige OHLC-Werte (High < Low, etc.)
+    - Null/NaN-Werte
+    """
+    try:
+        if not timescaledb_service.is_available:
+            return {
+                "status": "unavailable",
+                "message": "TimescaleDB is not available",
+            }
+
+        pool = await timescaledb_service._get_pool()
+        async with pool.acquire() as conn:
+            # Check for duplicates
+            dup_query = """
+                SELECT COUNT(*) as duplicates FROM (
+                    SELECT symbol, timeframe, snapshot_time, COUNT(*)
+                    FROM ohlcv_data
+                    GROUP BY symbol, timeframe, snapshot_time
+                    HAVING COUNT(*) > 1
+                ) as dups
+            """
+            dup_result = await conn.fetchval(dup_query)
+
+            # Check for invalid OHLC (High < Low or Close outside High-Low range)
+            invalid_query = """
+                SELECT COUNT(*) FROM ohlcv_data
+                WHERE high < low
+                   OR close > high * 1.001
+                   OR close < low * 0.999
+                   OR open > high * 1.001
+                   OR open < low * 0.999
+            """
+            invalid_result = await conn.fetchval(invalid_query)
+
+            # Check for null values
+            null_query = """
+                SELECT COUNT(*) FROM ohlcv_data
+                WHERE open IS NULL OR high IS NULL OR low IS NULL OR close IS NULL
+            """
+            null_result = await conn.fetchval(null_query)
+
+            # Check for gaps (simplified - checks for large time gaps)
+            gap_query = """
+                SELECT COUNT(*) FROM (
+                    SELECT symbol, timeframe,
+                           snapshot_time - LAG(snapshot_time) OVER (
+                               PARTITION BY symbol, timeframe ORDER BY snapshot_time
+                           ) as gap
+                    FROM ohlcv_data
+                    WHERE timeframe = 'H1'
+                ) as gaps
+                WHERE gap > INTERVAL '4 hours'
+            """
+            try:
+                gap_result = await conn.fetchval(gap_query)
+            except Exception:
+                gap_result = 0
+
+        return {
+            "status": "ok",
+            "gaps": gap_result or 0,
+            "duplicates": dup_result or 0,
+            "invalid_ohlc": invalid_result or 0,
+            "null_values": null_result or 0,
+            "quality_score": "good" if (dup_result == 0 and invalid_result == 0 and null_result == 0) else "needs_attention",
+        }
+    except Exception as e:
+        logger.error(f"Failed to run quality check: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/summary")
+async def get_db_summary():
+    """
+    Zusammenfassung der Datenbankdaten.
+
+    Zeigt Gesamtstatistiken und Zeitbereich der Daten.
+    """
+    try:
+        if not timescaledb_service.is_available:
+            return {
+                "status": "unavailable",
+                "available": False,
+            }
+
+        pool = await timescaledb_service._get_pool()
+        async with pool.acquire() as conn:
+            # Total statistics
+            stats_query = """
+                SELECT
+                    COUNT(DISTINCT symbol) as symbols_count,
+                    COUNT(*) as total_rows,
+                    MIN(snapshot_time) as oldest_entry,
+                    MAX(snapshot_time) as newest_entry
+                FROM ohlcv_data
+            """
+            stats = await conn.fetchrow(stats_query)
+
+            # Per-timeframe counts
+            tf_query = """
+                SELECT timeframe, COUNT(*) as count
+                FROM ohlcv_data
+                GROUP BY timeframe
+                ORDER BY timeframe
+            """
+            tf_rows = await conn.fetch(tf_query)
+            timeframe_counts = {row["timeframe"]: row["count"] for row in tf_rows}
+
+        return {
+            "status": "ok",
+            "available": True,
+            "symbols_count": stats["symbols_count"],
+            "total_rows": stats["total_rows"],
+            "oldest_entry": stats["oldest_entry"].isoformat() if stats["oldest_entry"] else None,
+            "newest_entry": stats["newest_entry"].isoformat() if stats["newest_entry"] else None,
+            "timeframe_counts": timeframe_counts,
+        }
+    except Exception as e:
+        logger.error(f"Failed to get DB summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

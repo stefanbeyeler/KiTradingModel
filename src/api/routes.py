@@ -1140,6 +1140,65 @@ async def clear_all_cache():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@system_router.get("/cache/stats", tags=["1. System"])
+async def get_cache_stats():
+    """
+    Cache-Statistiken für Validierung abrufen.
+
+    Liefert Gesamtstatistiken und Aufschlüsselung nach Kategorien.
+    """
+    from ..services.cache_service import cache_service, CacheCategory
+
+    try:
+        if not cache_service._redis_available:
+            await cache_service.connect()
+
+        # Get overall stats
+        stats = cache_service.get_stats()
+
+        # Get categories breakdown
+        categories = {}
+        for cat in CacheCategory:
+            category_stats = await cache_service.get_category_stats(cat)
+            categories[cat.value] = {
+                "count": category_stats.get("count", 0),
+                "ttl": category_stats.get("ttl", 0),
+            }
+
+        # Calculate hit rate
+        total_calls = stats.get("total_calls", 0)
+        cache_hits = stats.get("cache_hits", 0)
+        hit_rate = cache_hits / total_calls if total_calls > 0 else 0
+
+        return {
+            "status": "ok",
+            "redis_available": cache_service._redis_available,
+            "total_keys": stats.get("total_keys", 0),
+            "total_calls": total_calls,
+            "cache_hits": cache_hits,
+            "hit_rate": hit_rate,
+            "memory_used": stats.get("memory_used", "N/A"),
+            "categories": categories,
+        }
+    except Exception as e:
+        logger.error(f"Failed to get cache stats: {e}")
+        return {
+            "status": "error",
+            "redis_available": False,
+            "error": str(e),
+            "total_keys": 0,
+            "categories": {},
+        }
+
+
+@system_router.post("/cache/clear", tags=["1. System"])
+async def clear_cache():
+    """
+    Gesamten Cache leeren (Alias für DELETE /cache/all).
+    """
+    return await clear_all_cache()
+
+
 def _format_ttl(seconds: int) -> str:
     """Format TTL in human-readable format."""
     if seconds < 60:

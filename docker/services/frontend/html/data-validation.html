@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>KI Trading Model - Daten-Validierung</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .back-link {
+            color: #64c8ff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(100, 200, 255, 0.1);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: rgba(100, 200, 255, 0.2);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #a0a0a0;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e8e8e8;
+        }
+
+        .tab-btn.active {
+            background: rgba(100, 200, 255, 0.2);
+            border-color: rgba(100, 200, 255, 0.4);
+            color: #64c8ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Test Panel */
+        .test-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .panel-header h2 {
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Progress */
+        .progress-container {
+            margin: 1rem 0;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .progress-text {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+
+        /* Results Table */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .results-table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .results-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .status-ok {
+            color: #10b981;
+        }
+
+        .status-warning {
+            color: #f59e0b;
+        }
+
+        .status-error {
+            color: #ef4444;
+        }
+
+        .status-pending {
+            color: #6b7280;
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .summary-card h3 {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .summary-card .value.success {
+            color: #10b981;
+        }
+
+        .summary-card .value.warning {
+            color: #f59e0b;
+        }
+
+        .summary-card .value.error {
+            color: #ef4444;
+        }
+
+        /* Symbol/Timeframe Matrix */
+        .matrix-container {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .matrix-table th,
+        .matrix-table td {
+            padding: 0.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 60px;
+        }
+
+        .matrix-table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+        }
+
+        .matrix-table th:first-child {
+            text-align: left;
+        }
+
+        .matrix-table td:first-child {
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .cell-ok {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .cell-error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .cell-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .cell-pending {
+            background: rgba(107, 114, 128, 0.1);
+            color: #6b7280;
+        }
+
+        .cell-running {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Log Output */
+        .log-output {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+
+        .log-output .log-line {
+            margin-bottom: 0.25rem;
+        }
+
+        .log-output .log-time {
+            color: #6b7280;
+        }
+
+        .log-output .log-ok {
+            color: #10b981;
+        }
+
+        .log-output .log-error {
+            color: #ef4444;
+        }
+
+        .log-output .log-warning {
+            color: #f59e0b;
+        }
+
+        .log-output .log-info {
+            color: #3b82f6;
+        }
+
+        /* Filter Controls */
+        .filter-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-controls label {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+
+        .filter-controls select,
+        .filter-controls input {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+            font-size: 0.85rem;
+        }
+
+        .filter-controls select:focus,
+        .filter-controls input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .panel-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: #e8e8e8;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+
+        /* Validation Details */
+        .validation-details {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .validation-details h4 {
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .validation-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .validation-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>&#128202; Daten-Validierung</h1>
+            <div class="header-actions">
+                <a href="/" class="back-link">&#8592; Dashboard</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="overview">&#128200; Übersicht</button>
+            <button class="tab-btn" data-tab="twelvedata">&#128201; TwelveData</button>
+            <button class="tab-btn" data-tab="easyinsight">&#128202; EasyInsight</button>
+            <button class="tab-btn" data-tab="yfinance">&#128203; Yahoo Finance</button>
+            <button class="tab-btn" data-tab="timescaledb">&#128451; TimescaleDB</button>
+            <button class="tab-btn" data-tab="redis">&#9889; Redis</button>
+            <button class="tab-btn" data-tab="endpoints">&#128279; API Endpoints</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <h3>Gesamtstatus</h3>
+                    <div class="value" id="overall-status">-</div>
+                </div>
+                <div class="summary-card">
+                    <h3>TwelveData</h3>
+                    <div class="value" id="twelvedata-status">-</div>
+                </div>
+                <div class="summary-card">
+                    <h3>EasyInsight</h3>
+                    <div class="value" id="easyinsight-status">-</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Yahoo Finance</h3>
+                    <div class="value" id="yfinance-status">-</div>
+                </div>
+                <div class="summary-card">
+                    <h3>TimescaleDB</h3>
+                    <div class="value" id="timescaledb-status">-</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Redis</h3>
+                    <div class="value" id="redis-status">-</div>
+                </div>
+            </div>
+
+            <div class="test-panel">
+                <div class="panel-header">
+                    <h2>&#9889; Vollständige Validierung</h2>
+                    <div>
+                        <button class="btn btn-primary" id="run-all-tests" onclick="runAllTests()">
+                            &#9654; Alle Tests starten
+                        </button>
+                        <button class="btn btn-warning" onclick="stopAllTests()">
+                            &#9632; Abbrechen
+                        </button>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="overall-progress" style="width: 0%">0%</div>
+                    </div>
+                    <div class="progress-text" id="progress-text">Bereit für Tests</div>
+                </div>
+
+                <div class="log-output" id="main-log">
+                    <div class="log-line"><span class="log-time">[--:--:--]</span> <span class="log-info">Warte auf Teststart...</span></div>
+                </div>
+            </div>
+
+            <div class="test-panel">
+                <h2>&#128202; Letzte Ergebnisse</h2>
+                <div id="overview-results">
+                    <p style="color: #6b7280; margin-top: 1rem;">Noch keine Tests ausgeführt</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TwelveData Tab -->
+        <div id="twelvedata" class="tab-content">
+            <div class="test-panel">
+                <div class="panel-header">
+                    <h2>&#128201; TwelveData API Test</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="runTwelveDataTests()">
+                            &#9654; Tests starten
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filter-controls">
+                    <label>Symbole:</label>
+                    <select id="td-symbols" multiple style="min-width: 200px; height: 80px;">
+                        <option value="EURUSD" selected>EUR/USD</option>
+                        <option value="GBPUSD" selected>GBP/USD</option>
+                        <option value="USDJPY" selected>USD/JPY</option>
+                        <option value="BTCUSD" selected>BTC/USD</option>
+                        <option value="ETHUSD" selected>ETH/USD</option>
+                        <option value="AAPL">AAPL</option>
+                        <option value="MSFT">MSFT</option>
+                        <option value="GOOGL">GOOGL</option>
+                    </select>
+                    <label>Timeframes:</label>
+                    <select id="td-timeframes" multiple style="min-width: 150px; height: 80px;">
+                        <option value="M1">M1</option>
+                        <option value="M5" selected>M5</option>
+                        <option value="M15" selected>M15</option>
+                        <option value="M30">M30</option>
+                        <option value="H1" selected>H1</option>
+                        <option value="H4" selected>H4</option>
+                        <option value="D1" selected>D1</option>
+                        <option value="W1">W1</option>
+                    </select>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="td-progress" style="width: 0%">0%</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 1.5rem;">OHLCV Matrix</h3>
+                <div class="matrix-container">
+                    <table class="matrix-table" id="td-ohlcv-matrix">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>M1</th>
+                                <th>M5</th>
+                                <th>M15</th>
+                                <th>M30</th>
+                                <th>H1</th>
+                                <th>H4</th>
+                                <th>D1</th>
+                                <th>W1</th>
+                            </tr>
+                        </thead>
+                        <tbody id="td-ohlcv-body">
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 style="margin-top: 1.5rem;">Indikatoren Test</h3>
+                <div class="matrix-container">
+                    <table class="matrix-table" id="td-indicators-matrix">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>RSI</th>
+                                <th>MACD</th>
+                                <th>BBands</th>
+                                <th>Stoch</th>
+                                <th>ADX</th>
+                                <th>ATR</th>
+                                <th>EMA</th>
+                                <th>SMA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="td-indicators-body">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="log-output" id="td-log" style="margin-top: 1rem;">
+                    <div class="log-line"><span class="log-info">Bereit für TwelveData Tests...</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EasyInsight Tab -->
+        <div id="easyinsight" class="tab-content">
+            <div class="test-panel">
+                <div class="panel-header">
+                    <h2>&#128202; EasyInsight API Test</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="runEasyInsightTests()">
+                            &#9654; Tests starten
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filter-controls">
+                    <label>Symbole:</label>
+                    <select id="ei-symbols" multiple style="min-width: 200px; height: 80px;">
+                        <option value="EURUSD" selected>EUR/USD</option>
+                        <option value="GBPUSD" selected>GBP/USD</option>
+                        <option value="USDJPY" selected>USD/JPY</option>
+                        <option value="BTCUSD" selected>BTC/USD</option>
+                        <option value="ETHUSD" selected>ETH/USD</option>
+                        <option value="XAUUSD" selected>XAU/USD (Gold)</option>
+                    </select>
+                    <label>Timeframes:</label>
+                    <select id="ei-timeframes" multiple style="min-width: 150px; height: 80px;">
+                        <option value="M1" selected>M1</option>
+                        <option value="M5" selected>M5</option>
+                        <option value="M15" selected>M15</option>
+                        <option value="M30" selected>M30</option>
+                        <option value="H1" selected>H1</option>
+                        <option value="H4" selected>H4</option>
+                        <option value="D1" selected>D1</option>
+                        <option value="W1" selected>W1</option>
+                    </select>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="ei-progress" style="width: 0%">0%</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 1.5rem;">OHLCV Matrix</h3>
+                <div class="matrix-container">
+                    <table class="matrix-table" id="ei-ohlcv-matrix">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>M1</th>
+                                <th>M5</th>
+                                <th>M15</th>
+                                <th>M30</th>
+                                <th>H1</th>
+                                <th>H4</th>
+                                <th>D1</th>
+                                <th>W1</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ei-ohlcv-body">
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 style="margin-top: 1.5rem;">Indikatoren Test</h3>
+                <div class="matrix-container">
+                    <table class="matrix-table" id="ei-indicators-matrix">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>RSI</th>
+                                <th>MACD</th>
+                                <th>BBands</th>
+                                <th>Stoch</th>
+                                <th>ADX</th>
+                                <th>ATR</th>
+                                <th>Strength</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ei-indicators-body">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="log-output" id="ei-log" style="margin-top: 1rem;">
+                    <div class="log-line"><span class="log-info">Bereit für EasyInsight Tests...</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Yahoo Finance Tab -->
+        <div id="yfinance" class="tab-content">
+            <div class="test-panel">
+                <div class="panel-header">
+                    <h2>&#128203; Yahoo Finance Test</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="runYahooFinanceTests()">
+                            &#9654; Tests starten
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filter-controls">
+                    <label>Symbole:</label>
+                    <select id="yf-symbols" multiple style="min-width: 200px; height: 80px;">
+                        <option value="AAPL" selected>AAPL</option>
+                        <option value="MSFT" selected>MSFT</option>
+                        <option value="GOOGL" selected>GOOGL</option>
+                        <option value="AMZN" selected>AMZN</option>
+                        <option value="BTC-USD" selected>BTC-USD</option>
+                        <option value="ETH-USD" selected>ETH-USD</option>
+                        <option value="EURUSD=X">EUR/USD</option>
+                        <option value="GC=F">Gold Futures</option>
+                    </select>
+                    <label>Perioden:</label>
+                    <select id="yf-periods" multiple style="min-width: 150px; height: 80px;">
+                        <option value="1d" selected>1 Tag</option>
+                        <option value="5d" selected>5 Tage</option>
+                        <option value="1mo" selected>1 Monat</option>
+                        <option value="3mo" selected>3 Monate</option>
+                        <option value="1y">1 Jahr</option>
+                        <option value="5y">5 Jahre</option>
+                    </select>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="yf-progress" style="width: 0%">0%</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 1.5rem;">OHLCV Matrix</h3>
+                <div class="matrix-container">
+                    <table class="matrix-table" id="yf-ohlcv-matrix">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>1d</th>
+                                <th>5d</th>
+                                <th>1mo</th>
+                                <th>3mo</th>
+                                <th>1y</th>
+                                <th>5y</th>
+                            </tr>
+                        </thead>
+                        <tbody id="yf-ohlcv-body">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="log-output" id="yf-log" style="margin-top: 1rem;">
+                    <div class="log-line"><span class="log-info">Bereit für Yahoo Finance Tests...</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TimescaleDB Tab -->
+        <div id="timescaledb" class="tab-content">
+            <div class="test-panel">
+                <div class="panel-header">
+                    <h2>&#128451; TimescaleDB Validierung</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="runTimescaleDBTests()">
+                            &#9654; Tests starten
+                        </button>
+                    </div>
+                </div>
+
+                <div class="summary-grid" id="tsdb-summary">
+                    <div class="summary-card">
+                        <h3>Verbindung</h3>
+                        <div class="value" id="tsdb-connection">-</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Symbole</h3>
+                        <div class="value" id="tsdb-symbols">-</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Datenpunkte</h3>
+                        <div class="value" id="tsdb-datapoints">-</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Ältester Eintrag</h3>
+                        <div class="value" id="tsdb-oldest" style="font-size: 1rem;">-</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Neuester Eintrag</h3>
+                        <div class="value" id="tsdb-newest" style="font-size: 1rem;">-</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 1.5rem;">Daten pro Symbol/Timeframe</h3>
+                <div class="matrix-container">
+                    <table class="matrix-table" id="tsdb-matrix">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>M1</th>
+                                <th>M5</th>
+                                <th>M15</th>
+                                <th>M30</th>
+                                <th>H1</th>
+                                <th>H4</th>
+                                <th>D1</th>
+                                <th>W1</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tsdb-body">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="validation-details" style="margin-top: 1.5rem;">
+                    <h4>&#128269; Datenqualitätsprüfung</h4>
+                    <div id="tsdb-quality-checks">
+                        <div class="validation-item">
+                            <span>Lücken in Zeitreihen</span>
+                            <span id="tsdb-gaps">-</span>
+                        </div>
+                        <div class="validation-item">
+                            <span>Duplikate</span>
+                            <span id="tsdb-duplicates">-</span>
+                        </div>
+                        <div class="validation-item">
+                            <span>Ungültige OHLC-Werte</span>
+                            <span id="tsdb-invalid">-</span>
+                        </div>
+                        <div class="validation-item">
+                            <span>Null/NaN-Werte</span>
+                            <span id="tsdb-nulls">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="log-output" id="tsdb-log" style="margin-top: 1rem;">
+                    <div class="log-line"><span class="log-info">Bereit für TimescaleDB Tests...</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Redis Tab -->
+        <div id="redis" class="tab-content">
+            <div class="test-panel">
+                <div class="panel-header">
+                    <h2>&#9889; Redis Cache Validierung</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="runRedisTests()">
+                            &#9654; Tests starten
+                        </button>
+                        <button class="btn btn-warning" onclick="clearRedisCache()">
+                            &#128465; Cache leeren
+                        </button>
+                    </div>
+                </div>
+
+                <div class="summary-grid" id="redis-summary">
+                    <div class="summary-card">
+                        <h3>Verbindung</h3>
+                        <div class="value" id="redis-connection">-</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Speicher</h3>
+                        <div class="value" id="redis-memory" style="font-size: 1.2rem;">-</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Schlüssel</h3>
+                        <div class="value" id="redis-keys">-</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Hit Rate</h3>
+                        <div class="value" id="redis-hitrate">-</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 1.5rem;">Cache-Kategorien</h3>
+                <table class="results-table" id="redis-categories">
+                    <thead>
+                        <tr>
+                            <th>Kategorie</th>
+                            <th>Schlüssel</th>
+                            <th>TTL (Standard)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="redis-categories-body">
+                    </tbody>
+                </table>
+
+                <div class="log-output" id="redis-log" style="margin-top: 1rem;">
+                    <div class="log-line"><span class="log-info">Bereit für Redis Tests...</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Endpoints Tab -->
+        <div id="endpoints" class="tab-content">
+            <div class="test-panel">
+                <div class="panel-header">
+                    <h2>&#128279; API Endpoints Test</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="runEndpointTests()">
+                            &#9654; Alle testen
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filter-controls">
+                    <label>Service:</label>
+                    <select id="endpoint-service" onchange="filterEndpoints()">
+                        <option value="all">Alle Services</option>
+                        <option value="data">Data Service</option>
+                        <option value="nhits">NHITS Service</option>
+                        <option value="tcn">TCN Service</option>
+                        <option value="hmm">HMM Service</option>
+                        <option value="candlestick">Candlestick Service</option>
+                        <option value="cnn-lstm">CNN-LSTM Service</option>
+                        <option value="rag">RAG Service</option>
+                        <option value="llm">LLM Service</option>
+                        <option value="watchdog">Watchdog Service</option>
+                    </select>
+                    <label>Status:</label>
+                    <select id="endpoint-status" onchange="filterEndpoints()">
+                        <option value="all">Alle</option>
+                        <option value="ok">Erfolgreich</option>
+                        <option value="error">Fehlerhaft</option>
+                        <option value="pending">Ausstehend</option>
+                    </select>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="endpoint-progress" style="width: 0%">0%</div>
+                    </div>
+                </div>
+
+                <table class="results-table" id="endpoints-table">
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Endpoint</th>
+                            <th>Methode</th>
+                            <th>Status</th>
+                            <th>Latenz</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="endpoints-body">
+                    </tbody>
+                </table>
+
+                <div class="log-output" id="endpoint-log" style="margin-top: 1rem;">
+                    <div class="log-line"><span class="log-info">Bereit für Endpoint Tests...</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let testRunning = false;
+        let abortController = null;
+        const BASE_URL = '';
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Utility functions
+        function log(elementId, message, type = 'info') {
+            const logEl = document.getElementById(elementId);
+            const time = new Date().toLocaleTimeString('de-DE');
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${type}">${message}</span>`;
+            logEl.appendChild(line);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function clearLog(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        function updateProgress(elementId, percent, text = '') {
+            const el = document.getElementById(elementId);
+            el.style.width = `${percent}%`;
+            el.textContent = `${Math.round(percent)}%`;
+            if (text) {
+                const textEl = document.getElementById('progress-text');
+                if (textEl) textEl.textContent = text;
+            }
+        }
+
+        function setCellStatus(cellId, status, tooltip = '') {
+            const cell = document.getElementById(cellId);
+            if (!cell) return;
+            cell.className = `cell-${status}`;
+            cell.textContent = status === 'ok' ? '✓' : status === 'error' ? '✗' : status === 'running' ? '...' : '-';
+            if (tooltip) cell.title = tooltip;
+        }
+
+        async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
+            }
+        }
+
+        // Initialize matrices
+        function initMatrix(bodyId, symbols, cols, prefix) {
+            const body = document.getElementById(bodyId);
+            body.innerHTML = '';
+            symbols.forEach(symbol => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${symbol}</td>` + cols.map(col =>
+                    `<td id="${prefix}-${symbol}-${col}" class="cell-pending">-</td>`
+                ).join('');
+                body.appendChild(row);
+            });
+        }
+
+        // TwelveData Tests
+        async function runTwelveDataTests() {
+            if (testRunning) return;
+            testRunning = true;
+            clearLog('td-log');
+            log('td-log', 'Starte TwelveData Tests...', 'info');
+
+            const symbols = Array.from(document.getElementById('td-symbols').selectedOptions).map(o => o.value);
+            const timeframes = Array.from(document.getElementById('td-timeframes').selectedOptions).map(o => o.value);
+            const indicators = ['rsi', 'macd', 'bbands', 'stoch', 'adx', 'atr', 'ema', 'sma'];
+
+            // Initialize matrices
+            initMatrix('td-ohlcv-body', symbols, ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1'], 'td-ohlcv');
+            initMatrix('td-indicators-body', symbols, indicators, 'td-ind');
+
+            const totalTests = symbols.length * timeframes.length + symbols.length * indicators.length;
+            let completed = 0;
+
+            // Test OHLCV
+            for (const symbol of symbols) {
+                for (const tf of timeframes) {
+                    setCellStatus(`td-ohlcv-${symbol}-${tf}`, 'running');
+                    try {
+                        const response = await fetchWithTimeout(
+                            `${BASE_URL}/data/api/v1/twelvedata/time_series/${symbol}?interval=${tf}&outputsize=5`
+                        );
+                        if (response.ok) {
+                            const data = await response.json();
+                            const count = data.values?.length || 0;
+                            setCellStatus(`td-ohlcv-${symbol}-${tf}`, count > 0 ? 'ok' : 'warning', `${count} Datenpunkte`);
+                            log('td-log', `${symbol}/${tf}: ${count} Datenpunkte`, count > 0 ? 'ok' : 'warning');
+                        } else {
+                            setCellStatus(`td-ohlcv-${symbol}-${tf}`, 'error', `HTTP ${response.status}`);
+                            log('td-log', `${symbol}/${tf}: HTTP ${response.status}`, 'error');
+                        }
+                    } catch (e) {
+                        setCellStatus(`td-ohlcv-${symbol}-${tf}`, 'error', e.message);
+                        log('td-log', `${symbol}/${tf}: ${e.message}`, 'error');
+                    }
+                    completed++;
+                    updateProgress('td-progress', (completed / totalTests) * 100);
+                }
+            }
+
+            // Test Indicators
+            for (const symbol of symbols) {
+                for (const ind of indicators) {
+                    setCellStatus(`td-ind-${symbol}-${ind}`, 'running');
+                    try {
+                        const response = await fetchWithTimeout(
+                            `${BASE_URL}/data/api/v1/twelvedata/${ind}/${symbol}?interval=1h&outputsize=5`
+                        );
+                        if (response.ok) {
+                            const data = await response.json();
+                            const count = data.values?.length || 0;
+                            setCellStatus(`td-ind-${symbol}-${ind}`, count > 0 ? 'ok' : 'warning', `${count} Werte`);
+                        } else {
+                            setCellStatus(`td-ind-${symbol}-${ind}`, 'error', `HTTP ${response.status}`);
+                        }
+                    } catch (e) {
+                        setCellStatus(`td-ind-${symbol}-${ind}`, 'error', e.message);
+                    }
+                    completed++;
+                    updateProgress('td-progress', (completed / totalTests) * 100);
+                }
+            }
+
+            log('td-log', 'TwelveData Tests abgeschlossen', 'ok');
+            testRunning = false;
+        }
+
+        // EasyInsight Tests
+        async function runEasyInsightTests() {
+            if (testRunning) return;
+            testRunning = true;
+            clearLog('ei-log');
+            log('ei-log', 'Starte EasyInsight Tests...', 'info');
+
+            const symbols = Array.from(document.getElementById('ei-symbols').selectedOptions).map(o => o.value);
+            const timeframes = Array.from(document.getElementById('ei-timeframes').selectedOptions).map(o => o.value);
+            const indicators = ['rsi', 'macd', 'bbands', 'stoch', 'adx', 'atr', 'strength'];
+
+            // Initialize matrices
+            initMatrix('ei-ohlcv-body', symbols, ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1'], 'ei-ohlcv');
+            initMatrix('ei-indicators-body', symbols, indicators, 'ei-ind');
+
+            const totalTests = symbols.length * timeframes.length + symbols.length * indicators.length;
+            let completed = 0;
+
+            // Test OHLCV
+            for (const symbol of symbols) {
+                for (const tf of timeframes) {
+                    setCellStatus(`ei-ohlcv-${symbol}-${tf}`, 'running');
+                    try {
+                        const response = await fetchWithTimeout(
+                            `${BASE_URL}/data/api/v1/easyinsight/time-series/${symbol}?interval=${tf}&outputsize=5`
+                        );
+                        if (response.ok) {
+                            const data = await response.json();
+                            const count = data.values?.length || data.count || 0;
+                            setCellStatus(`ei-ohlcv-${symbol}-${tf}`, count > 0 ? 'ok' : 'warning', `${count} Datenpunkte`);
+                            log('ei-log', `${symbol}/${tf}: ${count} Datenpunkte`, count > 0 ? 'ok' : 'warning');
+                        } else {
+                            setCellStatus(`ei-ohlcv-${symbol}-${tf}`, 'error', `HTTP ${response.status}`);
+                            log('ei-log', `${symbol}/${tf}: HTTP ${response.status}`, 'error');
+                        }
+                    } catch (e) {
+                        setCellStatus(`ei-ohlcv-${symbol}-${tf}`, 'error', e.message);
+                        log('ei-log', `${symbol}/${tf}: ${e.message}`, 'error');
+                    }
+                    completed++;
+                    updateProgress('ei-progress', (completed / totalTests) * 100);
+                }
+            }
+
+            // Test Indicators
+            for (const symbol of symbols) {
+                for (const ind of indicators) {
+                    setCellStatus(`ei-ind-${symbol}-${ind}`, 'running');
+                    try {
+                        const response = await fetchWithTimeout(
+                            `${BASE_URL}/data/api/v1/easyinsight/${ind}/${symbol}?interval=H1&outputsize=5`
+                        );
+                        if (response.ok) {
+                            const data = await response.json();
+                            const count = data.values?.length || 0;
+                            setCellStatus(`ei-ind-${symbol}-${ind}`, count > 0 ? 'ok' : 'warning', `${count} Werte`);
+                        } else {
+                            setCellStatus(`ei-ind-${symbol}-${ind}`, 'error', `HTTP ${response.status}`);
+                        }
+                    } catch (e) {
+                        setCellStatus(`ei-ind-${symbol}-${ind}`, 'error', e.message);
+                    }
+                    completed++;
+                    updateProgress('ei-progress', (completed / totalTests) * 100);
+                }
+            }
+
+            log('ei-log', 'EasyInsight Tests abgeschlossen', 'ok');
+            testRunning = false;
+        }
+
+        // Yahoo Finance Tests
+        async function runYahooFinanceTests() {
+            if (testRunning) return;
+            testRunning = true;
+            clearLog('yf-log');
+            log('yf-log', 'Starte Yahoo Finance Tests...', 'info');
+
+            const symbols = Array.from(document.getElementById('yf-symbols').selectedOptions).map(o => o.value);
+            const periods = Array.from(document.getElementById('yf-periods').selectedOptions).map(o => o.value);
+
+            // Initialize matrix
+            initMatrix('yf-ohlcv-body', symbols, ['1d', '5d', '1mo', '3mo', '1y', '5y'], 'yf-ohlcv');
+
+            const totalTests = symbols.length * periods.length;
+            let completed = 0;
+
+            for (const symbol of symbols) {
+                for (const period of periods) {
+                    setCellStatus(`yf-ohlcv-${symbol}-${period}`, 'running');
+                    try {
+                        const response = await fetchWithTimeout(
+                            `${BASE_URL}/data/api/v1/yfinance/time-series/${symbol}?period=${period}`
+                        );
+                        if (response.ok) {
+                            const data = await response.json();
+                            const count = data.data?.length || data.count || 0;
+                            setCellStatus(`yf-ohlcv-${symbol}-${period}`, count > 0 ? 'ok' : 'warning', `${count} Datenpunkte`);
+                            log('yf-log', `${symbol}/${period}: ${count} Datenpunkte`, count > 0 ? 'ok' : 'warning');
+                        } else {
+                            setCellStatus(`yf-ohlcv-${symbol}-${period}`, 'error', `HTTP ${response.status}`);
+                            log('yf-log', `${symbol}/${period}: HTTP ${response.status}`, 'error');
+                        }
+                    } catch (e) {
+                        setCellStatus(`yf-ohlcv-${symbol}-${period}`, 'error', e.message);
+                        log('yf-log', `${symbol}/${period}: ${e.message}`, 'error');
+                    }
+                    completed++;
+                    updateProgress('yf-progress', (completed / totalTests) * 100);
+                }
+            }
+
+            log('yf-log', 'Yahoo Finance Tests abgeschlossen', 'ok');
+            testRunning = false;
+        }
+
+        // TimescaleDB Tests
+        async function runTimescaleDBTests() {
+            if (testRunning) return;
+            testRunning = true;
+            clearLog('tsdb-log');
+            log('tsdb-log', 'Starte TimescaleDB Tests...', 'info');
+
+            // Test connection
+            try {
+                const healthResponse = await fetchWithTimeout(`${BASE_URL}/data/health`);
+                if (healthResponse.ok) {
+                    const health = await healthResponse.json();
+                    const tsdbStatus = health.timescaledb?.status || 'unknown';
+                    document.getElementById('tsdb-connection').textContent = tsdbStatus === 'healthy' ? '✓' : '✗';
+                    document.getElementById('tsdb-connection').className = `value ${tsdbStatus === 'healthy' ? 'success' : 'error'}`;
+                    log('tsdb-log', `TimescaleDB Status: ${tsdbStatus}`, tsdbStatus === 'healthy' ? 'ok' : 'error');
+                }
+            } catch (e) {
+                document.getElementById('tsdb-connection').textContent = '✗';
+                document.getElementById('tsdb-connection').className = 'value error';
+                log('tsdb-log', `Verbindungsfehler: ${e.message}`, 'error');
+            }
+
+            // Get DB stats
+            try {
+                const statsResponse = await fetchWithTimeout(`${BASE_URL}/data/api/v1/db/stats`);
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    document.getElementById('tsdb-symbols').textContent = stats.symbols_count || '-';
+                    document.getElementById('tsdb-datapoints').textContent = (stats.total_rows || 0).toLocaleString();
+                    document.getElementById('tsdb-oldest').textContent = stats.oldest_entry || '-';
+                    document.getElementById('tsdb-newest').textContent = stats.newest_entry || '-';
+                    log('tsdb-log', `${stats.symbols_count} Symbole, ${(stats.total_rows || 0).toLocaleString()} Datenpunkte`, 'ok');
+                }
+            } catch (e) {
+                log('tsdb-log', `Stats-Fehler: ${e.message}`, 'warning');
+            }
+
+            // Get symbol coverage
+            try {
+                const coverageResponse = await fetchWithTimeout(`${BASE_URL}/data/api/v1/db/coverage`);
+                if (coverageResponse.ok) {
+                    const coverage = await coverageResponse.json();
+                    const symbols = Object.keys(coverage.symbols || {}).slice(0, 20);
+                    const timeframes = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1'];
+
+                    initMatrix('tsdb-body', symbols, timeframes, 'tsdb');
+
+                    for (const symbol of symbols) {
+                        const symbolData = coverage.symbols[symbol] || {};
+                        for (const tf of timeframes) {
+                            const count = symbolData[tf] || 0;
+                            setCellStatus(`tsdb-${symbol}-${tf}`, count > 0 ? 'ok' : 'pending', `${count} Einträge`);
+                        }
+                    }
+                }
+            } catch (e) {
+                log('tsdb-log', `Coverage-Fehler: ${e.message}`, 'warning');
+            }
+
+            // Data quality checks
+            try {
+                const qualityResponse = await fetchWithTimeout(`${BASE_URL}/data/api/v1/db/quality-check`);
+                if (qualityResponse.ok) {
+                    const quality = await qualityResponse.json();
+                    document.getElementById('tsdb-gaps').innerHTML = quality.gaps === 0 ?
+                        '<span class="status-ok">✓ Keine</span>' :
+                        `<span class="status-warning">${quality.gaps} gefunden</span>`;
+                    document.getElementById('tsdb-duplicates').innerHTML = quality.duplicates === 0 ?
+                        '<span class="status-ok">✓ Keine</span>' :
+                        `<span class="status-warning">${quality.duplicates} gefunden</span>`;
+                    document.getElementById('tsdb-invalid').innerHTML = quality.invalid_ohlc === 0 ?
+                        '<span class="status-ok">✓ Keine</span>' :
+                        `<span class="status-error">${quality.invalid_ohlc} gefunden</span>`;
+                    document.getElementById('tsdb-nulls').innerHTML = quality.null_values === 0 ?
+                        '<span class="status-ok">✓ Keine</span>' :
+                        `<span class="status-warning">${quality.null_values} gefunden</span>`;
+                }
+            } catch (e) {
+                log('tsdb-log', `Quality-Check nicht verfügbar: ${e.message}`, 'warning');
+            }
+
+            log('tsdb-log', 'TimescaleDB Tests abgeschlossen', 'ok');
+            testRunning = false;
+        }
+
+        // Redis Tests
+        async function runRedisTests() {
+            if (testRunning) return;
+            testRunning = true;
+            clearLog('redis-log');
+            log('redis-log', 'Starte Redis Tests...', 'info');
+
+            // Test connection via health endpoint
+            try {
+                const healthResponse = await fetchWithTimeout(`${BASE_URL}/data/health`);
+                if (healthResponse.ok) {
+                    const health = await healthResponse.json();
+                    const redisStatus = health.redis?.status || 'unknown';
+                    const connected = health.redis?.connected || false;
+                    const memory = health.redis?.memory_used || 'N/A';
+
+                    document.getElementById('redis-connection').textContent = connected ? '✓' : '✗';
+                    document.getElementById('redis-connection').className = `value ${connected ? 'success' : 'error'}`;
+                    document.getElementById('redis-memory').textContent = memory;
+
+                    log('redis-log', `Redis Status: ${redisStatus}, Speicher: ${memory}`, connected ? 'ok' : 'error');
+                }
+            } catch (e) {
+                document.getElementById('redis-connection').textContent = '✗';
+                document.getElementById('redis-connection').className = 'value error';
+                log('redis-log', `Verbindungsfehler: ${e.message}`, 'error');
+            }
+
+            // Get cache stats
+            try {
+                const statsResponse = await fetchWithTimeout(`${BASE_URL}/data/api/v1/cache/stats`);
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    document.getElementById('redis-keys').textContent = (stats.total_keys || 0).toLocaleString();
+                    const hitRate = stats.hit_rate ? `${(stats.hit_rate * 100).toFixed(1)}%` : '-';
+                    document.getElementById('redis-hitrate').textContent = hitRate;
+
+                    log('redis-log', `${stats.total_keys} Schlüssel, Hit Rate: ${hitRate}`, 'ok');
+
+                    // Populate categories
+                    const categoriesBody = document.getElementById('redis-categories-body');
+                    categoriesBody.innerHTML = '';
+                    const categories = stats.categories || {};
+                    for (const [cat, data] of Object.entries(categories)) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${cat}</td>
+                            <td>${data.count || 0}</td>
+                            <td>${data.ttl || '-'}s</td>
+                            <td class="${data.count > 0 ? 'status-ok' : 'status-pending'}">${data.count > 0 ? '✓ Aktiv' : '- Leer'}</td>
+                        `;
+                        categoriesBody.appendChild(row);
+                    }
+                }
+            } catch (e) {
+                log('redis-log', `Stats-Fehler: ${e.message}`, 'warning');
+            }
+
+            log('redis-log', 'Redis Tests abgeschlossen', 'ok');
+            testRunning = false;
+        }
+
+        async function clearRedisCache() {
+            if (!confirm('Möchten Sie wirklich den gesamten Redis-Cache leeren?')) return;
+
+            try {
+                const response = await fetchWithTimeout(`${BASE_URL}/data/api/v1/cache/clear`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    log('redis-log', 'Cache erfolgreich geleert', 'ok');
+                    runRedisTests();
+                } else {
+                    log('redis-log', 'Fehler beim Leeren des Cache', 'error');
+                }
+            } catch (e) {
+                log('redis-log', `Fehler: ${e.message}`, 'error');
+            }
+        }
+
+        // API Endpoints Tests
+        const ENDPOINTS = [
+            // Data Service
+            { service: 'data', method: 'GET', path: '/data/health', name: 'Health Check' },
+            { service: 'data', method: 'GET', path: '/data/api/v1/symbols', name: 'Symbole Liste' },
+            { service: 'data', method: 'GET', path: '/data/api/v1/twelvedata/time_series/EURUSD?interval=1h&outputsize=5', name: 'TwelveData OHLCV' },
+            { service: 'data', method: 'GET', path: '/data/api/v1/easyinsight/time-series/BTCUSD?interval=H1&outputsize=5', name: 'EasyInsight OHLCV' },
+            { service: 'data', method: 'GET', path: '/data/api/v1/easyinsight/status', name: 'EasyInsight Status' },
+            { service: 'data', method: 'GET', path: '/data/api/v1/yfinance/time-series/AAPL?period=1mo', name: 'Yahoo Finance OHLCV' },
+            { service: 'data', method: 'GET', path: '/data/api/v1/db/stats', name: 'DB Stats' },
+            { service: 'data', method: 'GET', path: '/data/api/v1/cache/stats', name: 'Cache Stats' },
+
+            // NHITS Service
+            { service: 'nhits', method: 'GET', path: '/nhits/health', name: 'Health Check' },
+            { service: 'nhits', method: 'GET', path: '/nhits/api/v1/models', name: 'Models Liste' },
+
+            // TCN Service
+            { service: 'tcn', method: 'GET', path: '/tcn/health', name: 'Health Check' },
+
+            // HMM Service
+            { service: 'hmm', method: 'GET', path: '/hmm/health', name: 'Health Check' },
+
+            // Candlestick Service
+            { service: 'candlestick', method: 'GET', path: '/candlestick/health', name: 'Health Check' },
+
+            // CNN-LSTM Service
+            { service: 'cnn-lstm', method: 'GET', path: '/cnn-lstm/health', name: 'Health Check' },
+
+            // RAG Service
+            { service: 'rag', method: 'GET', path: '/rag/health', name: 'Health Check' },
+
+            // LLM Service
+            { service: 'llm', method: 'GET', path: '/llm/health', name: 'Health Check' },
+
+            // Watchdog Service
+            { service: 'watchdog', method: 'GET', path: '/watchdog/health', name: 'Health Check' },
+            { service: 'watchdog', method: 'GET', path: '/watchdog/api/v1/services/status', name: 'Services Status' },
+        ];
+
+        async function runEndpointTests() {
+            if (testRunning) return;
+            testRunning = true;
+            clearLog('endpoint-log');
+            log('endpoint-log', 'Starte Endpoint Tests...', 'info');
+
+            const body = document.getElementById('endpoints-body');
+            body.innerHTML = '';
+
+            let completed = 0;
+            const results = { ok: 0, error: 0 };
+
+            for (const ep of ENDPOINTS) {
+                const row = document.createElement('tr');
+                row.dataset.service = ep.service;
+                row.innerHTML = `
+                    <td>${ep.service}</td>
+                    <td>${ep.path}</td>
+                    <td>${ep.method}</td>
+                    <td class="status-pending">Testing...</td>
+                    <td>-</td>
+                    <td>${ep.name}</td>
+                `;
+                body.appendChild(row);
+
+                const start = performance.now();
+                try {
+                    const response = await fetchWithTimeout(`${BASE_URL}${ep.path}`, { method: ep.method });
+                    const latency = Math.round(performance.now() - start);
+
+                    if (response.ok) {
+                        row.children[3].className = 'status-ok';
+                        row.children[3].textContent = `✓ ${response.status}`;
+                        results.ok++;
+                    } else {
+                        row.children[3].className = 'status-error';
+                        row.children[3].textContent = `✗ ${response.status}`;
+                        results.error++;
+                    }
+                    row.children[4].textContent = `${latency}ms`;
+                } catch (e) {
+                    row.children[3].className = 'status-error';
+                    row.children[3].textContent = '✗ Error';
+                    row.children[4].textContent = '-';
+                    results.error++;
+                }
+
+                completed++;
+                updateProgress('endpoint-progress', (completed / ENDPOINTS.length) * 100);
+            }
+
+            log('endpoint-log', `Abgeschlossen: ${results.ok} OK, ${results.error} Fehler`, results.error > 0 ? 'warning' : 'ok');
+            testRunning = false;
+        }
+
+        function filterEndpoints() {
+            const serviceFilter = document.getElementById('endpoint-service').value;
+            const statusFilter = document.getElementById('endpoint-status').value;
+
+            document.querySelectorAll('#endpoints-body tr').forEach(row => {
+                const service = row.dataset.service;
+                const status = row.children[3].classList.contains('status-ok') ? 'ok' :
+                              row.children[3].classList.contains('status-error') ? 'error' : 'pending';
+
+                const matchService = serviceFilter === 'all' || service === serviceFilter;
+                const matchStatus = statusFilter === 'all' || status === statusFilter;
+
+                row.style.display = matchService && matchStatus ? '' : 'none';
+            });
+        }
+
+        // Run All Tests
+        async function runAllTests() {
+            if (testRunning) return;
+
+            clearLog('main-log');
+            log('main-log', 'Starte vollständige Validierung...', 'info');
+            updateProgress('overall-progress', 0, 'Initialisiere...');
+
+            // Phase 1: TwelveData (20%)
+            log('main-log', '--- Phase 1: TwelveData ---', 'info');
+            updateProgress('overall-progress', 5, 'TwelveData Tests...');
+            await runTwelveDataTests();
+            document.getElementById('twelvedata-status').textContent = '✓';
+            document.getElementById('twelvedata-status').className = 'value success';
+            updateProgress('overall-progress', 20);
+
+            // Phase 2: EasyInsight (40%)
+            log('main-log', '--- Phase 2: EasyInsight ---', 'info');
+            updateProgress('overall-progress', 25, 'EasyInsight Tests...');
+            await runEasyInsightTests();
+            document.getElementById('easyinsight-status').textContent = '✓';
+            document.getElementById('easyinsight-status').className = 'value success';
+            updateProgress('overall-progress', 40);
+
+            // Phase 3: Yahoo Finance (55%)
+            log('main-log', '--- Phase 3: Yahoo Finance ---', 'info');
+            updateProgress('overall-progress', 45, 'Yahoo Finance Tests...');
+            await runYahooFinanceTests();
+            document.getElementById('yfinance-status').textContent = '✓';
+            document.getElementById('yfinance-status').className = 'value success';
+            updateProgress('overall-progress', 55);
+
+            // Phase 4: TimescaleDB (70%)
+            log('main-log', '--- Phase 4: TimescaleDB ---', 'info');
+            updateProgress('overall-progress', 60, 'TimescaleDB Tests...');
+            await runTimescaleDBTests();
+            document.getElementById('timescaledb-status').textContent = '✓';
+            document.getElementById('timescaledb-status').className = 'value success';
+            updateProgress('overall-progress', 70);
+
+            // Phase 5: Redis (85%)
+            log('main-log', '--- Phase 5: Redis ---', 'info');
+            updateProgress('overall-progress', 75, 'Redis Tests...');
+            await runRedisTests();
+            document.getElementById('redis-status').textContent = '✓';
+            document.getElementById('redis-status').className = 'value success';
+            updateProgress('overall-progress', 85);
+
+            // Phase 6: API Endpoints (100%)
+            log('main-log', '--- Phase 6: API Endpoints ---', 'info');
+            updateProgress('overall-progress', 90, 'API Endpoint Tests...');
+            await runEndpointTests();
+            updateProgress('overall-progress', 100, 'Abgeschlossen!');
+
+            document.getElementById('overall-status').textContent = '✓';
+            document.getElementById('overall-status').className = 'value success';
+            log('main-log', 'Alle Tests abgeschlossen!', 'ok');
+        }
+
+        function stopAllTests() {
+            testRunning = false;
+            log('main-log', 'Tests abgebrochen', 'warning');
+        }
+
+        // Initial status check
+        async function checkInitialStatus() {
+            try {
+                const response = await fetchWithTimeout(`${BASE_URL}/data/health`);
+                if (response.ok) {
+                    const health = await response.json();
+                    if (health.redis?.connected) {
+                        document.getElementById('redis-status').textContent = '✓';
+                        document.getElementById('redis-status').className = 'value success';
+                    }
+                    if (health.timescaledb?.status === 'healthy') {
+                        document.getElementById('timescaledb-status').textContent = '✓';
+                        document.getElementById('timescaledb-status').className = 'value success';
+                    }
+                }
+            } catch (e) {
+                console.log('Initial status check failed:', e);
+            }
+        }
+
+        // Run initial check on load
+        checkInitialStatus();
+    </script>
+</body>
+</html>
