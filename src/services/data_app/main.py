@@ -123,15 +123,17 @@ openapi_tags = [
     },
     {
         "name": "6. EasyInsight API",
-        "description": """EasyInsight API - TimescaleDB mit Echtzeit-Marktdaten und vorberechneten Indikatoren.
+        "description": """EasyInsight API v2.0 - TwelveData-kompatible Schnittstelle.
 
-**Funktionen:**
-- OHLCV-Daten mit H1 Timeframe
-- Vorberechnete technische Indikatoren (RSI, MACD, BBands, ATR, ADX, etc.)
-- Symbol-Informationen und Kategorien
-- Echtzeit-Snapshots
+**Unterstützte Timeframes:** M1, M5, M15, M30, H1, H4, D1, W1, MN (alle)
 
-**Hinweis:** Für andere Timeframes (M1-D1) TwelveData API verwenden."""
+**Endpoints:**
+- `/time_series/{symbol}` - OHLCV-Daten für alle Timeframes
+- `/rsi/{symbol}`, `/macd/{symbol}`, etc. - Technische Indikatoren
+- `/indicators/{symbol}` - Multiple Indikatoren in einem Request
+- `/quote/{symbol}`, `/price/{symbol}` - Echtzeit-Daten
+
+**Indikatoren:** RSI, MACD, Bollinger Bands, Stochastic, ADX, ATR, EMA, SMA, Ichimoku, Strength"""
     },
     {
         "name": "7. Yahoo Finance",

@@ -7693,6 +7693,10 @@ def get_all_routers():
             "name": "Twelve Data",
             "description": "Access to Twelve Data API - stocks, forex, crypto, ETFs, indices, and technical indicators"
         }),
+        (easyinsight_router, "/api/v1", ["🔌 EasyInsight API"], {
+            "name": "EasyInsight",
+            "description": "EasyInsight API (TwelveData-compatible) - OHLCV data, technical indicators, real-time quotes"
+        }),
         (config_router, "/api/v1", ["⚙️ Configuration"], {
             "name": "Configuration",
             "description": "System configuration and settings management"
