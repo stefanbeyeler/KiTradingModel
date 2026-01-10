@@ -372,8 +372,10 @@ class HealthChecker:
                 if response.status_code == 200:
                     data = response.json()
                     status = data.get("status", "disconnected")
+                    is_available = data.get("available", False)
 
-                    if status == "connected":
+                    # Accept both "connected" and "healthy" as healthy states
+                    if status in ("connected", "healthy") or is_available:
                         return ServiceStatus(
                             name=name,
                             state=HealthState.HEALTHY,
