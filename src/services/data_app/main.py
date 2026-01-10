@@ -90,117 +90,59 @@ logger.add(
     level=settings.log_level
 )
 
-# OpenAPI Tags für Swagger UI Dokumentation
+# OpenAPI Tags - kurze Beschreibungen für Swagger UI (max 60 Zeichen)
 openapi_tags = [
     {
         "name": "1. System",
-        "description": "Health checks, version info, system status, and general utilities"
+        "description": "Health checks, version info und System-Status"
     },
     {
         "name": "2. Symbol Management",
-        "description": "Manage trading symbols from EasyInsight API"
+        "description": "Trading-Symbole verwalten (Forex, Crypto, Indizes)"
     },
     {
         "name": "3. Trading Strategies",
-        "description": "Create, update, and manage trading strategies"
+        "description": "Handelsstrategien erstellen und verwalten"
     },
     {
         "name": "4. Config Export/Import",
-        "description": "Export and import configuration (symbols, strategies)"
-    },
-    {
-        "name": "5. Twelve Data API",
-        "description": """TwelveData API - Primäre Datenquelle für OHLC-Daten aller Timeframes.
-
-**Unterstützte Timeframes:** M1, M5, M15, M30, H1, H4, D1, W1, MN
-
-**Technical Indicators:**
-- **Trend:** SMA, EMA, WMA, DEMA, TEMA, KAMA, Ichimoku, SAR, Supertrend, VWAP
-- **Momentum:** RSI, MACD, Stochastic, Williams %R, CCI, ADX, Aroon, MFI, Connors RSI
-- **Volatility:** Bollinger Bands, ATR, Percent B
-- **Volume:** OBV, A/D
-- **ML Features:** Linear Regression Slope, Hilbert Trend Mode"""
-    },
-    {
-        "name": "6. EasyInsight API",
-        "description": """EasyInsight API v2.0 - TwelveData-kompatible Schnittstelle.
-
-**Unterstützte Timeframes:** M1, M5, M15, M30, H1, H4, D1, W1, MN (alle)
-
-**Endpoints:**
-- `/time_series/{symbol}` - OHLCV-Daten für alle Timeframes
-- `/rsi/{symbol}`, `/macd/{symbol}`, etc. - Technische Indikatoren
-- `/indicators/{symbol}` - Multiple Indikatoren in einem Request
-- `/quote/{symbol}`, `/price/{symbol}` - Echtzeit-Daten
-
-**Indikatoren:** RSI, MACD, Bollinger Bands, Stochastic, ADX, ATR, EMA, SMA, Ichimoku, Strength"""
-    },
-    {
-        "name": "7. Yahoo Finance",
-        "description": """Yahoo Finance market data integration (2. Fallback).
-
-**Funktionen:**
-- Historische OHLCV-Daten (kostenlos, ohne API-Key)
-- Echtzeit-Quotes und Marktdaten
-- Symbol-Informationen und Fundamentaldaten
-- Unterstützt Aktien, ETFs, Indizes, Forex, Crypto"""
-    },
-    {
-        "name": "8. RAG Sync",
-        "description": "Synchronization of market data to RAG knowledge base (optional, disabled by default)"
-    },
-    {
-        "name": "9. Query Logs & Analytics",
-        "description": "Query logging and analytics for monitoring"
-    },
-    {
-        "name": "10. External Data Sources",
-        "description": """Externe Datenquellen für Trading Intelligence (Gateway für RAG Service).
-
-**Datenquellen:**
-- **Economic Calendar**: Fed, ECB, CPI, NFP, GDP und andere Wirtschaftsereignisse
-- **Sentiment**: Fear & Greed Index, Social Media, Options, VIX
-- **On-Chain**: Whale Alerts, Exchange Flows, Mining, DeFi TVL
-- **Orderbook**: Bid/Ask Depth, Liquidations, CVD
-- **Macro**: DXY, Bond Yields, Cross-Asset Korrelationen
-- **Historical Patterns**: Saisonalität, Drawdowns, Events
-- **Technical Levels**: S/R Zonen, Fibonacci, Pivots, VWAP
-- **Regulatory**: SEC/CFTC, ETF News, Global Regulation
-- **Correlations**: Cross-Asset Korrelationen, Divergenzen, Hedge-Empfehlungen
-- **Volatility Regime**: VIX, ATR, Bollinger, Position Sizing
-- **Institutional Flow**: COT Reports, ETF Flows, Whale Tracking"""
-    },
-    {
-        "name": "11. Technical Indicators",
-        "description": """Technische Indikatoren Registry mit API-Mappings.
-
-**Funktionen:**
-- Vollständige Liste aller verfügbaren Indikatoren
-- TwelveData und EasyInsight API-Bezeichnungen
-- Kategorisierung: Trend, Momentum, Volatilität, Volumen, etc.
-- Stärken, Schwächen und Anwendungsgebiete je Indikator
-- Aktivieren/Deaktivieren von Indikatoren"""
-    },
-    {
-        "name": "12. Testing",
-        "description": """Test Suite Execution für automatisierte Qualitätssicherung.
-
-**Test-Kategorien:**
-- **Smoke Tests**: Health Checks für alle Microservices
-- **API Tests**: Endpoint-Tests für alle Service-APIs
-- **Integration Tests**: Service-übergreifende Tests
-- **Contract Tests**: API-Schema-Validierung mit Pydantic
-- **Unit Tests**: Isolierte Tests ohne Service-Abhängigkeiten"""
+        "description": "Konfiguration exportieren und importieren"
     },
     {
         "name": "5. Database",
-        "description": """TimescaleDB persistente Datenspeicherung.
-
-**Funktionen:**
-- OHLCV-Daten aus TimescaleDB (alle Timeframes)
-- Technische Indikatoren (Momentum, Volatilität, Trend, etc.)
-- Data Freshness Tracking und Synchronisation
-- 3-Layer-Caching: Redis → TimescaleDB → External APIs"""
+        "description": "TimescaleDB OHLCV-Daten und Indikatoren"
+    },
+    {
+        "name": "6. TwelveData API",
+        "description": "OHLC-Daten und Indikatoren (M1-MN, 50+ Indikatoren)"
+    },
+    {
+        "name": "7. EasyInsight API",
+        "description": "TwelveData-kompatible API v2.0 (alle Timeframes)"
+    },
+    {
+        "name": "8. Yahoo Finance",
+        "description": "Historische Kursdaten (kostenloser Fallback)"
+    },
+    {
+        "name": "9. RAG Sync",
+        "description": "Marktdaten-Synchronisation zur RAG Knowledge Base"
+    },
+    {
+        "name": "10. Query Logs",
+        "description": "Query-Logging und Analytics"
+    },
+    {
+        "name": "11. External Sources",
+        "description": "Economic Calendar, Sentiment, On-Chain, Macro"
+    },
+    {
+        "name": "12. Technical Indicators",
+        "description": "Indikator-Registry mit API-Mappings"
+    },
+    {
+        "name": "13. Testing",
+        "description": "Test-Suite und Quality Assurance"
     },
 ]
 
@@ -215,19 +157,22 @@ Zentraler Service für Datenmanagement im KI Trading Model System.
 
 - **Symbol Management**: Verwaltung von Trading-Symbolen (Forex, Crypto, Indizes)
 - **Trading Strategies**: Konfiguration und Verwaltung von Handelsstrategien
-- **TwelveData Integration**: Marktdaten und technische Indikatoren
-- **Yahoo Finance Integration**: Historische Kursdaten als Fallback
+- **TwelveData Integration**: Marktdaten und technische Indikatoren (primär)
+- **EasyInsight Integration**: TwelveData-kompatible API v2.0 (1. Fallback)
+- **Yahoo Finance Integration**: Historische Kursdaten (2. Fallback)
 - **External Data Sources**: Gateway für externe Datenquellen
 - **RAG Sync**: Synchronisation von Marktdaten zur RAG Knowledge Base
 
-**Hinweis:** Candlestick Pattern Detection wurde in eigenen Service migriert (Port 3006).
+### Architektur (3-Layer-Caching)
 
-### Architektur
+```
+Request → Redis Cache → TimescaleDB → Externe APIs
+```
 
-Dieser Service fungiert als **Data Gateway** für alle externen Datenquellen:
-- **TwelveData API** (primär) - OHLC-Daten für alle Timeframes (M1-MN)
-- **EasyInsight API** (1. Fallback) - Zusätzliche Indikatoren & TimescaleDB
-- **Yahoo Finance** (2. Fallback) - Kostenlose historische Daten
+**Datenquellen-Hierarchie:**
+1. **TwelveData API** (primär) - OHLC-Daten für alle Timeframes (M1-MN)
+2. **EasyInsight API** (1. Fallback) - TwelveData-kompatible Schnittstelle
+3. **Yahoo Finance** (2. Fallback) - Kostenlose historische Daten
 
 Andere Services (NHITS, RAG, LLM) greifen auf Daten ausschließlich über diesen Service zu.
 """,
@@ -256,20 +201,18 @@ app.include_router(config_router, prefix="/api/v1", tags=["4. Config Export/Impo
 # Include DB router if available (requires asyncpg)
 if _db_routes_available and db_router:
     app.include_router(db_router, prefix="/api/v1", tags=["5. Database"])
-app.include_router(twelvedata_router, prefix="/api/v1", tags=["6. Twelve Data API"])
-app.include_router(easyinsight_router, prefix="/api/v1", tags=["6. EasyInsight API"])
-app.include_router(yfinance_router, prefix="/api/v1", tags=["7. Yahoo Finance"])
-# Note: patterns_router has been moved to Candlestick Service (Port 3006)
-# Note: NHITS Training endpoints are in the NHITS Service (Port 3002), not here
-app.include_router(sync_router, prefix="/api/v1", tags=["8. RAG Sync"])
-app.include_router(query_log_router, prefix="/api/v1", tags=["9. Query Logs & Analytics"])
-app.include_router(external_sources_router, prefix="/api/v1", tags=["10. External Data Sources"])
-app.include_router(indicators_router, prefix="/api/v1", tags=["11. Technical Indicators"])
-app.include_router(testing_router, prefix="/api/v1/testing", tags=["12. Testing"])
+app.include_router(twelvedata_router, prefix="/api/v1", tags=["6. TwelveData API"])
+app.include_router(easyinsight_router, prefix="/api/v1", tags=["7. EasyInsight API"])
+app.include_router(yfinance_router, prefix="/api/v1", tags=["8. Yahoo Finance"])
+app.include_router(sync_router, prefix="/api/v1", tags=["9. RAG Sync"])
+app.include_router(query_log_router, prefix="/api/v1", tags=["10. Query Logs"])
+app.include_router(external_sources_router, prefix="/api/v1", tags=["11. External Sources"])
+app.include_router(indicators_router, prefix="/api/v1", tags=["12. Technical Indicators"])
+app.include_router(testing_router, prefix="/api/v1/testing", tags=["13. Testing"])
 
 # Test-Health-Router für Test-Unhealthy-Endpoint
 test_health_router = create_test_health_router("data")
-app.include_router(test_health_router, prefix="/api/v1", tags=["12. Testing"])
+app.include_router(test_health_router, prefix="/api/v1", tags=["13. Testing"])
 
 
 async def _periodic_cache_cleanup():
