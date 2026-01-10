@@ -336,15 +336,12 @@ class DataGatewayService:
             )
             return td_data, "twelvedata"
 
-        # 3. Fallback to EasyInsight only for H1 (EasyInsight only provides H1 data)
-        # For other timeframes, return empty data - don't use H1 data for D1/W1/etc.
-        if tf_str == "H1":
-            logger.warning(f"TwelveData failed for {symbol} {tf_str}, trying EasyInsight fallback")
-            data = await self.get_historical_data(symbol, limit, tf_str, force_refresh=True)
+        # 3. Fallback to EasyInsight (now supports all timeframes via /ohlcv endpoint)
+        logger.warning(f"TwelveData failed for {symbol} {tf_str}, trying EasyInsight fallback")
+        data = await self.get_easyinsight_ohlcv(symbol, tf_str, limit)
+        if data:
             return data, "easyinsight"
-        else:
-            logger.warning(f"TwelveData failed for {symbol} {tf_str}, no fallback available (EasyInsight only supports H1)")
-            return [], "none"
+        return [], "none"
 
     def _convert_twelvedata_to_easyinsight(
         self,
@@ -583,6 +580,97 @@ class DataGatewayService:
 
         except Exception as e:
             logger.error(f"Failed to fetch EasyInsight historical data for {symbol}: {e}")
+            return []
+
+    async def get_easyinsight_ohlcv(
+        self,
+        symbol: str,
+        timeframe: str,
+        limit: int = 500,
+    ) -> list[dict]:
+        """
+        Get OHLCV data from EasyInsight API for any timeframe.
+
+        EasyInsight provides multi-timeframe data in /symbol-data-full with prefixed fields:
+        - h1_open, h1_high, h1_low, h1_close (H1)
+        - m15_open, m15_high, m15_low, m15_close (M15)
+        - d1_open, d1_high, d1_low, d1_close (D1)
+
+        This method extracts OHLCV for the requested timeframe.
+
+        Args:
+            symbol: Trading symbol (e.g., BTCUSD)
+            timeframe: Timeframe (M15, H1, D1 are supported by EasyInsight)
+            limit: Number of data points
+
+        Returns:
+            List of OHLCV dictionaries with standardized format
+        """
+        try:
+            # Normalize timeframe
+            tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
+
+            # Map timeframe to EasyInsight prefix
+            # Note: D1 is excluded because EasyInsight provides rolling D1 values, not historical daily candles
+            prefix_map = {
+                Timeframe.M15: "m15",
+                Timeframe.H1: "h1",
+            }
+
+            prefix = prefix_map.get(tf)
+            if not prefix:
+                logger.warning(f"EasyInsight does not support timeframe {tf.value}, only M15, H1")
+                return []
+
+            client = await self._get_client()
+            response = await client.get(
+                f"{self._easyinsight_url}/symbol-data-full/{symbol}",
+                params={"limit": limit}
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            raw_rows = data.get('data', [])
+
+            if not raw_rows:
+                return []
+
+            # Extract OHLCV from prefixed fields
+            rows = []
+            for raw in raw_rows:
+                open_val = raw.get(f"{prefix}_open")
+                high_val = raw.get(f"{prefix}_high")
+                low_val = raw.get(f"{prefix}_low")
+                close_val = raw.get(f"{prefix}_close")
+                timestamp = raw.get("snapshot_time")
+
+                if all([open_val, high_val, low_val, close_val, timestamp]):
+                    rows.append({
+                        "timestamp": timestamp,
+                        "snapshot_time": timestamp,
+                        "symbol": symbol,
+                        "timeframe": tf.value,
+                        "open": float(open_val),
+                        "high": float(high_val),
+                        "low": float(low_val),
+                        "close": float(close_val),
+                        "volume": 0,  # EasyInsight doesn't provide volume
+                    })
+
+            if rows:
+                # Save to repository
+                await data_repository.save_ohlcv(
+                    symbol=symbol,
+                    timeframe=tf.value,
+                    data=rows,
+                    source="easyinsight",
+                )
+                logger.debug(f"Fetched {len(rows)} EasyInsight OHLCV rows for {symbol}/{tf.value}")
+
+            return rows
+
+        except Exception as e:
+            logger.error(f"Failed to fetch EasyInsight OHLCV for {symbol}/{timeframe}: {e}")
             return []
 
     # ==================== API Health ====================

@@ -5137,9 +5137,10 @@ async def get_training_data(
             rows = []
 
     # FALLBACK 1: If TwelveData has insufficient data, try EasyInsight
-    # WICHTIG: EasyInsight liefert nur H1-Daten via /symbol-data-full
-    # Daher nur als Fallback für H1 verwenden, sonst werden falsche Daten gespeichert
-    if len(rows) < 50 and tf == "H1":
+    # EasyInsight supports M15, H1 timeframes via prefixed fields in /symbol-data-full
+    # Note: D1 excluded because EasyInsight provides rolling D1 values, not historical daily candles
+    supported_ei_timeframes = ["M15", "H1"]
+    if len(rows) < 50 and tf in supported_ei_timeframes:
         logger.info(f"TwelveData insufficient ({len(rows)} rows), trying EasyInsight fallback for {symbol}/{tf}")
         try:
             # Resolve EasyInsight symbol from managed symbols config
@@ -5147,6 +5148,10 @@ async def get_training_data(
             ei_symbol = await symbol_service.get_easyinsight_symbol(symbol)
             if ei_symbol != symbol:
                 logger.info(f"Resolved EasyInsight symbol: {symbol} -> {ei_symbol}")
+
+            # Map timeframe to EasyInsight prefix
+            prefix_map = {"M15": "m15", "H1": "h1"}
+            prefix = prefix_map.get(tf)
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
@@ -5156,7 +5161,29 @@ async def get_training_data(
                 response.raise_for_status()
 
                 data = response.json()
-                ei_rows = data.get('data', [])
+                raw_rows = data.get('data', [])
+
+                # Extract OHLCV from prefixed fields
+                ei_rows = []
+                for raw in raw_rows:
+                    open_val = raw.get(f"{prefix}_open")
+                    high_val = raw.get(f"{prefix}_high")
+                    low_val = raw.get(f"{prefix}_low")
+                    close_val = raw.get(f"{prefix}_close")
+                    timestamp = raw.get("snapshot_time")
+
+                    if all([open_val, high_val, low_val, close_val, timestamp]):
+                        ei_rows.append({
+                            "timestamp": timestamp,
+                            "snapshot_time": timestamp,
+                            "symbol": symbol,
+                            "timeframe": tf,
+                            "open": float(open_val),
+                            "high": float(high_val),
+                            "low": float(low_val),
+                            "close": float(close_val),
+                            "volume": 0,
+                        })
 
                 if ei_rows and len(ei_rows) >= 50:
                     # Cache EasyInsight data (use original symbol for cache key)
@@ -5176,7 +5203,7 @@ async def get_training_data(
         except Exception as e:
             logger.warning(f"EasyInsight API fallback failed for {symbol}: {e}")
     elif len(rows) < 50:
-        logger.warning(f"TwelveData insufficient for {symbol}/{tf}, EasyInsight fallback only available for H1")
+        logger.warning(f"TwelveData insufficient for {symbol}/{tf}, EasyInsight fallback only supports M15, H1")
 
     # Return whatever we have (might be empty or partial)
     source = "twelvedata" if rows else "none"
