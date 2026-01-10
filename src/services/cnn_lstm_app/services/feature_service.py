@@ -109,7 +109,7 @@ class FeatureService:
         try:
             client = await self._get_http_client()
             response = await client.get(
-                f"{DATA_SERVICE_URL}/api/v1/ohlcv/{symbol}",
+                f"{DATA_SERVICE_URL}/api/v1/db/ohlcv/{symbol}",
                 params={"timeframe": timeframe, "limit": limit}
             )
             response.raise_for_status()
@@ -151,9 +151,14 @@ class FeatureService:
     def calculate_returns(self, closes: np.ndarray) -> np.ndarray:
         """Berechnet logarithmische Returns."""
         returns = np.zeros_like(closes)
-        returns[1:] = np.log(closes[1:] / closes[:-1])
+        # Vermeide Division by Zero und Log von 0
+        prev_closes = closes[:-1]
+        curr_closes = closes[1:]
+        # Nur berechnen wo beide Werte > 0
+        valid_mask = (prev_closes > 0) & (curr_closes > 0)
+        returns[1:] = np.where(valid_mask, np.log(curr_closes / prev_closes), 0.0)
         returns[0] = 0  # Erster Wert ist 0
-        return np.nan_to_num(returns, nan=0.0)
+        return np.nan_to_num(returns, nan=0.0, posinf=0.0, neginf=0.0)
 
     def calculate_volatility(self, returns: np.ndarray, window: int = 20) -> np.ndarray:
         """Berechnet Rolling Volatility."""
@@ -307,10 +312,13 @@ class FeatureService:
         Returns:
             Normalisierte Features
         """
+        # Ersetze NaN/Inf vor Normalisierung
+        features = np.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0)
         mean = np.mean(features, axis=0, keepdims=True)
         std = np.std(features, axis=0, keepdims=True)
         std = np.where(std == 0, 1, std)  # Vermeide Division durch 0
-        return (features - mean) / std
+        normalized = (features - mean) / std
+        return np.nan_to_num(normalized, nan=0.0, posinf=0.0, neginf=0.0)
 
     async def prepare_features(
         self,
@@ -330,6 +338,30 @@ class FeatureService:
 
         Returns:
             Feature-Array der Shape (sequence_length, 25) oder None bei Fehler
+        """
+        result = await self.prepare_features_with_price(symbol, timeframe, sequence_length, normalize)
+        if result is None:
+            return None
+        return result[0]
+
+    async def prepare_features_with_price(
+        self,
+        symbol: str,
+        timeframe: str = "H1",
+        sequence_length: Optional[int] = None,
+        normalize: bool = True
+    ) -> Optional[tuple[np.ndarray, float]]:
+        """
+        Bereitet alle Features fuer ein Symbol vor und gibt auch den aktuellen Preis zurueck.
+
+        Args:
+            symbol: Trading-Symbol
+            timeframe: Timeframe
+            sequence_length: Sequenzlaenge (optional, nutzt Default)
+            normalize: Features normalisieren
+
+        Returns:
+            Tuple von (Feature-Array, aktueller Preis) oder None bei Fehler
         """
         if sequence_length is None:
             sequence_length = self.get_sequence_length(timeframe)
@@ -404,6 +436,9 @@ class FeatureService:
             tf_encoding
         ])
 
+        # Speichere aktuellen Preis VOR Normalisierung
+        current_price = float(closes[-1])
+
         # Schneide auf Sequenzlaenge
         features = features[-sequence_length:]
 
@@ -415,7 +450,10 @@ class FeatureService:
             features[:, 7:12] = self.normalize_features(features[:, 7:12])  # MAs, MACD
             features[:, 16:20] = self.normalize_features(features[:, 16:20])  # ATR, BBands
 
-        return features.astype(np.float32)
+        # Finales NaN/Inf Cleanup
+        features = np.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0)
+
+        return features.astype(np.float32), current_price
 
     async def prepare_batch_features(
         self,

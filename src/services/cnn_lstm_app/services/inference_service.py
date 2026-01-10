@@ -229,11 +229,13 @@ class InferenceService:
         start_time = time.time()
 
         try:
-            # Hole Features
-            features = await feature_service.prepare_features(symbol, timeframe)
-            if features is None:
+            # Hole Features und aktuellen Preis
+            result = await feature_service.prepare_features_with_price(symbol, timeframe)
+            if result is None:
                 logger.error(f"Could not prepare features for {symbol}")
                 return None
+
+            features, current_price = result
 
             # Konvertiere zu Tensor
             features_tensor = torch.FloatTensor(features).unsqueeze(0).to(self._device)
@@ -247,11 +249,7 @@ class InferenceService:
             pattern_logits = outputs['patterns'].cpu().numpy()[0]
             regime_logits = outputs['regime'].cpu().numpy()[0]
 
-            # Hole aktuellen Preis aus Features (close ist Index 3)
-            current_price = float(features[-1, 3])  # Letzte Close
-
-            # Denormalisiere (vereinfacht - in Produktion waere Skalierung noetig)
-            # Hier nehmen wir an dass price_pred prozentuale Aenderungen sind
+            # Erstelle Price Prediction mit echtem aktuellem Preis
             price_prediction = self._create_price_prediction(
                 current_price, price_pred, timeframe
             )
@@ -290,6 +288,9 @@ class InferenceService:
         """Erstellt PricePrediction aus Modell-Output."""
         # predictions enthält [1h, 4h, 1d, 1w] prozentuale Aenderungen
 
+        # Handle NaN values
+        predictions = np.nan_to_num(predictions, nan=0.0)
+
         # Berechne Forecast-Preise
         forecast_1h = current_price * (1 + predictions[0]) if len(predictions) > 0 else None
         forecast_4h = current_price * (1 + predictions[1]) if len(predictions) > 1 else None
@@ -298,6 +299,8 @@ class InferenceService:
 
         # Bestimme Richtung basierend auf 1d Forecast
         avg_change = np.mean(predictions)
+        if np.isnan(avg_change):
+            avg_change = 0.0
         if avg_change > 0.005:
             direction = PriceDirection.BULLISH
         elif avg_change < -0.005:
@@ -308,6 +311,8 @@ class InferenceService:
         # Konfidenz basierend auf Konsistenz der Vorhersagen
         signs = np.sign(predictions)
         consistency = np.mean(signs == signs[0]) if len(signs) > 0 else 0.5
+        if np.isnan(consistency):
+            consistency = 0.5
         confidence = min(0.95, max(0.3, consistency * 0.8 + abs(avg_change) * 2))
 
         return PricePrediction(
@@ -328,8 +333,12 @@ class InferenceService:
         threshold: float = 0.5
     ) -> list[PatternPrediction]:
         """Erstellt PatternPredictions aus Modell-Output."""
+        # Handle NaN values
+        logits = np.nan_to_num(logits, nan=0.0)
+
         # Sigmoid auf Logits
         probs = 1 / (1 + np.exp(-logits))
+        probs = np.nan_to_num(probs, nan=0.0)
 
         predictions = []
         for i, prob in enumerate(probs):
@@ -365,9 +374,20 @@ class InferenceService:
 
     def _create_regime_prediction(self, logits: np.ndarray) -> RegimePrediction:
         """Erstellt RegimePrediction aus Modell-Output."""
+        # Handle NaN values in logits
+        if np.any(np.isnan(logits)):
+            logits = np.nan_to_num(logits, nan=0.0)
+
         # Softmax auf Logits
         exp_logits = np.exp(logits - np.max(logits))
-        probs = exp_logits / np.sum(exp_logits)
+        sum_exp = np.sum(exp_logits)
+        if sum_exp == 0 or np.isnan(sum_exp):
+            probs = np.array([0.25, 0.25, 0.25, 0.25])  # Fallback: equal distribution
+        else:
+            probs = exp_logits / sum_exp
+
+        # Handle any remaining NaN values
+        probs = np.nan_to_num(probs, nan=0.25)
 
         # Bestimme Regime mit hoechster Wahrscheinlichkeit
         regime_idx = int(np.argmax(probs))

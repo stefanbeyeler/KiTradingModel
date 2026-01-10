@@ -1127,12 +1127,6 @@
                 const data = await response.json();
                 renderPrediction(data);
 
-                // Update stats
-                document.getElementById('stat-model-status').textContent = 'Aktiv';
-                document.getElementById('stat-model-status').className = 'stat-value success';
-                document.getElementById('stat-model-version').textContent = data.model_version?.split('-').slice(-1)[0] || '-';
-                document.getElementById('stat-inference-time').textContent = data.inference_time_ms?.toFixed(1) || '-';
-
             } catch (error) {
                 container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#9888;</div><p>${error.message}</p></div>`;
                 showToast(error.message, 'error');
