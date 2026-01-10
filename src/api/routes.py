@@ -5407,7 +5407,7 @@ async def list_common_timezones():
     }
 
 
-# ==================== EasyInsight API (TimescaleDB) ====================
+# ==================== EasyInsight API (TwelveData-kompatibel) ====================
 
 
 @easyinsight_router.get("/easyinsight/status")
@@ -5415,32 +5415,48 @@ async def get_easyinsight_status():
     """
     Get EasyInsight API connection status and statistics.
 
+    EasyInsight now provides a TwelveData-compatible API with:
+    - /time_series/{symbol} - OHLCV for all timeframes
+    - /rsi/{symbol}, /macd/{symbol}, etc. - Technical indicators
+    - /indicators/{symbol} - Multiple indicators in one request
+
     Returns connection health, latency, and available symbol count.
     """
+    from ..services.easyinsight_service import easyinsight_service
     import time
     start = time.time()
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{settings.easyinsight_api_url}/symbols")
-            latency_ms = (time.time() - start) * 1000
+        status = await easyinsight_service.get_status()
+        latency_ms = (time.time() - start) * 1000
 
-            if response.status_code == 200:
-                symbols = response.json()
-                return {
-                    "status": "connected",
-                    "url": settings.easyinsight_api_url,
-                    "latency_ms": round(latency_ms, 2),
-                    "symbols_available": len(symbols),
-                    "api_version": "1.0",
-                }
-            else:
-                return {
-                    "status": "error",
-                    "url": settings.easyinsight_api_url,
-                    "latency_ms": round(latency_ms, 2),
-                    "error": f"HTTP {response.status_code}",
-                }
+        if status.get("available"):
+            return {
+                "status": "connected",
+                "url": settings.easyinsight_api_url,
+                "latency_ms": round(latency_ms, 2),
+                "api_version": "2.0 (TwelveData-compatible)",
+                "supported_endpoints": [
+                    "/time_series/{symbol}",
+                    "/rsi/{symbol}",
+                    "/macd/{symbol}",
+                    "/bbands/{symbol}",
+                    "/stoch/{symbol}",
+                    "/adx/{symbol}",
+                    "/atr/{symbol}",
+                    "/indicators/{symbol}",
+                    "/quote/{symbol}",
+                    "/price/{symbol}",
+                ],
+                **status,
+            }
+        else:
+            return {
+                "status": "error",
+                "url": settings.easyinsight_api_url,
+                "latency_ms": round(latency_ms, 2),
+                "error": status.get("error", "Unknown error"),
+            }
     except Exception as e:
         return {
             "status": "disconnected",
@@ -5450,70 +5466,143 @@ async def get_easyinsight_status():
 
 
 @easyinsight_router.get("/easyinsight/symbols")
-async def get_easyinsight_symbols():
+async def get_easyinsight_symbols(
+    symbol_type: str = Query(None, description="Filter by type: forex, crypto, stock, index, commodity")
+):
     """
-    Get list of all available symbols from EasyInsight TimescaleDB.
+    Get list of all available symbols from EasyInsight API.
 
-    Returns symbols with their categories, data counts, and metadata.
+    Uses the TwelveData-compatible /symbols endpoint.
+    Returns symbols with their categories, types, and available timeframes.
     """
+    from ..services.easyinsight_service import easyinsight_service
+
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"{settings.easyinsight_api_url}/symbols")
-            response.raise_for_status()
-            symbols = response.json()
+        result = await easyinsight_service.get_symbols(symbol_type=symbol_type)
 
-            # Group by category
-            categories = {}
-            for s in symbols:
-                cat = s.get("category", "unknown")
-                if cat not in categories:
-                    categories[cat] = []
-                categories[cat].append(s.get("symbol"))
+        if result.get("status") == "error":
+            raise HTTPException(status_code=502, detail=result.get("error", "Unknown error"))
 
-            return {
-                "total": len(symbols),
-                "categories": {k: len(v) for k, v in categories.items()},
-                "symbols": symbols,
-            }
+        symbols = result.get("data", [])
+
+        # Group by category/type
+        categories = {}
+        for s in symbols:
+            cat = s.get("type", s.get("category", "unknown"))
+            if cat not in categories:
+                categories[cat] = []
+            categories[cat].append(s.get("symbol"))
+
+        return {
+            "total": len(symbols),
+            "categories": {k: len(v) for k, v in categories.items()},
+            "symbols": symbols,
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to fetch EasyInsight symbols: {e}")
+        raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
+
+
+@easyinsight_router.get("/easyinsight/time-series/{symbol}")
+async def get_easyinsight_time_series(
+    symbol: str,
+    interval: str = Query("1h", description="Timeframe: 1min, 5min, 15min, 30min, 1h, 4h, 1day, 1week, 1month"),
+    outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
+    start_date: str = Query(None, description="Start date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)"),
+    end_date: str = Query(None, description="End date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)"),
+):
+    """
+    Get OHLCV time series data from EasyInsight API.
+
+    Uses the new TwelveData-compatible /time_series endpoint.
+    All timeframes (M1-MN) are now supported.
+
+    Args:
+        symbol: Trading symbol (e.g., BTCUSD, EURUSD)
+        interval: Timeframe (1min, 5min, 15min, 30min, 1h, 4h, 1day, 1week, 1month)
+        outputsize: Number of data points to fetch (max 5000)
+        start_date: Optional start date filter
+        end_date: Optional end date filter
+
+    Returns historical OHLCV data.
+    """
+    from ..services.easyinsight_service import easyinsight_service
+
+    try:
+        result = await easyinsight_service.get_time_series(
+            symbol=symbol,
+            interval=interval,
+            outputsize=outputsize,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if result.get("status") == "error":
+            error = result.get("error", "Unknown error")
+            if "not found" in error.lower():
+                raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found")
+            raise HTTPException(status_code=502, detail=error)
+
+        return {
+            "symbol": symbol.upper(),
+            "interval": interval,
+            "source": "easyinsight",
+            "count": len(result.get("values", [])),
+            "meta": result.get("meta", {}),
+            "values": result.get("values", []),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch EasyInsight time series for {symbol}: {e}")
         raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
 
 
 @easyinsight_router.get("/easyinsight/ohlcv/{symbol}")
 async def get_easyinsight_ohlcv(
     symbol: str,
-    limit: int = 500,
+    interval: str = Query("1h", description="Timeframe: 1min, 5min, 15min, 30min, 1h, 4h, 1day, 1week, 1month"),
+    limit: int = Query(500, ge=1, le=5000, description="Number of data points"),
 ):
     """
-    Get OHLCV data for a symbol from EasyInsight TimescaleDB.
+    Get OHLCV data for a symbol from EasyInsight API.
+
+    Alias for /time-series endpoint for backwards compatibility.
+    Uses the new TwelveData-compatible API.
 
     Args:
         symbol: Trading symbol (e.g., BTCUSD, EURUSD)
+        interval: Timeframe (1h default)
         limit: Number of data points to fetch (max 5000)
 
-    Returns historical OHLCV data with H1 timeframe indicators.
+    Returns historical OHLCV data.
     """
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
-                params={"limit": min(limit, 5000)}
-            )
-            response.raise_for_status()
-            data = response.json()
+    from ..services.easyinsight_service import easyinsight_service
 
-            rows = data.get("data", [])
-            return {
-                "symbol": symbol.upper(),
-                "source": "easyinsight",
-                "count": len(rows),
-                "data": rows,
-            }
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
-            raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found in EasyInsight")
-        raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
+    try:
+        result = await easyinsight_service.get_time_series(
+            symbol=symbol,
+            interval=interval,
+            outputsize=limit,
+        )
+
+        if result.get("status") == "error":
+            error = result.get("error", "Unknown error")
+            if "not found" in error.lower():
+                raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found in EasyInsight")
+            raise HTTPException(status_code=502, detail=error)
+
+        return {
+            "symbol": symbol.upper(),
+            "interval": interval,
+            "source": "easyinsight",
+            "count": len(result.get("values", [])),
+            "data": result.get("values", []),
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to fetch EasyInsight OHLCV for {symbol}: {e}")
         raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
@@ -5524,25 +5613,27 @@ async def get_easyinsight_latest(symbol: str):
     """
     Get latest market snapshot for a symbol from EasyInsight.
 
-    Returns the most recent OHLCV data with all available indicators.
+    Uses the TwelveData-compatible /quote endpoint for real-time data.
+    Returns the most recent quote with price information.
     """
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(
-                f"{settings.easyinsight_api_url}/symbol-latest-full/{symbol}"
-            )
-            response.raise_for_status()
-            data = response.json()
+    from ..services.easyinsight_service import easyinsight_service
 
-            return {
-                "symbol": symbol.upper(),
-                "source": "easyinsight",
-                "data": data,
-            }
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
-            raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found in EasyInsight")
-        raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
+    try:
+        result = await easyinsight_service.get_quote(symbol)
+
+        if result.get("status") == "error":
+            error = result.get("error", "Unknown error")
+            if "not found" in error.lower():
+                raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found in EasyInsight")
+            raise HTTPException(status_code=502, detail=error)
+
+        return {
+            "symbol": symbol.upper(),
+            "source": "easyinsight",
+            "data": result,
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to fetch EasyInsight latest for {symbol}: {e}")
         raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
@@ -5551,49 +5642,61 @@ async def get_easyinsight_latest(symbol: str):
 @easyinsight_router.get("/easyinsight/indicators/{symbol}")
 async def get_easyinsight_indicators(
     symbol: str,
-    limit: int = 100,
+    indicators: str = Query("rsi,macd,bbands", description="Comma-separated list of indicators"),
+    interval: str = Query("1h", description="Timeframe: 1min, 5min, 15min, 30min, 1h, 4h, 1day"),
+    outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
 ):
     """
-    Get technical indicators for a symbol from EasyInsight.
+    Get multiple technical indicators for a symbol from EasyInsight.
 
-    EasyInsight provides pre-calculated indicators including:
-    - RSI, MACD, Bollinger Bands
-    - Moving Averages (SMA, EMA)
-    - ATR, ADX, Stochastic
-    - And more...
+    Uses the TwelveData-compatible /indicators endpoint.
+
+    Supported indicators:
+    - rsi: Relative Strength Index
+    - macd: Moving Average Convergence Divergence
+    - bbands: Bollinger Bands
+    - stoch: Stochastic Oscillator
+    - adx: Average Directional Index
+    - atr: Average True Range
+    - ema: Exponential Moving Average
+    - sma: Simple Moving Average
+    - cci: Commodity Channel Index
+    - ichimoku: Ichimoku Cloud
+    - strength: EasyInsight Multi-Timeframe Strength (proprietary)
 
     Args:
         symbol: Trading symbol
-        limit: Number of data points
+        indicators: Comma-separated indicator names (e.g., "rsi,macd,bbands")
+        interval: Timeframe
+        outputsize: Number of data points
 
-    Returns OHLCV data with all available indicators.
+    Returns indicator data for the requested indicators.
     """
+    from ..services.easyinsight_service import easyinsight_service
+
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                f"{settings.easyinsight_api_url}/symbol-data-full/{symbol}",
-                params={"limit": limit}
-            )
-            response.raise_for_status()
-            data = response.json()
+        indicator_list = [i.strip().lower() for i in indicators.split(",")]
 
-            rows = data.get("data", [])
+        result = await easyinsight_service.get_multiple_indicators(
+            symbol=symbol,
+            indicators=indicator_list,
+            interval=interval,
+            outputsize=outputsize,
+        )
 
-            # Extract indicator columns from first row
-            indicators = []
-            if rows:
-                first_row = rows[0]
-                # Find indicator columns (not basic OHLCV)
-                basic_cols = {"symbol", "snapshot_time", "h1_open", "h1_high", "h1_low", "h1_close"}
-                indicators = [k for k in first_row.keys() if k not in basic_cols and not k.startswith("_")]
+        if result.get("status") == "error":
+            raise HTTPException(status_code=502, detail=result.get("error", "Unknown error"))
 
-            return {
-                "symbol": symbol.upper(),
-                "source": "easyinsight",
-                "count": len(rows),
-                "available_indicators": sorted(indicators),
-                "data": rows,
-            }
+        return {
+            "symbol": symbol.upper(),
+            "interval": interval,
+            "source": "easyinsight",
+            "available_indicators": list(result.get("indicators", {}).keys()),
+            "indicators": result.get("indicators", {}),
+            "errors": result.get("errors", []),
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to fetch EasyInsight indicators for {symbol}: {e}")
         raise HTTPException(status_code=502, detail=f"EasyInsight API error: {str(e)}")
@@ -5604,17 +5707,167 @@ async def get_easyinsight_timeframes():
     """
     Get list of supported timeframes in EasyInsight.
 
-    Note: EasyInsight primarily stores H1 (1-hour) data with indicators.
-    For other timeframes, use TwelveData API.
+    With the new TwelveData-compatible API, EasyInsight now supports all timeframes.
     """
     return {
-        "primary_timeframe": "H1",
-        "supported_timeframes": ["H1"],
-        "note": "EasyInsight stores H1 data with pre-calculated indicators. For M1, M5, M15, H4, D1, use TwelveData API.",
-        "indicator_timeframes": {
-            "H1": "Full OHLCV with RSI, MACD, BBands, ATR, ADX, etc.",
-        }
+        "api_version": "2.0 (TwelveData-compatible)",
+        "supported_timeframes": [
+            {"interval": "1min", "standard": "M1", "description": "1 Minute"},
+            {"interval": "5min", "standard": "M5", "description": "5 Minutes"},
+            {"interval": "15min", "standard": "M15", "description": "15 Minutes"},
+            {"interval": "30min", "standard": "M30", "description": "30 Minutes"},
+            {"interval": "1h", "standard": "H1", "description": "1 Hour"},
+            {"interval": "4h", "standard": "H4", "description": "4 Hours"},
+            {"interval": "1day", "standard": "D1", "description": "1 Day"},
+            {"interval": "1week", "standard": "W1", "description": "1 Week"},
+            {"interval": "1month", "standard": "MN", "description": "1 Month"},
+        ],
+        "supported_indicators": [
+            "rsi", "macd", "bbands", "stoch", "adx", "atr",
+            "ema", "sma", "cci", "ichimoku", "strength"
+        ],
+        "note": "EasyInsight now provides TwelveData-compatible API with full timeframe support.",
     }
+
+
+# New individual indicator endpoints for EasyInsight
+@easyinsight_router.get("/easyinsight/rsi/{symbol}")
+async def get_easyinsight_rsi(
+    symbol: str,
+    interval: str = Query("1h", description="Timeframe"),
+    time_period: int = Query(14, ge=2, le=100, description="RSI period"),
+    outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
+):
+    """Get RSI indicator from EasyInsight API."""
+    from ..services.easyinsight_service import easyinsight_service
+
+    result = await easyinsight_service.get_rsi(
+        symbol=symbol, interval=interval, time_period=time_period, outputsize=outputsize
+    )
+    if result.get("status") == "error":
+        raise HTTPException(status_code=502, detail=result.get("error"))
+    return result
+
+
+@easyinsight_router.get("/easyinsight/macd/{symbol}")
+async def get_easyinsight_macd(
+    symbol: str,
+    interval: str = Query("1h", description="Timeframe"),
+    fast_period: int = Query(12, ge=2, le=100, description="Fast EMA period"),
+    slow_period: int = Query(26, ge=2, le=100, description="Slow EMA period"),
+    signal_period: int = Query(9, ge=2, le=100, description="Signal period"),
+    outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
+):
+    """Get MACD indicator from EasyInsight API."""
+    from ..services.easyinsight_service import easyinsight_service
+
+    result = await easyinsight_service.get_macd(
+        symbol=symbol, interval=interval,
+        fast_period=fast_period, slow_period=slow_period, signal_period=signal_period,
+        outputsize=outputsize
+    )
+    if result.get("status") == "error":
+        raise HTTPException(status_code=502, detail=result.get("error"))
+    return result
+
+
+@easyinsight_router.get("/easyinsight/bbands/{symbol}")
+async def get_easyinsight_bbands(
+    symbol: str,
+    interval: str = Query("1h", description="Timeframe"),
+    time_period: int = Query(20, ge=2, le=100, description="SMA period"),
+    sd: float = Query(2.0, ge=0.1, le=5.0, description="Standard deviation"),
+    outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
+):
+    """Get Bollinger Bands indicator from EasyInsight API."""
+    from ..services.easyinsight_service import easyinsight_service
+
+    result = await easyinsight_service.get_bollinger_bands(
+        symbol=symbol, interval=interval, time_period=time_period, sd=sd, outputsize=outputsize
+    )
+    if result.get("status") == "error":
+        raise HTTPException(status_code=502, detail=result.get("error"))
+    return result
+
+
+@easyinsight_router.get("/easyinsight/stoch/{symbol}")
+async def get_easyinsight_stoch(
+    symbol: str,
+    interval: str = Query("1h", description="Timeframe"),
+    fast_k_period: int = Query(14, ge=1, le=100, description="Fast %K period"),
+    slow_k_period: int = Query(3, ge=1, le=100, description="Slow %K period"),
+    slow_d_period: int = Query(3, ge=1, le=100, description="Slow %D period"),
+    outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
+):
+    """Get Stochastic Oscillator from EasyInsight API."""
+    from ..services.easyinsight_service import easyinsight_service
+
+    result = await easyinsight_service.get_stochastic(
+        symbol=symbol, interval=interval,
+        fast_k_period=fast_k_period, slow_k_period=slow_k_period, slow_d_period=slow_d_period,
+        outputsize=outputsize
+    )
+    if result.get("status") == "error":
+        raise HTTPException(status_code=502, detail=result.get("error"))
+    return result
+
+
+@easyinsight_router.get("/easyinsight/adx/{symbol}")
+async def get_easyinsight_adx(
+    symbol: str,
+    interval: str = Query("1h", description="Timeframe"),
+    time_period: int = Query(14, ge=2, le=100, description="ADX period"),
+    outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
+):
+    """Get ADX indicator from EasyInsight API."""
+    from ..services.easyinsight_service import easyinsight_service
+
+    result = await easyinsight_service.get_adx(
+        symbol=symbol, interval=interval, time_period=time_period, outputsize=outputsize
+    )
+    if result.get("status") == "error":
+        raise HTTPException(status_code=502, detail=result.get("error"))
+    return result
+
+
+@easyinsight_router.get("/easyinsight/atr/{symbol}")
+async def get_easyinsight_atr(
+    symbol: str,
+    interval: str = Query("1h", description="Timeframe"),
+    time_period: int = Query(14, ge=2, le=100, description="ATR period"),
+    outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
+):
+    """Get ATR indicator from EasyInsight API."""
+    from ..services.easyinsight_service import easyinsight_service
+
+    result = await easyinsight_service.get_atr(
+        symbol=symbol, interval=interval, time_period=time_period, outputsize=outputsize
+    )
+    if result.get("status") == "error":
+        raise HTTPException(status_code=502, detail=result.get("error"))
+    return result
+
+
+@easyinsight_router.get("/easyinsight/strength/{symbol}")
+async def get_easyinsight_strength(
+    symbol: str,
+    interval: str = Query("1h", description="Timeframe"),
+    outputsize: int = Query(100, ge=1, le=5000, description="Number of data points"),
+):
+    """
+    Get EasyInsight proprietary Multi-Timeframe Strength indicator.
+
+    This indicator is EasyInsight-specific and provides strength values
+    across multiple timeframes (H4, D1, W1).
+    """
+    from ..services.easyinsight_service import easyinsight_service
+
+    result = await easyinsight_service.get_strength(
+        symbol=symbol, interval=interval, outputsize=outputsize
+    )
+    if result.get("status") == "error":
+        raise HTTPException(status_code=502, detail=result.get("error"))
+    return result
 
 
 # ==================== Yahoo Finance API ====================

@@ -2,7 +2,7 @@
 
 Dieser Service ist das einzige Gateway für den Zugriff auf externe Datenquellen:
 - TwelveData API (primär für OHLC-Daten aller Timeframes)
-- EasyInsight API (Fallback + zusätzliche Indikatoren)
+- EasyInsight API (Fallback mit TwelveData-kompatibler API)
 - Yahoo Finance (2. Fallback)
 
 Alle anderen Services (NHITS, RAG, LLM, Analysis) MÜSSEN diesen Service
@@ -10,6 +10,12 @@ für externe Datenzugriffe verwenden.
 
 Datenfluss (3-Layer-Caching):
 1. Redis Cache → 2. TimescaleDB → 3. Externe APIs
+
+EasyInsight API (TwelveData-kompatibel):
+- /time_series/{symbol} - OHLCV für alle Timeframes
+- /rsi/{symbol}, /macd/{symbol}, etc. - Technische Indikatoren
+- /indicators/{symbol} - Multiple Indikatoren in einem Request
+- Siehe: docs/EASYINSIGHT_API_MIGRATION_GUIDE.md
 
 Caching:
 - Redis als primärer Cache (verteilt, persistent)
@@ -591,71 +597,49 @@ class DataGatewayService:
         """
         Get OHLCV data from EasyInsight API for any timeframe.
 
-        EasyInsight provides multi-timeframe data in /symbol-data-full with prefixed fields:
-        - h1_open, h1_high, h1_low, h1_close (H1)
-        - m15_open, m15_high, m15_low, m15_close (M15)
-        - d1_open, d1_high, d1_low, d1_close (D1)
-
-        This method extracts OHLCV for the requested timeframe.
+        Uses the new TwelveData-compatible /time_series endpoint.
+        All timeframes (M1-MN) are now supported.
 
         Args:
             symbol: Trading symbol (e.g., BTCUSD)
-            timeframe: Timeframe (M15, H1, D1 are supported by EasyInsight)
+            timeframe: Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)
             limit: Number of data points
 
         Returns:
             List of OHLCV dictionaries with standardized format
         """
         try:
+            from .easyinsight_service import easyinsight_service
+
             # Normalize timeframe
             tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
+            td_interval = to_twelvedata(tf)  # Convert to TwelveData format (1h, 1day, etc.)
 
-            # Map timeframe to EasyInsight prefix
-            # Note: D1 is excluded because EasyInsight provides rolling D1 values, not historical daily candles
-            prefix_map = {
-                Timeframe.M15: "m15",
-                Timeframe.H1: "h1",
-            }
-
-            prefix = prefix_map.get(tf)
-            if not prefix:
-                logger.warning(f"EasyInsight does not support timeframe {tf.value}, only M15, H1")
-                return []
-
-            client = await self._get_client()
-            response = await client.get(
-                f"{self._easyinsight_url}/symbol-data-full/{symbol}",
-                params={"limit": limit}
+            # Use new TwelveData-compatible endpoint
+            result = await easyinsight_service.get_time_series(
+                symbol=symbol,
+                interval=td_interval,
+                outputsize=limit,
             )
-            response.raise_for_status()
 
-            data = response.json()
-            raw_rows = data.get('data', [])
-
-            if not raw_rows:
+            if result.get("status") != "ok" or not result.get("values"):
+                logger.warning(f"EasyInsight returned no data for {symbol}/{tf.value}")
                 return []
 
-            # Extract OHLCV from prefixed fields
+            # Convert to standardized format
             rows = []
-            for raw in raw_rows:
-                open_val = raw.get(f"{prefix}_open")
-                high_val = raw.get(f"{prefix}_high")
-                low_val = raw.get(f"{prefix}_low")
-                close_val = raw.get(f"{prefix}_close")
-                timestamp = raw.get("snapshot_time")
-
-                if all([open_val, high_val, low_val, close_val, timestamp]):
-                    rows.append({
-                        "timestamp": timestamp,
-                        "snapshot_time": timestamp,
-                        "symbol": symbol,
-                        "timeframe": tf.value,
-                        "open": float(open_val),
-                        "high": float(high_val),
-                        "low": float(low_val),
-                        "close": float(close_val),
-                        "volume": 0,  # EasyInsight doesn't provide volume
-                    })
+            for row in result.get("values", []):
+                rows.append({
+                    "timestamp": row.get("datetime"),
+                    "snapshot_time": row.get("datetime"),
+                    "symbol": symbol,
+                    "timeframe": tf.value,
+                    "open": float(row.get("open", 0)),
+                    "high": float(row.get("high", 0)),
+                    "low": float(row.get("low", 0)),
+                    "close": float(row.get("close", 0)),
+                    "volume": float(row.get("volume", 0)) if row.get("volume") else 0,
+                })
 
             if rows:
                 # Save to repository
@@ -665,7 +649,7 @@ class DataGatewayService:
                     data=rows,
                     source="easyinsight",
                 )
-                logger.debug(f"Fetched {len(rows)} EasyInsight OHLCV rows for {symbol}/{tf.value}")
+                logger.info(f"EasyInsight: Fetched {len(rows)} OHLCV rows for {symbol}/{tf.value}")
 
             return rows
 
@@ -981,6 +965,154 @@ class DataGatewayService:
             interval=interval,
             outputsize=outputsize,
         )
+
+    # ==================== EasyInsight Indicators (TwelveData-kompatibel) ====================
+
+    async def get_easyinsight_indicator(
+        self,
+        symbol: str,
+        indicator: str,
+        interval: str = "1h",
+        outputsize: int = 100,
+        **kwargs,
+    ) -> dict:
+        """
+        Get technical indicator data from EasyInsight API.
+
+        Uses the new TwelveData-compatible EasyInsight API endpoints.
+        Falls back to TwelveData if EasyInsight is unavailable.
+
+        Args:
+            symbol: Trading symbol
+            indicator: Indicator name (rsi, macd, bbands, stoch, adx, atr, etc.)
+            interval: Time interval
+            outputsize: Number of data points
+            **kwargs: Additional indicator-specific parameters
+
+        Returns:
+            Dictionary with indicator values
+        """
+        try:
+            from .easyinsight_service import easyinsight_service
+
+            # Normalize interval
+            tf = normalize_timeframe_safe(interval, Timeframe.H1)
+            td_interval = to_twelvedata(tf)
+
+            # Try EasyInsight first
+            result = await easyinsight_service.get_technical_indicator(
+                symbol=symbol,
+                indicator=indicator,
+                interval=td_interval,
+                outputsize=outputsize,
+                **kwargs,
+            )
+
+            if result.get("status") == "ok":
+                result["timeframe"] = tf.value
+                result["source"] = "easyinsight"
+                return result
+
+            # Fallback to TwelveData
+            logger.warning(f"EasyInsight {indicator} failed, falling back to TwelveData")
+            return await self.get_indicator(
+                symbol=symbol,
+                indicator=indicator,
+                interval=interval,
+                outputsize=outputsize,
+                **kwargs,
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to get {indicator} for {symbol}: {e}")
+            return {"error": str(e), "symbol": symbol, "indicator": indicator}
+
+    async def get_easyinsight_multiple_indicators(
+        self,
+        symbol: str,
+        indicators: list[str],
+        interval: str = "1h",
+        outputsize: int = 100,
+    ) -> dict:
+        """
+        Get multiple technical indicators from EasyInsight API.
+
+        Uses the TwelveData-compatible /indicators endpoint.
+
+        Args:
+            symbol: Trading symbol
+            indicators: List of indicator names
+            interval: Time interval
+            outputsize: Number of data points
+
+        Returns:
+            Dictionary with results for each indicator
+        """
+        try:
+            from .easyinsight_service import easyinsight_service
+
+            # Normalize interval
+            tf = normalize_timeframe_safe(interval, Timeframe.H1)
+            td_interval = to_twelvedata(tf)
+
+            result = await easyinsight_service.get_multiple_indicators(
+                symbol=symbol,
+                indicators=indicators,
+                interval=td_interval,
+                outputsize=outputsize,
+            )
+
+            result["timeframe"] = tf.value
+            result["source"] = "easyinsight"
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to get multiple indicators from EasyInsight for {symbol}: {e}")
+            # Fallback to TwelveData
+            return await self.get_multiple_indicators(
+                symbol=symbol,
+                indicators=indicators,
+                interval=interval,
+                outputsize=outputsize,
+            )
+
+    async def get_easyinsight_strength(
+        self,
+        symbol: str,
+        interval: str = "1h",
+        outputsize: int = 100,
+    ) -> dict:
+        """
+        Get EasyInsight proprietary Multi-Timeframe Strength indicator.
+
+        This indicator is EasyInsight-specific and not available via TwelveData.
+
+        Args:
+            symbol: Trading symbol
+            interval: Time interval
+            outputsize: Number of data points
+
+        Returns:
+            Dictionary with strength values across multiple timeframes
+        """
+        try:
+            from .easyinsight_service import easyinsight_service
+
+            tf = normalize_timeframe_safe(interval, Timeframe.H1)
+            td_interval = to_twelvedata(tf)
+
+            result = await easyinsight_service.get_strength(
+                symbol=symbol,
+                interval=td_interval,
+                outputsize=outputsize,
+            )
+
+            result["timeframe"] = tf.value
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to get EasyInsight strength for {symbol}: {e}")
+            return {"error": str(e), "symbol": symbol, "indicator": "strength"}
 
 
 # Global singleton instance
