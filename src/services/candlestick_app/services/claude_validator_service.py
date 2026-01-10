@@ -637,6 +637,24 @@ class ClaudeValidatorService:
 - Gap UP after the island (last island candle's high < next candle's low)
 - Post-gap candle is bullish (confirming the reversal)
 - Appears after a downtrend - strong bullish reversal signal""",
+
+            "morning_star": """
+**STRICT Morning Star Criteria (ALL must be met):**
+- First candle: bearish (red) with significant body
+- Second candle: small body (Doji or small candle) - can be bullish or bearish
+- Third candle: bullish (green) with significant body
+- Third candle closes above the midpoint of the first candle's body
+- Appears after a downtrend
+NOTE: Gaps between candles are NOT required for Morning Star (unlike Abandoned Baby)""",
+
+            "evening_star": """
+**STRICT Evening Star Criteria (ALL must be met):**
+- First candle: bullish (green) with significant body
+- Second candle: small body (Doji or small candle) - can be bullish or bearish
+- Third candle: bearish (red) with significant body
+- Third candle closes below the midpoint of the first candle's body
+- Appears after an uptrend
+NOTE: Gaps between candles are NOT required for Evening Star (unlike Abandoned Baby)""",
         }
         return criteria.get(pattern_type.lower(), "")
 
@@ -662,7 +680,8 @@ class ClaudeValidatorService:
         is_two_candle = is_engulfing or is_harami
         is_three_inside = pattern_type.lower() in ["three_inside_up", "three_inside_down"]
         is_three_soldiers_crows = pattern_type.lower() in ["three_white_soldiers", "three_black_crows"]
-        is_three_candle = is_three_inside or is_three_soldiers_crows
+        is_morning_evening_star = pattern_type.lower() in ["morning_star", "evening_star"]
+        is_three_candle = is_three_inside or is_three_soldiers_crows or is_morning_evening_star
 
         # Handle 3-candle patterns FIRST
         if is_three_candle and prev_candle_metrics and candle_metrics and third_candle_metrics:
@@ -806,6 +825,99 @@ Du MUSST agrees=true setzen."""
                         validation_instruction = """
 **AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
 Nicht alle Kerzen sind bullish oder Schlusskurse steigen nicht stetig.
+Du MUSST agrees=false setzen."""
+
+            elif is_morning_evening_star:
+                # Morning/Evening Star validation
+                # Calculate body sizes as percentage of range
+                first_range = first['high'] - first['low']
+                second_range = second['high'] - second['low']
+                third_range = third['high'] - third['low']
+
+                first_body_size = abs(first['close'] - first['open'])
+                second_body_size = abs(second['close'] - second['open'])
+                third_body_size = abs(third['close'] - third['open'])
+
+                # Calculate body ratio (body/range)
+                first_body_ratio = (first_body_size / first_range * 100) if first_range > 0 else 0
+                second_body_ratio = (second_body_size / second_range * 100) if second_range > 0 else 0
+                third_body_ratio = (third_body_size / third_range * 100) if third_range > 0 else 0
+
+                # First candle midpoint for close comparison
+                first_midpoint = (first['open'] + first['close']) / 2
+
+                if pattern_type.lower() == "morning_star":
+                    # Morning Star: 1st bearish, 2nd small, 3rd bullish closes above 1st midpoint
+                    first_ok = not first['is_bullish']  # First must be bearish
+                    second_ok = second_body_ratio < 40  # Second has small body (< 40% of range)
+                    third_ok = third['is_bullish']  # Third must be bullish
+                    close_ok = third['close'] > first_midpoint  # Third closes above first midpoint
+
+                    all_ok = first_ok and second_ok and third_ok and close_ok
+
+                    metrics_section += f"""
+**MORNING STAR PRÜFUNG (automatisch berechnet):**
+- Kerze 1 bearish (rot): {"✅" if first_ok else "❌"} ({("grün" if first['is_bullish'] else "rot")})
+- Kerze 2 kleiner Body (< 40%): {"✅" if second_ok else "❌"} (Body Ratio: {second_body_ratio:.1f}%)
+- Kerze 3 bullish (grün): {"✅" if third_ok else "❌"} ({("grün" if third['is_bullish'] else "rot")})
+- Kerze 3 Close ({third['close']}) über Kerze 1 Mittelpunkt ({first_midpoint:.2f}): {"✅" if close_ok else "❌"}
+"""
+                    if all_ok:
+                        validation_instruction = """
+**AUTOMATISCHE BESTÄTIGUNG ERFORDERLICH:**
+Alle Morning Star Kriterien sind erfüllt.
+Du MUSST agrees=true setzen."""
+                    else:
+                        reasons = []
+                        if not first_ok:
+                            reasons.append("Kerze 1 ist nicht bearish (rot)")
+                        if not second_ok:
+                            reasons.append(f"Kerze 2 Body zu groß ({second_body_ratio:.1f}% statt < 40%)")
+                        if not third_ok:
+                            reasons.append("Kerze 3 ist nicht bullish (grün)")
+                        if not close_ok:
+                            reasons.append(f"Kerze 3 Close ({third['close']}) nicht über Kerze 1 Mittelpunkt ({first_midpoint:.2f})")
+                        validation_instruction = f"""
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Kriterien nicht erfüllt:
+{chr(10).join('- ' + r for r in reasons)}
+Du MUSST agrees=false setzen."""
+
+                else:  # evening_star
+                    # Evening Star: 1st bullish, 2nd small, 3rd bearish closes below 1st midpoint
+                    first_ok = first['is_bullish']  # First must be bullish
+                    second_ok = second_body_ratio < 40  # Second has small body
+                    third_ok = not third['is_bullish']  # Third must be bearish
+                    close_ok = third['close'] < first_midpoint  # Third closes below first midpoint
+
+                    all_ok = first_ok and second_ok and third_ok and close_ok
+
+                    metrics_section += f"""
+**EVENING STAR PRÜFUNG (automatisch berechnet):**
+- Kerze 1 bullish (grün): {"✅" if first_ok else "❌"} ({("grün" if first['is_bullish'] else "rot")})
+- Kerze 2 kleiner Body (< 40%): {"✅" if second_ok else "❌"} (Body Ratio: {second_body_ratio:.1f}%)
+- Kerze 3 bearish (rot): {"✅" if third_ok else "❌"} ({("grün" if third['is_bullish'] else "rot")})
+- Kerze 3 Close ({third['close']}) unter Kerze 1 Mittelpunkt ({first_midpoint:.2f}): {"✅" if close_ok else "❌"}
+"""
+                    if all_ok:
+                        validation_instruction = """
+**AUTOMATISCHE BESTÄTIGUNG ERFORDERLICH:**
+Alle Evening Star Kriterien sind erfüllt.
+Du MUSST agrees=true setzen."""
+                    else:
+                        reasons = []
+                        if not first_ok:
+                            reasons.append("Kerze 1 ist nicht bullish (grün)")
+                        if not second_ok:
+                            reasons.append(f"Kerze 2 Body zu groß ({second_body_ratio:.1f}% statt < 40%)")
+                        if not third_ok:
+                            reasons.append("Kerze 3 ist nicht bearish (rot)")
+                        if not close_ok:
+                            reasons.append(f"Kerze 3 Close ({third['close']}) nicht unter Kerze 1 Mittelpunkt ({first_midpoint:.2f})")
+                        validation_instruction = f"""
+**AUTOMATISCHE ABLEHNUNG ERFORDERLICH:**
+Kriterien nicht erfüllt:
+{chr(10).join('- ' + r for r in reasons)}
 Du MUSST agrees=false setzen."""
 
         elif candle_metrics and is_two_candle and prev_candle_metrics:
