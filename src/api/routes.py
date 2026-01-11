@@ -3866,7 +3866,6 @@ async def get_symbol_live_data(symbol: str):
         "timezone_info": get_timezone_info(),
         "easyinsight": None,
         "twelvedata": None,
-        "yfinance": None,
         "errors": []
     }
 
@@ -4105,7 +4104,8 @@ async def get_symbol_live_data(symbol: str):
                 # Stochastic: Use (5,3,3) to match EasyInsight parameters
                 "stoch": twelvedata_service.get_stochastic(td_symbol, interval=td_interval, fast_k_period=5, slow_k_period=3, slow_d_period=3, outputsize=1),
                 "adx": twelvedata_service.get_adx(td_symbol, interval=td_interval, outputsize=1),
-                "atr": twelvedata_service.get_atr(td_symbol, interval=td_interval, outputsize=1),
+                # ATR: Use D1 interval to match EasyInsight (atr_d1)
+                "atr": twelvedata_service.get_atr(td_symbol, interval="1day", outputsize=1),
                 # SMA(10) to match EasyInsight (not EMA)
                 "sma_10": twelvedata_service.get_sma(td_symbol, interval=td_interval, time_period=10, outputsize=1),
                 "ichimoku": twelvedata_service.get_ichimoku(td_symbol, interval=td_interval, outputsize=1),
@@ -4173,53 +4173,6 @@ async def get_symbol_live_data(symbol: str):
             result["errors"].append(f"TwelveData: {quote.get('error')}")
     except Exception as e:
         result["errors"].append(f"TwelveData: {str(e)}")
-
-    # Fetch Yahoo Finance data as additional source
-    # Note: yfinance_service is imported conditionally at the top of this file
-    try:
-        if _yfinance_available and yfinance_service is not None and yfinance_service.is_available():
-            # Get daily data for comparison
-            yf_data = await yfinance_service.get_time_series(
-                symbol=symbol,
-                interval="1d",
-                outputsize=5  # Last 5 days
-            )
-
-            if "error" not in yf_data and yf_data.get("values"):
-                values = yf_data["values"]
-                latest = values[0] if values else None
-
-                if latest:
-                    yf_datetime = latest.get("datetime")
-                    result["yfinance"] = {
-                        "source": "Yahoo Finance",
-                        "symbol_used": yfinance_service._map_symbol(symbol),
-                        "datetime_utc": format_utc_iso(yf_datetime),
-                        "datetime_display": format_for_display(yf_datetime),
-                        "price": {
-                            "open": latest.get("open"),
-                            "high": latest.get("high"),
-                            "low": latest.get("low"),
-                            "close": latest.get("close"),
-                        },
-                        "volume": latest.get("volume"),
-                        "data_points": len(values),
-                    }
-
-                    # Calculate change from previous day if available
-                    if len(values) >= 2:
-                        prev = values[1]
-                        if prev.get("close") and latest.get("close"):
-                            prev_close = float(prev["close"])
-                            curr_close = float(latest["close"])
-                            change = curr_close - prev_close
-                            change_pct = (change / prev_close * 100) if prev_close != 0 else 0
-                            result["yfinance"]["change"] = round(change, 5)
-                            result["yfinance"]["change_percent"] = round(change_pct, 2)
-            elif "error" in yf_data:
-                result["errors"].append(f"Yahoo Finance: {yf_data['error']}")
-    except Exception as e:
-        result["errors"].append(f"Yahoo Finance: {str(e)}")
 
     return result
 
