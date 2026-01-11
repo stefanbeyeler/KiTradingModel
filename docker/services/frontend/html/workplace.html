@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trading Workplace - Setups & Analyse</title>
+    <!-- TradingView Widget Library -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
         * {
             margin: 0;
@@ -270,6 +272,83 @@
 
         .setup-card.market-closed {
             opacity: 0.5;
+        }
+
+        .setup-card.selected {
+            border: 2px solid #64c8ff;
+            background: rgba(100, 200, 255, 0.1);
+        }
+
+        .setup-card:hover {
+            cursor: pointer;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        /* TradingView Chart Section */
+        .chart-section {
+            margin-top: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .chart-header h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-symbol {
+            color: #64c8ff;
+            font-size: 1rem;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chart-controls select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e8e8e8;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .chart-container {
+            height: 400px;
+            background: #131722;
+        }
+
+        .chart-placeholder {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .chart-placeholder .icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.3;
         }
 
         .setup-top {
@@ -669,6 +748,39 @@
                         <p>Lade Setups...</p>
                     </div>
                 </div>
+
+                <!-- TradingView Chart -->
+                <div class="chart-section" id="chartSection">
+                    <div class="chart-header">
+                        <h3>
+                            <span>Chart:</span>
+                            <span class="chart-symbol" id="chartSymbol">Kein Symbol ausgewählt</span>
+                        </h3>
+                        <div class="chart-controls">
+                            <select id="chartInterval" onchange="updateChart()">
+                                <option value="1">1 Min</option>
+                                <option value="5">5 Min</option>
+                                <option value="15">15 Min</option>
+                                <option value="60" selected>1 Std</option>
+                                <option value="240">4 Std</option>
+                                <option value="D">1 Tag</option>
+                                <option value="W">1 Woche</option>
+                            </select>
+                            <select id="chartStyle" onchange="updateChart()">
+                                <option value="1" selected>Kerzen</option>
+                                <option value="0">Balken</option>
+                                <option value="3">Linie</option>
+                                <option value="9">Hollow Kerzen</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="chart-container" id="chartContainer">
+                        <div class="chart-placeholder">
+                            <div class="icon">📊</div>
+                            <p>Klicken Sie auf ein Setup, um das Chart anzuzeigen</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Sidebar -->
@@ -727,6 +839,59 @@
 
         // Display timezone from settings (Europe/Zurich)
         const DISPLAY_TIMEZONE = 'Europe/Zurich';
+
+        // TradingView Chart State
+        let currentChartSymbol = null;
+        let tvWidget = null;
+        let tradingViewConfig = {
+            enabled: true,
+            defaultInterval: '60',
+            defaultStyle: '1',
+            showToolbar: true,
+            showDrawingTools: true,
+            theme: 'dark'
+        };
+
+        // Symbol mapping for TradingView (unser Format -> TradingView Format)
+        const TV_SYMBOL_MAP = {
+            'BTCUSD': 'BITSTAMP:BTCUSD',
+            'ETHUSD': 'BITSTAMP:ETHUSD',
+            'XRPUSD': 'BITSTAMP:XRPUSD',
+            'SOLUSD': 'COINBASE:SOLUSD',
+            'ADAUSD': 'COINBASE:ADAUSD',
+            'DOTUSD': 'KRAKEN:DOTUSD',
+            'LINKUSD': 'COINBASE:LINKUSD',
+            'BNBUSD': 'BINANCE:BNBUSD',
+            'EURUSD': 'FX:EURUSD',
+            'GBPUSD': 'FX:GBPUSD',
+            'USDJPY': 'FX:USDJPY',
+            'USDCHF': 'FX:USDCHF',
+            'AUDUSD': 'FX:AUDUSD',
+            'USDCAD': 'FX:USDCAD',
+            'NZDUSD': 'FX:NZDUSD',
+            'EURGBP': 'FX:EURGBP',
+            'EURJPY': 'FX:EURJPY',
+            'GBPJPY': 'FX:GBPJPY',
+            'XAUUSD': 'TVC:GOLD',
+            'XAGUSD': 'TVC:SILVER',
+            'AAPL': 'NASDAQ:AAPL',
+            'MSFT': 'NASDAQ:MSFT',
+            'GOOGL': 'NASDAQ:GOOGL',
+            'AMZN': 'NASDAQ:AMZN',
+            'NVDA': 'NASDAQ:NVDA',
+            'TSLA': 'NASDAQ:TSLA',
+            'META': 'NASDAQ:META',
+            'US500': 'FOREXCOM:SPXUSD',
+            'US100': 'NASDAQ:NDX',
+            'US30': 'DJ:DJI',
+            'DE40': 'XETR:DAX',
+            'UK100': 'CAPITALCOM:UK100',
+            'FR40': 'EURONEXT:PX1',
+            'EU50': 'TVC:SX5E',
+            'JP225': 'TVC:NI225',
+            'HK50': 'HSI:HSI',
+            'AU200': 'PEPPERSTONE:AUS200'
+        };
 
         // Market Hours (in UTC) - will be converted to local time for display
         const MARKET_HOURS_UTC = {
@@ -835,6 +1000,64 @@
             return marketStatus[market] !== false;
         }
 
+        // TradingView Chart Functions
+        function selectSetup(symbol, timeframe) {
+            // Highlight selected card
+            document.querySelectorAll('.setup-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+
+            // Load chart
+            loadChart(symbol);
+        }
+
+        function getTradingViewSymbol(symbol) {
+            return TV_SYMBOL_MAP[symbol.toUpperCase()] || symbol;
+        }
+
+        function loadChart(symbol) {
+            currentChartSymbol = symbol;
+            const tvSymbol = getTradingViewSymbol(symbol);
+            const interval = document.getElementById('chartInterval').value;
+            const style = document.getElementById('chartStyle').value;
+
+            document.getElementById('chartSymbol').textContent = symbol;
+
+            // Create TradingView Widget
+            const container = document.getElementById('chartContainer');
+            container.innerHTML = '';
+
+            new TradingView.widget({
+                "autosize": true,
+                "symbol": tvSymbol,
+                "interval": interval,
+                "timezone": DISPLAY_TIMEZONE,
+                "theme": "dark",
+                "style": style,
+                "locale": "de_DE",
+                "toolbar_bg": "#1a1a2e",
+                "enable_publishing": false,
+                "hide_top_toolbar": false,
+                "hide_legend": false,
+                "save_image": true,
+                "container_id": "chartContainer",
+                "studies": [
+                    "MASimple@tv-basicstudies",
+                    "RSI@tv-basicstudies"
+                ],
+                "show_popup_button": true,
+                "popup_width": "1000",
+                "popup_height": "650"
+            });
+        }
+
+        function updateChart() {
+            if (currentChartSymbol) {
+                loadChart(currentChartSymbol);
+            }
+        }
+
         async function loadSetups() {
             const direction = document.getElementById('directionFilter').value;
             const marketFilter = document.getElementById('marketFilter').value;
@@ -902,7 +1125,7 @@
             ];
 
             return `
-                <div class="setup-card ${setup.direction} ${marketClosedClass}" onclick="openAnalysis('${setup.symbol}', '${setup.timeframe}')">
+                <div class="setup-card ${setup.direction} ${marketClosedClass}" onclick="selectSetup('${setup.symbol}', '${setup.timeframe}')" ondblclick="openAnalysis('${setup.symbol}', '${setup.timeframe}')">
                     <div class="setup-top">
                         <span class="setup-symbol">
                             ${setup.symbol}

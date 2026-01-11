@@ -310,3 +310,53 @@ class ServiceHealthResponse(BaseModel):
         default_factory=dict,
         description="Erreichbarkeit der ML-Services"
     )
+
+
+# =============================================================================
+# TradingView Config Schemas
+# =============================================================================
+
+class TradingViewIndicators(BaseModel):
+    """TradingView Standard-Indikatoren Einstellungen."""
+    sma: bool = Field(default=True, description="SMA anzeigen")
+    ema: bool = Field(default=False, description="EMA anzeigen")
+    rsi: bool = Field(default=True, description="RSI anzeigen")
+    macd: bool = Field(default=False, description="MACD anzeigen")
+    bollinger: bool = Field(default=False, description="Bollinger Bands anzeigen")
+    volume: bool = Field(default=True, description="Volume anzeigen")
+
+
+class TradingViewExchanges(BaseModel):
+    """TradingView Exchange-Mapping Einstellungen."""
+    crypto: str = Field(default="BITSTAMP", description="Crypto-Börse")
+    forex: str = Field(default="FX", description="Forex-Provider")
+    stocks: str = Field(default="NASDAQ", description="US-Stock Exchange")
+
+
+class TradingViewConfig(BaseModel):
+    """TradingView Konfiguration."""
+    username: Optional[str] = Field(None, description="TradingView Benutzername")
+    session_id: Optional[str] = Field(None, description="TradingView Session ID")
+    default_interval: str = Field(default="60", description="Standard-Intervall")
+    default_style: str = Field(default="1", description="Standard-Chart-Stil")
+    theme: str = Field(default="dark", description="Theme (dark/light)")
+    indicators: TradingViewIndicators = Field(
+        default_factory=TradingViewIndicators,
+        description="Standard-Indikatoren"
+    )
+    exchanges: TradingViewExchanges = Field(
+        default_factory=TradingViewExchanges,
+        description="Exchange-Mapping"
+    )
+
+
+class TradingViewTestRequest(BaseModel):
+    """Request zum Testen der TradingView-Verbindung."""
+    username: Optional[str] = Field(None, description="TradingView Benutzername")
+    session_id: Optional[str] = Field(None, description="TradingView Session ID")
+
+
+class TradingViewTestResponse(BaseModel):
+    """Response für TradingView-Verbindungstest."""
+    valid: bool = Field(..., description="Verbindung gültig")
+    error: Optional[str] = Field(None, description="Fehlermeldung bei ungültiger Verbindung")

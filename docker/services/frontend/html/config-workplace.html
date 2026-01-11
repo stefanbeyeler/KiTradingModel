@@ -309,6 +309,7 @@
             <button class="tab-btn active" onclick="showTab('watchlist')">Watchlist</button>
             <button class="tab-btn" onclick="showTab('scanner')">Scanner</button>
             <button class="tab-btn" onclick="showTab('scoring')">Scoring</button>
+            <button class="tab-btn" onclick="showTab('tradingview')">TradingView</button>
         </div>
 
         <!-- Watchlist Tab -->
@@ -479,6 +480,156 @@
                 </div>
             </div>
         </div>
+
+        <!-- TradingView Tab -->
+        <div id="tradingview-tab" class="tab-content">
+            <div class="card">
+                <h2>TradingView Konto</h2>
+                <p style="margin-bottom: 1rem; opacity: 0.8;">
+                    Verbinden Sie Ihr TradingView-Konto für erweiterte Chart-Funktionen.
+                </p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>TradingView Benutzername</label>
+                        <input type="text" id="tvUsername" placeholder="Ihr TradingView Benutzername" />
+                        <p class="info-text">Optional - für personalisierte Charts</p>
+                    </div>
+                    <div class="form-group">
+                        <label>API Session ID</label>
+                        <input type="password" id="tvSessionId" placeholder="Session ID aus Browser Cookie" />
+                        <p class="info-text">Für erweiterte Features (optional)</p>
+                    </div>
+                </div>
+                <p class="info-text" style="margin-top: 1rem; color: #fbbf24;">
+                    <strong>Hinweis:</strong> Die Session ID finden Sie in Ihren Browser-Cookies unter "sessionid" auf tradingview.com
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>Chart-Einstellungen</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Standard-Intervall</label>
+                        <select id="tvDefaultInterval">
+                            <option value="1">1 Minute</option>
+                            <option value="5">5 Minuten</option>
+                            <option value="15">15 Minuten</option>
+                            <option value="60" selected>1 Stunde</option>
+                            <option value="240">4 Stunden</option>
+                            <option value="D">1 Tag</option>
+                            <option value="W">1 Woche</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Standard-Chart-Stil</label>
+                        <select id="tvDefaultStyle">
+                            <option value="1" selected>Kerzen (Candlestick)</option>
+                            <option value="0">Balken (OHLC)</option>
+                            <option value="3">Linie</option>
+                            <option value="9">Hollow Candles</option>
+                            <option value="8">Heikin-Ashi</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Theme</label>
+                        <select id="tvTheme">
+                            <option value="dark" selected>Dark</option>
+                            <option value="light">Light</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Standard-Indikatoren</h2>
+                <p style="margin-bottom: 1rem; opacity: 0.8;">
+                    Diese Indikatoren werden automatisch bei jedem Chart hinzugefügt.
+                </p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="tvShowSMA" checked />
+                            SMA (Simple Moving Average)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="tvShowEMA" />
+                            EMA (Exponential Moving Average)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="tvShowRSI" checked />
+                            RSI (Relative Strength Index)
+                        </label>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="tvShowMACD" />
+                            MACD
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="tvShowBB" />
+                            Bollinger Bands
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="tvShowVolume" checked />
+                            Volume
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Symbol-Mapping</h2>
+                <p style="margin-bottom: 1rem; opacity: 0.8;">
+                    Zuordnung von internen Symbolen zu TradingView-Symbolen.
+                </p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Crypto-Börse</label>
+                        <select id="tvCryptoExchange">
+                            <option value="BITSTAMP" selected>Bitstamp</option>
+                            <option value="COINBASE">Coinbase</option>
+                            <option value="BINANCE">Binance</option>
+                            <option value="KRAKEN">Kraken</option>
+                        </select>
+                        <p class="info-text">Bevorzugte Börse für Crypto-Charts</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Forex-Provider</label>
+                        <select id="tvForexProvider">
+                            <option value="FX" selected>FX (Standard)</option>
+                            <option value="OANDA">OANDA</option>
+                            <option value="FOREXCOM">Forex.com</option>
+                        </select>
+                        <p class="info-text">Datenquelle für Forex-Charts</p>
+                    </div>
+                    <div class="form-group">
+                        <label>US-Stocks</label>
+                        <select id="tvStockExchange">
+                            <option value="NASDAQ" selected>NASDAQ</option>
+                            <option value="NYSE">NYSE</option>
+                            <option value="AMEX">AMEX</option>
+                        </select>
+                        <p class="info-text">Börse für US-Aktien</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button class="btn btn-primary" onclick="saveTradingViewConfig()">Einstellungen speichern</button>
+                <button class="btn btn-secondary" onclick="loadTradingViewConfig()">Zurücksetzen</button>
+                <button class="btn btn-secondary" onclick="testTradingViewConnection()">Verbindung testen</button>
+            </div>
+        </div>
     </div>
 
     <div id="toast" class="toast"></div>
@@ -489,6 +640,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadWatchlist();
             loadScannerStatus();
+            loadTradingViewConfig();
 
             // Gewichte-Summe berechnen
             document.querySelectorAll('#scoring-tab input[type="number"]').forEach(input => {
@@ -666,6 +818,108 @@
             sumInput.style.background = Math.abs(sum - 1.0) < 0.01
                 ? 'rgba(16, 185, 129, 0.2)'
                 : 'rgba(239, 68, 68, 0.2)';
+        }
+
+        // TradingView Config Functions
+        async function loadTradingViewConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/config/tradingview`);
+                if (response.ok) {
+                    const config = await response.json();
+
+                    // Konto
+                    document.getElementById('tvUsername').value = config.username || '';
+                    document.getElementById('tvSessionId').value = config.session_id || '';
+
+                    // Chart-Einstellungen
+                    document.getElementById('tvDefaultInterval').value = config.default_interval || '60';
+                    document.getElementById('tvDefaultStyle').value = config.default_style || '1';
+                    document.getElementById('tvTheme').value = config.theme || 'dark';
+
+                    // Indikatoren
+                    document.getElementById('tvShowSMA').checked = config.indicators?.sma !== false;
+                    document.getElementById('tvShowEMA').checked = config.indicators?.ema === true;
+                    document.getElementById('tvShowRSI').checked = config.indicators?.rsi !== false;
+                    document.getElementById('tvShowMACD').checked = config.indicators?.macd === true;
+                    document.getElementById('tvShowBB').checked = config.indicators?.bollinger === true;
+                    document.getElementById('tvShowVolume').checked = config.indicators?.volume !== false;
+
+                    // Symbol-Mapping
+                    document.getElementById('tvCryptoExchange').value = config.exchanges?.crypto || 'BITSTAMP';
+                    document.getElementById('tvForexProvider').value = config.exchanges?.forex || 'FX';
+                    document.getElementById('tvStockExchange').value = config.exchanges?.stocks || 'NASDAQ';
+                }
+            } catch (error) {
+                console.log('TradingView Config nicht verfügbar, verwende Defaults');
+            }
+        }
+
+        async function saveTradingViewConfig() {
+            const config = {
+                username: document.getElementById('tvUsername').value.trim(),
+                session_id: document.getElementById('tvSessionId').value.trim(),
+                default_interval: document.getElementById('tvDefaultInterval').value,
+                default_style: document.getElementById('tvDefaultStyle').value,
+                theme: document.getElementById('tvTheme').value,
+                indicators: {
+                    sma: document.getElementById('tvShowSMA').checked,
+                    ema: document.getElementById('tvShowEMA').checked,
+                    rsi: document.getElementById('tvShowRSI').checked,
+                    macd: document.getElementById('tvShowMACD').checked,
+                    bollinger: document.getElementById('tvShowBB').checked,
+                    volume: document.getElementById('tvShowVolume').checked
+                },
+                exchanges: {
+                    crypto: document.getElementById('tvCryptoExchange').value,
+                    forex: document.getElementById('tvForexProvider').value,
+                    stocks: document.getElementById('tvStockExchange').value
+                }
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/config/tradingview`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+
+                if (response.ok) {
+                    showToast('TradingView-Einstellungen gespeichert', 'success');
+                } else {
+                    showToast('Fehler beim Speichern', 'error');
+                }
+            } catch (error) {
+                console.error('Fehler:', error);
+                showToast('Fehler beim Speichern', 'error');
+            }
+        }
+
+        async function testTradingViewConnection() {
+            const username = document.getElementById('tvUsername').value.trim();
+            const sessionId = document.getElementById('tvSessionId').value.trim();
+
+            if (!username && !sessionId) {
+                showToast('Keine Anmeldedaten vorhanden - Widget funktioniert ohne Konto', 'success');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/config/tradingview/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, session_id: sessionId })
+                });
+
+                const result = await response.json();
+                if (result.valid) {
+                    showToast('TradingView-Verbindung erfolgreich', 'success');
+                } else {
+                    showToast('Verbindung fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'), 'error');
+                }
+            } catch (error) {
+                console.error('Fehler:', error);
+                showToast('Test fehlgeschlagen', 'error');
+            }
         }
 
         function showToast(message, type = 'success') {

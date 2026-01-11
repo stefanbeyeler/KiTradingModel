@@ -10,6 +10,7 @@ from .setups_router import router as setups_router
 from .analyze_router import router as analyze_router
 from .watchlist_router import router as watchlist_router
 from .scan_router import router as scan_router
+from .config_router import router as config_router
 
 # Haupt-Router
 router = APIRouter()
@@ -37,4 +38,10 @@ router.include_router(
     scan_router,
     prefix="/scan",
     tags=["4. Scanner"]
+)
+
+router.include_router(
+    config_router,
+    prefix="/config",
+    tags=["5. Konfiguration"]
 )
