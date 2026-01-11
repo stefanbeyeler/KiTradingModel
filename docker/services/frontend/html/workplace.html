@@ -725,13 +725,16 @@
             metals: ['XAUUSD', 'XAGUSD']
         };
 
-        // Market Hours (in UTC)
-        const MARKET_HOURS = {
-            crypto: { open: 0, close: 24, days: [0, 1, 2, 3, 4, 5, 6] }, // 24/7
-            forex: { open: 22, close: 21, days: [0, 1, 2, 3, 4], sundayOpen: 22, fridayClose: 21 }, // Sun 22:00 - Fri 21:00 UTC
-            us: { open: 14, close: 21, days: [1, 2, 3, 4, 5] }, // 14:30-21:00 UTC (9:30-16:00 EST)
-            eu: { open: 8, close: 16.5, days: [1, 2, 3, 4, 5] }, // 08:00-16:30 UTC
-            asia: { open: 0, close: 6, days: [1, 2, 3, 4, 5] } // 00:00-06:00 UTC (Tokyo)
+        // Display timezone from settings (Europe/Zurich)
+        const DISPLAY_TIMEZONE = 'Europe/Zurich';
+
+        // Market Hours (in UTC) - will be converted to local time for display
+        const MARKET_HOURS_UTC = {
+            crypto: { open: 0, close: 24 }, // 24/7
+            forex: { sundayOpen: 22, fridayClose: 21 }, // Sun 22:00 - Fri 21:00 UTC
+            us: { open: 14.5, close: 21 }, // 14:30-21:00 UTC
+            eu: { open: 8, close: 16.5 }, // 08:00-16:30 UTC
+            asia: { open: 0, close: 6 } // 00:00-06:00 UTC
         };
 
         // Initialisierung
@@ -747,6 +750,14 @@
             setInterval(loadSetups, 15000);
         });
 
+        // Convert UTC hour to local timezone hour
+        function utcToLocal(utcHour, utcMinutes = 0) {
+            const now = new Date();
+            const utcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), Math.floor(utcHour), utcMinutes));
+            const localTime = utcDate.toLocaleTimeString('de-CH', { timeZone: DISPLAY_TIMEZONE, hour: '2-digit', minute: '2-digit' });
+            return localTime;
+        }
+
         function updateMarketHours() {
             const now = new Date();
             const utcHour = now.getUTCHours() + now.getUTCMinutes() / 60;
@@ -759,30 +770,38 @@
             if (cryptoOpen) openCount++;
             marketStatus.crypto = cryptoOpen;
 
-            // Forex - Sun 22:00 UTC bis Fri 21:00 UTC
+            // Forex - Sun 22:00 UTC bis Fri 21:00 UTC (Sun 23:00 - Fri 22:00 CET)
             let forexOpen = false;
             if (utcDay === 0 && utcHour >= 22) forexOpen = true;
             else if (utcDay > 0 && utcDay < 5) forexOpen = true;
             else if (utcDay === 5 && utcHour < 21) forexOpen = true;
-            updateMarketDisplay('forex', forexOpen, forexOpen ? 'bis Fr 21:00' : 'ab So 22:00');
+            const forexCloseLocal = utcToLocal(21, 0);
+            const forexOpenLocal = utcToLocal(22, 0);
+            updateMarketDisplay('forex', forexOpen, forexOpen ? `bis Fr ${forexCloseLocal}` : `ab So ${forexOpenLocal}`);
             if (forexOpen) openCount++;
             marketStatus.forex = forexOpen;
 
-            // US Markets - 14:30-21:00 UTC (Mon-Fri)
+            // US Markets - 14:30-21:00 UTC (15:30-22:00 CET)
             const usOpen = utcDay >= 1 && utcDay <= 5 && utcHour >= 14.5 && utcHour < 21;
-            updateMarketDisplay('us', usOpen, usOpen ? `bis ${formatTime(21, 0)}` : `ab ${formatTime(14, 30)}`);
+            const usOpenLocal = utcToLocal(14, 30);
+            const usCloseLocal = utcToLocal(21, 0);
+            updateMarketDisplay('us', usOpen, usOpen ? `bis ${usCloseLocal}` : `ab ${usOpenLocal}`);
             if (usOpen) openCount++;
             marketStatus.us = usOpen;
 
-            // EU Markets - 08:00-16:30 UTC (Mon-Fri)
+            // EU Markets - 08:00-16:30 UTC (09:00-17:30 CET)
             const euOpen = utcDay >= 1 && utcDay <= 5 && utcHour >= 8 && utcHour < 16.5;
-            updateMarketDisplay('eu', euOpen, euOpen ? `bis ${formatTime(16, 30)}` : `ab ${formatTime(8, 0)}`);
+            const euOpenLocal = utcToLocal(8, 0);
+            const euCloseLocal = utcToLocal(16, 30);
+            updateMarketDisplay('eu', euOpen, euOpen ? `bis ${euCloseLocal}` : `ab ${euOpenLocal}`);
             if (euOpen) openCount++;
             marketStatus.eu = euOpen;
 
-            // Asia Markets - 00:00-06:00 UTC (Mon-Fri, entspricht Tokyo 09:00-15:00)
+            // Asia Markets - 00:00-06:00 UTC (01:00-07:00 CET)
             const asiaOpen = utcDay >= 1 && utcDay <= 5 && utcHour < 6;
-            updateMarketDisplay('asia', asiaOpen, asiaOpen ? `bis ${formatTime(6, 0)}` : `ab ${formatTime(0, 0)}`);
+            const asiaOpenLocal = utcToLocal(0, 0);
+            const asiaCloseLocal = utcToLocal(6, 0);
+            updateMarketDisplay('asia', asiaOpen, asiaOpen ? `bis ${asiaCloseLocal}` : `ab ${asiaOpenLocal}`);
             if (asiaOpen) openCount++;
             marketStatus.asia = asiaOpen;
 
@@ -798,10 +817,6 @@
 
             const timeEl = el.querySelector('.market-time');
             if (timeEl) timeEl.textContent = timeText;
-        }
-
-        function formatTime(hours, minutes) {
-            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} UTC`;
         }
 
         function getSymbolMarket(symbol) {
