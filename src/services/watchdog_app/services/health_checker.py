@@ -193,6 +193,12 @@ class HealthChecker:
                 "startup_grace": 60,
                 "dependencies": ["rag"]
             },
+            "workplace": {
+                "url": "http://trading-workplace:3020/health",
+                "criticality": "medium",
+                "startup_grace": 30,
+                "dependencies": ["data", "nhits", "hmm", "candlestick"]
+            },
             # Externe Datenquellen werden über den Data Service abgefragt (Gateway-Pattern)
             "easyinsight": {
                 "url": "/api/v1/easyinsight/status",
