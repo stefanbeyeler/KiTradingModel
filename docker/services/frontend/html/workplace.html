@@ -1348,7 +1348,10 @@
                 const data = await response.json();
 
                 if (data.items && data.items.length > 0) {
-                    container.innerHTML = data.items.slice(0, 8).map(item => {
+                    // Sortiere nach Score (höchste zuerst)
+                    const sortedItems = [...data.items].sort((a, b) => (b.last_score || 0) - (a.last_score || 0));
+
+                    container.innerHTML = sortedItems.slice(0, 8).map(item => {
                         const scoreClass = item.last_score >= 75 ? 'high' :
                                           item.last_score >= 60 ? 'moderate' : 'low';
                         return `
