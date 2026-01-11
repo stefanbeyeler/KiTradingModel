@@ -335,6 +335,51 @@
             background: #131722;
         }
 
+        /* Chart Fullscreen Mode */
+        .chart-section.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            margin: 0;
+            border-radius: 0;
+            border: none;
+        }
+
+        .chart-section.fullscreen .chart-container {
+            height: calc(100vh - 50px);
+        }
+
+        .chart-section.fullscreen .chart-header {
+            padding: 0.8rem 1.5rem;
+        }
+
+        .chart-expand-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e8e8e8;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s;
+        }
+
+        .chart-expand-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .chart-expand-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
         .chart-placeholder {
             height: 100%;
             display: flex;
@@ -772,6 +817,12 @@
                                 <option value="3">Linie</option>
                                 <option value="9">Hollow Kerzen</option>
                             </select>
+                            <button class="chart-expand-btn" id="chartExpandBtn" onclick="toggleChartFullscreen()" title="Vollbild (Esc zum Schliessen)">
+                                <svg id="expandIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                                </svg>
+                                <span id="expandText">Vollbild</span>
+                            </button>
                         </div>
                     </div>
                     <div class="chart-container" id="chartContainer">
@@ -844,12 +895,32 @@
         let currentChartSymbol = null;
         let tvWidget = null;
         let tradingViewConfig = {
-            enabled: true,
-            defaultInterval: '60',
-            defaultStyle: '1',
-            showToolbar: true,
-            showDrawingTools: true,
-            theme: 'dark'
+            default_interval: '60',
+            default_style: '1',
+            theme: 'dark',
+            indicators: {
+                sma: true,
+                ema: false,
+                rsi: true,
+                macd: false,
+                bollinger: false,
+                volume: true
+            },
+            exchanges: {
+                crypto: 'BITSTAMP',
+                forex: 'FX',
+                stocks: 'NASDAQ'
+            }
+        };
+
+        // TradingView Indikator-Mapping
+        const TV_INDICATOR_MAP = {
+            sma: 'MASimple@tv-basicstudies',
+            ema: 'MAExp@tv-basicstudies',
+            rsi: 'RSI@tv-basicstudies',
+            macd: 'MACD@tv-basicstudies',
+            bollinger: 'BB@tv-basicstudies',
+            volume: 'Volume@tv-basicstudies'
         };
 
         // Symbol mapping for TradingView (unser Format -> TradingView Format)
@@ -902,8 +973,38 @@
             asia: { open: 0, close: 6 } // 00:00-06:00 UTC
         };
 
+        // TradingView-Konfiguration laden
+        async function loadTradingViewConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/config/tradingview`);
+                if (response.ok) {
+                    const config = await response.json();
+                    // Merge mit Defaults
+                    tradingViewConfig = {
+                        ...tradingViewConfig,
+                        ...config,
+                        indicators: { ...tradingViewConfig.indicators, ...config.indicators },
+                        exchanges: { ...tradingViewConfig.exchanges, ...config.exchanges }
+                    };
+
+                    // Default-Werte für Dropdowns setzen
+                    if (config.default_interval) {
+                        document.getElementById('chartInterval').value = config.default_interval;
+                    }
+                    if (config.default_style) {
+                        document.getElementById('chartStyle').value = config.default_style;
+                    }
+
+                    console.log('TradingView-Konfiguration geladen:', tradingViewConfig);
+                }
+            } catch (error) {
+                console.warn('TradingView-Konfiguration konnte nicht geladen werden:', error);
+            }
+        }
+
         // Initialisierung
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadTradingViewConfig();
             updateMarketHours();
             loadSetups();
             loadWatchlist();
@@ -1013,8 +1114,84 @@
         }
 
         function getTradingViewSymbol(symbol) {
-            return TV_SYMBOL_MAP[symbol.toUpperCase()] || symbol;
+            const upperSymbol = symbol.toUpperCase();
+
+            // Wenn ein festes Mapping existiert, verwende es
+            if (TV_SYMBOL_MAP[upperSymbol]) {
+                return TV_SYMBOL_MAP[upperSymbol];
+            }
+
+            // Dynamisches Mapping basierend auf konfigurierter Exchange
+            const exchanges = tradingViewConfig.exchanges || {};
+
+            // Crypto-Symbole
+            if (SYMBOL_CATEGORIES.crypto.includes(upperSymbol)) {
+                const exchange = exchanges.crypto || 'BITSTAMP';
+                return `${exchange}:${upperSymbol}`;
+            }
+
+            // Forex-Symbole
+            if (SYMBOL_CATEGORIES.forex.includes(upperSymbol)) {
+                const provider = exchanges.forex || 'FX';
+                return `${provider}:${upperSymbol}`;
+            }
+
+            // US-Aktien
+            if (SYMBOL_CATEGORIES.us_stocks.includes(upperSymbol)) {
+                const exchange = exchanges.stocks || 'NASDAQ';
+                return `${exchange}:${upperSymbol}`;
+            }
+
+            return symbol;
         }
+
+        function getActiveIndicators() {
+            const studies = [];
+            if (tradingViewConfig.indicators) {
+                for (const [key, enabled] of Object.entries(tradingViewConfig.indicators)) {
+                    if (enabled && TV_INDICATOR_MAP[key]) {
+                        studies.push(TV_INDICATOR_MAP[key]);
+                    }
+                }
+            }
+            // Kein Fallback - nur explizit aktivierte Indikatoren anzeigen
+            return studies;
+        }
+
+        // Chart Fullscreen Toggle
+        let isChartFullscreen = false;
+
+        function toggleChartFullscreen() {
+            const chartSection = document.getElementById('chartSection');
+            const expandText = document.getElementById('expandText');
+            const expandIcon = document.getElementById('expandIcon');
+
+            isChartFullscreen = !isChartFullscreen;
+
+            if (isChartFullscreen) {
+                chartSection.classList.add('fullscreen');
+                expandText.textContent = 'Verkleinern';
+                expandIcon.innerHTML = '<path d="M4 14h6v6m10-10h-6V4m0 6l7-7M3 21l7-7"/>';
+                document.body.style.overflow = 'hidden';
+            } else {
+                chartSection.classList.remove('fullscreen');
+                expandText.textContent = 'Vollbild';
+                expandIcon.innerHTML = '<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>';
+                document.body.style.overflow = '';
+            }
+
+            // Chart neu laden um Größe anzupassen
+            if (currentChartSymbol) {
+                setTimeout(() => loadChart(currentChartSymbol), 100);
+            }
+        }
+
+        // ESC-Taste zum Schließen des Fullscreen-Modus
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isChartFullscreen) {
+                toggleChartFullscreen();
+            }
+        });
 
         function loadChart(symbol) {
             currentChartSymbol = symbol;
@@ -1023,6 +1200,9 @@
             const style = document.getElementById('chartStyle').value;
 
             document.getElementById('chartSymbol').textContent = symbol;
+
+            // Get active indicators from config
+            const activeStudies = getActiveIndicators();
 
             // Create TradingView Widget
             const container = document.getElementById('chartContainer');
@@ -1033,7 +1213,7 @@
                 "symbol": tvSymbol,
                 "interval": interval,
                 "timezone": DISPLAY_TIMEZONE,
-                "theme": "dark",
+                "theme": tradingViewConfig.theme || "dark",
                 "style": style,
                 "locale": "de_DE",
                 "toolbar_bg": "#1a1a2e",
@@ -1042,10 +1222,7 @@
                 "hide_legend": false,
                 "save_image": true,
                 "container_id": "chartContainer",
-                "studies": [
-                    "MASimple@tv-basicstudies",
-                    "RSI@tv-basicstudies"
-                ],
+                "studies": activeStudies,
                 "show_popup_button": true,
                 "popup_width": "1000",
                 "popup_height": "650"
