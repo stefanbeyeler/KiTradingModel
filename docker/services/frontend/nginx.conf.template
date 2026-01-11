@@ -49,12 +49,15 @@ http {
         root /usr/share/nginx/html;
         index index.html;
 
-        # Frontend - Static Files
+        # Frontend - Static Files (with no-cache for index.html)
         location / {
             try_files $uri $uri/ /index.html;
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+            add_header Pragma "no-cache";
+            add_header Expires "0";
         }
 
-        # Disable caching for HTML files to ensure latest version
+        # Disable caching for all HTML files
         location ~* \.html$ {
             add_header Cache-Control "no-cache, no-store, must-revalidate";
             add_header Pragma "no-cache";

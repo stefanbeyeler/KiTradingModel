@@ -768,6 +768,10 @@
             border-color: #ec4899;
             background: rgba(236, 72, 153, 0.1);
         }
+        .dataflow-node.workplace {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
 
         .dataflow-node .node-icon {
             font-size: 1rem;
@@ -1356,6 +1360,14 @@
                                 <div class="node-info">
                                     <span class="node-name">Frontend</span>
                                     <span class="node-port">:3000</span>
+                                </div>
+                            </div>
+                            <div class="dataflow-node workplace">
+                                <span class="node-status loading" id="df-workplace-status"></span>
+                                <span class="node-icon">&#128188;</span>
+                                <div class="node-info">
+                                    <span class="node-name">Workplace</span>
+                                    <span class="node-port">:3020</span>
                                 </div>
                             </div>
                             <div class="dataflow-node monitoring">
@@ -1978,13 +1990,37 @@
                         <a href="/config-watchdog.html" target="_blank">Config</a>
                     </div>
                 </div>
+
+                <!-- Trading Workplace Service -->
+                <div class="service-card" id="workplace-card">
+                    <div class="service-header">
+                        <h2>Trading Workplace</h2>
+                        <span class="status-badge status-loading" id="workplace-status">Laden...</span>
+                    </div>
+                    <p>Multi-Signal-Aggregation und Trading-Setups - Kombiniert alle ML-Services für optimale Signale.</p>
+                    <div class="service-info" id="workplace-info">
+                        <div><span class="label">Port</span><span>3020</span></div>
+                        <div><span class="label">Watchlist</span><span id="workplace-watchlist">-</span></div>
+                        <div><span class="label">Scanner</span><span id="workplace-scanner">-</span></div>
+                    </div>
+                    <div class="service-resources">
+                        <div class="service-resource cpu"><span class="value">2 CPU</span><span class="label">CPU Limit</span></div>
+                        <div class="service-resource ram"><span class="value">2 GB</span><span class="label">RAM Limit</span></div>
+                        <div class="service-resource net"><span class="value">CPU</span><span class="label">Mode</span></div>
+                    </div>
+                    <div class="service-links">
+                        <a href="/service-workplace.html" target="_blank">Info</a>
+                        <a href="/workplace/docs" target="_blank">API Docs</a>
+                        <a href="/config-workplace.html" target="_blank">Config</a>
+                    </div>
+                </div>
             </div>
         </div>
 
     </div>
 
     <footer>
-        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + TCN + Candlestick + HMM + Embedder + RAG + LLM + Watchdog
+        KI Trading Model v2.0.0 | Microservices Architecture | FastAPI + NHITS + TCN + Candlestick + HMM + Embedder + RAG + LLM + Watchdog + Workplace
     </footer>
 
     <!-- Symbols Modal -->
@@ -2028,6 +2064,7 @@
             'rag': 'df-rag-status',
             'llm': 'df-llm-status',
             'watchdog': 'df-watchdog-status',
+            'workplace': 'df-workplace-status',
             // External data sources
             'easyinsight': 'df-easyinsight-status',
             'twelvedata': 'df-twelvedata-status',
@@ -2594,6 +2631,55 @@
             }
         }
 
+        // Trading Workplace Info Update
+        async function updateWorkplaceInfo() {
+            const data = await checkHealth('workplace', 3020, 'workplace-status');
+            const statusEl = document.getElementById('workplace-status');
+
+            if (data) {
+                const isHealthy = data.status === 'healthy';
+
+                if (statusEl) {
+                    statusEl.textContent = isHealthy ? 'Online' : 'Unhealthy';
+                    statusEl.className = isHealthy ? 'status-badge status-healthy' : 'status-badge status-unhealthy';
+                    if (isHealthy) healthyServices++;
+                }
+
+                updateDataflowStatus('workplace', isHealthy);
+
+                // Update watchlist count
+                const watchlistEl = document.getElementById('workplace-watchlist');
+                if (watchlistEl) {
+                    const watchlistCount = data.watchlist_count !== undefined ? data.watchlist_count : '-';
+                    watchlistEl.textContent = `${watchlistCount} Symbole`;
+                }
+
+                // Update scanner status
+                const scannerEl = document.getElementById('workplace-scanner');
+                if (scannerEl) {
+                    const scannerRunning = data.scanner_running || false;
+                    scannerEl.textContent = scannerRunning ? 'Aktiv' : 'Inaktiv';
+                    scannerEl.classList.remove('healthy', 'warning');
+                    scannerEl.classList.add(scannerRunning ? 'healthy' : 'warning');
+                }
+            } else {
+                if (statusEl) {
+                    statusEl.textContent = 'Offline';
+                    statusEl.className = 'status-badge status-unhealthy';
+                }
+                updateDataflowStatus('workplace', false);
+
+                // Reset info fields
+                const watchlistEl = document.getElementById('workplace-watchlist');
+                if (watchlistEl) watchlistEl.textContent = '-';
+                const scannerEl = document.getElementById('workplace-scanner');
+                if (scannerEl) {
+                    scannerEl.textContent = '-';
+                    scannerEl.classList.remove('healthy', 'warning');
+                }
+            }
+        }
+
         // Update Watchdog Panel mini service dots based on dataflow status
         function updateWatchdogPanelDots() {
             const dotMapping = {
@@ -2894,6 +2980,7 @@
                 updateCnnLstmInfo(),
                 updateCnnLstmTrainInfo(),
                 updateWatchdogInfo(),
+                updateWorkplaceInfo(),
                 updateEasyInsightInfo(),  // Fetch additional details (symbols, latency)
                 updateSystemMetrics(),
                 updateStorageMetrics()
