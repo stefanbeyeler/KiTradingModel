@@ -4135,9 +4135,9 @@
                             ${compareRow('MACD Histogram', null, td?.indicators?.macd?.histogram, null, {decimals: 5})}
                             ${compareRow('Stochastic %K', ei?.indicators?.stochastic?.main, td?.indicators?.stochastic?.k, null, {decimals: 2})}
                             ${compareRow('Stochastic %D', ei?.indicators?.stochastic?.signal, td?.indicators?.stochastic?.d, null, {decimals: 2})}
-                            ${compareRow('CCI', ei?.indicators?.cci, null, null, {decimals: 2})}
+                            ${compareRow('CCI', ei?.indicators?.cci, td?.indicators?.cci, null, {decimals: 2})}
                             ${compareRow('ADX', ei?.indicators?.adx?.main, td?.indicators?.adx, null, {decimals: 2})}
-                            ${compareRow('MA/EMA (10)', ei?.indicators?.ma_10, td?.indicators?.ema_10, null)}
+                            ${compareRow('SMA (10)', ei?.indicators?.ma_10, td?.indicators?.sma_10, null)}
                             ${compareRow('ATR (D1)', ei?.indicators?.atr?.d1, td?.indicators?.atr, null)}
                             ${compareRow('ATR % (D1)', ei?.indicators?.atr?.d1_pct, null, null, {decimals: 2})}
 

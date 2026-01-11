@@ -4095,17 +4095,22 @@ async def get_symbol_live_data(symbol: str):
                 "indicators": {},
             }
 
-            # Fetch TwelveData technical indicators (parallel requests) - use 1min interval for real-time data
-            td_interval = "1min"  # Minute data for real-time comparison
+            # Fetch TwelveData technical indicators (parallel requests)
+            # Use M5 interval to match EasyInsight indicator timeframe
+            td_interval = "5min"  # M5 data to match EasyInsight indicators
             indicator_tasks = {
                 "rsi": twelvedata_service.get_rsi(td_symbol, interval=td_interval, outputsize=1),
                 "macd": twelvedata_service.get_macd(td_symbol, interval=td_interval, outputsize=1),
                 "bbands": twelvedata_service.get_bollinger_bands(td_symbol, interval=td_interval, outputsize=1),
-                "stoch": twelvedata_service.get_stochastic(td_symbol, interval=td_interval, outputsize=1),
+                # Stochastic: Use (5,3,3) to match EasyInsight parameters
+                "stoch": twelvedata_service.get_stochastic(td_symbol, interval=td_interval, fast_k_period=5, slow_k_period=3, slow_d_period=3, outputsize=1),
                 "adx": twelvedata_service.get_adx(td_symbol, interval=td_interval, outputsize=1),
                 "atr": twelvedata_service.get_atr(td_symbol, interval=td_interval, outputsize=1),
-                "ema_10": twelvedata_service.get_ema(td_symbol, interval=td_interval, time_period=10, outputsize=1),
+                # SMA(10) to match EasyInsight (not EMA)
+                "sma_10": twelvedata_service.get_sma(td_symbol, interval=td_interval, time_period=10, outputsize=1),
                 "ichimoku": twelvedata_service.get_ichimoku(td_symbol, interval=td_interval, outputsize=1),
+                # CCI to match EasyInsight
+                "cci": twelvedata_service.get_cci(td_symbol, interval=td_interval, outputsize=1),
             }
 
             # Execute all indicator requests in parallel
@@ -4151,8 +4156,10 @@ async def get_symbol_live_data(symbol: str):
                         result["twelvedata"]["indicators"]["adx"] = float(latest.get("adx", 0)) if latest.get("adx") else None
                     elif name == "atr":
                         result["twelvedata"]["indicators"]["atr"] = float(latest.get("atr", 0)) if latest.get("atr") else None
-                    elif name == "ema_10":
-                        result["twelvedata"]["indicators"]["ema_10"] = float(latest.get("ema", 0)) if latest.get("ema") else None
+                    elif name == "sma_10":
+                        result["twelvedata"]["indicators"]["sma_10"] = float(latest.get("sma", 0)) if latest.get("sma") else None
+                    elif name == "cci":
+                        result["twelvedata"]["indicators"]["cci"] = float(latest.get("cci", 0)) if latest.get("cci") else None
                     elif name == "ichimoku":
                         result["twelvedata"]["indicators"]["ichimoku"] = {
                             "tenkan": float(latest.get("tenkan_sen", 0)) if latest.get("tenkan_sen") else None,
