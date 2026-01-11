@@ -35,19 +35,21 @@ class WatchlistService:
         if self._loaded:
             return
 
+        # Flag ZUERST setzen um Rekursion zu verhindern
+        self._loaded = True
+
         await self._load_from_disk()
 
         # Falls leer, Default-Symbole hinzufügen
         if not self._watchlist:
             logger.info("Initialisiere Watchlist mit Default-Symbolen")
             for symbol in settings.default_symbols:
-                await self.add(WatchlistAddRequest(
+                await self._add_internal(WatchlistAddRequest(
                     symbol=symbol,
                     is_favorite=symbol in ["BTCUSD", "EURUSD"],
                     alert_threshold=settings.default_alert_threshold,
                 ))
 
-        self._loaded = True
         logger.info(f"Watchlist initialisiert mit {len(self._watchlist)} Symbolen")
 
     async def _load_from_disk(self):
@@ -112,14 +114,12 @@ class WatchlistService:
         await self.initialize()
         return self._watchlist.get(symbol.upper())
 
-    async def add(self, request: WatchlistAddRequest) -> WatchlistItem:
-        """Fügt ein Symbol zur Watchlist hinzu."""
-        await self.initialize()
-
+    async def _add_internal(self, request: WatchlistAddRequest, save: bool = True) -> WatchlistItem:
+        """Interne Methode zum Hinzufügen (ohne initialize-Aufruf)."""
         symbol = request.symbol.upper()
 
         if symbol in self._watchlist:
-            logger.info(f"Symbol {symbol} bereits in Watchlist")
+            logger.debug(f"Symbol {symbol} bereits in Watchlist")
             return self._watchlist[symbol]
 
         if len(self._watchlist) >= settings.max_watchlist_size:
@@ -135,10 +135,17 @@ class WatchlistService:
         )
 
         self._watchlist[symbol] = item
-        await self._save_to_disk()
+
+        if save:
+            await self._save_to_disk()
 
         logger.info(f"Symbol {symbol} zur Watchlist hinzugefügt")
         return item
+
+    async def add(self, request: WatchlistAddRequest) -> WatchlistItem:
+        """Fügt ein Symbol zur Watchlist hinzu."""
+        await self.initialize()
+        return await self._add_internal(request)
 
     async def update(self, symbol: str, request: WatchlistUpdateRequest) -> Optional[WatchlistItem]:
         """Aktualisiert ein Watchlist-Item."""

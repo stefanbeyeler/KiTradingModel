@@ -29,52 +29,13 @@ http {
     gzip_min_length 1024;
     gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json;
 
-    # Upstream services - ports from environment variables
-    upstream nhits-backend {
-        server trading-nhits:${NHITS_SERVICE_PORT};
-    }
+    # Note: All services use dynamic resolver in location blocks
+    # to allow nginx to start even when backend containers are not running.
+    # This enables independent container restarts without affecting nginx.
 
-    upstream llm-backend {
-        server trading-llm:${LLM_SERVICE_PORT};
-    }
-
-    upstream data-backend {
-        server trading-data:${DATA_SERVICE_PORT};
-    }
-
-    upstream rag-backend {
-        server trading-rag:${RAG_SERVICE_PORT};
-    }
-
+    # Only static upstream for external service
     upstream easyinsight-backend {
         server 10.1.19.102:3000;
-    }
-
-    upstream tcn-backend {
-        server trading-tcn:${TCN_SERVICE_PORT};
-    }
-
-    upstream tcn-train-backend {
-        server trading-tcn-train:3013;
-    }
-
-    upstream candlestick-backend {
-        server trading-candlestick:${CANDLESTICK_SERVICE_PORT};
-    }
-
-    upstream candlestick-train-backend {
-        server trading-candlestick-train:3016;
-    }
-
-    upstream hmm-backend {
-        server trading-hmm:${HMM_SERVICE_PORT};
-    }
-
-    # Note: nhits-train and hmm-train use dynamic resolver in location blocks
-    # to avoid nginx startup failures when training containers are not running
-
-    upstream embedder-backend {
-        server trading-embedder:${EMBEDDER_SERVICE_PORT};
     }
 
     server {
@@ -106,7 +67,10 @@ http {
 
         # NHITS Service - Direct Access
         location /nhits/ {
-            proxy_pass http://nhits-backend/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $nhits_upstream trading-nhits:${NHITS_SERVICE_PORT};
+            rewrite ^/nhits/(.*)$ /$1 break;
+            proxy_pass http://$nhits_upstream;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -116,12 +80,15 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
             proxy_read_timeout 300s;
-            proxy_connect_timeout 75s;
+            proxy_connect_timeout 5s;
         }
 
         # LLM Service - Direct Access
         location /llm/ {
-            proxy_pass http://llm-backend/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $llm_upstream trading-llm:${LLM_SERVICE_PORT};
+            rewrite ^/llm/(.*)$ /$1 break;
+            proxy_pass http://$llm_upstream;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -131,6 +98,7 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         # Data Service - Direct Access
@@ -154,7 +122,10 @@ http {
 
         # RAG Service - Direct Access
         location /rag/ {
-            proxy_pass http://rag-backend/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $rag_upstream trading-rag:${RAG_SERVICE_PORT};
+            rewrite ^/rag/(.*)$ /$1 break;
+            proxy_pass http://$rag_upstream;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -164,11 +135,15 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         # TCN-Pattern Service - Direct Access (Inference)
         location /tcn/ {
-            proxy_pass http://tcn-backend/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $tcn_upstream trading-tcn:${TCN_SERVICE_PORT};
+            rewrite ^/tcn/(.*)$ /$1 break;
+            proxy_pass http://$tcn_upstream;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -178,11 +153,15 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         # TCN-Training Service - Direct Access (Training)
         location /tcn-train/ {
-            proxy_pass http://tcn-train-backend/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $tcn_train_upstream trading-tcn-train:3013;
+            rewrite ^/tcn-train/(.*)$ /$1 break;
+            proxy_pass http://$tcn_train_upstream;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -191,7 +170,8 @@ http {
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
-            proxy_read_timeout 600s;  # Long timeout for training requests
+            proxy_read_timeout 600s;
+            proxy_connect_timeout 5s;
         }
 
         # Candlestick Pattern Service - Direct Access (Inference)
@@ -215,7 +195,10 @@ http {
 
         # Candlestick Training Service - Direct Access (Training)
         location /candlestick-train/ {
-            proxy_pass http://candlestick-train-backend/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $candlestick_train_upstream trading-candlestick-train:3016;
+            rewrite ^/candlestick-train/(.*)$ /$1 break;
+            proxy_pass http://$candlestick_train_upstream;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -224,7 +207,8 @@ http {
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
-            proxy_read_timeout 600s;  # Long timeout for training requests
+            proxy_read_timeout 600s;
+            proxy_connect_timeout 5s;
         }
 
         # NHITS-Training Service - Direct Access (Training)
@@ -303,7 +287,10 @@ http {
 
         # HMM-Regime Service - Direct Access
         location /hmm/ {
-            proxy_pass http://hmm-backend/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $hmm_upstream trading-hmm:${HMM_SERVICE_PORT};
+            rewrite ^/hmm/(.*)$ /$1 break;
+            proxy_pass http://$hmm_upstream;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -313,11 +300,15 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         # Embedder Service - Direct Access
         location /embedder/ {
-            proxy_pass http://embedder-backend/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $embedder_upstream trading-embedder:${EMBEDDER_SERVICE_PORT};
+            rewrite ^/embedder/(.*)$ /$1 break;
+            proxy_pass http://$embedder_upstream;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -327,6 +318,7 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         # Watchdog Service - Direct Access (uses resolver for dynamic DNS)
@@ -367,104 +359,120 @@ http {
         }
 
         # =====================================================
-        # API Gateway Routes
+        # API Gateway Routes (all using dynamic resolver)
         # =====================================================
 
         # NHITS Service
         location /api/v1/forecast/ {
-            proxy_pass http://nhits-backend/api/v1/forecast/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $nhits_api trading-nhits:${NHITS_SERVICE_PORT};
+            proxy_pass http://$nhits_api/api/v1/forecast/;
             proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_cache_bypass $http_upgrade;
             proxy_read_timeout 300s;
-            proxy_connect_timeout 75s;
+            proxy_connect_timeout 5s;
         }
 
         # LLM Service
         location /api/v1/analyze {
-            proxy_pass http://llm-backend/api/v1/analyze;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $llm_api trading-llm:${LLM_SERVICE_PORT};
+            proxy_pass http://$llm_api/api/v1/analyze;
             proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_cache_bypass $http_upgrade;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         location /api/v1/llm/ {
-            proxy_pass http://llm-backend/api/v1/llm/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $llm_api2 trading-llm:${LLM_SERVICE_PORT};
+            proxy_pass http://$llm_api2/api/v1/llm/;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         # RAG Service
         location /api/v1/rag/ {
-            proxy_pass http://rag-backend/api/v1/rag/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $rag_api trading-rag:${RAG_SERVICE_PORT};
+            proxy_pass http://$rag_api/api/v1/rag/;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         # TCN-Pattern Service (Port 3003)
         location /api/v1/patterns/ {
-            proxy_pass http://tcn-backend/api/v1/patterns/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $tcn_api trading-tcn:${TCN_SERVICE_PORT};
+            proxy_pass http://$tcn_api/api/v1/patterns/;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         # HMM-Regime Service (Port 3004)
         location /api/v1/regime/ {
-            proxy_pass http://hmm-backend/api/v1/regime/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $hmm_api trading-hmm:${HMM_SERVICE_PORT};
+            proxy_pass http://$hmm_api/api/v1/regime/;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         location /api/v1/signals/ {
-            proxy_pass http://hmm-backend/api/v1/signals/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $hmm_api2 trading-hmm:${HMM_SERVICE_PORT};
+            proxy_pass http://$hmm_api2/api/v1/signals/;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         # Embedder Service (Port 3005)
         location /api/v1/embeddings/ {
-            proxy_pass http://embedder-backend/api/v1/embeddings/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $embedder_api trading-embedder:${EMBEDDER_SERVICE_PORT};
+            proxy_pass http://$embedder_api/api/v1/embeddings/;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         # Candlestick Pattern Service (Port 3006)
-        # Uses dynamic resolver for DNS refresh after container rebuilds
         location /api/v1/candlestick/ {
             resolver 127.0.0.11 valid=10s ipv6=off;
             set $candlestick_api_upstream trading-candlestick:${CANDLESTICK_SERVICE_PORT};
@@ -480,75 +488,102 @@ http {
         }
 
         location /api/v1/recommendation/ {
-            proxy_pass http://llm-backend/api/v1/recommendation/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $llm_rec trading-llm:${LLM_SERVICE_PORT};
+            proxy_pass http://$llm_rec/api/v1/recommendation/;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_read_timeout 300s;
+            proxy_connect_timeout 5s;
         }
 
         # Data Service
         location /api/v1/symbols {
-            proxy_pass http://data-backend/api/v1/symbols;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $data_api trading-data:${DATA_SERVICE_PORT};
+            proxy_pass http://$data_api/api/v1/symbols;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_connect_timeout 5s;
         }
 
         # Managed Symbols - use regex to preserve encoded slashes in symbol IDs
         location ~ ^/api/v1/managed-symbols(/.*)?$ {
-            proxy_pass http://data-backend$request_uri;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $data_managed trading-data:${DATA_SERVICE_PORT};
+            proxy_pass http://$data_managed$request_uri;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_connect_timeout 5s;
         }
 
         location /api/v1/strategies {
-            proxy_pass http://data-backend/api/v1/strategies;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $data_strat trading-data:${DATA_SERVICE_PORT};
+            proxy_pass http://$data_strat/api/v1/strategies;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
+            proxy_connect_timeout 5s;
         }
 
         location /api/v1/sync/ {
-            proxy_pass http://data-backend/api/v1/sync/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $data_sync trading-data:${DATA_SERVICE_PORT};
+            proxy_pass http://$data_sync/api/v1/sync/;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
+            proxy_connect_timeout 5s;
         }
 
         location /api/v1/query-logs {
-            proxy_pass http://data-backend/api/v1/query-logs;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $data_logs trading-data:${DATA_SERVICE_PORT};
+            proxy_pass http://$data_logs/api/v1/query-logs;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
+            proxy_connect_timeout 5s;
         }
 
         location /api/v1/health {
-            proxy_pass http://data-backend/api/v1/health;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $data_health trading-data:${DATA_SERVICE_PORT};
+            proxy_pass http://$data_health/api/v1/health;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
+            proxy_connect_timeout 5s;
         }
 
         location /api/v1/system/ {
-            proxy_pass http://data-backend/api/v1/system/;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $data_sys trading-data:${DATA_SERVICE_PORT};
+            proxy_pass http://$data_sys/api/v1/system/;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
+            proxy_connect_timeout 5s;
         }
 
         location /api/v1/version {
-            proxy_pass http://data-backend/api/v1/version;
+            resolver 127.0.0.11 valid=10s ipv6=off;
+            set $data_ver trading-data:${DATA_SERVICE_PORT};
+            proxy_pass http://$data_ver/api/v1/version;
             proxy_http_version 1.1;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
+            proxy_connect_timeout 5s;
         }
 
         # Swagger Documentation - Default redirect
