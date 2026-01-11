@@ -322,12 +322,18 @@
         }
 
         .chart-controls select {
-            background: rgba(255, 255, 255, 0.1);
+            background: #1a1a2e;
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: #e8e8e8;
             padding: 0.3rem 0.5rem;
             border-radius: 4px;
             font-size: 0.75rem;
+        }
+
+        .chart-controls select option {
+            background: #1a1a2e;
+            color: #e8e8e8;
+            padding: 0.5rem;
         }
 
         .chart-container {
@@ -813,6 +819,7 @@
                             </select>
                             <select id="chartStyle" onchange="updateChart()">
                                 <option value="1" selected>Kerzen</option>
+                                <option value="8">Heikin-Ashi</option>
                                 <option value="0">Balken</option>
                                 <option value="3">Linie</option>
                                 <option value="9">Hollow Kerzen</option>
