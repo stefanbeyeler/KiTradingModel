@@ -1208,6 +1208,9 @@
             const container = document.getElementById('chartContainer');
             container.innerHTML = '';
 
+            // Volumen nur anzeigen wenn in Config aktiviert
+            const hideVolume = !tradingViewConfig.indicators?.volume;
+
             new TradingView.widget({
                 "autosize": true,
                 "symbol": tvSymbol,
@@ -1220,6 +1223,7 @@
                 "enable_publishing": false,
                 "hide_top_toolbar": false,
                 "hide_legend": false,
+                "hide_volume": hideVolume,
                 "save_image": true,
                 "container_id": "chartContainer",
                 "studies": activeStudies,
