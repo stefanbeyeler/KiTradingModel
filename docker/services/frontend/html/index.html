@@ -78,6 +78,18 @@
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
         }
 
+        .header-btn.workplace-btn {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.2));
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+        }
+
+        .header-btn.workplace-btn:hover {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(245, 158, 11, 0.3));
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+        }
+
         .services-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -225,6 +237,16 @@
         .service-links a:hover {
             background: rgba(100, 200, 255, 0.2);
             transform: translateY(-1px);
+        }
+
+        .service-links a.open-btn {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .service-links a.open-btn:hover {
+            background: rgba(245, 158, 11, 0.3);
         }
 
         /* System Resources Section Styles */
@@ -1156,6 +1178,7 @@
         <div class="container">
             <h1>KI Trading Model</h1>
             <div class="header-status">
+                <a href="/workplace.html" class="header-btn workplace-btn">&#128188; Workplace</a>
                 <a href="/data-validation.html" class="header-btn">&#128202; Daten-Validierung</a>
                 <a href="/testing.html" class="header-btn">&#128295; Test Suite</a>
                 <span id="last-update">Update: -</span>
@@ -2012,6 +2035,7 @@
                         <a href="/service-workplace.html" target="_blank">Info</a>
                         <a href="/workplace/docs" target="_blank">API Docs</a>
                         <a href="/config-workplace.html" target="_blank">Config</a>
+                        <a href="/workplace.html" class="open-btn">Open</a>
                     </div>
                 </div>
             </div>
