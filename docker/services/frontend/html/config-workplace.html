@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Workplace - Konfiguration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .back-link {
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #a0a0a0;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+        }
+
+        .tab-btn.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border-bottom: 2px solid #10b981;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: #34d399;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #e8e8e8;
+            font-size: 0.9rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #059669;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e8e8e8;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .watchlist-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .watchlist-table th,
+        .watchlist-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .watchlist-table th {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            font-weight: 500;
+        }
+
+        .watchlist-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .watchlist-table .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .favorite-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #6b7280;
+            transition: color 0.2s;
+        }
+
+        .favorite-btn.active {
+            color: #fbbf24;
+        }
+
+        .favorite-btn:hover {
+            color: #fbbf24;
+        }
+
+        .add-symbol-form {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .add-symbol-form input {
+            flex: 1;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: #065f46;
+            border: 1px solid #10b981;
+        }
+
+        .toast.error {
+            background: #7f1d1d;
+            border: 1px solid #ef4444;
+        }
+
+        .info-text {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-top: 0.5rem;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .status-badge.running {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .status-badge.stopped {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-left">
+                <a href="workplace.html" class="back-link">← Zurück zum Workplace</a>
+                <h1>Konfiguration</h1>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('watchlist')">Watchlist</button>
+            <button class="tab-btn" onclick="showTab('scanner')">Scanner</button>
+            <button class="tab-btn" onclick="showTab('scoring')">Scoring</button>
+        </div>
+
+        <!-- Watchlist Tab -->
+        <div id="watchlist-tab" class="tab-content active">
+            <div class="card">
+                <h2>Symbol hinzufügen</h2>
+                <div class="add-symbol-form">
+                    <input type="text" id="newSymbol" placeholder="Symbol (z.B. BTCUSD)" />
+                    <input type="number" id="newThreshold" placeholder="Alert-Schwelle" value="70" min="0" max="100" />
+                    <select id="newTimeframe">
+                        <option value="M15">M15</option>
+                        <option value="H1" selected>H1</option>
+                        <option value="H4">H4</option>
+                        <option value="D1">D1</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="addSymbol()">Hinzufügen</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Watchlist (<span id="watchlistCount">0</span> Symbole)</h2>
+                <table class="watchlist-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Timeframe</th>
+                            <th>Alert-Schwelle</th>
+                            <th>Letzter Score</th>
+                            <th>Letzter Scan</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="watchlistBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; opacity: 0.6;">Lade Watchlist...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Scanner Tab -->
+        <div id="scanner-tab" class="tab-content">
+            <div class="card">
+                <h2>Scanner-Status</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Status</label>
+                        <div>
+                            <span class="status-badge" id="scannerStatusBadge">-</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Gescannte Symbole</label>
+                        <div id="scannedSymbols">-</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Alerts ausgelöst</label>
+                        <div id="alertsCount">-</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="startScanner()">Scanner starten</button>
+                    <button class="btn btn-secondary" onclick="stopScanner()">Scanner stoppen</button>
+                    <button class="btn btn-secondary" onclick="triggerManualScan()">Manueller Scan</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Scanner-Einstellungen</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Scan-Intervall (Sekunden)</label>
+                        <input type="number" id="scanInterval" value="60" min="10" max="600" />
+                        <p class="info-text">Intervall zwischen den Scans (10-600 Sekunden)</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Auto-Scan aktiviert</label>
+                        <select id="autoScanEnabled">
+                            <option value="true">Ja</option>
+                            <option value="false">Nein</option>
+                        </select>
+                        <p class="info-text">Automatischer Start beim Service-Start</p>
+                    </div>
+                </div>
+                <p class="info-text" style="margin-top: 1rem;">
+                    Hinweis: Änderungen an diesen Einstellungen erfordern einen Neustart des Services.
+                </p>
+            </div>
+        </div>
+
+        <!-- Scoring Tab -->
+        <div id="scoring-tab" class="tab-content">
+            <div class="card">
+                <h2>Scoring-Gewichte</h2>
+                <p style="margin-bottom: 1rem; opacity: 0.8;">
+                    Die Summe aller Gewichte muss 1.0 (100%) ergeben.
+                </p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>NHITS Gewicht</label>
+                        <input type="number" id="nhitsWeight" value="0.30" min="0" max="1" step="0.05" />
+                        <p class="info-text">Preis-Prognose (trend_probability)</p>
+                    </div>
+                    <div class="form-group">
+                        <label>HMM Gewicht</label>
+                        <input type="number" id="hmmWeight" value="0.25" min="0" max="1" step="0.05" />
+                        <p class="info-text">Regime-Detection (regime_confidence)</p>
+                    </div>
+                    <div class="form-group">
+                        <label>TCN Gewicht</label>
+                        <input type="number" id="tcnWeight" value="0.20" min="0" max="1" step="0.05" />
+                        <p class="info-text">Chart-Patterns (pattern_confidence)</p>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Candlestick Gewicht</label>
+                        <input type="number" id="candlestickWeight" value="0.15" min="0" max="1" step="0.05" />
+                        <p class="info-text">Candlestick-Patterns (pattern_strength)</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Technical Gewicht</label>
+                        <input type="number" id="technicalWeight" value="0.10" min="0" max="1" step="0.05" />
+                        <p class="info-text">RSI, MACD (trend_alignment)</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Summe</label>
+                        <input type="text" id="weightSum" value="1.00" readonly style="background: rgba(16, 185, 129, 0.1);" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Konfidenz-Schwellwerte</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>High Confidence (ab)</label>
+                        <input type="number" id="highThreshold" value="75" min="0" max="100" />
+                    </div>
+                    <div class="form-group">
+                        <label>Moderate Confidence (ab)</label>
+                        <input type="number" id="moderateThreshold" value="60" min="0" max="100" />
+                    </div>
+                    <div class="form-group">
+                        <label>Minimum Confidence</label>
+                        <input type="number" id="minThreshold" value="50" min="0" max="100" />
+                    </div>
+                </div>
+                <p class="info-text">
+                    Setups unter dem Minimum-Threshold werden nicht angezeigt.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>Alignment-Boni</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Alignment-Bonus</label>
+                        <input type="number" id="alignmentBonus" value="15" min="0" max="50" />
+                        <p class="info-text">Bonus wenn alle Signale übereinstimmen</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Alignment-Penalty</label>
+                        <input type="number" id="alignmentPenalty" value="10" min="0" max="50" />
+                        <p class="info-text">Abzug bei widersprüchlichen Signalen</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_BASE = '/workplace/api/v1';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadWatchlist();
+            loadScannerStatus();
+
+            // Gewichte-Summe berechnen
+            document.querySelectorAll('#scoring-tab input[type="number"]').forEach(input => {
+                if (input.id.includes('Weight')) {
+                    input.addEventListener('input', updateWeightSum);
+                }
+            });
+        });
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+
+        async function loadWatchlist() {
+            try {
+                const response = await fetch(`${API_BASE}/watchlist/`);
+                const data = await response.json();
+
+                document.getElementById('watchlistCount').textContent = data.total;
+
+                const tbody = document.getElementById('watchlistBody');
+                if (data.items && data.items.length > 0) {
+                    tbody.innerHTML = data.items.map(item => `
+                        <tr>
+                            <td>
+                                <button class="favorite-btn ${item.is_favorite ? 'active' : ''}"
+                                        onclick="toggleFavorite('${item.symbol}')">
+                                    ${item.is_favorite ? '★' : '☆'}
+                                </button>
+                                ${item.symbol}
+                            </td>
+                            <td>${item.timeframe}</td>
+                            <td>${item.alert_threshold}</td>
+                            <td>${item.last_score ? item.last_score.toFixed(1) : '-'}</td>
+                            <td>${item.last_scan ? new Date(item.last_scan).toLocaleString('de-DE') : '-'}</td>
+                            <td class="actions">
+                                <button class="btn btn-danger" onclick="removeSymbol('${item.symbol}')">Entfernen</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; opacity: 0.6;">Keine Symbole in Watchlist</td></tr>';
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Watchlist:', error);
+                showToast('Fehler beim Laden der Watchlist', 'error');
+            }
+        }
+
+        async function addSymbol() {
+            const symbol = document.getElementById('newSymbol').value.trim().toUpperCase();
+            const threshold = parseFloat(document.getElementById('newThreshold').value);
+            const timeframe = document.getElementById('newTimeframe').value;
+
+            if (!symbol) {
+                showToast('Bitte Symbol eingeben', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/watchlist/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbol,
+                        alert_threshold: threshold,
+                        timeframe,
+                        is_favorite: false
+                    })
+                });
+
+                if (response.ok) {
+                    document.getElementById('newSymbol').value = '';
+                    loadWatchlist();
+                    showToast(`${symbol} zur Watchlist hinzugefügt`, 'success');
+                } else {
+                    const error = await response.json();
+                    showToast(error.detail || 'Fehler beim Hinzufügen', 'error');
+                }
+            } catch (error) {
+                console.error('Fehler beim Hinzufügen:', error);
+                showToast('Fehler beim Hinzufügen', 'error');
+            }
+        }
+
+        async function removeSymbol(symbol) {
+            if (!confirm(`${symbol} wirklich entfernen?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/watchlist/${symbol}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadWatchlist();
+                    showToast(`${symbol} entfernt`, 'success');
+                }
+            } catch (error) {
+                console.error('Fehler beim Entfernen:', error);
+                showToast('Fehler beim Entfernen', 'error');
+            }
+        }
+
+        async function toggleFavorite(symbol) {
+            try {
+                await fetch(`${API_BASE}/watchlist/${symbol}/favorite`, {
+                    method: 'POST'
+                });
+                loadWatchlist();
+            } catch (error) {
+                console.error('Fehler beim Togglen:', error);
+            }
+        }
+
+        async function loadScannerStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/scan/status`);
+                const data = await response.json();
+
+                const badge = document.getElementById('scannerStatusBadge');
+                badge.textContent = data.is_running ? 'Läuft' : 'Gestoppt';
+                badge.className = `status-badge ${data.is_running ? 'running' : 'stopped'}`;
+
+                document.getElementById('scannedSymbols').textContent = data.symbols_scanned_total;
+                document.getElementById('alertsCount').textContent = data.alerts_triggered;
+            } catch (error) {
+                console.error('Fehler beim Laden des Scanner-Status:', error);
+            }
+        }
+
+        async function startScanner() {
+            try {
+                await fetch(`${API_BASE}/scan/start`, { method: 'POST' });
+                loadScannerStatus();
+                showToast('Scanner gestartet', 'success');
+            } catch (error) {
+                showToast('Fehler beim Starten', 'error');
+            }
+        }
+
+        async function stopScanner() {
+            try {
+                await fetch(`${API_BASE}/scan/stop`, { method: 'POST' });
+                loadScannerStatus();
+                showToast('Scanner gestoppt', 'success');
+            } catch (error) {
+                showToast('Fehler beim Stoppen', 'error');
+            }
+        }
+
+        async function triggerManualScan() {
+            try {
+                await fetch(`${API_BASE}/scan/trigger`, { method: 'POST' });
+                showToast('Manueller Scan ausgelöst', 'success');
+            } catch (error) {
+                showToast('Fehler beim Auslösen', 'error');
+            }
+        }
+
+        function updateWeightSum() {
+            const weights = [
+                parseFloat(document.getElementById('nhitsWeight').value) || 0,
+                parseFloat(document.getElementById('hmmWeight').value) || 0,
+                parseFloat(document.getElementById('tcnWeight').value) || 0,
+                parseFloat(document.getElementById('candlestickWeight').value) || 0,
+                parseFloat(document.getElementById('technicalWeight').value) || 0,
+            ];
+            const sum = weights.reduce((a, b) => a + b, 0);
+            const sumInput = document.getElementById('weightSum');
+            sumInput.value = sum.toFixed(2);
+            sumInput.style.background = Math.abs(sum - 1.0) < 0.01
+                ? 'rgba(16, 185, 129, 0.2)'
+                : 'rgba(239, 68, 68, 0.2)';
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

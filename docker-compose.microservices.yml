@@ -897,6 +897,61 @@ services:
       retries: 3
       start_period: 20s
 
+  # Trading Workplace Service - Setup Aggregation & Multi-Signal Scoring (Port 3020)
+  # Aggregates predictions from all ML services and provides trading setup recommendations
+  workplace-service:
+    build:
+      context: .
+      dockerfile: docker/services/workplace/Dockerfile
+      args:
+        - SERVICE_PORT=${WORKPLACE_SERVICE_PORT:-3020}
+    container_name: trading-workplace
+    ports:
+      - "${WORKPLACE_SERVICE_PORT:-3020}:${WORKPLACE_SERVICE_PORT:-3020}"
+    volumes:
+      - workplace-data:/app/data
+      - ./src/services/workplace_app:/app/src/services/workplace_app:ro
+      - ./src/shared:/app/src/shared:ro
+      - ./src/config:/app/src/config:ro
+      - ./src/utils:/app/src/utils:ro
+      - logs-data:/app/logs
+    environment:
+      - SERVICE_NAME=workplace
+      - PORT=${WORKPLACE_SERVICE_PORT:-3020}
+      - ROOT_PATH=/workplace
+      # ML Service URLs for signal aggregation
+      - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      - NHITS_SERVICE_URL=http://trading-nhits:${NHITS_SERVICE_PORT:-3002}
+      - TCN_SERVICE_URL=http://trading-tcn:${TCN_SERVICE_PORT:-3003}
+      - HMM_SERVICE_URL=http://trading-hmm:${HMM_SERVICE_PORT:-3004}
+      - CANDLESTICK_SERVICE_URL=http://trading-candlestick:${CANDLESTICK_SERVICE_PORT:-3006}
+      - CNN_LSTM_SERVICE_URL=http://trading-cnn-lstm:${CNN_LSTM_SERVICE_PORT:-3007}
+      - RAG_SERVICE_URL=http://trading-rag:${RAG_SERVICE_PORT:-3008}
+      - LLM_SERVICE_URL=http://trading-llm:${LLM_SERVICE_PORT:-3009}
+      # Scanner configuration
+      - WORKPLACE_SCAN_INTERVAL_SECONDS=${WORKPLACE_SCAN_INTERVAL:-60}
+      - WORKPLACE_AUTO_SCAN_ENABLED=${WORKPLACE_AUTO_SCAN:-true}
+    networks:
+      - trading-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - data-service
+      - nhits-service
+      - hmm-service
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${WORKPLACE_SERVICE_PORT:-3020}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 # =============================================================================
 # VOLUMES
 # =============================================================================
@@ -955,6 +1010,10 @@ volumes:
 
   # Watchdog Service Volume
   watchdog-data:
+    driver: local
+
+  # Trading Workplace Service Volume
+  workplace-data:
     driver: local
 
 # =============================================================================

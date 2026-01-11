@@ -382,6 +382,7 @@ Ein **Three Inside Down** Pattern (3 Kerzen) wird angezeigt als:
 | RAG Service | 3008 | /docs | CUDA | Vector Search |
 | LLM Service | 3009 | /docs | CUDA | LLM Analysis |
 | Watchdog Service | 3010 | /docs | - | Monitoring + Training Orchestrator |
+| **Trading Workplace** | **3020** | /docs | - | Setup-Aggregation + Multi-Signal-Scoring |
 
 ### Training Services (Low Priority, orchestriert von Watchdog)
 
@@ -557,6 +558,7 @@ Alle Services sind via Nginx-Proxy unter folgenden Pfaden erreichbar:
 | RAG Service | http://10.1.19.101:3000/rag/docs | /rag/* |
 | LLM Service | http://10.1.19.101:3000/llm/docs | /llm/* |
 | Watchdog Service | http://10.1.19.101:3000/watchdog/docs | /watchdog/* |
+| Trading Workplace | http://10.1.19.101:3000/workplace/docs | /workplace/* |
 
 Die Swagger UI bietet:
 - Interaktive API-Dokumentation
@@ -736,6 +738,96 @@ curl http://10.1.19.101:3010/api/v1/training/schedules
 - `src/services/watchdog_app/services/training_orchestrator.py` - Orchestrator-Service
 - `src/services/watchdog_app/api/training_routes.py` - API-Endpoints
 
+## Trading Workplace Service
+
+Der **Trading Workplace Service** (Port 3020) aggregiert alle ML-Vorhersagen und präsentiert die vielversprechendsten Trading-Setups automatisch.
+
+### Architektur
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    TRADING WORKPLACE                             │
+│                       (Port 3020)                                │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │  Signal     │  │  Scoring    │  │  Scanner    │              │
+│  │ Aggregator  │  │  Service    │  │  Service    │              │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘              │
+└─────────┼────────────────┼────────────────┼─────────────────────┘
+          │                │                │
+    ┌─────┴─────┬──────────┴────────┬───────┴──────┐
+    ▼           ▼                   ▼              ▼
+ NHITS        HMM                 TCN         Candlestick
+ :3002       :3004               :3003          :3006
+  30%         25%                 20%            15%
+    │           │                   │              │
+    └───────────┴───────────────────┴──────────────┘
+                         │
+                    ┌────┴────┐
+                    ▼         ▼
+                  RAG       LLM
+                 :3008     :3009
+              (Deep Analysis)
+```
+
+### Multi-Signal-Scoring
+
+| Service | Gewicht | Signal |
+|---------|---------|--------|
+| NHITS | 30% | `trend_probability`, `direction` |
+| HMM | 25% | `regime_confidence`, `alignment` |
+| TCN | 20% | `pattern_confidence` |
+| Candlestick | 15% | `pattern_strength` |
+| Technical | 10% | `trend_alignment` (RSI, MACD) |
+
+### API-Endpoints
+
+| Endpoint | Methode | Beschreibung |
+|----------|---------|--------------|
+| `/api/v1/setups/` | GET | Top Trading-Setups (Schnellbeurteilung) |
+| `/api/v1/setups/{symbol}` | GET | Setup für einzelnes Symbol |
+| `/api/v1/analyze/{symbol}` | POST | Vertiefte Analyse mit RAG+LLM |
+| `/api/v1/watchlist/` | GET | Watchlist abrufen |
+| `/api/v1/watchlist/` | POST | Symbol zur Watchlist hinzufügen |
+| `/api/v1/watchlist/{symbol}` | DELETE | Symbol entfernen |
+| `/api/v1/scan/start` | POST | Manuellen Scan starten |
+| `/api/v1/scan/stop` | POST | Scan stoppen |
+| `/api/v1/scan/status` | GET | Scan-Status abrufen |
+
+### Features
+
+- **Schnellbeurteilung**: Top Trading-Setups auf einen Blick mit Composite-Score
+- **Vertiefte Analyse**: RAG-Kontext + LLM-generierte Empfehlungen
+- **Konfigurierbare Watchlist**: Eigene Symbole mit Favoriten und Alert-Schwellen
+- **Auto-Scanner**: Periodisches Background-Scanning (konfigurierbar)
+- **Alert-System**: Benachrichtigungen bei Überschreiten von Schwellenwerten
+
+### Verwendung
+
+```bash
+# Top-Setups abrufen
+curl http://localhost:3020/api/v1/setups/?limit=5
+
+# Vertiefte Analyse
+curl -X POST http://localhost:3020/api/v1/analyze/BTCUSD \
+  -H "Content-Type: application/json" \
+  -d '{"timeframe": "H1", "include_rag": true, "include_llm": true}'
+
+# Symbol zur Watchlist hinzufügen
+curl -X POST http://localhost:3020/api/v1/watchlist/ \
+  -H "Content-Type: application/json" \
+  -d '{"symbol": "BTCUSD", "is_favorite": true, "alert_threshold": 0.75}'
+```
+
+### Implementierung
+
+- `src/services/workplace_app/main.py` - FastAPI App mit Lifespan
+- `src/services/workplace_app/config.py` - Pydantic Settings
+- `src/services/workplace_app/services/signal_aggregator.py` - Parallele Signal-Aggregation
+- `src/services/workplace_app/services/scoring_service.py` - Gewichteter Scoring-Algorithmus
+- `src/services/workplace_app/services/watchlist_service.py` - JSON-persistierte Watchlist
+- `src/services/workplace_app/services/scanner_service.py` - Background Auto-Scanner
+- `src/services/workplace_app/services/deep_analysis_service.py` - RAG + LLM Integration
+
 ## Commit-Konvention
 
 ```text
@@ -743,7 +835,7 @@ curl http://10.1.19.101:3010/api/v1/training/schedules
 ```
 
 Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`
-Scopes: `nhits`, `tcn`, `hmm`, `embedder`, `rag`, `llm`, `data`, `watchdog`, `frontend`, `api`, `config`, `docker`, `cnn-lstm`, `candlestick`
+Scopes: `nhits`, `tcn`, `hmm`, `embedder`, `rag`, `llm`, `data`, `watchdog`, `frontend`, `api`, `config`, `docker`, `cnn-lstm`, `candlestick`, `workplace`
 
 ## Zeitzonen-Handling (VERBINDLICH)
 
@@ -807,6 +899,7 @@ Jeder Service hat eine Info-Seite unter `docker/services/frontend/html/service-{
 | RAG Service | `service-rag.html` |
 | LLM Service | `service-llm.html` |
 | Watchdog Service | `service-watchdog.html` |
+| Trading Workplace | `service-workplace.html` |
 
 **Aktualisieren bei:**
 - Neuen Endpoints

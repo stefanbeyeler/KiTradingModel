@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Workplace - Setups & Analyse</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .back-link {
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .scanner-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .scanner-status.stopped {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.stopped {
+            background: #ef4444;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #059669;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e8e8e8;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #34d399;
+        }
+
+        .stat-value.warning {
+            color: #fbbf24;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .setups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1rem;
+        }
+
+        .setup-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .setup-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(16, 185, 129, 0.4);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .setup-card.long {
+            border-left: 4px solid #10b981;
+        }
+
+        .setup-card.short {
+            border-left: 4px solid #ef4444;
+        }
+
+        .setup-card.neutral {
+            border-left: 4px solid #fbbf24;
+        }
+
+        .setup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .setup-symbol {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .setup-direction {
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .setup-direction.long {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .setup-direction.short {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .setup-direction.neutral {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fcd34d;
+        }
+
+        .setup-score {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .score-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .score-value.high {
+            color: #10b981;
+        }
+
+        .score-value.moderate {
+            color: #fbbf24;
+        }
+
+        .score-value.low {
+            color: #f87171;
+        }
+
+        .score-label {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+
+        .setup-signals {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .signal-tag {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .signal-tag.available {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .setup-drivers {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            line-height: 1.5;
+        }
+
+        .setup-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.75rem;
+            opacity: 0.6;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .sidebar-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-card h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: #34d399;
+        }
+
+        .watchlist-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .watchlist-item:last-child {
+            border-bottom: none;
+        }
+
+        .watchlist-symbol {
+            font-weight: 500;
+        }
+
+        .watchlist-symbol.favorite::before {
+            content: "★ ";
+            color: #fbbf24;
+        }
+
+        .watchlist-score {
+            font-size: 0.85rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .watchlist-score.high {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .watchlist-score.moderate {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fcd34d;
+        }
+
+        .watchlist-score.low {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .scanner-info {
+            font-size: 0.85rem;
+        }
+
+        .scanner-info p {
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .scanner-info .label {
+            opacity: 0.7;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            opacity: 0.6;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(16, 185, 129, 0.2);
+            border-top-color: #10b981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            opacity: 0.6;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header h2 {
+            font-size: 1.3rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #e8e8e8;
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .modal-close:hover {
+            opacity: 1;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .analysis-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .analysis-section h4 {
+            color: #34d399;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .analysis-content {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            line-height: 1.6;
+        }
+
+        .levels-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .level-item {
+            text-align: center;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .level-item .value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #ffd54f;
+        }
+
+        .level-item .label {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+
+        @media (max-width: 768px) {
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header-left {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-left">
+                <a href="index.html" class="back-link">← Dashboard</a>
+                <h1>Trading Workplace</h1>
+            </div>
+            <div class="scanner-status" id="scannerStatus">
+                <span class="status-dot"></span>
+                <span id="scannerText">Scanner läuft</span>
+            </div>
+            <div class="controls">
+                <button class="btn btn-secondary" onclick="triggerScan()">Scan starten</button>
+                <button class="btn btn-primary" onclick="toggleScanner()">Scanner stoppen</button>
+                <a href="config-workplace.html" class="btn btn-secondary">Einstellungen</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-value" id="totalScanned">-</div>
+                <div class="stat-label">Symbole gescannt</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="highConfidence">-</div>
+                <div class="stat-label">High Confidence</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value warning" id="alertsTriggered">-</div>
+                <div class="stat-label">Alerts ausgelöst</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="lastScan">-</div>
+                <div class="stat-label">Letzter Scan</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Setups Section -->
+            <div class="setups-section">
+                <div class="section-title">
+                    <span>Top Trading-Setups</span>
+                    <select id="directionFilter" onchange="loadSetups()">
+                        <option value="">Alle Richtungen</option>
+                        <option value="long">Long</option>
+                        <option value="short">Short</option>
+                    </select>
+                </div>
+                <div id="setupsContainer" class="setups-grid">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Lade Setups...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="sidebar-card">
+                    <h3>Watchlist</h3>
+                    <div id="watchlistContainer">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-card">
+                    <h3>Scanner-Status</h3>
+                    <div class="scanner-info" id="scannerInfo">
+                        <p>
+                            <span class="label">Status:</span>
+                            <span id="scanStatus">-</span>
+                        </p>
+                        <p>
+                            <span class="label">Intervall:</span>
+                            <span id="scanInterval">-</span>
+                        </p>
+                        <p>
+                            <span class="label">Letzter Scan:</span>
+                            <span id="lastScanTime">-</span>
+                        </p>
+                        <p>
+                            <span class="label">Nächster Scan:</span>
+                            <span id="nextScanTime">-</span>
+                        </p>
+                        <p>
+                            <span class="label">Fehler:</span>
+                            <span id="errorCount">-</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Modal -->
+    <div class="modal-overlay" id="analysisModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Vertiefte Analyse</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Analysiere...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/workplace/api/v1';
+        let scannerRunning = true;
+
+        // Initiale Daten laden
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSetups();
+            loadWatchlist();
+            loadScannerStatus();
+            setInterval(loadScannerStatus, 5000);
+            setInterval(loadSetups, 10000);
+        });
+
+        async function loadSetups() {
+            const direction = document.getElementById('directionFilter').value;
+            const container = document.getElementById('setupsContainer');
+
+            try {
+                let url = `${API_BASE}/setups/?limit=12&min_score=50`;
+                if (direction) {
+                    url += `&direction=${direction}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.setups && data.setups.length > 0) {
+                    container.innerHTML = data.setups.map(setup => createSetupCard(setup)).join('');
+
+                    // Stats aktualisieren
+                    document.getElementById('totalScanned').textContent = data.total_scanned;
+                    document.getElementById('highConfidence').textContent = data.high_confidence_count;
+                } else {
+                    container.innerHTML = '<div class="empty-state"><p>Keine Setups gefunden. Scanner läuft...</p></div>';
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Setups:', error);
+                container.innerHTML = '<div class="empty-state"><p>Fehler beim Laden der Daten</p></div>';
+            }
+        }
+
+        function createSetupCard(setup) {
+            const scoreClass = setup.composite_score >= 75 ? 'high' :
+                              setup.composite_score >= 60 ? 'moderate' : 'low';
+
+            const signals = [
+                { name: 'NHITS', available: setup.nhits_signal?.available },
+                { name: 'HMM', available: setup.hmm_signal?.available },
+                { name: 'TCN', available: setup.tcn_signal?.available && setup.tcn_signal?.patterns?.length > 0 },
+                { name: 'Candle', available: setup.candlestick_signal?.available && setup.candlestick_signal?.patterns?.length > 0 },
+            ];
+
+            const driversHtml = setup.key_drivers && setup.key_drivers.length > 0
+                ? `<div class="setup-drivers">${setup.key_drivers.slice(0, 3).join(' | ')}</div>`
+                : '';
+
+            return `
+                <div class="setup-card ${setup.direction}" onclick="openAnalysis('${setup.symbol}', '${setup.timeframe}')">
+                    <div class="setup-header">
+                        <span class="setup-symbol">${setup.symbol}</span>
+                        <span class="setup-direction ${setup.direction}">${setup.direction.toUpperCase()}</span>
+                    </div>
+                    <div class="setup-score">
+                        <div class="score-value ${scoreClass}">${setup.composite_score.toFixed(1)}</div>
+                        <div class="score-label">${setup.confidence_level} confidence</div>
+                    </div>
+                    <div class="setup-signals">
+                        ${signals.map(s => `<span class="signal-tag ${s.available ? 'available' : ''}">${s.name}</span>`).join('')}
+                    </div>
+                    ${driversHtml}
+                    <div class="setup-meta">
+                        <span>${setup.timeframe}</span>
+                        <span>${setup.signal_alignment}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadWatchlist() {
+            const container = document.getElementById('watchlistContainer');
+
+            try {
+                const response = await fetch(`${API_BASE}/watchlist/`);
+                const data = await response.json();
+
+                if (data.items && data.items.length > 0) {
+                    container.innerHTML = data.items.slice(0, 10).map(item => {
+                        const scoreClass = item.last_score >= 75 ? 'high' :
+                                          item.last_score >= 60 ? 'moderate' : 'low';
+                        return `
+                            <div class="watchlist-item">
+                                <span class="watchlist-symbol ${item.is_favorite ? 'favorite' : ''}">${item.symbol}</span>
+                                <span class="watchlist-score ${scoreClass}">${item.last_score ? item.last_score.toFixed(1) : '-'}</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<p style="opacity: 0.6; text-align: center;">Keine Symbole in Watchlist</p>';
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Watchlist:', error);
+            }
+        }
+
+        async function loadScannerStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/scan/status`);
+                const data = await response.json();
+
+                scannerRunning = data.is_running;
+
+                // Status-Anzeige aktualisieren
+                const statusEl = document.getElementById('scannerStatus');
+                const dotEl = statusEl.querySelector('.status-dot');
+                const textEl = document.getElementById('scannerText');
+
+                if (data.is_running) {
+                    statusEl.classList.remove('stopped');
+                    dotEl.classList.remove('stopped');
+                    textEl.textContent = 'Scanner läuft';
+                } else {
+                    statusEl.classList.add('stopped');
+                    dotEl.classList.add('stopped');
+                    textEl.textContent = 'Scanner gestoppt';
+                }
+
+                // Scanner-Info
+                document.getElementById('scanStatus').textContent = data.status;
+                document.getElementById('scanInterval').textContent = `${data.scan_interval_seconds}s`;
+                document.getElementById('lastScanTime').textContent = data.last_scan_time
+                    ? new Date(data.last_scan_time).toLocaleTimeString('de-DE')
+                    : '-';
+                document.getElementById('nextScanTime').textContent = data.next_scan_time
+                    ? new Date(data.next_scan_time).toLocaleTimeString('de-DE')
+                    : '-';
+                document.getElementById('errorCount').textContent = data.errors_count;
+
+                // Stats
+                document.getElementById('alertsTriggered').textContent = data.alerts_triggered;
+                if (data.last_scan_time) {
+                    document.getElementById('lastScan').textContent =
+                        new Date(data.last_scan_time).toLocaleTimeString('de-DE');
+                }
+
+            } catch (error) {
+                console.error('Fehler beim Laden des Scanner-Status:', error);
+            }
+        }
+
+        async function toggleScanner() {
+            const endpoint = scannerRunning ? 'stop' : 'start';
+            try {
+                await fetch(`${API_BASE}/scan/${endpoint}`, { method: 'POST' });
+                loadScannerStatus();
+            } catch (error) {
+                console.error('Fehler beim Umschalten des Scanners:', error);
+            }
+        }
+
+        async function triggerScan() {
+            try {
+                await fetch(`${API_BASE}/scan/trigger`, { method: 'POST' });
+                loadScannerStatus();
+                setTimeout(loadSetups, 2000);
+            } catch (error) {
+                console.error('Fehler beim Auslösen des Scans:', error);
+            }
+        }
+
+        async function openAnalysis(symbol, timeframe) {
+            const modal = document.getElementById('analysisModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modal.classList.add('active');
+            modalTitle.textContent = `Vertiefte Analyse: ${symbol}`;
+            modalBody.innerHTML = '<div class="loading"><div class="spinner"></div><p>Analysiere...</p></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/analyze/${symbol}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeframe, include_rag: true, include_llm: true })
+                });
+                const data = await response.json();
+
+                modalBody.innerHTML = `
+                    <div class="analysis-section">
+                        <h4>Setup-Score: ${data.setup.composite_score.toFixed(1)} (${data.setup.confidence_level})</h4>
+                        <div class="analysis-content">
+                            <p><strong>Richtung:</strong> ${data.setup.direction.toUpperCase()}</p>
+                            <p><strong>Signal-Alignment:</strong> ${data.setup.signal_alignment}</p>
+                            <p><strong>Key Drivers:</strong> ${data.setup.key_drivers?.join(', ') || '-'}</p>
+                        </div>
+                    </div>
+
+                    ${data.entry_exit_levels ? `
+                    <div class="analysis-section">
+                        <h4>Entry/Exit Levels</h4>
+                        <div class="levels-grid">
+                            <div class="level-item">
+                                <div class="value">${data.entry_exit_levels.entry_price?.toFixed(2) || '-'}</div>
+                                <div class="label">Entry</div>
+                            </div>
+                            <div class="level-item">
+                                <div class="value">${data.entry_exit_levels.stop_loss?.toFixed(2) || '-'}</div>
+                                <div class="label">Stop-Loss</div>
+                            </div>
+                            <div class="level-item">
+                                <div class="value">${data.entry_exit_levels.take_profit_1?.toFixed(2) || '-'}</div>
+                                <div class="label">Take-Profit 1</div>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${data.analysis_summary ? `
+                    <div class="analysis-section">
+                        <h4>LLM-Analyse</h4>
+                        <div class="analysis-content">${data.analysis_summary}</div>
+                    </div>
+                    ` : ''}
+
+                    ${data.risk_assessment ? `
+                    <div class="analysis-section">
+                        <h4>Risiko-Bewertung</h4>
+                        <div class="analysis-content">${data.risk_assessment}</div>
+                    </div>
+                    ` : ''}
+
+                    ${data.rationale ? `
+                    <div class="analysis-section">
+                        <h4>Begründung</h4>
+                        <div class="analysis-content">${data.rationale}</div>
+                    </div>
+                    ` : ''}
+
+                    <div class="analysis-section">
+                        <p style="opacity: 0.6; font-size: 0.8rem;">
+                            Analyse-Dauer: ${data.analysis_duration_ms?.toFixed(0) || '-'}ms |
+                            RAG-Quellen: ${data.rag_sources_used || 0}
+                        </p>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Fehler bei der Analyse:', error);
+                modalBody.innerHTML = '<div class="empty-state"><p>Fehler bei der Analyse</p></div>';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('analysisModal').classList.remove('active');
+        }
+
+        // Modal schliessen bei Klick ausserhalb
+        document.getElementById('analysisModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
