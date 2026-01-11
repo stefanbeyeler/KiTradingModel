@@ -519,6 +519,40 @@
             color: #94a3b8;
         }
 
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-header h3 {
+            margin-bottom: 0;
+        }
+
+        .refresh-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0.2rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            color: #64c8ff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .refresh-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
         .watchlist-item {
             display: flex;
             justify-content: space-between;
@@ -849,7 +883,14 @@
             <!-- Sidebar -->
             <div class="sidebar">
                 <div class="sidebar-card">
-                    <h3>Watchlist</h3>
+                    <div class="sidebar-header">
+                        <h3>Watchlist</h3>
+                        <button class="refresh-btn" onclick="loadWatchlist()" title="Aktualisieren">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                            </svg>
+                        </button>
+                    </div>
                     <div id="watchlistContainer">
                         <div class="loading"><div class="spinner"></div></div>
                     </div>
@@ -1024,8 +1065,9 @@
 
             // Regelmässige Updates
             setInterval(updateMarketHours, 60000); // Jede Minute
-            setInterval(loadScannerStatus, 5000);
-            setInterval(loadSetups, 15000);
+            setInterval(loadScannerStatus, 5000);  // Alle 5 Sekunden
+            setInterval(loadSetups, 15000);        // Alle 15 Sekunden
+            setInterval(loadWatchlist, 30000);     // Alle 30 Sekunden
         });
 
         // Convert UTC hour to local timezone hour
