@@ -4119,7 +4119,12 @@
                             ${compareRow('Änderung', null, td?.change, yf?.change, {tdStyle: `color: ${changeColor};`, yfStyle: `color: ${yfChangeColor};`})}
                             ${compareRow('Änderung %', null, td?.percent_change, yf?.change_percent, {decimals: 2, tdStyle: `color: ${changeColor};`, yfStyle: `color: ${yfChangeColor};`})}
 
-                            ${sectionHeader('&#128202; Technische Indikatoren')}
+                            ${sectionHeader('&#128202; Vergleichbare Indikatoren (M5, gleiche Parameter)')}
+                            <tr>
+                                <td colspan="5" style="padding: 6px 12px; background: rgba(76,175,80,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <span style="color: #4caf50; font-size: 0.75rem;">&#9432; Beide Quellen: M5 Timeframe, identische Parameter</span>
+                                </td>
+                            </tr>
                             ${compareRow('RSI (14)', ei?.indicators?.rsi, td?.indicators?.rsi, null, {
                                 formatter: (v) => {
                                     if (v === null || v === undefined) return '-';
@@ -4132,37 +4137,54 @@
                             })}
                             ${compareRow('MACD Main', ei?.indicators?.macd?.main, td?.indicators?.macd?.main, null, {decimals: 5})}
                             ${compareRow('MACD Signal', ei?.indicators?.macd?.signal, td?.indicators?.macd?.signal, null, {decimals: 5})}
-                            ${compareRow('MACD Histogram', null, td?.indicators?.macd?.histogram, null, {decimals: 5})}
-                            ${compareRow('Stochastic %K', ei?.indicators?.stochastic?.main, td?.indicators?.stochastic?.k, null, {decimals: 2})}
-                            ${compareRow('Stochastic %D', ei?.indicators?.stochastic?.signal, td?.indicators?.stochastic?.d, null, {decimals: 2})}
-                            ${compareRow('CCI', ei?.indicators?.cci, td?.indicators?.cci, null, {decimals: 2})}
-                            ${compareRow('ADX', ei?.indicators?.adx?.main, td?.indicators?.adx, null, {decimals: 2})}
+                            ${compareRow('Stochastic %K (5,3,3)', ei?.indicators?.stochastic?.main, td?.indicators?.stochastic?.k, null, {decimals: 2})}
+                            ${compareRow('Stochastic %D (5,3,3)', ei?.indicators?.stochastic?.signal, td?.indicators?.stochastic?.d, null, {decimals: 2})}
+                            ${compareRow('CCI (14)', ei?.indicators?.cci, td?.indicators?.cci, null, {decimals: 2})}
+                            ${compareRow('ADX (14)', ei?.indicators?.adx?.main, td?.indicators?.adx, null, {decimals: 2})}
                             ${compareRow('SMA (10)', ei?.indicators?.ma_10, td?.indicators?.sma_10, null)}
-                            ${compareRow('ATR (D1)', ei?.indicators?.atr?.d1, td?.indicators?.atr, null)}
-                            ${compareRow('ATR % (D1)', ei?.indicators?.atr?.d1_pct, null, null, {decimals: 2})}
 
-                            ${sectionHeader('&#128200; Bollinger Bands')}
+                            ${sectionHeader('&#128200; Bollinger Bands (20, 2.0)')}
                             ${compareRow('Upper Band', ei?.indicators?.bollinger?.upper, td?.indicators?.bollinger?.upper, null)}
                             ${compareRow('Middle Band', ei?.indicators?.bollinger?.base, td?.indicators?.bollinger?.middle, null)}
                             ${compareRow('Lower Band', ei?.indicators?.bollinger?.lower, td?.indicators?.bollinger?.lower, null)}
 
-                            ${sectionHeader('&#9729; Ichimoku Cloud')}
+                            ${sectionHeader('&#9729; Ichimoku Cloud (9, 26, 52)')}
                             ${compareRow('Tenkan-sen', ei?.indicators?.ichimoku?.tenkan, td?.indicators?.ichimoku?.tenkan, null)}
                             ${compareRow('Kijun-sen', ei?.indicators?.ichimoku?.kijun, td?.indicators?.ichimoku?.kijun, null)}
                             ${compareRow('Senkou Span A', ei?.indicators?.ichimoku?.senkou_a, td?.indicators?.ichimoku?.senkou_a, null)}
                             ${compareRow('Senkou Span B', ei?.indicators?.ichimoku?.senkou_b, td?.indicators?.ichimoku?.senkou_b, null)}
                             ${compareRow('Chikou Span', ei?.indicators?.ichimoku?.chikou, td?.indicators?.ichimoku?.chikou, null)}
 
-                            ${sectionHeader('&#128200; Trend-Stärke')}
-                            ${compareRow('4H Trend', ei?.indicators?.strength?.h4, null, null, {
+                            ${sectionHeader('&#9888; Nicht direkt vergleichbar (unterschiedliche Timeframes/Parameter)')}
+                            <tr>
+                                <td colspan="5" style="padding: 6px 12px; background: rgba(255,152,0,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <span style="color: #ff9800; font-size: 0.75rem;">&#9432; Unterschiedliche Berechnungsgrundlagen - Werte nicht 1:1 vergleichbar</span>
+                                </td>
+                            </tr>
+                            ${compareRow('MACD Histogram', null, td?.indicators?.macd?.histogram, null, {decimals: 5})}
+                            ${compareRow('ATR (EI: D1, TD: M5)', ei?.indicators?.atr?.d1, td?.indicators?.atr, null)}
+                            ${compareRow('ATR % (D1)', ei?.indicators?.atr?.d1_pct, null, null, {decimals: 2})}
+
+                            ${sectionHeader('&#128202; Nur EasyInsight (proprietär)')}
+                            <tr>
+                                <td colspan="5" style="padding: 6px 12px; background: rgba(33,150,243,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <span style="color: #2196f3; font-size: 0.75rem;">&#9432; EasyInsight-spezifische Indikatoren ohne TwelveData-Pendant</span>
+                                </td>
+                            </tr>
+                            ${compareRow('4H Trend-Stärke', ei?.indicators?.strength?.h4, null, null, {
                                 formatter: (v) => formatStrength(v)
                             })}
-                            ${compareRow('1D Trend', ei?.indicators?.strength?.d1, null, null, {
+                            ${compareRow('1D Trend-Stärke', ei?.indicators?.strength?.d1, null, null, {
                                 formatter: (v) => formatStrength(v)
                             })}
-                            ${compareRow('1W Trend', ei?.indicators?.strength?.w1, null, null, {
+                            ${compareRow('1W Trend-Stärke', ei?.indicators?.strength?.w1, null, null, {
                                 formatter: (v) => formatStrength(v)
                             })}
+                            ${compareRow('ADX +DI', ei?.indicators?.adx?.plus_di, null, null, {decimals: 2})}
+                            ${compareRow('ADX -DI', ei?.indicators?.adx?.minus_di, null, null, {decimals: 2})}
+                            ${compareRow('S1 Level (M5)', ei?.indicators?.pivot_points?.s1_m5, null, null)}
+                            ${compareRow('R1 Level (M5)', ei?.indicators?.pivot_points?.r1_m5, null, null)}
+                            ${compareRow('Range D1', ei?.indicators?.range_d1, null, null)}
 
                             ${sectionHeader('&#128202; Volumen & Markt')}
                             ${compareRow('Volumen', null, td?.volume, yf?.price?.volume, {
@@ -4188,13 +4210,18 @@
                 </div>
 
                 <!-- Fixed Legend Footer -->
-                <div style="flex-shrink: 0; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1); display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; font-size: 0.75rem; color: #888;">
-                    <span><span style="color: #2196f3;">&#9632;</span> EasyInsight</span>
-                    <span><span style="color: #9c27b0;">&#9632;</span> TwelveData</span>
-                    <span><span style="color: #ff9800;">&#9632;</span> Yahoo Finance</span>
-                    <span style="margin-left: 1rem;"><span style="color: #4caf50;">&#10003;</span> Identisch (&lt;0.01%)</span>
-                    <span><span style="color: #ffc107;">&#8776;</span> Abweichung (&lt;1%)</span>
-                    <span><span style="color: #f44336;">&#10007;</span> Unterschiedlich (&gt;1%)</span>
+                <div style="flex-shrink: 0; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; color: #888;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; margin-bottom: 0.5rem;">
+                        <span><span style="color: #2196f3;">&#9632;</span> EasyInsight (M5)</span>
+                        <span><span style="color: #9c27b0;">&#9632;</span> TwelveData (M5)</span>
+                        <span><span style="color: #ff9800;">&#9632;</span> Yahoo Finance (D1)</span>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center;">
+                        <span><span style="color: #4caf50;">&#10003;</span> Identisch (&lt;0.01%)</span>
+                        <span><span style="color: #ffc107;">&#8776;</span> Abweichung (&lt;1%)</span>
+                        <span><span style="color: #f44336;">&#10007;</span> Unterschiedlich (&gt;1%)</span>
+                        <span style="margin-left: 1rem;"><span style="color: #ff9800;">&#9888;</span> Nicht vergleichbar</span>
+                    </div>
                 </div>
             `;
 
