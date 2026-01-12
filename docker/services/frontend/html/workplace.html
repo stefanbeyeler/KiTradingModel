@@ -1163,7 +1163,17 @@
             });
             event.currentTarget.classList.add('selected');
 
-            // Load chart
+            // Timeframe automatisch übernehmen
+            const intervalSelect = document.getElementById('chartInterval');
+            const intervalMap = {
+                'M1': '1', 'M5': '5', 'M15': '15', 'M30': '30',
+                'H1': '60', 'H4': '240', 'D1': 'D', 'W1': 'W', 'MN': 'M'
+            };
+            if (intervalMap[timeframe]) {
+                intervalSelect.value = intervalMap[timeframe];
+            }
+
+            // Load chart with the selected timeframe
             loadChart(symbol);
         }
 
@@ -1363,10 +1373,10 @@
             const marketClosedClass = isOpen ? '' : 'market-closed';
 
             const signals = [
-                { name: 'N', available: setup.nhits_signal?.available },
-                { name: 'H', available: setup.hmm_signal?.available },
-                { name: 'T', available: setup.tcn_signal?.available && setup.tcn_signal?.patterns?.length > 0 },
-                { name: 'C', available: setup.candlestick_signal?.available && setup.candlestick_signal?.patterns?.length > 0 },
+                { name: 'N', available: setup.nhits_signal?.available, tooltip: 'NHITS: Preis-Prognose (30%)' },
+                { name: 'H', available: setup.hmm_signal?.available, tooltip: 'HMM: Regime-Erkennung (25%)' },
+                { name: 'T', available: setup.tcn_signal?.available && setup.tcn_signal?.patterns?.length > 0, tooltip: 'TCN: Chart-Patterns (20%)' },
+                { name: 'C', available: setup.candlestick_signal?.available && setup.candlestick_signal?.patterns?.length > 0, tooltip: 'Candlestick: Kerzen-Patterns (15%)' },
             ];
 
             return `
@@ -1382,7 +1392,7 @@
                         </div>
                     </div>
                     <div class="setup-signals">
-                        ${signals.map(s => `<span class="signal-tag ${s.available ? 'available' : ''}">${s.name}</span>`).join('')}
+                        ${signals.map(s => `<span class="signal-tag ${s.available ? 'available' : ''}" title="${s.tooltip}">${s.name}</span>`).join('')}
                     </div>
                     <div class="setup-meta">
                         <span>${setup.timeframe} | ${setup.confidence_level}</span>
