@@ -148,7 +148,7 @@ class ScannerService:
         """Scannt ein einzelnes Symbol über alle relevanten Timeframes."""
         try:
             # Alle relevanten Timeframes scannen
-            timeframes = ["M15", "H1", "H4", "D1"]
+            timeframes = ["M5", "M15", "H1", "H4", "D1"]
             best_setup: Optional[TradingSetup] = None
             timeframe_scores: dict[str, float] = {}
 
