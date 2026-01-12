@@ -123,3 +123,32 @@ async def test_tradingview_connection(request: TradingViewTestRequest) -> Tradin
         valid=True,
         error=None
     )
+
+
+@router.post(
+    "/restart",
+    summary="Service neu starten",
+    description="Startet den Workplace-Service neu. Der Service wird kurzzeitig nicht erreichbar sein."
+)
+async def restart_service():
+    """
+    Startet den Workplace-Service neu.
+
+    Der Service sendet ein SIGTERM an sich selbst, was einen sauberen Neustart auslöst.
+    Docker/Supervisor wird den Service automatisch neu starten.
+    """
+    import os
+    import signal
+    import asyncio
+
+    logger.info("Service-Neustart angefordert")
+
+    # Verzögerten Neustart in separatem Task starten
+    async def delayed_restart():
+        await asyncio.sleep(1)  # Kurze Verzögerung damit Response noch gesendet wird
+        logger.info("Service wird beendet für Neustart...")
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    asyncio.create_task(delayed_restart())
+
+    return {"status": "restarting", "message": "Service wird neu gestartet"}

@@ -190,6 +190,18 @@
             background: rgba(239, 68, 68, 0.3);
         }
 
+        .btn-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .btn-warning:hover {
+            background: rgba(245, 158, 11, 0.3);
+        }
+
         .watchlist-table {
             width: 100%;
             border-collapse: collapse;
@@ -395,9 +407,17 @@
                         <p class="info-text">Automatischer Start beim Service-Start</p>
                     </div>
                 </div>
-                <p class="info-text" style="margin-top: 1rem;">
-                    Hinweis: Änderungen an diesen Einstellungen erfordern einen Neustart des Services.
-                </p>
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <p class="info-text" style="margin-bottom: 0.75rem;">
+                        Hinweis: Änderungen an diesen Einstellungen erfordern einen Neustart des Services.
+                    </p>
+                    <button class="btn btn-warning" onclick="restartWorkplaceService()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 0.5rem;">
+                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                        Service neu starten
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -929,6 +949,35 @@
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
+        }
+
+        async function restartWorkplaceService() {
+            if (!confirm('Möchten Sie den Workplace-Service wirklich neu starten?\n\nDer Service wird kurzzeitig nicht erreichbar sein.')) {
+                return;
+            }
+
+            showToast('Service wird neu gestartet...', 'success');
+
+            try {
+                const response = await fetch(`${API_BASE}/restart`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    showToast('Neustart eingeleitet - Seite wird in 5 Sekunden neu geladen', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 5000);
+                } else {
+                    showToast('Fehler beim Neustart', 'error');
+                }
+            } catch (error) {
+                // Erwarteter Fehler wenn Service neu startet
+                showToast('Neustart eingeleitet - Seite wird in 5 Sekunden neu geladen', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 5000);
+            }
         }
     </script>
 </body>
