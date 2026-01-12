@@ -134,6 +134,9 @@ class TradingSetup(BaseModel):
     # Preise
     current_price: Optional[float] = Field(None, description="Aktueller Preis")
 
+    # Multi-Timeframe Scores
+    timeframe_scores: Optional[dict[str, float]] = Field(None, description="Scores pro Timeframe")
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -223,13 +226,16 @@ class WatchlistItem(BaseModel):
     symbol: str = Field(..., description="Trading-Symbol")
     is_favorite: bool = Field(default=False, description="Als Favorit markiert")
     alert_threshold: float = Field(default=70.0, ge=0.0, le=100.0, description="Alert-Schwelle")
-    timeframe: str = Field(default="H1", description="Bevorzugter Timeframe")
-    last_score: Optional[float] = Field(None, description="Letzter Composite-Score")
+    timeframe: str = Field(default="H1", description="Bevorzugter Timeframe (deprecated)")
+    last_score: Optional[float] = Field(None, description="Bester Composite-Score über alle Timeframes")
+    best_timeframe: Optional[str] = Field(None, description="Timeframe mit bestem Score")
     last_direction: Optional[SignalDirection] = Field(None, description="Letzte Richtung")
     last_scan: Optional[datetime] = Field(None, description="Letzter Scan-Zeitpunkt")
     alerts_triggered: int = Field(default=0, description="Anzahl ausgelöster Alerts")
     added_at: Optional[datetime] = Field(None, description="Hinzugefügt am")
     notes: Optional[str] = Field(None, max_length=500, description="Benutzer-Notizen")
+    # Scores pro Timeframe für detaillierte Ansicht
+    timeframe_scores: Optional[dict[str, float]] = Field(None, description="Scores pro Timeframe")
 
 
 class WatchlistAddRequest(BaseModel):

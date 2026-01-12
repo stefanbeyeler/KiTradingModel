@@ -331,14 +331,9 @@
                 <div class="add-symbol-form">
                     <input type="text" id="newSymbol" placeholder="Symbol (z.B. BTCUSD)" />
                     <input type="number" id="newThreshold" placeholder="Alert-Schwelle" value="70" min="0" max="100" />
-                    <select id="newTimeframe">
-                        <option value="M15">M15</option>
-                        <option value="H1" selected>H1</option>
-                        <option value="H4">H4</option>
-                        <option value="D1">D1</option>
-                    </select>
                     <button class="btn btn-primary" onclick="addSymbol()">Hinzufügen</button>
                 </div>
+                <p class="info-text">Alle verfügbaren Timeframes (M15, H1, H4, D1) werden automatisch gescannt.</p>
             </div>
 
             <div class="card">
@@ -347,9 +342,9 @@
                     <thead>
                         <tr>
                             <th>Symbol</th>
-                            <th>Timeframe</th>
                             <th>Alert-Schwelle</th>
-                            <th>Letzter Score</th>
+                            <th>Bester Score</th>
+                            <th>Bester TF</th>
                             <th>Letzter Scan</th>
                             <th>Aktionen</th>
                         </tr>
@@ -696,9 +691,9 @@
                                 </button>
                                 ${item.symbol}
                             </td>
-                            <td>${item.timeframe}</td>
                             <td>${item.alert_threshold}</td>
                             <td>${item.last_score ? item.last_score.toFixed(1) : '-'}</td>
+                            <td>${item.best_timeframe || '-'}</td>
                             <td>${item.last_scan ? new Date(item.last_scan).toLocaleString('de-DE') : '-'}</td>
                             <td class="actions">
                                 <button class="btn btn-danger" onclick="removeSymbol('${item.symbol}')">Entfernen</button>
@@ -717,7 +712,6 @@
         async function addSymbol() {
             const symbol = document.getElementById('newSymbol').value.trim().toUpperCase();
             const threshold = parseFloat(document.getElementById('newThreshold').value);
-            const timeframe = document.getElementById('newTimeframe').value;
 
             if (!symbol) {
                 showToast('Bitte Symbol eingeben', 'error');
@@ -731,7 +725,6 @@
                     body: JSON.stringify({
                         symbol,
                         alert_threshold: threshold,
-                        timeframe,
                         is_favorite: false
                     })
                 });

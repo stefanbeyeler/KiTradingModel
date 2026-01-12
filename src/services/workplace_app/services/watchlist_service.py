@@ -191,7 +191,9 @@ class WatchlistService:
         self,
         symbol: str,
         score: float,
-        direction: SignalDirection
+        direction: SignalDirection,
+        best_timeframe: Optional[str] = None,
+        timeframe_scores: Optional[dict[str, float]] = None
     ):
         """Aktualisiert das Scan-Ergebnis für ein Symbol."""
         await self.initialize()
@@ -204,6 +206,12 @@ class WatchlistService:
         item.last_score = score
         item.last_direction = direction
         item.last_scan = datetime.now(timezone.utc)
+
+        # Multi-Timeframe Felder
+        if best_timeframe:
+            item.best_timeframe = best_timeframe
+        if timeframe_scores:
+            item.timeframe_scores = timeframe_scores
 
         self._watchlist[symbol] = item
         # Nicht bei jedem Scan speichern (Performance)

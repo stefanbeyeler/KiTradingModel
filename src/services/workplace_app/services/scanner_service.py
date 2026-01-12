@@ -108,11 +108,13 @@ class ScannerService:
                             self._results[symbol] = setup
                             self._symbols_scanned_total += 1
 
-                            # Watchlist aktualisieren
+                            # Watchlist aktualisieren mit Multi-Timeframe Daten
                             await watchlist_service.update_scan_result(
                                 symbol,
                                 setup.composite_score,
-                                setup.direction
+                                setup.direction,
+                                best_timeframe=setup.timeframe,
+                                timeframe_scores=setup.timeframe_scores
                             )
 
                             # Alert prüfen
@@ -143,19 +145,38 @@ class ScannerService:
             await asyncio.sleep(settings.scan_interval_seconds)
 
     async def _scan_symbol(self, symbol: str) -> Optional[TradingSetup]:
-        """Scannt ein einzelnes Symbol."""
+        """Scannt ein einzelnes Symbol über alle relevanten Timeframes."""
         try:
-            # Watchlist-Item für Timeframe holen
-            item = await watchlist_service.get(symbol)
-            timeframe = item.timeframe if item else "H1"
+            # Alle relevanten Timeframes scannen
+            timeframes = ["M15", "H1", "H4", "D1"]
+            best_setup: Optional[TradingSetup] = None
+            timeframe_scores: dict[str, float] = {}
 
-            # Signale aggregieren
-            signals = await signal_aggregator.fetch_all_signals(symbol, timeframe)
+            for timeframe in timeframes:
+                try:
+                    # Signale aggregieren für diesen Timeframe
+                    signals = await signal_aggregator.fetch_all_signals(symbol, timeframe)
 
-            # Setup erstellen
-            setup = scoring_service.create_setup(symbol, timeframe, signals)
+                    # Setup erstellen
+                    setup = scoring_service.create_setup(symbol, timeframe, signals)
 
-            return setup
+                    if setup:
+                        timeframe_scores[timeframe] = setup.composite_score
+
+                        # Bestes Setup merken
+                        if best_setup is None or setup.composite_score > best_setup.composite_score:
+                            best_setup = setup
+
+                except Exception as e:
+                    logger.debug(f"Scan-Fehler für {symbol}/{timeframe}: {e}")
+                    continue
+
+            # Timeframe-Scores im Setup speichern (falls vorhanden)
+            if best_setup:
+                # Speichere alle Scores für spätere Referenz
+                best_setup.timeframe_scores = timeframe_scores
+
+            return best_setup
 
         except Exception as e:
             logger.debug(f"Scan-Fehler für {symbol}: {e}")
