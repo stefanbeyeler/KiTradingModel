@@ -718,6 +718,280 @@
             opacity: 0.7;
         }
 
+        /* Detail Button in Setup Card */
+        .setup-detail-btn {
+            background: rgba(100, 200, 255, 0.15);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64c8ff;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .setup-detail-btn:hover {
+            background: rgba(100, 200, 255, 0.25);
+            border-color: rgba(100, 200, 255, 0.5);
+        }
+
+        .setup-detail-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* Detail Modal - Grösseres Modal für alle Details */
+        .detail-modal {
+            max-width: 900px;
+            width: 95%;
+        }
+
+        .detail-modal .modal-body {
+            padding: 0;
+        }
+
+        .detail-tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .detail-tab {
+            padding: 0.75rem 1.25rem;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .detail-tab:hover {
+            color: #e8e8e8;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .detail-tab.active {
+            color: #64c8ff;
+            border-bottom-color: #64c8ff;
+            background: rgba(100, 200, 255, 0.1);
+        }
+
+        .detail-content {
+            padding: 1rem;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .detail-panel {
+            display: none;
+        }
+
+        .detail-panel.active {
+            display: block;
+        }
+
+        /* Detail Sections */
+        .detail-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .detail-section h4 {
+            font-size: 0.9rem;
+            color: #64c8ff;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detail-section h4 .icon {
+            font-size: 1rem;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .detail-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .detail-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-card-title {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-card-badge {
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        .detail-card-badge.available {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .detail-card-badge.unavailable {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .detail-card-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-card-sub {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        /* Pattern List */
+        .pattern-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        .pattern-tag {
+            padding: 0.25rem 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .pattern-tag.bullish {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .pattern-tag.bearish {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        /* LLM Analysis Box */
+        .llm-analysis-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            border-left: 3px solid #64c8ff;
+        }
+
+        .llm-analysis-box p {
+            line-height: 1.6;
+            font-size: 0.85rem;
+        }
+
+        .llm-loading {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .llm-loading .spinner {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Score Meter */
+        .score-meter {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .score-bar {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .score-bar-fill.high {
+            background: linear-gradient(90deg, #10b981, #34d399);
+        }
+
+        .score-bar-fill.moderate {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
+        .score-bar-fill.low {
+            background: linear-gradient(90deg, #6b7280, #9ca3af);
+        }
+
+        .score-value-large {
+            font-size: 1.5rem;
+            font-weight: 700;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        /* Forecast Table */
+        .forecast-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .forecast-table th,
+        .forecast-table td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .forecast-table th {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .forecast-table td {
+            font-size: 0.85rem;
+        }
+
+        .forecast-positive {
+            color: #34d399;
+        }
+
+        .forecast-negative {
+            color: #f87171;
+        }
+
         /* Responsive */
         @media (max-width: 900px) {
             .market-hours {
@@ -921,6 +1195,54 @@
                 <div class="loading">
                     <div class="spinner"></div>
                     <p>Analysiere...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal - Alle Signal-Informationen -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal detail-modal">
+            <div class="modal-header">
+                <h2 id="detailModalTitle">Setup Details</h2>
+                <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+            </div>
+            <div class="detail-tabs">
+                <button class="detail-tab active" onclick="switchDetailTab('overview')">Übersicht</button>
+                <button class="detail-tab" onclick="switchDetailTab('signals')">Signale</button>
+                <button class="detail-tab" onclick="switchDetailTab('patterns')">Patterns</button>
+                <button class="detail-tab" onclick="switchDetailTab('llm')">LLM Analyse</button>
+            </div>
+            <div class="detail-content">
+                <!-- Overview Panel -->
+                <div class="detail-panel active" id="panel-overview">
+                    <div id="detailOverviewContent">
+                        <div class="loading"><div class="spinner"></div><p>Lade Details...</p></div>
+                    </div>
+                </div>
+
+                <!-- Signals Panel -->
+                <div class="detail-panel" id="panel-signals">
+                    <div id="detailSignalsContent">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+
+                <!-- Patterns Panel -->
+                <div class="detail-panel" id="panel-patterns">
+                    <div id="detailPatternsContent">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+
+                <!-- LLM Analysis Panel -->
+                <div class="detail-panel" id="panel-llm">
+                    <div id="detailLlmContent">
+                        <div class="llm-loading">
+                            <div class="spinner"></div>
+                            <span>LLM-Analyse wird geladen...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1364,6 +1686,9 @@
             }
         }
 
+        // Cache für geladene Setups (für Detail-Modal)
+        let setupsCache = {};
+
         function createSetupCard(setup) {
             const scoreClass = setup.composite_score >= 75 ? 'high' :
                               setup.composite_score >= 60 ? 'moderate' : 'low';
@@ -1378,6 +1703,9 @@
                 { name: 'T', available: setup.tcn_signal?.available && setup.tcn_signal?.patterns?.length > 0, tooltip: 'TCN: Chart-Patterns (20%)' },
                 { name: 'C', available: setup.candlestick_signal?.available && setup.candlestick_signal?.patterns?.length > 0, tooltip: 'Candlestick: Kerzen-Patterns (15%)' },
             ];
+
+            // Setup im Cache speichern für Detail-Modal
+            setupsCache[setup.symbol] = setup;
 
             return `
                 <div class="setup-card ${setup.direction} ${marketClosedClass}" onclick="selectSetup('${setup.symbol}', '${setup.timeframe}')" ondblclick="openAnalysis('${setup.symbol}', '${setup.timeframe}')">
@@ -1396,7 +1724,14 @@
                     </div>
                     <div class="setup-meta">
                         <span>${setup.timeframe} | ${setup.confidence_level}</span>
-                        <span>${setup.signal_alignment}</span>
+                        <button class="setup-detail-btn" onclick="event.stopPropagation(); openDetailModal('${setup.symbol}', '${setup.timeframe}')" title="Alle Details anzeigen">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="16" x2="12" y2="12"/>
+                                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                            </svg>
+                            Details
+                        </button>
                     </div>
                 </div>
             `;
@@ -1571,6 +1906,560 @@
         document.getElementById('analysisModal').addEventListener('click', (e) => {
             if (e.target.classList.contains('modal-overlay')) closeModal();
         });
+
+        // =============================================
+        // Detail Modal Funktionen
+        // =============================================
+
+        let currentDetailSymbol = null;
+        let currentDetailTimeframe = null;
+        let llmAnalysisLoaded = false;
+
+        async function openDetailModal(symbol, timeframe) {
+            currentDetailSymbol = symbol;
+            currentDetailTimeframe = timeframe;
+            llmAnalysisLoaded = false;
+
+            const modal = document.getElementById('detailModal');
+            document.getElementById('detailModalTitle').textContent = `${symbol} - Setup Details`;
+
+            // Reset tabs
+            document.querySelectorAll('.detail-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector('.detail-tab').classList.add('active');
+            document.querySelectorAll('.detail-panel').forEach(panel => panel.classList.remove('active'));
+            document.getElementById('panel-overview').classList.add('active');
+
+            // Reset LLM content
+            document.getElementById('detailLlmContent').innerHTML = `
+                <div class="llm-loading">
+                    <div class="spinner"></div>
+                    <span>LLM-Analyse wird beim Wechsel zum Tab geladen...</span>
+                </div>
+            `;
+
+            modal.classList.add('active');
+
+            // Lade Setup-Details
+            await loadDetailContent(symbol, timeframe);
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('active');
+            currentDetailSymbol = null;
+            currentDetailTimeframe = null;
+        }
+
+        document.getElementById('detailModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) closeDetailModal();
+        });
+
+        function switchDetailTab(tabId) {
+            // Tab-Buttons aktualisieren
+            document.querySelectorAll('.detail-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Panels aktualisieren
+            document.querySelectorAll('.detail-panel').forEach(panel => panel.classList.remove('active'));
+            document.getElementById(`panel-${tabId}`).classList.add('active');
+
+            // LLM-Analyse lazy laden
+            if (tabId === 'llm' && !llmAnalysisLoaded && currentDetailSymbol) {
+                loadLlmAnalysis(currentDetailSymbol, currentDetailTimeframe);
+            }
+        }
+
+        async function loadDetailContent(symbol, timeframe) {
+            // Versuche zuerst aus Cache
+            let setup = setupsCache[symbol];
+
+            // Falls nicht im Cache, vom API laden
+            if (!setup) {
+                try {
+                    const response = await fetch(`${API_BASE}/setups/${symbol}?timeframe=${timeframe}`);
+                    if (response.ok) {
+                        setup = await response.json();
+                        setupsCache[symbol] = setup;
+                    }
+                } catch (error) {
+                    console.error('Fehler beim Laden des Setups:', error);
+                }
+            }
+
+            if (!setup) {
+                document.getElementById('detailOverviewContent').innerHTML = '<div class="empty-state">Setup nicht gefunden</div>';
+                return;
+            }
+
+            // Overview Panel befüllen
+            renderOverviewPanel(setup);
+
+            // Signals Panel befüllen
+            renderSignalsPanel(setup);
+
+            // Patterns Panel befüllen
+            renderPatternsPanel(setup);
+        }
+
+        function renderOverviewPanel(setup) {
+            const scoreClass = setup.composite_score >= 75 ? 'high' :
+                              setup.composite_score >= 60 ? 'moderate' : 'low';
+
+            const directionIcon = setup.direction === 'long' ? '📈' :
+                                 setup.direction === 'short' ? '📉' : '➡️';
+
+            const directionColor = setup.direction === 'long' ? '#34d399' :
+                                  setup.direction === 'short' ? '#f87171' : '#fbbf24';
+
+            document.getElementById('detailOverviewContent').innerHTML = `
+                <div class="detail-section">
+                    <h4><span class="icon">📊</span> Composite Score</h4>
+                    <div class="score-meter">
+                        <div class="score-bar">
+                            <div class="score-bar-fill ${scoreClass}" style="width: ${setup.composite_score}%"></div>
+                        </div>
+                        <span class="score-value-large" style="color: ${scoreClass === 'high' ? '#34d399' : scoreClass === 'moderate' ? '#fbbf24' : '#9ca3af'}">${setup.composite_score.toFixed(1)}</span>
+                    </div>
+                </div>
+
+                <div class="detail-grid">
+                    <div class="detail-card">
+                        <div class="detail-card-header">
+                            <span class="detail-card-title">Richtung</span>
+                        </div>
+                        <div class="detail-card-value" style="color: ${directionColor}">
+                            ${directionIcon} ${setup.direction.toUpperCase()}
+                        </div>
+                        <div class="detail-card-sub">Signal-Alignment: ${setup.signal_alignment}</div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-card-header">
+                            <span class="detail-card-title">Konfidenz</span>
+                        </div>
+                        <div class="detail-card-value">${setup.confidence_level.toUpperCase()}</div>
+                        <div class="detail-card-sub">${setup.signals_available} von 5 Signalen verfügbar</div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-card-header">
+                            <span class="detail-card-title">Timeframe</span>
+                        </div>
+                        <div class="detail-card-value">${setup.timeframe}</div>
+                        <div class="detail-card-sub">${new Date(setup.timestamp).toLocaleString('de-CH')}</div>
+                    </div>
+
+                    ${setup.current_price ? `
+                    <div class="detail-card">
+                        <div class="detail-card-header">
+                            <span class="detail-card-title">Aktueller Preis</span>
+                        </div>
+                        <div class="detail-card-value">${setup.current_price.toLocaleString('de-CH', {minimumFractionDigits: 2})}</div>
+                        <div class="detail-card-sub">${setup.symbol}</div>
+                    </div>
+                    ` : ''}
+                </div>
+
+                ${setup.key_drivers && setup.key_drivers.length > 0 ? `
+                <div class="detail-section" style="margin-top: 1rem;">
+                    <h4><span class="icon">🎯</span> Key Drivers</h4>
+                    <div class="pattern-list">
+                        ${setup.key_drivers.map(driver => `<span class="pattern-tag">${driver}</span>`).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        }
+
+        function renderSignalsPanel(setup) {
+            const nhits = setup.nhits_signal || {};
+            const hmm = setup.hmm_signal || {};
+            const technical = setup.technical_signal || {};
+
+            document.getElementById('detailSignalsContent').innerHTML = `
+                <!-- NHITS Signal -->
+                <div class="detail-section">
+                    <h4><span class="icon">🔮</span> NHITS Prognose (30%)</h4>
+                    <div class="detail-grid">
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">Status</span>
+                                <span class="detail-card-badge ${nhits.available ? 'available' : 'unavailable'}">
+                                    ${nhits.available ? 'Verfügbar' : 'Nicht verfügbar'}
+                                </span>
+                            </div>
+                            ${nhits.available ? `
+                            <div class="detail-card-value" style="color: ${nhits.direction === 'long' ? '#34d399' : nhits.direction === 'short' ? '#f87171' : '#fbbf24'}">
+                                ${nhits.direction?.toUpperCase() || 'NEUTRAL'}
+                            </div>
+                            <div class="detail-card-sub">Trend-Wahrscheinlichkeit: ${((nhits.trend_probability || 0) * 100).toFixed(1)}%</div>
+                            ` : '<div class="detail-card-sub">Keine Prognose verfügbar</div>'}
+                        </div>
+
+                        ${nhits.available && (nhits.forecast_change_1h !== null || nhits.forecast_change_24h !== null) ? `
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">Prognose</span>
+                            </div>
+                            <table class="forecast-table">
+                                <tr>
+                                    <th>Zeitraum</th>
+                                    <th>Änderung</th>
+                                </tr>
+                                ${nhits.forecast_change_1h !== null ? `
+                                <tr>
+                                    <td>1 Stunde</td>
+                                    <td class="${nhits.forecast_change_1h >= 0 ? 'forecast-positive' : 'forecast-negative'}">
+                                        ${nhits.forecast_change_1h >= 0 ? '+' : ''}${nhits.forecast_change_1h?.toFixed(2)}%
+                                    </td>
+                                </tr>
+                                ` : ''}
+                                ${nhits.forecast_change_24h !== null ? `
+                                <tr>
+                                    <td>24 Stunden</td>
+                                    <td class="${nhits.forecast_change_24h >= 0 ? 'forecast-positive' : 'forecast-negative'}">
+                                        ${nhits.forecast_change_24h >= 0 ? '+' : ''}${nhits.forecast_change_24h?.toFixed(2)}%
+                                    </td>
+                                </tr>
+                                ` : ''}
+                            </table>
+                        </div>
+                        ` : ''}
+
+                        ${nhits.available && nhits.model_confidence !== null ? `
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">Modell-Konfidenz</span>
+                            </div>
+                            <div class="detail-card-value">${((nhits.model_confidence || 0) * 100).toFixed(1)}%</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- HMM Signal -->
+                <div class="detail-section">
+                    <h4><span class="icon">📊</span> HMM Regime (25%)</h4>
+                    <div class="detail-grid">
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">Status</span>
+                                <span class="detail-card-badge ${hmm.available ? 'available' : 'unavailable'}">
+                                    ${hmm.available ? 'Verfügbar' : 'Nicht verfügbar'}
+                                </span>
+                            </div>
+                            ${hmm.available ? `
+                            <div class="detail-card-value">${formatRegime(hmm.regime)}</div>
+                            <div class="detail-card-sub">Wahrscheinlichkeit: ${((hmm.regime_probability || 0) * 100).toFixed(1)}%</div>
+                            ` : '<div class="detail-card-sub">Keine Regime-Daten verfügbar</div>'}
+                        </div>
+
+                        ${hmm.available ? `
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">Signal Score</span>
+                            </div>
+                            <div class="detail-card-value">${(hmm.signal_score || 0).toFixed(1)}</div>
+                            <div class="detail-card-sub">Alignment: ${hmm.alignment || 'neutral'}</div>
+                        </div>
+
+                        ${hmm.regime_duration !== null ? `
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">Regime-Dauer</span>
+                            </div>
+                            <div class="detail-card-value">${hmm.regime_duration} Bars</div>
+                        </div>
+                        ` : ''}
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- Technical Signal -->
+                <div class="detail-section">
+                    <h4><span class="icon">📈</span> Technische Indikatoren (10%)</h4>
+                    <div class="detail-grid">
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">Status</span>
+                                <span class="detail-card-badge ${technical.available ? 'available' : 'unavailable'}">
+                                    ${technical.available ? 'Verfügbar' : 'Nicht verfügbar'}
+                                </span>
+                            </div>
+                            ${technical.available ? `
+                            <div class="detail-card-sub">Trend Alignment: ${((technical.trend_alignment || 0) * 100).toFixed(0)}%</div>
+                            ` : '<div class="detail-card-sub">Keine technischen Daten verfügbar</div>'}
+                        </div>
+
+                        ${technical.available && technical.rsi !== null ? `
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">RSI (14)</span>
+                            </div>
+                            <div class="detail-card-value" style="color: ${technical.rsi < 30 ? '#34d399' : technical.rsi > 70 ? '#f87171' : '#fbbf24'}">
+                                ${technical.rsi?.toFixed(1)}
+                            </div>
+                            <div class="detail-card-sub">${technical.rsi_signal || 'neutral'}</div>
+                        </div>
+                        ` : ''}
+
+                        ${technical.available ? `
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">MACD</span>
+                            </div>
+                            <div class="detail-card-value" style="color: ${technical.macd_signal === 'bullish' ? '#34d399' : technical.macd_signal === 'bearish' ? '#f87171' : '#fbbf24'}">
+                                ${(technical.macd_signal || 'neutral').toUpperCase()}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${technical.available && technical.bb_position !== null ? `
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">BB Position</span>
+                            </div>
+                            <div class="detail-card-value">${((technical.bb_position || 0) * 100).toFixed(0)}%</div>
+                            <div class="detail-card-sub">${technical.bb_position < 0.2 ? 'Nahe unteres Band' : technical.bb_position > 0.8 ? 'Nahe oberes Band' : 'Mittig'}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPatternsPanel(setup) {
+            const tcn = setup.tcn_signal || {};
+            const candlestick = setup.candlestick_signal || {};
+
+            document.getElementById('detailPatternsContent').innerHTML = `
+                <!-- TCN Patterns -->
+                <div class="detail-section">
+                    <h4><span class="icon">📐</span> TCN Chart Patterns (20%)</h4>
+                    <div class="detail-grid">
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">Status</span>
+                                <span class="detail-card-badge ${tcn.available ? 'available' : 'unavailable'}">
+                                    ${tcn.available ? 'Verfügbar' : 'Nicht verfügbar'}
+                                </span>
+                            </div>
+                            ${tcn.available ? `
+                            <div class="detail-card-value" style="color: ${tcn.direction === 'long' ? '#34d399' : tcn.direction === 'short' ? '#f87171' : '#fbbf24'}">
+                                ${tcn.direction?.toUpperCase() || 'NEUTRAL'}
+                            </div>
+                            <div class="detail-card-sub">Konfidenz: ${((tcn.pattern_confidence || 0) * 100).toFixed(1)}%</div>
+                            ` : '<div class="detail-card-sub">Keine TCN-Patterns erkannt</div>'}
+                        </div>
+
+                        ${tcn.available && tcn.price_target ? `
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">Kursziel</span>
+                            </div>
+                            <div class="detail-card-value">${tcn.price_target?.toLocaleString('de-CH', {minimumFractionDigits: 2})}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    ${tcn.available && tcn.patterns && tcn.patterns.length > 0 ? `
+                    <div style="margin-top: 0.75rem;">
+                        <div class="detail-card-title" style="margin-bottom: 0.5rem;">Erkannte Patterns:</div>
+                        <div class="pattern-list">
+                            ${tcn.patterns.map(p => `
+                                <span class="pattern-tag ${tcn.direction === 'long' ? 'bullish' : tcn.direction === 'short' ? 'bearish' : ''}">
+                                    ${formatPatternName(p)}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+
+                <!-- Candlestick Patterns -->
+                <div class="detail-section">
+                    <h4><span class="icon">🕯️</span> Candlestick Patterns (15%)</h4>
+                    <div class="detail-grid">
+                        <div class="detail-card">
+                            <div class="detail-card-header">
+                                <span class="detail-card-title">Status</span>
+                                <span class="detail-card-badge ${candlestick.available ? 'available' : 'unavailable'}">
+                                    ${candlestick.available ? 'Verfügbar' : 'Nicht verfügbar'}
+                                </span>
+                            </div>
+                            ${candlestick.available ? `
+                            <div class="detail-card-value" style="color: ${candlestick.direction === 'long' ? '#34d399' : candlestick.direction === 'short' ? '#f87171' : '#fbbf24'}">
+                                ${candlestick.direction?.toUpperCase() || 'NEUTRAL'}
+                            </div>
+                            <div class="detail-card-sub">Stärke: ${((candlestick.pattern_strength || 0) * 100).toFixed(1)}%</div>
+                            ` : '<div class="detail-card-sub">Keine Candlestick-Patterns erkannt</div>'}
+                        </div>
+                    </div>
+
+                    ${candlestick.available && candlestick.patterns && candlestick.patterns.length > 0 ? `
+                    <div style="margin-top: 0.75rem;">
+                        <div class="detail-card-title" style="margin-bottom: 0.5rem;">Erkannte Patterns:</div>
+                        <div class="pattern-list">
+                            ${candlestick.patterns.map(p => `
+                                <span class="pattern-tag ${candlestick.direction === 'long' ? 'bullish' : candlestick.direction === 'short' ? 'bearish' : ''}">
+                                    ${formatPatternName(p)}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+
+                <!-- CNN-LSTM (falls verfügbar - zukünftige Erweiterung) -->
+                <div class="detail-section">
+                    <h4><span class="icon">🧠</span> CNN-LSTM Multi-Task</h4>
+                    <div class="detail-card">
+                        <div class="detail-card-header">
+                            <span class="detail-card-title">Status</span>
+                            <span class="detail-card-badge unavailable">Nicht integriert</span>
+                        </div>
+                        <div class="detail-card-sub">CNN-LSTM Multi-Task-Prognosen werden in einer zukünftigen Version integriert.</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadLlmAnalysis(symbol, timeframe) {
+            const container = document.getElementById('detailLlmContent');
+            container.innerHTML = `
+                <div class="llm-loading">
+                    <div class="spinner"></div>
+                    <span>LLM-Analyse wird generiert...</span>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_BASE}/analyze/${symbol}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeframe, include_rag: true, include_llm: true })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Analyse konnte nicht geladen werden');
+                }
+
+                const data = await response.json();
+                llmAnalysisLoaded = true;
+
+                container.innerHTML = `
+                    ${data.analysis_summary ? `
+                    <div class="detail-section">
+                        <h4><span class="icon">🤖</span> LLM Kurzanalyse</h4>
+                        <div class="llm-analysis-box">
+                            <p>${data.analysis_summary}</p>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${data.entry_exit_levels ? `
+                    <div class="detail-section">
+                        <h4><span class="icon">🎯</span> Entry/Exit Levels</h4>
+                        <div class="detail-grid">
+                            ${data.entry_exit_levels.entry_price ? `
+                            <div class="detail-card">
+                                <div class="detail-card-title">Entry</div>
+                                <div class="detail-card-value" style="color: #64c8ff">${data.entry_exit_levels.entry_price?.toFixed(2)}</div>
+                            </div>
+                            ` : ''}
+                            ${data.entry_exit_levels.stop_loss ? `
+                            <div class="detail-card">
+                                <div class="detail-card-title">Stop Loss</div>
+                                <div class="detail-card-value" style="color: #f87171">${data.entry_exit_levels.stop_loss?.toFixed(2)}</div>
+                            </div>
+                            ` : ''}
+                            ${data.entry_exit_levels.take_profit_1 ? `
+                            <div class="detail-card">
+                                <div class="detail-card-title">Take Profit 1</div>
+                                <div class="detail-card-value" style="color: #34d399">${data.entry_exit_levels.take_profit_1?.toFixed(2)}</div>
+                            </div>
+                            ` : ''}
+                            ${data.entry_exit_levels.take_profit_2 ? `
+                            <div class="detail-card">
+                                <div class="detail-card-title">Take Profit 2</div>
+                                <div class="detail-card-value" style="color: #34d399">${data.entry_exit_levels.take_profit_2?.toFixed(2)}</div>
+                            </div>
+                            ` : ''}
+                            ${data.entry_exit_levels.risk_reward_ratio ? `
+                            <div class="detail-card">
+                                <div class="detail-card-title">Risk/Reward</div>
+                                <div class="detail-card-value">${data.entry_exit_levels.risk_reward_ratio?.toFixed(2)}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${data.risk_assessment ? `
+                    <div class="detail-section">
+                        <h4><span class="icon">⚠️</span> Risiko-Bewertung</h4>
+                        <div class="llm-analysis-box" style="border-left-color: #f59e0b;">
+                            <p>${data.risk_assessment}</p>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${data.rationale ? `
+                    <div class="detail-section">
+                        <h4><span class="icon">💡</span> Begründung</h4>
+                        <div class="llm-analysis-box" style="border-left-color: #8b5cf6;">
+                            <p>${data.rationale}</p>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${data.similar_patterns && data.similar_patterns.length > 0 ? `
+                    <div class="detail-section">
+                        <h4><span class="icon">📚</span> Ähnliche historische Patterns</h4>
+                        <div class="detail-card">
+                            <div class="detail-card-sub">${data.similar_patterns.length} ähnliche Situationen gefunden</div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div style="margin-top: 1rem; font-size: 0.75rem; opacity: 0.6;">
+                        <span>Analyse-Dauer: ${data.analysis_duration_ms?.toFixed(0) || '-'}ms</span>
+                        ${data.rag_sources_used ? `<span style="margin-left: 1rem;">RAG-Quellen: ${data.rag_sources_used}</span>` : ''}
+                        ${data.llm_model ? `<span style="margin-left: 1rem;">Modell: ${data.llm_model}</span>` : ''}
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('LLM Analyse Fehler:', error);
+                container.innerHTML = `
+                    <div class="detail-section">
+                        <div class="llm-analysis-box" style="border-left-color: #f87171;">
+                            <p>Die LLM-Analyse konnte nicht geladen werden. Bitte versuchen Sie es später erneut.</p>
+                            <p style="font-size: 0.75rem; opacity: 0.6; margin-top: 0.5rem;">${error.message}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Hilfsfunktionen
+        function formatRegime(regime) {
+            const regimeMap = {
+                'bull_trend': '🐂 Bull Trend',
+                'bear_trend': '🐻 Bear Trend',
+                'sideways': '↔️ Sideways',
+                'high_volatility': '⚡ High Volatility'
+            };
+            return regimeMap[regime] || regime || 'Unbekannt';
+        }
+
+        function formatPatternName(pattern) {
+            if (!pattern) return 'Unknown';
+            // snake_case zu Title Case
+            return pattern
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+        }
     </script>
 </body>
 </html>
