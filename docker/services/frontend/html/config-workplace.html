@@ -304,6 +304,31 @@
             background: rgba(239, 68, 68, 0.2);
             color: #f87171;
         }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-bar.scanning {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
     </style>
 </head>
 <body>
@@ -381,7 +406,22 @@
                 <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                     <button class="btn btn-primary" onclick="startScanner()">Scanner starten</button>
                     <button class="btn btn-secondary" onclick="stopScanner()">Scanner stoppen</button>
-                    <button class="btn btn-secondary" onclick="triggerManualScan()">Manueller Scan</button>
+                    <button class="btn btn-secondary" id="manualScanBtn" onclick="triggerManualScan()">Manueller Scan</button>
+                </div>
+
+                <!-- Scan Progress Bar -->
+                <div id="scanProgressContainer" style="display: none; margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span id="scanProgressText">Scanne...</span>
+                        <span id="scanProgressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="scanProgressBar" style="width: 0%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.8rem; opacity: 0.7;">
+                        <span id="scanCurrentSymbol">-</span>
+                        <span id="scanProgressCount">0 / 0</span>
+                    </div>
                 </div>
             </div>
 
@@ -808,13 +848,102 @@
             }
         }
 
+        let scanProgressInterval = null;
+
         async function triggerManualScan() {
             try {
+                // Button deaktivieren
+                const btn = document.getElementById('manualScanBtn');
+                btn.disabled = true;
+                btn.textContent = 'Scanne...';
+
+                // Progress Container anzeigen
+                const progressContainer = document.getElementById('scanProgressContainer');
+                progressContainer.style.display = 'block';
+
+                // Progress Bar initialisieren
+                const progressBar = document.getElementById('scanProgressBar');
+                progressBar.style.width = '0%';
+                progressBar.classList.add('scanning');
+
+                // Scan starten
                 await fetch(`${API_BASE}/scan/trigger`, { method: 'POST' });
-                showToast('Manueller Scan ausgelöst', 'success');
+                showToast('Manueller Scan gestartet', 'success');
+
+                // Progress Polling starten
+                scanProgressInterval = setInterval(updateScanProgress, 500);
+
             } catch (error) {
                 showToast('Fehler beim Auslösen', 'error');
+                resetScanProgress();
             }
+        }
+
+        async function updateScanProgress() {
+            try {
+                const response = await fetch(`${API_BASE}/scan/status`);
+                const data = await response.json();
+
+                const progressBar = document.getElementById('scanProgressBar');
+                const progressText = document.getElementById('scanProgressText');
+                const progressPercent = document.getElementById('scanProgressPercent');
+                const progressCount = document.getElementById('scanProgressCount');
+                const currentSymbol = document.getElementById('scanCurrentSymbol');
+
+                // Berechne Fortschritt
+                const total = data.symbols_in_queue || 1;
+                const scanned = data.symbols_scanned_total || 0;
+                const current = data.current_symbol || '-';
+
+                // Wir tracken den Fortschritt innerhalb dieses Scans
+                // Wenn current_symbol null ist und der Scanner läuft, ist der Scan fertig
+                if (!data.current_symbol && data.is_running) {
+                    // Scan abgeschlossen
+                    progressBar.style.width = '100%';
+                    progressPercent.textContent = '100%';
+                    progressText.textContent = 'Scan abgeschlossen!';
+                    progressCount.textContent = `${total} / ${total}`;
+                    currentSymbol.textContent = 'Fertig';
+                    progressBar.classList.remove('scanning');
+
+                    // Nach 2 Sekunden ausblenden
+                    setTimeout(resetScanProgress, 2000);
+                    return;
+                }
+
+                if (data.current_symbol) {
+                    // Scan läuft noch
+                    // Schätze Fortschritt basierend auf aktuellem Symbol
+                    const percent = Math.min(95, Math.round((scanned / Math.max(total, scanned + 1)) * 100));
+                    progressBar.style.width = `${percent}%`;
+                    progressPercent.textContent = `${percent}%`;
+                    progressText.textContent = 'Scanne Symbole...';
+                    progressCount.textContent = `${scanned} / ${total}`;
+                    currentSymbol.textContent = current;
+                }
+
+            } catch (error) {
+                console.error('Fehler beim Abrufen des Scan-Fortschritts:', error);
+            }
+        }
+
+        function resetScanProgress() {
+            // Interval stoppen
+            if (scanProgressInterval) {
+                clearInterval(scanProgressInterval);
+                scanProgressInterval = null;
+            }
+
+            // Button wieder aktivieren
+            const btn = document.getElementById('manualScanBtn');
+            btn.disabled = false;
+            btn.textContent = 'Manueller Scan';
+
+            // Progress Container ausblenden
+            setTimeout(() => {
+                document.getElementById('scanProgressContainer').style.display = 'none';
+                document.getElementById('scanProgressBar').classList.remove('scanning');
+            }, 500);
         }
 
         function updateWeightSum() {
