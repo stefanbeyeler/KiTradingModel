@@ -44,11 +44,13 @@ async def get_top_setups(
     Multi-Signal Composite-Score zurück.
 
     Die Setups werden aus dem letzten Scan-Lauf geholt und nach
-    Score absteigend sortiert.
+    Score absteigend sortiert. Falls keine Scanner-Ergebnisse vorhanden
+    sind, werden Setups aus den Watchlist-Daten generiert.
     """
     start_time = time.time()
 
-    setups = scanner_service.get_top_setups(
+    # Verwende Methode mit Watchlist-Fallback
+    setups = await scanner_service.get_top_setups_with_watchlist_fallback(
         limit=limit,
         min_score=min_score,
         direction=direction,

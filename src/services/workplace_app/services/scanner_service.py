@@ -245,6 +245,87 @@ class ScannerService:
 
         return setups[:limit]
 
+    async def get_top_setups_with_watchlist_fallback(
+        self,
+        limit: int = 10,
+        min_score: float = 0.0,
+        direction: Optional[SignalDirection] = None
+    ) -> list[TradingSetup]:
+        """
+        Gibt die Top-N Setups zurück.
+
+        Wenn keine Scanner-Ergebnisse vorhanden sind, werden Setups
+        aus den Watchlist-Daten generiert.
+        """
+        # Erst Scanner-Ergebnisse prüfen
+        setups = self.get_top_setups(limit=limit, min_score=min_score, direction=direction)
+
+        if setups:
+            return setups
+
+        # Fallback: Setups aus Watchlist-Daten generieren
+        logger.info("Keine Scanner-Ergebnisse, generiere Setups aus Watchlist-Daten")
+        return await self._generate_setups_from_watchlist(limit, min_score, direction)
+
+    async def _generate_setups_from_watchlist(
+        self,
+        limit: int,
+        min_score: float,
+        direction: Optional[SignalDirection]
+    ) -> list[TradingSetup]:
+        """Generiert TradingSetup-Objekte aus Watchlist-Daten."""
+        from .watchlist_service import watchlist_service
+        from ..models.schemas import (
+            ConfidenceLevel,
+            SignalAlignment,
+        )
+
+        items = await watchlist_service.get_all()
+        setups = []
+
+        for item in items:
+            # Nur Items mit Score berücksichtigen
+            if item.last_score is None or item.last_score <= 0:
+                continue
+
+            # Min-Score-Filter
+            if item.last_score < min_score:
+                continue
+
+            # Direction-Filter
+            item_direction = item.last_direction or SignalDirection.NEUTRAL
+            if direction and item_direction != direction:
+                continue
+
+            # Confidence-Level bestimmen
+            if item.last_score >= 75:
+                confidence = ConfidenceLevel.HIGH
+            elif item.last_score >= 60:
+                confidence = ConfidenceLevel.MODERATE
+            elif item.last_score >= 50:
+                confidence = ConfidenceLevel.LOW
+            else:
+                confidence = ConfidenceLevel.WEAK
+
+            setup = TradingSetup(
+                symbol=item.symbol,
+                timeframe=item.best_timeframe or item.timeframe or "H1",
+                timestamp=item.last_scan or datetime.now(timezone.utc),
+                direction=item_direction,
+                composite_score=item.last_score,
+                confidence_level=confidence,
+                signal_alignment=SignalAlignment.MIXED,
+                key_drivers=["Aus Watchlist-Cache"],
+                signals_available=0,
+                timeframe_scores=item.timeframe_scores,
+            )
+            setups.append(setup)
+
+        # Sortieren nach Score (absteigend)
+        setups.sort(key=lambda s: s.composite_score, reverse=True)
+
+        return setups[:limit]
+
     def get_setup(self, symbol: str) -> Optional[TradingSetup]:
         """Gibt das Setup für ein Symbol zurück."""
         return self._results.get(symbol.upper())

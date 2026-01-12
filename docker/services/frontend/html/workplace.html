@@ -1299,18 +1299,28 @@
             const container = document.getElementById('setupsContainer');
 
             try {
-                let url = `${API_BASE}/setups/?limit=20&min_score=40`;
+                // min_score auf 0 setzen um alle Setups zu sehen
+                let url = `${API_BASE}/setups/?limit=20&min_score=0`;
                 if (direction) url += `&direction=${direction}`;
 
                 const response = await fetch(url);
                 const data = await response.json();
 
+                console.log('Setups loaded:', data);
+
                 if (data.setups && data.setups.length > 0) {
                     let setups = data.setups;
 
+                    console.log('Before filter:', setups.length, 'setups, marketFilter:', marketFilter);
+                    console.log('marketStatus:', marketStatus);
+
                     // Filter nach Markt
                     if (marketFilter === 'open') {
-                        setups = setups.filter(s => isMarketOpen(s.symbol));
+                        setups = setups.filter(s => {
+                            const open = isMarketOpen(s.symbol);
+                            console.log(`${s.symbol}: market=${getSymbolMarket(s.symbol)}, open=${open}`);
+                            return open;
+                        });
                     } else if (marketFilter === 'crypto') {
                         setups = setups.filter(s => getSymbolMarket(s.symbol) === 'crypto');
                     } else if (marketFilter === 'forex') {
