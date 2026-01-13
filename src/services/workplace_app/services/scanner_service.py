@@ -37,6 +37,9 @@ class ScannerService:
         self._errors_count = 0
         self._alerts_triggered = 0
         self._scan_start_time: Optional[datetime] = None
+        # Alert-State: Speichert letzten Alert-Zustand pro Symbol
+        # Format: {symbol: {"alerted": bool, "direction": str, "score": float}}
+        self._alert_state: dict[str, dict] = {}
 
     async def start(self):
         """Startet den Auto-Scanner."""
@@ -183,20 +186,59 @@ class ScannerService:
             return None
 
     async def _check_alert(self, symbol: str, setup: TradingSetup):
-        """Prüft ob ein Alert ausgelöst werden soll."""
+        """
+        Prüft ob ein Alert ausgelöst werden soll.
+
+        Alert wird nur ausgelöst bei:
+        1. Erstes Überschreiten der Schwelle (noch kein Alert für dieses Symbol)
+        2. Richtungswechsel (z.B. von neutral zu long, oder von long zu short)
+        3. Score fällt unter Schwelle und steigt wieder darüber
+        """
         try:
             item = await watchlist_service.get(symbol)
             if not item:
                 return
 
-            # Alert wenn Score über Schwelle
-            if setup.composite_score >= item.alert_threshold:
+            current_direction = setup.direction.value
+            current_score = setup.composite_score
+            threshold = item.alert_threshold
+
+            # Vorherigen Alert-State holen
+            prev_state = self._alert_state.get(symbol, {})
+            prev_alerted = prev_state.get("alerted", False)
+            prev_direction = prev_state.get("direction", None)
+
+            # Prüfen ob Score über Schwelle
+            is_above_threshold = current_score >= threshold
+
+            # Alert auslösen wenn:
+            should_alert = False
+            alert_reason = ""
+
+            if is_above_threshold:
+                if not prev_alerted:
+                    # Fall 1: Erstes Überschreiten oder nach Reset
+                    should_alert = True
+                    alert_reason = "Schwelle überschritten"
+                elif prev_direction and prev_direction != current_direction:
+                    # Fall 2: Richtungswechsel während über Schwelle
+                    should_alert = True
+                    alert_reason = f"Richtungswechsel: {prev_direction} → {current_direction}"
+
+            # State aktualisieren
+            self._alert_state[symbol] = {
+                "alerted": is_above_threshold,
+                "direction": current_direction,
+                "score": current_score
+            }
+
+            if should_alert:
                 self._alerts_triggered += 1
                 await watchlist_service.increment_alert_count(symbol)
 
                 logger.info(
-                    f"ALERT: {symbol} Score {setup.composite_score:.1f} "
-                    f"(Threshold: {item.alert_threshold}) - {setup.direction.value}"
+                    f"ALERT: {symbol} Score {current_score:.1f} "
+                    f"(Threshold: {threshold}) - {current_direction} - {alert_reason}"
                 )
 
                 # TODO: Hier könnte Telegram/Push-Notification implementiert werden
