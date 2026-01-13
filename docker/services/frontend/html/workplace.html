@@ -578,6 +578,15 @@
         .watchlist-score.moderate { color: #fbbf24; }
         .watchlist-score.low { color: #94a3b8; }
 
+        .direction-arrow {
+            font-size: 0.7rem;
+            margin-right: 0.15rem;
+        }
+
+        .direction-arrow.long { color: #10b981; }
+        .direction-arrow.short { color: #ef4444; }
+        .direction-arrow.neutral { color: #fbbf24; }
+
         .scanner-info p {
             display: flex;
             justify-content: space-between;
@@ -587,6 +596,42 @@
 
         .scanner-info .label {
             opacity: 0.6;
+        }
+
+        /* Scan Progress Bar */
+        .scan-progress {
+            margin-bottom: 0.5rem;
+            padding: 0.4rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        .scan-progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 0.3rem;
+        }
+
+        .scan-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .scan-progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            color: #94a3b8;
+        }
+
+        .scan-progress-text span:first-child {
+            color: #64c8ff;
+            font-weight: 500;
         }
 
         /* Loading & Empty States */
@@ -1308,7 +1353,20 @@
                 </div>
 
                 <div class="sidebar-card">
-                    <h3>Scanner-Status</h3>
+                    <div class="sidebar-header">
+                        <h3>Scanner-Status</h3>
+                        <button class="btn btn-sm" onclick="scanAllSymbols()" id="scanAllBtn" title="Alle bekannten Symbole scannen">Alle scannen</button>
+                    </div>
+                    <!-- Fortschrittsbalken -->
+                    <div class="scan-progress" id="scanProgress" style="display: none;">
+                        <div class="scan-progress-bar">
+                            <div class="scan-progress-fill" id="scanProgressFill"></div>
+                        </div>
+                        <div class="scan-progress-text">
+                            <span id="scanProgressSymbol">-</span>
+                            <span id="scanProgressCount">0/0</span>
+                        </div>
+                    </div>
                     <div class="scanner-info" id="scannerInfo">
                         <p><span class="label">Status</span><span id="scanStatus">-</span></p>
                         <p><span class="label">Intervall</span><span id="scanInterval">-</span></p>
@@ -1320,18 +1378,18 @@
 
                 <!-- Symbol Picker -->
                 <div class="sidebar-card">
-                    <h3>Symbol-Auswahl</h3>
+                    <h3>Symbol-Auswahl <span id="symbolCount" style="font-weight: normal; font-size: 0.7rem; opacity: 0.6;"></span></h3>
                     <div class="symbol-picker">
                         <input type="text" class="symbol-search" id="symbolSearch" placeholder="Symbol suchen..." oninput="filterSymbols()">
                         <div class="symbol-categories">
-                            <button class="category-btn active" onclick="selectCategory('all')">Alle</button>
-                            <button class="category-btn" onclick="selectCategory('crypto')">Crypto</button>
-                            <button class="category-btn" onclick="selectCategory('forex')">Forex</button>
-                            <button class="category-btn" onclick="selectCategory('stocks')">Aktien</button>
-                            <button class="category-btn" onclick="selectCategory('metals')">Metalle</button>
+                            <button class="category-btn active" data-category="all" onclick="selectCategory('all')">Alle</button>
+                            <button class="category-btn" data-category="crypto" onclick="selectCategory('crypto')">Crypto</button>
+                            <button class="category-btn" data-category="forex" onclick="selectCategory('forex')">Forex</button>
+                            <button class="category-btn" data-category="indices" onclick="selectCategory('indices')">Indizes</button>
+                            <button class="category-btn" data-category="metals" onclick="selectCategory('metals')">Metalle</button>
                         </div>
                         <div class="symbol-list" id="symbolList">
-                            <!-- Wird dynamisch gefüllt -->
+                            <!-- Wird dynamisch vom Data Service geladen -->
                         </div>
                     </div>
                 </div>
@@ -1869,6 +1927,13 @@
         // Cache für geladene Setups (für Detail-Modal)
         let setupsCache = {};
 
+        // Richtungs-Pfeil Symbol
+        function getDirectionArrow(direction) {
+            if (direction === 'long') return '▲';
+            if (direction === 'short') return '▼';
+            return '▶';
+        }
+
         function createSetupCard(setup) {
             const scoreClass = setup.composite_score >= 75 ? 'high' :
                               setup.composite_score >= 60 ? 'moderate' : 'low';
@@ -1884,6 +1949,8 @@
                 { name: 'C', available: setup.candlestick_signal?.available && setup.candlestick_signal?.patterns?.length > 0, tooltip: 'Candlestick: Kerzen-Patterns (15%)' },
             ];
 
+            const arrow = getDirectionArrow(setup.direction);
+
             // Setup im Cache speichern für Detail-Modal
             setupsCache[setup.symbol] = setup;
 
@@ -1896,7 +1963,7 @@
                         </span>
                         <div class="setup-score">
                             <span class="score-value ${scoreClass}">${setup.composite_score.toFixed(0)}</span>
-                            <span class="setup-direction ${setup.direction}">${setup.direction.toUpperCase()}</span>
+                            <span class="setup-direction ${setup.direction}">${arrow} ${setup.direction.toUpperCase()}</span>
                         </div>
                     </div>
                     <div class="setup-signals">
@@ -1931,10 +1998,12 @@
                     container.innerHTML = sortedItems.slice(0, 8).map(item => {
                         const scoreClass = item.last_score >= 75 ? 'high' :
                                           item.last_score >= 60 ? 'moderate' : 'low';
+                        const arrow = getDirectionArrow(item.last_direction);
+                        const directionClass = item.last_direction || 'neutral';
                         return `
                             <div class="watchlist-item">
                                 <span class="watchlist-symbol ${item.is_favorite ? 'favorite' : ''}">${item.symbol}</span>
-                                <span class="watchlist-score ${scoreClass}">${item.last_score ? item.last_score.toFixed(0) : '-'}</span>
+                                <span class="watchlist-score ${scoreClass}"><span class="direction-arrow ${directionClass}">${arrow}</span> ${item.last_score ? item.last_score.toFixed(0) : '-'}</span>
                             </div>
                         `;
                     }).join('');
@@ -2645,31 +2714,64 @@
         // Symbol Picker Funktionen
         // =============================================
 
-        // Alle verfügbaren Symbole
-        const ALL_SYMBOLS = {
-            crypto: ['BTCUSD', 'ETHUSD', 'XRPUSD', 'SOLUSD', 'ADAUSD', 'DOTUSD', 'LINKUSD', 'BNBUSD', 'AVAXUSD', 'MATICUSD'],
-            forex: ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', 'EURGBP', 'EURJPY', 'GBPJPY', 'EURCHF', 'AUDCAD'],
-            stocks: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'US500', 'US100', 'US30', 'DE40', 'UK100', 'FR40', 'EU50', 'JP225'],
-            metals: ['XAUUSD', 'XAGUSD']
-        };
-
+        // Symbole werden dynamisch vom Data Service geladen
+        let allSymbolsFromAPI = [];
         let currentPickerCategory = 'all';
         let selectedPickerSymbol = null;
         let watchlistSymbols = [];
 
+        // Kategorisierung der Symbole
+        function categorizeSymbol(symbol) {
+            // Crypto
+            const cryptoPrefixes = ['BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOT', 'LNK', 'BNB', 'AVX', 'MTC', 'BCH', 'DOG', 'LTC', 'UNI', 'XLM', 'XTZ', 'KSM'];
+            if (cryptoPrefixes.some(p => symbol.startsWith(p))) return 'crypto';
+
+            // Metalle & Commodities
+            if (symbol.startsWith('XAU') || symbol.startsWith('XAG')) return 'metals';
+            if (symbol.startsWith('XTI') || symbol.startsWith('WTI') || symbol.startsWith('BRENT')) return 'commodities';
+
+            // Indizes
+            const indexPatterns = ['US30', 'US500', 'NAS100', 'GER40', 'UK100', 'JP225', 'AUS200', 'FRA40', 'EURO50'];
+            if (indexPatterns.some(p => symbol === p || symbol.startsWith(p))) return 'indices';
+
+            // Forex: 6 Zeichen, bekannte Währungspaare
+            const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD', 'NZD'];
+            if (symbol.length === 6) {
+                const base = symbol.substring(0, 3);
+                const quote = symbol.substring(3, 6);
+                if (currencies.includes(base) && currencies.includes(quote)) return 'forex';
+            }
+
+            return 'other';
+        }
+
         // Symbol-Liste initialisieren
         document.addEventListener('DOMContentLoaded', () => {
-            renderSymbolList();
-            // Watchlist-Symbole für Markierung laden
+            loadAllSymbols();
             loadWatchlistSymbols();
         });
+
+        async function loadAllSymbols() {
+            try {
+                const response = await fetch('/data/api/v1/symbols');
+                if (response.ok) {
+                    allSymbolsFromAPI = await response.json();
+                    renderSymbolList();
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Symbole vom Data Service:', error);
+                // Fallback
+                allSymbolsFromAPI = ['BTCUSD', 'ETHUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'];
+                renderSymbolList();
+            }
+        }
 
         async function loadWatchlistSymbols() {
             try {
                 const response = await fetch(`${API_BASE}/watchlist/`);
                 const data = await response.json();
                 watchlistSymbols = (data.items || []).map(item => item.symbol);
-                renderSymbolList(); // Neu rendern mit Markierungen
+                renderSymbolList();
             } catch (error) {
                 console.error('Fehler beim Laden der Watchlist-Symbole:', error);
             }
@@ -2678,12 +2780,10 @@
         function selectCategory(category) {
             currentPickerCategory = category;
 
-            // Button-Status aktualisieren
+            // Button-Status aktualisieren - nur via data-category Attribut
             document.querySelectorAll('.category-btn').forEach(btn => {
                 btn.classList.remove('active');
-                if (btn.textContent.toLowerCase().includes(category) ||
-                    (category === 'all' && btn.textContent === 'Alle') ||
-                    (category === 'stocks' && btn.textContent === 'Aktien')) {
+                if (btn.getAttribute('data-category') === category) {
                     btn.classList.add('active');
                 }
             });
@@ -2697,22 +2797,23 @@
 
         function renderSymbolList() {
             const container = document.getElementById('symbolList');
-            const searchTerm = document.getElementById('symbolSearch').value.toUpperCase();
+            if (!container) return;
 
-            let symbols = [];
+            const searchTerm = document.getElementById('symbolSearch')?.value?.toUpperCase() || '';
 
-            if (currentPickerCategory === 'all') {
-                symbols = [...ALL_SYMBOLS.crypto, ...ALL_SYMBOLS.forex, ...ALL_SYMBOLS.stocks, ...ALL_SYMBOLS.metals];
-            } else {
-                symbols = ALL_SYMBOLS[currentPickerCategory] || [];
+            let symbols = [...allSymbolsFromAPI];
+
+            // Nach Kategorie filtern
+            if (currentPickerCategory !== 'all') {
+                symbols = symbols.filter(s => categorizeSymbol(s) === currentPickerCategory);
             }
 
-            // Filtern nach Suchbegriff
+            // Nach Suchbegriff filtern
             if (searchTerm) {
                 symbols = symbols.filter(s => s.includes(searchTerm));
             }
 
-            // Sortieren: Watchlist-Symbole zuerst
+            // Sortieren: Watchlist-Symbole zuerst, dann alphabetisch
             symbols.sort((a, b) => {
                 const aInWatchlist = watchlistSymbols.includes(a);
                 const bInWatchlist = watchlistSymbols.includes(b);
@@ -2727,6 +2828,12 @@
                                 onclick="openSymbolTimeframeModal('${symbol}')"
                                 title="${symbol}${inWatchlist ? ' (in Watchlist)' : ''}">${symbol}</button>`;
             }).join('');
+
+            // Anzahl anzeigen
+            const countEl = document.getElementById('symbolCount');
+            if (countEl) {
+                countEl.textContent = `(${symbols.length})`;
+            }
         }
 
         // Timeframe Modal für Symbol-Auswahl
@@ -2765,6 +2872,92 @@
             if (intervalMap[timeframe]) {
                 document.getElementById('chartInterval').value = intervalMap[timeframe];
             }
+        }
+
+        // =============================================
+        // Scan All Symbols Funktion
+        // =============================================
+
+        let scanAllRunning = false;
+        let scanAllAborted = false;
+
+        async function scanAllSymbols() {
+            if (scanAllRunning) {
+                // Abbrechen
+                scanAllAborted = true;
+                return;
+            }
+
+            if (allSymbolsFromAPI.length === 0) {
+                alert('Keine Symbole geladen. Bitte warten.');
+                return;
+            }
+
+            scanAllRunning = true;
+            scanAllAborted = false;
+
+            const btn = document.getElementById('scanAllBtn');
+            const progress = document.getElementById('scanProgress');
+            const progressFill = document.getElementById('scanProgressFill');
+            const progressSymbol = document.getElementById('scanProgressSymbol');
+            const progressCount = document.getElementById('scanProgressCount');
+
+            btn.textContent = 'Abbrechen';
+            btn.style.background = 'rgba(239, 68, 68, 0.2)';
+            progress.style.display = 'block';
+
+            const symbols = [...allSymbolsFromAPI];
+            const total = symbols.length;
+            let scanned = 0;
+            let errors = 0;
+
+            for (const symbol of symbols) {
+                if (scanAllAborted) break;
+
+                progressSymbol.textContent = symbol;
+                progressCount.textContent = `${scanned + 1}/${total}`;
+                progressFill.style.width = `${((scanned + 1) / total) * 100}%`;
+
+                try {
+                    // Setup für H1 Timeframe abrufen (schnellster Scan)
+                    const response = await fetch(`${API_BASE}/setups/${symbol}?timeframe=H1`);
+                    if (response.ok) {
+                        const setup = await response.json();
+                        setupsCache[symbol] = setup;
+                    }
+                } catch (error) {
+                    errors++;
+                    console.error(`Scan-Fehler für ${symbol}:`, error);
+                }
+
+                scanned++;
+
+                // Kleine Pause um Server nicht zu überlasten
+                await new Promise(r => setTimeout(r, 100));
+            }
+
+            // Fertig
+            scanAllRunning = false;
+            btn.textContent = 'Alle scannen';
+            btn.style.background = '';
+
+            if (scanAllAborted) {
+                progressSymbol.textContent = 'Abgebrochen';
+                progressCount.textContent = `${scanned}/${total}`;
+            } else {
+                progressSymbol.textContent = 'Fertig';
+                progressCount.textContent = `${scanned}/${total}${errors > 0 ? ` (${errors} Fehler)` : ''}`;
+                progressFill.style.width = '100%';
+            }
+
+            // Setups neu laden
+            await loadSetups();
+
+            // Progress nach 3 Sekunden ausblenden
+            setTimeout(() => {
+                progress.style.display = 'none';
+                progressFill.style.width = '0%';
+            }, 3000);
         }
     </script>
 </body>
