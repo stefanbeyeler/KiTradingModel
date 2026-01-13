@@ -27,6 +27,9 @@ nul
 .DS_Store
 Thumbs.db
 
+# Claude Code temp files
+tmpclaude-*
+
 # RAG/FAISS Data - gesamter data Ordner
 data/
 

@@ -9,10 +9,16 @@ WORKDIR /app
 # System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for caching
 COPY docker/services/embedder/requirements.txt .
+
+# Install PyTorch Nightly with CUDA 13.0 support for NVIDIA Thor (sm_110)
+RUN pip install --no-cache-dir --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu130
+
+# Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy only the Embedder app source code (avoid importing other services)

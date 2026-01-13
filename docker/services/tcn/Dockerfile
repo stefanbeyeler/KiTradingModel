@@ -1,9 +1,5 @@
 # TCN-Pattern Service Dockerfile
 # Port: 3003
-#
-# Note: NVIDIA Thor GPU (sm_110) is not yet supported by PyTorch stable releases.
-# Training currently runs on CPU. GPU support will be available when PyTorch
-# adds sm_110 support (expected in PyTorch 2.6+).
 
 FROM python:3.11-slim
 ARG SERVICE_PORT=3003
@@ -13,10 +9,16 @@ WORKDIR /app
 # System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for caching
 COPY docker/services/tcn/requirements.txt .
+
+# Install PyTorch Nightly with CUDA 13.0 support for NVIDIA Thor (sm_110)
+RUN pip install --no-cache-dir --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu130
+
+# Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy only the TCN app source code (avoid importing other services)
