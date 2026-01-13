@@ -11,7 +11,7 @@ httpx>=0.25.0
 aiohttp>=3.9.0
 
 # ML/Deep Learning
-torch>=2.0.0
+# Note: torch is installed separately in Dockerfile with CUDA 13.0 for NVIDIA Thor
 numpy>=1.24.0
 
 # Embedding Models

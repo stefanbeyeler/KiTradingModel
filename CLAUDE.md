@@ -474,62 +474,49 @@ Total Loss = 0.4 × Price_MSE + 0.35 × Pattern_BCE + 0.25 × Regime_CE
 
 ### Hardware-Umgebung
 
-- **System**: NVIDIA Tegra (JetPack R38)
+- **System**: NVIDIA Tegra (JetPack 7.0)
 - **Architektur**: aarch64 (ARM64)
 - **GPU**: NVIDIA Thor mit Compute Capability **sm_110**
 - **CUDA Version**: 13.0
 
-### PyTorch Kompatibilität (KRITISCH)
+### PyTorch Kompatibilität
 
-**NVIDIA Thor (sm_110) wird von PyTorch noch NICHT unterstützt!**
+**NVIDIA Thor (sm_110) wird seit PyTorch 2.9+ mit CUDA 13.0 unterstützt.**
 
-| PyTorch Version | Unterstützte Compute Capabilities |
-|-----------------|-----------------------------------|
-| 2.5.x           | sm_50, sm_80, sm_86, sm_89, sm_90, sm_90a |
-| 2.6+ (erwartet) | sm_110 Support geplant |
+| PyTorch Version | sm_110 Support |
+|-----------------|----------------|
+| 2.5.x - 2.8.x   | ❌ Nicht unterstützt |
+| 2.9+            | ✅ Unterstützt (CUDA 13.0) |
 
-### Vor Container-Umbau IMMER prüfen
+### Aktueller Status (Stand: Januar 2026)
 
-Bevor GPU-bezogene Dockerfile-Änderungen vorgenommen werden:
+- **PyTorch**: 2.11.0.dev (Nightly, CUDA 13.0)
+- **CUDA available**: ✅ True
+- **Device**: NVIDIA Thor (sm_110)
+- **TCN, NHITS, Embedder, RAG, LLM**: Laufen auf **GPU**
+
+### GPU-Status prüfen
 
 ```bash
-# 1. Aktuelle PyTorch-Version auf PyPI prüfen
-pip index versions torch
-
-# 2. CUDA Support für sm_110 prüfen (auf dem Server)
 ssh sbeyeler@10.1.19.101 "docker exec <container> python3 -c \"
 import torch
 print('PyTorch:', torch.__version__)
 print('CUDA available:', torch.cuda.is_available())
 if torch.cuda.is_available():
     print('Device:', torch.cuda.get_device_name(0))
+    print('Compute Capability:', torch.cuda.get_device_capability(0))
 \""
-
-# 3. PyTorch Release Notes auf sm_110 Support prüfen
-# https://pytorch.org/get-started/locally/
-# https://github.com/pytorch/pytorch/releases
 ```
 
-### Aktueller Status (Stand: Dezember 2024)
-
-- **TCN, NHITS, Embedder, RAG, LLM**: Laufen auf **CPU**
-- **Grund**: PyTorch 2.5.x unterstützt sm_110 nicht
-- **Training**: ~4x langsamer als mit GPU, aber funktional
-
-### Wenn PyTorch 2.6+ verfügbar ist
-
-Sobald sm_110 Support bestätigt ist, Dockerfiles anpassen:
+### Docker-Konfiguration
 
 ```dockerfile
-# Option 1: NVIDIA L4T Base Image (bevorzugt für Jetson)
-FROM nvcr.io/nvidia/l4t-pytorch:r38.x.x-pthX.X-py3
-
-# Option 2: CUDA Base Image mit PyTorch
+# CUDA 13.0 Base Image mit PyTorch
 FROM nvidia/cuda:13.0-runtime-ubuntu22.04
 RUN pip install torch --index-url https://download.pytorch.org/whl/cu130
 ```
 
-### Betroffene Dockerfiles
+### GPU-fähige Dockerfiles
 
 - `docker/services/tcn/Dockerfile`
 - `docker/services/nhits/Dockerfile`
