@@ -1282,9 +1282,16 @@
                             <option value="stocks">Aktien/Indizes</option>
                         </select>
                         <select id="directionFilter" onchange="loadSetups()">
+                            <option value="longshort" selected>Long/Short</option>
                             <option value="">Alle</option>
                             <option value="long">Long</option>
                             <option value="short">Short</option>
+                        </select>
+                        <select id="minScoreFilter" onchange="loadSetups()">
+                            <option value="70" selected>≥70</option>
+                            <option value="60">≥60</option>
+                            <option value="50">≥50</option>
+                            <option value="0">Alle</option>
                         </select>
                     </div>
                 </div>
@@ -1864,14 +1871,18 @@
         }
 
         async function loadSetups() {
-            const direction = document.getElementById('directionFilter').value;
+            const directionFilter = document.getElementById('directionFilter').value;
             const marketFilter = document.getElementById('marketFilter').value;
+            const minScore = parseInt(document.getElementById('minScoreFilter').value) || 0;
             const container = document.getElementById('setupsContainer');
 
             try {
-                // min_score auf 0 setzen um alle Setups zu sehen
-                let url = `${API_BASE}/setups/?limit=20&min_score=0`;
-                if (direction) url += `&direction=${direction}`;
+                // min_score aus Filter verwenden
+                // Bei "longshort" keinen direction-Parameter senden, später clientseitig filtern
+                let url = `${API_BASE}/setups/?limit=50&min_score=${minScore}`;
+                if (directionFilter && directionFilter !== 'longshort') {
+                    url += `&direction=${directionFilter}`;
+                }
 
                 const response = await fetch(url);
                 const data = await response.json();
@@ -1881,14 +1892,17 @@
                 if (data.setups && data.setups.length > 0) {
                     let setups = data.setups;
 
+                    // Filter Long/Short (Neutral ausschliessen)
+                    if (directionFilter === 'longshort') {
+                        setups = setups.filter(s => s.direction === 'long' || s.direction === 'short');
+                    }
+
                     console.log('Before filter:', setups.length, 'setups, marketFilter:', marketFilter);
-                    console.log('marketStatus:', marketStatus);
 
                     // Filter nach Markt
                     if (marketFilter === 'open') {
                         setups = setups.filter(s => {
                             const open = isMarketOpen(s.symbol);
-                            console.log(`${s.symbol}: market=${getSymbolMarket(s.symbol)}, open=${open}`);
                             return open;
                         });
                     } else if (marketFilter === 'crypto') {
