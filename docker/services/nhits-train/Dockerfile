@@ -4,9 +4,7 @@
 # Dedicated training container - runs separately from inference service.
 # This prevents training from blocking forecast API requests.
 #
-# Note: NVIDIA Thor GPU (sm_110) is not yet supported by PyTorch stable releases.
-# Training currently runs on CPU. GPU support will be available when PyTorch
-# adds sm_110 support (expected in PyTorch 2.6+).
+# Uses PyTorch Nightly with CUDA 13.0 for NVIDIA Thor GPU (sm_110) support.
 
 FROM python:3.11-slim
 ARG SERVICE_PORT=3012
@@ -21,6 +19,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy requirements first for caching
 COPY docker/services/nhits-train/requirements.txt .
+
+# Install PyTorch Nightly with CUDA 13.0 support for NVIDIA Thor (sm_110)
+RUN pip install --no-cache-dir --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu130
+
+# Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy only the NHITS training app source code
@@ -42,6 +45,9 @@ RUN mkdir -p /app/data/models/nhits /app/data/symbols /app/logs
 ENV PYTHONPATH=/app
 ENV SERVICE_NAME=nhits-train
 ENV PORT=${SERVICE_PORT}
+# Enable CUDA to use host libraries
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 # Low priority for training - doesn't compete with inference
 ENV NICE_PRIORITY=19

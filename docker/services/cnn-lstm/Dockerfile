@@ -14,6 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy requirements first for caching
 COPY docker/services/cnn-lstm/requirements.txt .
+
+# Install PyTorch Nightly with CUDA 13.0 support for NVIDIA Thor (sm_110)
+RUN pip install --no-cache-dir --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu130
+
+# Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
@@ -32,6 +37,9 @@ ENV PYTHONPATH=/app
 ENV SERVICE_NAME=cnn-lstm
 ENV PORT=${SERVICE_PORT}
 ENV PYTHONUNBUFFERED=1
+# Enable CUDA to use host libraries
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 # Limit threads for CPU efficiency
 ENV OMP_NUM_THREADS=2

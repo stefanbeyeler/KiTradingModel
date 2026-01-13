@@ -707,6 +707,7 @@ services:
       args:
         - SERVICE_PORT=${CNN_LSTM_SERVICE_PORT:-3007}
     container_name: trading-cnn-lstm
+    runtime: nvidia
     ports:
       - "${CNN_LSTM_SERVICE_PORT:-3007}:${CNN_LSTM_SERVICE_PORT:-3007}"
     volumes:
@@ -752,6 +753,7 @@ services:
       args:
         - SERVICE_PORT=${CNN_LSTM_TRAIN_SERVICE_PORT:-3017}
     container_name: trading-cnn-lstm-train
+    runtime: nvidia
     ports:
       - "${CNN_LSTM_TRAIN_SERVICE_PORT:-3017}:${CNN_LSTM_TRAIN_SERVICE_PORT:-3017}"
     volumes:
