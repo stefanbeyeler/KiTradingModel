@@ -1153,32 +1153,21 @@ async def get_cache_stats():
         if not cache_service._redis_available:
             await cache_service.connect()
 
-        # Get overall stats
+        # Get overall stats from CacheService
         stats = cache_service.get_stats()
-
-        # Get categories breakdown
-        categories = {}
-        for cat in CacheCategory:
-            category_stats = await cache_service.get_category_stats(cat)
-            categories[cat.value] = {
-                "count": category_stats.get("count", 0),
-                "ttl": category_stats.get("ttl", 0),
-            }
-
-        # Calculate hit rate
-        total_calls = stats.get("total_calls", 0)
-        cache_hits = stats.get("cache_hits", 0)
-        hit_rate = cache_hits / total_calls if total_calls > 0 else 0
 
         return {
             "status": "ok",
-            "redis_available": cache_service._redis_available,
-            "total_keys": stats.get("total_keys", 0),
-            "total_calls": total_calls,
-            "cache_hits": cache_hits,
-            "hit_rate": hit_rate,
-            "memory_used": stats.get("memory_used", "N/A"),
-            "categories": categories,
+            "redis_available": stats.get("redis_available", False),
+            "hits": stats.get("hits", 0),
+            "misses": stats.get("misses", 0),
+            "hit_rate_percent": stats.get("hit_rate_percent", 0.0),
+            "sets": stats.get("sets", 0),
+            "deletes": stats.get("deletes", 0),
+            "bytes_saved": stats.get("bytes_saved", 0),
+            "redis_errors": stats.get("redis_errors", 0),
+            "memory_cache_entries": stats.get("memory_cache_entries", 0),
+            "memory_cache_bytes": stats.get("memory_cache_bytes", 0),
         }
     except Exception as e:
         logger.error(f"Failed to get cache stats: {e}")
@@ -5092,7 +5081,7 @@ async def get_training_data(
     use_cache: bool = True
 ):
     """
-    Get training data for NHITS model training with caching.
+    Get training data for NHITS model training with HTTP-response caching.
 
     This endpoint is used by the NHITS service to fetch training data.
     Data sources (in order of priority):
@@ -5112,6 +5101,7 @@ async def get_training_data(
         Training data with OHLCV data
     """
     from ..services.training_data_cache_service import training_data_cache
+    from ..services.cache_service import cache_service, CacheCategory
     import httpx
     from datetime import datetime
 
@@ -5126,6 +5116,17 @@ async def get_training_data(
 
     # Calculate limit using central configuration
     limit = calculate_limit_for_days(tf_enum, days, max_limit=5000)
+
+    # HTTP-Response-Level Cache (Redis) - verhindert doppelte Requests
+    if use_cache:
+        http_cache_key = f"{symbol}_{tf}_{days}"
+        cached_response = await cache_service.get(
+            CacheCategory.TRAINING,
+            http_cache_key
+        )
+        if cached_response:
+            logger.info(f"HTTP cache hit for training-data: {symbol}/{tf} (days={days})")
+            return cached_response
 
     # Try to get data from cache first (TwelveData cache)
     rows = None
@@ -5142,7 +5143,7 @@ async def get_training_data(
         try:
             td_data = await _fetch_twelvedata_training_data(symbol, tf, use_cache)
             if td_data and len(td_data) >= 50:
-                return {
+                response = {
                     "symbol": symbol,
                     "timeframe": tf,
                     "source": "twelvedata",
@@ -5150,6 +5151,15 @@ async def get_training_data(
                     "count": len(td_data),
                     "data": td_data
                 }
+                # Cache HTTP response in Redis
+                if use_cache:
+                    http_cache_key = f"{symbol}_{tf}_{days}"
+                    await cache_service.set(
+                        CacheCategory.TRAINING,
+                        response,
+                        http_cache_key
+                    )
+                return response
             rows = td_data or []
         except Exception as e:
             logger.warning(f"TwelveData API failed for {symbol}: {e}")
@@ -5210,7 +5220,7 @@ async def get_training_data(
                         training_data_cache.cache_data(symbol, tf, ei_rows, "easyinsight")
                         logger.debug(f"Cached {len(ei_rows)} EasyInsight rows for {symbol}/{tf}")
 
-                    return {
+                    response = {
                         "symbol": symbol,  # Return original symbol in response
                         "timeframe": tf,
                         "source": "easyinsight",
@@ -5219,6 +5229,17 @@ async def get_training_data(
                         "data": ei_rows
                     }
 
+                    # Cache HTTP response in Redis
+                    if use_cache:
+                        http_cache_key = f"{symbol}_{tf}_{days}"
+                        await cache_service.set(
+                            CacheCategory.TRAINING,
+                            response,
+                            http_cache_key
+                        )
+
+                    return response
+
         except Exception as e:
             logger.warning(f"EasyInsight API fallback failed for {symbol}: {e}")
     elif len(rows) < 50:
@@ -5226,7 +5247,7 @@ async def get_training_data(
 
     # Return whatever we have (might be empty or partial)
     source = "twelvedata" if rows else "none"
-    return {
+    response = {
         "symbol": symbol,
         "timeframe": tf,
         "source": source,
@@ -5234,6 +5255,18 @@ async def get_training_data(
         "count": len(rows),
         "data": rows
     }
+
+    # Cache HTTP response in Redis (6h TTL für Training-Data)
+    if use_cache and len(rows) > 0:
+        http_cache_key = f"{symbol}_{tf}_{days}"
+        await cache_service.set(
+            CacheCategory.TRAINING,
+            response,
+            http_cache_key
+        )
+        logger.debug(f"Cached HTTP response for training-data: {symbol}/{tf} (days={days}, rows={len(rows)})")
+
+    return response
 
 
 async def _fetch_twelvedata_training_data(symbol: str, timeframe: str, use_cache: bool) -> list:

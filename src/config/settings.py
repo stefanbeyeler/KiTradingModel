@@ -187,11 +187,11 @@ class Settings(BaseSettings):
         description="TimescaleDB password"
     )
     timescale_pool_min: int = Field(
-        default=5,
+        default=10,
         description="Minimum connections in TimescaleDB pool"
     )
     timescale_pool_max: int = Field(
-        default=20,
+        default=50,
         description="Maximum connections in TimescaleDB pool"
     )
     timescale_enabled: bool = Field(

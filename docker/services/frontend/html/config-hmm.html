@@ -357,6 +357,10 @@
             border-left: 4px solid #f44336;
         }
 
+        .toast.info {
+            border-left: 4px solid #2196f3;
+        }
+
         @keyframes slideIn {
             from {
                 transform: translateX(100%);
@@ -823,6 +827,7 @@
 
     <script>
         const API_BASE = '/hmm/api/v1';
+        const TRAIN_API_BASE = '/hmm-train/api/v1';
         let serviceStartTime = null;
 
         // ==================== Header Status Functions ====================
@@ -1285,17 +1290,63 @@
         // Train Scorer
         async function trainScorer() {
             const btn = document.getElementById('btn-train-scorer');
+            const originalText = btn.innerHTML;
+
             btn.classList.add('btn-loading');
             btn.disabled = true;
+            btn.innerHTML = '⏳ Training läuft...';
 
             try {
-                const response = await fetch(`${API_BASE}/train/scorer`, { method: 'POST' });
-                if (!response.ok) throw new Error('Training failed');
+                const response = await fetch(`${TRAIN_API_BASE}/train/scorer`, { method: 'POST' });
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Training failed');
+                }
 
-                showToast('Scorer erfolgreich trainiert');
-                loadInfo();
+                const result = await response.json();
+
+                // Warte auf Training-Abschluss (Polling)
+                let attempts = 0;
+                const maxAttempts = 30; // 30 Sekunden max
+
+                while (attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    const statusRes = await fetch(`${TRAIN_API_BASE}/train/status`);
+                    const status = await statusRes.json();
+
+                    if (!status.current_job || status.status === 'idle') {
+                        // Training abgeschlossen
+                        btn.innerHTML = '✅ Erfolgreich trainiert!';
+                        showToast(`Scorer erfolgreich trainiert (Job: ${result.job_id})`, 'success');
+                        await loadInfo();
+
+                        // Zurücksetzen nach 3 Sekunden
+                        setTimeout(() => {
+                            btn.innerHTML = originalText;
+                        }, 3000);
+                        break;
+                    }
+
+                    attempts++;
+                }
+
+                if (attempts >= maxAttempts) {
+                    btn.innerHTML = '⚠️ Training läuft noch...';
+                    showToast('Training läuft im Hintergrund weiter', 'info');
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                    }, 3000);
+                }
+
             } catch (error) {
-                showToast('Fehler beim Scorer Training', 'error');
+                btn.innerHTML = '❌ Training fehlgeschlagen';
+                showToast(`Fehler beim Scorer Training: ${error.message}`, 'error');
+                console.error('Scorer training error:', error);
+
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                }, 3000);
             } finally {
                 btn.classList.remove('btn-loading');
                 btn.disabled = false;

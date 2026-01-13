@@ -32,9 +32,16 @@ class SignalScoringService:
         os.makedirs(self.MODEL_DIR, exist_ok=True)
 
         # Try to load saved model
-        scorer_path = os.path.join(self.MODEL_DIR, "signal_scorer.pkl")
-        if os.path.exists(scorer_path):
-            self._scorer = LightGBMSignalScorer.load(scorer_path)
+        # Check both possible filenames for backward compatibility
+        scorer_paths = [
+            os.path.join(self.MODEL_DIR, "scorer_lightgbm.pkl"),  # New name from training
+            os.path.join(self.MODEL_DIR, "signal_scorer.pkl")     # Legacy name
+        ]
+
+        for scorer_path in scorer_paths:
+            if os.path.exists(scorer_path):
+                self._scorer = LightGBMSignalScorer.load(scorer_path)
+                break
 
     async def score_signal(
         self,

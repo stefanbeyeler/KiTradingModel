@@ -47,11 +47,13 @@ def _load_hmmlearn():
 
 
 def _load_lightgbm():
-    global lightgbm
+    global lightgbm, joblib
     if lightgbm is None:
         try:
             import lightgbm as lgb
+            import joblib as jl
             lightgbm = lgb
+            joblib = jl
             return True
         except ImportError:
             logger.warning("lightgbm not installed")
@@ -251,13 +253,13 @@ class HMMTrainingService:
             return False
 
     def _extract_features(self, prices: np.ndarray) -> np.ndarray:
-        """Extract features for HMM training."""
+        """Extract features for HMM training with improved numerical stability."""
         # Log returns
-        returns = np.diff(np.log(prices))
+        returns = np.diff(np.log(prices + 1e-10))  # Add small epsilon to prevent log(0)
 
         # Rolling volatility (20 periods)
         volatility = np.array([
-            np.std(returns[max(0, i-20):i+1])
+            np.std(returns[max(0, i-20):i+1]) if i >= 20 else np.std(returns[:i+1])
             for i in range(len(returns))
         ])
 
@@ -274,7 +276,20 @@ class HMMTrainingService:
             trend_strength[1:]
         ])
 
-        return np.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0)
+        # Clean NaN/Inf values
+        features = np.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0)
+
+        # Standardize features for numerical stability
+        from sklearn.preprocessing import StandardScaler
+        scaler = StandardScaler()
+        features = scaler.fit_transform(features)
+
+        # Add small random noise to prevent singular covariance matrices
+        # This helps with numerical stability during HMM training
+        noise = np.random.randn(*features.shape) * 1e-6
+        features = features + noise
+
+        return features
 
     def _map_states_to_regimes(self, model, features: np.ndarray) -> Dict[int, MarketRegime]:
         """Map HMM states to market regimes based on state characteristics."""
@@ -351,12 +366,16 @@ class HMMTrainingService:
 
             start_time = datetime.now(timezone.utc)
 
-            # Train HMM
+            # Train HMM with improved parameters for numerical stability
             model = hmmlearn_hmm.GaussianHMM(
                 n_components=4,
-                covariance_type="full",
-                n_iter=100,
-                random_state=42
+                covariance_type="diag",  # Diagonal covariance is more stable than full
+                n_iter=200,  # More iterations for better convergence
+                random_state=42,
+                tol=1e-3,  # Convergence tolerance
+                min_covar=1e-3,  # Minimum covariance to prevent singular matrices
+                init_params="stmc",  # Initialize all parameters
+                params="stmc"  # Update all parameters
             )
             model.fit(features)
 
@@ -469,7 +488,9 @@ class HMMTrainingService:
                 "model": model,
                 "trained_at": datetime.now(timezone.utc).isoformat(),
                 "samples": len(X),
-                "symbols_used": list(data_by_symbol.keys())
+                "symbols_used": list(data_by_symbol.keys()),
+                "is_fitted": True,  # Add this flag for inference service
+                "feature_importance": {}  # Placeholder for feature importance
             }, model_path)
 
             duration = (datetime.now(timezone.utc) - start_time).total_seconds()

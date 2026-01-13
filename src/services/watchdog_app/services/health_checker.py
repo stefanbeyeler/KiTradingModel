@@ -118,7 +118,7 @@ class HealthChecker:
                 "criticality": "high",
                 "startup_grace": 150,  # Erhöht: TCN hängt von Embedder ab (120s)
                 "dependencies": ["data", "embedder"],
-                "timeout": 15  # Erhöht: TCN kann während Auto-Scan langsamer antworten
+                "timeout": 20  # Erhöht: GPU-Inference kann während hoher Last 14+ Sekunden dauern
             },
             "hmm": {
                 "url": "http://trading-hmm:3004/health",

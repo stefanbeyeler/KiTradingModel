@@ -1175,6 +1175,59 @@
         </div>
 
         <div class="content-card">
+            <h2>&#128202; Cache-Performance (Live)</h2>
+            <p>Echtzeit-Metriken zur Cache-Nutzung und Hit-Rate.</p>
+            <div id="cache-metrics" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <div style="background: rgba(76, 175, 80, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(76, 175, 80, 0.3);">
+                    <div style="font-size: 2rem; font-weight: 600; color: #81c784;" id="hit-rate">--</div>
+                    <div style="opacity: 0.7; font-size: 0.9rem;">Hit Rate</div>
+                </div>
+                <div style="background: rgba(33, 150, 243, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(33, 150, 243, 0.3);">
+                    <div style="font-size: 2rem; font-weight: 600; color: #64b5f6;" id="cache-hits">--</div>
+                    <div style="opacity: 0.7; font-size: 0.9rem;">Cache Hits</div>
+                </div>
+                <div style="background: rgba(255, 152, 0, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255, 152, 0, 0.3);">
+                    <div style="font-size: 2rem; font-weight: 600; color: #ffb74d;" id="cache-misses">--</div>
+                    <div style="opacity: 0.7; font-size: 0.9rem;">Cache Misses</div>
+                </div>
+                <div style="background: rgba(156, 39, 176, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(156, 39, 176, 0.3);">
+                    <div style="font-size: 1.5rem; font-weight: 600; color: #ba68c8;" id="bytes-saved">--</div>
+                    <div style="opacity: 0.7; font-size: 0.9rem;">Bytes Saved</div>
+                </div>
+            </div>
+            <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.03); border-radius: 6px; font-size: 0.85rem; opacity: 0.8;">
+                <strong>Redis-Status:</strong> <span id="redis-status" style="color: #81c784;">--</span> |
+                <strong>Errors:</strong> <span id="redis-errors">--</span> |
+                <strong>Sets:</strong> <span id="cache-sets">--</span>
+            </div>
+            <script>
+                async function updateCacheMetrics() {
+                    try {
+                        const response = await fetch('/data/api/v1/cache/stats');
+                        const data = await response.json();
+
+                        document.getElementById('hit-rate').textContent = data.hit_rate_percent.toFixed(1) + '%';
+                        document.getElementById('cache-hits').textContent = data.hits.toLocaleString();
+                        document.getElementById('cache-misses').textContent = data.misses.toLocaleString();
+                        document.getElementById('bytes-saved').textContent = (data.bytes_saved / 1024 / 1024).toFixed(1) + ' MB';
+                        document.getElementById('redis-status').textContent = data.redis_available ? 'Online' : 'Offline';
+                        document.getElementById('redis-status').style.color = data.redis_available ? '#81c784' : '#e57373';
+                        document.getElementById('redis-errors').textContent = data.redis_errors;
+                        document.getElementById('cache-sets').textContent = data.sets.toLocaleString();
+                    } catch (error) {
+                        console.error('Failed to load cache metrics:', error);
+                    }
+                }
+
+                // Initial load
+                updateCacheMetrics();
+
+                // Auto-refresh every 5 seconds
+                setInterval(updateCacheMetrics, 5000);
+            </script>
+        </div>
+
+        <div class="content-card">
             <h2>&#128640; Schnellzugriff</h2>
             <div class="quick-links">
                 <a href="/data/docs" target="_blank">&#128196; API Dokumentation</a>

@@ -159,11 +159,13 @@ class CacheService:
                 self.redis_url,
                 encoding="utf-8",
                 decode_responses=True,
+                max_connections=100,  # Erhöht von default 50 für hohe Parallelität
+                health_check_interval=30,  # Health check alle 30s
             )
             # Teste Verbindung
             await self._redis.ping()
             self._redis_available = True
-            logger.info("Redis-Verbindung erfolgreich hergestellt")
+            logger.info("Redis-Verbindung erfolgreich hergestellt (Pool: 100 connections)")
             return True
         except Exception as e:
             logger.warning(f"Redis-Verbindung fehlgeschlagen: {e} - verwende In-Memory Cache")
@@ -435,6 +437,14 @@ class CacheService:
         """
         total = self._stats["hits"] + self._stats["misses"]
         hit_rate = (self._stats["hits"] / total * 100) if total > 0 else 0.0
+
+        # Warnung bei niedriger Hit-Rate (< 40% nach mindestens 100 Requests)
+        if total >= 100 and hit_rate < 40.0:
+            logger.warning(
+                f"Low cache hit rate: {hit_rate:.1f}% "
+                f"(Hits: {self._stats['hits']}, Misses: {self._stats['misses']}) "
+                f"- Consider optimizing cache TTL or query patterns"
+            )
 
         memory_size = sum(size for _, size, _ in self._memory_cache.values())
 
