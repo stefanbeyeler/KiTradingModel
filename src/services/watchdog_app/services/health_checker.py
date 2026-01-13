@@ -201,11 +201,11 @@ class HealthChecker:
             },
             # Externe Datenquellen werden über den Data Service abgefragt (Gateway-Pattern)
             "easyinsight": {
-                "url": "/api/v1/easyinsight/status",
+                "url": "http://10.1.19.102:3000/api/components/status",
                 "criticality": "critical",
                 "startup_grace": 10,
-                "dependencies": ["data"],
-                "check_type": "easyinsight",
+                "dependencies": [],
+                "check_type": "easyinsight_components",
                 "is_external": True
             },
             "twelvedata": {
@@ -243,7 +243,11 @@ class HealthChecker:
         if config.get("check_type") == "tcp":
             return await self._check_tcp_service(name, config, start_time)
 
-        # EasyInsight API Check (über Data Service)
+        # EasyInsight Components Check (direkt über EasyInsight API)
+        if config.get("check_type") == "easyinsight_components":
+            return await self._check_easyinsight_components(name, config, start_time)
+
+        # EasyInsight API Check (über Data Service) - Legacy
         if config.get("check_type") == "easyinsight":
             return await self._check_easyinsight(name, config, start_time)
 
@@ -696,3 +700,89 @@ class HealthChecker:
             "total": len(self.status),
             "avg_response_ms": avg_response_ms
         }
+
+    async def _check_easyinsight_components(
+        self, name: str, config: dict, start_time: datetime
+    ) -> ServiceStatus:
+        """
+        Prüft EasyInsight-Komponenten direkt über /api/components/status.
+
+        Args:
+            name: Service-Name
+            config: Service-Konfiguration
+            start_time: Zeitpunkt des Check-Starts
+
+        Returns:
+            ServiceStatus mit aktuellem Status
+        """
+        try:
+            async with httpx.AsyncClient(timeout=self.settings.timeout_seconds) as client:
+                response = await client.get(config['url'])
+                response_time_ms = (
+                    datetime.now(timezone.utc) - start_time
+                ).total_seconds() * 1000
+
+                if response.status_code == 200:
+                    components = response.json()
+
+                    # Prüfe alle Komponenten
+                    all_healthy = all(
+                        comp.get("health") == "healthy" and comp.get("running", False)
+                        for comp in components
+                    )
+
+                    unhealthy_components = [
+                        comp.get("display_name", comp.get("name", "Unknown"))
+                        for comp in components
+                        if comp.get("health") != "healthy" or not comp.get("running", False)
+                    ]
+
+                    if all_healthy:
+                        return ServiceStatus(
+                            name=name,
+                            state=HealthState.HEALTHY,
+                            response_time_ms=response_time_ms,
+                            last_check=start_time,
+                            details={
+                                "status": "healthy",
+                                "components": len(components),
+                                "all_healthy": True
+                            },
+                            consecutive_failures=0
+                        )
+                    else:
+                        return ServiceStatus(
+                            name=name,
+                            state=HealthState.DEGRADED,
+                            response_time_ms=response_time_ms,
+                            last_check=start_time,
+                            details={
+                                "status": "degraded",
+                                "components": len(components),
+                                "unhealthy": unhealthy_components
+                            },
+                            consecutive_failures=0
+                        )
+                else:
+                    return ServiceStatus(
+                        name=name,
+                        state=HealthState.UNHEALTHY,
+                        response_time_ms=response_time_ms,
+                        last_check=start_time,
+                        error=f"HTTP {response.status_code}",
+                        consecutive_failures=self.status.get(name, ServiceStatus(
+                            name=name, state=HealthState.UNHEALTHY, last_check=start_time
+                        )).consecutive_failures + 1
+                    )
+        except Exception as e:
+            error_msg = str(e)
+            return ServiceStatus(
+                name=name,
+                state=HealthState.UNHEALTHY,
+                response_time_ms=0,
+                last_check=start_time,
+                error=_translate_error(error_msg),
+                consecutive_failures=self.status.get(name, ServiceStatus(
+                    name=name, state=HealthState.UNHEALTHY, last_check=start_time
+                )).consecutive_failures + 1
+            )
