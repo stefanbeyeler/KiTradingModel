@@ -193,24 +193,43 @@ class NHITSTrainingService:
                             additional_data={'source': 'twelvedata', 'timeframe': tf}
                         ))
                     else:
-                        # EasyInsight format
-                        timestamp_str = row.get('snapshot_time')
+                        # EasyInsight format (Data Service already extracts OHLC to standard fields)
+                        timestamp_str = row.get('snapshot_time') or row.get('timestamp')
                         if not timestamp_str:
                             continue
 
                         timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
 
-                        # For D1, deduplicate by date
+                        # Deduplicate based on timeframe interval
+                        # EasyInsight returns rolling snapshots, we need unique candles
                         if tf == "D1":
-                            date_key = timestamp.date()
-                            if date_key in seen_timestamps:
-                                continue
-                            seen_timestamps.add(date_key)
+                            # Deduplicate by date
+                            dedup_key = timestamp.date()
+                        elif tf in ("H1", "H4"):
+                            # Deduplicate by hour
+                            dedup_key = (timestamp.date(), timestamp.hour)
+                        elif tf in ("M15", "M30"):
+                            # Deduplicate by 15/30 min interval
+                            interval = 15 if tf == "M15" else 30
+                            minute_bucket = (timestamp.minute // interval) * interval
+                            dedup_key = (timestamp.date(), timestamp.hour, minute_bucket)
+                        elif tf == "M5":
+                            # Deduplicate by 5 min interval
+                            minute_bucket = (timestamp.minute // 5) * 5
+                            dedup_key = (timestamp.date(), timestamp.hour, minute_bucket)
+                        else:
+                            dedup_key = timestamp  # No dedup for other timeframes
 
-                        open_val = row.get(f'{ohlc_prefix}open', 0)
-                        high_val = row.get(f'{ohlc_prefix}high', 0)
-                        low_val = row.get(f'{ohlc_prefix}low', 0)
-                        close_val = row.get(f'{ohlc_prefix}close', 0)
+                        if dedup_key in seen_timestamps:
+                            continue
+                        seen_timestamps.add(dedup_key)
+
+                        # Data Service already extracts OHLC to standard field names
+                        # Try standard names first, then prefixed names for backward compatibility
+                        open_val = row.get('open') or row.get(f'{ohlc_prefix}open', 0)
+                        high_val = row.get('high') or row.get(f'{ohlc_prefix}high', 0)
+                        low_val = row.get('low') or row.get(f'{ohlc_prefix}low', 0)
+                        close_val = row.get('close') or row.get(f'{ohlc_prefix}close', 0)
 
                         if not all([open_val, high_val, low_val, close_val]):
                             continue

@@ -5193,85 +5193,70 @@ async def get_training_data(
             logger.warning(f"TwelveData API failed for {symbol}: {e}")
             rows = []
 
-    # FALLBACK 1: If TwelveData has insufficient data, try EasyInsight
-    # EasyInsight supports M15, H1 timeframes via prefixed fields in /symbol-data-full
-    # Note: D1 excluded because EasyInsight provides rolling D1 values, not historical daily candles
-    supported_ei_timeframes = ["M15", "H1"]
-    if len(rows) < 50 and tf in supported_ei_timeframes:
-        logger.info(f"TwelveData insufficient ({len(rows)} rows), trying EasyInsight fallback for {symbol}/{tf}")
+    # FALLBACK 1: If TwelveData has insufficient data, try EasyInsight OHLCV endpoint
+    # EasyInsight supports all timeframes via get_time_series
+    if len(rows) < 50:
+        logger.info(f"TwelveData insufficient ({len(rows)} rows), trying EasyInsight OHLCV for {symbol}/{tf}")
         try:
-            # Resolve EasyInsight symbol from managed symbols config
-            # e.g., N225 -> JP225, BTCUSD -> BTCUSD
-            ei_symbol = await symbol_service.get_easyinsight_symbol(symbol)
-            if ei_symbol != symbol:
-                logger.info(f"Resolved EasyInsight symbol: {symbol} -> {ei_symbol}")
+            # Use the internal EasyInsight service for OHLCV data
+            from ..services.easyinsight_service import easyinsight_service
 
-            # Map timeframe to EasyInsight prefix
-            prefix_map = {"M15": "m15", "H1": "h1"}
-            prefix = prefix_map.get(tf)
+            # Convert timeframe to TwelveData interval format
+            td_interval = to_twelvedata(tf_enum)
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    f"{settings.easyinsight_api_url}/symbol-data-full/{ei_symbol}",
-                    params={"limit": limit}
-                )
-                response.raise_for_status()
+            ei_result = await easyinsight_service.get_time_series(
+                symbol=symbol,
+                interval=td_interval,
+                outputsize=limit
+            )
 
-                data = response.json()
-                raw_rows = data.get('data', [])
+            ei_rows = ei_result.get('values', [])
 
-                # Extract OHLCV from prefixed fields
-                ei_rows = []
-                for raw in raw_rows:
-                    open_val = raw.get(f"{prefix}_open")
-                    high_val = raw.get(f"{prefix}_high")
-                    low_val = raw.get(f"{prefix}_low")
-                    close_val = raw.get(f"{prefix}_close")
-                    timestamp = raw.get("snapshot_time")
-
-                    if all([open_val, high_val, low_val, close_val, timestamp]):
-                        ei_rows.append({
-                            "timestamp": timestamp,
-                            "snapshot_time": timestamp,
-                            "symbol": symbol,
-                            "timeframe": tf,
-                            "open": float(open_val),
-                            "high": float(high_val),
-                            "low": float(low_val),
-                            "close": float(close_val),
-                            "volume": 0,
-                        })
-
-                if ei_rows and len(ei_rows) >= 50:
-                    # Cache EasyInsight data (use original symbol for cache key)
-                    if use_cache:
-                        training_data_cache.cache_data(symbol, tf, ei_rows, "easyinsight")
-                        logger.debug(f"Cached {len(ei_rows)} EasyInsight rows for {symbol}/{tf}")
-
-                    response = {
-                        "symbol": symbol,  # Return original symbol in response
+            if ei_rows and len(ei_rows) >= 50:
+                # Format for training data response
+                formatted_rows = []
+                for row in ei_rows:
+                    formatted_rows.append({
+                        "datetime": row.get("datetime"),
+                        "timestamp": row.get("datetime"),
+                        "symbol": symbol,
                         "timeframe": tf,
-                        "source": "easyinsight",
-                        "from_cache": False,
-                        "count": len(ei_rows),
-                        "data": ei_rows
-                    }
+                        "open": row.get("open"),
+                        "high": row.get("high"),
+                        "low": row.get("low"),
+                        "close": row.get("close"),
+                        "volume": row.get("volume", 0),
+                    })
 
-                    # Cache HTTP response in Redis
-                    if use_cache:
-                        http_cache_key = f"{symbol}_{tf}_{days}"
-                        await cache_service.set(
-                            CacheCategory.TRAINING,
-                            response,
-                            http_cache_key
-                        )
+                # Cache EasyInsight data
+                if use_cache:
+                    training_data_cache.cache_data(symbol, tf, formatted_rows, "easyinsight")
+                    logger.debug(f"Cached {len(formatted_rows)} EasyInsight OHLCV rows for {symbol}/{tf}")
 
-                    return response
+                response = {
+                    "symbol": symbol,
+                    "timeframe": tf,
+                    "source": "easyinsight",
+                    "from_cache": False,
+                    "count": len(formatted_rows),
+                    "data": formatted_rows
+                }
+
+                # Cache HTTP response in Redis
+                if use_cache:
+                    http_cache_key = f"{symbol}_{tf}_{days}"
+                    await cache_service.set(
+                        CacheCategory.TRAINING,
+                        response,
+                        http_cache_key
+                    )
+
+                return response
+            else:
+                logger.warning(f"EasyInsight OHLCV insufficient for {symbol}/{tf}: {len(ei_rows)} rows")
 
         except Exception as e:
-            logger.warning(f"EasyInsight API fallback failed for {symbol}: {e}")
-    elif len(rows) < 50:
-        logger.warning(f"TwelveData insufficient for {symbol}/{tf}, EasyInsight fallback only supports M15, H1")
+            logger.warning(f"EasyInsight OHLCV fallback failed for {symbol}/{tf}: {e}")
 
     # Return whatever we have (might be empty or partial)
     source = "twelvedata" if rows else "none"
