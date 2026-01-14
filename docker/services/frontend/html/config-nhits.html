@@ -1715,9 +1715,21 @@
 
                     let html = '';
                     for (const [key, info] of Object.entries(data.models)) {
+                        // Format timestamp for display
+                        let timeStr = '';
+                        if (info.timestamp) {
+                            const date = new Date(info.timestamp);
+                            timeStr = date.toLocaleString('de-CH', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        }
                         html += `
                             <div class="failed-item">
-                                <div class="symbol">${info.symbol} (${info.timeframe})</div>
+                                <div class="symbol">${info.symbol} (${info.timeframe})${timeStr ? ` <span style="color: #888; font-size: 0.85em; margin-left: 0.5rem;">${timeStr}</span>` : ''}</div>
                                 <div class="error">${info.error}</div>
                             </div>
                         `;
@@ -2991,7 +3003,9 @@
                     );
                     showToast(data.message);
                 } else {
-                    showBackupResult('Backup fehlgeschlagen', `<p style="color: #e57373;">${data.message}</p>`, false);
+                    // Handle both 'message' and 'detail' (FastAPI error format)
+                    const errorMsg = data.message || data.detail || 'Unbekannter Fehler';
+                    showBackupResult('Backup fehlgeschlagen', `<p style="color: #e57373;">${errorMsg}</p>`, false);
                 }
             } catch (err) {
                 console.error('Backup failed:', err);

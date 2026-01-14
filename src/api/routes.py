@@ -7265,20 +7265,54 @@ async def create_predictions_backup():
     try:
         from ..services.model_improvement_service import model_improvement_service
 
+        import math
+
+        def safe_isoformat(val):
+            """Convert datetime to isoformat, handling strings and None."""
+            if val is None:
+                return None
+            if isinstance(val, str):
+                return val  # Already a string
+            if hasattr(val, 'isoformat'):
+                return val.isoformat()
+            return str(val)
+
+        def safe_float(val):
+            """Convert float to JSON-safe value, handling nan/inf."""
+            if val is None:
+                return None
+            if isinstance(val, float):
+                if math.isnan(val) or math.isinf(val):
+                    return None
+            return val
+
+        def safe_dict(d):
+            """Recursively sanitize dict values for JSON serialization."""
+            if d is None:
+                return None
+            if isinstance(d, dict):
+                return {k: safe_dict(v) for k, v in d.items()}
+            if isinstance(d, list):
+                return [safe_dict(v) for v in d]
+            if isinstance(d, float):
+                if math.isnan(d) or math.isinf(d):
+                    return None
+            return d
+
         # Convert dataclass objects to dicts
         pending_data = {}
         for symbol, feedbacks in model_improvement_service.pending_feedback.items():
             pending_data[symbol] = [
                 {
                     "symbol": fb.symbol,
-                    "timestamp": fb.timestamp.isoformat() if fb.timestamp else None,
+                    "timestamp": safe_isoformat(fb.timestamp),
                     "horizon": fb.horizon,
-                    "current_price": fb.current_price,
-                    "predicted_price": fb.predicted_price,
-                    "actual_price": fb.actual_price,
-                    "prediction_error_pct": fb.prediction_error_pct,
+                    "current_price": safe_float(fb.current_price),
+                    "predicted_price": safe_float(fb.predicted_price),
+                    "actual_price": safe_float(fb.actual_price),
+                    "prediction_error_pct": safe_float(fb.prediction_error_pct),
                     "direction_correct": fb.direction_correct,
-                    "evaluated_at": fb.evaluated_at.isoformat() if fb.evaluated_at else None,
+                    "evaluated_at": safe_isoformat(fb.evaluated_at),
                 }
                 for fb in feedbacks
             ]
@@ -7288,14 +7322,14 @@ async def create_predictions_backup():
             evaluated_data[symbol] = [
                 {
                     "symbol": fb.symbol,
-                    "timestamp": fb.timestamp.isoformat() if fb.timestamp else None,
+                    "timestamp": safe_isoformat(fb.timestamp),
                     "horizon": fb.horizon,
-                    "current_price": fb.current_price,
-                    "predicted_price": fb.predicted_price,
-                    "actual_price": fb.actual_price,
-                    "prediction_error_pct": fb.prediction_error_pct,
+                    "current_price": safe_float(fb.current_price),
+                    "predicted_price": safe_float(fb.predicted_price),
+                    "actual_price": safe_float(fb.actual_price),
+                    "prediction_error_pct": safe_float(fb.prediction_error_pct),
                     "direction_correct": fb.direction_correct,
-                    "evaluated_at": fb.evaluated_at.isoformat() if fb.evaluated_at else None,
+                    "evaluated_at": safe_isoformat(fb.evaluated_at),
                 }
                 for fb in feedbacks
             ]
@@ -7306,12 +7340,12 @@ async def create_predictions_backup():
                 "symbol": metrics.symbol,
                 "total_predictions": metrics.total_predictions,
                 "evaluated_predictions": metrics.evaluated_predictions,
-                "avg_error_pct": metrics.avg_error_pct,
-                "direction_accuracy": metrics.direction_accuracy,
-                "last_updated": metrics.last_updated.isoformat() if metrics.last_updated else None,
-                "metrics_1h": metrics.metrics_1h,
-                "metrics_4h": metrics.metrics_4h,
-                "metrics_24h": metrics.metrics_24h,
+                "avg_error_pct": safe_float(metrics.avg_error_pct),
+                "direction_accuracy": safe_float(metrics.direction_accuracy),
+                "last_updated": safe_isoformat(metrics.last_updated),
+                "metrics_1h": safe_dict(metrics.metrics_1h),
+                "metrics_4h": safe_dict(metrics.metrics_4h),
+                "metrics_24h": safe_dict(metrics.metrics_24h),
                 "needs_retraining": metrics.needs_retraining,
                 "retraining_reason": metrics.retraining_reason,
             }
