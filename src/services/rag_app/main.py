@@ -19,7 +19,7 @@ from typing import Optional
 from loguru import logger
 import sys
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 # Add parent directory to path for imports
@@ -64,13 +64,20 @@ data_fetcher: Optional[DataFetcherProxy] = None
 scheduler_task: Optional[asyncio.Task] = None
 scheduler_stats = {
     "enabled": False,
+    "current_status": "stopped",  # stopped, waiting, fetching, error
     "last_fetch": None,
     "next_fetch": None,
     "total_fetches": 0,
     "total_documents_stored": 0,
     "last_error": None,
     "symbols": [],
-    "interval_minutes": 5
+    "interval_minutes": 5,
+    # Progress tracking
+    "fetch_started_at": None,
+    "current_symbol": None,
+    "symbols_processed": 0,
+    "symbols_total": 0,
+    "last_fetch_duration_seconds": None
 }
 
 # Runtime configuration (can be changed via API and persisted)
@@ -423,6 +430,14 @@ async def fetch_external_sources_task():
         min_priority = get_scheduler_priority()
         scheduler_stats["interval_minutes"] = interval_minutes
 
+        # Set next_fetch at the START of the cycle so UI shows when next run will be
+        scheduler_stats["next_fetch"] = (datetime.now(timezone.utc) + timedelta(minutes=interval_minutes)).isoformat()
+        scheduler_stats["current_status"] = "fetching"
+        scheduler_stats["fetch_started_at"] = datetime.now(timezone.utc).isoformat()
+        scheduler_stats["current_symbol"] = None
+        scheduler_stats["symbols_processed"] = 0
+        scheduler_stats["symbols_total"] = 0
+
         try:
             # Get symbols - either from config or dynamically from Data Service
             if use_managed_symbols and data_fetcher:
@@ -439,41 +454,52 @@ async def fetch_external_sources_task():
                 symbols = [s.strip() for s in settings.external_sources_symbols.split(",") if s.strip()]
 
             scheduler_stats["symbols"] = symbols
+            scheduler_stats["symbols_total"] = len(symbols)
 
-            # Fetch and store for each symbol
+            # Process symbols in batches for better parallelization
+            # Note: Too many parallel requests can overload the Data Service/TwelveData API
+            BATCH_SIZE = 4  # Process 4 symbols concurrently (balanced for API limits)
             total_stored = 0
-            for symbol in symbols:
+
+            async def fetch_all_for_symbol(symbol: str) -> int:
+                """Fetch all data sources for a single symbol."""
                 try:
-                    stored = await fetch_and_store_for_symbol(symbol, min_priority)
-                    total_stored += stored
+                    results = await asyncio.gather(
+                        fetch_and_store_for_symbol(symbol, min_priority),
+                        fetch_and_store_candlestick_patterns(symbol),
+                        fetch_and_store_tcn_patterns(symbol),
+                        fetch_and_store_hmm_regime(symbol),
+                        fetch_and_store_nhits_forecast(symbol),
+                        return_exceptions=True
+                    )
+                    stored = sum(r for r in results if isinstance(r, int))
                     if stored > 0:
                         logger.info(f"Fetched and stored {stored} documents for {symbol}")
-
-                    # Also fetch candlestick patterns for the symbol
-                    pattern_stored = await fetch_and_store_candlestick_patterns(symbol)
-                    total_stored += pattern_stored
-                    if pattern_stored > 0:
-                        logger.info(f"Fetched and stored {pattern_stored} candlestick patterns for {symbol}")
-
-                    # Fetch TCN chart patterns
-                    tcn_stored = await fetch_and_store_tcn_patterns(symbol)
-                    total_stored += tcn_stored
-                    if tcn_stored > 0:
-                        logger.info(f"Fetched and stored {tcn_stored} TCN patterns for {symbol}")
-
-                    # Fetch HMM regime detection
-                    hmm_stored = await fetch_and_store_hmm_regime(symbol)
-                    total_stored += hmm_stored
-                    if hmm_stored > 0:
-                        logger.info(f"Fetched and stored {hmm_stored} HMM regime docs for {symbol}")
-
-                    # Fetch NHITS forecasts
-                    nhits_stored = await fetch_and_store_nhits_forecast(symbol)
-                    total_stored += nhits_stored
-                    if nhits_stored > 0:
-                        logger.info(f"Fetched and stored {nhits_stored} NHITS forecast docs for {symbol}")
+                    return stored
                 except Exception as e:
-                    logger.error(f"Error fetching external sources for {symbol}: {e}")
+                    logger.error(f"Error fetching for {symbol}: {e}")
+                    return 0
+
+            # Process in batches
+            for batch_start in range(0, len(symbols), BATCH_SIZE):
+                batch_end = min(batch_start + BATCH_SIZE, len(symbols))
+                batch_symbols = symbols[batch_start:batch_end]
+
+                scheduler_stats["current_symbol"] = f"{batch_symbols[0]}...{batch_symbols[-1]}"
+                scheduler_stats["symbols_processed"] = batch_start
+
+                # Run batch in parallel
+                batch_results = await asyncio.gather(
+                    *[fetch_all_for_symbol(s) for s in batch_symbols],
+                    return_exceptions=True
+                )
+
+                # Sum results
+                for result in batch_results:
+                    if isinstance(result, int):
+                        total_stored += result
+
+            scheduler_stats["symbols_processed"] = len(symbols)
 
             # Also fetch market-wide data (no symbol)
             try:
@@ -483,25 +509,35 @@ async def fetch_external_sources_task():
             except Exception as e:
                 logger.error(f"Error fetching market-wide external sources: {e}")
 
-            scheduler_stats["last_fetch"] = datetime.now().isoformat()
+            scheduler_stats["last_fetch"] = datetime.now(timezone.utc).isoformat()
             scheduler_stats["total_fetches"] += 1
             scheduler_stats["total_documents_stored"] += total_stored
             scheduler_stats["last_error"] = None
+            scheduler_stats["symbols_processed"] = len(symbols)
+            scheduler_stats["current_symbol"] = None
+
+            # Calculate fetch duration
+            fetch_started = datetime.fromisoformat(scheduler_stats["fetch_started_at"])
+            fetch_duration = (datetime.now(timezone.utc) - fetch_started).total_seconds()
+            scheduler_stats["last_fetch_duration_seconds"] = round(fetch_duration, 1)
 
             # Persist RAG database
             if rag_service and total_stored > 0:
                 await rag_service.persist()
                 logger.info(f"RAG database persisted after storing {total_stored} documents")
 
-            logger.info(f"External sources fetch completed: {total_stored} documents stored in total")
+            logger.info(f"External sources fetch completed: {total_stored} documents stored in {fetch_duration:.1f}s")
+            scheduler_stats["current_status"] = "idle"
 
         except Exception as e:
             logger.error(f"Error in external sources scheduler: {e}")
             scheduler_stats["last_error"] = str(e)
+            scheduler_stats["current_status"] = "error"
 
         # Schedule next fetch (re-read interval in case it changed)
         interval_minutes = get_scheduler_interval()
-        scheduler_stats["next_fetch"] = (datetime.now() + timedelta(minutes=interval_minutes)).isoformat()
+        scheduler_stats["next_fetch"] = (datetime.now(timezone.utc) + timedelta(minutes=interval_minutes)).isoformat()
+        scheduler_stats["current_status"] = "waiting"
 
         # Wait for next interval
         await asyncio.sleep(interval_minutes * 60)
@@ -1005,7 +1041,7 @@ async def fetch_now(background_tasks: BackgroundTasks):
         except Exception as e:
             logger.error(f"Error fetching market-wide data: {e}")
 
-        scheduler_stats["last_fetch"] = datetime.now().isoformat()
+        scheduler_stats["last_fetch"] = datetime.now(timezone.utc).isoformat()
         scheduler_stats["total_fetches"] += 1
         scheduler_stats["total_documents_stored"] += total_stored
 

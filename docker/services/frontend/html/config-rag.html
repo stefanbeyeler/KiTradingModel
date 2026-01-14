@@ -742,6 +742,16 @@
                     </div>
                     <div class="scheduler-status">
                         <div id="scheduler-message" style="font-size: 1.1rem; margin-bottom: 0.5rem;">Lade...</div>
+                        <!-- Progress bar (shown during fetch) -->
+                        <div id="fetch-progress-container" style="display: none; margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-size: 0.85rem;">
+                                <span id="fetch-progress-symbol">-</span>
+                                <span id="fetch-progress-time">-</span>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.1); border-radius: 4px; height: 8px; overflow: hidden;">
+                                <div id="fetch-progress-bar" style="background: linear-gradient(90deg, #4caf50, #81c784); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
                         <div class="scheduler-info">
                             <div class="scheduler-stat">
                                 <div class="value" id="sched-total-fetches">-</div>
@@ -758,6 +768,10 @@
                             <div class="scheduler-stat">
                                 <div class="value" id="sched-next-fetch">-</div>
                                 <div class="label">Nächster Abruf</div>
+                            </div>
+                            <div class="scheduler-stat">
+                                <div class="value" id="sched-last-duration">-</div>
+                                <div class="label">Letzte Dauer</div>
                             </div>
                         </div>
                     </div>
@@ -862,7 +876,7 @@
                                 <th>Typ</th>
                                 <th>Symbol</th>
                                 <th>Inhalt</th>
-                                <th>Erstellt</th>
+                                <th>Datum</th>
                             </tr>
                         </thead>
                         <tbody id="docs-tbody">
@@ -1182,8 +1196,67 @@
                 // Format timestamps
                 document.getElementById('sched-last-fetch').textContent =
                     data.scheduler.last_fetch ? formatDateTime(data.scheduler.last_fetch) : '-';
-                document.getElementById('sched-next-fetch').textContent =
-                    data.scheduler.next_fetch ? formatDateTime(data.scheduler.next_fetch) : '-';
+
+                // Show next fetch with status indicator
+                const nextFetchEl = document.getElementById('sched-next-fetch');
+                const currentStatus = data.scheduler.current_status || 'unknown';
+                const progressContainer = document.getElementById('fetch-progress-container');
+
+                if (currentStatus === 'fetching') {
+                    nextFetchEl.innerHTML = '<span style="color: #ffc107;">⏳ Läuft...</span>';
+
+                    // Show progress bar
+                    progressContainer.style.display = 'block';
+
+                    // Calculate progress
+                    const processed = data.scheduler.symbols_processed || 0;
+                    const total = data.scheduler.symbols_total || 1;
+                    const currentSymbol = data.scheduler.current_symbol || '-';
+                    const progress = Math.round((processed / total) * 100);
+
+                    document.getElementById('fetch-progress-bar').style.width = progress + '%';
+                    document.getElementById('fetch-progress-symbol').textContent =
+                        `${currentSymbol} (${processed}/${total})`;
+
+                    // Calculate elapsed time
+                    if (data.scheduler.fetch_started_at) {
+                        const started = new Date(data.scheduler.fetch_started_at);
+                        const elapsed = Math.round((Date.now() - started.getTime()) / 1000);
+                        const elapsedMin = Math.floor(elapsed / 60);
+                        const elapsedSec = elapsed % 60;
+
+                        // Estimate remaining time
+                        const avgTimePerSymbol = processed > 0 ? elapsed / processed : 0;
+                        const remaining = Math.round(avgTimePerSymbol * (total - processed));
+                        const remMin = Math.floor(remaining / 60);
+                        const remSec = remaining % 60;
+
+                        document.getElementById('fetch-progress-time').textContent =
+                            `${elapsedMin}:${elapsedSec.toString().padStart(2, '0')} / ~${remMin}:${remSec.toString().padStart(2, '0')} verbleibend`;
+                    }
+                } else {
+                    progressContainer.style.display = 'none';
+                    if (data.scheduler.next_fetch) {
+                        nextFetchEl.textContent = formatDateTime(data.scheduler.next_fetch);
+                    } else {
+                        nextFetchEl.textContent = '-';
+                    }
+                }
+
+                // Show last fetch duration
+                const lastDurationEl = document.getElementById('sched-last-duration');
+                if (data.scheduler.last_fetch_duration_seconds) {
+                    const dur = data.scheduler.last_fetch_duration_seconds;
+                    if (dur >= 60) {
+                        const min = Math.floor(dur / 60);
+                        const sec = Math.round(dur % 60);
+                        lastDurationEl.textContent = `${min}m ${sec}s`;
+                    } else {
+                        lastDurationEl.textContent = `${dur}s`;
+                    }
+                } else {
+                    lastDurationEl.textContent = '-';
+                }
 
                 // Update config display
                 document.getElementById('sched-cfg-enabled').textContent = data.config.enabled_in_config ? 'Ja' : 'Nein';
