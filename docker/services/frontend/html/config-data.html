@@ -1831,6 +1831,39 @@
                         <small style="color: #888; font-size: 0.8rem;">Format für EasyInsight API</small>
                     </div>
                 </div>
+                <!-- Data Source Availability -->
+                <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <h4 style="color: #64c8ff; margin-bottom: 0.75rem; font-size: 0.95rem;">&#128202; Datenquellen-Verfügbarkeit</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">TwelveData</label>
+                            <select class="form-select" id="symbol-td-available">
+                                <option value="">Auto-Erkennung</option>
+                                <option value="true">✓ Verfügbar</option>
+                                <option value="false">✗ Nicht verfügbar</option>
+                            </select>
+                            <small style="color: #888; font-size: 0.75rem;">Indices sind bei TwelveData nicht verfügbar</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">EasyInsight</label>
+                            <select class="form-select" id="symbol-ei-available">
+                                <option value="">Auto-Erkennung</option>
+                                <option value="true">✓ Verfügbar</option>
+                                <option value="false">✗ Nicht verfügbar</option>
+                            </select>
+                            <small style="color: #888; font-size: 0.75rem;">Broker-Feed via MT5</small>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Bevorzugte Datenquelle</label>
+                        <select class="form-select" id="symbol-preferred-source">
+                            <option value="">Automatisch</option>
+                            <option value="twelvedata">TwelveData (primär)</option>
+                            <option value="easyinsight">EasyInsight (primär)</option>
+                            <option value="yfinance">Yahoo Finance (Fallback)</option>
+                        </select>
+                    </div>
+                </div>
                 <!-- Synonyme / Aliase -->
                 <div class="form-group">
                     <label class="form-label">Synonyme / Aliase</label>
@@ -2138,14 +2171,20 @@
                 // Update version
                 document.getElementById('headerVersion').textContent = healthData.version || '-';
 
-                // Update prefetch status
-                const prefetchEl = document.getElementById('headerPrefetch');
-                if (healthData.prefetch_service_status === 'running') {
-                    prefetchEl.textContent = 'Aktiv';
-                    prefetchEl.style.color = '#4caf50';
-                } else {
-                    prefetchEl.textContent = 'Gestoppt';
-                    prefetchEl.style.color = '#ff9800';
+                // Update prefetch status from dedicated endpoint for consistency
+                try {
+                    const prefetchResponse = await fetch(`${API_BASE}/prefetch/status`);
+                    const prefetchStatus = await prefetchResponse.json();
+                    const prefetchEl = document.getElementById('headerPrefetch');
+                    if (prefetchStatus.running) {
+                        prefetchEl.textContent = 'Aktiv';
+                        prefetchEl.style.color = '#4caf50';
+                    } else {
+                        prefetchEl.textContent = 'Gestoppt';
+                        prefetchEl.style.color = '#ff9800';
+                    }
+                } catch (e) {
+                    console.error('Error fetching prefetch status:', e);
                 }
 
                 // Fetch symbol count
@@ -2804,6 +2843,14 @@
             document.getElementById('symbol-quote-currency').value = symbolData?.quote_currency || '';
             document.getElementById('symbol-aliases').value = (symbolData?.aliases || []).join(', ');
             document.getElementById('symbol-favorite').checked = symbolData?.is_favorite || false;
+
+            // Data source availability fields
+            const tdAvailable = symbolData?.twelvedata_available;
+            document.getElementById('symbol-td-available').value = tdAvailable === null || tdAvailable === undefined ? '' : (tdAvailable ? 'true' : 'false');
+            const eiAvailable = symbolData?.easyinsight_available;
+            document.getElementById('symbol-ei-available').value = eiAvailable === null || eiAvailable === undefined ? '' : (eiAvailable ? 'true' : 'false');
+            document.getElementById('symbol-preferred-source').value = symbolData?.preferred_data_source || '';
+
             document.getElementById('symbol-name').disabled = !!symbolData;
             document.getElementById('symbol-modal').classList.add('active');
         }
@@ -2826,6 +2873,11 @@
                 ? aliasesStr.split(',').map(a => a.trim()).filter(a => a.length > 0)
                 : [];
 
+            // Parse data source availability
+            const tdAvailableVal = document.getElementById('symbol-td-available').value;
+            const eiAvailableVal = document.getElementById('symbol-ei-available').value;
+            const preferredSource = document.getElementById('symbol-preferred-source').value;
+
             const data = {
                 symbol: document.getElementById('symbol-name').value,
                 display_name: document.getElementById('symbol-display-name').value || null,
@@ -2835,6 +2887,9 @@
                 description: document.getElementById('symbol-description').value || null,
                 twelvedata_symbol: document.getElementById('symbol-twelvedata').value || null,
                 easyinsight_symbol: document.getElementById('symbol-easyinsight').value || null,
+                twelvedata_available: tdAvailableVal === '' ? null : tdAvailableVal === 'true',
+                easyinsight_available: eiAvailableVal === '' ? null : eiAvailableVal === 'true',
+                preferred_data_source: preferredSource || null,
                 base_currency: document.getElementById('symbol-base-currency').value || null,
                 quote_currency: document.getElementById('symbol-quote-currency').value || null,
                 aliases: aliases,
@@ -5981,6 +6036,25 @@
             const errorsEl = document.getElementById('prefetch-errors');
             errorsEl.textContent = stats.errors || 0;
             errorsEl.style.color = (stats.errors || 0) > 0 ? '#e57373' : '#666';
+
+            // Update progress if running
+            const progressContainer = document.getElementById('prefetch-progress-container');
+            const progress = data.progress;
+            if (isRunning && progress && progress.symbols_total > 0) {
+                progressContainer.style.display = 'block';
+                const percent = Math.round((progress.symbols_done / progress.symbols_total) * 100);
+                document.getElementById('prefetch-progress-bar').style.width = `${percent}%`;
+                document.getElementById('prefetch-progress-percent').textContent = `${percent}%`;
+
+                // Show current symbol and phase
+                const phaseLabels = { ohlcv: 'OHLCV', indicators: 'Indikatoren', easyinsight: 'EasyInsight', pivots: 'Pivots', done: 'Fertig' };
+                const phaseLabel = phaseLabels[progress.current_phase] || progress.current_phase || '';
+                const symbolInfo = progress.current_symbol ? `${progress.current_symbol}` : '';
+                document.getElementById('prefetch-progress-text').textContent =
+                    `${progress.symbols_done + 1} / ${progress.symbols_total} ${symbolInfo} (${phaseLabel})`;
+            } else if (!isRunning) {
+                progressContainer.style.display = 'none';
+            }
 
             // Update config fields
             const config = data.config || {};

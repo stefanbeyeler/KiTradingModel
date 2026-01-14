@@ -1262,7 +1262,19 @@
                 </p>
                 <!-- Evaluation Status -->
                 <div id="evaluation-status" style="display: none; margin-bottom: 1rem; padding: 0.75rem; background: rgba(100, 200, 255, 0.1); border-radius: 8px; border: 1px solid rgba(100, 200, 255, 0.2);">
-                    <span id="evaluation-message">Evaluierung läuft...</span>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span id="evaluation-message">Evaluierung läuft...</span>
+                    </div>
+                    <!-- Progress bar -->
+                    <div id="evaluation-progress-container" style="display: none; margin-top: 0.5rem;">
+                        <div style="background: rgba(255,255,255,0.1); border-radius: 4px; height: 6px; overflow: hidden;">
+                            <div id="evaluation-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #64b5f6, #42a5f5); border-radius: 4px; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.25rem; font-size: 0.75rem; opacity: 0.7;">
+                            <span id="evaluation-progress-text">0%</span>
+                            <span id="evaluation-progress-count"></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="table-container">
                     <table id="performance-table">
@@ -1813,18 +1825,19 @@
                     let timeframeKey = 'default';
                     let timeframeLabel = 'H1 (Std)';
 
-                    if (model.symbol.endsWith('_M15')) {
-                        baseSymbol = model.symbol.replace('_M15', '');
-                        timeframeKey = 'M15';
-                        timeframeLabel = 'M15';
-                    } else if (model.symbol.endsWith('_H1')) {
-                        baseSymbol = model.symbol.replace('_H1', '');
-                        timeframeKey = 'H1';
-                        timeframeLabel = 'H1';
-                    } else if (model.symbol.endsWith('_D1')) {
-                        baseSymbol = model.symbol.replace('_D1', '');
-                        timeframeKey = 'D1';
-                        timeframeLabel = 'D1';
+                    // Extract timeframe suffix from symbol
+                    const tfSuffixes = {
+                        '_M5': 'M5', '_M15': 'M15', '_M30': 'M30',
+                        '_H1': 'H1', '_H4': 'H4',
+                        '_D1': 'D1', '_W1': 'W1', '_MN': 'MN'
+                    };
+                    for (const [suffix, tf] of Object.entries(tfSuffixes)) {
+                        if (model.symbol.endsWith(suffix)) {
+                            baseSymbol = model.symbol.slice(0, -suffix.length);
+                            timeframeKey = tf;
+                            timeframeLabel = tf;
+                            break;
+                        }
                     }
 
                     allModels.push({
@@ -1952,16 +1965,37 @@
                 const data = await res.json();
 
                 if (res.ok && data.predicted_prices && data.predicted_prices.length > 0) {
-                    const trend = data.predicted_prices[data.predicted_prices.length - 1] > data.predicted_prices[0] ? '↑' : '↓';
-                    const trendColor = trend === '↑' ? '#4ade80' : '#f87171';
-                    const currentPrice = data.predicted_prices[0].toFixed(5);
-                    const targetPrice = data.predicted_prices[data.predicted_prices.length - 1].toFixed(5);
-                    showToast(`✓ ${symbol}/${tf}: ${currentPrice} → ${targetPrice} <span style="color: ${trendColor};">${trend}</span>`, 'success');
+                    const currentPrice = data.predicted_prices[0];
+                    const targetPrice = data.predicted_prices[data.predicted_prices.length - 1];
+                    const trend = targetPrice > currentPrice ? 'up' : 'down';
 
-                    // Refresh latest forecasts
+                    // Build forecast object for modal display
+                    const fullSymbol = `${symbol}_${tf}`;
+                    const forecastData = {
+                        symbol: symbol,
+                        timeframe: tf,
+                        timestamp: data.timestamp || new Date().toISOString(),
+                        horizon: data.horizons ? data.horizons[data.horizons.length - 1] : '24h',
+                        current_price: currentPrice,
+                        predicted_price: targetPrice,
+                        trend: trend,
+                        evaluated: false,
+                        direction_correct: null,
+                        error_pct: null,
+                        predicted_prices: data.predicted_prices,
+                        horizons: data.horizons || ['1h', '4h', '24h']
+                    };
+
+                    // Store in cache for modal display
+                    latestForecasts[fullSymbol] = forecastData;
+
+                    // Refresh latest forecasts from server
                     await loadLatestForecasts();
                     // Refresh models table to show new forecast
                     filterModels();
+
+                    // Show modal with forecast details
+                    showForecastModal(symbol, fullSymbol);
                 } else {
                     showToast(`✗ Prognose fehlgeschlagen: ${data.detail || 'Unbekannter Fehler'}`, 'error');
                 }
@@ -2311,6 +2345,10 @@
             const btn = document.getElementById('btn-manual-eval');
             const statusDiv = document.getElementById('evaluation-status');
             const statusMsg = document.getElementById('evaluation-message');
+            const progressContainer = document.getElementById('evaluation-progress-container');
+            const progressBar = document.getElementById('evaluation-progress-bar');
+            const progressText = document.getElementById('evaluation-progress-text');
+            const progressCount = document.getElementById('evaluation-progress-count');
 
             // Disable button and show loading state
             btn.disabled = true;
@@ -2320,7 +2358,67 @@
             statusDiv.style.background = 'rgba(100, 200, 255, 0.1)';
             statusDiv.style.borderColor = 'rgba(100, 200, 255, 0.2)';
 
+            // Show progress bar
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'linear-gradient(90deg, #64b5f6, #42a5f5)';
+            progressText.textContent = '0%';
+            progressCount.textContent = 'Initialisiere...';
+
+            // Animated progress simulation
+            let progress = 0;
+            let progressInterval = null;
+
+            // Start progress animation (simulate progress while waiting for API)
+            const startProgress = (totalItems) => {
+                const estimatedTimeMs = Math.max(2000, totalItems * 50); // ~50ms per item, min 2s
+                const updateInterval = 100;
+                const progressStep = (95 / (estimatedTimeMs / updateInterval)); // Go up to 95%
+
+                progressCount.textContent = `${totalItems} Prognosen`;
+
+                progressInterval = setInterval(() => {
+                    if (progress < 95) {
+                        progress += progressStep;
+                        progress = Math.min(progress, 95);
+                        progressBar.style.width = `${progress}%`;
+                        progressText.textContent = `${Math.round(progress)}%`;
+                    }
+                }, updateInterval);
+            };
+
+            // Complete progress animation
+            const completeProgress = (success) => {
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+                progress = 100;
+                progressBar.style.width = '100%';
+                progressText.textContent = '100%';
+                if (success) {
+                    progressBar.style.background = 'linear-gradient(90deg, #4caf50, #66bb6a)';
+                } else {
+                    progressBar.style.background = 'linear-gradient(90deg, #f44336, #e57373)';
+                }
+            };
+
             try {
+                // First, get pending count to estimate progress
+                let pendingCount = 100; // Default estimate
+                try {
+                    const statusRes = await fetch(`${API_BASE}/forecast/auto-status`);
+                    if (statusRes.ok) {
+                        const statusData = await statusRes.json();
+                        pendingCount = statusData.pending_total || statusData.ready_for_eval || 100;
+                    }
+                } catch (e) {
+                    console.warn('Could not get pending count:', e);
+                }
+
+                // Start progress animation
+                startProgress(pendingCount);
+
                 const res = await fetch(`${API_BASE}/forecast/evaluate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
@@ -2330,6 +2428,7 @@
 
                 if (res.ok && data.success) {
                     // Success
+                    completeProgress(true);
                     btn.textContent = '✓ Fertig';
                     statusDiv.style.background = 'rgba(76, 175, 80, 0.1)';
                     statusDiv.style.borderColor = 'rgba(76, 175, 80, 0.2)';
@@ -2339,6 +2438,7 @@
                             <span style="font-size: 0.85rem; opacity: 0.8;">
                                 Ausstehend vorher: ${data.pending_before} → nachher: ${data.pending_after}
                             </span>`;
+                        progressCount.textContent = `${data.evaluated_count} evaluiert`;
 
                         // Show per-symbol breakdown if available
                         if (data.by_symbol && Object.keys(data.by_symbol).length > 0) {
@@ -2352,6 +2452,7 @@
                             <span style="font-size: 0.85rem; opacity: 0.8;">
                                 ${data.pending_before} Prognosen warten noch auf Ablauf ihres Zeithorizonts.
                             </span>`;
+                        progressCount.textContent = 'Keine bereit';
                     }
 
                     // Reload performance data and auto status
@@ -2360,17 +2461,21 @@
                     showToast(data.message);
                 } else {
                     // Error response
+                    completeProgress(false);
                     btn.textContent = '✗ Fehler';
                     statusDiv.style.background = 'rgba(244, 67, 54, 0.1)';
                     statusDiv.style.borderColor = 'rgba(244, 67, 54, 0.2)';
                     statusMsg.textContent = `Fehler: ${data.detail || 'Unbekannter Fehler'}`;
+                    progressCount.textContent = 'Fehler';
                 }
             } catch (err) {
                 console.error('Evaluation failed:', err);
+                completeProgress(false);
                 btn.textContent = '✗ Fehler';
                 statusDiv.style.background = 'rgba(244, 67, 54, 0.1)';
                 statusDiv.style.borderColor = 'rgba(244, 67, 54, 0.2)';
                 statusMsg.textContent = `Fehler: ${err.message}`;
+                progressCount.textContent = 'Fehler';
             } finally {
                 // Re-enable button after short delay
                 setTimeout(() => {
@@ -2381,6 +2486,7 @@
                 // Hide status after 10 seconds
                 setTimeout(() => {
                     statusDiv.style.display = 'none';
+                    progressContainer.style.display = 'none';
                 }, 10000);
             }
         }
@@ -2423,12 +2529,16 @@
                 const symbols = new Set();
 
                 // Extract unique base symbols
+                const timeframeSuffixes = ['_M5', '_M15', '_M30', '_H1', '_H4', '_D1', '_W1', '_MN'];
                 for (const model of data) {
                     if (!model.model_exists) continue;
                     let baseSymbol = model.symbol;
-                    if (baseSymbol.endsWith('_M15')) baseSymbol = baseSymbol.replace('_M15', '');
-                    else if (baseSymbol.endsWith('_H1')) baseSymbol = baseSymbol.replace('_H1', '');
-                    else if (baseSymbol.endsWith('_D1')) baseSymbol = baseSymbol.replace('_D1', '');
+                    for (const suffix of timeframeSuffixes) {
+                        if (baseSymbol.endsWith(suffix)) {
+                            baseSymbol = baseSymbol.slice(0, -suffix.length);
+                            break;
+                        }
+                    }
                     symbols.add(baseSymbol);
                 }
 
@@ -2483,20 +2593,29 @@
 
                     // Extract unique base symbols from favorites models
                     const symbolSet = new Set();
+                    const tfSuffixList = ['_M5', '_M15', '_M30', '_H1', '_H4', '_D1', '_W1', '_MN'];
                     if (data.models && data.models.length > 0) {
                         for (const model of data.models) {
                             let baseSymbol = model.base_symbol || model.symbol;
                             // Remove timeframe suffix if present
-                            if (baseSymbol.endsWith('_M15')) baseSymbol = baseSymbol.replace('_M15', '');
-                            else if (baseSymbol.endsWith('_H1')) baseSymbol = baseSymbol.replace('_H1', '');
-                            else if (baseSymbol.endsWith('_D1')) baseSymbol = baseSymbol.replace('_D1', '');
+                            for (const suffix of tfSuffixList) {
+                                if (baseSymbol.endsWith(suffix)) {
+                                    baseSymbol = baseSymbol.slice(0, -suffix.length);
+                                    break;
+                                }
+                            }
                             symbolSet.add(baseSymbol);
                         }
                     }
                     symbols = Array.from(symbolSet).sort();
 
                     if (symbols.length === 0) {
-                        showToast('Keine Favoriten gefunden');
+                        showToast('⚠️ Keine Favoriten gefunden. Markieren Sie Symbole im Data Service (config-data.html → Symbol Management → ⭐) als Favoriten.', 8000);
+                        batchForecastRunning = false;
+                        btnFavorites.disabled = false;
+                        btnAll.disabled = false;
+                        btnCancel.style.display = 'none';
+                        progressContainer.style.display = 'none';
                         return;
                     }
                 } else {
@@ -2506,12 +2625,16 @@
                     const data = await res.json();
 
                     const symbolSet = new Set();
+                    const tfSuffixList2 = ['_M5', '_M15', '_M30', '_H1', '_H4', '_D1', '_W1', '_MN'];
                     for (const model of data) {
                         if (!model.model_exists) continue;
                         let baseSymbol = model.symbol;
-                        if (baseSymbol.endsWith('_M15')) baseSymbol = baseSymbol.replace('_M15', '');
-                        else if (baseSymbol.endsWith('_H1')) baseSymbol = baseSymbol.replace('_H1', '');
-                        else if (baseSymbol.endsWith('_D1')) baseSymbol = baseSymbol.replace('_D1', '');
+                        for (const suffix of tfSuffixList2) {
+                            if (baseSymbol.endsWith(suffix)) {
+                                baseSymbol = baseSymbol.slice(0, -suffix.length);
+                                break;
+                            }
+                        }
                         symbolSet.add(baseSymbol);
                     }
                     symbols = Array.from(symbolSet).sort();
@@ -2539,19 +2662,21 @@
                         const res = await fetch(`${API_BASE}/forecast/${symbol}?timeframe=${timeframe}`);
                         const data = await res.json();
 
-                        if (data.error) {
+                        // Check for various error conditions
+                        if (!res.ok || data.error || data.detail || !data.predicted_prices || data.predicted_prices.length === 0) {
                             failed++;
-                            results.push({ symbol, success: false, error: data.error });
+                            const errorMsg = data.error || data.detail || data.message || 'Kein Modell oder keine Daten';
+                            results.push({ symbol, success: false, error: errorMsg });
                         } else {
                             successful++;
-                            const trend = data.predicted_prices && data.predicted_prices.length > 1 ?
+                            const trend = data.predicted_prices.length > 1 ?
                                 (data.predicted_prices[data.predicted_prices.length - 1] > data.current_price ? '↑' : '↓') : '-';
                             results.push({
                                 symbol,
                                 success: true,
                                 trend,
                                 currentPrice: data.current_price,
-                                predictedPrice: data.predicted_prices ? data.predicted_prices[data.predicted_prices.length - 1] : null
+                                predictedPrice: data.predicted_prices[data.predicted_prices.length - 1]
                             });
                         }
                     } catch (err) {
@@ -2565,12 +2690,31 @@
 
                 // Show final summary
                 const summaryDiv = document.getElementById('batch-results-summary');
-                summaryDiv.innerHTML = `
-                    <strong>Fertig!</strong> ✓ ${successful} erfolgreich, ✗ ${failed} fehlgeschlagen
-                    ${results.filter(r => r.success).map(r => `
-                        <span style="margin-left: 0.5rem; color: ${r.trend === '↑' ? '#4ade80' : '#f87171'};">${r.symbol} ${r.trend}</span>
-                    `).join('')}
-                `;
+                const successResults = results.filter(r => r.success);
+                const failedResults = results.filter(r => !r.success);
+
+                let summaryHtml = `<strong>Fertig!</strong> ✓ ${successful} erfolgreich, ✗ ${failed} fehlgeschlagen<br>`;
+
+                // Show successful forecasts with trend
+                if (successResults.length > 0) {
+                    summaryHtml += `<div style="margin-top: 0.3rem;">`;
+                    summaryHtml += successResults.map(r => `
+                        <span style="margin-right: 0.5rem; color: ${r.trend === '↑' ? '#4ade80' : '#f87171'};">${r.symbol} ${r.trend}</span>
+                    `).join('');
+                    summaryHtml += `</div>`;
+                }
+
+                // Show failed forecasts with reason
+                if (failedResults.length > 0) {
+                    summaryHtml += `<div style="margin-top: 0.3rem; color: #f87171;">`;
+                    summaryHtml += `<strong>Fehlgeschlagen:</strong> `;
+                    summaryHtml += failedResults.map(r => `
+                        <span title="${r.error || 'Unbekannter Fehler'}" style="cursor: help; text-decoration: underline dotted;">${r.symbol}</span>
+                    `).join(', ');
+                    summaryHtml += `</div>`;
+                }
+
+                summaryDiv.innerHTML = summaryHtml;
 
                 showToast(`Batch-Prognose abgeschlossen: ${successful}/${total} erfolgreich`);
 
@@ -2760,8 +2904,15 @@
         // Parse UTC timestamp (API returns timestamps without Z suffix but they are UTC)
         function parseUTCDate(timestamp) {
             if (!timestamp) return null;
-            // If timestamp doesn't end with Z, append it to ensure UTC interpretation
-            const ts = timestamp.endsWith('Z') ? timestamp : timestamp + 'Z';
+            // Handle various UTC timestamp formats:
+            // - "2026-01-14T18:23:31.382089Z" (Z suffix)
+            // - "2026-01-14T18:23:31.382089+00:00" (offset suffix)
+            // - "2026-01-14T18:23:31.382089" (no suffix - assume UTC)
+            let ts = timestamp;
+            if (!timestamp.endsWith('Z') && !timestamp.includes('+') && !timestamp.includes('-', 10)) {
+                // No timezone info, append Z for UTC
+                ts = timestamp + 'Z';
+            }
             return new Date(ts);
         }
 
@@ -3206,13 +3357,16 @@
                 let statusHtml = `<span class="badge badge-success">Aktiv</span> `;
                 statusHtml += `<span style="opacity: 0.8;">Timeframes: ${activeTimeframes}</span>`;
 
-                // Show last run times (UTC -> local time)
-                if (favorites.timeframes) {
+                // Show last run times (UTC -> local time) - only for enabled timeframes
+                if (favorites.timeframes && favorites.enabled_timeframes) {
                     const lastRuns = [];
-                    for (const [tf, info] of Object.entries(favorites.timeframes)) {
-                        if (info.last_run) {
+                    for (const tf of favorites.enabled_timeframes) {
+                        const info = favorites.timeframes[tf];
+                        if (info && info.last_run) {
                             const d = parseUTCDate(info.last_run);
-                            lastRuns.push(`${tf}: ${d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})}`);
+                            if (d && !isNaN(d.getTime())) {
+                                lastRuns.push(`${tf}: ${d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})}`);
+                            }
                         }
                     }
                     if (lastRuns.length > 0) {
@@ -3232,7 +3386,19 @@
                 document.getElementById('auto-tf-d1').checked = favorites.enabled_timeframes.includes('D1');
                 document.getElementById('auto-tf-w1').checked = favorites.enabled_timeframes.includes('W1');
             } else {
-                statusDiv.innerHTML = '<span class="badge badge-failed">Inaktiv</span>';
+                // Show saved timeframes info if available
+                let statusHtml = '<span class="badge badge-failed">Inaktiv</span>';
+                if (favorites.enabled_timeframes && favorites.enabled_timeframes.length > 0) {
+                    statusHtml += ` <span style="opacity: 0.6; font-size: 0.85rem;">(Gespeichert: ${favorites.enabled_timeframes.join(', ')})</span>`;
+                    // Restore checkboxes from saved config
+                    document.getElementById('auto-tf-m5').checked = favorites.enabled_timeframes.includes('M5');
+                    document.getElementById('auto-tf-m15').checked = favorites.enabled_timeframes.includes('M15');
+                    document.getElementById('auto-tf-h1').checked = favorites.enabled_timeframes.includes('H1');
+                    document.getElementById('auto-tf-h4').checked = favorites.enabled_timeframes.includes('H4');
+                    document.getElementById('auto-tf-d1').checked = favorites.enabled_timeframes.includes('D1');
+                    document.getElementById('auto-tf-w1').checked = favorites.enabled_timeframes.includes('W1');
+                }
+                statusDiv.innerHTML = statusHtml;
                 startBtn.style.display = 'inline-flex';
                 stopBtn.style.display = 'none';
             }

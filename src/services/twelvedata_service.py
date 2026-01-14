@@ -98,8 +98,12 @@ class TwelveDataService:
     """Service for accessing Twelve Data API for market data with rate limiting and caching."""
 
     # Special symbol mappings for non-standard symbols
-    # Note: Index symbols (GER40, US30, etc.) are NOT supported by TwelveData
-    # and will fall back to EasyInsight via DataGatewayService
+    # Maps internal/EasyInsight symbols to TwelveData format
+    #
+    # HINWEIS: TwelveData bietet KEINE Zeitreihen-Daten für Indices an!
+    # Die Index-Symbole (AXJO, GDAXI, FTSE, etc.) sind zwar in der /indices
+    # Liste aufgeführt, aber der time_series Endpoint gibt "invalid symbol" zurück.
+    # Indices müssen über Yahoo Finance oder EasyInsight bezogen werden.
     SYMBOL_MAPPINGS = {
         # Crypto with non-standard abbreviations
         "AVXUSD": "AVAX/USD",   # Avalanche
@@ -109,15 +113,17 @@ class TwelveDataService:
         # Note: MATIC/USD, CL/USD (crude oil) also not supported by TwelveData
     }
 
-    # Symbols that should skip TwelveData and go directly to fallback
-    # (Indices and commodities not supported by TwelveData)
+    # Symbols that should skip TwelveData and go directly to fallback (EasyInsight/Yahoo)
+    # TwelveData does NOT support indices via time_series API (returns "invalid symbol")
     UNSUPPORTED_SYMBOLS = {
-        # Indices - display names
-        "AUS200", "EURO50", "FRA40", "GER40", "JP225",
-        "NAS100", "UK100", "US30", "US500",
-        # Indices - TwelveData symbol names (also not valid)
-        "XJO", "STOXX50E", "FCHI", "GDAXI", "N225",
-        "NDX", "FTSE", "DJI", "SPX",
+        # ALL Indices - TwelveData lists them in /indices but time_series returns error
+        # MT5/EasyInsight display names:
+        "AUS200", "GER40", "UK100", "FRA40", "JP225",
+        "US500", "US30", "NAS100", "EURO50",
+        # TwelveData/Yahoo index symbols (also not valid for time_series):
+        "AXJO", "GDAXI", "FTSE", "FCHI", "N225",
+        "SPX", "DJI", "NDX", "IXIC", "STOXX50E",
+        "XJO",  # Alternative ASX 200 symbol
         # Commodities not in TwelveData format
         "XTIUSD", "CLUSD", "CL",
         # Crypto with non-standard names that don't work

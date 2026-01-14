@@ -162,6 +162,17 @@ class PrefetchService:
             "easyinsight_indicators_created": 0,
             "pivot_points_calculated": 0,
         }
+        # Current progress tracking
+        self._progress = {
+            "current_symbol": None,
+            "current_timeframe": None,
+            "current_phase": None,  # "ohlcv", "indicators", "easyinsight", "pivots"
+            "symbols_total": 0,
+            "symbols_done": 0,
+            "timeframes_total": 0,
+            "timeframes_done": 0,
+            "started_at": None,
+        }
         self._symbols_cache: list[dict] = []
 
     async def load_config(self) -> bool:
@@ -368,6 +379,18 @@ class PrefetchService:
         start_time = datetime.now(timezone.utc)
         self._stats["total_runs"] += 1
 
+        # Reset progress
+        self._progress = {
+            "current_symbol": None,
+            "current_timeframe": None,
+            "current_phase": "init",
+            "symbols_total": 0,
+            "symbols_done": 0,
+            "timeframes_total": 0,
+            "timeframes_done": 0,
+            "started_at": start_time.isoformat(),
+        }
+
         try:
             # 1. Symbole laden
             symbols = await self._get_symbols()
@@ -381,6 +404,10 @@ class PrefetchService:
             # 3. Limitieren
             symbols = symbols[:self._config.max_symbols]
 
+            # Update progress with totals
+            self._progress["symbols_total"] = len(symbols)
+            self._progress["timeframes_total"] = len(self._config.timeframes)
+
             indicators_info = f", {len(self._config.indicators)} Indikatoren" if self._config.indicators else ""
             logger.info(
                 f"Pre-Fetch gestartet für {len(symbols)} Symbole, "
@@ -388,9 +415,10 @@ class PrefetchService:
             )
 
             # 4. OHLCV-Daten pre-fetchen
+            self._progress["current_phase"] = "ohlcv"
             fetched_count = 0
             indicator_count = 0
-            for symbol_data in symbols:
+            for idx, symbol_data in enumerate(symbols):
                 # Verwende immer display symbol (BTCUSD) - Konvertierung erfolgt im TwelveDataService
                 symbol = (
                     symbol_data.get("symbol") or
@@ -399,7 +427,15 @@ class PrefetchService:
                 if not symbol:
                     continue
 
-                for timeframe in self._config.timeframes:
+                # Update progress
+                self._progress["current_symbol"] = symbol
+                self._progress["symbols_done"] = idx
+                self._progress["timeframes_done"] = 0
+
+                for tf_idx, timeframe in enumerate(self._config.timeframes):
+                    self._progress["current_timeframe"] = timeframe
+                    self._progress["timeframes_done"] = tf_idx
+
                     try:
                         success = await self._prefetch_ohlcv(symbol, timeframe)
                         if success:
@@ -411,6 +447,7 @@ class PrefetchService:
                         self._stats["errors"] += 1
 
                     # 5. Indikatoren pre-fetchen (falls konfiguriert)
+                    self._progress["current_phase"] = "indicators"
                     for indicator in self._config.indicators:
                         try:
                             success = await self._prefetch_indicator(symbol, timeframe, indicator)
@@ -421,15 +458,20 @@ class PrefetchService:
                         except Exception as e:
                             logger.error(f"Pre-Fetch Fehler für {indicator}/{symbol}/{timeframe}: {e}")
                             self._stats["errors"] += 1
+                    self._progress["current_phase"] = "ohlcv"
 
             # 6. EasyInsight-Indikatoren pre-fetchen (falls aktiviert)
             easyinsight_count = 0
             if self._config.easyinsight_indicators_enabled and self._config.db_sync_enabled:
+                self._progress["current_phase"] = "easyinsight"
                 logger.info(f"Pre-Fetch EasyInsight Indikatoren für {len(symbols)} Symbole...")
-                for symbol_data in symbols:
+                for idx, symbol_data in enumerate(symbols):
                     symbol = symbol_data.get("symbol") or symbol_data.get("name", "")
                     if not symbol:
                         continue
+
+                    self._progress["current_symbol"] = symbol
+                    self._progress["symbols_done"] = idx
 
                     try:
                         saved = await self._prefetch_easyinsight_indicators(symbol)
@@ -442,11 +484,15 @@ class PrefetchService:
             # 7. Pivot Points lokal berechnen und speichern (falls DB-Sync aktiviert)
             pivot_count = 0
             if self._config.db_sync_enabled:
+                self._progress["current_phase"] = "pivots"
                 logger.info(f"Berechne Pivot Points für {len(symbols)} Symbole...")
-                for symbol_data in symbols:
+                for idx, symbol_data in enumerate(symbols):
                     symbol = symbol_data.get("symbol") or symbol_data.get("name", "")
                     if not symbol:
                         continue
+
+                    self._progress["current_symbol"] = symbol
+                    self._progress["symbols_done"] = idx
 
                     # Pivot Points für D1 und W1 berechnen (sinnvollste Timeframes)
                     for timeframe in ["1day", "1week"]:
@@ -455,6 +501,10 @@ class PrefetchService:
                             pivot_count += saved
                         except Exception as e:
                             logger.debug(f"Pivot-Berechnung fehlgeschlagen für {symbol}/{timeframe}: {e}")
+
+            # Mark progress as complete
+            self._progress["current_phase"] = "done"
+            self._progress["symbols_done"] = len(symbols)
 
             self._stats["last_run"] = start_time.isoformat()
             self._stats["symbols_fetched"] = len(symbols)
@@ -960,6 +1010,7 @@ class PrefetchService:
             },
             "running": self._running,
             "fast_task_running": self._fast_task is not None and not self._fast_task.done() if self._fast_task else False,
+            "progress": self._progress if self._running else None,
         }
 
     def get_config(self) -> dict:

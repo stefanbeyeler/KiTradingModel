@@ -94,6 +94,32 @@ TIMEFRAME_TTL = {
 }
 
 
+# Timeframe-Normalisierung: Alternative Formate zu Standard-Format konvertieren
+TIMEFRAME_NORMALIZE = {
+    "1min": "M1", "5min": "M5", "15min": "M15", "30min": "M30",
+    "1h": "H1", "4h": "H4", "1day": "D1", "1week": "W1", "1month": "MN",
+    "1m": "M1", "5m": "M5", "15m": "M15", "30m": "M30",
+    "daily": "D1", "weekly": "W1", "monthly": "MN",
+}
+VALID_TIMEFRAMES = {"M1", "M5", "M15", "M30", "H1", "H4", "D1", "W1", "MN"}
+
+
+def normalize_timeframe(tf: str) -> Optional[str]:
+    """
+    Normalisiert ein Timeframe-Format zum Standard-Format.
+
+    Args:
+        tf: Timeframe-String (z.B. "1min", "1h", "M1", "H1")
+
+    Returns:
+        Standard-Timeframe (z.B. "M1", "H1") oder None wenn ungültig
+    """
+    if tf in VALID_TIMEFRAMES:
+        return tf
+    normalized = TIMEFRAME_NORMALIZE.get(tf)
+    return normalized if normalized in VALID_TIMEFRAMES else None
+
+
 class CacheService:
     """
     Einheitlicher Cache Service mit Redis-Backend.
@@ -595,11 +621,10 @@ class CacheService:
 
             if len(parts) >= 4:
                 potential_timeframe = parts[3]
-                # Bekannte Timeframe-Formate prüfen
-                valid_timeframes = ["M1", "M5", "M15", "M30", "H1", "H4", "D1", "W1", "MN",
-                                   "1min", "5min", "15min", "30min", "1h", "4h", "1day", "1week", "1month"]
-                if potential_timeframe in valid_timeframes:
-                    category_stats[category]["timeframes"].add(potential_timeframe)
+                # Timeframe zum Standard-Format normalisieren
+                normalized_tf = normalize_timeframe(potential_timeframe)
+                if normalized_tf:
+                    category_stats[category]["timeframes"].add(normalized_tf)
 
     async def get_category_entries(self, category: CacheCategory, limit: int = 100) -> list:
         """
@@ -623,10 +648,11 @@ class CacheService:
                     for key in keys[:limit - len(entries)]:
                         ttl = await self._redis.ttl(key)
                         parts = key.split(":")
+                        raw_tf = parts[3] if len(parts) > 3 else None
                         entries.append({
                             "key": key,
                             "symbol": parts[2] if len(parts) > 2 else None,
-                            "timeframe": parts[3] if len(parts) > 3 else None,
+                            "timeframe": normalize_timeframe(raw_tf) if raw_tf else None,
                             "ttl_remaining": ttl if ttl > 0 else 0,
                         })
                     if cursor == 0:
@@ -641,10 +667,11 @@ class CacheService:
             if key.startswith(f"{self.prefix}:{category.value}:") and len(entries) < limit:
                 parts = key.split(":")
                 ttl_remaining = max(0, int((expires - now).total_seconds()))
+                raw_tf = parts[3] if len(parts) > 3 else None
                 entries.append({
                     "key": key,
                     "symbol": parts[2] if len(parts) > 2 else None,
-                    "timeframe": parts[3] if len(parts) > 3 else None,
+                    "timeframe": normalize_timeframe(raw_tf) if raw_tf else None,
                     "ttl_remaining": ttl_remaining,
                     "size_bytes": size,
                 })

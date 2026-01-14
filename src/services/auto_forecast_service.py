@@ -53,10 +53,17 @@ class AutoForecastService:
 
         # Timeframe intervals for favorites (how often to generate forecasts)
         self._timeframe_intervals = {
+            "M5": 300,     # 5 minutes
             "M15": 900,    # 15 minutes
+            "M30": 1800,   # 30 minutes
             "H1": 3600,    # 1 hour
+            "H4": 14400,   # 4 hours
             "D1": 86400,   # 24 hours
+            "W1": 604800,  # 7 days
         }
+
+        # Path for persistent config storage
+        self._config_file = "data/auto_forecast_config.json"
 
         # Statistics
         self._favorites_total_forecasts: int = 0
@@ -65,6 +72,64 @@ class AutoForecastService:
         self._daily_failed_forecasts: int = 0
 
         logger.info("AutoForecastService initialized with favorites and daily mode support")
+
+        # Load saved config on initialization
+        self._load_config()
+
+    def _load_config(self):
+        """Load auto-forecast configuration from disk."""
+        import json
+        from pathlib import Path
+
+        config_path = Path(self._config_file)
+        if not config_path.exists():
+            logger.debug("No saved auto-forecast config found")
+            return
+
+        try:
+            with open(config_path) as f:
+                config = json.load(f)
+
+            # Restore favorites timeframes
+            saved_timeframes = config.get("favorites_timeframes", [])
+            if saved_timeframes:
+                self._favorites_enabled_timeframes = [
+                    tf for tf in saved_timeframes if tf in self._timeframe_intervals
+                ]
+                logger.info(f"Loaded saved favorites timeframes: {self._favorites_enabled_timeframes}")
+
+            # Restore daily schedule
+            if "daily_scheduled_time" in config:
+                h, m = map(int, config["daily_scheduled_time"].split(":"))
+                self._daily_scheduled_time = time(h, m)
+            if "daily_timezone" in config:
+                self._daily_timezone = config["daily_timezone"]
+
+            logger.info("Auto-forecast config loaded from disk")
+        except Exception as e:
+            logger.warning(f"Failed to load auto-forecast config: {e}")
+
+    def _save_config(self):
+        """Save auto-forecast configuration to disk."""
+        import json
+        from pathlib import Path
+
+        config = {
+            "favorites_timeframes": self._favorites_enabled_timeframes,
+            "daily_scheduled_time": f"{self._daily_scheduled_time.hour:02d}:{self._daily_scheduled_time.minute:02d}",
+            "daily_timezone": self._daily_timezone,
+            "favorites_running": self._favorites_running,
+            "daily_running": self._daily_running,
+        }
+
+        try:
+            config_path = Path(self._config_file)
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(config_path, "w") as f:
+                json.dump(config, f, indent=2)
+            logger.debug(f"Auto-forecast config saved: {self._favorites_enabled_timeframes}")
+        except Exception as e:
+            logger.warning(f"Failed to save auto-forecast config: {e}")
 
     async def get_favorites(self) -> list[dict]:
         """Fetch favorite symbols from Data Service."""
@@ -96,7 +161,7 @@ class AutoForecastService:
             base_symbol = symbol
             timeframe = "H1"  # default
 
-            for tf in ["M15", "H1", "D1"]:
+            for tf in self._timeframe_intervals.keys():
                 if symbol.endswith(f"_{tf}"):
                     base_symbol = symbol[:-len(f"_{tf}")]
                     timeframe = tf
@@ -277,8 +342,8 @@ class AutoForecastService:
         Start auto-forecasting for favorite symbols.
 
         Args:
-            timeframes: List of timeframes to enable (M15, H1, D1).
-                        If None, enables all timeframes.
+            timeframes: List of timeframes to enable (M5, M15, M30, H1, H4, D1, W1).
+                        If None, enables default timeframes (M15, H1, D1).
         """
         if timeframes is None:
             timeframes = ["M15", "H1", "D1"]
@@ -291,6 +356,9 @@ class AutoForecastService:
 
         self._favorites_running = True
         self._favorites_enabled_timeframes = valid_timeframes
+
+        # Save config to disk for persistence
+        self._save_config()
 
         # Start a loop for each timeframe
         for tf in valid_timeframes:
@@ -330,6 +398,9 @@ class AutoForecastService:
         if not self._favorites_enabled_timeframes:
             self._favorites_running = False
             logger.info("All favorites auto-forecast loops stopped")
+
+        # Save config to disk for persistence
+        self._save_config()
 
     # ==================== DAILY (NON-FAVORITES) AUTO-FORECAST ====================
 
@@ -584,7 +655,7 @@ class AutoForecastService:
         """Get comprehensive status of the auto-forecast service."""
         # Build favorites status per timeframe
         favorites_timeframe_status = {}
-        for tf in ["M15", "H1", "D1"]:
+        for tf in self._timeframe_intervals.keys():
             task = self._favorites_tasks.get(tf)
             last_run = self._favorites_last_run.get(tf)
             favorites_timeframe_status[tf] = {
@@ -633,9 +704,10 @@ class AutoForecastService:
 
     def get_favorites_forecast_history(self) -> Dict[str, list]:
         """Get forecast history grouped by timeframe."""
-        history = {"M15": [], "H1": [], "D1": []}
+        all_timeframes = list(self._timeframe_intervals.keys())
+        history = {tf: [] for tf in all_timeframes}
         for key, result in self._forecast_results.items():
-            for tf in ["M15", "H1", "D1"]:
+            for tf in all_timeframes:
                 if key.endswith(f"_{tf}"):
                     history[tf].append(result)
                     break

@@ -92,6 +92,24 @@ class ManagedSymbol(BaseModel):
     twelvedata_symbol: Optional[str] = Field(None, description="Symbol format for Twelve Data API (e.g., BTC/USD, EUR/USD)")
     easyinsight_symbol: Optional[str] = Field(None, description="Symbol format for EasyInsight API (e.g., BTCUSD, EURUSD)")
 
+    # Data source availability flags
+    # These flags indicate whether a data source is available for this symbol.
+    # If None, the system will auto-detect availability based on UNSUPPORTED_SYMBOLS lists.
+    # If explicitly set to False, the source will be skipped and fallback used.
+    twelvedata_available: Optional[bool] = Field(
+        None,
+        description="Whether TwelveData API supports this symbol. None=auto-detect, False=use fallback"
+    )
+    easyinsight_available: Optional[bool] = Field(
+        None,
+        description="Whether EasyInsight API supports this symbol. None=auto-detect, False=use fallback"
+    )
+    # Preferred data source for this symbol (overrides global default)
+    preferred_data_source: Optional[str] = Field(
+        None,
+        description="Preferred data source: 'twelvedata', 'easyinsight', 'yfinance', or None for auto"
+    )
+
     # User preferences
     is_favorite: bool = Field(default=False, description="User marked as favorite")
     notes: Optional[str] = Field(None, description="User notes about this symbol")
@@ -117,6 +135,9 @@ class SymbolCreateRequest(BaseModel):
     max_lot_size: Optional[float] = 100.0
     twelvedata_symbol: Optional[str] = None
     easyinsight_symbol: Optional[str] = None
+    twelvedata_available: Optional[bool] = None
+    easyinsight_available: Optional[bool] = None
+    preferred_data_source: Optional[str] = None
     notes: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
     aliases: list[str] = Field(default_factory=list)
@@ -136,6 +157,9 @@ class SymbolUpdateRequest(BaseModel):
     max_lot_size: Optional[float] = None
     twelvedata_symbol: Optional[str] = None
     easyinsight_symbol: Optional[str] = None
+    twelvedata_available: Optional[bool] = None
+    easyinsight_available: Optional[bool] = None
+    preferred_data_source: Optional[str] = None
     is_favorite: Optional[bool] = None
     notes: Optional[str] = None
     tags: Optional[list[str]] = None

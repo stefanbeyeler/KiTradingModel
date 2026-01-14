@@ -55,6 +55,7 @@ class PredictionFeedback:
     prediction_error_pct: Optional[float] = None
     direction_correct: Optional[bool] = None
     evaluated_at: Optional[datetime] = None
+    timeframe: Optional[str] = None  # "H1", "M15", "D1", etc.
 
 
 @dataclass
@@ -337,6 +338,7 @@ class ModelImprovementService:
             horizons = [("1h", predicted_price_1h), ("4h", predicted_price_4h), ("24h", predicted_price_24h)]
 
         recorded_count = 0
+        normalized_tf = timeframe.upper()
         for horizon, pred_price in horizons:
             if pred_price is not None:
                 feedback = PredictionFeedback(
@@ -345,6 +347,7 @@ class ModelImprovementService:
                     horizon=horizon,
                     current_price=current_price,
                     predicted_price=pred_price,
+                    timeframe=normalized_tf,
                 )
                 self.pending_feedback[symbol].append(feedback)
                 recorded_count += 1

@@ -16,6 +16,7 @@ import asyncpg
 
 from ..config import settings
 from .data_gateway_service import data_gateway
+from .twelvedata_service import TwelveDataService
 from ..models.symbol_data import (
     ManagedSymbol,
     SymbolCategory,
@@ -113,6 +114,9 @@ class SymbolService:
             nhits_model_trained_at=row.get("nhits_model_trained_at"),
             twelvedata_symbol=row.get("twelvedata_symbol"),
             easyinsight_symbol=row.get("easyinsight_symbol"),
+            twelvedata_available=row.get("twelvedata_available"),
+            easyinsight_available=row.get("easyinsight_available"),
+            preferred_data_source=row.get("preferred_data_source"),
             is_favorite=row.get("is_favorite", False),
             notes=row.get("notes"),
             tags=list(row["tags"]) if row.get("tags") else [],
@@ -253,6 +257,160 @@ class SymbolService:
             return symbol.twelvedata_symbol
         return None
 
+    async def is_twelvedata_available(self, identifier: str) -> bool:
+        """
+        Check if TwelveData API is available for a symbol.
+
+        Priority:
+        1. Explicit flag in managed symbol (twelvedata_available)
+        2. Auto-detect via TwelveDataService.UNSUPPORTED_SYMBOLS
+        """
+        symbol = await self.resolve_symbol(identifier)
+
+        # If explicitly set in managed symbol, use that
+        if symbol and symbol.twelvedata_available is not None:
+            return symbol.twelvedata_available
+
+        # Auto-detect using TwelveDataService's unsupported list
+        symbol_id = identifier.upper()
+        return symbol_id not in TwelveDataService.UNSUPPORTED_SYMBOLS
+
+    async def is_easyinsight_available(self, identifier: str) -> bool:
+        """
+        Check if EasyInsight API is available for a symbol.
+
+        Priority:
+        1. Explicit flag in managed symbol (easyinsight_available)
+        2. Default to True (EasyInsight supports most symbols)
+        """
+        symbol = await self.resolve_symbol(identifier)
+
+        # If explicitly set in managed symbol, use that
+        if symbol and symbol.easyinsight_available is not None:
+            return symbol.easyinsight_available
+
+        # EasyInsight typically supports all symbols from the MT5 broker
+        return True
+
+    async def get_preferred_data_source(self, identifier: str) -> str:
+        """
+        Get the preferred data source for a symbol.
+
+        Returns:
+            'twelvedata', 'easyinsight', 'yfinance', or 'auto'
+        """
+        symbol = await self.resolve_symbol(identifier)
+
+        # If explicitly set, use that
+        if symbol and symbol.preferred_data_source:
+            return symbol.preferred_data_source
+
+        # Auto-determine based on availability
+        td_available = await self.is_twelvedata_available(identifier)
+        ei_available = await self.is_easyinsight_available(identifier)
+
+        if td_available:
+            return "twelvedata"
+        elif ei_available:
+            return "easyinsight"
+        else:
+            return "yfinance"
+
+    async def get_data_source_info(self, identifier: str) -> dict:
+        """
+        Get comprehensive data source availability info for a symbol.
+
+        Returns dict with:
+        - twelvedata_available: bool
+        - easyinsight_available: bool
+        - preferred_source: str
+        - auto_detected: bool (whether values were auto-detected or explicit)
+        """
+        symbol = await self.resolve_symbol(identifier)
+        symbol_id = identifier.upper()
+
+        td_explicit = symbol.twelvedata_available if symbol else None
+        ei_explicit = symbol.easyinsight_available if symbol else None
+        preferred = symbol.preferred_data_source if symbol else None
+
+        td_available = await self.is_twelvedata_available(identifier)
+        ei_available = await self.is_easyinsight_available(identifier)
+        pref_source = await self.get_preferred_data_source(identifier)
+
+        return {
+            "symbol": symbol_id,
+            "twelvedata": {
+                "available": td_available,
+                "explicit": td_explicit is not None,
+                "symbol": symbol.twelvedata_symbol if symbol else self._generate_twelvedata_symbol(symbol_id, SymbolCategory.OTHER),
+            },
+            "easyinsight": {
+                "available": ei_available,
+                "explicit": ei_explicit is not None,
+                "symbol": symbol.easyinsight_symbol if symbol else symbol_id,
+            },
+            "preferred_source": pref_source,
+            "preferred_explicit": preferred is not None,
+        }
+
+    async def set_data_source_availability(
+        self,
+        symbol_id: str,
+        twelvedata_available: Optional[bool] = None,
+        easyinsight_available: Optional[bool] = None,
+        preferred_data_source: Optional[str] = None,
+    ) -> Optional[ManagedSymbol]:
+        """
+        Set data source availability flags for a symbol.
+
+        Args:
+            symbol_id: Symbol identifier
+            twelvedata_available: True/False to explicitly set, None to auto-detect
+            easyinsight_available: True/False to explicitly set, None to auto-detect
+            preferred_data_source: 'twelvedata', 'easyinsight', 'yfinance', or None for auto
+
+        Returns:
+            Updated ManagedSymbol or None if symbol not found
+        """
+        symbol_id = symbol_id.upper()
+        await self._ensure_cache_loaded()
+
+        symbol = self._cache.get(symbol_id)
+        if not symbol:
+            return None
+
+        # Update fields
+        symbol.twelvedata_available = twelvedata_available
+        symbol.easyinsight_available = easyinsight_available
+        symbol.preferred_data_source = preferred_data_source
+        symbol.updated_at = datetime.utcnow()
+
+        # Update in database
+        pool = await self._get_pool()
+        if pool:
+            try:
+                async with pool.acquire() as conn:
+                    await conn.execute("""
+                        UPDATE symbols SET
+                            twelvedata_available = $2,
+                            easyinsight_available = $3,
+                            preferred_data_source = $4,
+                            updated_at = $5
+                        WHERE symbol = $1
+                    """,
+                        symbol_id,
+                        twelvedata_available,
+                        easyinsight_available,
+                        preferred_data_source,
+                        symbol.updated_at,
+                    )
+            except Exception as e:
+                logger.error(f"Failed to update data source availability for {symbol_id}: {e}")
+
+        self._cache[symbol_id] = symbol
+        logger.info(f"Updated data source availability for {symbol_id}: TD={twelvedata_available}, EI={easyinsight_available}, Preferred={preferred_data_source}")
+        return symbol
+
     async def create_symbol(self, request: SymbolCreateRequest) -> ManagedSymbol:
         """Create a new managed symbol in the database."""
         symbol_id = request.symbol.upper()
@@ -289,6 +447,9 @@ class SymbolService:
             max_lot_size=request.max_lot_size,
             twelvedata_symbol=twelvedata_sym,
             easyinsight_symbol=easyinsight_sym,
+            twelvedata_available=request.twelvedata_available,
+            easyinsight_available=request.easyinsight_available,
+            preferred_data_source=request.preferred_data_source,
             notes=request.notes,
             tags=request.tags,
             aliases=request.aliases,

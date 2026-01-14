@@ -9,6 +9,7 @@ import httpx
 import torch
 from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Query
 from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel, Field
 from loguru import logger
 
 from ..config import settings
@@ -1237,6 +1238,7 @@ async def get_prefetch_status():
                 "pivot_points_calculated": stats.get("pivot_points_calculated", 0),
                 "errors": stats["errors"],
             },
+            "progress": stats.get("progress"),  # Current progress if running
             "timestamp": datetime.utcnow().isoformat()
         }
     except Exception as e:
@@ -2405,7 +2407,7 @@ async def get_latest_forecasts_per_model():
                     # Sanitize float values (handle inf/nan)
                     current_price = fb.current_price if fb.current_price and math.isfinite(fb.current_price) else None
                     predicted_price = fb.predicted_price if fb.predicted_price and math.isfinite(fb.predicted_price) else None
-                    error_pct = fb.error_pct if fb.error_pct and math.isfinite(fb.error_pct) else None
+                    error_pct = fb.prediction_error_pct if fb.prediction_error_pct and math.isfinite(fb.prediction_error_pct) else None
 
                     latest_forecasts[model_key] = {
                         "_ts": timestamp,
@@ -3005,13 +3007,14 @@ async def start_favorites_auto_forecast(
     from ..services.auto_forecast_service import auto_forecast_service
 
     tf_list = None
+    valid_timeframes = ["M5", "M15", "M30", "H1", "H4", "D1", "W1"]
     if timeframes:
         tf_list = [tf.strip().upper() for tf in timeframes.split(",")]
-        invalid = [tf for tf in tf_list if tf not in ["M15", "H1", "D1"]]
+        invalid = [tf for tf in tf_list if tf not in valid_timeframes]
         if invalid:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid timeframes: {invalid}. Use M15, H1, or D1."
+                detail=f"Invalid timeframes: {invalid}. Use {', '.join(valid_timeframes)}."
             )
 
     await auto_forecast_service.start_favorites_auto_forecast(tf_list)
@@ -4011,187 +4014,262 @@ async def get_symbol_live_data(symbol: str):
                 symbol, managed_symbol.category if managed_symbol else SymbolCategory.FOREX
             ) or symbol
 
-    try:
-        import asyncio
+    # Check if symbol is supported by TwelveData before making API calls
+    # Uses both explicit managed symbol flags and auto-detection via UNSUPPORTED_SYMBOLS
+    td_available = await symbol_service.is_twelvedata_available(symbol)
+    if not td_available:
+        result["errors"].append(
+            f"TwelveData: Symbol '{symbol}' wird nicht unterstützt (Indices sind bei TwelveData nicht verfügbar). "
+            "Verwende EasyInsight oder Yahoo Finance für Index-Daten."
+        )
+    else:
+        try:
+            import asyncio
 
-        # Fetch quote and M1 time series in parallel
-        quote_task = twelvedata_service.get_quote(symbol=td_symbol)
-        m1_task = twelvedata_service.get_time_series(symbol=td_symbol, interval="1min", outputsize=2)
+            # Fetch quote and M1 time series in parallel
+            quote_task = twelvedata_service.get_quote(symbol=td_symbol)
+            m1_task = twelvedata_service.get_time_series(symbol=td_symbol, interval="1min", outputsize=2)
 
-        quote, m1_data = await asyncio.gather(quote_task, m1_task, return_exceptions=True)
+            quote, m1_data = await asyncio.gather(quote_task, m1_task, return_exceptions=True)
 
-        # Handle exceptions
-        if isinstance(quote, Exception):
-            quote = None
-        if isinstance(m1_data, Exception):
-            m1_data = None
+            # Handle exceptions
+            if isinstance(quote, Exception):
+                quote = None
+            if isinstance(m1_data, Exception):
+                m1_data = None
 
-        if quote and "error" not in quote:
-            # Calculate spread from bid/ask if available, or estimate from close
-            td_bid = quote.get("bid")
-            td_ask = quote.get("ask")
-            td_spread = None
-            td_spread_pct = None
+            if quote and "error" not in quote:
+                # Calculate spread from bid/ask if available, or estimate from close
+                td_bid = quote.get("bid")
+                td_ask = quote.get("ask")
+                td_spread = None
+                td_spread_pct = None
 
-            if td_bid and td_ask:
-                try:
-                    bid_val = float(td_bid)
-                    ask_val = float(td_ask)
-                    td_spread = ask_val - bid_val
-                    if bid_val > 0:
-                        td_spread_pct = (td_spread / bid_val) * 100
-                except (ValueError, TypeError):
-                    pass
+                if td_bid and td_ask:
+                    try:
+                        bid_val = float(td_bid)
+                        ask_val = float(td_ask)
+                        td_spread = ask_val - bid_val
+                        if bid_val > 0:
+                            td_spread_pct = (td_spread / bid_val) * 100
+                    except (ValueError, TypeError):
+                        pass
 
-            # Use M1 data for real-time OHLC if available, fallback to quote (daily)
-            # IMPORTANT: TwelveData returns datetimes in Exchange timezone (EST for Forex),
-            # NOT in UTC. Use Unix timestamps (last_quote_at) when available for accuracy.
-            td_datetime = None
-            # Prefer Unix timestamp from quote (last_quote_at) - this is unambiguous
-            if quote.get("last_quote_at"):
-                from datetime import datetime as dt
-                td_datetime = dt.fromtimestamp(quote.get("last_quote_at"), tz=timezone.utc)
+                # Use M1 data for real-time OHLC if available, fallback to quote (daily)
+                # IMPORTANT: TwelveData returns datetimes in Exchange timezone (EST for Forex),
+                # NOT in UTC. Use Unix timestamps (last_quote_at) when available for accuracy.
+                td_datetime = None
+                # Prefer Unix timestamp from quote (last_quote_at) - this is unambiguous
+                if quote.get("last_quote_at"):
+                    from datetime import datetime as dt
+                    td_datetime = dt.fromtimestamp(quote.get("last_quote_at"), tz=timezone.utc)
 
-            m1_ohlc = None
-            m1_datetime = None
+                m1_ohlc = None
+                m1_datetime = None
 
-            if m1_data and "error" not in m1_data and m1_data.get("values"):
-                m1_values = m1_data["values"]
-                if m1_values and len(m1_values) > 0:
-                    latest_m1 = m1_values[0]
-                    # M1 datetime is in Exchange timezone - for now, use quote timestamp
-                    # as it's more reliable (Unix timestamp)
-                    m1_ohlc = {
-                        "open": latest_m1.get("open"),
-                        "high": latest_m1.get("high"),
-                        "low": latest_m1.get("low"),
-                        "close": latest_m1.get("close"),
-                    }
-
-            # Use quote timestamp (derived from Unix timestamp) as it's timezone-unambiguous
-            display_datetime = td_datetime
-
-            result["twelvedata"] = {
-                "source": "Twelve Data API",
-                "symbol_used": td_symbol,
-                "name": quote.get("name"),
-                "exchange": quote.get("exchange"),
-                "currency": quote.get("currency"),
-                "datetime_utc": format_utc_iso(display_datetime),
-                "datetime_display": format_for_display(display_datetime),
-                "bid_ask": {
-                    "bid": td_bid,
-                    "ask": td_ask,
-                    "spread": td_spread,
-                    "spread_pct": td_spread_pct,
-                },
-                # Use M1 OHLC for real-time price, daily OHLC as secondary
-                "price": m1_ohlc or {
-                    "open": quote.get("open"),
-                    "high": quote.get("high"),
-                    "low": quote.get("low"),
-                    "close": quote.get("close"),
-                },
-                "price_daily": {
-                    "open": quote.get("open"),
-                    "high": quote.get("high"),
-                    "low": quote.get("low"),
-                    "close": quote.get("close"),
-                    "previous_close": quote.get("previous_close"),
-                },
-                "change": quote.get("change"),
-                "percent_change": quote.get("percent_change"),
-                "volume": quote.get("volume"),
-                "average_volume": quote.get("average_volume"),
-                "is_market_open": quote.get("is_market_open"),
-                "fifty_two_week": {
-                    "low": quote.get("fifty_two_week", {}).get("low") if isinstance(quote.get("fifty_two_week"), dict) else None,
-                    "high": quote.get("fifty_two_week", {}).get("high") if isinstance(quote.get("fifty_two_week"), dict) else None,
-                },
-                "indicators": {},
-            }
-
-            # Fetch TwelveData technical indicators (parallel requests)
-            # Use M5 interval to match EasyInsight indicator timeframe
-            td_interval = "5min"  # M5 data to match EasyInsight indicators
-            indicator_tasks = {
-                "rsi": twelvedata_service.get_rsi(td_symbol, interval=td_interval, outputsize=1),
-                "macd": twelvedata_service.get_macd(td_symbol, interval=td_interval, outputsize=1),
-                "bbands": twelvedata_service.get_bollinger_bands(td_symbol, interval=td_interval, outputsize=1),
-                # Stochastic: Use (5,3,3) to match EasyInsight parameters
-                "stoch": twelvedata_service.get_stochastic(td_symbol, interval=td_interval, fast_k_period=5, slow_k_period=3, slow_d_period=3, outputsize=1),
-                "adx": twelvedata_service.get_adx(td_symbol, interval=td_interval, outputsize=1),
-                # ATR: Use D1 interval to match EasyInsight (atr_d1)
-                "atr": twelvedata_service.get_atr(td_symbol, interval="1day", outputsize=1),
-                # SMA(10) to match EasyInsight (not EMA)
-                "sma_10": twelvedata_service.get_sma(td_symbol, interval=td_interval, time_period=10, outputsize=1),
-                "ichimoku": twelvedata_service.get_ichimoku(td_symbol, interval=td_interval, outputsize=1),
-                # CCI to match EasyInsight
-                "cci": twelvedata_service.get_cci(td_symbol, interval=td_interval, outputsize=1),
-            }
-
-            # Execute all indicator requests in parallel
-            indicator_results = await asyncio.gather(
-                *indicator_tasks.values(),
-                return_exceptions=True
-            )
-
-            # Process results - use the same timestamp as the quote for consistency
-            # NOTE: TwelveData indicator datetimes are in Exchange timezone (not UTC),
-            # so we use the quote's Unix timestamp which is timezone-unambiguous.
-            if display_datetime:
-                result["twelvedata"]["indicator_datetime_utc"] = format_utc_iso(display_datetime)
-                result["twelvedata"]["indicator_datetime_display"] = format_for_display(display_datetime)
-
-            for name, res in zip(indicator_tasks.keys(), indicator_results):
-                if isinstance(res, Exception):
-                    continue
-                if res and "error" not in res and res.get("values"):
-                    values = res["values"]
-                    latest = values[0] if isinstance(values, list) and values else values
-
-                    if name == "rsi":
-                        result["twelvedata"]["indicators"]["rsi"] = float(latest.get("rsi", 0)) if latest.get("rsi") else None
-                    elif name == "macd":
-                        result["twelvedata"]["indicators"]["macd"] = {
-                            "main": float(latest.get("macd", 0)) if latest.get("macd") else None,
-                            "signal": float(latest.get("macd_signal", 0)) if latest.get("macd_signal") else None,
-                            "histogram": float(latest.get("macd_hist", 0)) if latest.get("macd_hist") else None,
-                        }
-                    elif name == "bbands":
-                        result["twelvedata"]["indicators"]["bollinger"] = {
-                            "upper": float(latest.get("upper_band", 0)) if latest.get("upper_band") else None,
-                            "middle": float(latest.get("middle_band", 0)) if latest.get("middle_band") else None,
-                            "lower": float(latest.get("lower_band", 0)) if latest.get("lower_band") else None,
-                        }
-                    elif name == "stoch":
-                        result["twelvedata"]["indicators"]["stochastic"] = {
-                            "k": float(latest.get("slow_k", 0)) if latest.get("slow_k") else None,
-                            "d": float(latest.get("slow_d", 0)) if latest.get("slow_d") else None,
-                        }
-                    elif name == "adx":
-                        result["twelvedata"]["indicators"]["adx"] = float(latest.get("adx", 0)) if latest.get("adx") else None
-                    elif name == "atr":
-                        result["twelvedata"]["indicators"]["atr"] = float(latest.get("atr", 0)) if latest.get("atr") else None
-                    elif name == "sma_10":
-                        result["twelvedata"]["indicators"]["sma_10"] = float(latest.get("sma", 0)) if latest.get("sma") else None
-                    elif name == "cci":
-                        result["twelvedata"]["indicators"]["cci"] = float(latest.get("cci", 0)) if latest.get("cci") else None
-                    elif name == "ichimoku":
-                        result["twelvedata"]["indicators"]["ichimoku"] = {
-                            "tenkan": float(latest.get("tenkan_sen", 0)) if latest.get("tenkan_sen") else None,
-                            "kijun": float(latest.get("kijun_sen", 0)) if latest.get("kijun_sen") else None,
-                            "senkou_a": float(latest.get("senkou_span_a", 0)) if latest.get("senkou_span_a") else None,
-                            "senkou_b": float(latest.get("senkou_span_b", 0)) if latest.get("senkou_span_b") else None,
-                            "chikou": float(latest.get("chikou_span", 0)) if latest.get("chikou_span") else None,
+                if m1_data and "error" not in m1_data and m1_data.get("values"):
+                    m1_values = m1_data["values"]
+                    if m1_values and len(m1_values) > 0:
+                        latest_m1 = m1_values[0]
+                        # M1 datetime is in Exchange timezone - for now, use quote timestamp
+                        # as it's more reliable (Unix timestamp)
+                        m1_ohlc = {
+                            "open": latest_m1.get("open"),
+                            "high": latest_m1.get("high"),
+                            "low": latest_m1.get("low"),
+                            "close": latest_m1.get("close"),
                         }
 
-        elif quote and "error" in quote:
-            result["errors"].append(f"TwelveData: {quote.get('error')}")
-    except Exception as e:
-        result["errors"].append(f"TwelveData: {str(e)}")
+                # Use quote timestamp (derived from Unix timestamp) as it's timezone-unambiguous
+                display_datetime = td_datetime
+
+                result["twelvedata"] = {
+                    "source": "Twelve Data API",
+                    "symbol_used": td_symbol,
+                    "name": quote.get("name"),
+                    "exchange": quote.get("exchange"),
+                    "currency": quote.get("currency"),
+                    "datetime_utc": format_utc_iso(display_datetime),
+                    "datetime_display": format_for_display(display_datetime),
+                    "bid_ask": {
+                        "bid": td_bid,
+                        "ask": td_ask,
+                        "spread": td_spread,
+                        "spread_pct": td_spread_pct,
+                    },
+                    # Use M1 OHLC for real-time price, daily OHLC as secondary
+                    "price": m1_ohlc or {
+                        "open": quote.get("open"),
+                        "high": quote.get("high"),
+                        "low": quote.get("low"),
+                        "close": quote.get("close"),
+                    },
+                    "price_daily": {
+                        "open": quote.get("open"),
+                        "high": quote.get("high"),
+                        "low": quote.get("low"),
+                        "close": quote.get("close"),
+                        "previous_close": quote.get("previous_close"),
+                    },
+                    "change": quote.get("change"),
+                    "percent_change": quote.get("percent_change"),
+                    "volume": quote.get("volume"),
+                    "average_volume": quote.get("average_volume"),
+                    "is_market_open": quote.get("is_market_open"),
+                    "fifty_two_week": {
+                        "low": quote.get("fifty_two_week", {}).get("low") if isinstance(quote.get("fifty_two_week"), dict) else None,
+                        "high": quote.get("fifty_two_week", {}).get("high") if isinstance(quote.get("fifty_two_week"), dict) else None,
+                    },
+                    "indicators": {},
+                }
+
+                # Fetch TwelveData technical indicators (parallel requests)
+                # Use M5 interval to match EasyInsight indicator timeframe
+                td_interval = "5min"  # M5 data to match EasyInsight indicators
+                indicator_tasks = {
+                    "rsi": twelvedata_service.get_rsi(td_symbol, interval=td_interval, outputsize=1),
+                    "macd": twelvedata_service.get_macd(td_symbol, interval=td_interval, outputsize=1),
+                    "bbands": twelvedata_service.get_bollinger_bands(td_symbol, interval=td_interval, outputsize=1),
+                    # Stochastic: Use (5,3,3) to match EasyInsight parameters
+                    "stoch": twelvedata_service.get_stochastic(td_symbol, interval=td_interval, fast_k_period=5, slow_k_period=3, slow_d_period=3, outputsize=1),
+                    "adx": twelvedata_service.get_adx(td_symbol, interval=td_interval, outputsize=1),
+                    # ATR: Use D1 interval to match EasyInsight (atr_d1)
+                    "atr": twelvedata_service.get_atr(td_symbol, interval="1day", outputsize=1),
+                    # SMA(10) to match EasyInsight (not EMA)
+                    "sma_10": twelvedata_service.get_sma(td_symbol, interval=td_interval, time_period=10, outputsize=1),
+                    "ichimoku": twelvedata_service.get_ichimoku(td_symbol, interval=td_interval, outputsize=1),
+                    # CCI to match EasyInsight
+                    "cci": twelvedata_service.get_cci(td_symbol, interval=td_interval, outputsize=1),
+                }
+
+                # Execute all indicator requests in parallel
+                indicator_results = await asyncio.gather(
+                    *indicator_tasks.values(),
+                    return_exceptions=True
+                )
+
+                # Process results - use the same timestamp as the quote for consistency
+                # NOTE: TwelveData indicator datetimes are in Exchange timezone (not UTC),
+                # so we use the quote's Unix timestamp which is timezone-unambiguous.
+                if display_datetime:
+                    result["twelvedata"]["indicator_datetime_utc"] = format_utc_iso(display_datetime)
+                    result["twelvedata"]["indicator_datetime_display"] = format_for_display(display_datetime)
+
+                for name, res in zip(indicator_tasks.keys(), indicator_results):
+                    if isinstance(res, Exception):
+                        continue
+                    if res and "error" not in res and res.get("values"):
+                        values = res["values"]
+                        latest = values[0] if isinstance(values, list) and values else values
+
+                        if name == "rsi":
+                            result["twelvedata"]["indicators"]["rsi"] = float(latest.get("rsi", 0)) if latest.get("rsi") else None
+                        elif name == "macd":
+                            result["twelvedata"]["indicators"]["macd"] = {
+                                "main": float(latest.get("macd", 0)) if latest.get("macd") else None,
+                                "signal": float(latest.get("macd_signal", 0)) if latest.get("macd_signal") else None,
+                                "histogram": float(latest.get("macd_hist", 0)) if latest.get("macd_hist") else None,
+                            }
+                        elif name == "bbands":
+                            result["twelvedata"]["indicators"]["bollinger"] = {
+                                "upper": float(latest.get("upper_band", 0)) if latest.get("upper_band") else None,
+                                "middle": float(latest.get("middle_band", 0)) if latest.get("middle_band") else None,
+                                "lower": float(latest.get("lower_band", 0)) if latest.get("lower_band") else None,
+                            }
+                        elif name == "stoch":
+                            result["twelvedata"]["indicators"]["stochastic"] = {
+                                "k": float(latest.get("slow_k", 0)) if latest.get("slow_k") else None,
+                                "d": float(latest.get("slow_d", 0)) if latest.get("slow_d") else None,
+                            }
+                        elif name == "adx":
+                            result["twelvedata"]["indicators"]["adx"] = float(latest.get("adx", 0)) if latest.get("adx") else None
+                        elif name == "atr":
+                            result["twelvedata"]["indicators"]["atr"] = float(latest.get("atr", 0)) if latest.get("atr") else None
+                        elif name == "sma_10":
+                            result["twelvedata"]["indicators"]["sma_10"] = float(latest.get("sma", 0)) if latest.get("sma") else None
+                        elif name == "cci":
+                            result["twelvedata"]["indicators"]["cci"] = float(latest.get("cci", 0)) if latest.get("cci") else None
+                        elif name == "ichimoku":
+                            result["twelvedata"]["indicators"]["ichimoku"] = {
+                                "tenkan": float(latest.get("tenkan_sen", 0)) if latest.get("tenkan_sen") else None,
+                                "kijun": float(latest.get("kijun_sen", 0)) if latest.get("kijun_sen") else None,
+                                "senkou_a": float(latest.get("senkou_span_a", 0)) if latest.get("senkou_span_a") else None,
+                                "senkou_b": float(latest.get("senkou_span_b", 0)) if latest.get("senkou_span_b") else None,
+                                "chikou": float(latest.get("chikou_span", 0)) if latest.get("chikou_span") else None,
+                            }
+
+            elif quote and "error" in quote:
+                result["errors"].append(f"TwelveData: {quote.get('error')}")
+        except Exception as e:
+            result["errors"].append(f"TwelveData: {str(e)}")
 
     return result
+
+
+# ==================== Data Source Availability ====================
+
+
+@symbol_router.get("/managed-symbols/data-sources/{symbol:path}")
+async def get_symbol_data_sources(symbol: str):
+    """
+    Get data source availability information for a symbol.
+
+    Returns which data sources (TwelveData, EasyInsight, Yahoo Finance) are available
+    for this symbol, whether explicitly set or auto-detected.
+    """
+    try:
+        info = await symbol_service.get_data_source_info(symbol)
+        return info
+    except Exception as e:
+        logger.error(f"Failed to get data source info for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class DataSourceAvailabilityRequest(BaseModel):
+    """Request to update data source availability for a symbol."""
+    twelvedata_available: Optional[bool] = Field(
+        None,
+        description="True=available, False=not available (use fallback), None=auto-detect"
+    )
+    easyinsight_available: Optional[bool] = Field(
+        None,
+        description="True=available, False=not available (use fallback), None=auto-detect"
+    )
+    preferred_data_source: Optional[str] = Field(
+        None,
+        description="Preferred data source: 'twelvedata', 'easyinsight', 'yfinance', or None for auto"
+    )
+
+
+@symbol_router.put("/managed-symbols/data-sources/{symbol:path}")
+async def set_symbol_data_sources(symbol: str, request: DataSourceAvailabilityRequest):
+    """
+    Set data source availability for a symbol.
+
+    Use this to explicitly mark a data source as available or unavailable.
+    Set to None to use auto-detection based on UNSUPPORTED_SYMBOLS lists.
+    """
+    try:
+        updated = await symbol_service.set_data_source_availability(
+            symbol_id=symbol,
+            twelvedata_available=request.twelvedata_available,
+            easyinsight_available=request.easyinsight_available,
+            preferred_data_source=request.preferred_data_source,
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail=f"Symbol '{symbol}' not found")
+        return {
+            "symbol": symbol,
+            "updated": True,
+            "twelvedata_available": updated.twelvedata_available,
+            "easyinsight_available": updated.easyinsight_available,
+            "preferred_data_source": updated.preferred_data_source,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update data source availability for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @symbol_router.post("/managed-symbols", response_model=ManagedSymbol)
@@ -7446,6 +7524,7 @@ async def restore_predictions_backup(file: UploadFile = File(...)):
                     prediction_error_pct=fb_data.get("prediction_error_pct"),
                     direction_correct=fb_data.get("direction_correct"),
                     evaluated_at=datetime.fromisoformat(fb_data["evaluated_at"]) if fb_data.get("evaluated_at") else None,
+                    timeframe=fb_data.get("timeframe"),
                 )
                 model_improvement_service.pending_feedback[symbol].append(fb)
                 restored_pending += 1
@@ -7467,6 +7546,7 @@ async def restore_predictions_backup(file: UploadFile = File(...)):
                     prediction_error_pct=fb_data.get("prediction_error_pct"),
                     direction_correct=fb_data.get("direction_correct"),
                     evaluated_at=datetime.fromisoformat(fb_data["evaluated_at"]) if fb_data.get("evaluated_at") else None,
+                    timeframe=fb_data.get("timeframe"),
                 )
                 model_improvement_service.evaluated_feedback[symbol].append(fb)
                 restored_evaluated += 1
