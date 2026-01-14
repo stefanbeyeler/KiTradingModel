@@ -86,6 +86,12 @@ SCHEDULER_CONFIG_FILE = "/app/data/scheduler_config.json"
 scheduler_runtime_config = {
     "interval_minutes": None,  # None = use settings default
     "min_priority": None,      # None = use settings default
+    # ML service calls are slow (real-time inference) - disable by default for faster fetches
+    # External sources from Data Service are fast (cached in TimescaleDB)
+    "include_candlestick": False,  # Candlestick Service patterns
+    "include_tcn": False,          # TCN chart pattern detection
+    "include_hmm": False,          # HMM regime detection
+    "include_nhits": False,        # NHITS price forecasts
 }
 
 def load_scheduler_config():
@@ -462,16 +468,27 @@ async def fetch_external_sources_task():
             total_stored = 0
 
             async def fetch_all_for_symbol(symbol: str) -> int:
-                """Fetch all data sources for a single symbol."""
+                """Fetch all data sources for a single symbol.
+
+                ML service calls (Candlestick, TCN, HMM, NHITS) are configurable
+                because they do real-time inference which is slow.
+                External sources from Data Service are fast (cached in TimescaleDB).
+                """
                 try:
-                    results = await asyncio.gather(
-                        fetch_and_store_for_symbol(symbol, min_priority),
-                        fetch_and_store_candlestick_patterns(symbol),
-                        fetch_and_store_tcn_patterns(symbol),
-                        fetch_and_store_hmm_regime(symbol),
-                        fetch_and_store_nhits_forecast(symbol),
-                        return_exceptions=True
-                    )
+                    # Always fetch external sources (fast, cached)
+                    tasks = [fetch_and_store_for_symbol(symbol, min_priority)]
+
+                    # Optionally include ML service calls (slow, real-time inference)
+                    if scheduler_runtime_config.get("include_candlestick", False):
+                        tasks.append(fetch_and_store_candlestick_patterns(symbol))
+                    if scheduler_runtime_config.get("include_tcn", False):
+                        tasks.append(fetch_and_store_tcn_patterns(symbol))
+                    if scheduler_runtime_config.get("include_hmm", False):
+                        tasks.append(fetch_and_store_hmm_regime(symbol))
+                    if scheduler_runtime_config.get("include_nhits", False):
+                        tasks.append(fetch_and_store_nhits_forecast(symbol))
+
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
                     stored = sum(r for r in results if isinstance(r, int))
                     if stored > 0:
                         logger.info(f"Fetched and stored {stored} documents for {symbol}")
@@ -954,6 +971,11 @@ class SchedulerConfigRequest(BaseModel):
     """Request model for updating scheduler configuration."""
     interval_minutes: Optional[int] = Field(None, ge=1, le=1440, description="Fetch interval in minutes (1-1440)")
     min_priority: Optional[str] = Field(None, description="Minimum priority: critical, high, medium, low")
+    # ML service inclusion (slow, real-time inference)
+    include_candlestick: Optional[bool] = Field(None, description="Include Candlestick Service patterns (slow)")
+    include_tcn: Optional[bool] = Field(None, description="Include TCN chart patterns (slow)")
+    include_hmm: Optional[bool] = Field(None, description="Include HMM regime detection (slow)")
+    include_nhits: Optional[bool] = Field(None, description="Include NHITS forecasts (slow)")
 
 
 @app.get("/api/v1/rag/scheduler/config", tags=["Data Ingestion"])
@@ -1000,6 +1022,20 @@ async def update_scheduler_config(request: SchedulerConfigRequest):
         scheduler_runtime_config["min_priority"] = request.min_priority.lower()
         updated["min_priority"] = request.min_priority.lower()
 
+    # ML service inclusion settings
+    if request.include_candlestick is not None:
+        scheduler_runtime_config["include_candlestick"] = request.include_candlestick
+        updated["include_candlestick"] = request.include_candlestick
+    if request.include_tcn is not None:
+        scheduler_runtime_config["include_tcn"] = request.include_tcn
+        updated["include_tcn"] = request.include_tcn
+    if request.include_hmm is not None:
+        scheduler_runtime_config["include_hmm"] = request.include_hmm
+        updated["include_hmm"] = request.include_hmm
+    if request.include_nhits is not None:
+        scheduler_runtime_config["include_nhits"] = request.include_nhits
+        updated["include_nhits"] = request.include_nhits
+
     # Persist to file
     save_scheduler_config()
 
@@ -1008,7 +1044,11 @@ async def update_scheduler_config(request: SchedulerConfigRequest):
         "updated": updated,
         "current_config": {
             "interval_minutes": get_scheduler_interval(),
-            "min_priority": get_scheduler_priority()
+            "min_priority": get_scheduler_priority(),
+            "include_candlestick": scheduler_runtime_config.get("include_candlestick", False),
+            "include_tcn": scheduler_runtime_config.get("include_tcn", False),
+            "include_hmm": scheduler_runtime_config.get("include_hmm", False),
+            "include_nhits": scheduler_runtime_config.get("include_nhits", False),
         }
     }
 

@@ -329,9 +329,13 @@
 
         <div class="content-card">
             <h2>&#128337; Multi-Timeframe Training</h2>
-            <p>Der Service unterstützt Training für verschiedene Zeitintervalle:</p>
+            <p>Der Service unterstützt Training für 6 verschiedene Zeitintervalle:</p>
 
-            <div class="timeframe-grid">
+            <div class="timeframe-grid" style="grid-template-columns: repeat(6, 1fr);">
+                <div class="timeframe-item">
+                    <div class="tf-name">M5</div>
+                    <div class="tf-desc">5 Minuten</div>
+                </div>
                 <div class="timeframe-item">
                     <div class="tf-name">M15</div>
                     <div class="tf-desc">15 Minuten</div>
@@ -341,18 +345,22 @@
                     <div class="tf-desc">1 Stunde</div>
                 </div>
                 <div class="timeframe-item">
-                    <div class="tf-name">1H</div>
-                    <div class="tf-desc">Standard-Stunde</div>
+                    <div class="tf-name">H4</div>
+                    <div class="tf-desc">4 Stunden</div>
                 </div>
                 <div class="timeframe-item">
                     <div class="tf-name">D1</div>
                     <div class="tf-desc">1 Tag</div>
                 </div>
+                <div class="timeframe-item">
+                    <div class="tf-name">W1</div>
+                    <div class="tf-desc">1 Woche</div>
+                </div>
             </div>
 
             <div class="info-box">
                 <strong>Trainingsablauf:</strong> Beim Multi-Timeframe Training werden Modelle für alle
-                ausgewahlten Zeitrahmen trainiert. Der Fortschritt kann live im Dashboard verfolgt werden.
+                ausgewählten Zeitrahmen trainiert. Der Fortschritt kann live im Dashboard verfolgt werden.
             </div>
         </div>
 

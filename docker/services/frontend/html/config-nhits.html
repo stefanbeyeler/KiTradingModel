@@ -828,7 +828,11 @@
                         </div>
                         <div class="timeframe-breakdown">
                             <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.75rem;">Modelle nach Timeframe:</div>
-                            <div class="training-info" style="grid-template-columns: repeat(3, 1fr);">
+                            <div class="training-info" style="grid-template-columns: repeat(6, 1fr);">
+                                <div class="training-stat" title="5-Minuten Modelle">
+                                    <div class="value" id="stat-tf-m5">-</div>
+                                    <div class="label">M5</div>
+                                </div>
                                 <div class="training-stat" title="15-Minuten Modelle">
                                     <div class="value" id="stat-tf-m15">-</div>
                                     <div class="label">M15</div>
@@ -837,9 +841,17 @@
                                     <div class="value" id="stat-tf-h1">-</div>
                                     <div class="label">H1</div>
                                 </div>
+                                <div class="training-stat" title="4-Stunden Modelle">
+                                    <div class="value" id="stat-tf-h4">-</div>
+                                    <div class="label">H4</div>
+                                </div>
                                 <div class="training-stat" title="Tägliche Modelle">
                                     <div class="value" id="stat-tf-d1">-</div>
                                     <div class="label">D1</div>
+                                </div>
+                                <div class="training-stat" title="Wöchentliche Modelle">
+                                    <div class="value" id="stat-tf-w1">-</div>
+                                    <div class="label">W1</div>
                                 </div>
                             </div>
                         </div>
@@ -852,19 +864,28 @@
                         <h2 class="card-title">Schnellaktionen</h2>
                     </div>
                     <div class="quick-actions">
-                        <button class="btn btn-success" onclick="startTraining(['M15', 'H1', 'D1'])" id="btn-train-all">
-                            Multi-Timeframe Training (M15, H1, D1)
+                        <button class="btn btn-success" onclick="startTraining(['M5', 'M15', 'H1', 'H4', 'D1', 'W1'])" id="btn-train-all">
+                            Multi-Timeframe Training (Alle)
                         </button>
-                        <button class="btn btn-primary" onclick="startTraining(['M15'])" id="btn-train-m15">
-                            Nur M15 Training
+                        <button class="btn btn-primary btn-sm" onclick="startTraining(['M5'])" id="btn-train-m5">
+                            Nur M5
                         </button>
-                        <button class="btn btn-primary" onclick="startTraining(['H1'])" id="btn-train-h1">
-                            Nur H1 Training
+                        <button class="btn btn-primary btn-sm" onclick="startTraining(['M15'])" id="btn-train-m15">
+                            Nur M15
                         </button>
-                        <button class="btn btn-primary" onclick="startTraining(['D1'])" id="btn-train-d1">
-                            Nur D1 Training
+                        <button class="btn btn-primary btn-sm" onclick="startTraining(['H1'])" id="btn-train-h1">
+                            Nur H1
                         </button>
-                        <button class="btn btn-warning" onclick="startTraining(['M15', 'H1', 'D1'], true)" id="btn-force-train" title="Trainiert alle Modelle neu, auch wenn bereits aktuell">
+                        <button class="btn btn-primary btn-sm" onclick="startTraining(['H4'])" id="btn-train-h4">
+                            Nur H4
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="startTraining(['D1'])" id="btn-train-d1">
+                            Nur D1
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="startTraining(['W1'])" id="btn-train-w1">
+                            Nur W1
+                        </button>
+                        <button class="btn btn-warning" onclick="startTraining(['M5', 'M15', 'H1', 'H4', 'D1', 'W1'], true)" id="btn-force-train" title="Trainiert alle Modelle neu, auch wenn bereits aktuell">
                             Force Train All
                         </button>
                         <button class="btn btn-danger" onclick="cancelTraining()" id="btn-cancel" disabled>
@@ -905,9 +926,12 @@
                     </select>
                     <select class="filter-select" id="timeframe-filter" onchange="filterModels()">
                         <option value="">Alle Timeframes</option>
+                        <option value="M5">M5</option>
                         <option value="M15">M15</option>
                         <option value="H1">H1</option>
+                        <option value="H4">H4</option>
                         <option value="D1">D1</option>
+                        <option value="W1">W1</option>
                     </select>
                     <button class="btn btn-primary" onclick="loadModels()">Aktualisieren</button>
                     <div class="legend" style="margin-left: auto;">
@@ -950,9 +974,12 @@
                     <div class="form-group" style="margin: 0;">
                         <label style="font-size: 0.85rem; opacity: 0.7;">Timeframe</label>
                         <select class="filter-select" id="batch-timeframe" style="min-width: 180px;">
+                            <option value="M5">M5 (5 Min)</option>
                             <option value="M15">M15 (15 Min)</option>
                             <option value="H1" selected>H1 (1 Stunde)</option>
+                            <option value="H4">H4 (4 Stunden)</option>
                             <option value="D1">D1 (Täglich)</option>
+                            <option value="W1">W1 (Wöchentlich)</option>
                         </select>
                     </div>
                     <button class="btn btn-success" onclick="runBatchForecast('favorites')" id="btn-forecast-favorites">
@@ -1000,13 +1027,22 @@
                         </div>
                         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
                             <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
+                                <input type="checkbox" id="auto-tf-m5"> M5
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
                                 <input type="checkbox" id="auto-tf-m15" checked> M15
                             </label>
                             <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
                                 <input type="checkbox" id="auto-tf-h1" checked> H1
                             </label>
                             <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
+                                <input type="checkbox" id="auto-tf-h4"> H4
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
                                 <input type="checkbox" id="auto-tf-d1" checked> D1
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
+                                <input type="checkbox" id="auto-tf-w1"> W1
                             </label>
                         </div>
                         <div style="display: flex; gap: 0.5rem;">
@@ -1093,9 +1129,12 @@
                         <div class="form-group">
                             <label for="forecast-timeframe">Timeframe</label>
                             <select class="filter-select" id="forecast-timeframe" style="width: 100%;">
+                                <option value="M5">M5 (5 Min) - 1h Horizont</option>
                                 <option value="M15">M15 (15 Min) - 2h Horizont</option>
                                 <option value="H1" selected>H1 (1 Stunde) - 24h Horizont</option>
+                                <option value="H4">H4 (4 Stunden) - 48h Horizont</option>
                                 <option value="D1">D1 (Täglich) - 7 Tage Horizont</option>
+                                <option value="W1">W1 (Wöchentlich) - 4 Wochen Horizont</option>
                             </select>
                         </div>
                         <div class="form-group" style="margin-top: 1rem;">
@@ -1649,9 +1688,12 @@
                 const res = await fetch(`${API_BASE}/forecast/models/by-timeframe`);
                 const data = await res.json();
 
+                document.getElementById('stat-tf-m5').textContent = data.by_timeframe?.M5?.count || 0;
                 document.getElementById('stat-tf-m15').textContent = data.by_timeframe?.M15?.count || 0;
                 document.getElementById('stat-tf-h1').textContent = data.by_timeframe?.H1?.count || 0;
+                document.getElementById('stat-tf-h4').textContent = data.by_timeframe?.H4?.count || 0;
                 document.getElementById('stat-tf-d1').textContent = data.by_timeframe?.D1?.count || 0;
+                document.getElementById('stat-tf-w1').textContent = data.by_timeframe?.W1?.count || 0;
             } catch (err) {
                 console.error('Failed to load model counts:', err);
             }
@@ -1816,8 +1858,8 @@
                 return matchSearch && matchTf && matchFav;
             });
 
-            // Sort by 1. Favorites first, 2. Symbol, 3. Timeframe (M15, H1, D1)
-            const timeframeOrder = { 'M15': 1, 'H1': 2, 'D1': 3, 'default': 2 };
+            // Sort by 1. Favorites first, 2. Symbol, 3. Timeframe (M5, M15, H1, H4, D1, W1)
+            const timeframeOrder = { 'M5': 1, 'M15': 2, 'H1': 3, 'H4': 4, 'D1': 5, 'W1': 6, 'default': 3 };
             filtered.sort((a, b) => {
                 // Favorites first
                 if (a.isFavorite !== b.isFavorite) return b.isFavorite - a.isFavorite;
@@ -3169,9 +3211,12 @@
                 stopBtn.style.display = 'inline-flex';
 
                 // Update checkboxes to reflect active timeframes
+                document.getElementById('auto-tf-m5').checked = favorites.enabled_timeframes.includes('M5');
                 document.getElementById('auto-tf-m15').checked = favorites.enabled_timeframes.includes('M15');
                 document.getElementById('auto-tf-h1').checked = favorites.enabled_timeframes.includes('H1');
+                document.getElementById('auto-tf-h4').checked = favorites.enabled_timeframes.includes('H4');
                 document.getElementById('auto-tf-d1').checked = favorites.enabled_timeframes.includes('D1');
+                document.getElementById('auto-tf-w1').checked = favorites.enabled_timeframes.includes('W1');
             } else {
                 statusDiv.innerHTML = '<span class="badge badge-failed">Inaktiv</span>';
                 startBtn.style.display = 'inline-flex';
@@ -3229,9 +3274,12 @@
         // Start favorites auto-forecast
         async function startFavoritesAutoForecast() {
             const timeframes = [];
+            if (document.getElementById('auto-tf-m5').checked) timeframes.push('M5');
             if (document.getElementById('auto-tf-m15').checked) timeframes.push('M15');
             if (document.getElementById('auto-tf-h1').checked) timeframes.push('H1');
+            if (document.getElementById('auto-tf-h4').checked) timeframes.push('H4');
             if (document.getElementById('auto-tf-d1').checked) timeframes.push('D1');
+            if (document.getElementById('auto-tf-w1').checked) timeframes.push('W1');
 
             if (timeframes.length === 0) {
                 showToast('Mindestens ein Timeframe muss ausgewählt sein', 'warning');
