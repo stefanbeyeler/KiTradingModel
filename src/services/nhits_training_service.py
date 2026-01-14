@@ -574,12 +574,18 @@ class NHITSTrainingService:
             # For H1: min_required is in hours, convert to days
             # For M15: min_required is in 15-min intervals, convert to days
             step_minutes = tf_config["step_minutes"]
-            if step_minutes == 1440:  # D1
+            if step_minutes == 10080:  # W1 (weekly)
+                required_days = (min_required * 7) + 30  # Weeks to days + buffer
+            elif step_minutes == 1440:  # D1
                 required_days = min_required + 14  # Add 2 week buffer for D1
+            elif step_minutes == 240:  # H4
+                required_days = (min_required // 6) + 7  # 6 H4 candles per day + buffer
             elif step_minutes == 60:  # H1
                 required_days = (min_required // 24) + 7  # Convert hours to days + buffer
-            else:  # M15
+            elif step_minutes == 15:  # M15
                 required_days = (min_required // 96) + 3  # 96 = 24*4 (15min intervals per day)
+            else:  # M5
+                required_days = (min_required // 288) + 2  # 288 = 24*12 (5min intervals per day)
 
             logger.info(
                 f"Training {symbol}/{tf}: min_required={min_required} samples, "
@@ -694,7 +700,7 @@ class NHITSTrainingService:
             symbols: List of symbols to train (None = all available)
             force: Force retraining even if model is up to date
             max_concurrent: Maximum concurrent training tasks
-            timeframes: List of timeframes to train (default: ["M15", "H1", "D1"])
+            timeframes: List of timeframes to train (default: all supported)
 
         Returns:
             Summary of training results
@@ -713,7 +719,7 @@ class NHITSTrainingService:
 
         # Default timeframes for multi-timeframe training
         if timeframes is None:
-            timeframes = ["M15", "H1", "D1"]
+            timeframes = ["M5", "M15", "H1", "H4", "D1", "W1"]
 
         # Reset progress counters
         self._training_completed_symbols = 0

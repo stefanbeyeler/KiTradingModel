@@ -168,9 +168,12 @@ class ForecastService:
     # Timeframe configurations: (horizon_steps, input_size, step_minutes)
     # input_size must be > horizon to create valid training sequences
     TIMEFRAME_CONFIG = {
-        "M15": {"horizon": 8, "input_size": 96, "step_minutes": 15},   # 2h horizon, 24h lookback
-        "H1": {"horizon": 24, "input_size": 168, "step_minutes": 60},  # 24h horizon, 7d lookback
-        "D1": {"horizon": 7, "input_size": 60, "step_minutes": 1440},  # 7d horizon, 60d lookback (fixed from 30)
+        "M5": {"horizon": 12, "input_size": 144, "step_minutes": 5},    # 1h horizon, 12h lookback
+        "M15": {"horizon": 8, "input_size": 96, "step_minutes": 15},    # 2h horizon, 24h lookback
+        "H1": {"horizon": 24, "input_size": 168, "step_minutes": 60},   # 24h horizon, 7d lookback
+        "H4": {"horizon": 12, "input_size": 84, "step_minutes": 240},   # 48h horizon, 14d lookback
+        "D1": {"horizon": 7, "input_size": 60, "step_minutes": 1440},   # 7d horizon, 60d lookback
+        "W1": {"horizon": 4, "input_size": 26, "step_minutes": 10080},  # 4w horizon, 26w lookback
     }
 
     def __init__(self):

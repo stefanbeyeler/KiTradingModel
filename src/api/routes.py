@@ -1741,17 +1741,20 @@ async def list_models_by_timeframe():
     """
     List all trained NHITS models grouped by timeframe.
 
-    Returns models organized by their timeframe suffix (M15, H1, D1).
+    Returns models organized by their timeframe suffix (M5, M15, H1, H4, D1, W1).
     """
     try:
         forecast_service = get_forecast_service()
         models = forecast_service.list_models()
 
-        # Group models by timeframe (only M15, H1, D1)
+        # Group models by timeframe
         timeframe_groups = {
+            "M5": [],       # 5 minutes
             "M15": [],      # 15 minutes
             "H1": [],       # Hourly
+            "H4": [],       # 4 hours
             "D1": [],       # Daily
+            "W1": [],       # Weekly
         }
 
         for model in models:
@@ -1760,12 +1763,18 @@ async def list_models_by_timeframe():
             symbol = model.symbol
 
             # Check for timeframe suffix
-            if symbol.endswith("_M15"):
+            if symbol.endswith("_M5"):
+                timeframe_groups["M5"].append(symbol.replace("_M5", ""))
+            elif symbol.endswith("_M15"):
                 timeframe_groups["M15"].append(symbol.replace("_M15", ""))
             elif symbol.endswith("_H1"):
                 timeframe_groups["H1"].append(symbol.replace("_H1", ""))
+            elif symbol.endswith("_H4"):
+                timeframe_groups["H4"].append(symbol.replace("_H4", ""))
             elif symbol.endswith("_D1"):
                 timeframe_groups["D1"].append(symbol.replace("_D1", ""))
+            elif symbol.endswith("_W1"):
+                timeframe_groups["W1"].append(symbol.replace("_W1", ""))
             # Skip models without timeframe suffix (legacy models)
 
         # Sort symbols in each group
@@ -1777,6 +1786,11 @@ async def list_models_by_timeframe():
         return {
             "total_models": total,
             "by_timeframe": {
+                "M5": {
+                    "count": len(timeframe_groups["M5"]),
+                    "label": "5 Minuten (M5)",
+                    "symbols": timeframe_groups["M5"]
+                },
                 "M15": {
                     "count": len(timeframe_groups["M15"]),
                     "label": "15 Minuten (M15)",
@@ -1787,10 +1801,20 @@ async def list_models_by_timeframe():
                     "label": "Stündlich (H1)",
                     "symbols": timeframe_groups["H1"]
                 },
+                "H4": {
+                    "count": len(timeframe_groups["H4"]),
+                    "label": "4 Stunden (H4)",
+                    "symbols": timeframe_groups["H4"]
+                },
                 "D1": {
                     "count": len(timeframe_groups["D1"]),
                     "label": "Täglich (D1)",
                     "symbols": timeframe_groups["D1"]
+                },
+                "W1": {
+                    "count": len(timeframe_groups["W1"]),
+                    "label": "Wöchentlich (W1)",
+                    "symbols": timeframe_groups["W1"]
                 }
             }
         }
@@ -1994,7 +2018,7 @@ async def train_all_models(
 
         # Validate timeframes if provided
         if timeframes:
-            valid_timeframes = ["M15", "H1", "D1"]
+            valid_timeframes = ["M5", "M15", "H1", "H4", "D1", "W1"]
             invalid = [tf for tf in timeframes if tf.upper() not in valid_timeframes]
             if invalid:
                 raise HTTPException(
@@ -2016,7 +2040,7 @@ async def train_all_models(
                 "status": "started",
                 "message": "Multi-timeframe training started in background",
                 "symbols": symbols or "all available",
-                "timeframes": timeframes or ["M15", "H1", "D1"]
+                "timeframes": timeframes or ["M5", "M15", "H1", "H4", "D1", "W1"]
             }
         else:
             # Run training synchronously
@@ -2590,14 +2614,17 @@ async def get_forecast(
     - symbol: Trading symbol (e.g., EURUSD)
     - horizon: Forecast horizon in hours (default: 24, max: 168) - NOTE: overridden by timeframe config
     - retrain: Force model retraining before forecast (default: false)
-    - timeframe: Data granularity - M15 (15-min, 2h horizon), H1 (hourly, 24h horizon), D1 (daily, 7d horizon)
+    - timeframe: Data granularity (M5, M15, H1, H4, D1, W1)
 
     Returns predicted prices with confidence intervals for the specified horizon.
 
     **Timeframe configurations:**
+    - **M5**: 5-minute candles, 12-step forecast (1 hour), 144-candle lookback (12 hours)
     - **M15**: 15-minute candles, 8-step forecast (2 hours), 96-candle lookback (24 hours)
     - **H1** (default): Hourly candles, 24-step forecast (24 hours), 168-candle lookback (7 days)
-    - **D1**: Daily candles, 7-step forecast (7 days), 30-candle lookback (30 days)
+    - **H4**: 4-hour candles, 12-step forecast (48 hours), 84-candle lookback (14 days)
+    - **D1**: Daily candles, 7-step forecast (7 days), 60-candle lookback (60 days)
+    - **W1**: Weekly candles, 4-step forecast (4 weeks), 26-candle lookback (26 weeks)
     """
     try:
         # Check if NHITS is enabled
@@ -2609,26 +2636,26 @@ async def get_forecast(
 
         # Validate timeframe
         timeframe = timeframe.upper()
-        if timeframe not in ["M15", "H1", "D1"]:
+        valid_timeframes = ["M5", "M15", "H1", "H4", "D1", "W1"]
+        if timeframe not in valid_timeframes:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid timeframe '{timeframe}'. Use M15, H1, or D1."
+                detail=f"Invalid timeframe '{timeframe}'. Use one of: {', '.join(valid_timeframes)}."
             )
 
         # Determine data requirements based on timeframe
         from datetime import timedelta
-        if timeframe == "M15":
-            # M15 needs ~24h of data for 96 candles input
-            days_needed = 2
-            interval = "m15"
-        elif timeframe == "D1":
-            # D1 needs ~30 days of data for 30 candles input + 7 horizon + buffer for sequences
-            days_needed = 60
-            interval = "d1"
-        else:  # H1
-            # H1 needs ~7 days of data for 168 candles input
-            days_needed = 30
-            interval = "h1"
+        timeframe_data_config = {
+            "M5": {"days": 2, "interval": "m5"},      # 144 candles = 12h lookback
+            "M15": {"days": 2, "interval": "m15"},   # 96 candles = 24h lookback
+            "H1": {"days": 30, "interval": "h1"},    # 168 candles = 7d lookback
+            "H4": {"days": 30, "interval": "h4"},    # 84 candles = 14d lookback
+            "D1": {"days": 90, "interval": "d1"},    # 60 candles = 60d lookback
+            "W1": {"days": 365, "interval": "w1"},   # 26 candles = 26w lookback
+        }
+        config_data = timeframe_data_config[timeframe]
+        days_needed = config_data["days"]
+        interval = config_data["interval"]
 
         # Fetch time series data using nhits_training_service (works in NHITS container)
         from ..services.nhits_training_service import nhits_training_service
@@ -2682,7 +2709,7 @@ async def train_forecast_model(
     - symbol: Trading symbol
     - days: Number of days of historical data to use (default: 90)
     - force: Force retraining even if model is up to date
-    - timeframe: Timeframe for the model (M15, H1, D1) - default: H1
+    - timeframe: Timeframe for the model (M5, M15, H1, H4, D1, W1) - default: H1
 
     This will train a new model or replace the existing one.
     The model will be saved with a timeframe suffix (e.g., EURUSD_M15, EURUSD_H1).
@@ -2696,10 +2723,11 @@ async def train_forecast_model(
 
         # Validate timeframe
         timeframe = timeframe.upper()
-        if timeframe not in ["M15", "H1", "D1"]:
+        valid_timeframes = ["M5", "M15", "H1", "H4", "D1", "W1"]
+        if timeframe not in valid_timeframes:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid timeframe '{timeframe}'. Use M15, H1, or D1."
+                detail=f"Invalid timeframe '{timeframe}'. Use one of: {', '.join(valid_timeframes)}."
             )
 
         # Use nhits_training_service which supports EasyInsight API
