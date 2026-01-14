@@ -570,21 +570,29 @@ class ModelImprovementService:
                         min_diff = float('inf')
 
                         for candle in data:
-                            # Parse snapshot_time from EasyInsight data
-                            snapshot_time_str = candle.get('snapshot_time', '')
-                            if not snapshot_time_str:
+                            # Support both EasyInsight (snapshot_time) and TwelveData (datetime) formats
+                            time_str = candle.get('snapshot_time') or candle.get('datetime', '')
+                            if not time_str:
                                 continue
 
                             try:
-                                candle_time = datetime.fromisoformat(snapshot_time_str.replace('Z', '+00:00'))
+                                # Handle different datetime formats
+                                if 'T' in time_str or '+' in time_str or 'Z' in time_str:
+                                    # ISO format: 2026-01-14T05:00:00Z or 2026-01-14T05:00:00+00:00
+                                    candle_time = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+                                else:
+                                    # TwelveData format: "2026-01-14 05:00:00"
+                                    candle_time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+                                    candle_time = candle_time.replace(tzinfo=tz.utc)
                             except ValueError:
                                 continue
 
                             diff = abs((candle_time - target_aware).total_seconds())
                             if diff < min_diff:
                                 min_diff = diff
-                                # Use h1_close for H1 timeframe
-                                closest_price = float(candle.get('h1_close', 0))
+                                # Support both EasyInsight (h1_close) and TwelveData (close) formats
+                                price_val = candle.get('h1_close') or candle.get('close', 0)
+                                closest_price = float(price_val) if price_val else 0
 
                         if closest_price and closest_price > 0 and min_diff < 14400:  # Within 4 hours
                             return closest_price
@@ -607,24 +615,38 @@ class ModelImprovementService:
 
         return None
 
-    async def evaluate_pending_predictions_via_api(self) -> Dict[str, int]:
+    async def evaluate_pending_predictions_via_api(self, max_per_cycle: int = 100) -> Dict[str, int]:
         """
         Evaluate pending predictions using EasyInsight/Data Service API.
 
         This method does not require database access and uses the Data Service
         as a gateway to fetch historical prices.
 
+        Args:
+            max_per_cycle: Maximum predictions to evaluate per cycle (default 100)
+                          This prevents long-running cycles and allows regular status updates.
+
         Returns:
             Dict mapping symbol to number of evaluated predictions
         """
         evaluated = {}
         now = datetime.utcnow()
+        total_evaluated_this_cycle = 0
 
         for symbol, feedbacks in list(self.pending_feedback.items()):
+            # Stop if we've evaluated enough this cycle
+            if total_evaluated_this_cycle >= max_per_cycle:
+                break
+
             symbol_evaluated = 0
             remaining = []
 
             for fb in feedbacks:
+                # Stop if we've evaluated enough this cycle
+                if total_evaluated_this_cycle >= max_per_cycle:
+                    remaining.append(fb)
+                    continue
+
                 # Check if enough time has passed
                 target_time = self._parse_horizon_to_target_time(fb.timestamp, fb.horizon)
 
@@ -663,6 +685,10 @@ class ModelImprovementService:
                         # Update metrics
                         self._update_metrics(symbol, fb)
                         symbol_evaluated += 1
+                        total_evaluated_this_cycle += 1
+
+                        # Update running total immediately for status display
+                        self._total_auto_evaluations += 1
 
                         logger.info(
                             f"Evaluated {symbol} {fb.horizon}: "
@@ -683,7 +709,7 @@ class ModelImprovementService:
 
         if evaluated:
             self._save_data()
-            logger.info(f"Evaluated predictions via API: {evaluated}")
+            logger.info(f"Evaluated {total_evaluated_this_cycle} predictions via API: {evaluated}")
 
         return evaluated
 
@@ -926,14 +952,14 @@ class ModelImprovementService:
             logger.debug(f"Auto-evaluation cycle started. Pending predictions: {pending_count}")
 
             # Evaluate pending predictions via API (no DB required)
-            evaluated = await self.evaluate_pending_predictions_via_api()
+            # Note: _total_auto_evaluations is updated inside evaluate_pending_predictions_via_api
+            evaluated = await self.evaluate_pending_predictions_via_api(max_per_cycle=100)
 
             # Always update last evaluation time to show loop is running
             self._last_evaluation_time = datetime.utcnow()
 
             if evaluated:
-                self._total_auto_evaluations += sum(evaluated.values())
-                logger.info(f"Auto-evaluation completed: {evaluated}")
+                logger.info(f"Auto-evaluation cycle completed: {evaluated}")
 
                 # Check if any symbols need retraining and trigger auto-retrain
                 if self._auto_retrain_enabled:

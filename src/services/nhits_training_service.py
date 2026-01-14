@@ -430,128 +430,6 @@ class NHITSTrainingService:
         logger.info(f"Parsed {len(time_series)} data points from Twelve Data for {symbol}/{timeframe}")
         return time_series
 
-    async def get_training_data_yfinance(
-        self,
-        symbol: str,
-        timeframe: str = "D1",
-        days: int = 100
-    ) -> List[TimeSeriesData]:
-        """Fetch training data from Yahoo Finance via Data Service as second fallback.
-
-        ARCHITEKTUR-KONFORM: Alle Datenzugriffe erfolgen über den Data Service.
-        Der Data Service (Port 3001) ist das einzige Gateway für Yahoo Finance.
-
-        Args:
-            symbol: Trading symbol
-            timeframe: Timeframe for OHLCV data (M15, H1, D1)
-            days: Number of days of data to fetch
-
-        Returns:
-            List of TimeSeriesData objects
-        """
-        import httpx
-        from datetime import datetime
-
-        try:
-            tf = timeframe.upper()
-
-            # Map timeframe to yfinance interval
-            interval_map = {
-                "M15": "15m",
-                "H1": "1h",
-                "D1": "1d"
-            }
-            interval = interval_map.get(tf, "1d")
-
-            # Yahoo Finance has limits on intraday data
-            # 15m: max 60 days, 1h: max 730 days, 1d: unlimited
-            if tf == "M15":
-                logger.info(f"Yahoo Finance: 15min data limited to 60 days")
-            elif tf == "H1":
-                logger.info(f"Yahoo Finance: Hourly data limited to 730 days")
-
-            # Fetch data via Data Service (not directly from yfinance)
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.get(
-                    f"{DATA_SERVICE_URL}/api/v1/yfinance/time-series/{symbol}",
-                    params={
-                        "interval": interval,
-                        "outputsize": days * 2  # Extra buffer for weekends/holidays
-                    }
-                )
-
-                if response.status_code == 503:
-                    logger.warning("Yahoo Finance not available via Data Service")
-                    return []
-
-                response.raise_for_status()
-                result = response.json()
-
-            if "error" in result:
-                logger.warning(f"Yahoo Finance error for {symbol}: {result['error']}")
-                return []
-
-            values = result.get("values", [])
-            if not values:
-                logger.warning(f"No data from Yahoo Finance for {symbol}/{tf}")
-                return []
-
-            # Parse values into TimeSeriesData
-            time_series = []
-            for row in values:
-                try:
-                    timestamp_str = row.get("datetime")
-                    if not timestamp_str:
-                        continue
-
-                    # Yahoo Finance returns: "2024-01-15 14:30:00"
-                    try:
-                        if " " in timestamp_str:
-                            timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
-                        else:
-                            timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d")
-                    except ValueError:
-                        timestamp = datetime.fromisoformat(timestamp_str)
-
-                    open_val = row.get("open")
-                    high_val = row.get("high")
-                    low_val = row.get("low")
-                    close_val = row.get("close")
-                    volume = row.get("volume", 0)
-
-                    if not all([open_val, high_val, low_val, close_val]):
-                        continue
-
-                    time_series.append(TimeSeriesData(
-                        timestamp=timestamp,
-                        symbol=symbol,
-                        open=float(open_val),
-                        high=float(high_val),
-                        low=float(low_val),
-                        close=float(close_val),
-                        volume=float(volume) if volume else 0.0,
-                        additional_data={
-                            'source': 'yfinance',
-                            'timeframe': tf
-                        }
-                    ))
-                except Exception as e:
-                    logger.warning(f"Failed to parse Yahoo Finance row: {e}")
-                    continue
-
-            # Sort by timestamp (oldest first for training)
-            time_series.sort(key=lambda x: x.timestamp)
-
-            logger.info(f"Yahoo Finance returned {len(time_series)} data points for {symbol}/{tf}")
-            return time_series
-
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Data Service HTTP error for Yahoo Finance {symbol}: {e}")
-            return []
-        except Exception as e:
-            logger.error(f"Failed to get Yahoo Finance data for {symbol}: {e}")
-            return []
-
     async def train_symbol(
         self,
         symbol: str,
@@ -596,37 +474,21 @@ class NHITSTrainingService:
             time_series = await self.get_training_data(symbol, days=required_days, timeframe=tf)
             data_source = "easyinsight"
 
-            # If EasyInsight doesn't have enough data, try Twelve Data as fallback
+            # If EasyInsight doesn't have enough data, try TwelveData as fallback
             if len(time_series) < min_required:
                 logger.info(
                     f"EasyInsight has insufficient data for {symbol}/{tf} "
-                    f"({len(time_series)} < {min_required}), trying Twelve Data..."
+                    f"({len(time_series)} < {min_required}), trying TwelveData..."
                 )
                 td_data = await self.get_training_data_twelvedata(symbol, timeframe=tf)
                 if len(td_data) >= min_required:
                     time_series = td_data
                     data_source = "twelvedata"
-                    logger.info(f"Using Twelve Data for {symbol}/{tf}: {len(time_series)} samples")
+                    logger.info(f"Using TwelveData for {symbol}/{tf}: {len(time_series)} samples")
                 elif len(td_data) > len(time_series):
-                    # Use Twelve Data if it has more data, even if still insufficient
+                    # Use TwelveData if it has more data, even if still insufficient
                     time_series = td_data
                     data_source = "twelvedata"
-
-            # If still insufficient, try Yahoo Finance as second fallback
-            if len(time_series) < min_required:
-                logger.info(
-                    f"TwelveData has insufficient data for {symbol}/{tf} "
-                    f"({len(time_series)} < {min_required}), trying Yahoo Finance..."
-                )
-                yf_data = await self.get_training_data_yfinance(symbol, timeframe=tf, days=required_days)
-                if len(yf_data) >= min_required:
-                    time_series = yf_data
-                    data_source = "yfinance"
-                    logger.info(f"Using Yahoo Finance for {symbol}/{tf}: {len(time_series)} samples")
-                elif len(yf_data) > len(time_series):
-                    # Use Yahoo Finance if it has more data
-                    time_series = yf_data
-                    data_source = "yfinance"
 
             if not time_series:
                 return ForecastTrainingResult(
@@ -637,7 +499,7 @@ class NHITSTrainingService:
                     model_path="",
                     metrics=TrainingMetrics(),
                     success=False,
-                    error_message=f"No training data available for {tf} (tried EasyInsight, TwelveData, Yahoo Finance)"
+                    error_message=f"No training data available for {tf} (tried EasyInsight, TwelveData)"
                 )
 
             if len(time_series) < min_required:
