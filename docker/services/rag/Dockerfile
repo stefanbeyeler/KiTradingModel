@@ -1,5 +1,6 @@
 # RAG Service Dockerfile
-FROM nvcr.io/nvidia/pytorch:23.08-py3
+# Use Python base image - CUDA libraries are mounted from host via nvidia runtime
+FROM python:3.11-slim
 
 LABEL maintainer="KI Trading Model"
 LABEL service="rag"
@@ -12,15 +13,22 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
+# Copy requirements first for better caching
 COPY docker/services/rag/requirements.txt .
+
+# Install PyTorch Nightly with CUDA 13.0 support for NVIDIA Thor (sm_110)
+# Thor requires sm_110 compute capability which is only in PyTorch 2.10+ with CUDA 13.0
+RUN pip install --no-cache-dir --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu130
+
+# Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install FAISS - use faiss-cpu as faiss-gpu is not available for ARM64/Tegra
-# FAISS will still use GPU via PyTorch for embeddings
-RUN pip install --no-cache-dir faiss-cpu
+# Install FAISS with GPU support
+# faiss-gpu requires CUDA - try GPU version first, fallback to CPU
+RUN pip install --no-cache-dir faiss-gpu || pip install --no-cache-dir faiss-cpu
 
 # Copy only the RAG app source code (avoid importing other services)
 # ARCHITEKTUR: RAG greift auf Daten NUR über Data Service (Port 3001) zu
@@ -48,6 +56,9 @@ RUN mkdir -p /app/data/faiss /app/data/symbols /app/logs
 ENV PYTHONPATH=/app
 ENV SERVICE_NAME=rag
 ENV PORT=${SERVICE_PORT}
+# Enable CUDA to use host libraries
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 # Expose port
 EXPOSE ${SERVICE_PORT}
