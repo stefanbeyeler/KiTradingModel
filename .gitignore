@@ -23,6 +23,9 @@ logs/
 =0.5.0
 nul
 
+# Build info (generated during build)
+src/build_info.json
+
 # OS
 .DS_Store
 Thumbs.db

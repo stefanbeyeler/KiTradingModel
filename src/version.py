@@ -1,5 +1,6 @@
 """Version configuration for KI Trading Model - derived from Git or environment."""
 
+import json
 import os
 import subprocess
 from datetime import datetime
@@ -12,21 +13,63 @@ BASE_VERSION = "1.0.0"
 _git_info_cache = None
 
 
+def _load_build_info() -> dict | None:
+    """Load build info from JSON file if available.
+
+    This file is generated during Docker build by scripts/generate_build_info.sh
+    """
+    build_info_paths = [
+        Path(__file__).parent / "build_info.json",
+        Path("/app/src/build_info.json"),
+    ]
+
+    for path in build_info_paths:
+        if path.exists():
+            try:
+                with open(path) as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, OSError):
+                continue
+
+    return None
+
+
 def _get_git_info() -> dict:
     """Get version info from git repository or environment variables.
 
     Priority:
-    1. Environment variables (BUILD_VERSION, BUILD_COMMIT, BUILD_DATE, BUILD_NUMBER)
+    1. Build info JSON file (generated during Docker build)
+    2. Environment variables (BUILD_VERSION, BUILD_COMMIT, BUILD_DATE, BUILD_NUMBER)
        - Set during Docker build or CI/CD
-    2. Git repository (if available)
-    3. Fallback values
+    3. Git repository (if available)
+    4. Fallback values
     """
     global _git_info_cache
 
     if _git_info_cache is not None:
         return _git_info_cache
 
-    # Check for environment variables first (Docker/CI builds)
+    # Check for build_info.json file first (Docker builds)
+    build_info = _load_build_info()
+    if build_info and build_info.get("commit"):
+        commit_date = None
+        if build_info.get("commit_date"):
+            try:
+                commit_date = datetime.fromisoformat(
+                    build_info["commit_date"].replace("Z", "+00:00")
+                )
+            except ValueError:
+                pass
+
+        _git_info_cache = {
+            "commit_hash": build_info.get("commit"),
+            "commit_date": commit_date,
+            "tag": build_info.get("tag") or None,
+            "commit_count": build_info.get("commit_count", "0"),
+        }
+        return _git_info_cache
+
+    # Check for environment variables (Docker/CI builds)
     env_commit = os.environ.get("BUILD_COMMIT")
     env_date = os.environ.get("BUILD_DATE")
     env_count = os.environ.get("BUILD_NUMBER")
@@ -134,11 +177,20 @@ def _build_version() -> str:
     if git_info["tag"]:
         return git_info["tag"].lstrip("v")
 
-    # Otherwise use BASE_VERSION + build number + commit hash
-    commit_hash = git_info["commit_hash"] or "unknown"
+    # Build version string based on available info
+    commit_hash = git_info["commit_hash"]
     commit_count = git_info["commit_count"] or "0"
 
-    return f"{BASE_VERSION}.{commit_count}+{commit_hash}"
+    # If we have git info, include build number and commit hash
+    if commit_hash:
+        return f"{BASE_VERSION}.{commit_count}+{commit_hash}"
+
+    # If commit count is available (but no hash), just use build number
+    if commit_count and commit_count != "0":
+        return f"{BASE_VERSION}.{commit_count}"
+
+    # Fallback: just base version (no "unknown" suffix)
+    return BASE_VERSION
 
 
 def _get_release_date() -> str:

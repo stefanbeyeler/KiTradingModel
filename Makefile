@@ -194,8 +194,12 @@ up:
 	export BUILD_NUMBER=$$(git rev-list --count HEAD 2>/dev/null || echo '0') && \
 	docker-compose -f docker-compose.microservices.yml up -d
 
+# Generate build info JSON file (used by Docker builds)
+build-info:
+	@./scripts/generate_build_info.sh src/build_info.json
+
 # Rebuild and start microservices with version info
-up-build:
+up-build: build-info
 	@export BUILD_VERSION=$$(git describe --tags 2>/dev/null || echo '1.0.0').$$(git rev-list --count HEAD 2>/dev/null || echo '0')+$$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown') && \
 	export BUILD_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown') && \
 	export BUILD_DATE=$$(git log -1 --format=%cI 2>/dev/null || date -Iseconds) && \
