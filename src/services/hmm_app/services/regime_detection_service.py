@@ -33,12 +33,21 @@ class RegimeDetectionService:
     def get_model(self, symbol: str) -> HMMRegimeModel:
         """Get or create model for symbol."""
         if symbol not in self._models:
-            # Try to load saved model
-            model_path = os.path.join(self.MODEL_DIR, f"{symbol}_hmm.pkl")
-            if os.path.exists(model_path):
-                self._models[symbol] = HMMRegimeModel.load(model_path)
+            # Try to load saved model - check both naming conventions
+            model_paths = [
+                os.path.join(self.MODEL_DIR, f"hmm_{symbol}.pkl"),  # New format from training
+                os.path.join(self.MODEL_DIR, f"{symbol}_hmm.pkl")   # Legacy format
+            ]
+
+            for model_path in model_paths:
+                if os.path.exists(model_path):
+                    self._models[symbol] = HMMRegimeModel.load(model_path)
+                    logger.debug(f"Loaded HMM model for {symbol} from {model_path}")
+                    break
             else:
+                # No saved model found - create new one
                 self._models[symbol] = HMMRegimeModel()
+                logger.debug(f"Created new HMM model for {symbol}")
 
         return self._models[symbol]
 

@@ -1105,19 +1105,41 @@
             btn.disabled = true;
 
             try {
-                const response = await fetch(`${API_BASE}/regime/scan`);
-                if (!response.ok) throw new Error('Scan failed');
+                // 1. Lade alle verfügbaren Symbole
+                const symbolsResponse = await fetch('/data/api/v1/managed-symbols');
+                if (!symbolsResponse.ok) throw new Error('Failed to load symbols');
+
+                const symbolsData = await symbolsResponse.json();
+                const symbols = symbolsData.map(s => s.symbol);
+
+                if (symbols.length === 0) {
+                    throw new Error('Keine Symbole verfügbar');
+                }
+
+                // 2. Scanne alle Symbole (POST mit Array)
+                const response = await fetch(`${API_BASE}/regime/scan?timeframe=1h`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(symbols)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Scan failed: ${errorText}`);
+                }
 
                 const data = await response.json();
                 const results = document.getElementById('scan-results');
 
-                if (data.results && Object.keys(data.results).length > 0) {
+                if (data.results && data.results.length > 0) {
                     let html = '<table class="data-table"><tr><th>Symbol</th><th>Regime</th><th>Confidence</th></tr>';
-                    for (const [symbol, info] of Object.entries(data.results)) {
+                    for (const info of data.results) {
                         const regime = getRegimeDisplay(info.regime);
-                        const confidence = info.probabilities?.[info.regime] || 0;
+                        const confidence = info.probability || 0;
                         html += `<tr>
-                            <td>${symbol}</td>
+                            <td>${info.symbol}</td>
                             <td><span class="regime-badge ${info.regime}">${regime.icon} ${regime.name}</span></td>
                             <td>${(confidence * 100).toFixed(1)}%</td>
                         </tr>`;
@@ -1128,9 +1150,9 @@
                     results.innerHTML = '<div class="info-box">Keine Ergebnisse.</div>';
                 }
 
-                showToast('Multi-Symbol Scan abgeschlossen');
+                showToast(`Multi-Symbol Scan abgeschlossen (${data.results.length} Symbole)`);
             } catch (error) {
-                showToast('Fehler beim Scan', 'error');
+                showToast(`Fehler beim Scan: ${error.message}`, 'error');
                 console.error(error);
             } finally {
                 btn.classList.remove('btn-loading');

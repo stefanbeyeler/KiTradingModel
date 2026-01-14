@@ -26,10 +26,12 @@ RUN pip install --no-cache-dir --pre torch torchvision --index-url https://downl
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy only the TCN training app source code
-# ARCHITEKTUR: TCN-Train greift auf Daten NUR über Data Service (Port 3001) zu
-# twelvedata_service.py wird NICHT kopiert - alle Datenzugriffe über HTTP
+# ARCHITEKTUR: TCN-Train greift auf Daten über Data Gateway zu
+# Data Gateway → Data Repository → TimescaleDB/Redis + External APIs
 COPY src/services/tcn_train_app/ ./src/services/tcn_train_app/
 COPY src/services/data_gateway_service.py ./src/services/
+COPY src/services/data_repository.py ./src/services/
+COPY src/services/timescaledb_service.py ./src/services/
 COPY src/services/cache_service.py ./src/services/
 COPY src/config/ ./src/config/
 COPY src/utils/ ./src/utils/
