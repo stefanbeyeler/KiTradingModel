@@ -1725,8 +1725,15 @@
                     failedCard.style.display = 'block';
                     failedCount.textContent = data.count;
 
+                    // Sort by timestamp descending (newest first)
+                    const sortedEntries = Object.entries(data.models).sort((a, b) => {
+                        const timeA = a[1].timestamp ? new Date(a[1].timestamp).getTime() : 0;
+                        const timeB = b[1].timestamp ? new Date(b[1].timestamp).getTime() : 0;
+                        return timeB - timeA;
+                    });
+
                     let html = '';
-                    for (const [key, info] of Object.entries(data.models)) {
+                    for (const [key, info] of sortedEntries) {
                         // Format timestamp for display
                         let timeStr = '';
                         if (info.timestamp) {
