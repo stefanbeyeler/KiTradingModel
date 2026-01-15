@@ -134,7 +134,7 @@ class EasyInsightService:
                 params["end_date"] = end_date
 
             response = await client.get(
-                f"{self._api_url}/time_series/{symbol}",
+                f"{self._api_url}/time-series/{symbol}",
                 params=params
             )
 
@@ -676,6 +676,224 @@ class EasyInsightService:
         except Exception as e:
             logger.error(f"Failed to get symbols from EasyInsight: {e}")
             return {"status": "error", "error": str(e)}
+
+    # ==================== Aggregated Timeframe Data ====================
+    # These endpoints provide pre-aggregated OHLC data for all symbols at once
+
+    async def get_available_timeframes(self) -> dict:
+        """
+        Get list of available timeframes from EasyInsight aggregated data API.
+
+        Returns:
+            Dictionary with list of timeframes (m1, m5, m15, m30, h1, h4, d1, w1, mn)
+        """
+        try:
+            client = await self._get_client()
+            self._total_calls += 1
+
+            response = await client.get(f"{self._api_url}/timeframes")
+
+            if response.status_code != 200:
+                return {"status": "error", "error": f"HTTP {response.status_code}"}
+
+            data = response.json()
+            logger.debug(f"EasyInsight: Retrieved {len(data.get('timeframes', []))} timeframes")
+            return {"status": "ok", **data}
+
+        except Exception as e:
+            logger.error(f"Failed to get timeframes from EasyInsight: {e}")
+            return {"status": "error", "error": str(e)}
+
+    async def get_timeframe_symbols(self, timeframe: str) -> dict:
+        """
+        Get list of symbols available for a specific timeframe.
+
+        Args:
+            timeframe: Timeframe identifier (m1, m5, m15, m30, h1, h4, d1, w1, mn)
+
+        Returns:
+            Dictionary with list of symbols
+        """
+        try:
+            client = await self._get_client()
+            self._total_calls += 1
+
+            tf_lower = timeframe.lower()
+            response = await client.get(f"{self._api_url}/timeframes/{tf_lower}/symbols")
+
+            if response.status_code != 200:
+                return {"status": "error", "error": f"HTTP {response.status_code}"}
+
+            data = response.json()
+            logger.debug(f"EasyInsight: Retrieved {data.get('count', 0)} symbols for {timeframe}")
+            return {"status": "ok", "timeframe": tf_lower, **data}
+
+        except Exception as e:
+            logger.error(f"Failed to get symbols for timeframe {timeframe}: {e}")
+            return {"status": "error", "error": str(e)}
+
+    async def get_timeframe_data(
+        self,
+        timeframe: str,
+        symbol: Optional[str] = None,
+        limit: int = 100,
+    ) -> dict:
+        """
+        Get aggregated OHLC data for a timeframe.
+
+        This endpoint provides pre-aggregated data with OHLC values and
+        additional indicators (RSI, MACD, Bollinger Bands, etc.) already calculated.
+
+        Args:
+            timeframe: Timeframe identifier (m1, m5, m15, m30, h1, h4, d1, w1, mn)
+            symbol: Optional symbol filter. If None, returns data for all symbols.
+            limit: Number of data points (only applies when symbol is specified)
+
+        Returns:
+            Dictionary with OHLC data and indicators
+        """
+        try:
+            client = await self._get_client()
+            self._total_calls += 1
+
+            tf_lower = timeframe.lower()
+
+            if symbol:
+                # Get data for specific symbol
+                url = f"{self._api_url}/timeframes/{tf_lower}/symbol/{symbol.upper()}"
+                params = {"limit": limit} if limit else {}
+            else:
+                # Get data for all symbols
+                url = f"{self._api_url}/timeframes/{tf_lower}/data"
+                params = {}
+
+            response = await client.get(url, params=params)
+
+            if response.status_code != 200:
+                return {
+                    "status": "error",
+                    "error": f"HTTP {response.status_code}",
+                    "timeframe": tf_lower,
+                    "symbol": symbol,
+                }
+
+            data = response.json()
+
+            # Standardize response format
+            result = {
+                "status": "ok",
+                "timeframe": tf_lower,
+                "symbol": symbol.upper() if symbol else None,
+                "columns": data.get("columns", []),
+                "data": data.get("data", []),
+                "count": len(data.get("data", [])),
+            }
+
+            logger.info(
+                f"EasyInsight: Retrieved {result['count']} {tf_lower} records"
+                + (f" for {symbol}" if symbol else " for all symbols")
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to get timeframe data from EasyInsight: {e}")
+            return {"status": "error", "error": str(e), "timeframe": timeframe, "symbol": symbol}
+
+    async def get_timeframe_latest(self, timeframe: str) -> dict:
+        """
+        Get latest data point for each symbol in a timeframe.
+
+        Args:
+            timeframe: Timeframe identifier (m1, m5, m15, m30, h1, h4, d1, w1, mn)
+
+        Returns:
+            Dictionary with latest OHLC data for each symbol
+        """
+        try:
+            client = await self._get_client()
+            self._total_calls += 1
+
+            tf_lower = timeframe.lower()
+            response = await client.get(f"{self._api_url}/timeframes/{tf_lower}/latest")
+
+            if response.status_code != 200:
+                return {"status": "error", "error": f"HTTP {response.status_code}"}
+
+            data = response.json()
+
+            result = {
+                "status": "ok",
+                "timeframe": tf_lower,
+                "data": data.get("data", []),
+                "count": len(data.get("data", [])),
+            }
+
+            logger.debug(f"EasyInsight: Retrieved latest {tf_lower} data for {result['count']} symbols")
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to get latest timeframe data from EasyInsight: {e}")
+            return {"status": "error", "error": str(e)}
+
+    async def get_timeframe_ohlcv(
+        self,
+        symbol: str,
+        timeframe: str,
+        limit: int = 500,
+    ) -> list[dict]:
+        """
+        Get OHLCV data for a symbol from aggregated timeframe endpoint.
+
+        This is the primary method for fetching OHLCV data when TwelveData
+        doesn't support the symbol (e.g., CFD indices like GER40, US30).
+
+        Args:
+            symbol: Trading symbol (e.g., US30, GER40, BTCUSD)
+            timeframe: Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)
+            limit: Number of data points
+
+        Returns:
+            List of OHLCV dictionaries in standardized format
+        """
+        result = await self.get_timeframe_data(
+            timeframe=timeframe,
+            symbol=symbol,
+            limit=limit,
+        )
+
+        if result.get("status") != "ok" or not result.get("data"):
+            return []
+
+        # Convert to standardized OHLCV format
+        rows = []
+        for row in result.get("data", []):
+            # The API uses "bucket" for timestamp
+            timestamp = row.get("bucket") or row.get("snapshot_time") or row.get("timestamp")
+
+            rows.append({
+                "timestamp": timestamp,
+                "snapshot_time": timestamp,
+                "symbol": symbol.upper(),
+                "timeframe": timeframe.upper(),
+                "open": float(row.get("open", 0)),
+                "high": float(row.get("high", 0)),
+                "low": float(row.get("low", 0)),
+                "close": float(row.get("close", 0)),
+                "volume": float(row.get("volume", 0)) if row.get("volume") else 0,
+                # Include available indicators
+                "rsi": row.get("rsi"),
+                "macd_main": row.get("macd_main"),
+                "macd_signal": row.get("macd_signal"),
+                "bb_upper": row.get("bb_upper"),
+                "bb_lower": row.get("bb_lower"),
+                "bb_base": row.get("bb_base"),
+                "atr": row.get("atr_d1") or row.get("atr"),
+                "adx": row.get("adx_main"),
+                "cci": row.get("cci"),
+            })
+
+        logger.info(f"EasyInsight: Converted {len(rows)} {timeframe} OHLCV records for {symbol}")
+        return rows
 
     # ==================== Status ====================
 

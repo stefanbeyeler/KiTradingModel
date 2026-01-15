@@ -506,9 +506,9 @@ class ForecastService:
             # Convert to tensors with optimized memory transfer
             # Use pin_memory for faster CPU->GPU transfer on CUDA devices
             if self.device.type == 'cuda':
-                # Create tensors with pinned memory for async transfer
-                X_tensor = torch.tensor(X, dtype=torch.float32, pin_memory=True).to(self.device, non_blocking=True)
-                y_tensor = torch.tensor(y, dtype=torch.float32, pin_memory=True).to(self.device, non_blocking=True)
+                # Create tensors first, then pin and transfer asynchronously
+                X_tensor = torch.FloatTensor(X).pin_memory().to(self.device, non_blocking=True)
+                y_tensor = torch.FloatTensor(y).pin_memory().to(self.device, non_blocking=True)
             else:
                 X_tensor = torch.FloatTensor(X).to(self.device)
                 y_tensor = torch.FloatTensor(y).to(self.device)
@@ -531,13 +531,13 @@ class ForecastService:
             optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr)
 
             # Learning rate scheduler: reduce LR when loss plateaus
+            # Note: 'verbose' parameter removed in PyTorch 2.4+
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer,
                 mode='min',
                 factor=0.5,       # Reduce LR by half
                 patience=20,      # Wait 20 epochs before reducing
-                min_lr=1e-5,      # Don't go below this
-                verbose=False
+                min_lr=1e-5       # Don't go below this
             )
 
             # Quantile loss for probabilistic forecasting with direction awareness

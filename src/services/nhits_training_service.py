@@ -489,25 +489,32 @@ class NHITSTrainingService:
                 f"requesting {required_days} days of data"
             )
 
-            # Get training data from EasyInsight first
-            time_series = await self.get_training_data(symbol, days=required_days, timeframe=tf)
-            data_source = "easyinsight"
+            # Track data from both sources for detailed error messages
+            td_count = 0
+            ei_count = 0
 
-            # If EasyInsight doesn't have enough data, try TwelveData as fallback
-            if len(time_series) < min_required:
+            # Get training data from TwelveData first (primary source)
+            time_series = await self.get_training_data_twelvedata(symbol, timeframe=tf)
+            td_count = len(time_series)
+            data_source = "TwelveData"
+
+            # If TwelveData doesn't have enough data, try EasyInsight as fallback
+            if td_count < min_required:
                 logger.info(
-                    f"EasyInsight has insufficient data for {symbol}/{tf} "
-                    f"({len(time_series)} < {min_required}), trying TwelveData..."
+                    f"TwelveData has insufficient data for {symbol}/{tf} "
+                    f"({td_count} < {min_required}), trying EasyInsight..."
                 )
-                td_data = await self.get_training_data_twelvedata(symbol, timeframe=tf)
-                if len(td_data) >= min_required:
-                    time_series = td_data
-                    data_source = "twelvedata"
-                    logger.info(f"Using TwelveData for {symbol}/{tf}: {len(time_series)} samples")
-                elif len(td_data) > len(time_series):
-                    # Use TwelveData if it has more data, even if still insufficient
-                    time_series = td_data
-                    data_source = "twelvedata"
+                ei_data = await self.get_training_data(symbol, days=required_days, timeframe=tf)
+                ei_count = len(ei_data)
+
+                if ei_count >= min_required:
+                    time_series = ei_data
+                    data_source = "EasyInsight"
+                    logger.info(f"Using EasyInsight for {symbol}/{tf}: {ei_count} samples")
+                elif ei_count > td_count:
+                    # Use EasyInsight if it has more data, even if still insufficient
+                    time_series = ei_data
+                    data_source = "EasyInsight"
 
             if not time_series:
                 return ForecastTrainingResult(
@@ -518,7 +525,7 @@ class NHITSTrainingService:
                     model_path="",
                     metrics=TrainingMetrics(),
                     success=False,
-                    error_message=f"No training data available for {tf} (tried EasyInsight, TwelveData)"
+                    error_message=f"Keine Daten für {tf}: TwelveData={td_count}, EasyInsight={ei_count} (benötigt: {min_required})"
                 )
 
             if len(time_series) < min_required:
@@ -530,7 +537,7 @@ class NHITSTrainingService:
                     model_path="",
                     metrics=TrainingMetrics(),
                     success=False,
-                    error_message=f"Insufficient data for {tf}: {len(time_series)} < {min_required} (source: {data_source})"
+                    error_message=f"Zu wenig Daten für {tf}: TwelveData={td_count}, EasyInsight={ei_count}, verwendet={len(time_series)} (benötigt: {min_required})"
                 )
 
             # Check if retraining is needed
@@ -652,23 +659,32 @@ class NHITSTrainingService:
                     result = await self.train_symbol(symbol, force=force, timeframe=tf)
 
                     if isinstance(result, Exception):
-                        return (model_key, {
+                        result_info = {
                             "success": False,
                             "error": str(result),
                             "timeframe": tf,
                             "symbol": symbol,
                             "timestamp": datetime.utcnow().isoformat()
-                        }, "failed")
+                        }
+                        # Update counters immediately for live progress
+                        self._training_completed_symbols += 1
+                        self._training_failed += 1
+                        self._failed_models[model_key] = result_info
+                        return (model_key, result_info, "failed")
                     elif result.success:
                         if "skipped" in (result.error_message or "").lower():
-                            return (model_key, {
+                            result_info = {
                                 "success": True,
                                 "skipped": True,
                                 "samples": result.training_samples,
                                 "timeframe": tf
-                            }, "skipped")
+                            }
+                            # Update counters immediately for live progress
+                            self._training_completed_symbols += 1
+                            self._training_skipped += 1
+                            return (model_key, result_info, "skipped")
                         else:
-                            return (model_key, {
+                            result_info = {
                                 "success": True,
                                 "samples": result.training_samples,
                                 "duration": result.training_duration_seconds,
@@ -676,26 +692,41 @@ class NHITSTrainingService:
                                 "timeframe": tf,
                                 "symbol": symbol,
                                 "timestamp": datetime.utcnow().isoformat()
-                            }, "success")
+                            }
+                            # Update counters immediately for live progress
+                            self._training_completed_symbols += 1
+                            self._training_successful += 1
+                            self._successful_models[model_key] = result_info
+                            return (model_key, result_info, "success")
                     else:
-                        return (model_key, {
+                        result_info = {
                             "success": False,
                             "error": result.error_message,
                             "timeframe": tf,
                             "symbol": symbol,
                             "samples_found": result.training_samples,
                             "timestamp": datetime.utcnow().isoformat()
-                        }, "failed")
+                        }
+                        # Update counters immediately for live progress
+                        self._training_completed_symbols += 1
+                        self._training_failed += 1
+                        self._failed_models[model_key] = result_info
+                        return (model_key, result_info, "failed")
 
                 except Exception as e:
                     logger.error(f"Exception during training {model_key}: {e}")
-                    return (model_key, {
+                    result_info = {
                         "success": False,
                         "error": str(e),
                         "timeframe": tf,
                         "symbol": symbol,
                         "timestamp": datetime.utcnow().isoformat()
-                    }, "failed")
+                    }
+                    # Update counters immediately for live progress
+                    self._training_completed_symbols += 1
+                    self._training_failed += 1
+                    self._failed_models[model_key] = result_info
+                    return (model_key, result_info, "failed")
 
             # Create all training tasks
             all_tasks = [
@@ -725,7 +756,7 @@ class NHITSTrainingService:
                 return_exceptions=True
             )
 
-            # Process results
+            # Collect results (counters already updated in train_single_model)
             for result in training_results:
                 if isinstance(result, Exception):
                     logger.error(f"Unexpected training error: {result}")
@@ -733,18 +764,6 @@ class NHITSTrainingService:
 
                 model_key, result_info, status = result
                 results[model_key] = result_info
-
-                if status == "success":
-                    self._successful_models[model_key] = result_info
-                    self._training_successful += 1
-                elif status == "skipped":
-                    self._training_skipped += 1
-                else:  # failed
-                    self._failed_models[model_key] = result_info
-                    self._training_failed += 1
-                    logger.warning(f"Training failed for {model_key}: {result_info.get('error')}")
-
-                self._training_completed_symbols += 1
 
             duration = (datetime.utcnow() - start_time).total_seconds()
             self._last_training_run = datetime.utcnow()

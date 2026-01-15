@@ -808,11 +808,15 @@
                                 <div class="label">Abgeschlossen</div>
                             </div>
                             <div class="training-stat">
-                                <div class="value" id="stat-successful">-</div>
+                                <div class="value" id="stat-successful" style="color: #4ade80;">-</div>
                                 <div class="label">Erfolgreich</div>
                             </div>
                             <div class="training-stat">
-                                <div class="value" id="stat-failed">-</div>
+                                <div class="value" id="stat-skipped" style="color: #fbbf24;">-</div>
+                                <div class="label">Übersprungen</div>
+                            </div>
+                            <div class="training-stat">
+                                <div class="value" id="stat-failed" style="color: #f87171;">-</div>
                                 <div class="label">Fehlgeschlagen</div>
                             </div>
                         </div>
@@ -1627,7 +1631,10 @@
                 const progressEl = document.getElementById('training-progress');
                 const timingEl = document.getElementById('training-timing');
                 const btnCancel = document.getElementById('btn-cancel');
-                const trainButtons = ['btn-train-all', 'btn-train-h1', 'btn-train-m15', 'btn-train-d1'];
+                const trainButtons = [
+                    'btn-train-all', 'btn-train-m5', 'btn-train-m15', 'btn-train-h1',
+                    'btn-train-h4', 'btn-train-d1', 'btn-train-w1', 'btn-force-train', 'btn-retrain-failed'
+                ];
 
                 // Check if retrain is in progress (from auto-status)
                 const retrainInProgress = autoStatus?.auto_retrain?.in_progress || false;
@@ -1643,6 +1650,7 @@
 
                     document.getElementById('stat-completed').textContent = data.completed_symbols || 0;
                     document.getElementById('stat-successful').textContent = data.results?.successful || 0;
+                    document.getElementById('stat-skipped').textContent = data.results?.skipped || 0;
                     document.getElementById('stat-failed').textContent = data.results?.failed || 0;
 
                     if (data.timing) {

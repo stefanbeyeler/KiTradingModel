@@ -597,65 +597,85 @@ class DataGatewayService:
         """
         Get OHLCV data from EasyInsight API for any timeframe.
 
-        Uses the new TwelveData-compatible /time_series endpoint.
-        All timeframes (M1-MN) are now supported.
+        Uses two strategies:
+        1. First tries the /time_series endpoint (TwelveData-compatible)
+        2. Falls back to /timeframes/<tf>/symbol/<symbol> (aggregated data endpoint)
+
+        The aggregated endpoint provides pre-calculated indicators (RSI, MACD, etc.)
+        and supports CFD indices (GER40, US30, etc.) that TwelveData doesn't support.
 
         Args:
-            symbol: Trading symbol (e.g., BTCUSD)
+            symbol: Trading symbol (e.g., BTCUSD, GER40, US30)
             timeframe: Timeframe (M1, M5, M15, M30, H1, H4, D1, W1, MN)
             limit: Number of data points
 
         Returns:
             List of OHLCV dictionaries with standardized format
         """
+        from .easyinsight_service import easyinsight_service
+
+        # Normalize timeframe
+        tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
+        td_interval = to_twelvedata(tf)  # Convert to TwelveData format (1h, 1day, etc.)
+
+        rows = []
+
+        # Strategy 1: Try TwelveData-compatible /time_series endpoint
         try:
-            from .easyinsight_service import easyinsight_service
-
-            # Normalize timeframe
-            tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
-            td_interval = to_twelvedata(tf)  # Convert to TwelveData format (1h, 1day, etc.)
-
-            # Use new TwelveData-compatible endpoint
             result = await easyinsight_service.get_time_series(
                 symbol=symbol,
                 interval=td_interval,
                 outputsize=limit,
             )
 
-            if result.get("status") != "ok" or not result.get("values"):
-                logger.warning(f"EasyInsight returned no data for {symbol}/{tf.value}")
-                return []
+            if result.get("status") == "ok" and result.get("values"):
+                # Convert to standardized format
+                for row in result.get("values", []):
+                    rows.append({
+                        "timestamp": row.get("datetime"),
+                        "snapshot_time": row.get("datetime"),
+                        "symbol": symbol,
+                        "timeframe": tf.value,
+                        "open": float(row.get("open", 0)),
+                        "high": float(row.get("high", 0)),
+                        "low": float(row.get("low", 0)),
+                        "close": float(row.get("close", 0)),
+                        "volume": float(row.get("volume", 0)) if row.get("volume") else 0,
+                    })
+                logger.info(f"EasyInsight time_series: {len(rows)} rows for {symbol}/{tf.value}")
 
-            # Convert to standardized format
-            rows = []
-            for row in result.get("values", []):
-                rows.append({
-                    "timestamp": row.get("datetime"),
-                    "snapshot_time": row.get("datetime"),
-                    "symbol": symbol,
-                    "timeframe": tf.value,
-                    "open": float(row.get("open", 0)),
-                    "high": float(row.get("high", 0)),
-                    "low": float(row.get("low", 0)),
-                    "close": float(row.get("close", 0)),
-                    "volume": float(row.get("volume", 0)) if row.get("volume") else 0,
-                })
+        except Exception as e:
+            logger.debug(f"EasyInsight time_series failed for {symbol}: {e}")
 
-            if rows:
-                # Save to repository
+        # Strategy 2: Try aggregated /timeframes endpoint (supports CFD indices)
+        if not rows:
+            try:
+                logger.info(f"Trying EasyInsight aggregated endpoint for {symbol}/{tf.value}")
+                rows = await easyinsight_service.get_timeframe_ohlcv(
+                    symbol=symbol,
+                    timeframe=tf.value,
+                    limit=limit,
+                )
+                if rows:
+                    logger.info(f"EasyInsight timeframes: {len(rows)} rows for {symbol}/{tf.value}")
+
+            except Exception as e:
+                logger.warning(f"EasyInsight aggregated endpoint failed for {symbol}: {e}")
+
+        # Save to repository if we got data
+        if rows:
+            try:
                 await data_repository.save_ohlcv(
                     symbol=symbol,
                     timeframe=tf.value,
                     data=rows,
                     source="easyinsight",
                 )
-                logger.info(f"EasyInsight: Fetched {len(rows)} OHLCV rows for {symbol}/{tf.value}")
+                logger.info(f"EasyInsight: Saved {len(rows)} OHLCV rows for {symbol}/{tf.value}")
+            except Exception as e:
+                logger.error(f"Failed to save EasyInsight data to repository: {e}")
 
-            return rows
-
-        except Exception as e:
-            logger.error(f"Failed to fetch EasyInsight OHLCV for {symbol}/{timeframe}: {e}")
-            return []
+        return rows
 
     # ==================== API Health ====================
 

@@ -1985,10 +1985,10 @@ async def get_training_results():
 
 @training_router.post("/forecast/train-all")
 async def train_all_models(
-    symbols: list[str] | None = None,
-    force: bool = False,
-    background: bool = True,
-    timeframes: list[str] | None = None
+    symbols: list[str] | None = Query(default=None, description="Specific symbols to train"),
+    force: bool = Query(default=False, description="Force retraining even if models are up to date"),
+    background: bool = Query(default=True, description="Run training in background"),
+    timeframes: list[str] | None = Query(default=None, description="Timeframes to train (M5, M15, H1, H4, D1, W1)")
 ):
     """
     Train NHITS models for all (or specified) symbols across multiple timeframes.
@@ -5273,8 +5273,11 @@ async def get_training_data(
 
     # FALLBACK 1: If TwelveData has insufficient data, try EasyInsight OHLCV endpoint
     # EasyInsight supports all timeframes via get_time_series
-    if len(rows) < 50:
-        logger.info(f"TwelveData insufficient ({len(rows)} rows), trying EasyInsight OHLCV for {symbol}/{tf}")
+    # Minimum threshold depends on timeframe: D1/W1 need less data than intraday
+    min_threshold = 20 if tf in ("D1", "W1", "MN") else 50
+
+    if len(rows) < min_threshold:
+        logger.info(f"TwelveData insufficient ({len(rows)} rows, min={min_threshold}), trying EasyInsight OHLCV for {symbol}/{tf}")
         try:
             # Use the internal EasyInsight service for OHLCV data
             from ..services.easyinsight_service import easyinsight_service
@@ -5290,7 +5293,7 @@ async def get_training_data(
 
             ei_rows = ei_result.get('values', [])
 
-            if ei_rows and len(ei_rows) >= 50:
+            if ei_rows and len(ei_rows) >= min_threshold:
                 # Format for training data response
                 formatted_rows = []
                 for row in ei_rows:
@@ -5331,7 +5334,7 @@ async def get_training_data(
 
                 return response
             else:
-                logger.warning(f"EasyInsight OHLCV insufficient for {symbol}/{tf}: {len(ei_rows)} rows")
+                logger.warning(f"EasyInsight OHLCV insufficient for {symbol}/{tf}: {len(ei_rows)} rows (min={min_threshold})")
 
         except Exception as e:
             logger.warning(f"EasyInsight OHLCV fallback failed for {symbol}/{tf}: {e}")
