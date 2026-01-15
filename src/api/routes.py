@@ -5273,8 +5273,13 @@ async def get_training_data(
 
     # FALLBACK 1: If TwelveData has insufficient data, try EasyInsight OHLCV endpoint
     # EasyInsight supports all timeframes via get_time_series
-    # Minimum threshold depends on timeframe: D1/W1 need less data than intraday
-    min_threshold = 20 if tf in ("D1", "W1", "MN") else 50
+    # Minimum threshold depends on timeframe - longer timeframes need fewer samples
+    if tf in ("W1", "MN"):
+        min_threshold = 5  # Weekly/Monthly data is scarce, 5 samples minimum
+    elif tf == "D1":
+        min_threshold = 20  # Daily data needs at least 20 samples
+    else:
+        min_threshold = 50  # Intraday needs more samples for meaningful training
 
     if len(rows) < min_threshold:
         logger.info(f"TwelveData insufficient ({len(rows)} rows, min={min_threshold}), trying EasyInsight OHLCV for {symbol}/{tf}")
@@ -5338,6 +5343,65 @@ async def get_training_data(
 
         except Exception as e:
             logger.warning(f"EasyInsight OHLCV fallback failed for {symbol}/{tf}: {e}")
+
+    # FALLBACK 2: Try EasyInsight aggregated timeframe endpoint
+    # This endpoint supports CFD indices (GER40, US30, etc.) that TwelveData doesn't support
+    if len(rows) < min_threshold:
+        logger.info(f"Trying EasyInsight aggregated timeframes for {symbol}/{tf}")
+        try:
+            from ..services.easyinsight_service import easyinsight_service
+
+            ei_rows = await easyinsight_service.get_timeframe_ohlcv(
+                symbol=symbol,
+                timeframe=tf,
+                limit=limit
+            )
+
+            if ei_rows and len(ei_rows) >= min_threshold:
+                # Format for training data response
+                formatted_rows = []
+                for row in ei_rows:
+                    formatted_rows.append({
+                        "datetime": row.get("timestamp") or row.get("snapshot_time"),
+                        "timestamp": row.get("timestamp") or row.get("snapshot_time"),
+                        "symbol": symbol,
+                        "timeframe": tf,
+                        "open": row.get("open"),
+                        "high": row.get("high"),
+                        "low": row.get("low"),
+                        "close": row.get("close"),
+                        "volume": row.get("volume", 0),
+                    })
+
+                # Cache data
+                if use_cache:
+                    training_data_cache.cache_data(symbol, tf, formatted_rows, "easyinsight")
+                    logger.debug(f"Cached {len(formatted_rows)} EasyInsight timeframe rows for {symbol}/{tf}")
+
+                response = {
+                    "symbol": symbol,
+                    "timeframe": tf,
+                    "source": "easyinsight",
+                    "from_cache": False,
+                    "count": len(formatted_rows),
+                    "data": formatted_rows
+                }
+
+                # Cache HTTP response in Redis
+                if use_cache:
+                    http_cache_key = f"{symbol}_{tf}_{days}"
+                    await cache_service.set(
+                        CacheCategory.TRAINING,
+                        response,
+                        http_cache_key
+                    )
+
+                return response
+            else:
+                logger.warning(f"EasyInsight timeframes insufficient for {symbol}/{tf}: {len(ei_rows) if ei_rows else 0} rows (min={min_threshold})")
+
+        except Exception as e:
+            logger.warning(f"EasyInsight timeframes fallback failed for {symbol}/{tf}: {e}")
 
     # Return whatever we have (might be empty or partial)
     source = "twelvedata" if rows else "none"

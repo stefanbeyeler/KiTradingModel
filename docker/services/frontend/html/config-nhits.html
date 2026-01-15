@@ -1742,10 +1742,15 @@
 
                     let html = '';
                     for (const [key, info] of sortedEntries) {
-                        // Format timestamp for display
+                        // Format timestamp for display (timestamps from server are UTC)
                         let timeStr = '';
                         if (info.timestamp) {
-                            const date = new Date(info.timestamp);
+                            // Append 'Z' if timestamp doesn't have timezone info (treat as UTC)
+                            let ts = info.timestamp;
+                            if (!ts.endsWith('Z') && !ts.includes('+') && !ts.includes('-', 10)) {
+                                ts += 'Z';
+                            }
+                            const date = new Date(ts);
                             timeStr = date.toLocaleString('de-CH', {
                                 day: '2-digit',
                                 month: '2-digit',
