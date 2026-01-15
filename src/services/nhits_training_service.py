@@ -639,85 +639,112 @@ class NHITSTrainingService:
 
             results = {}
 
-            # Train sequentially: each symbol across all timeframes
-            for symbol in symbols_to_train:
-                # Check if cancelled
-                if self._training_cancelled:
-                    logger.info("Training cancelled by user")
-                    break
+            # Parallel training configuration
+            # Limit concurrent training to avoid GPU memory issues
+            max_concurrent = 4  # Train up to 4 models in parallel
 
-                for tf in timeframes:
-                    if self._training_cancelled:
-                        break
+            async def train_single_model(symbol: str, tf: str) -> tuple:
+                """Train a single model and return result tuple."""
+                model_key = f"{symbol}_{tf}"
+                self._training_current_symbol = model_key
 
-                    model_key = f"{symbol}_{tf}"
-                    self._training_current_symbol = model_key
+                try:
+                    result = await self.train_symbol(symbol, force=force, timeframe=tf)
 
-                    try:
-                        result = await self.train_symbol(symbol, force=force, timeframe=tf)
-
-                        if isinstance(result, Exception):
-                            error_info = {
-                                "success": False,
-                                "error": str(result),
-                                "timeframe": tf,
-                                "symbol": symbol,
-                                "timestamp": datetime.utcnow().isoformat()
-                            }
-                            results[model_key] = error_info
-                            self._failed_models[model_key] = error_info
-                            self._training_failed += 1
-                            logger.warning(f"Training failed for {model_key}: {result}")
-                        elif result.success:
-                            if "skipped" in (result.error_message or "").lower():
-                                results[model_key] = {
-                                    "success": True,
-                                    "skipped": True,
-                                    "samples": result.training_samples,
-                                    "timeframe": tf
-                                }
-                                self._training_skipped += 1
-                            else:
-                                success_info = {
-                                    "success": True,
-                                    "samples": result.training_samples,
-                                    "duration": result.training_duration_seconds,
-                                    "loss": result.metrics.final_loss if result.metrics else None,
-                                    "timeframe": tf,
-                                    "symbol": symbol,
-                                    "timestamp": datetime.utcnow().isoformat()
-                                }
-                                results[model_key] = success_info
-                                self._successful_models[model_key] = success_info
-                                self._training_successful += 1
-                        else:
-                            error_info = {
-                                "success": False,
-                                "error": result.error_message,
-                                "timeframe": tf,
-                                "symbol": symbol,
-                                "samples_found": result.training_samples,
-                                "timestamp": datetime.utcnow().isoformat()
-                            }
-                            results[model_key] = error_info
-                            self._failed_models[model_key] = error_info
-                            self._training_failed += 1
-                            logger.warning(f"Training failed for {model_key}: {result.error_message}")
-
-                    except Exception as e:
-                        error_info = {
+                    if isinstance(result, Exception):
+                        return (model_key, {
                             "success": False,
-                            "error": str(e),
+                            "error": str(result),
                             "timeframe": tf,
                             "symbol": symbol,
                             "timestamp": datetime.utcnow().isoformat()
-                        }
-                        results[model_key] = error_info
-                        self._failed_models[model_key] = error_info
-                        self._training_failed += 1
-                        logger.error(f"Exception during training {model_key}: {e}")
+                        }, "failed")
+                    elif result.success:
+                        if "skipped" in (result.error_message or "").lower():
+                            return (model_key, {
+                                "success": True,
+                                "skipped": True,
+                                "samples": result.training_samples,
+                                "timeframe": tf
+                            }, "skipped")
+                        else:
+                            return (model_key, {
+                                "success": True,
+                                "samples": result.training_samples,
+                                "duration": result.training_duration_seconds,
+                                "loss": result.metrics.final_loss if result.metrics else None,
+                                "timeframe": tf,
+                                "symbol": symbol,
+                                "timestamp": datetime.utcnow().isoformat()
+                            }, "success")
+                    else:
+                        return (model_key, {
+                            "success": False,
+                            "error": result.error_message,
+                            "timeframe": tf,
+                            "symbol": symbol,
+                            "samples_found": result.training_samples,
+                            "timestamp": datetime.utcnow().isoformat()
+                        }, "failed")
 
-                    self._training_completed_symbols += 1
+                except Exception as e:
+                    logger.error(f"Exception during training {model_key}: {e}")
+                    return (model_key, {
+                        "success": False,
+                        "error": str(e),
+                        "timeframe": tf,
+                        "symbol": symbol,
+                        "timestamp": datetime.utcnow().isoformat()
+                    }, "failed")
+
+            # Create all training tasks
+            all_tasks = [
+                (symbol, tf)
+                for symbol in symbols_to_train
+                for tf in timeframes
+            ]
+
+            logger.info(
+                f"Starting PARALLEL training with max_concurrent={max_concurrent} "
+                f"for {len(all_tasks)} models"
+            )
+
+            # Process in batches to limit concurrency
+            semaphore = asyncio.Semaphore(max_concurrent)
+
+            async def train_with_semaphore(symbol: str, tf: str) -> tuple:
+                """Train with semaphore to limit concurrency."""
+                if self._training_cancelled:
+                    return (f"{symbol}_{tf}", {"success": False, "error": "Cancelled"}, "failed")
+                async with semaphore:
+                    return await train_single_model(symbol, tf)
+
+            # Run all training tasks in parallel (limited by semaphore)
+            training_results = await asyncio.gather(
+                *[train_with_semaphore(s, tf) for s, tf in all_tasks],
+                return_exceptions=True
+            )
+
+            # Process results
+            for result in training_results:
+                if isinstance(result, Exception):
+                    logger.error(f"Unexpected training error: {result}")
+                    continue
+
+                model_key, result_info, status = result
+                results[model_key] = result_info
+
+                if status == "success":
+                    self._successful_models[model_key] = result_info
+                    self._training_successful += 1
+                elif status == "skipped":
+                    self._training_skipped += 1
+                else:  # failed
+                    self._failed_models[model_key] = result_info
+                    self._training_failed += 1
+                    logger.warning(f"Training failed for {model_key}: {result_info.get('error')}")
+
+                self._training_completed_symbols += 1
 
             duration = (datetime.utcnow() - start_time).total_seconds()
             self._last_training_run = datetime.utcnow()

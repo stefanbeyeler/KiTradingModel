@@ -231,12 +231,12 @@ class Settings(BaseSettings):
         description="Hierarchical pooling kernel sizes (multi-scale: coarse, medium, fine)"
     )
     nhits_batch_size: int = Field(
-        default=64,
-        description="Training batch size (64 for better GPU utilization)"
+        default=48,
+        description="Training batch size (48 optimized for NVIDIA Thor GPU memory)"
     )
     nhits_max_steps: int = Field(
-        default=1000,
-        description="Maximum training steps (early stopping controls actual duration)"
+        default=500,
+        description="Maximum training steps (reduced from 1000, early stopping typically triggers at 100-200)"
     )
     nhits_learning_rate: float = Field(
         default=3e-3,

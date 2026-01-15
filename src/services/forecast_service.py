@@ -190,7 +190,8 @@ class ForecastService:
 
         # ThreadPoolExecutor for running blocking PyTorch operations
         # without blocking the async event loop
-        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="nhits")
+        # Increased from 2 to 6 workers for better GPU utilization
+        self._executor = ThreadPoolExecutor(max_workers=6, thread_name_prefix="nhits")
 
         # Ensure model directory exists
         self.model_path.mkdir(parents=True, exist_ok=True)
@@ -502,23 +503,42 @@ class ForecastService:
             if len(X) < 10:
                 raise ValueError(f"Not enough sequences for training: {len(X)}")
 
-            # Convert to tensors
-            X_tensor = torch.FloatTensor(X).to(self.device)
-            y_tensor = torch.FloatTensor(y).to(self.device)
+            # Convert to tensors with optimized memory transfer
+            # Use pin_memory for faster CPU->GPU transfer on CUDA devices
+            if self.device.type == 'cuda':
+                # Create tensors with pinned memory for async transfer
+                X_tensor = torch.tensor(X, dtype=torch.float32, pin_memory=True).to(self.device, non_blocking=True)
+                y_tensor = torch.tensor(y, dtype=torch.float32, pin_memory=True).to(self.device, non_blocking=True)
+            else:
+                X_tensor = torch.FloatTensor(X).to(self.device)
+                y_tensor = torch.FloatTensor(y).to(self.device)
 
-            # Create dataset and loader
+            # Create dataset and loader with optimized settings
             dataset = TensorDataset(X_tensor, y_tensor)
             loader = DataLoader(
                 dataset,
                 batch_size=settings.nhits_batch_size,
-                shuffle=True
+                shuffle=True,
+                num_workers=0,  # Data already on GPU, no need for workers
+                pin_memory=False  # Already on GPU
             )
 
             # Create model with correct number of features and timeframe dimensions
             model = self._create_model(n_features=n_features, input_size=input_size, horizon=horizon)
 
-            # Training setup
-            optimizer = torch.optim.Adam(model.parameters(), lr=settings.nhits_learning_rate)
+            # Training setup with optimized learning rate scheduling
+            initial_lr = settings.nhits_learning_rate * 3  # Start higher (0.009 instead of 0.003)
+            optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr)
+
+            # Learning rate scheduler: reduce LR when loss plateaus
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer,
+                mode='min',
+                factor=0.5,       # Reduce LR by half
+                patience=20,      # Wait 20 epochs before reducing
+                min_lr=1e-5,      # Don't go below this
+                verbose=False
+            )
 
             # Quantile loss for probabilistic forecasting with direction awareness
             quantiles = torch.tensor([0.1, 0.5, 0.9], device=self.device)
@@ -557,10 +577,12 @@ class ForecastService:
 
                 return (1 - direction_weight) * q_loss + direction_weight * dir_loss
 
-            # Training loop
+            # Training loop with optimized early stopping
             model.train()
             best_loss = float('inf')
+            best_model_state = None
             patience_counter = 0
+            early_stopping_patience = 30  # Reduced from 50 for faster convergence
 
             for epoch in range(settings.nhits_max_steps):
                 epoch_loss = 0
@@ -584,18 +606,27 @@ class ForecastService:
 
                 epoch_loss /= len(loader)
 
-                # Early stopping
+                # Update learning rate scheduler
+                scheduler.step(epoch_loss)
+
+                # Early stopping with best model checkpoint
                 if epoch_loss < best_loss:
                     best_loss = epoch_loss
+                    best_model_state = model.state_dict().copy()  # Save best model
                     patience_counter = 0
                 else:
                     patience_counter += 1
-                    if patience_counter >= 50:
-                        logger.info(f"Early stopping at epoch {epoch}")
+                    if patience_counter >= early_stopping_patience:
+                        logger.info(f"Early stopping at epoch {epoch}, best_loss={best_loss:.6f}")
                         break
 
                 if epoch % 100 == 0:
-                    logger.debug(f"Epoch {epoch}, Loss: {epoch_loss:.6f}")
+                    current_lr = optimizer.param_groups[0]['lr']
+                    logger.debug(f"Epoch {epoch}, Loss: {epoch_loss:.6f}, LR: {current_lr:.6f}")
+
+            # Restore best model weights
+            if best_model_state is not None:
+                model.load_state_dict(best_model_state)
 
             # Save model with feature information
             model_key = self._get_model_key(symbol, timeframe)
