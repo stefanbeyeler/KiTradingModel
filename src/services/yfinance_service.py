@@ -176,18 +176,19 @@ class YFinanceService:
         # Try common patterns
         upper = symbol.upper()
 
+        # Already in yfinance format (check BEFORE other transformations)
+        # e.g., BTC-USD, EURUSD=X, ^GSPC
+        if "=" in symbol or "-" in symbol or symbol.startswith("^"):
+            return upper
+
         # Forex: Add =X suffix (6 alphabetic characters)
         if len(upper) == 6 and upper.isalpha():
             return f"{upper}=X"
 
-        # Crypto: Try with -USD suffix
+        # Crypto: Try with -USD suffix (only if no dash already present)
         if upper.endswith("USD") and len(upper) > 3:
             crypto = upper[:-3]
             return f"{crypto}-USD"
-
-        # Already in yfinance format
-        if "=" in symbol or "-" in symbol or symbol.startswith("^"):
-            return symbol
 
         # Stock symbols: 1-5 uppercase letters are typically direct stock tickers
         # (e.g., AAPL, MSFT, GOOGL, META, NVDA, TSLA)
