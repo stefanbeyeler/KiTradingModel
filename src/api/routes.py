@@ -1213,6 +1213,161 @@ def _format_ttl(seconds: int) -> str:
 
 
 # ============================================
+# Aggregated KPI Dashboard Endpoint
+# ============================================
+
+@system_router.get("/kpi/dashboard", tags=["1. System"])
+async def get_kpi_dashboard():
+    """
+    Aggregierte KPIs für das Status-Dashboard.
+
+    Liefert alle wichtigen Metriken in einem Aufruf:
+    - Symbol-Statistiken
+    - Indikator-Statistiken
+    - Cache-Statistiken (Redis + Memory)
+    - TimescaleDB-Statistiken
+    - API-Zugriffs-Statistiken
+    """
+    from ..services.cache_service import cache_service
+    from ..services.timescaledb_service import timescaledb_service
+    from ..config.database import get_ohlcv_table_name
+    from ..config.indicators import get_indicator_stats
+
+    result = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "symbols": {
+            "total": 0,
+            "active": 0,
+            "with_data": 0,
+            "by_type": {}
+        },
+        "indicators": {
+            "total": 0,
+            "enabled": 0,
+            "by_category": {}
+        },
+        "cache": {
+            "redis_available": False,
+            "hits": 0,
+            "misses": 0,
+            "hit_rate_percent": 0.0,
+            "memory_entries": 0,
+            "memory_bytes": 0
+        },
+        "timescaledb": {
+            "available": False,
+            "total_records": 0,
+            "symbols_with_data": 0,
+            "by_timeframe": {},
+            "oldest_data": None,
+            "newest_data": None
+        },
+        "api_access": {
+            "total_queries": 0,
+            "cache_served": 0,
+            "db_served": 0,
+            "external_fetched": 0
+        }
+    }
+
+    # 1. Symbol-Statistiken
+    try:
+        stats = await symbol_service.get_stats()
+        result["symbols"]["total"] = stats.total
+        result["symbols"]["active"] = stats.active
+        result["symbols"]["by_type"] = stats.by_type
+    except Exception as e:
+        logger.debug(f"Failed to get symbol stats: {e}")
+
+    # 2. Indikator-Statistiken
+    try:
+        ind_stats = get_indicator_stats()
+        result["indicators"]["total"] = ind_stats["total"]
+        result["indicators"]["enabled"] = ind_stats["enabled"]
+        result["indicators"]["by_category"] = ind_stats["by_category"]
+    except Exception as e:
+        logger.debug(f"Failed to get indicator stats: {e}")
+
+    # 3. Cache-Statistiken
+    try:
+        if not cache_service._redis_available:
+            await cache_service.connect()
+        cache_stats = cache_service.get_stats()
+        result["cache"]["redis_available"] = cache_stats.get("redis_available", False)
+        result["cache"]["hits"] = cache_stats.get("hits", 0)
+        result["cache"]["misses"] = cache_stats.get("misses", 0)
+        result["cache"]["hit_rate_percent"] = cache_stats.get("hit_rate_percent", 0.0)
+        result["cache"]["memory_entries"] = cache_stats.get("memory_cache_entries", 0)
+        result["cache"]["memory_bytes"] = cache_stats.get("memory_cache_bytes", 0)
+    except Exception as e:
+        logger.debug(f"Failed to get cache stats: {e}")
+
+    # 4. TimescaleDB-Statistiken
+    try:
+        if timescaledb_service.is_available:
+            await timescaledb_service.initialize()
+            result["timescaledb"]["available"] = True
+
+            async with timescaledb_service.connection() as conn:
+                total_records = 0
+                symbols_set = set()
+                oldest = None
+                newest = None
+
+                for tf in ["M1", "M5", "M15", "M30", "H1", "H4", "D1", "W1", "MN"]:
+                    try:
+                        table_name = get_ohlcv_table_name(tf)
+                        row = await conn.fetchrow(f"""
+                            SELECT COUNT(*) as cnt,
+                                   COUNT(DISTINCT symbol) as sym_cnt,
+                                   MIN(timestamp) as min_ts,
+                                   MAX(timestamp) as max_ts
+                            FROM {table_name}
+                        """)
+                        if row:
+                            cnt = row["cnt"] or 0
+                            total_records += cnt
+                            result["timescaledb"]["by_timeframe"][tf] = {
+                                "records": cnt,
+                                "symbols": row["sym_cnt"] or 0
+                            }
+                            if row["min_ts"]:
+                                if oldest is None or row["min_ts"] < oldest:
+                                    oldest = row["min_ts"]
+                            if row["max_ts"]:
+                                if newest is None or row["max_ts"] > newest:
+                                    newest = row["max_ts"]
+
+                            # Get distinct symbols for this timeframe
+                            sym_rows = await conn.fetch(f"SELECT DISTINCT symbol FROM {table_name}")
+                            for sr in sym_rows:
+                                symbols_set.add(sr["symbol"])
+                    except Exception as e:
+                        logger.debug(f"Failed to query {tf}: {e}")
+
+                result["timescaledb"]["total_records"] = total_records
+                result["timescaledb"]["symbols_with_data"] = len(symbols_set)
+                if oldest:
+                    result["timescaledb"]["oldest_data"] = oldest.isoformat()
+                if newest:
+                    result["timescaledb"]["newest_data"] = newest.isoformat()
+    except Exception as e:
+        logger.debug(f"Failed to get TimescaleDB stats: {e}")
+
+    # 5. API-Zugriffs-Statistiken (from query log)
+    try:
+        log_stats = query_log_service.get_stats()
+        result["api_access"]["total_queries"] = log_stats.get("total_queries", 0)
+        result["api_access"]["cache_served"] = log_stats.get("cache_hits", 0)
+        result["api_access"]["db_served"] = log_stats.get("db_hits", 0)
+        result["api_access"]["external_fetched"] = log_stats.get("external_fetches", 0)
+    except Exception as e:
+        logger.debug(f"Failed to get query log stats: {e}")
+
+    return result
+
+
+# ============================================
 # Pre-Fetching Endpoints
 # ============================================
 
