@@ -1,15 +1,13 @@
-"""EasyInsight API Service - TwelveData-kompatible API für Marktdaten und Indikatoren.
+"""EasyInsight API Service - API für Marktdaten und Indikatoren.
 
-Dieser Service nutzt die neuen TwelveData-kompatiblen EasyInsight API-Endpoints:
-- /time_series/{symbol} - OHLCV-Daten für alle Timeframes
+Dieser Service nutzt die EasyInsight API-Endpoints:
+- /timeframes/{timeframe}/symbol/{symbol} - OHLCV-Daten für alle Timeframes
 - /rsi/{symbol}, /macd/{symbol}, etc. - Technische Indikatoren
 - /indicators/{symbol} - Multiple Indikatoren in einem Request
 - /quote/{symbol}, /price/{symbol} - Echtzeit-Daten
 
-Siehe: docs/EASYINSIGHT_API_MIGRATION_GUIDE.md
-
-WICHTIG: Timeframes werden vom Data Gateway Service normalisiert und zum
-TwelveData-Format konvertiert (siehe src/config/timeframes.py).
+WICHTIG: Timeframes werden vom Data Gateway Service normalisiert.
+EasyInsight verwendet Grossbuchstaben-Timeframes (M1, M5, H1, D1, W1, MN).
 """
 
 import asyncio
@@ -24,7 +22,7 @@ from .cache_service import cache_service, CacheCategory, TIMEFRAME_TTL
 
 
 class EasyInsightService:
-    """Service for accessing EasyInsight API with TwelveData-compatible endpoints."""
+    """Service for accessing EasyInsight API."""
 
     # Supported technical indicators (matching TwelveData)
     SUPPORTED_INDICATORS = [
@@ -37,6 +35,24 @@ class EasyInsightService:
         # EasyInsight proprietary
         "strength",
     ]
+
+    # Mapping from TwelveData interval format to EasyInsight timeframe format
+    # EasyInsight uses uppercase timeframes (M1, M5, H1, D1, W1, MN)
+    INTERVAL_TO_TIMEFRAME = {
+        "1min": "M1", "1m": "M1", "m1": "M1", "M1": "M1",
+        "5min": "M5", "5m": "M5", "m5": "M5", "M5": "M5",
+        "15min": "M15", "15m": "M15", "m15": "M15", "M15": "M15",
+        "30min": "M30", "30m": "M30", "m30": "M30", "M30": "M30",
+        "1h": "H1", "1hour": "H1", "h1": "H1", "H1": "H1", "60min": "H1",
+        "4h": "H4", "4hour": "H4", "h4": "H4", "H4": "H4",
+        "1day": "D1", "1d": "D1", "d1": "D1", "D1": "D1", "daily": "D1",
+        "1week": "W1", "1wk": "W1", "w1": "W1", "W1": "W1", "weekly": "W1",
+        "1month": "MN", "1mo": "MN", "mn": "MN", "MN": "MN", "monthly": "MN",
+    }
+
+    def _to_easyinsight_timeframe(self, interval: str) -> str:
+        """Convert any interval format to EasyInsight timeframe format (M1, H1, D1, etc.)."""
+        return self.INTERVAL_TO_TIMEFRAME.get(interval, interval.upper())
 
     def __init__(self):
         self._api_url: str = settings.easyinsight_api_url
@@ -82,7 +98,7 @@ class EasyInsightService:
         """
         Get time series (OHLCV) data for a symbol.
 
-        Uses the new TwelveData-compatible /time_series endpoint.
+        Uses the /timeframes/{timeframe}/symbol/{symbol} endpoint.
 
         Args:
             symbol: The symbol to get data for (e.g., 'BTCUSD', 'EURUSD')
@@ -97,11 +113,14 @@ class EasyInsightService:
         """
         await self._ensure_cache_connected()
 
+        # Convert interval to EasyInsight timeframe format (M1, H1, D1, etc.)
+        ei_timeframe = self._to_easyinsight_timeframe(interval)
+
         # Normalize symbol for cache key
         cache_symbol = symbol.upper().replace("/", "")
 
         # Build cache params
-        cache_params = {"interval": interval, "outputsize": outputsize}
+        cache_params = {"interval": ei_timeframe, "outputsize": outputsize}
         if start_date:
             cache_params["start_date"] = start_date
         if end_date:
@@ -110,66 +129,97 @@ class EasyInsightService:
         # Check cache first (unless bypassed)
         if not bypass_cache and not start_date and not end_date:
             cached = await cache_service.get(
-                CacheCategory.OHLCV, cache_symbol, interval, params=cache_params
+                CacheCategory.OHLCV, cache_symbol, ei_timeframe, params=cache_params
             )
             if cached:
                 self._cache_hits += 1
                 if "meta" in cached:
                     cached["meta"]["from_cache"] = True
-                logger.debug(f"EasyInsight cache hit for {symbol}/{interval}")
+                logger.debug(f"EasyInsight cache hit for {symbol}/{ei_timeframe}")
                 return cached
 
         try:
             client = await self._get_client()
             self._total_calls += 1
 
-            # Build request parameters
-            params = {
-                "interval": interval,
-                "outputsize": outputsize,
-            }
+            # Build request parameters for /timeframes/{timeframe}/symbol/{symbol}
+            params = {"limit": outputsize}
             if start_date:
                 params["start_date"] = start_date
             if end_date:
                 params["end_date"] = end_date
 
+            # Use the correct EasyInsight endpoint: /timeframes/{timeframe}/symbol/{symbol}
             response = await client.get(
-                f"{self._api_url}/time-series/{symbol}",
+                f"{self._api_url}/timeframes/{ei_timeframe}/symbol/{symbol}",
                 params=params
             )
 
             if response.status_code != 200:
                 error_msg = f"EasyInsight API error: {response.status_code}"
-                logger.warning(error_msg)
+                logger.warning(f"{error_msg} for {symbol}/{ei_timeframe}")
                 return {"meta": {"symbol": symbol}, "values": [], "status": "error", "error": error_msg}
 
             data = response.json()
 
             # Check for API error
-            if data.get("status") == "error":
-                return data
+            if data.get("error"):
+                return {"meta": {"symbol": symbol}, "values": [], "status": "error", "error": data.get("error")}
 
-            # Convert string values to floats for consistency
-            values = data.get("values", [])
+            # EasyInsight returns {"columns": [...], "data": [{...}, {...}]}
+            # The data is a list of dictionaries with column names as keys
+            # Convert to TwelveData-compatible format {"meta": {...}, "values": [...]}
+            rows = data.get("data", [])
+
+            # Convert rows to OHLCV dictionaries
+            # EasyInsight uses "bucket" for timestamp
             converted_values = []
-            for row in values:
-                converted_row = {
-                    "datetime": row.get("datetime"),
-                    "open": float(row.get("open", 0)),
-                    "high": float(row.get("high", 0)),
-                    "low": float(row.get("low", 0)),
-                    "close": float(row.get("close", 0)),
-                    "volume": float(row.get("volume", 0)) if row.get("volume") else 0,
-                }
-                converted_values.append(converted_row)
+            for row in rows:
+                if isinstance(row, dict):
+                    # Row is a dictionary - extract OHLCV fields
+                    converted_row = {
+                        "datetime": row.get("bucket") or row.get("datetime") or row.get("time"),
+                        "open": float(row.get("open", 0)) if row.get("open") is not None else 0.0,
+                        "high": float(row.get("high", 0)) if row.get("high") is not None else 0.0,
+                        "low": float(row.get("low", 0)) if row.get("low") is not None else 0.0,
+                        "close": float(row.get("close", 0)) if row.get("close") is not None else 0.0,
+                        "volume": float(row.get("volume", 0)) if row.get("volume") is not None else 0.0,
+                    }
+                    converted_values.append(converted_row)
+                elif isinstance(row, (list, tuple)):
+                    # Row is a list/tuple - use column indices (legacy format)
+                    columns = data.get("columns", [])
+                    col_indices = {}
+                    for i, col in enumerate(columns):
+                        col_lower = col.lower()
+                        if col_lower in ("bucket", "datetime", "time"):
+                            col_indices["datetime"] = i
+                        elif col_lower == "open":
+                            col_indices["open"] = i
+                        elif col_lower == "high":
+                            col_indices["high"] = i
+                        elif col_lower == "low":
+                            col_indices["low"] = i
+                        elif col_lower == "close":
+                            col_indices["close"] = i
+                        elif col_lower == "volume":
+                            col_indices["volume"] = i
+                    converted_row = {
+                        "datetime": row[col_indices.get("datetime", 0)] if "datetime" in col_indices else None,
+                        "open": float(row[col_indices["open"]]) if "open" in col_indices else 0.0,
+                        "high": float(row[col_indices["high"]]) if "high" in col_indices else 0.0,
+                        "low": float(row[col_indices["low"]]) if "low" in col_indices else 0.0,
+                        "close": float(row[col_indices["close"]]) if "close" in col_indices else 0.0,
+                        "volume": float(row[col_indices["volume"]]) if "volume" in col_indices else 0.0,
+                    }
+                    converted_values.append(converted_row)
 
             result = {
                 "meta": {
                     "symbol": symbol.upper(),
-                    "interval": interval,
+                    "interval": ei_timeframe,
                     "type": "Time Series",
                     "from_cache": False,
-                    **(data.get("meta", {}))
                 },
                 "values": converted_values,
                 "status": "ok"
@@ -177,18 +227,18 @@ class EasyInsightService:
 
             # Cache the result (only if not using date filters)
             if not start_date and not end_date and converted_values:
-                ttl = TIMEFRAME_TTL.get(interval, 300)
+                ttl = TIMEFRAME_TTL.get(ei_timeframe, 300)
                 await cache_service.set(
-                    CacheCategory.OHLCV, result, cache_symbol, interval,
+                    CacheCategory.OHLCV, result, cache_symbol, ei_timeframe,
                     params=cache_params, ttl=ttl
                 )
-                logger.debug(f"Cached {len(converted_values)} OHLCV points for {symbol}/{interval}")
+                logger.debug(f"Cached {len(converted_values)} OHLCV points for {symbol}/{ei_timeframe}")
 
-            logger.info(f"EasyInsight: Retrieved {len(converted_values)} data points for {symbol}")
+            logger.info(f"EasyInsight: Retrieved {len(converted_values)} data points for {symbol}/{ei_timeframe}")
             return result
 
         except Exception as e:
-            logger.error(f"Failed to get time series from EasyInsight for {symbol}: {e}")
+            logger.error(f"Failed to get time series from EasyInsight for {symbol}/{ei_timeframe}: {e}")
             return {"meta": {"symbol": symbol}, "values": [], "status": "error", "error": str(e)}
 
     # ==================== Technical Indicators ====================

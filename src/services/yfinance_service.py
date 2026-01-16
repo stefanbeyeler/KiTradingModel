@@ -176,7 +176,7 @@ class YFinanceService:
         # Try common patterns
         upper = symbol.upper()
 
-        # Forex: Add =X suffix
+        # Forex: Add =X suffix (6 alphabetic characters)
         if len(upper) == 6 and upper.isalpha():
             return f"{upper}=X"
 
@@ -188,6 +188,11 @@ class YFinanceService:
         # Already in yfinance format
         if "=" in symbol or "-" in symbol or symbol.startswith("^"):
             return symbol
+
+        # Stock symbols: 1-5 uppercase letters are typically direct stock tickers
+        # (e.g., AAPL, MSFT, GOOGL, META, NVDA, TSLA)
+        if 1 <= len(upper) <= 5 and upper.isalpha():
+            return upper
 
         return None
 
