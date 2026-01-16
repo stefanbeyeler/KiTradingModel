@@ -755,10 +755,23 @@
             gap: 0.4rem;
         }
 
+        .dataflow-node[data-href] {
+            cursor: pointer;
+        }
+
         .dataflow-node:hover {
             transform: scale(1.02);
             border-color: rgba(100, 200, 255, 0.5);
             box-shadow: 0 2px 8px rgba(100, 200, 255, 0.2);
+        }
+
+        .dataflow-node[data-href]:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(100, 200, 255, 0.3);
+        }
+
+        .dataflow-node[data-href]:active {
+            transform: scale(0.98);
         }
 
         .dataflow-node.external {
@@ -1230,7 +1243,7 @@
                     <div class="dataflow-stage">
                         <span class="dataflow-stage-label">Gateway</span>
                         <div class="dataflow-nodes-vertical">
-                            <div class="dataflow-node gateway">
+                            <div class="dataflow-node gateway" data-href="/config-data.html">
                                 <span class="node-status loading" id="df-data-status"></span>
                                 <span class="node-icon">&#128279;</span>
                                 <div class="node-info">
@@ -1247,7 +1260,7 @@
                                 </div>
                             </div>
                             <span class="dataflow-stage-label" style="margin-top: 0.3rem;">Training</span>
-                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);" data-href="/config-candlestick.html">
                                 <span class="node-status loading" id="df-candlestick-train-status"></span>
                                 <span class="node-icon">&#127891;</span>
                                 <div class="node-info">
@@ -1255,7 +1268,7 @@
                                     <span class="node-port">:3016</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);" data-href="/config-cnn-lstm.html">
                                 <span class="node-status loading" id="df-cnn-lstm-train-status"></span>
                                 <span class="node-icon">&#127891;</span>
                                 <div class="node-info">
@@ -1263,7 +1276,7 @@
                                     <span class="node-port">:3017</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);" data-href="/config-hmm.html">
                                 <span class="node-status loading" id="df-hmm-train-status"></span>
                                 <span class="node-icon">&#127891;</span>
                                 <div class="node-info">
@@ -1271,7 +1284,7 @@
                                     <span class="node-port">:3014</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);" data-href="/config-nhits.html">
                                 <span class="node-status loading" id="df-nhits-train-status"></span>
                                 <span class="node-icon">&#127891;</span>
                                 <div class="node-info">
@@ -1279,7 +1292,7 @@
                                     <span class="node-port">:3012</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);">
+                            <div class="dataflow-node training" style="border-color: #f97316; background: rgba(249, 115, 22, 0.1);" data-href="/config-tcn.html">
                                 <span class="node-status loading" id="df-tcn-train-status"></span>
                                 <span class="node-icon">&#127891;</span>
                                 <div class="node-info">
@@ -1296,7 +1309,7 @@
                     <div class="dataflow-stage">
                         <span class="dataflow-stage-label">ML Inference</span>
                         <div class="dataflow-nodes-vertical">
-                            <div class="dataflow-node ml">
+                            <div class="dataflow-node ml" data-href="/config-candlestick.html">
                                 <span class="node-status loading" id="df-candlestick-status"></span>
                                 <span class="node-icon">&#128293;</span>
                                 <div class="node-info">
@@ -1304,7 +1317,7 @@
                                     <span class="node-port">:3006</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node ml">
+                            <div class="dataflow-node ml" data-href="/config-cnn-lstm.html">
                                 <span class="node-status loading" id="df-cnn-lstm-status"></span>
                                 <span class="node-icon">&#129516;</span>
                                 <div class="node-info">
@@ -1312,7 +1325,7 @@
                                     <span class="node-port">:3007</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node ml">
+                            <div class="dataflow-node ml" data-href="/config-embedder.html">
                                 <span class="node-status loading" id="df-embedder-status"></span>
                                 <span class="node-icon">&#129302;</span>
                                 <div class="node-info">
@@ -1320,7 +1333,7 @@
                                     <span class="node-port">:3005</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node ml">
+                            <div class="dataflow-node ml" data-href="/config-hmm.html">
                                 <span class="node-status loading" id="df-hmm-status"></span>
                                 <span class="node-icon">&#128201;</span>
                                 <div class="node-info">
@@ -1328,7 +1341,7 @@
                                     <span class="node-port">:3004</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node ml">
+                            <div class="dataflow-node ml" data-href="/config-nhits.html">
                                 <span class="node-status loading" id="df-nhits-status"></span>
                                 <span class="node-icon">&#128202;</span>
                                 <div class="node-info">
@@ -1336,7 +1349,7 @@
                                     <span class="node-port">:3002</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node ml">
+                            <div class="dataflow-node ml" data-href="/config-tcn.html">
                                 <span class="node-status loading" id="df-tcn-status"></span>
                                 <span class="node-icon">&#128200;</span>
                                 <div class="node-info">
@@ -1353,7 +1366,7 @@
                     <div class="dataflow-stage">
                         <span class="dataflow-stage-label">Analyse</span>
                         <div class="dataflow-nodes-vertical">
-                            <div class="dataflow-node analysis">
+                            <div class="dataflow-node analysis" data-href="/config-rag.html">
                                 <span class="node-status loading" id="df-rag-status"></span>
                                 <span class="node-icon">&#128269;</span>
                                 <div class="node-info">
@@ -1361,7 +1374,7 @@
                                     <span class="node-port">:3008</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node analysis">
+                            <div class="dataflow-node analysis" data-href="/config-llm.html">
                                 <span class="node-status loading" id="df-llm-status"></span>
                                 <span class="node-icon">&#129504;</span>
                                 <div class="node-info">
@@ -1386,7 +1399,7 @@
                                     <span class="node-port">:3000</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node workplace">
+                            <div class="dataflow-node workplace" data-href="/config-workplace.html">
                                 <span class="node-status loading" id="df-workplace-status"></span>
                                 <span class="node-icon">&#128188;</span>
                                 <div class="node-info">
@@ -1394,7 +1407,7 @@
                                     <span class="node-port">:3020</span>
                                 </div>
                             </div>
-                            <div class="dataflow-node monitoring">
+                            <div class="dataflow-node monitoring" data-href="/config-watchdog.html">
                                 <span class="node-status loading" id="df-watchdog-status"></span>
                                 <span class="node-icon">&#128065;</span>
                                 <div class="node-info">
@@ -3137,6 +3150,16 @@
             if (e.key === 'Escape') {
                 closeSymbolsModal();
             }
+        });
+
+        // Dataflow node click handler - navigate to config pages
+        document.querySelectorAll('.dataflow-node[data-href]').forEach(node => {
+            node.addEventListener('click', (e) => {
+                const href = node.getAttribute('data-href');
+                if (href) {
+                    window.location.href = href;
+                }
+            });
         });
 
         // Initial load

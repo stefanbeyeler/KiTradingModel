@@ -802,8 +802,10 @@
             color: #60a5fa;
         }
 
-        .timeframe-item .tf-symbols {
-            display: none;
+        .timeframe-item .tf-newest {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            margin-top: 2px;
         }
 
         .category-pills {
@@ -6627,6 +6629,20 @@
             });
         }
 
+        function formatDateTimeKpi(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            const dateStr = date.toLocaleDateString('de-CH', {
+                day: '2-digit',
+                month: '2-digit'
+            });
+            const timeStr = date.toLocaleTimeString('de-CH', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            return `${dateStr} ${timeStr}`;
+        }
+
         const symbolTypeIcons = {
             'forex': '&#128177;',
             'crypto': '&#8383;',
@@ -6724,12 +6740,13 @@
                     tfGrid.innerHTML = '';
                     const timeframes = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1', 'MN'];
                     for (const tf of timeframes) {
-                        const tfData = data.timescaledb.by_timeframe[tf] || { records: 0, symbols: 0 };
+                        const tfData = data.timescaledb.by_timeframe[tf] || { records: 0, symbols: 0, newest: null };
+                        const newestDate = tfData.newest ? formatDateTimeKpi(tfData.newest) : '-';
                         tfGrid.innerHTML += `
                             <div class="timeframe-item">
                                 <div class="tf-name">${tf}</div>
                                 <div class="tf-records">${formatNumberKpi(tfData.records)}</div>
-                                <div class="tf-symbols">${tfData.symbols} Symbole</div>
+                                <div class="tf-newest" title="Letzter Eintrag">${newestDate}</div>
                             </div>
                         `;
                     }

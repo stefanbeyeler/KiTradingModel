@@ -1422,8 +1422,16 @@
     <div id="error-details-modal" class="error-modal" style="display: none;">
         <div class="error-modal-content">
             <div class="error-modal-header">
-                <h3>Fehlerdetails</h3>
-                <button class="error-modal-close" onclick="closeErrorModal()">&times;</button>
+                <h3>&#128270; Fehlerdetails</h3>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button class="btn btn-primary" onclick="exportErrorsForClaude()" title="Export als Markdown für Claude Code">
+                        &#128196; MD Export
+                    </button>
+                    <button class="btn btn-warning" onclick="exportErrorsAsJSON()" title="Export als JSON">
+                        &#128203; JSON Export
+                    </button>
+                    <button class="error-modal-close" onclick="closeErrorModal()">&times;</button>
+                </div>
             </div>
             <div id="error-details-content" class="error-modal-body">
                 <p>Keine Fehler aufgetreten</p>
@@ -1537,6 +1545,112 @@
 
         function clearErrorDetails() {
             errorDetails = [];
+        }
+
+        // Export-Funktion für Fehlerdetails (für Claude Code / VS Code)
+        function exportErrorsForClaude() {
+            if (errorDetails.length === 0) {
+                alert('Keine Fehler zum Exportieren vorhanden.');
+                return;
+            }
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+            // Gruppiere nach Quelle
+            const bySource = {};
+            errorDetails.forEach(e => {
+                if (!bySource[e.source]) bySource[e.source] = [];
+                bySource[e.source].push(e);
+            });
+
+            // Generiere Markdown-Format für Claude Code
+            let markdown = `# Daten-Validierung Fehlerreport\n\n`;
+            markdown += `**Exportiert:** ${new Date().toLocaleString('de-DE')}\n`;
+            markdown += `**Anzahl Fehler:** ${errorDetails.length}\n\n`;
+            markdown += `---\n\n`;
+
+            // Zusammenfassung pro Quelle
+            markdown += `## Zusammenfassung\n\n`;
+            markdown += `| Quelle | Anzahl Fehler |\n`;
+            markdown += `|--------|---------------|\n`;
+            for (const [source, errors] of Object.entries(bySource)) {
+                markdown += `| ${source} | ${errors.length} |\n`;
+            }
+            markdown += `\n---\n\n`;
+
+            // Details pro Quelle
+            for (const [source, errors] of Object.entries(bySource)) {
+                markdown += `## ${source}\n\n`;
+                markdown += `| Symbol | Timeframe | Fehler |\n`;
+                markdown += `|--------|-----------|--------|\n`;
+
+                errors.forEach(e => {
+                    const errorMsg = e.error.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+                    markdown += `| ${e.symbol} | ${e.timeframe} | ${errorMsg} |\n`;
+                });
+
+                markdown += `\n`;
+
+                // Detaillierte Fehler mit Response-Daten (wenn vorhanden)
+                const errorsWithResponse = errors.filter(e => e.responseData);
+                if (errorsWithResponse.length > 0) {
+                    markdown += `### Detaillierte API-Responses\n\n`;
+                    errorsWithResponse.forEach(e => {
+                        markdown += `#### ${e.symbol} @ ${e.timeframe}\n\n`;
+                        markdown += `**Fehler:** ${e.error}\n\n`;
+                        markdown += `**Timestamp:** ${e.timestamp}\n\n`;
+                        markdown += `\`\`\`json\n${JSON.stringify(e.responseData, null, 2)}\n\`\`\`\n\n`;
+                    });
+                }
+            }
+
+            // Rohdaten als JSON für programmatische Weiterverarbeitung
+            markdown += `---\n\n`;
+            markdown += `## Rohdaten (JSON)\n\n`;
+            markdown += `<details>\n<summary>Klicken zum Aufklappen</summary>\n\n`;
+            markdown += `\`\`\`json\n${JSON.stringify(errorDetails, null, 2)}\n\`\`\`\n\n`;
+            markdown += `</details>\n`;
+
+            // Download als Markdown-Datei
+            const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `data-validation-errors-${timestamp}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            log('main-log', `${errorDetails.length} Fehler als Markdown exportiert`, 'ok');
+        }
+
+        // Export als JSON für programmatische Weiterverarbeitung
+        function exportErrorsAsJSON() {
+            if (errorDetails.length === 0) {
+                alert('Keine Fehler zum Exportieren vorhanden.');
+                return;
+            }
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+            const exportData = {
+                exportedAt: new Date().toISOString(),
+                totalErrors: errorDetails.length,
+                errors: errorDetails
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `data-validation-errors-${timestamp}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            log('main-log', `${errorDetails.length} Fehler als JSON exportiert`, 'ok');
         }
 
         // Cached symbols data from Data Service
@@ -2629,9 +2743,15 @@
                     </tbody>
                 </table>
                 ${(totalWarning + totalError) > 0 ? `
-                <div style="margin-top: 1.5rem; text-align: center;">
+                <div style="margin-top: 1.5rem; text-align: center; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
                     <button class="btn btn-danger" onclick="showErrorDetails()" style="padding: 0.75rem 2rem;">
                         &#128269; Fehlerdetails anzeigen (${errorDetails.length} Einträge)
+                    </button>
+                    <button class="btn btn-primary" onclick="exportErrorsForClaude()" style="padding: 0.75rem 2rem;" title="Export als Markdown für Claude Code / VS Code">
+                        &#128196; Fehler exportieren (MD)
+                    </button>
+                    <button class="btn btn-warning" onclick="exportErrorsAsJSON()" style="padding: 0.75rem 2rem;" title="Export als JSON">
+                        &#128203; Fehler exportieren (JSON)
                     </button>
                 </div>
                 ` : ''}

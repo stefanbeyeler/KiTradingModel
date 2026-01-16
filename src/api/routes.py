@@ -1327,9 +1327,11 @@ async def get_kpi_dashboard():
                         if row:
                             cnt = row["cnt"] or 0
                             total_records += cnt
+                            tf_newest = row["max_ts"].isoformat() if row["max_ts"] else None
                             result["timescaledb"]["by_timeframe"][tf] = {
                                 "records": cnt,
-                                "symbols": row["sym_cnt"] or 0
+                                "symbols": row["sym_cnt"] or 0,
+                                "newest": tf_newest
                             }
                             if row["min_ts"]:
                                 if oldest is None or row["min_ts"] < oldest:
