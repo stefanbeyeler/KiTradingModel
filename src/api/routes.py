@@ -194,8 +194,13 @@ async def get_version():
 async def health_check():
     """Check health of all services."""
     try:
-        # Check LLM service directly
-        llm_healthy = await llm_service.check_model_available()
+        # Check LLM service directly (may be None if not available)
+        llm_healthy = False
+        if llm_service is not None:
+            try:
+                llm_healthy = await llm_service.check_model_available()
+            except Exception as e:
+                logger.debug(f"LLM health check failed: {e}")
 
         # Check RAG service
         rag_healthy = False
@@ -463,6 +468,8 @@ async def persist_rag():
 @llm_router.get("/llm/status")
 async def get_llm_status():
     """Check LLM model status."""
+    if llm_service is None:
+        raise HTTPException(status_code=503, detail="LLM service not available")
     try:
         is_available = await llm_service.check_model_available()
         model_info = await llm_service.get_model_info()
@@ -481,6 +488,8 @@ async def get_llm_status():
 @llm_router.post("/llm/pull")
 async def pull_llm_model():
     """Pull the configured LLM model."""
+    if llm_service is None:
+        raise HTTPException(status_code=503, detail="LLM service not available")
     try:
         success = await llm_service.pull_model()
         return {
@@ -509,6 +518,8 @@ async def chat_with_llm(query: str, symbol: Optional[str] = None, use_rag: bool 
     Returns:
         LLM response with optional RAG context
     """
+    if llm_service is None:
+        raise HTTPException(status_code=503, detail="LLM service not available")
     try:
         # Try to extract symbol from query if not provided
         detected_symbol = symbol
