@@ -674,113 +674,83 @@
             font-size: 0.8rem;
         }
 
-        /* ==================== Status Tab Styles ==================== */
+        /* ==================== Status Tab Styles (Compact) ==================== */
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
         }
 
         @media (max-width: 1200px) {
             .kpi-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
-        @media (max-width: 600px) {
-            .kpi-grid { grid-template-columns: 1fr; }
-        }
-
         .kpi-card {
             background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 1.5rem;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s;
-        }
-
-        .kpi-card:hover {
-            transform: translateY(-3px);
-            border-color: rgba(100, 200, 255, 0.3);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
         }
 
         .kpi-card h3 {
-            font-size: 0.9rem;
-            opacity: 0.8;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-bottom: 0.2rem;
         }
 
         .kpi-value {
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             font-weight: 700;
             background: linear-gradient(135deg, #60a5fa, #34d399);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            line-height: 1.1;
         }
 
         .kpi-subtitle {
-            font-size: 0.8rem;
-            opacity: 0.6;
-            margin-top: 0.3rem;
+            font-size: 0.7rem;
+            opacity: 0.5;
         }
 
         .section-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
         }
 
-        @media (max-width: 900px) {
-            .section-grid { grid-template-columns: 1fr; }
+        @media (max-width: 1200px) {
+            .section-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         .section-card {
             background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 1.5rem;
+            border-radius: 8px;
+            padding: 0.75rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .section-card h2 {
-            font-size: 1.1rem;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding-bottom: 0.75rem;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.4rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .stats-table {
-            width: 100%;
         }
 
         .stats-row {
             display: flex;
             justify-content: space-between;
-            padding: 0.6rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .stats-row:last-child {
-            border-bottom: none;
+            padding: 0.25rem 0;
+            font-size: 0.8rem;
         }
 
         .stats-label {
             opacity: 0.7;
-            font-size: 0.9rem;
         }
 
         .stats-value-text {
             font-weight: 600;
-            font-size: 0.9rem;
         }
 
         .stats-value-text.highlight {
@@ -788,19 +758,19 @@
         }
 
         .progress-container {
-            margin-top: 0.5rem;
+            margin-top: 0.4rem;
         }
 
         .progress-bar {
-            height: 8px;
+            height: 6px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
+            border-radius: 3px;
             overflow: hidden;
         }
 
         .progress-fill {
             height: 100%;
-            border-radius: 4px;
+            border-radius: 3px;
             transition: width 0.5s ease;
         }
 
@@ -808,67 +778,61 @@
 
         .timeframe-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.75rem;
-            margin-top: 1rem;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 0.4rem;
+            margin-top: 0.5rem;
         }
 
         .timeframe-item {
             background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            padding: 0.75rem;
+            border-radius: 4px;
+            padding: 0.4rem;
             text-align: center;
         }
 
         .timeframe-item .tf-name {
             font-weight: 600;
-            font-size: 0.85rem;
-            margin-bottom: 0.3rem;
+            font-size: 0.7rem;
+            opacity: 0.8;
         }
 
         .timeframe-item .tf-records {
-            font-size: 1.1rem;
+            font-size: 0.85rem;
             font-weight: 700;
             color: #60a5fa;
         }
 
         .timeframe-item .tf-symbols {
-            font-size: 0.75rem;
-            opacity: 0.6;
+            display: none;
         }
 
         .category-pills {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 1rem;
+            gap: 0.3rem;
+            margin-top: 0.5rem;
         }
 
         .category-pill {
             background: rgba(96, 165, 250, 0.2);
             border: 1px solid rgba(96, 165, 250, 0.3);
-            border-radius: 20px;
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
+            border-radius: 12px;
+            padding: 0.2rem 0.5rem;
+            font-size: 0.7rem;
         }
 
         .category-pill .count {
             background: rgba(96, 165, 250, 0.3);
-            border-radius: 10px;
-            padding: 0.1rem 0.5rem;
+            border-radius: 8px;
+            padding: 0 0.3rem;
+            margin-left: 0.2rem;
             font-weight: 600;
         }
 
         .status-badge-kpi {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            padding: 0.3rem 0.6rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
             font-weight: 600;
         }
 
@@ -884,42 +848,39 @@
 
         .symbol-types {
             display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
-            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
         }
 
         .symbol-type {
             flex: 1;
-            min-width: 80px;
             background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            padding: 0.75rem;
+            border-radius: 4px;
+            padding: 0.4rem;
             text-align: center;
         }
 
         .symbol-type .type-icon {
-            font-size: 1.5rem;
-            margin-bottom: 0.3rem;
+            font-size: 1rem;
         }
 
         .symbol-type .type-name {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             opacity: 0.7;
         }
 
         .symbol-type .type-count {
-            font-size: 1.2rem;
+            font-size: 0.9rem;
             font-weight: 700;
             color: #fbbf24;
         }
 
         .full-width-section {
-            grid-column: span 2;
+            grid-column: span 3;
         }
 
-        @media (max-width: 900px) {
-            .full-width-section { grid-column: span 1; }
+        @media (max-width: 1200px) {
+            .full-width-section { grid-column: span 2; }
         }
     </style>
 </head>
@@ -988,161 +949,101 @@
             <!-- Top KPI Cards -->
             <div class="kpi-grid">
                 <div class="kpi-card">
-                    <h3>&#128200; Symbole</h3>
+                    <h3>Symbole</h3>
                     <div class="kpi-value" id="kpi-symbols">-</div>
                     <div class="kpi-subtitle"><span id="kpi-symbols-active">-</span> aktiv</div>
                 </div>
                 <div class="kpi-card">
-                    <h3>&#128208; Indikatoren</h3>
+                    <h3>Indikatoren</h3>
                     <div class="kpi-value" id="kpi-indicators">-</div>
                     <div class="kpi-subtitle"><span id="kpi-indicators-enabled">-</span> aktiviert</div>
                 </div>
                 <div class="kpi-card">
-                    <h3>&#128451; Cache Hit Rate</h3>
+                    <h3>Cache Hit Rate</h3>
                     <div class="kpi-value" id="kpi-cache-rate">-</div>
-                    <div class="kpi-subtitle"><span id="kpi-cache-hits">-</span> Hits / <span id="kpi-cache-misses">-</span> Misses</div>
+                    <div class="kpi-subtitle"><span id="kpi-cache-hits">-</span> / <span id="kpi-cache-misses">-</span></div>
                 </div>
                 <div class="kpi-card">
-                    <h3>&#128190; TimescaleDB</h3>
+                    <h3>TimescaleDB</h3>
                     <div class="kpi-value" id="kpi-db-records">-</div>
-                    <div class="kpi-subtitle"><span id="kpi-db-symbols">-</span> Symbole mit Daten</div>
+                    <div class="kpi-subtitle"><span id="kpi-db-symbols">-</span> Symbole</div>
                 </div>
             </div>
 
-            <!-- Detail Sections -->
+            <!-- Detail Sections - 3 Columns -->
             <div class="section-grid">
-                <!-- Cache Statistics -->
+                <!-- Cache + API Combined -->
                 <div class="section-card">
-                    <h2>&#128451; Cache Statistiken</h2>
-                    <div class="stats-table">
-                        <div class="stats-row">
-                            <span class="stats-label">Redis Status</span>
-                            <span class="stats-value-text" id="cache-redis-status">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Cache Hits</span>
-                            <span class="stats-value-text highlight" id="cache-hits">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Cache Misses</span>
-                            <span class="stats-value-text" id="cache-misses">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Hit Rate</span>
-                            <span class="stats-value-text" id="cache-hit-rate">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Memory Cache Einträge</span>
-                            <span class="stats-value-text" id="cache-memory-entries">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Memory Cache Grösse</span>
-                            <span class="stats-value-text" id="cache-memory-size">-</span>
-                        </div>
+                    <h2>Cache &amp; API</h2>
+                    <div class="stats-row">
+                        <span class="stats-label">Redis</span>
+                        <span class="stats-value-text" id="cache-redis-status">-</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">Hits / Misses</span>
+                        <span class="stats-value-text"><span id="cache-hits">-</span> / <span id="cache-misses">-</span></span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">Hit Rate</span>
+                        <span class="stats-value-text highlight" id="cache-hit-rate">-</span>
                     </div>
                     <div class="progress-container">
                         <div class="progress-bar">
                             <div class="progress-fill green" id="cache-hit-bar" style="width: 0%"></div>
                         </div>
                     </div>
+                    <div class="stats-row" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <span class="stats-label">Memory Cache</span>
+                        <span class="stats-value-text"><span id="cache-memory-entries">-</span> (<span id="cache-memory-size">-</span>)</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">API Queries</span>
+                        <span class="stats-value-text" id="api-total">-</span>
+                    </div>
                 </div>
 
-                <!-- API Access Statistics -->
+                <!-- Symbols -->
                 <div class="section-card">
-                    <h2>&#128640; API Zugriffe</h2>
-                    <div class="stats-table">
-                        <div class="stats-row">
-                            <span class="stats-label">Total Queries</span>
-                            <span class="stats-value-text highlight" id="api-total">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Aus Cache bedient</span>
-                            <span class="stats-value-text" id="api-cache">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Aus DB bedient</span>
-                            <span class="stats-value-text" id="api-db">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Extern abgerufen</span>
-                            <span class="stats-value-text" id="api-external">-</span>
-                        </div>
+                    <h2>Symbole</h2>
+                    <div class="stats-row">
+                        <span class="stats-label">Gesamt / Aktiv</span>
+                        <span class="stats-value-text"><span class="highlight" id="symbols-total">-</span> / <span id="symbols-active">-</span></span>
                     </div>
+                    <div class="stats-row">
+                        <span class="stats-label">Mit Daten</span>
+                        <span class="stats-value-text" id="symbols-with-data">-</span>
+                    </div>
+                    <div class="symbol-types" id="symbol-types"></div>
                 </div>
 
-                <!-- Symbol Statistics -->
+                <!-- Indicators -->
                 <div class="section-card">
-                    <h2>&#128200; Symbol Übersicht</h2>
-                    <div class="stats-table">
-                        <div class="stats-row">
-                            <span class="stats-label">Gesamt Symbole</span>
-                            <span class="stats-value-text highlight" id="symbols-total">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Aktive Symbole</span>
-                            <span class="stats-value-text" id="symbols-active">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Symbole mit Daten</span>
-                            <span class="stats-value-text" id="symbols-with-data">-</span>
-                        </div>
+                    <h2>Indikatoren</h2>
+                    <div class="stats-row">
+                        <span class="stats-label">Total / Aktiv</span>
+                        <span class="stats-value-text"><span class="highlight" id="indicators-total">-</span> / <span id="indicators-enabled">-</span></span>
                     </div>
-                    <div class="symbol-types" id="symbol-types">
-                        <!-- Populated by JS -->
-                    </div>
+                    <div class="category-pills" id="indicator-categories"></div>
                 </div>
 
-                <!-- Indicator Statistics -->
-                <div class="section-card">
-                    <h2>&#128208; Indikator Übersicht</h2>
-                    <div class="stats-table">
-                        <div class="stats-row">
-                            <span class="stats-label">Gesamt Indikatoren</span>
-                            <span class="stats-value-text highlight" id="indicators-total">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Aktiviert</span>
-                            <span class="stats-value-text" id="indicators-enabled">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Deaktiviert</span>
-                            <span class="stats-value-text" id="indicators-disabled">-</span>
-                        </div>
-                    </div>
-                    <div class="category-pills" id="indicator-categories">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-
-                <!-- TimescaleDB Statistics - Full Width -->
+                <!-- TimescaleDB - Full Width -->
                 <div class="section-card full-width-section">
-                    <h2>&#128190; TimescaleDB Datenbestand</h2>
-                    <div class="stats-table">
-                        <div class="stats-row">
-                            <span class="stats-label">Status</span>
-                            <span class="stats-value-text" id="db-status">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Total Records</span>
+                    <h2>TimescaleDB <span id="db-status" style="margin-left: 0.5rem;"></span></h2>
+                    <div style="display: flex; gap: 1.5rem; margin-bottom: 0.5rem;">
+                        <div class="stats-row" style="flex: 1;">
+                            <span class="stats-label">Records</span>
                             <span class="stats-value-text highlight" id="db-total-records">-</span>
                         </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Symbole mit Daten</span>
+                        <div class="stats-row" style="flex: 1;">
+                            <span class="stats-label">Symbole</span>
                             <span class="stats-value-text" id="db-symbols">-</span>
                         </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Älteste Daten</span>
-                            <span class="stats-value-text" id="db-oldest">-</span>
-                        </div>
-                        <div class="stats-row">
-                            <span class="stats-label">Neueste Daten</span>
-                            <span class="stats-value-text" id="db-newest">-</span>
+                        <div class="stats-row" style="flex: 1;">
+                            <span class="stats-label">Zeitraum</span>
+                            <span class="stats-value-text"><span id="db-oldest">-</span> - <span id="db-newest">-</span></span>
                         </div>
                     </div>
-                    <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; opacity: 0.8;">Records pro Timeframe</h4>
-                    <div class="timeframe-grid" id="timeframe-grid">
-                        <!-- Populated by JS -->
-                    </div>
+                    <div class="timeframe-grid" id="timeframe-grid"></div>
                 </div>
             </div>
         </div>
@@ -6722,9 +6623,7 @@
             return date.toLocaleDateString('de-CH', {
                 day: '2-digit',
                 month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+                year: '2-digit'
             });
         }
 
@@ -6770,9 +6669,6 @@
 
                 // API Access Statistics
                 document.getElementById('api-total').textContent = formatNumberKpi(data.api_access.total_queries);
-                document.getElementById('api-cache').textContent = formatNumberKpi(data.api_access.cache_served);
-                document.getElementById('api-db').textContent = formatNumberKpi(data.api_access.db_served);
-                document.getElementById('api-external').textContent = formatNumberKpi(data.api_access.external_fetched);
 
                 // Symbol Statistics
                 document.getElementById('symbols-total').textContent = formatNumberKpi(data.symbols.total);
@@ -6798,7 +6694,6 @@
                 // Indicator Statistics
                 document.getElementById('indicators-total').textContent = formatNumberKpi(data.indicators.total);
                 document.getElementById('indicators-enabled').textContent = formatNumberKpi(data.indicators.enabled);
-                document.getElementById('indicators-disabled').textContent = formatNumberKpi(data.indicators.total - data.indicators.enabled);
 
                 // Indicator Categories
                 const categoriesContainer = document.getElementById('indicator-categories');

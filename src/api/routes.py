@@ -1273,9 +1273,9 @@ async def get_kpi_dashboard():
     # 1. Symbol-Statistiken
     try:
         stats = await symbol_service.get_stats()
-        result["symbols"]["total"] = stats.total
-        result["symbols"]["active"] = stats.active
-        result["symbols"]["by_type"] = stats.by_type
+        result["symbols"]["total"] = stats.total_symbols
+        result["symbols"]["active"] = stats.active_symbols
+        result["symbols"]["by_type"] = stats.by_category
     except Exception as e:
         logger.debug(f"Failed to get symbol stats: {e}")
 
