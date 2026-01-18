@@ -534,7 +534,8 @@
 </head>
 <body>
     <header>
-        <div class="container">
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+            <a href="index.html" class="back-link">← Dashboard</a>
             <h1>🧪 API Test Suite</h1>
             <div class="header-actions">
                 <span class="status-badge status-idle" id="run-status">BEREIT</span>
@@ -544,7 +545,6 @@
                 <button class="btn btn-danger" id="btn-abort" onclick="abortTests()" disabled>
                     ⏹ Abbrechen
                 </button>
-                <a href="index.html" class="btn btn-secondary">← Dashboard</a>
                 <a href="/watchdog/docs#/Tests" target="_blank" class="btn btn-secondary">📚 API Docs</a>
             </div>
         </div>

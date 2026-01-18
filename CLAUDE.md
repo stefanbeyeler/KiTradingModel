@@ -315,6 +315,33 @@ In allen HTML-Dateien und UI-Texten sind deutsche Umlaute korrekt zu verwenden:
 - `Filter zurücksetzen` (nicht `Filter zurucksetzen`)
 - `Datenquellen-Übersicht` (nicht `Datenquellen-Ubersicht`)
 
+### Header-Layout (UI-Konvention)
+
+In allen Service-Seiten und Unterseiten gilt folgendes Layout:
+
+- **Links**: "← Dashboard" Link
+- **Mitte**: Seitentitel (h1)
+- **Rechts**: Action-Buttons, Status-Badges
+
+```html
+<!-- ✅ RICHTIG: Dashboard links, Titel Mitte, Actions rechts -->
+<div class="header-row">
+    <div class="header-left">
+        <a href="index.html" class="back-link">← Dashboard</a>
+    </div>
+    <h1>Service Name</h1>
+    <div class="header-right">
+        <!-- Action-Buttons, Status-Badges -->
+    </div>
+</div>
+
+<!-- ❌ FALSCH: Dashboard und Titel zusammen links -->
+<div class="header-left">
+    <a href="index.html" class="back-link">← Dashboard</a>
+    <h1>Service Name</h1>
+</div>
+```
+
 ## Candlestick Pattern Charts (VERBINDLICH)
 
 ### Chart-Kontext-Regel
