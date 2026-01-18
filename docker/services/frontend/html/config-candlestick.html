@@ -3592,6 +3592,7 @@
         const DATA_API = '/data/api/v1';
         let isAutoScanRunning = true;  // Default: aktiv
         let trainingRefreshInterval = null;
+        let revalTrainingInterval = null;  // Polling interval for training progress
         let currentHistoryPage = 1;
         const HISTORY_PAGE_SIZE = 12;
         let ohlcCache = {};  // Cache for OHLC data
@@ -6942,9 +6943,11 @@
                 const card = document.getElementById('currentTrainingSection');
                 const btn = document.getElementById('btnStartRevalTraining');
 
-                // Only show section if training is actively running
-                if (data.training && data.last_job) {
-                    // Show current training
+                // Check if training is actively running (either training flag or job status)
+                const isRunning = data.training || (data.last_job && data.last_job.status === 'running');
+
+                if (isRunning && data.last_job) {
+                    // Show current training progress
                     card.style.display = 'block';
                     btn.disabled = true;
                     btn.textContent = 'Training läuft...';
@@ -6960,6 +6963,11 @@
 
                     document.getElementById('currentJobStatus').textContent = 'Running';
                     document.getElementById('currentJobStatus').className = 'job-status running';
+
+                    // Start polling if not already running
+                    if (!revalTrainingInterval) {
+                        revalTrainingInterval = setInterval(pollRevalTrainingProgress, 2000);
+                    }
 
                 } else {
                     // No active training - hide section
@@ -8441,8 +8449,6 @@
         }
 
         // Revalidation Training
-        let revalTrainingInterval = null;
-
         async function startRevalTraining() {
             const epochs = parseInt(document.getElementById('trainEpochs').value) || 50;
             const batchSize = parseInt(document.getElementById('trainBatchSize').value) || 32;
