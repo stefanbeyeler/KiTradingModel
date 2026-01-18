@@ -1587,14 +1587,17 @@
             'hmm': { icon: '&#128201;', name: 'HMM Regime', category: 'inference', port: 3004, proxyPath: '/hmm' },
             'embedder': { icon: '&#129302;', name: 'Embedder', category: 'inference', port: 3005, proxyPath: '/embedder' },
             'candlestick': { icon: '&#128293;', name: 'Candlestick', category: 'inference', port: 3006, proxyPath: '/candlestick' },
+            'cnn-lstm': { icon: '&#129504;', name: 'CNN-LSTM', category: 'inference', port: 3007, proxyPath: '/cnn-lstm' },
             'redis': { icon: '&#128451;', name: 'Redis Cache', category: 'inference', port: null },
             'rag': { icon: '&#128269;', name: 'RAG Service', category: 'inference', port: 3008, proxyPath: '/rag' },
             'llm': { icon: '&#129504;', name: 'LLM Service', category: 'inference', port: 3009, proxyPath: '/llm' },
+            'workplace': { icon: '&#128188;', name: 'Workplace', category: 'inference', port: 3020, proxyPath: '/workplace' },
             // Training Services
             'nhits-train': { icon: '&#127891;', name: 'NHITS Train', category: 'training', port: 3012, proxyPath: '/nhits-train' },
             'tcn-train': { icon: '&#127891;', name: 'TCN Train', category: 'training', port: 3013, proxyPath: '/tcn-train' },
             'hmm-train': { icon: '&#127891;', name: 'HMM Train', category: 'training', port: 3014, proxyPath: '/hmm-train' },
             'candlestick-train': { icon: '&#127891;', name: 'Candle Train', category: 'training', port: 3016, proxyPath: '/candlestick-train' },
+            'cnn-lstm-train': { icon: '&#127891;', name: 'CNN-LSTM Train', category: 'training', port: 3017, proxyPath: '/cnn-lstm-train' },
             // External Services (keine direkten Test-Endpoints)
             'easyinsight': { icon: '&#127760;', name: 'EasyInsight', category: 'external', port: null },
             'twelvedata': { icon: '&#128200;', name: 'TwelveData', category: 'external', port: null },
@@ -1870,13 +1873,16 @@
             { name: 'HMM', port: 3004, key: 'hmm' },
             { name: 'Embedder', port: 3005, key: 'embedder' },
             { name: 'Candlestick', port: 3006, key: 'candlestick' },
+            { name: 'CNN-LSTM', port: 3007, key: 'cnn-lstm' },
             { name: 'RAG', port: 3008, key: 'rag' },
             { name: 'LLM', port: 3009, key: 'llm' },
+            { name: 'Workplace', port: 3020, key: 'workplace' },
             { name: 'Redis', port: 6379, key: 'redis' },
             { name: 'NHITS-Train', port: 3012, key: 'nhits-train' },
             { name: 'TCN-Train', port: 3013, key: 'tcn-train' },
             { name: 'HMM-Train', port: 3014, key: 'hmm-train' },
-            { name: 'Candle-Train', port: 3016, key: 'candlestick-train' }
+            { name: 'Candle-Train', port: 3016, key: 'candlestick-train' },
+            { name: 'CNN-LSTM-Train', port: 3017, key: 'cnn-lstm-train' }
         ];
 
         // External API Services (checked via Watchdog)
