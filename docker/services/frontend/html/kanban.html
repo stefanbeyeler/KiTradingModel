@@ -269,6 +269,16 @@
             cursor: grabbing;
         }
 
+        .kanban-card.drag-over-top {
+            border-top: 3px solid #64c8ff;
+            margin-top: -2px;
+        }
+
+        .kanban-card.drag-over-bottom {
+            border-bottom: 3px solid #64c8ff;
+            margin-bottom: -2px;
+        }
+
         .card-header {
             display: flex;
             justify-content: space-between;
@@ -682,9 +692,9 @@
                 <select class="filter-select" id="filterClassification" onchange="applyFilters()">
                     <option value="">Alle Klassifizierungen</option>
                     <option value="task">Task</option>
-                    <option value="bug">Bug</option>
-                    <option value="requirement">Requirement</option>
                     <option value="idee">Idee</option>
+                    <option value="requirement">Requirement</option>
+                    <option value="bug">Bug</option>
                 </select>
                 <select class="filter-select" id="filterService" onchange="applyFilters()">
                     <option value="">Alle Services</option>
@@ -749,9 +759,9 @@
                         <label for="cardClassification">Klassifizierung</label>
                         <select id="cardClassification">
                             <option value="task">Task</option>
-                            <option value="bug">Bug</option>
-                            <option value="requirement">Requirement</option>
                             <option value="idee">Idee</option>
+                            <option value="requirement">Requirement</option>
+                            <option value="bug">Bug</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -996,7 +1006,10 @@
                      draggable="true"
                      data-card-id="${card.id}"
                      ondragstart="handleDragStart(event, '${card.id}')"
-                     ondragend="handleDragEnd(event)">
+                     ondragend="handleDragEnd(event)"
+                     ondragover="handleCardDragOver(event)"
+                     ondrop="handleCardDrop(event, '${card.id}')"
+                     ondragleave="handleCardDragLeave(event)">
                     <div class="card-header">
                         <div class="card-title">${escapeHtml(card.title)}</div>
                         <div class="card-actions">
@@ -1019,18 +1032,20 @@
             `;
         }
 
-        // Get filtered cards
+        // Get filtered cards (sorted by order)
         function getFilteredCards() {
             const classificationFilter = document.getElementById('filterClassification').value;
             const serviceFilter = document.getElementById('filterService').value;
             const priorityFilter = document.getElementById('filterPriority').value;
 
-            return state.cards.filter(card => {
-                if (classificationFilter && card.classification !== classificationFilter) return false;
-                if (serviceFilter && card.service !== serviceFilter) return false;
-                if (priorityFilter && card.priority !== priorityFilter) return false;
-                return true;
-            });
+            return state.cards
+                .filter(card => {
+                    if (classificationFilter && card.classification !== classificationFilter) return false;
+                    if (serviceFilter && card.service !== serviceFilter) return false;
+                    if (priorityFilter && card.priority !== priorityFilter) return false;
+                    return true;
+                })
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
         }
 
         // Apply filters
@@ -1062,10 +1077,14 @@
             draggedCardId = cardId;
             event.target.classList.add('dragging');
             event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', cardId);
         }
 
         function handleDragEnd(event) {
             event.target.classList.remove('dragging');
+            document.querySelectorAll('.kanban-card').forEach(c => {
+                c.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
             draggedCardId = null;
         }
 
@@ -1078,6 +1097,88 @@
             event.currentTarget.classList.remove('drag-over');
         }
 
+        // Card-level drag handlers for reordering within column
+        function handleCardDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const card = event.currentTarget;
+            const cardId = card.dataset.cardId;
+
+            // Don't highlight if dragging over itself
+            if (cardId === draggedCardId) return;
+
+            const rect = card.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+
+            // Remove previous indicators
+            card.classList.remove('drag-over-top', 'drag-over-bottom');
+
+            // Show indicator based on mouse position
+            if (event.clientY < midY) {
+                card.classList.add('drag-over-top');
+            } else {
+                card.classList.add('drag-over-bottom');
+            }
+        }
+
+        function handleCardDragLeave(event) {
+            event.currentTarget.classList.remove('drag-over-top', 'drag-over-bottom');
+        }
+
+        function handleCardDrop(event, targetCardId) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const targetCard = event.currentTarget;
+            targetCard.classList.remove('drag-over-top', 'drag-over-bottom');
+
+            if (!draggedCardId || draggedCardId === targetCardId) return;
+
+            const draggedCard = state.cards.find(c => c.id === draggedCardId);
+            const targetCardData = state.cards.find(c => c.id === targetCardId);
+
+            if (!draggedCard || !targetCardData) return;
+
+            // Determine if dropping above or below
+            const rect = targetCard.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            const insertBefore = event.clientY < midY;
+
+            // Move to same column as target
+            draggedCard.columnId = targetCardData.columnId;
+            draggedCard.updatedAt = new Date().toISOString();
+
+            // Reorder cards in the column
+            const columnCards = state.cards.filter(c => c.columnId === targetCardData.columnId);
+            const otherCards = state.cards.filter(c => c.columnId !== targetCardData.columnId);
+
+            // Remove dragged card from column cards
+            const filteredColumnCards = columnCards.filter(c => c.id !== draggedCardId);
+
+            // Find target position
+            const targetIndex = filteredColumnCards.findIndex(c => c.id === targetCardId);
+
+            // Insert at correct position
+            if (insertBefore) {
+                filteredColumnCards.splice(targetIndex, 0, draggedCard);
+            } else {
+                filteredColumnCards.splice(targetIndex + 1, 0, draggedCard);
+            }
+
+            // Update order property
+            filteredColumnCards.forEach((card, index) => {
+                card.order = index;
+            });
+
+            // Rebuild state.cards maintaining order
+            state.cards = [...otherCards, ...filteredColumnCards];
+
+            saveState();
+            renderBoard();
+            showToast('Aufgabe verschoben', 'success');
+        }
+
         function handleDrop(event, columnId) {
             event.preventDefault();
             event.currentTarget.classList.remove('drag-over');
@@ -1085,7 +1186,14 @@
             if (draggedCardId) {
                 const card = state.cards.find(c => c.id === draggedCardId);
                 if (card) {
+                    // Get max order in target column
+                    const columnCards = state.cards.filter(c => c.columnId === columnId);
+                    const maxOrder = columnCards.length > 0
+                        ? Math.max(...columnCards.map(c => c.order || 0)) + 1
+                        : 0;
+
                     card.columnId = columnId;
+                    card.order = maxOrder;
                     card.updatedAt = new Date().toISOString();
                     saveState();
                     renderBoard();
@@ -1161,7 +1269,12 @@
                     showToast('Aufgabe aktualisiert', 'success');
                 }
             } else {
-                // Create new card
+                // Create new card - add at end of column
+                const columnCards = state.cards.filter(c => c.columnId === columnId);
+                const maxOrder = columnCards.length > 0
+                    ? Math.max(...columnCards.map(c => c.order || 0)) + 1
+                    : 0;
+
                 const newCard = {
                     id: generateId(),
                     title,
@@ -1171,6 +1284,7 @@
                     priority,
                     size,
                     columnId,
+                    order: maxOrder,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
