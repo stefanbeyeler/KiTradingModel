@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>KI Trading Model - Kanban Board</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 100%;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .back-link {
+            color: #64c8ff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(100, 200, 255, 0.1);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: rgba(100, 200, 255, 0.2);
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .toolbar-left {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-right {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(100, 200, 255, 0.3);
+        }
+
+        .btn-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .filter-select {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(20, 30, 50, 0.95);
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        .filter-select option {
+            background: #1a2744;
+            color: #fff;
+            padding: 0.5rem;
+        }
+
+        /* Kanban Board */
+        .kanban-board {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+            min-height: calc(100vh - 220px);
+        }
+
+        .kanban-column {
+            min-width: 320px;
+            max-width: 320px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .column-header {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .column-title {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .column-count {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .column-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .column-btn {
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .column-btn:hover {
+            color: #64c8ff;
+            background: rgba(100, 200, 255, 0.1);
+        }
+
+        .column-cards {
+            padding: 0.75rem;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 100px;
+        }
+
+        .column-cards.drag-over {
+            background: rgba(100, 200, 255, 0.05);
+        }
+
+        /* Cards */
+        .kanban-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: grab;
+            transition: all 0.2s;
+        }
+
+        .kanban-card:hover {
+            border-color: rgba(100, 200, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .kanban-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            flex: 1;
+            margin-right: 0.5rem;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.25rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .kanban-card:hover .card-actions {
+            opacity: 1;
+        }
+
+        .card-action-btn {
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 0.2rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .card-action-btn:hover {
+            color: #64c8ff;
+            background: rgba(100, 200, 255, 0.1);
+        }
+
+        .card-action-btn.delete:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .card-description {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-tag {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        /* Classification colors */
+        .tag-task {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .tag-bug {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .tag-requirement {
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
+        }
+
+        .tag-idee {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        /* Priority colors */
+        .tag-priority-hoch {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .tag-priority-mittel {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        .tag-priority-tief {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .tag-priority-keine {
+            background: rgba(107, 114, 128, 0.2);
+            color: #9ca3af;
+        }
+
+        /* T-Shirt Size colors */
+        .tag-size {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+        }
+
+        /* Service tag */
+        .tag-service {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: #888;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #ccc;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(20, 30, 50, 0.95);
+            color: #fff;
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+
+        .form-group select option {
+            background: #1a2744;
+            color: #fff;
+            padding: 0.5rem;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #64c8ff;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        /* Column Modal */
+        .column-modal .modal {
+            max-width: 400px;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .empty-state-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            color: #e8e8e8;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .toast.success {
+            border-color: rgba(16, 185, 129, 0.5);
+        }
+
+        .toast.error {
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Scrollbar */
+        .kanban-board::-webkit-scrollbar,
+        .column-cards::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .kanban-board::-webkit-scrollbar-track,
+        .column-cards::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        .kanban-board::-webkit-scrollbar-thumb,
+        .column-cards::-webkit-scrollbar-thumb {
+            background: rgba(100, 200, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .kanban-board::-webkit-scrollbar-thumb:hover,
+        .column-cards::-webkit-scrollbar-thumb:hover {
+            background: rgba(100, 200, 255, 0.5);
+        }
+
+        /* Add column button */
+        .add-column-btn {
+            min-width: 280px;
+            max-width: 280px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+        }
+
+        .add-column-btn:hover {
+            background: rgba(100, 200, 255, 0.05);
+            border-color: rgba(100, 200, 255, 0.3);
+            color: #64c8ff;
+        }
+
+        /* Statistics bar */
+        .stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .stat-label {
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>&#128203; Kanban Board</h1>
+            <div class="header-actions">
+                <a href="/" class="back-link">&#8592; Dashboard</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <button class="btn btn-primary" onclick="openCardModal()">
+                    &#10133; Neue Aufgabe
+                </button>
+                <button class="btn btn-secondary" onclick="openColumnModal()">
+                    &#10133; Neue Spalte
+                </button>
+                <select class="filter-select" id="filterClassification" onchange="applyFilters()">
+                    <option value="">Alle Klassifizierungen</option>
+                    <option value="task">Task</option>
+                    <option value="bug">Bug</option>
+                    <option value="requirement">Requirement</option>
+                    <option value="idee">Idee</option>
+                </select>
+                <select class="filter-select" id="filterService" onchange="applyFilters()">
+                    <option value="">Alle Services</option>
+                </select>
+                <select class="filter-select" id="filterPriority" onchange="applyFilters()">
+                    <option value="">Alle Prioritäten</option>
+                    <option value="hoch">Hoch</option>
+                    <option value="mittel">Mittel</option>
+                    <option value="tief">Tief</option>
+                    <option value="keine">Keine</option>
+                </select>
+            </div>
+            <div class="toolbar-right">
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalCards">0</span>
+                        <span class="stat-label">Gesamt</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="bugCount">0</span>
+                        <span class="stat-label">Bugs</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="taskCount">0</span>
+                        <span class="stat-label">Tasks</span>
+                    </div>
+                </div>
+                <button class="btn btn-warning" onclick="exportData()">
+                    &#128190; Export
+                </button>
+                <button class="btn btn-secondary" onclick="importData()">
+                    &#128194; Import
+                </button>
+            </div>
+        </div>
+
+        <!-- Kanban Board -->
+        <div class="kanban-board" id="kanbanBoard">
+            <!-- Columns will be rendered here -->
+        </div>
+    </div>
+
+    <!-- Card Modal -->
+    <div class="modal-overlay" id="cardModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="cardModalTitle">&#10133; Neue Aufgabe</h2>
+                <button class="modal-close" onclick="closeCardModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cardId">
+                <div class="form-group">
+                    <label for="cardTitle">Bezeichnung *</label>
+                    <input type="text" id="cardTitle" placeholder="Kurze Bezeichnung der Aufgabe" required>
+                </div>
+                <div class="form-group">
+                    <label for="cardDescription">Beschreibung</label>
+                    <textarea id="cardDescription" placeholder="Detaillierte Beschreibung..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cardClassification">Klassifizierung</label>
+                        <select id="cardClassification">
+                            <option value="task">Task</option>
+                            <option value="bug">Bug</option>
+                            <option value="requirement">Requirement</option>
+                            <option value="idee">Idee</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cardService">Micro-Service</label>
+                        <select id="cardService">
+                            <option value="">Kein Service</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cardPriority">Priorität</label>
+                        <select id="cardPriority">
+                            <option value="keine">Keine</option>
+                            <option value="tief">Tief</option>
+                            <option value="mittel">Mittel</option>
+                            <option value="hoch">Hoch</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cardSize">T-Shirt Size</label>
+                        <select id="cardSize">
+                            <option value="">Keine Schätzung</option>
+                            <option value="XXS">XXS</option>
+                            <option value="XS">XS</option>
+                            <option value="S">S</option>
+                            <option value="M">M</option>
+                            <option value="L">L</option>
+                            <option value="XL">XL</option>
+                            <option value="XXL">XXL</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="cardColumn">Spalte</label>
+                    <select id="cardColumn">
+                        <!-- Columns will be populated dynamically -->
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCardModal()">Abbrechen</button>
+                <button class="btn btn-primary" onclick="saveCard()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Column Modal -->
+    <div class="modal-overlay column-modal" id="columnModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="columnModalTitle">&#10133; Neue Spalte</h2>
+                <button class="modal-close" onclick="closeColumnModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="columnId">
+                <div class="form-group">
+                    <label for="columnName">Spaltenname *</label>
+                    <input type="text" id="columnName" placeholder="z.B. Backlog, In Progress, Done" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeColumnModal()">Abbrechen</button>
+                <button class="btn btn-primary" onclick="saveColumn()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>&#9888; Löschen bestätigen</h2>
+                <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteMessage">Möchten Sie dieses Element wirklich löschen?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Abbrechen</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">Löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for import -->
+    <input type="file" id="importFile" accept=".json" style="display: none" onchange="handleImport(event)">
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Micro-Services list (alphabetisch sortiert)
+        const MICROSERVICES = [
+            { value: 'candlestick', label: 'Candlestick Service' },
+            { value: 'candlestick-train', label: 'Candlestick-Train Service' },
+            { value: 'cnn-lstm', label: 'CNN-LSTM Service' },
+            { value: 'cnn-lstm-train', label: 'CNN-LSTM-Train Service' },
+            { value: 'data', label: 'Data Service' },
+            { value: 'easyinsight', label: 'EasyInsight API' },
+            { value: 'embedder', label: 'Embedder Service' },
+            { value: 'frontend', label: 'Frontend/Dashboard' },
+            { value: 'hmm', label: 'HMM-Regime Service' },
+            { value: 'hmm-train', label: 'HMM-Train Service' },
+            { value: 'llm', label: 'LLM Service' },
+            { value: 'nhits', label: 'NHITS Service' },
+            { value: 'nhits-train', label: 'NHITS-Train Service' },
+            { value: 'rag', label: 'RAG Service' },
+            { value: 'redis', label: 'Redis Cache' },
+            { value: 'tcn', label: 'TCN-Pattern Service' },
+            { value: 'tcn-train', label: 'TCN-Train Service' },
+            { value: 'workplace', label: 'Trading Workplace' },
+            { value: 'watchdog', label: 'Watchdog Service' }
+        ];
+
+        // Default columns
+        const DEFAULT_COLUMNS = [
+            { id: 'backlog', name: 'Backlog' },
+            { id: 'todo', name: 'To Do' },
+            { id: 'in-progress', name: 'In Progress' },
+            { id: 'review', name: 'Review' },
+            { id: 'done', name: 'Done' }
+        ];
+
+        // State
+        let state = {
+            columns: [],
+            cards: []
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            populateServiceDropdowns();
+            renderBoard();
+            updateStats();
+        });
+
+        // Load state from localStorage
+        function loadState() {
+            const saved = localStorage.getItem('kanban-state');
+            if (saved) {
+                try {
+                    state = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Failed to load state:', e);
+                    initializeDefaultState();
+                }
+            } else {
+                initializeDefaultState();
+            }
+        }
+
+        // Initialize with default columns
+        function initializeDefaultState() {
+            state = {
+                columns: [...DEFAULT_COLUMNS],
+                cards: []
+            };
+            saveState();
+        }
+
+        // Save state to localStorage
+        function saveState() {
+            localStorage.setItem('kanban-state', JSON.stringify(state));
+        }
+
+        // Populate service dropdowns
+        function populateServiceDropdowns() {
+            const cardServiceSelect = document.getElementById('cardService');
+            const filterServiceSelect = document.getElementById('filterService');
+
+            MICROSERVICES.forEach(service => {
+                cardServiceSelect.innerHTML += `<option value="${service.value}">${service.label}</option>`;
+                filterServiceSelect.innerHTML += `<option value="${service.value}">${service.label}</option>`;
+            });
+        }
+
+        // Render the board
+        function renderBoard() {
+            const board = document.getElementById('kanbanBoard');
+            board.innerHTML = '';
+
+            state.columns.forEach(column => {
+                const columnCards = getFilteredCards().filter(card => card.columnId === column.id);
+
+                const columnEl = document.createElement('div');
+                columnEl.className = 'kanban-column';
+                columnEl.innerHTML = `
+                    <div class="column-header">
+                        <div class="column-title">
+                            ${column.name}
+                            <span class="column-count">${columnCards.length}</span>
+                        </div>
+                        <div class="column-actions">
+                            <button class="column-btn" onclick="editColumn('${column.id}')" title="Bearbeiten">&#9998;</button>
+                            <button class="column-btn" onclick="confirmDeleteColumn('${column.id}')" title="Löschen">&#128465;</button>
+                        </div>
+                    </div>
+                    <div class="column-cards" data-column-id="${column.id}"
+                         ondragover="handleDragOver(event)"
+                         ondrop="handleDrop(event, '${column.id}')"
+                         ondragleave="handleDragLeave(event)">
+                        ${columnCards.length > 0 ? columnCards.map(card => renderCard(card)).join('') :
+                          '<div class="empty-state"><div class="empty-state-icon">&#128203;</div>Keine Aufgaben</div>'}
+                    </div>
+                `;
+                board.appendChild(columnEl);
+            });
+
+            // Add "Add Column" button
+            const addColumnBtn = document.createElement('button');
+            addColumnBtn.className = 'add-column-btn';
+            addColumnBtn.innerHTML = '&#10133; Neue Spalte';
+            addColumnBtn.onclick = openColumnModal;
+            board.appendChild(addColumnBtn);
+
+            updateColumnSelect();
+        }
+
+        // Render a single card
+        function renderCard(card) {
+            const classificationLabel = {
+                'task': 'Task',
+                'bug': 'Bug',
+                'requirement': 'Requirement',
+                'idee': 'Idee'
+            };
+
+            const priorityLabel = {
+                'hoch': 'Hoch',
+                'mittel': 'Mittel',
+                'tief': 'Tief',
+                'keine': 'Keine'
+            };
+
+            const serviceLabel = MICROSERVICES.find(s => s.value === card.service)?.label || '';
+            const createdDate = new Date(card.createdAt).toLocaleDateString('de-CH');
+
+            return `
+                <div class="kanban-card"
+                     draggable="true"
+                     data-card-id="${card.id}"
+                     ondragstart="handleDragStart(event, '${card.id}')"
+                     ondragend="handleDragEnd(event)">
+                    <div class="card-header">
+                        <div class="card-title">${escapeHtml(card.title)}</div>
+                        <div class="card-actions">
+                            <button class="card-action-btn" onclick="editCard('${card.id}')" title="Bearbeiten">&#9998;</button>
+                            <button class="card-action-btn delete" onclick="confirmDeleteCard('${card.id}')" title="Löschen">&#128465;</button>
+                        </div>
+                    </div>
+                    ${card.description ? `<div class="card-description">${escapeHtml(card.description)}</div>` : ''}
+                    <div class="card-tags">
+                        <span class="card-tag tag-${card.classification}">${classificationLabel[card.classification]}</span>
+                        ${card.priority !== 'keine' ? `<span class="card-tag tag-priority-${card.priority}">${priorityLabel[card.priority]}</span>` : ''}
+                        ${card.size ? `<span class="card-tag tag-size">${card.size}</span>` : ''}
+                        ${card.service ? `<span class="card-tag tag-service">${serviceLabel}</span>` : ''}
+                    </div>
+                    <div class="card-footer">
+                        <span>Erstellt: ${createdDate}</span>
+                        <span>#${card.id.slice(-4)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Get filtered cards
+        function getFilteredCards() {
+            const classificationFilter = document.getElementById('filterClassification').value;
+            const serviceFilter = document.getElementById('filterService').value;
+            const priorityFilter = document.getElementById('filterPriority').value;
+
+            return state.cards.filter(card => {
+                if (classificationFilter && card.classification !== classificationFilter) return false;
+                if (serviceFilter && card.service !== serviceFilter) return false;
+                if (priorityFilter && card.priority !== priorityFilter) return false;
+                return true;
+            });
+        }
+
+        // Apply filters
+        function applyFilters() {
+            renderBoard();
+            updateStats();
+        }
+
+        // Update statistics
+        function updateStats() {
+            const cards = getFilteredCards();
+            document.getElementById('totalCards').textContent = cards.length;
+            document.getElementById('bugCount').textContent = cards.filter(c => c.classification === 'bug').length;
+            document.getElementById('taskCount').textContent = cards.filter(c => c.classification === 'task').length;
+        }
+
+        // Update column select in card modal
+        function updateColumnSelect() {
+            const select = document.getElementById('cardColumn');
+            select.innerHTML = state.columns.map(col =>
+                `<option value="${col.id}">${col.name}</option>`
+            ).join('');
+        }
+
+        // Drag and Drop handlers
+        let draggedCardId = null;
+
+        function handleDragStart(event, cardId) {
+            draggedCardId = cardId;
+            event.target.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(event) {
+            event.target.classList.remove('dragging');
+            draggedCardId = null;
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(event, columnId) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+
+            if (draggedCardId) {
+                const card = state.cards.find(c => c.id === draggedCardId);
+                if (card) {
+                    card.columnId = columnId;
+                    card.updatedAt = new Date().toISOString();
+                    saveState();
+                    renderBoard();
+                    showToast('Aufgabe verschoben', 'success');
+                }
+            }
+        }
+
+        // Card Modal functions
+        function openCardModal(cardId = null) {
+            const modal = document.getElementById('cardModal');
+            const title = document.getElementById('cardModalTitle');
+
+            if (cardId) {
+                const card = state.cards.find(c => c.id === cardId);
+                if (card) {
+                    title.innerHTML = '&#9998; Aufgabe bearbeiten';
+                    document.getElementById('cardId').value = card.id;
+                    document.getElementById('cardTitle').value = card.title;
+                    document.getElementById('cardDescription').value = card.description || '';
+                    document.getElementById('cardClassification').value = card.classification;
+                    document.getElementById('cardService').value = card.service || '';
+                    document.getElementById('cardPriority').value = card.priority;
+                    document.getElementById('cardSize').value = card.size || '';
+                    document.getElementById('cardColumn').value = card.columnId;
+                }
+            } else {
+                title.innerHTML = '&#10133; Neue Aufgabe';
+                document.getElementById('cardId').value = '';
+                document.getElementById('cardTitle').value = '';
+                document.getElementById('cardDescription').value = '';
+                document.getElementById('cardClassification').value = 'task';
+                document.getElementById('cardService').value = '';
+                document.getElementById('cardPriority').value = 'keine';
+                document.getElementById('cardSize').value = '';
+                document.getElementById('cardColumn').value = state.columns[0]?.id || '';
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeCardModal() {
+            document.getElementById('cardModal').classList.remove('active');
+        }
+
+        function saveCard() {
+            const id = document.getElementById('cardId').value;
+            const title = document.getElementById('cardTitle').value.trim();
+            const description = document.getElementById('cardDescription').value.trim();
+            const classification = document.getElementById('cardClassification').value;
+            const service = document.getElementById('cardService').value;
+            const priority = document.getElementById('cardPriority').value;
+            const size = document.getElementById('cardSize').value;
+            const columnId = document.getElementById('cardColumn').value;
+
+            if (!title) {
+                showToast('Bitte Bezeichnung eingeben', 'error');
+                return;
+            }
+
+            if (id) {
+                // Update existing card
+                const card = state.cards.find(c => c.id === id);
+                if (card) {
+                    card.title = title;
+                    card.description = description;
+                    card.classification = classification;
+                    card.service = service;
+                    card.priority = priority;
+                    card.size = size;
+                    card.columnId = columnId;
+                    card.updatedAt = new Date().toISOString();
+                    showToast('Aufgabe aktualisiert', 'success');
+                }
+            } else {
+                // Create new card
+                const newCard = {
+                    id: generateId(),
+                    title,
+                    description,
+                    classification,
+                    service,
+                    priority,
+                    size,
+                    columnId,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                state.cards.push(newCard);
+                showToast('Aufgabe erstellt', 'success');
+            }
+
+            saveState();
+            closeCardModal();
+            renderBoard();
+            updateStats();
+        }
+
+        function editCard(cardId) {
+            openCardModal(cardId);
+        }
+
+        function confirmDeleteCard(cardId) {
+            const card = state.cards.find(c => c.id === cardId);
+            if (card) {
+                document.getElementById('deleteMessage').textContent =
+                    `Möchten Sie die Aufgabe "${card.title}" wirklich löschen?`;
+                document.getElementById('confirmDeleteBtn').onclick = () => deleteCard(cardId);
+                document.getElementById('deleteModal').classList.add('active');
+            }
+        }
+
+        function deleteCard(cardId) {
+            state.cards = state.cards.filter(c => c.id !== cardId);
+            saveState();
+            closeDeleteModal();
+            renderBoard();
+            updateStats();
+            showToast('Aufgabe gelöscht', 'success');
+        }
+
+        // Column Modal functions
+        function openColumnModal(columnId = null) {
+            const modal = document.getElementById('columnModal');
+            const title = document.getElementById('columnModalTitle');
+
+            if (columnId) {
+                const column = state.columns.find(c => c.id === columnId);
+                if (column) {
+                    title.innerHTML = '&#9998; Spalte bearbeiten';
+                    document.getElementById('columnId').value = column.id;
+                    document.getElementById('columnName').value = column.name;
+                }
+            } else {
+                title.innerHTML = '&#10133; Neue Spalte';
+                document.getElementById('columnId').value = '';
+                document.getElementById('columnName').value = '';
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeColumnModal() {
+            document.getElementById('columnModal').classList.remove('active');
+        }
+
+        function saveColumn() {
+            const id = document.getElementById('columnId').value;
+            const name = document.getElementById('columnName').value.trim();
+
+            if (!name) {
+                showToast('Bitte Spaltenname eingeben', 'error');
+                return;
+            }
+
+            if (id) {
+                // Update existing column
+                const column = state.columns.find(c => c.id === id);
+                if (column) {
+                    column.name = name;
+                    showToast('Spalte aktualisiert', 'success');
+                }
+            } else {
+                // Create new column
+                const newColumn = {
+                    id: generateId(),
+                    name
+                };
+                state.columns.push(newColumn);
+                showToast('Spalte erstellt', 'success');
+            }
+
+            saveState();
+            closeColumnModal();
+            renderBoard();
+        }
+
+        function editColumn(columnId) {
+            openColumnModal(columnId);
+        }
+
+        function confirmDeleteColumn(columnId) {
+            const column = state.columns.find(c => c.id === columnId);
+            const cardsInColumn = state.cards.filter(c => c.columnId === columnId);
+
+            if (column) {
+                let message = `Möchten Sie die Spalte "${column.name}" wirklich löschen?`;
+                if (cardsInColumn.length > 0) {
+                    message += ` Es befinden sich ${cardsInColumn.length} Aufgabe(n) in dieser Spalte, die ebenfalls gelöscht werden.`;
+                }
+                document.getElementById('deleteMessage').textContent = message;
+                document.getElementById('confirmDeleteBtn').onclick = () => deleteColumn(columnId);
+                document.getElementById('deleteModal').classList.add('active');
+            }
+        }
+
+        function deleteColumn(columnId) {
+            state.columns = state.columns.filter(c => c.id !== columnId);
+            state.cards = state.cards.filter(c => c.columnId !== columnId);
+            saveState();
+            closeDeleteModal();
+            renderBoard();
+            updateStats();
+            showToast('Spalte gelöscht', 'success');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+        }
+
+        // Export/Import functions
+        function exportData() {
+            const dataStr = JSON.stringify(state, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kanban-export-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Daten exportiert', 'success');
+        }
+
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    if (importedState.columns && importedState.cards) {
+                        state = importedState;
+                        saveState();
+                        renderBoard();
+                        updateStats();
+                        showToast('Daten importiert', 'success');
+                    } else {
+                        showToast('Ungültiges Dateiformat', 'error');
+                    }
+                } catch (err) {
+                    showToast('Fehler beim Import', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset for next import
+        }
+
+        // Utility functions
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '&#10004;' : '&#10006;'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Close modals on outside click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+            }
+            if (e.key === 'n' && e.ctrlKey) {
+                e.preventDefault();
+                openCardModal();
+            }
+        });
+    </script>
+</body>
+</html>
