@@ -63,6 +63,16 @@ except ImportError:
     validation_router = None
     _validation_routes_available = False
     logger.warning("Validation routes not available")
+
+# Prediction History routes
+try:
+    from src.services.data_app.api.prediction_routes import router as prediction_router
+    _prediction_routes_available = True
+except ImportError:
+    prediction_router = None
+    _prediction_routes_available = False
+    logger.warning("Prediction routes not available")
+
 from src.service_registry import register_service
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import is_test_unhealthy, get_test_unhealthy_status
@@ -157,6 +167,10 @@ openapi_tags = [
         "name": "14. Validation History",
         "description": "Validierungsläufe speichern und abrufen"
     },
+    {
+        "name": "15. Prediction History",
+        "description": "Vorhersagen aller Services speichern und evaluieren"
+    },
 ]
 
 # Create FastAPI application
@@ -230,6 +244,10 @@ app.include_router(test_health_router, prefix="/api/v1", tags=["13. Testing"])
 # Include Validation History router if available
 if _validation_routes_available and validation_router:
     app.include_router(validation_router, prefix="/api/v1", tags=["14. Validation History"])
+
+# Include Prediction History router if available
+if _prediction_routes_available and prediction_router:
+    app.include_router(prediction_router, prefix="/api/v1", tags=["15. Prediction History"])
 
 
 async def _periodic_cache_cleanup():
