@@ -303,6 +303,81 @@ class EmbeddingService:
             "hit_rate": round(stats.hit_rate, 4)
         }
 
+    async def warmup_all_models(self) -> dict:
+        """
+        Load and warmup all embedding models.
+
+        Loads all 4 models (Text, FinBERT, TimeSeries, Feature) into memory
+        for faster first-request latency.
+
+        Returns:
+            Dictionary with load status for each model
+        """
+        results = {}
+
+        # 1. Text Embedder
+        try:
+            logger.info("Warming up Text Embedder...")
+            await self.embed_text(["warmup text for initialization"])
+            results["text_embedder"] = {"status": "loaded", "model": self.text_embedder.model_name}
+            logger.success("Text Embedder loaded")
+        except Exception as e:
+            logger.error(f"Failed to load Text Embedder: {e}")
+            results["text_embedder"] = {"status": "failed", "error": str(e)}
+
+        # 2. FinBERT Embedder
+        try:
+            logger.info("Warming up FinBERT Embedder...")
+            await self.embed_text(["warmup financial text"], use_finbert=True)
+            results["finbert_embedder"] = {"status": "loaded", "model": self.finbert_embedder.model_name}
+            logger.success("FinBERT Embedder loaded")
+        except Exception as e:
+            logger.error(f"Failed to load FinBERT Embedder: {e}")
+            results["finbert_embedder"] = {"status": "failed", "error": str(e)}
+
+        # 3. TimeSeries Embedder (TS2Vec)
+        try:
+            logger.info("Warming up TimeSeries Embedder...")
+            # Create dummy OHLCV data: (1 sequence, 50 timesteps, 5 features)
+            dummy_ohlcv = np.random.randn(1, 50, 5).astype(np.float32)
+            await self.embed_timeseries(dummy_ohlcv)
+            results["timeseries_embedder"] = {"status": "loaded", "model": self.ts_embedder.model_name}
+            logger.success("TimeSeries Embedder loaded")
+        except Exception as e:
+            logger.error(f"Failed to load TimeSeries Embedder: {e}")
+            results["timeseries_embedder"] = {"status": "failed", "error": str(e)}
+
+        # 4. Feature Embedder (Autoencoder)
+        try:
+            logger.info("Warming up Feature Embedder...")
+            # Create dummy feature data: (1 sample, 25 features)
+            dummy_features = np.random.randn(1, 25).astype(np.float32)
+            await self.embed_features(dummy_features)
+            results["feature_embedder"] = {"status": "loaded", "model": self.feature_embedder.model_name}
+            logger.success("Feature Embedder loaded")
+        except Exception as e:
+            logger.error(f"Failed to load Feature Embedder: {e}")
+            results["feature_embedder"] = {"status": "failed", "error": str(e)}
+
+        # Summary
+        loaded_count = sum(1 for r in results.values() if r.get("status") == "loaded")
+        logger.info(f"Warmup complete: {loaded_count}/4 models loaded")
+
+        return {
+            "models": results,
+            "loaded_count": loaded_count,
+            "total_count": 4
+        }
+
+    def cleanup(self):
+        """Release model resources."""
+        logger.info("Cleaning up embedding models...")
+        # Models will be garbage collected, but we can explicitly clear references
+        self._text_embedder = None
+        self._finbert_embedder = None
+        self._ts_embedder = None
+        self._feature_embedder = None
+
 
 # Singleton instance
 embedding_service = EmbeddingService()

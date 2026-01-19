@@ -94,13 +94,15 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
 
     try:
-        # Model Warmup (optional)
+        # Model Warmup - Load all 4 models on startup
         if settings.warmup_on_startup:
-            logger.info("Pre-warming embedding models...")
+            logger.info("Pre-warming ALL embedding models (Text, FinBERT, TimeSeries, Feature)...")
             try:
-                await embedding_service.embed_text(["warmup"])
-                state.models_loaded = True
-                logger.success("Models warmed up successfully")
+                warmup_result = await embedding_service.warmup_all_models()
+                loaded_count = warmup_result.get("loaded_count", 0)
+                total_count = warmup_result.get("total_count", 4)
+                state.models_loaded = loaded_count == total_count
+                logger.success(f"Models warmed up: {loaded_count}/{total_count} loaded")
             except Exception as e:
                 logger.warning(f"Model warmup failed: {e}")
                 # Kein Fehler - Lazy Loading wird es später laden

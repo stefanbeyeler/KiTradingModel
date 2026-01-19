@@ -28,7 +28,7 @@ class EmbedderSettings(BaseSettings):
     # Model Loading
     model_load_timeout: float = 180.0  # Embedder braucht länger
     lazy_load_models: bool = True  # Lazy Loading default an
-    warmup_on_startup: bool = Field(default=False, alias="EMBEDDER_WARMUP")
+    warmup_on_startup: bool = Field(default=True, alias="EMBEDDER_WARMUP")  # Alle Modelle beim Start laden
 
     # GPU Configuration
     use_gpu: bool = Field(default=True, alias="USE_GPU")

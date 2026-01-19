@@ -103,29 +103,26 @@ async def clear_cache():
 @router.post("/warmup")
 async def warmup_models():
     """
-    Pre-load all embedding models.
+    Pre-load all 4 embedding models.
 
-    Useful for reducing first-request latency.
+    Loads Text, FinBERT, TimeSeries (TS2Vec), and Feature (Autoencoder) models
+    into memory for faster first-request latency.
+
+    This endpoint is automatically called on startup if EMBEDDER_WARMUP=true.
     """
     try:
-        logger.info("Starting model warmup...")
+        logger.info("Starting full model warmup (all 4 models)...")
 
-        # Warmup text embedder
-        await embedding_service.embed_text(["warmup text"])
-        logger.info("Text embedder warmed up")
+        # Use the new warmup_all_models method
+        warmup_result = await embedding_service.warmup_all_models()
 
-        # Warmup FinBERT
-        await embedding_service.embed_text(["warmup financial text"], use_finbert=True)
-        logger.info("FinBERT embedder warmed up")
-
-        # Note: TimeSeries and Feature embedders are warmed up on first use
-        # as they require actual data
-
-        info = embedding_service.get_model_info()
+        # Get final model info
+        model_info = embedding_service.get_model_info()
 
         return {
             "status": "completed",
-            "models_loaded": info
+            "warmup_result": warmup_result,
+            "models_loaded": model_info
         }
     except Exception as e:
         logger.error(f"Error during warmup: {e}")
