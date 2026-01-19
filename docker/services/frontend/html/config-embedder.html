@@ -629,12 +629,12 @@
             <!-- Warmup -->
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">&#128293; Modell Warmup</h3>
+                    <h3 class="card-title">&#128260; Modelle neu laden</h3>
                 </div>
                 <div class="info-box" style="margin-bottom: 1rem;">
-                    Lädt alle Modelle in den Speicher vor für schnellere Inferenz. Empfohlen nach einem Neustart.
+                    Alle 4 Modelle werden automatisch beim Start geladen. Nutze diese Funktion, um Modelle nach einem Fehler neu zu initialisieren.
                 </div>
-                <button class="btn btn-warning" id="btn-warmup" onclick="warmupModels()">&#128293; Warmup starten</button>
+                <button class="btn btn-warning" id="btn-warmup" onclick="warmupModels()">&#128260; Modelle neu laden</button>
                 <div id="warmup-result" style="margin-top: 1rem;"></div>
             </div>
         </div>
@@ -988,11 +988,12 @@ Bitcoin bearish Signal</textarea>
 
                 container.innerHTML = `
                     <table class="data-table">
-                        <tr><th>Embedder</th><th>Dimension</th></tr>
-                        ${Object.entries(data).map(([key, dim]) => `
+                        <tr><th>Embedder</th><th>Modell</th><th>Dimension</th></tr>
+                        ${Object.entries(data).map(([key, info]) => `
                             <tr>
                                 <td>${key}</td>
-                                <td style="color: #64c8ff; font-weight: 600;">${dim}</td>
+                                <td style="color: #aaa; font-size: 0.9em;">${info.model || '-'}</td>
+                                <td style="color: #64c8ff; font-weight: 600;">${info.dimension || '-'}</td>
                             </tr>
                         `).join('')}
                     </table>
