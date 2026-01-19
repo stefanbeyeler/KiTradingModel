@@ -1109,6 +1109,38 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Service Outages / Unterbrüche -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Service-Unterbrüche</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select class="form-control" id="filter-outage-service" style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem;" onchange="loadServiceOutages()">
+                            <option value="">Alle Services</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary" onclick="loadServiceOutages()">Aktualisieren</button>
+                    </div>
+                </div>
+                <div id="service-outages-summary" style="display: flex; gap: 1.5rem; margin-bottom: 1rem; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px; flex-wrap: wrap;">
+                    <div>
+                        <span style="font-size: 1.3rem; font-weight: 600; color: #e57373;" id="outages-total">0</span>
+                        <span style="font-size: 0.8rem; opacity: 0.7; margin-left: 0.3rem;">Unterbrüche</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 1.3rem; font-weight: 600; color: #ffb74d;" id="outages-total-duration">0m</span>
+                        <span style="font-size: 0.8rem; opacity: 0.7; margin-left: 0.3rem;">Gesamtdauer</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 1.3rem; font-weight: 600; color: #64b5f6;" id="outages-services-affected">0</span>
+                        <span style="font-size: 0.8rem; opacity: 0.7; margin-left: 0.3rem;">Services betroffen</span>
+                    </div>
+                </div>
+                <div id="service-outages-list">
+                    <div class="empty-state">
+                        <span class="loading-spinner"></span> Lade Unterbrüche...
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Service Runs Tab -->
@@ -1930,6 +1962,7 @@
                 loadMonitoredServices();
                 loadHealthHistory();
                 loadRetentionConfig();
+                loadServiceOutages();
             }
             if (tabName === 'alerts') {
                 loadServiceAlertConfig();
@@ -3079,6 +3112,171 @@
             toast.className = 'toast show' + (type === 'error' ? ' error' : type === 'success' ? ' success' : '');
             if (toastTimeout) clearTimeout(toastTimeout);
             toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ==================== Service Outages Functions ====================
+
+        // Load service outages from alert history
+        async function loadServiceOutages() {
+            const container = document.getElementById('service-outages-list');
+            const filterSelect = document.getElementById('filter-outage-service');
+            const selectedService = filterSelect.value;
+
+            try {
+                // Fetch alert history
+                const res = await fetch(`${API_BASE}/alerts/history?limit=100`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+
+                // Populate service filter dropdown
+                if (filterSelect.options.length <= 1) {
+                    const services = new Set();
+                    if (data.alerts) {
+                        data.alerts.forEach(a => {
+                            if (a.service) services.add(a.service);
+                        });
+                    }
+                    Array.from(services).sort().forEach(svc => {
+                        const opt = document.createElement('option');
+                        opt.value = svc;
+                        opt.textContent = svc;
+                        filterSelect.appendChild(opt);
+                    });
+                }
+
+                // Filter and process outages (UNHEALTHY events)
+                let outages = [];
+                if (data.alerts) {
+                    // Filter for unhealthy events
+                    const unhealthyEvents = data.alerts.filter(a =>
+                        a.type === 'UNHEALTHY' &&
+                        (!selectedService || a.service === selectedService)
+                    );
+
+                    // Match with recovery events to calculate duration
+                    unhealthyEvents.forEach(unhealthy => {
+                        const recovery = data.alerts.find(a =>
+                            a.type === 'RECOVERY' &&
+                            a.service === unhealthy.service &&
+                            new Date(a.timestamp) > new Date(unhealthy.timestamp)
+                        );
+
+                        const startTime = new Date(unhealthy.timestamp);
+                        const endTime = recovery ? new Date(recovery.timestamp) : null;
+                        const durationMs = endTime ? (endTime - startTime) : null;
+
+                        outages.push({
+                            service: unhealthy.service,
+                            startTime: startTime,
+                            endTime: endTime,
+                            durationMs: durationMs,
+                            error: unhealthy.error || unhealthy.message || 'Unbekannt',
+                            criticality: unhealthy.criticality || 'medium',
+                            recovered: !!recovery,
+                            telegramSent: unhealthy.telegram_sent
+                        });
+                    });
+                }
+
+                // Sort by start time (newest first)
+                outages.sort((a, b) => b.startTime - a.startTime);
+
+                // Update summary
+                const totalOutages = outages.length;
+                const totalDurationMs = outages.reduce((sum, o) => sum + (o.durationMs || 0), 0);
+                const servicesAffected = new Set(outages.map(o => o.service)).size;
+
+                document.getElementById('outages-total').textContent = totalOutages;
+                document.getElementById('outages-total-duration').textContent = formatOutageDuration(totalDurationMs);
+                document.getElementById('outages-services-affected').textContent = servicesAffected;
+
+                // Render outages list
+                if (outages.length > 0) {
+                    let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">';
+                    html += '<thead><tr style="background: rgba(0,0,0,0.3); text-align: left;">';
+                    html += '<th style="padding: 0.6rem 0.75rem;">Service</th>';
+                    html += '<th style="padding: 0.6rem 0.75rem;">Beginn</th>';
+                    html += '<th style="padding: 0.6rem 0.75rem;">Ende</th>';
+                    html += '<th style="padding: 0.6rem 0.75rem;">Dauer</th>';
+                    html += '<th style="padding: 0.6rem 0.75rem;">Status</th>';
+                    html += '<th style="padding: 0.6rem 0.75rem;">Fehler</th>';
+                    html += '</tr></thead><tbody>';
+
+                    outages.forEach(outage => {
+                        const startStr = outage.startTime.toLocaleString('de-CH');
+                        const endStr = outage.endTime ? outage.endTime.toLocaleString('de-CH') : '-';
+                        const durationStr = outage.durationMs ? formatOutageDuration(outage.durationMs) : 'Andauernd';
+                        const durationColor = !outage.recovered ? '#e57373' :
+                            (outage.durationMs > 300000 ? '#e57373' : outage.durationMs > 60000 ? '#ffb74d' : '#81c784');
+
+                        const statusIcon = outage.recovered ? '✓' : '⏳';
+                        const statusText = outage.recovered ? 'Behoben' : 'Aktiv';
+                        const statusColor = outage.recovered ? '#81c784' : '#e57373';
+
+                        const critColors = {
+                            'critical': '#e57373',
+                            'high': '#ffb74d',
+                            'medium': '#ffd54f',
+                            'low': '#81c784'
+                        };
+                        const critColor = critColors[outage.criticality] || '#888';
+
+                        const errorDisplay = outage.error.length > 40 ? outage.error.substring(0, 40) + '...' : outage.error;
+
+                        html += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05); ${!outage.recovered ? 'background: rgba(229, 115, 115, 0.1);' : ''}">`;
+                        html += `<td style="padding: 0.5rem 0.75rem;">
+                            <span style="font-weight: 600;">${outage.service}</span>
+                            <span style="display: inline-block; margin-left: 0.4rem; background: ${critColor}; color: #fff; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.65rem;">${outage.criticality}</span>
+                        </td>`;
+                        html += `<td style="padding: 0.5rem 0.75rem; font-family: monospace; font-size: 0.8rem;">${startStr}</td>`;
+                        html += `<td style="padding: 0.5rem 0.75rem; font-family: monospace; font-size: 0.8rem;">${endStr}</td>`;
+                        html += `<td style="padding: 0.5rem 0.75rem; font-weight: 600; color: ${durationColor};">${durationStr}</td>`;
+                        html += `<td style="padding: 0.5rem 0.75rem;">
+                            <span style="color: ${statusColor}; font-weight: 600;">${statusIcon} ${statusText}</span>
+                            ${outage.telegramSent ? '<span style="margin-left: 0.3rem; font-size: 0.7rem;" title="Telegram gesendet">📱</span>' : ''}
+                        </td>`;
+                        html += `<td style="padding: 0.5rem 0.75rem; font-size: 0.8rem; opacity: 0.8;" title="${outage.error}">${errorDisplay}</td>`;
+                        html += `</tr>`;
+                    });
+
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">✓</div>
+                            <div>Keine Unterbrüche gefunden</div>
+                            <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem;">
+                                ${selectedService ? `Für Service "${selectedService}" wurden keine Unterbrüche aufgezeichnet.` : 'Alle Services liefen ohne Unterbrüche.'}
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error('Error loading service outages:', err);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">⚠️</div>
+                        <div>Fehler beim Laden der Unterbrüche</div>
+                        <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem;">${err.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Format outage duration
+        function formatOutageDuration(ms) {
+            if (!ms || ms <= 0) return '0s';
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return `${days}d ${hours % 24}h`;
+            if (hours > 0) return `${hours}h ${minutes % 60}m`;
+            if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+            return `${seconds}s`;
         }
 
         // ==================== Service Runs Functions ====================
