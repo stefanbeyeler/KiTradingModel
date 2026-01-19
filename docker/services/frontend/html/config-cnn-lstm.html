@@ -802,6 +802,7 @@
         <div class="tabs">
             <button class="tab" onclick="switchTab('features')">&#128200; Features</button>
             <button class="tab active" onclick="switchTab('predictions')">&#127919; Live Predictions</button>
+            <button class="tab" onclick="switchTab('revalidation')">&#128202; Revalidierung</button>
             <button class="tab" onclick="switchTab('training')">&#128203; Training</button>
             <button class="tab" onclick="switchTab('model')">&#129516; Modell-Info</button>
         </div>
@@ -840,6 +841,173 @@
                     <div class="empty-state">
                         <div class="empty-state-icon">&#129516;</div>
                         <p>Klicke auf "Vorhersage" um eine Multi-Task Prediction zu laden</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revalidierung Tab -->
+        <div id="tab-revalidation" class="tab-content">
+            <!-- History Statistics -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128202; Prediction-History Statistiken</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="loadHistoryStats()">&#128260; Aktualisieren</button>
+                        <button class="btn btn-success" onclick="triggerPredictionScan()">&#128269; Scan starten</button>
+                    </div>
+                </div>
+                <div class="stats-grid" id="history-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-total-predictions">-</div>
+                        <div class="stat-label">Predictions</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value purple" id="stat-symbols">-</div>
+                        <div class="stat-label">Symbole</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success" id="stat-confirmed">-</div>
+                        <div class="stat-label">Bestätigt</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value warning" id="stat-corrected">-</div>
+                        <div class="stat-label">Korrigiert</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-avg-confidence">-</div>
+                        <div class="stat-label">&#8709; Konfidenz</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-scan-status">-</div>
+                        <div class="stat-label">Scan</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prediction History Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128203; Prediction-History</h2>
+                    <div class="btn-group">
+                        <select class="timeframe-select" id="history-symbol-filter" onchange="loadPredictionHistory()">
+                            <option value="">Alle Symbole</option>
+                            <option value="BTCUSD">BTCUSD</option>
+                            <option value="ETHUSD">ETHUSD</option>
+                            <option value="EURUSD">EURUSD</option>
+                            <option value="GBPUSD">GBPUSD</option>
+                            <option value="USDJPY">USDJPY</option>
+                        </select>
+                        <select class="timeframe-select" id="history-feedback-filter" onchange="loadPredictionHistory()">
+                            <option value="">Alle Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Bestätigt</option>
+                            <option value="corrected">Korrigiert</option>
+                            <option value="rejected">Abgelehnt</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="loadPredictionHistory()">&#128260; Laden</button>
+                    </div>
+                </div>
+                <div id="prediction-history-content">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#128203;</div>
+                        <p>Klicke auf "Laden" um die Prediction-History anzuzeigen</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128221; Feedback &amp; Revalidierung</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="loadPendingRevalidation()">&#128260; Pending laden</button>
+                        <button class="btn btn-warning" onclick="resetRevalidation()">&#128260; Reset nach Training</button>
+                    </div>
+                </div>
+                <div class="stats-grid" id="feedback-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-feedback-total">-</div>
+                        <div class="stat-label">Total Feedback</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value warning" id="stat-pending-reval">-</div>
+                        <div class="stat-label">Pending Revalidation</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success" id="stat-improvement-rate">-</div>
+                        <div class="stat-label">Verbesserungsrate</div>
+                    </div>
+                </div>
+                <div id="pending-revalidation-content">
+                    <div class="empty-state">
+                        <p>Klicke auf "Pending laden" um Predictions zur Revalidierung anzuzeigen</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backtesting Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128200; Backtesting</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="runBacktests()">&#9654; Backtests starten</button>
+                        <button class="btn btn-primary" onclick="loadBacktestSummary()">&#128202; Summary</button>
+                        <button class="btn btn-danger" onclick="clearBacktests()">&#128465; Löschen</button>
+                    </div>
+                </div>
+                <p class="card-description">
+                    Automatischer Vergleich von Predictions mit echten Marktdaten.
+                </p>
+                <div class="stats-grid" id="backtest-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-backtest-total">-</div>
+                        <div class="stat-label">Backtests</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success" id="stat-direction-accuracy">-</div>
+                        <div class="stat-label">Direction Accuracy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value purple" id="stat-regime-accuracy">-</div>
+                        <div class="stat-label">Regime Accuracy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-mae-1d">-</div>
+                        <div class="stat-label">MAE 1d (%)</div>
+                    </div>
+                </div>
+                <div id="backtest-results-content">
+                    <div class="empty-state">
+                        <p>Klicke auf "Summary" um Backtest-Ergebnisse anzuzeigen</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Claude Validation Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#129302; Claude Vision Validierung</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="loadClaudeValidationStats()">&#128202; Statistiken</button>
+                        <button class="btn btn-purple" onclick="checkClaudeStatus()">&#128161; Status</button>
+                    </div>
+                </div>
+                <p class="card-description">
+                    KI-gestützte Validierung von Predictions durch Claude Vision API.
+                </p>
+                <div class="stats-grid" id="claude-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-claude-total">-</div>
+                        <div class="stat-label">Validierungen</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success" id="stat-claude-agreement">-</div>
+                        <div class="stat-label">Agreement Rate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-claude-status">-</div>
+                        <div class="stat-label">API Status</div>
                     </div>
                 </div>
             </div>
@@ -1586,6 +1754,387 @@
 
         function formatPatternName(type) {
             return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+
+        // =====================================================
+        // Revalidierung Functions
+        // =====================================================
+
+        // Load History Statistics
+        async function loadHistoryStats() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/history/statistics');
+                const data = await response.json();
+
+                document.getElementById('stat-total-predictions').textContent = data.total_predictions || 0;
+                document.getElementById('stat-symbols').textContent = data.symbols_count || 0;
+                document.getElementById('stat-confirmed').textContent = data.by_feedback_status?.confirmed || 0;
+                document.getElementById('stat-corrected').textContent =
+                    (data.by_feedback_status?.corrected || 0) + (data.by_feedback_status?.rejected || 0);
+                document.getElementById('stat-avg-confidence').textContent =
+                    data.avg_confidence ? (data.avg_confidence * 100).toFixed(0) + '%' : '-';
+                document.getElementById('stat-scan-status').textContent = data.scan_running ? 'Aktiv' : 'Inaktiv';
+                document.getElementById('stat-scan-status').style.color = data.scan_running ? '#81c784' : '#888';
+
+                // Load feedback stats too
+                loadFeedbackStats();
+
+            } catch (error) {
+                showToast('Fehler beim Laden der Statistiken: ' + error.message, 'error');
+            }
+        }
+
+        // Trigger Prediction Scan
+        async function triggerPredictionScan() {
+            try {
+                showToast('Starte Prediction-Scan...', 'info');
+                const response = await fetch('/cnn-lstm/api/v1/history/scan', { method: 'POST' });
+                const data = await response.json();
+
+                showToast(`Scan abgeschlossen: ${data.new_predictions} neue Predictions`, 'success');
+                loadHistoryStats();
+
+            } catch (error) {
+                showToast('Fehler beim Scan: ' + error.message, 'error');
+            }
+        }
+
+        // Load Prediction History
+        async function loadPredictionHistory() {
+            const container = document.getElementById('prediction-history-content');
+            const symbolFilter = document.getElementById('history-symbol-filter').value;
+            const feedbackFilter = document.getElementById('history-feedback-filter').value;
+
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Lade History...</p></div>';
+
+            try {
+                let url = '/cnn-lstm/api/v1/history?limit=50';
+                if (symbolFilter) url += `&symbol=${symbolFilter}`;
+                if (feedbackFilter) url += `&feedback_status=${feedbackFilter}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!data.predictions || data.predictions.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>Keine Predictions gefunden</p></div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="feature-table">
+                        <thead>
+                            <tr>
+                                <th>Zeitpunkt</th>
+                                <th>Symbol</th>
+                                <th>TF</th>
+                                <th>Richtung</th>
+                                <th>Konfidenz</th>
+                                <th>Regime</th>
+                                <th>Status</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.predictions.map(p => `
+                                <tr>
+                                    <td>${new Date(p.timestamp).toLocaleString('de-DE', {dateStyle: 'short', timeStyle: 'short'})}</td>
+                                    <td><strong>${p.symbol}</strong></td>
+                                    <td>${p.timeframe}</td>
+                                    <td><span class="prediction-badge ${p.price_direction}">${p.price_direction}</span></td>
+                                    <td>${(p.price_confidence * 100).toFixed(0)}%</td>
+                                    <td>${formatRegimeName(p.regime_current)}</td>
+                                    <td><span class="prediction-badge ${getFeedbackClass(p.feedback_status)}">${p.feedback_status}</span></td>
+                                    <td>
+                                        <button class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
+                                            onclick="submitFeedback('${p.id}', 'confirmed', '${p.symbol}', '${p.timeframe}', '${p.timestamp}')">&#10003;</button>
+                                        <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
+                                            onclick="submitFeedback('${p.id}', 'rejected', '${p.symbol}', '${p.timeframe}', '${p.timestamp}')">&#10007;</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #888;">
+                        Zeige ${data.predictions.length} von ${data.count} Predictions
+                    </div>
+                `;
+
+            } catch (error) {
+                container.innerHTML = `<div class="empty-state"><p>Fehler: ${error.message}</p></div>`;
+            }
+        }
+
+        // Submit Feedback
+        async function submitFeedback(predictionId, feedbackType, symbol, timeframe, timestamp) {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prediction_id: predictionId,
+                        feedback_type: feedbackType,
+                        symbol: symbol,
+                        timeframe: timeframe,
+                        prediction_timestamp: timestamp
+                    })
+                });
+
+                if (!response.ok) throw new Error('Feedback speichern fehlgeschlagen');
+
+                showToast(`Feedback gespeichert: ${feedbackType}`, 'success');
+                loadPredictionHistory();
+                loadHistoryStats();
+
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // Load Feedback Statistics
+        async function loadFeedbackStats() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/feedback/statistics');
+                const data = await response.json();
+
+                document.getElementById('stat-feedback-total').textContent = data.total_feedback || 0;
+                document.getElementById('stat-pending-reval').textContent = data.pending_revalidation || 0;
+                document.getElementById('stat-improvement-rate').textContent =
+                    data.improvement_rate ? data.improvement_rate.toFixed(1) + '%' : '-';
+
+            } catch (error) {
+                console.error('Feedback stats error:', error);
+            }
+        }
+
+        // Load Pending Revalidation
+        async function loadPendingRevalidation() {
+            const container = document.getElementById('pending-revalidation-content');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Lade...</p></div>';
+
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/feedback/pending-revalidation');
+                const data = await response.json();
+
+                if (!data.pending || data.pending.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>Keine Predictions zur Revalidierung</p></div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="feature-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Timeframe</th>
+                                <th>Feedback Typ</th>
+                                <th>Grund</th>
+                                <th>Feedback Datum</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.pending.map(p => `
+                                <tr>
+                                    <td><strong>${p.symbol}</strong></td>
+                                    <td>${p.timeframe}</td>
+                                    <td><span class="prediction-badge ${getFeedbackClass(p.feedback_type)}">${p.feedback_type}</span></td>
+                                    <td>${p.reason_category || '-'}</td>
+                                    <td>${new Date(p.feedback_timestamp).toLocaleString('de-DE', {dateStyle: 'short'})}</td>
+                                    <td>
+                                        <button class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
+                                            onclick="markRevalidated('${p.id}', 'correct')">Korrekt</button>
+                                        <button class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
+                                            onclick="markRevalidated('${p.id}', 'now_correct')">Jetzt OK</button>
+                                        <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
+                                            onclick="markRevalidated('${p.id}', 'still_wrong')">Noch falsch</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+
+            } catch (error) {
+                container.innerHTML = `<div class="empty-state"><p>Fehler: ${error.message}</p></div>`;
+            }
+        }
+
+        // Mark as Revalidated
+        async function markRevalidated(feedbackId, result) {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/feedback/revalidate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        feedback_id: feedbackId,
+                        validation_result: result
+                    })
+                });
+
+                if (!response.ok) throw new Error('Revalidierung fehlgeschlagen');
+
+                showToast(`Revalidiert: ${result}`, 'success');
+                loadPendingRevalidation();
+                loadFeedbackStats();
+
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // Reset Revalidation
+        async function resetRevalidation() {
+            if (!confirm('Alle Revalidierungsstatus zurücksetzen? (Nach neuem Training)')) return;
+
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/feedback/reset-revalidation', { method: 'POST' });
+                const data = await response.json();
+
+                showToast(`Reset: ${data.reset_count} Einträge zurückgesetzt`, 'success');
+                loadFeedbackStats();
+
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // Run Backtests
+        async function runBacktests() {
+            try {
+                showToast('Starte Backtests...', 'info');
+                const response = await fetch('/cnn-lstm/api/v1/backtest/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ max_backtests: 50 })
+                });
+                const data = await response.json();
+
+                showToast(`Backtests: ${data.new_backtests} neu, ${data.skipped} übersprungen`, 'success');
+                loadBacktestSummary();
+
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // Load Backtest Summary
+        async function loadBacktestSummary() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/backtest/summary');
+                const data = await response.json();
+
+                document.getElementById('stat-backtest-total').textContent = data.backtested || 0;
+                document.getElementById('stat-direction-accuracy').textContent =
+                    data.price_direction_accuracy ? data.price_direction_accuracy.toFixed(1) + '%' : '-';
+                document.getElementById('stat-regime-accuracy').textContent =
+                    data.regime_accuracy ? data.regime_accuracy.toFixed(1) + '%' : '-';
+                document.getElementById('stat-mae-1d').textContent =
+                    data.price_mae_1d ? data.price_mae_1d.toFixed(2) : '-';
+
+                // Show by symbol breakdown
+                const container = document.getElementById('backtest-results-content');
+                if (data.by_symbol && Object.keys(data.by_symbol).length > 0) {
+                    container.innerHTML = `
+                        <table class="feature-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Tests</th>
+                                    <th>Direction Correct</th>
+                                    <th>Accuracy</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${Object.entries(data.by_symbol).map(([symbol, stats]) => `
+                                    <tr>
+                                        <td><strong>${symbol}</strong></td>
+                                        <td>${stats.total}</td>
+                                        <td>${stats.direction_correct}</td>
+                                        <td><span class="prediction-badge ${stats.accuracy >= 50 ? 'bullish' : 'bearish'}">${stats.accuracy}%</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } else {
+                    container.innerHTML = '<div class="empty-state"><p>Noch keine Backtest-Ergebnisse</p></div>';
+                }
+
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // Clear Backtests
+        async function clearBacktests() {
+            if (!confirm('Alle Backtest-Ergebnisse löschen?')) return;
+
+            try {
+                await fetch('/cnn-lstm/api/v1/backtest/clear', { method: 'POST' });
+                showToast('Backtest-Ergebnisse gelöscht', 'success');
+                loadBacktestSummary();
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // Load Claude Validation Statistics
+        async function loadClaudeValidationStats() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/validate/claude/statistics');
+                const data = await response.json();
+
+                document.getElementById('stat-claude-total').textContent = data.total_validations || 0;
+                document.getElementById('stat-claude-agreement').textContent =
+                    data.agreement_rate ? data.agreement_rate.toFixed(1) + '%' : '-';
+
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // Check Claude Status
+        async function checkClaudeStatus() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/validate/claude/status');
+                const data = await response.json();
+
+                const statusEl = document.getElementById('stat-claude-status');
+                if (data.enabled && data.api_configured) {
+                    statusEl.textContent = 'Aktiv';
+                    statusEl.style.color = '#81c784';
+                } else {
+                    statusEl.textContent = 'Inaktiv';
+                    statusEl.style.color = '#e57373';
+                }
+
+                showToast(`Claude API: ${data.api_configured ? 'Konfiguriert' : 'Nicht konfiguriert'}`,
+                    data.api_configured ? 'success' : 'warning');
+
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // Helper Functions
+        function formatRegimeName(regime) {
+            const names = {
+                'bull_trend': 'Bull',
+                'bear_trend': 'Bear',
+                'sideways': 'Sideways',
+                'high_volatility': 'High Vol'
+            };
+            return names[regime] || regime;
+        }
+
+        function getFeedbackClass(status) {
+            const classes = {
+                'pending': 'neutral',
+                'confirmed': 'bullish',
+                'corrected': 'bearish',
+                'rejected': 'bearish'
+            };
+            return classes[status] || 'neutral';
         }
 
         // Initial Load

@@ -884,6 +884,523 @@
         @media (max-width: 1200px) {
             .full-width-section { grid-column: span 2; }
         }
+
+        /* ==================== Validation Tab Styles ==================== */
+        .validation-subtabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .validation-subtab-btn {
+            padding: 0.6rem 1.2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #a0a0a0;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .validation-subtab-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e8e8e8;
+        }
+
+        .validation-subtab-btn.active {
+            background: rgba(100, 200, 255, 0.2);
+            border-color: rgba(100, 200, 255, 0.4);
+            color: #64c8ff;
+        }
+
+        .validation-subtab-content {
+            display: none;
+        }
+
+        .validation-subtab-content.active {
+            display: block;
+        }
+
+        .val-test-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .val-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .val-panel-header h2 {
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64c8ff;
+        }
+
+        .val-progress-container {
+            margin: 1rem 0;
+        }
+
+        .val-progress-bar {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+        }
+
+        .val-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .val-progress-text {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+
+        .val-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .val-summary-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .val-summary-card h3 {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+            margin-bottom: 0.5rem;
+        }
+
+        .val-summary-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .val-summary-card .value.success { color: #10b981; }
+        .val-summary-card .value.warning { color: #f59e0b; }
+        .val-summary-card .value.error { color: #ef4444; }
+
+        .val-matrix-container {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        .val-matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .val-matrix-table th,
+        .val-matrix-table td {
+            padding: 0.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 60px;
+        }
+
+        .val-matrix-table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+        }
+
+        .val-matrix-table th:first-child,
+        .val-matrix-table td:first-child {
+            text-align: left;
+        }
+
+        .val-cell-ok { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .val-cell-error { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .val-cell-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .val-cell-pending { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
+        .val-cell-running { background: rgba(59, 130, 246, 0.2); color: #3b82f6; animation: val-pulse 1.5s infinite; }
+
+        @keyframes val-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .val-log-output {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.8rem;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+
+        .val-log-output .log-line { margin-bottom: 0.25rem; }
+        .val-log-output .log-time { color: #6b7280; }
+        .val-log-output .log-ok { color: #10b981; }
+        .val-log-output .log-error { color: #ef4444; }
+        .val-log-output .log-warning { color: #f59e0b; }
+        .val-log-output .log-info { color: #3b82f6; }
+
+        .val-filter-controls {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        .val-filter-controls label {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+
+        .val-filter-controls select {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            color: #e8e8e8;
+            font-size: 0.85rem;
+        }
+
+        .val-selection-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .val-selection-box h4 {
+            font-size: 0.9rem;
+            color: #e8e8e8;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .val-selection-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .val-selection-actions button {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: #a0a0a0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .val-selection-actions button:hover {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border-color: #64c8ff;
+        }
+
+        .val-checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.5rem;
+            max-height: 180px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .val-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+
+        .val-checkbox-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .val-checkbox-item input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            accent-color: #3b82f6;
+        }
+
+        .val-checkbox-item label {
+            cursor: pointer;
+            color: #d0d0d0;
+            font-size: 0.8rem;
+        }
+
+        .val-timeframe-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .val-timeframe-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.4rem 0.6rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .val-timeframe-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .val-timeframe-item input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            accent-color: #3b82f6;
+        }
+
+        .val-timeframe-item label {
+            cursor: pointer;
+            color: #d0d0d0;
+            font-size: 0.8rem;
+        }
+
+        .val-selection-count {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-left: auto;
+        }
+
+        .val-results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .val-results-table th,
+        .val-results-table td {
+            padding: 0.6rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .val-results-table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+        }
+
+        .val-results-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .val-status-ok { color: #10b981; }
+        .val-status-warning { color: #f59e0b; }
+        .val-status-error { color: #ef4444; }
+        .val-status-pending { color: #6b7280; }
+
+        .val-validation-details {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .val-validation-details h4 {
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            color: #64c8ff;
+        }
+
+        .val-validation-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .val-validation-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Error Modal for Validation */
+        .val-error-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            backdrop-filter: blur(4px);
+        }
+
+        .val-error-modal-content {
+            background: #1a1a2e;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .val-error-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 12px 12px 0 0;
+        }
+
+        .val-error-modal-header h3 {
+            color: #ef4444;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .val-error-modal-close {
+            background: none;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .val-error-modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ef4444;
+        }
+
+        .val-error-modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .val-error-summary {
+            background: rgba(239, 68, 68, 0.15);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #ef4444;
+        }
+
+        .val-error-group { margin-bottom: 1rem; }
+
+        .val-error-group-header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s;
+            color: #e8e8e8;
+        }
+
+        .val-error-group-header:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .val-error-group-items { padding-left: 1rem; }
+
+        .val-error-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .val-error-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .val-error-item-header {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            align-items: center;
+        }
+
+        .val-error-symbol {
+            font-weight: 600;
+            color: #64c8ff;
+            min-width: 80px;
+        }
+
+        .val-error-timeframe {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #a0a0a0;
+        }
+
+        .val-error-message {
+            color: #ef4444;
+            flex: 1;
+            font-size: 0.9rem;
+        }
+
+        .val-error-item-details {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -939,6 +1456,7 @@
             <button class="tab-btn" data-tab="symbols">Symbole</button>
             <button class="tab-btn" data-tab="indicators">Indikatoren</button>
             <button class="tab-btn" data-tab="explorer">Daten-Explorer</button>
+            <button class="tab-btn" data-tab="validation">Daten-Validierung</button>
             <button class="tab-btn" data-tab="strategies">Trading-Strategien</button>
             <button class="tab-btn" data-tab="external">External Sources</button>
             <button class="tab-btn" data-tab="mt5logs">MT5 Logs</button>
@@ -2114,6 +2632,479 @@
                 <div style="padding: 2rem; text-align: center; color: #f44336;">
                     <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#9888;</div>
                     <p id="explorer-error-msg">Fehler beim Laden der Daten</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validation Tab -->
+        <div id="validation-tab" class="tab-content">
+            <!-- Sub-Tabs Navigation -->
+            <div class="validation-subtabs">
+                <button class="validation-subtab-btn active" data-subtab="val-overview">&#128200; Übersicht</button>
+                <button class="validation-subtab-btn" data-subtab="val-twelvedata">&#128201; TwelveData</button>
+                <button class="validation-subtab-btn" data-subtab="val-easyinsight">&#128202; EasyInsight</button>
+                <button class="validation-subtab-btn" data-subtab="val-yfinance">&#128203; Yahoo Finance</button>
+                <button class="validation-subtab-btn" data-subtab="val-timescaledb">&#128451; TimescaleDB</button>
+                <button class="validation-subtab-btn" data-subtab="val-redis">&#9889; Redis</button>
+                <button class="validation-subtab-btn" data-subtab="val-endpoints">&#128279; API Endpoints</button>
+            </div>
+
+            <!-- Overview Sub-Tab -->
+            <div id="val-overview" class="validation-subtab-content active">
+                <div class="val-summary-grid">
+                    <div class="val-summary-card">
+                        <h3>Gesamtstatus</h3>
+                        <div class="value" id="val-overall-status">-</div>
+                    </div>
+                    <div class="val-summary-card">
+                        <h3>TwelveData</h3>
+                        <div class="value" id="val-twelvedata-status">-</div>
+                    </div>
+                    <div class="val-summary-card">
+                        <h3>EasyInsight</h3>
+                        <div class="value" id="val-easyinsight-status">-</div>
+                    </div>
+                    <div class="val-summary-card">
+                        <h3>Yahoo Finance</h3>
+                        <div class="value" id="val-yfinance-status">-</div>
+                    </div>
+                    <div class="val-summary-card">
+                        <h3>TimescaleDB</h3>
+                        <div class="value" id="val-timescaledb-status">-</div>
+                    </div>
+                    <div class="val-summary-card">
+                        <h3>Redis</h3>
+                        <div class="value" id="val-redis-status">-</div>
+                    </div>
+                </div>
+
+                <div class="val-test-panel">
+                    <div class="val-panel-header">
+                        <h2>&#9889; Vollständige Validierung</h2>
+                        <div>
+                            <button class="btn btn-primary" id="val-run-all-tests" onclick="valRunAllTests()">
+                                &#9654; Alle Tests starten
+                            </button>
+                            <button class="btn btn-warning" onclick="valStopAllTests()">
+                                &#9632; Abbrechen
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="val-progress-container">
+                        <div class="val-progress-bar">
+                            <div class="val-progress-fill" id="val-overall-progress" style="width: 0%">0%</div>
+                        </div>
+                        <div class="val-progress-text" id="val-progress-text">Bereit für Tests</div>
+                    </div>
+
+                    <div class="val-log-output" id="val-main-log">
+                        <div class="log-line"><span class="log-time">[--:--:--]</span> <span class="log-info">Warte auf Teststart...</span></div>
+                    </div>
+                </div>
+
+                <div class="val-test-panel">
+                    <h2 style="color: #64c8ff; margin-bottom: 1rem;">&#128202; Letzte Ergebnisse</h2>
+                    <div id="val-overview-results">
+                        <p style="color: #6b7280; margin-top: 1rem;">Noch keine Tests ausgeführt</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TwelveData Sub-Tab -->
+            <div id="val-twelvedata" class="validation-subtab-content">
+                <div class="val-test-panel">
+                    <div class="val-panel-header">
+                        <h2>&#128201; TwelveData API Test</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="valRunTwelveDataTests()">
+                                &#9654; Tests starten
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="val-filter-controls">
+                        <div class="val-selection-box">
+                            <h4>&#128200; Symbole <span class="val-selection-count" id="val-td-symbols-count">(0 ausgewählt)</span></h4>
+                            <div class="val-selection-actions">
+                                <button onclick="valSelectAllSymbols('td')">Alle</button>
+                                <button onclick="valSelectNoneSymbols('td')">Keine</button>
+                                <button onclick="valSelectCategorySymbols('td', 'forex')">Forex</button>
+                                <button onclick="valSelectCategorySymbols('td', 'crypto')">Crypto</button>
+                                <button onclick="valSelectCategorySymbols('td', 'indices')">Indizes</button>
+                                <button onclick="valSelectCategorySymbols('td', 'stocks')">Aktien</button>
+                            </div>
+                            <div class="val-checkbox-grid" id="val-td-symbols-grid">
+                                <div style="color: #6b7280; font-style: italic; padding: 1rem; text-align: center;">Lade Symbole...</div>
+                            </div>
+                        </div>
+                        <div class="val-selection-box" style="min-width: 200px; flex: 0;">
+                            <h4>&#128337; Timeframes <span class="val-selection-count" id="val-td-tf-count">(0 ausgewählt)</span></h4>
+                            <div class="val-selection-actions">
+                                <button onclick="valSelectAllTimeframes('td')">Alle</button>
+                                <button onclick="valSelectNoneTimeframes('td')">Keine</button>
+                                <button onclick="valSelectDefaultTimeframes('td')">Standard</button>
+                            </div>
+                            <div class="val-timeframe-grid" id="val-td-timeframes-grid">
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-td-tf-M1" value="M1"><label for="val-td-tf-M1">M1</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-td-tf-M5" value="M5" checked><label for="val-td-tf-M5">M5</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-td-tf-M15" value="M15" checked><label for="val-td-tf-M15">M15</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-td-tf-M30" value="M30"><label for="val-td-tf-M30">M30</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-td-tf-H1" value="H1" checked><label for="val-td-tf-H1">H1</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-td-tf-H4" value="H4" checked><label for="val-td-tf-H4">H4</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-td-tf-D1" value="D1" checked><label for="val-td-tf-D1">D1</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-td-tf-W1" value="W1"><label for="val-td-tf-W1">W1</label></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="val-progress-container">
+                        <div class="val-progress-bar">
+                            <div class="val-progress-fill" id="val-td-progress" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem; color: #64c8ff;">OHLCV Matrix</h3>
+                    <div class="val-matrix-container">
+                        <table class="val-matrix-table" id="val-td-ohlcv-matrix">
+                            <thead>
+                                <tr><th>Symbol</th><th>M1</th><th>M5</th><th>M15</th><th>M30</th><th>H1</th><th>H4</th><th>D1</th><th>W1</th></tr>
+                            </thead>
+                            <tbody id="val-td-ohlcv-body"></tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem; color: #64c8ff;">Indikatoren Test</h3>
+                    <div class="val-matrix-container">
+                        <table class="val-matrix-table" id="val-td-indicators-matrix">
+                            <thead>
+                                <tr><th>Symbol</th><th>RSI</th><th>MACD</th><th>BBands</th><th>Stoch</th><th>ADX</th><th>ATR</th><th>EMA</th><th>SMA</th></tr>
+                            </thead>
+                            <tbody id="val-td-indicators-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="val-log-output" id="val-td-log" style="margin-top: 1rem;">
+                        <div class="log-line"><span class="log-info">Bereit für TwelveData Tests...</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EasyInsight Sub-Tab -->
+            <div id="val-easyinsight" class="validation-subtab-content">
+                <div class="val-test-panel">
+                    <div class="val-panel-header">
+                        <h2>&#128202; EasyInsight API Test</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="valRunEasyInsightTests()">
+                                &#9654; Tests starten
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="val-filter-controls">
+                        <div class="val-selection-box">
+                            <h4>&#128200; Symbole <span class="val-selection-count" id="val-ei-symbols-count">(0 ausgewählt)</span></h4>
+                            <div class="val-selection-actions">
+                                <button onclick="valSelectAllSymbols('ei')">Alle</button>
+                                <button onclick="valSelectNoneSymbols('ei')">Keine</button>
+                                <button onclick="valSelectCategorySymbols('ei', 'forex')">Forex</button>
+                                <button onclick="valSelectCategorySymbols('ei', 'crypto')">Crypto</button>
+                                <button onclick="valSelectCategorySymbols('ei', 'commodities')">Rohstoffe</button>
+                            </div>
+                            <div class="val-checkbox-grid" id="val-ei-symbols-grid">
+                                <div style="color: #6b7280; font-style: italic; padding: 1rem; text-align: center;">Lade Symbole...</div>
+                            </div>
+                        </div>
+                        <div class="val-selection-box" style="min-width: 200px; flex: 0;">
+                            <h4>&#128337; Timeframes <span class="val-selection-count" id="val-ei-tf-count">(0 ausgewählt)</span></h4>
+                            <div class="val-selection-actions">
+                                <button onclick="valSelectAllTimeframes('ei')">Alle</button>
+                                <button onclick="valSelectNoneTimeframes('ei')">Keine</button>
+                                <button onclick="valSelectDefaultTimeframes('ei')">Standard</button>
+                            </div>
+                            <div class="val-timeframe-grid" id="val-ei-timeframes-grid">
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-ei-tf-M1" value="M1" checked><label for="val-ei-tf-M1">M1</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-ei-tf-M5" value="M5" checked><label for="val-ei-tf-M5">M5</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-ei-tf-M15" value="M15" checked><label for="val-ei-tf-M15">M15</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-ei-tf-M30" value="M30" checked><label for="val-ei-tf-M30">M30</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-ei-tf-H1" value="H1" checked><label for="val-ei-tf-H1">H1</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-ei-tf-H4" value="H4" checked><label for="val-ei-tf-H4">H4</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-ei-tf-D1" value="D1" checked><label for="val-ei-tf-D1">D1</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-ei-tf-W1" value="W1" checked><label for="val-ei-tf-W1">W1</label></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="val-progress-container">
+                        <div class="val-progress-bar">
+                            <div class="val-progress-fill" id="val-ei-progress" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem; color: #64c8ff;">OHLCV Matrix</h3>
+                    <div class="val-matrix-container">
+                        <table class="val-matrix-table" id="val-ei-ohlcv-matrix">
+                            <thead>
+                                <tr><th>Symbol</th><th>M1</th><th>M5</th><th>M15</th><th>M30</th><th>H1</th><th>H4</th><th>D1</th><th>W1</th></tr>
+                            </thead>
+                            <tbody id="val-ei-ohlcv-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="val-log-output" id="val-ei-log" style="margin-top: 1rem;">
+                        <div class="log-line"><span class="log-info">Bereit für EasyInsight Tests...</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Yahoo Finance Sub-Tab -->
+            <div id="val-yfinance" class="validation-subtab-content">
+                <div class="val-test-panel">
+                    <div class="val-panel-header">
+                        <h2>&#128203; Yahoo Finance Test</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="valRunYahooFinanceTests()">
+                                &#9654; Tests starten
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="val-filter-controls">
+                        <div class="val-selection-box">
+                            <h4>&#128200; Symbole <span class="val-selection-count" id="val-yf-symbols-count">(0 ausgewählt)</span></h4>
+                            <div class="val-selection-actions">
+                                <button onclick="valSelectAllSymbols('yf')">Alle</button>
+                                <button onclick="valSelectNoneSymbols('yf')">Keine</button>
+                                <button onclick="valSelectCategorySymbols('yf', 'stocks')">Aktien</button>
+                                <button onclick="valSelectCategorySymbols('yf', 'crypto')">Crypto</button>
+                                <button onclick="valSelectCategorySymbols('yf', 'forex')">Forex</button>
+                            </div>
+                            <div class="val-checkbox-grid" id="val-yf-symbols-grid">
+                                <div style="color: #6b7280; font-style: italic; padding: 1rem; text-align: center;">Lade Symbole...</div>
+                            </div>
+                        </div>
+                        <div class="val-selection-box" style="min-width: 200px; flex: 0;">
+                            <h4>&#128337; Perioden <span class="val-selection-count" id="val-yf-tf-count">(0 ausgewählt)</span></h4>
+                            <div class="val-selection-actions">
+                                <button onclick="valSelectAllTimeframes('yf')">Alle</button>
+                                <button onclick="valSelectNoneTimeframes('yf')">Keine</button>
+                                <button onclick="valSelectDefaultTimeframes('yf')">Standard</button>
+                            </div>
+                            <div class="val-timeframe-grid" id="val-yf-timeframes-grid">
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-yf-tf-1d" value="1d" checked><label for="val-yf-tf-1d">1 Tag</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-yf-tf-5d" value="5d" checked><label for="val-yf-tf-5d">5 Tage</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-yf-tf-1mo" value="1mo" checked><label for="val-yf-tf-1mo">1 Monat</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-yf-tf-3mo" value="3mo" checked><label for="val-yf-tf-3mo">3 Monate</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-yf-tf-1y" value="1y"><label for="val-yf-tf-1y">1 Jahr</label></div>
+                                <div class="val-timeframe-item"><input type="checkbox" id="val-yf-tf-5y" value="5y"><label for="val-yf-tf-5y">5 Jahre</label></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="val-progress-container">
+                        <div class="val-progress-bar">
+                            <div class="val-progress-fill" id="val-yf-progress" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem; color: #64c8ff;">OHLCV Matrix</h3>
+                    <div class="val-matrix-container">
+                        <table class="val-matrix-table" id="val-yf-ohlcv-matrix">
+                            <thead>
+                                <tr><th>Symbol</th><th>1d</th><th>5d</th><th>1mo</th><th>3mo</th><th>1y</th><th>5y</th></tr>
+                            </thead>
+                            <tbody id="val-yf-ohlcv-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="val-log-output" id="val-yf-log" style="margin-top: 1rem;">
+                        <div class="log-line"><span class="log-info">Bereit für Yahoo Finance Tests...</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TimescaleDB Sub-Tab -->
+            <div id="val-timescaledb" class="validation-subtab-content">
+                <div class="val-test-panel">
+                    <div class="val-panel-header">
+                        <h2>&#128451; TimescaleDB Validierung</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="valRunTimescaleDBTests()">
+                                &#9654; Tests starten
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="val-summary-grid" id="val-tsdb-summary">
+                        <div class="val-summary-card">
+                            <h3>Verbindung</h3>
+                            <div class="value" id="val-tsdb-connection">-</div>
+                        </div>
+                        <div class="val-summary-card">
+                            <h3>Symbole</h3>
+                            <div class="value" id="val-tsdb-symbols">-</div>
+                        </div>
+                        <div class="val-summary-card">
+                            <h3>Datenpunkte</h3>
+                            <div class="value" id="val-tsdb-datapoints">-</div>
+                        </div>
+                        <div class="val-summary-card">
+                            <h3>Ältester Eintrag</h3>
+                            <div class="value" id="val-tsdb-oldest" style="font-size: 1rem;">-</div>
+                        </div>
+                        <div class="val-summary-card">
+                            <h3>Neuester Eintrag</h3>
+                            <div class="value" id="val-tsdb-newest" style="font-size: 1rem;">-</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem; color: #64c8ff;">Daten pro Symbol/Timeframe</h3>
+                    <div class="val-matrix-container">
+                        <table class="val-matrix-table" id="val-tsdb-matrix">
+                            <thead>
+                                <tr><th>Symbol</th><th>M1</th><th>M5</th><th>M15</th><th>M30</th><th>H1</th><th>H4</th><th>D1</th><th>W1</th></tr>
+                            </thead>
+                            <tbody id="val-tsdb-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="val-validation-details" style="margin-top: 1.5rem;">
+                        <h4>&#128269; Datenqualitätsprüfung</h4>
+                        <div id="val-tsdb-quality-checks">
+                            <div class="val-validation-item"><span>Lücken in Zeitreihen</span><span id="val-tsdb-gaps">-</span></div>
+                            <div class="val-validation-item"><span>Duplikate</span><span id="val-tsdb-duplicates">-</span></div>
+                            <div class="val-validation-item"><span>Ungültige OHLC-Werte</span><span id="val-tsdb-invalid">-</span></div>
+                            <div class="val-validation-item"><span>Null/NaN-Werte</span><span id="val-tsdb-nulls">-</span></div>
+                        </div>
+                    </div>
+
+                    <div class="val-log-output" id="val-tsdb-log" style="margin-top: 1rem;">
+                        <div class="log-line"><span class="log-info">Bereit für TimescaleDB Tests...</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Redis Sub-Tab -->
+            <div id="val-redis" class="validation-subtab-content">
+                <div class="val-test-panel">
+                    <div class="val-panel-header">
+                        <h2>&#9889; Redis Cache Validierung</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="valRunRedisTests()">
+                                &#9654; Tests starten
+                            </button>
+                            <button class="btn btn-warning" onclick="valClearRedisCache()">
+                                &#128465; Cache leeren
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="val-summary-grid" id="val-redis-summary">
+                        <div class="val-summary-card">
+                            <h3>Verbindung</h3>
+                            <div class="value" id="val-redis-connection">-</div>
+                        </div>
+                        <div class="val-summary-card">
+                            <h3>Speicher</h3>
+                            <div class="value" id="val-redis-memory" style="font-size: 1.2rem;">-</div>
+                        </div>
+                        <div class="val-summary-card">
+                            <h3>Schlüssel</h3>
+                            <div class="value" id="val-redis-keys">-</div>
+                        </div>
+                        <div class="val-summary-card">
+                            <h3>Hit Rate</h3>
+                            <div class="value" id="val-redis-hitrate">-</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 1.5rem; color: #64c8ff;">Cache-Kategorien</h3>
+                    <table class="val-results-table" id="val-redis-categories">
+                        <thead>
+                            <tr><th>Kategorie</th><th>Schlüssel</th><th>TTL (Standard)</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="val-redis-categories-body"></tbody>
+                    </table>
+
+                    <div class="val-log-output" id="val-redis-log" style="margin-top: 1rem;">
+                        <div class="log-line"><span class="log-info">Bereit für Redis Tests...</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Endpoints Sub-Tab -->
+            <div id="val-endpoints" class="validation-subtab-content">
+                <div class="val-test-panel">
+                    <div class="val-panel-header">
+                        <h2>&#128279; API Endpoints Test</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="valRunEndpointTests()">
+                                &#9654; Alle testen
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="val-filter-controls">
+                        <label>Service:</label>
+                        <select id="val-endpoint-service" onchange="valFilterEndpoints()">
+                            <option value="all">Alle Services</option>
+                            <option value="data">Data Service</option>
+                            <option value="nhits">NHITS Service</option>
+                            <option value="tcn">TCN Service</option>
+                            <option value="hmm">HMM Service</option>
+                            <option value="candlestick">Candlestick Service</option>
+                            <option value="cnn-lstm">CNN-LSTM Service</option>
+                            <option value="rag">RAG Service</option>
+                            <option value="llm">LLM Service</option>
+                            <option value="watchdog">Watchdog Service</option>
+                        </select>
+                        <label>Status:</label>
+                        <select id="val-endpoint-status" onchange="valFilterEndpoints()">
+                            <option value="all">Alle</option>
+                            <option value="ok">Erfolgreich</option>
+                            <option value="error">Fehlerhaft</option>
+                            <option value="pending">Ausstehend</option>
+                        </select>
+                    </div>
+
+                    <div class="val-progress-container">
+                        <div class="val-progress-bar">
+                            <div class="val-progress-fill" id="val-endpoint-progress" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+
+                    <table class="val-results-table" id="val-endpoints-table">
+                        <thead>
+                            <tr><th>Service</th><th>Endpoint</th><th>Methode</th><th>Status</th><th>Latenz</th><th>Details</th></tr>
+                        </thead>
+                        <tbody id="val-endpoints-body"></tbody>
+                    </table>
+
+                    <div class="val-log-output" id="val-endpoint-log" style="margin-top: 1rem;">
+                        <div class="log-line"><span class="log-info">Bereit für Endpoint Tests...</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Details Modal for Validation -->
+        <div id="val-error-details-modal" class="val-error-modal" style="display: none;">
+            <div class="val-error-modal-content">
+                <div class="val-error-modal-header">
+                    <h3>&#128270; Fehlerdetails</h3>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="btn btn-primary" onclick="valExportErrorsForClaude()" title="Export als Markdown für Claude Code">
+                            &#128196; MD Export
+                        </button>
+                        <button class="btn btn-warning" onclick="valExportErrorsAsJSON()" title="Export als JSON">
+                            &#128203; JSON Export
+                        </button>
+                        <button class="val-error-modal-close" onclick="valCloseErrorModal()">&times;</button>
+                    </div>
+                </div>
+                <div id="val-error-details-content" class="val-error-modal-body">
+                    <p>Keine Fehler aufgetreten</p>
                 </div>
             </div>
         </div>
@@ -6789,6 +7780,957 @@
                 });
             }
         }, 500);
+
+        // ==================== Validation Tab Functions ====================
+
+        // Validation State
+        let valTestRunning = false;
+        let valAbortController = null;
+        let valErrorDetails = [];
+        let valTestResults = {
+            twelvedata: { ok: 0, warning: 0, error: 0 },
+            easyinsight: { ok: 0, warning: 0, error: 0 },
+            yfinance: { ok: 0, warning: 0, error: 0 },
+            timescaledb: { ok: 0, warning: 0, error: 0 },
+            redis: { ok: 0, warning: 0, error: 0 },
+            endpoints: { ok: 0, warning: 0, error: 0 }
+        };
+        let valManagedSymbols = [];
+
+        // TwelveData Interval-Konvertierung
+        const VAL_TWELVEDATA_INTERVAL_MAP = {
+            'M1': '1min', 'M5': '5min', 'M15': '15min', 'M30': '30min', 'M45': '45min',
+            'H1': '1h', 'H2': '2h', 'H4': '4h', 'H8': '8h', 'D1': '1day', 'W1': '1week', 'MN': '1month'
+        };
+
+        function valToTwelveDataInterval(timeframe) {
+            return VAL_TWELVEDATA_INTERVAL_MAP[timeframe] || timeframe;
+        }
+
+        // Sub-Tab Switching
+        document.querySelectorAll('.validation-subtab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.validation-subtab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.validation-subtab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.subtab).classList.add('active');
+            });
+        });
+
+        // Utility Functions for Validation
+        function valLog(elementId, message, type = 'info') {
+            const logEl = document.getElementById(elementId);
+            if (!logEl) return;
+            const time = new Date().toLocaleTimeString('de-DE');
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${type}">${message}</span>`;
+            logEl.appendChild(line);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function valClearLog(elementId) {
+            const el = document.getElementById(elementId);
+            if (el) el.innerHTML = '';
+        }
+
+        function valUpdateProgress(elementId, percent, text = '') {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.style.width = `${percent}%`;
+                el.textContent = `${Math.round(percent)}%`;
+            }
+            if (text) {
+                const textEl = document.getElementById('val-progress-text');
+                if (textEl) textEl.textContent = text;
+            }
+        }
+
+        function valSetCellStatus(cellId, status, tooltip = '', dataCount = null) {
+            const cell = document.getElementById(cellId);
+            if (!cell) return;
+            cell.className = `val-cell-${status}`;
+            if (dataCount !== null && status === 'ok') {
+                cell.textContent = dataCount;
+            } else if (status === 'ok') {
+                const countMatch = tooltip.match(/(\d+)\s*(Datenpunkte|Werte|Einträge)/);
+                cell.textContent = countMatch ? countMatch[1] : '✓';
+            } else if (status === 'error') {
+                cell.textContent = '✗';
+            } else if (status === 'warning') {
+                cell.textContent = '⚠';
+            } else if (status === 'running') {
+                cell.textContent = '...';
+            } else {
+                cell.textContent = '-';
+            }
+            if (tooltip) cell.title = tooltip;
+        }
+
+        async function valFetchWithTimeout(url, options = {}, timeout = 10000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
+            }
+        }
+
+        // Initialize Validation Matrix
+        function valInitMatrix(bodyId, symbols, cols, prefix) {
+            const body = document.getElementById(bodyId);
+            if (!body) return;
+            body.innerHTML = '';
+            symbols.forEach(symbol => {
+                const row = document.createElement('tr');
+                const displayName = valGetSymbolDisplayName(symbol);
+                row.innerHTML = `<td>${displayName}</td>` + cols.map(col =>
+                    `<td id="val-${prefix}-${symbol}-${col}" class="val-cell-pending">-</td>`
+                ).join('');
+                body.appendChild(row);
+            });
+        }
+
+        function valGetSymbolDisplayName(symbol) {
+            const managed = valManagedSymbols.find(s => s.symbol === symbol || s.display_name === symbol);
+            return managed?.display_name || symbol;
+        }
+
+        // Error Detail Functions
+        function valAddErrorDetail(source, symbol, timeframe, error, responseData = null) {
+            valErrorDetails.push({
+                timestamp: new Date().toISOString(),
+                source, symbol, timeframe, error, responseData
+            });
+        }
+
+        function valClearErrorDetails() {
+            valErrorDetails = [];
+        }
+
+        function valShowErrorDetails() {
+            const modal = document.getElementById('val-error-details-modal');
+            const content = document.getElementById('val-error-details-content');
+            if (valErrorDetails.length === 0) {
+                content.innerHTML = '<p style="color: #6b7280;">Keine Fehler aufgetreten</p>';
+            } else {
+                let html = `<div class="val-error-summary"><strong>Gesamt: ${valErrorDetails.length} Fehler</strong></div>`;
+                const bySource = {};
+                valErrorDetails.forEach(e => {
+                    if (!bySource[e.source]) bySource[e.source] = [];
+                    bySource[e.source].push(e);
+                });
+                for (const [source, errors] of Object.entries(bySource)) {
+                    html += `<div class="val-error-group">
+                        <h4 class="val-error-group-header" onclick="valToggleErrorGroup(this)">${source} (${errors.length} Fehler) ▼</h4>
+                        <div class="val-error-group-items">`;
+                    errors.forEach(e => {
+                        html += `<div class="val-error-item" onclick="valToggleErrorDetails(this)">
+                            <div class="val-error-item-header">
+                                <span class="val-error-symbol">${e.symbol}</span>
+                                <span class="val-error-timeframe">${e.timeframe}</span>
+                                <span class="val-error-message">${e.error}</span>
+                            </div>
+                            <div class="val-error-item-details" style="display: none;">
+                                <div><strong>Zeit:</strong> ${e.timestamp}</div>
+                                ${e.responseData ? `<div><strong>Response:</strong> <pre style="background: rgba(0,0,0,0.4); padding: 0.5rem; border-radius: 4px; overflow-x: auto; font-size: 0.8rem;">${JSON.stringify(e.responseData, null, 2)}</pre></div>` : ''}
+                            </div>
+                        </div>`;
+                    });
+                    html += `</div></div>`;
+                }
+                content.innerHTML = html;
+            }
+            modal.style.display = 'flex';
+        }
+
+        function valToggleErrorGroup(header) {
+            const items = header.nextElementSibling;
+            const isHidden = items.style.display === 'none';
+            items.style.display = isHidden ? 'block' : 'none';
+            header.textContent = header.textContent.replace(isHidden ? '▶' : '▼', isHidden ? '▼' : '▶');
+        }
+
+        function valToggleErrorDetails(item) {
+            const details = item.querySelector('.val-error-item-details');
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function valCloseErrorModal() {
+            document.getElementById('val-error-details-modal').style.display = 'none';
+        }
+
+        // Symbol Selection Functions
+        function valSelectAllSymbols(prefix) {
+            document.querySelectorAll(`#val-${prefix}-symbols-grid input[type="checkbox"]`).forEach(cb => cb.checked = true);
+            valUpdateSymbolCount(prefix);
+        }
+
+        function valSelectNoneSymbols(prefix) {
+            document.querySelectorAll(`#val-${prefix}-symbols-grid input[type="checkbox"]`).forEach(cb => cb.checked = false);
+            valUpdateSymbolCount(prefix);
+        }
+
+        function valSelectCategorySymbols(prefix, category) {
+            document.querySelectorAll(`#val-${prefix}-symbols-grid input[type="checkbox"]`).forEach(cb => {
+                cb.checked = cb.dataset.category === category;
+            });
+            valUpdateSymbolCount(prefix);
+        }
+
+        function valSelectAllTimeframes(prefix) {
+            document.querySelectorAll(`#val-${prefix}-timeframes-grid input[type="checkbox"]`).forEach(cb => cb.checked = true);
+            valUpdateTimeframeCount(prefix);
+        }
+
+        function valSelectNoneTimeframes(prefix) {
+            document.querySelectorAll(`#val-${prefix}-timeframes-grid input[type="checkbox"]`).forEach(cb => cb.checked = false);
+            valUpdateTimeframeCount(prefix);
+        }
+
+        function valSelectDefaultTimeframes(prefix) {
+            const defaults = prefix === 'yf' ? ['1d', '5d', '1mo', '3mo'] : ['M5', 'M15', 'H1', 'H4', 'D1'];
+            document.querySelectorAll(`#val-${prefix}-timeframes-grid input[type="checkbox"]`).forEach(cb => {
+                cb.checked = defaults.includes(cb.value);
+            });
+            valUpdateTimeframeCount(prefix);
+        }
+
+        function valUpdateSymbolCount(prefix) {
+            const count = document.querySelectorAll(`#val-${prefix}-symbols-grid input[type="checkbox"]:checked`).length;
+            const el = document.getElementById(`val-${prefix}-symbols-count`);
+            if (el) el.textContent = `(${count} ausgewählt)`;
+        }
+
+        function valUpdateTimeframeCount(prefix) {
+            const count = document.querySelectorAll(`#val-${prefix}-timeframes-grid input[type="checkbox"]:checked`).length;
+            const el = document.getElementById(`val-${prefix}-tf-count`);
+            if (el) el.textContent = `(${count} ausgewählt)`;
+        }
+
+        function valGetSelectedSymbols(prefix) {
+            return Array.from(document.querySelectorAll(`#val-${prefix}-symbols-grid input[type="checkbox"]:checked`))
+                .map(cb => cb.value);
+        }
+
+        function valGetSelectedTimeframes(prefix) {
+            return Array.from(document.querySelectorAll(`#val-${prefix}-timeframes-grid input[type="checkbox"]:checked`))
+                .map(cb => cb.value);
+        }
+
+        // Load Managed Symbols for Validation
+        async function valLoadManagedSymbols() {
+            try {
+                const response = await valFetchWithTimeout('/data/api/v1/managed-symbols');
+                if (response.ok) {
+                    const data = await response.json();
+                    valManagedSymbols = data.symbols || [];
+                    valPopulateSymbolGrids();
+                }
+            } catch (e) {
+                console.error('Failed to load managed symbols for validation:', e);
+            }
+        }
+
+        function valPopulateSymbolGrids() {
+            ['td', 'ei', 'yf'].forEach(prefix => {
+                const grid = document.getElementById(`val-${prefix}-symbols-grid`);
+                if (!grid) return;
+                grid.innerHTML = '';
+
+                let symbols = valManagedSymbols;
+                if (prefix === 'td') {
+                    symbols = valManagedSymbols.filter(s => s.twelvedata_available !== false);
+                } else if (prefix === 'ei') {
+                    symbols = valManagedSymbols.filter(s => s.easyinsight_available !== false);
+                } else if (prefix === 'yf') {
+                    symbols = valManagedSymbols.filter(s => s.yfinance_available !== false);
+                }
+
+                symbols.slice(0, 30).forEach(s => {
+                    const item = document.createElement('div');
+                    item.className = 'val-checkbox-item';
+                    const symbolId = s.symbol || s.display_name;
+                    item.innerHTML = `<input type="checkbox" id="val-${prefix}-sym-${symbolId}" value="${symbolId}" data-category="${s.category || 'other'}" checked>
+                        <label for="val-${prefix}-sym-${symbolId}">${s.display_name || symbolId}</label>`;
+                    grid.appendChild(item);
+                });
+
+                valUpdateSymbolCount(prefix);
+
+                grid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.addEventListener('change', () => valUpdateSymbolCount(prefix));
+                });
+            });
+
+            ['td', 'ei', 'yf'].forEach(prefix => {
+                valUpdateTimeframeCount(prefix);
+                const tfGrid = document.getElementById(`val-${prefix}-timeframes-grid`);
+                if (tfGrid) {
+                    tfGrid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                        cb.addEventListener('change', () => valUpdateTimeframeCount(prefix));
+                    });
+                }
+            });
+        }
+
+        // Reset Test Results
+        function valResetTestResults() {
+            valTestResults = {
+                twelvedata: { ok: 0, warning: 0, error: 0 },
+                easyinsight: { ok: 0, warning: 0, error: 0 },
+                yfinance: { ok: 0, warning: 0, error: 0 },
+                timescaledb: { ok: 0, warning: 0, error: 0 },
+                redis: { ok: 0, warning: 0, error: 0 },
+                endpoints: { ok: 0, warning: 0, error: 0 }
+            };
+        }
+
+        // TwelveData Tests
+        async function valRunTwelveDataTests() {
+            if (valTestRunning) return { ok: 0, warning: 0, error: 0 };
+            valTestRunning = true;
+            valClearLog('val-td-log');
+            valLog('val-td-log', 'Starte TwelveData Tests...', 'info');
+
+            const symbols = valGetSelectedSymbols('td');
+            const timeframes = valGetSelectedTimeframes('td');
+            let stats = { ok: 0, warning: 0, error: 0 };
+
+            if (symbols.length === 0 || timeframes.length === 0) {
+                valLog('val-td-log', 'Bitte mindestens ein Symbol und einen Timeframe auswählen', 'warning');
+                valTestRunning = false;
+                return stats;
+            }
+
+            valInitMatrix('val-td-ohlcv-body', symbols, timeframes, 'td');
+            const totalTests = symbols.length * timeframes.length;
+            let completed = 0;
+
+            for (const symbol of symbols) {
+                for (const tf of timeframes) {
+                    valSetCellStatus(`val-td-${symbol}-${tf}`, 'running');
+                    try {
+                        const tdSymbol = valManagedSymbols.find(s => s.symbol === symbol)?.twelvedata_symbol || symbol;
+                        const interval = valToTwelveDataInterval(tf);
+                        const response = await valFetchWithTimeout(
+                            `/data/api/v1/twelvedata/time_series/${encodeURIComponent(tdSymbol)}?interval=${interval}&outputsize=5`
+                        );
+                        if (response.ok) {
+                            const data = await response.json();
+                            const count = data.values?.length || data.data?.length || 0;
+                            if (count > 0) {
+                                valSetCellStatus(`val-td-${symbol}-${tf}`, 'ok', `${count} Datenpunkte`, count);
+                                stats.ok++;
+                                valLog('val-td-log', `✓ ${symbol} ${tf}: ${count} Datenpunkte`, 'ok');
+                            } else {
+                                valSetCellStatus(`val-td-${symbol}-${tf}`, 'warning', 'Keine Daten');
+                                stats.warning++;
+                                valLog('val-td-log', `⚠ ${symbol} ${tf}: Keine Daten`, 'warning');
+                            }
+                        } else {
+                            const errData = await response.json().catch(() => ({}));
+                            valSetCellStatus(`val-td-${symbol}-${tf}`, 'error', errData.message || response.statusText);
+                            stats.error++;
+                            valAddErrorDetail('TwelveData', symbol, tf, errData.message || response.statusText, errData);
+                            valLog('val-td-log', `✗ ${symbol} ${tf}: ${errData.message || response.statusText}`, 'error');
+                        }
+                    } catch (e) {
+                        valSetCellStatus(`val-td-${symbol}-${tf}`, 'error', e.message);
+                        stats.error++;
+                        valAddErrorDetail('TwelveData', symbol, tf, e.message);
+                        valLog('val-td-log', `✗ ${symbol} ${tf}: ${e.message}`, 'error');
+                    }
+                    completed++;
+                    valUpdateProgress('val-td-progress', (completed / totalTests) * 100);
+                }
+            }
+
+            valLog('val-td-log', `Abgeschlossen: ${stats.ok} OK, ${stats.warning} Warnungen, ${stats.error} Fehler`, stats.error > 0 ? 'warning' : 'ok');
+            valTestRunning = false;
+            valTestResults.twelvedata = stats;
+            return stats;
+        }
+
+        // EasyInsight Tests
+        async function valRunEasyInsightTests() {
+            if (valTestRunning) return { ok: 0, warning: 0, error: 0 };
+            valTestRunning = true;
+            valClearLog('val-ei-log');
+            valLog('val-ei-log', 'Starte EasyInsight Tests...', 'info');
+
+            const symbols = valGetSelectedSymbols('ei');
+            const timeframes = valGetSelectedTimeframes('ei');
+            let stats = { ok: 0, warning: 0, error: 0 };
+
+            if (symbols.length === 0 || timeframes.length === 0) {
+                valLog('val-ei-log', 'Bitte mindestens ein Symbol und einen Timeframe auswählen', 'warning');
+                valTestRunning = false;
+                return stats;
+            }
+
+            valInitMatrix('val-ei-ohlcv-body', symbols, timeframes, 'ei');
+            const totalTests = symbols.length * timeframes.length;
+            let completed = 0;
+
+            for (const symbol of symbols) {
+                for (const tf of timeframes) {
+                    valSetCellStatus(`val-ei-${symbol}-${tf}`, 'running');
+                    try {
+                        const eiSymbol = valManagedSymbols.find(s => s.symbol === symbol)?.easyinsight_symbol || symbol;
+                        const response = await valFetchWithTimeout(
+                            `/data/api/v1/easyinsight/time-series/${encodeURIComponent(eiSymbol)}?interval=${tf}&outputsize=5`
+                        );
+                        if (response.ok) {
+                            const data = await response.json();
+                            const count = data.values?.length || data.data?.length || 0;
+                            if (count > 0) {
+                                valSetCellStatus(`val-ei-${symbol}-${tf}`, 'ok', `${count} Datenpunkte`, count);
+                                stats.ok++;
+                                valLog('val-ei-log', `✓ ${symbol} ${tf}: ${count} Datenpunkte`, 'ok');
+                            } else {
+                                valSetCellStatus(`val-ei-${symbol}-${tf}`, 'warning', 'Keine Daten');
+                                stats.warning++;
+                            }
+                        } else {
+                            const errData = await response.json().catch(() => ({}));
+                            valSetCellStatus(`val-ei-${symbol}-${tf}`, 'error', errData.message || response.statusText);
+                            stats.error++;
+                            valAddErrorDetail('EasyInsight', symbol, tf, errData.message || response.statusText, errData);
+                        }
+                    } catch (e) {
+                        valSetCellStatus(`val-ei-${symbol}-${tf}`, 'error', e.message);
+                        stats.error++;
+                        valAddErrorDetail('EasyInsight', symbol, tf, e.message);
+                    }
+                    completed++;
+                    valUpdateProgress('val-ei-progress', (completed / totalTests) * 100);
+                }
+            }
+
+            valLog('val-ei-log', `Abgeschlossen: ${stats.ok} OK, ${stats.warning} Warnungen, ${stats.error} Fehler`, stats.error > 0 ? 'warning' : 'ok');
+            valTestRunning = false;
+            valTestResults.easyinsight = stats;
+            return stats;
+        }
+
+        // Yahoo Finance Tests
+        async function valRunYahooFinanceTests() {
+            if (valTestRunning) return { ok: 0, warning: 0, error: 0 };
+            valTestRunning = true;
+            valClearLog('val-yf-log');
+            valLog('val-yf-log', 'Starte Yahoo Finance Tests...', 'info');
+
+            const symbols = valGetSelectedSymbols('yf');
+            const periods = valGetSelectedTimeframes('yf');
+            let stats = { ok: 0, warning: 0, error: 0 };
+
+            if (symbols.length === 0 || periods.length === 0) {
+                valLog('val-yf-log', 'Bitte mindestens ein Symbol und eine Periode auswählen', 'warning');
+                valTestRunning = false;
+                return stats;
+            }
+
+            valInitMatrix('val-yf-ohlcv-body', symbols, periods, 'yf');
+            const totalTests = symbols.length * periods.length;
+            let completed = 0;
+
+            for (const symbol of symbols) {
+                for (const period of periods) {
+                    valSetCellStatus(`val-yf-${symbol}-${period}`, 'running');
+                    try {
+                        const yfSymbol = valManagedSymbols.find(s => s.symbol === symbol)?.yfinance_symbol || symbol;
+                        const response = await valFetchWithTimeout(
+                            `/data/api/v1/yfinance/time-series/${encodeURIComponent(yfSymbol)}?period=${period}`
+                        );
+                        if (response.ok) {
+                            const data = await response.json();
+                            const count = data.values?.length || data.data?.length || 0;
+                            if (count > 0) {
+                                valSetCellStatus(`val-yf-${symbol}-${period}`, 'ok', `${count} Datenpunkte`, count);
+                                stats.ok++;
+                                valLog('val-yf-log', `✓ ${symbol} ${period}: ${count} Datenpunkte`, 'ok');
+                            } else {
+                                valSetCellStatus(`val-yf-${symbol}-${period}`, 'warning', 'Keine Daten');
+                                stats.warning++;
+                            }
+                        } else {
+                            const errData = await response.json().catch(() => ({}));
+                            valSetCellStatus(`val-yf-${symbol}-${period}`, 'error', errData.message || response.statusText);
+                            stats.error++;
+                            valAddErrorDetail('YahooFinance', symbol, period, errData.message || response.statusText, errData);
+                        }
+                    } catch (e) {
+                        valSetCellStatus(`val-yf-${symbol}-${period}`, 'error', e.message);
+                        stats.error++;
+                        valAddErrorDetail('YahooFinance', symbol, period, e.message);
+                    }
+                    completed++;
+                    valUpdateProgress('val-yf-progress', (completed / totalTests) * 100);
+                }
+            }
+
+            valLog('val-yf-log', `Abgeschlossen: ${stats.ok} OK, ${stats.warning} Warnungen, ${stats.error} Fehler`, stats.error > 0 ? 'warning' : 'ok');
+            valTestRunning = false;
+            valTestResults.yfinance = stats;
+            return stats;
+        }
+
+        // TimescaleDB Tests
+        async function valRunTimescaleDBTests() {
+            if (valTestRunning) return { ok: 0, warning: 0, error: 0 };
+            valTestRunning = true;
+            valClearLog('val-tsdb-log');
+            valLog('val-tsdb-log', 'Starte TimescaleDB Tests...', 'info');
+            let stats = { ok: 0, warning: 0, error: 0 };
+
+            // Test connection
+            try {
+                const healthResponse = await valFetchWithTimeout('/data/health');
+                if (healthResponse.ok) {
+                    const health = await healthResponse.json();
+                    const dbStatus = health.timescaledb?.status || 'unknown';
+                    document.getElementById('val-tsdb-connection').textContent = dbStatus === 'healthy' ? '✓' : '✗';
+                    document.getElementById('val-tsdb-connection').className = `value ${dbStatus === 'healthy' ? 'success' : 'error'}`;
+                    if (dbStatus === 'healthy') stats.ok++; else stats.error++;
+                    valLog('val-tsdb-log', `Verbindung: ${dbStatus}`, dbStatus === 'healthy' ? 'ok' : 'error');
+                }
+            } catch (e) {
+                document.getElementById('val-tsdb-connection').textContent = '✗';
+                document.getElementById('val-tsdb-connection').className = 'value error';
+                valLog('val-tsdb-log', `Verbindungsfehler: ${e.message}`, 'error');
+                stats.error++;
+            }
+
+            // Get DB stats
+            try {
+                const statsResponse = await valFetchWithTimeout('/data/api/v1/db/stats');
+                if (statsResponse.ok) {
+                    const dbStats = await statsResponse.json();
+                    document.getElementById('val-tsdb-symbols').textContent = dbStats.symbols_count || '-';
+                    document.getElementById('val-tsdb-datapoints').textContent = (dbStats.total_rows || 0).toLocaleString();
+                    document.getElementById('val-tsdb-oldest').textContent = dbStats.oldest_entry || '-';
+                    document.getElementById('val-tsdb-newest').textContent = dbStats.newest_entry || '-';
+                    valLog('val-tsdb-log', `${dbStats.symbols_count} Symbole, ${(dbStats.total_rows || 0).toLocaleString()} Datenpunkte`, 'ok');
+                }
+            } catch (e) {
+                valLog('val-tsdb-log', `Stats-Fehler: ${e.message}`, 'warning');
+            }
+
+            // Get symbol coverage
+            try {
+                const coverageResponse = await valFetchWithTimeout('/data/api/v1/db/coverage');
+                if (coverageResponse.ok) {
+                    const coverage = await coverageResponse.json();
+                    const symbols = Object.keys(coverage.symbols || {}).slice(0, 20);
+                    const timeframes = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1'];
+                    valInitMatrix('val-tsdb-body', symbols, timeframes, 'tsdb');
+                    for (const symbol of symbols) {
+                        const symbolData = coverage.symbols[symbol] || {};
+                        for (const tf of timeframes) {
+                            const count = symbolData[tf] || 0;
+                            valSetCellStatus(`val-tsdb-${symbol}-${tf}`, count > 0 ? 'ok' : 'pending', `${count} Einträge`);
+                        }
+                    }
+                }
+            } catch (e) {
+                valLog('val-tsdb-log', `Coverage-Fehler: ${e.message}`, 'warning');
+            }
+
+            // Data quality checks
+            try {
+                const qualityResponse = await valFetchWithTimeout('/data/api/v1/db/quality-check');
+                if (qualityResponse.ok) {
+                    const quality = await qualityResponse.json();
+                    document.getElementById('val-tsdb-gaps').innerHTML = quality.gaps === 0 ?
+                        '<span class="val-status-ok">✓ Keine</span>' : `<span class="val-status-warning">${quality.gaps} gefunden</span>`;
+                    document.getElementById('val-tsdb-duplicates').innerHTML = quality.duplicates === 0 ?
+                        '<span class="val-status-ok">✓ Keine</span>' : `<span class="val-status-warning">${quality.duplicates} gefunden</span>`;
+                    document.getElementById('val-tsdb-invalid').innerHTML = quality.invalid_ohlc === 0 ?
+                        '<span class="val-status-ok">✓ Keine</span>' : `<span class="val-status-error">${quality.invalid_ohlc} gefunden</span>`;
+                    document.getElementById('val-tsdb-nulls').innerHTML = quality.null_values === 0 ?
+                        '<span class="val-status-ok">✓ Keine</span>' : `<span class="val-status-warning">${quality.null_values} gefunden</span>`;
+                }
+            } catch (e) {
+                valLog('val-tsdb-log', `Quality-Check nicht verfügbar: ${e.message}`, 'warning');
+            }
+
+            valLog('val-tsdb-log', 'TimescaleDB Tests abgeschlossen', 'ok');
+            valTestRunning = false;
+            valTestResults.timescaledb = stats;
+            return stats;
+        }
+
+        // Redis Tests
+        async function valRunRedisTests() {
+            if (valTestRunning) return { ok: 0, warning: 0, error: 0 };
+            valTestRunning = true;
+            valClearLog('val-redis-log');
+            valLog('val-redis-log', 'Starte Redis Tests...', 'info');
+            let stats = { ok: 0, warning: 0, error: 0 };
+
+            // Test connection
+            try {
+                const healthResponse = await valFetchWithTimeout('/data/health');
+                if (healthResponse.ok) {
+                    const health = await healthResponse.json();
+                    const redisStatus = health.redis?.status || 'unknown';
+                    const connected = health.redis?.connected || false;
+                    const memory = health.redis?.memory_used || 'N/A';
+
+                    document.getElementById('val-redis-connection').textContent = connected ? '✓' : '✗';
+                    document.getElementById('val-redis-connection').className = `value ${connected ? 'success' : 'error'}`;
+                    document.getElementById('val-redis-memory').textContent = memory;
+
+                    valLog('val-redis-log', `Redis Status: ${redisStatus}, Speicher: ${memory}`, connected ? 'ok' : 'error');
+                    if (connected) stats.ok++; else stats.error++;
+                }
+            } catch (e) {
+                document.getElementById('val-redis-connection').textContent = '✗';
+                document.getElementById('val-redis-connection').className = 'value error';
+                valLog('val-redis-log', `Verbindungsfehler: ${e.message}`, 'error');
+                stats.error++;
+            }
+
+            // Get cache stats
+            try {
+                const statsResponse = await valFetchWithTimeout('/data/api/v1/cache/stats');
+                if (statsResponse.ok) {
+                    const cacheStats = await statsResponse.json();
+                    document.getElementById('val-redis-keys').textContent = (cacheStats.total_keys || 0).toLocaleString();
+                    const hitRate = cacheStats.hit_rate ? `${(cacheStats.hit_rate * 100).toFixed(1)}%` : '-';
+                    document.getElementById('val-redis-hitrate').textContent = hitRate;
+
+                    valLog('val-redis-log', `${cacheStats.total_keys} Schlüssel, Hit Rate: ${hitRate}`, 'ok');
+
+                    const categoriesBody = document.getElementById('val-redis-categories-body');
+                    categoriesBody.innerHTML = '';
+                    const categories = cacheStats.categories || {};
+                    for (const [cat, data] of Object.entries(categories)) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td>${cat}</td><td>${data.count || 0}</td><td>${data.ttl || '-'}s</td>
+                            <td class="${data.count > 0 ? 'val-status-ok' : 'val-status-pending'}">${data.count > 0 ? '✓ Aktiv' : '- Leer'}</td>`;
+                        categoriesBody.appendChild(row);
+                    }
+                }
+            } catch (e) {
+                valLog('val-redis-log', `Stats-Fehler: ${e.message}`, 'warning');
+            }
+
+            valLog('val-redis-log', 'Redis Tests abgeschlossen', 'ok');
+            valTestRunning = false;
+            valTestResults.redis = stats;
+            return stats;
+        }
+
+        async function valClearRedisCache() {
+            if (!confirm('Möchten Sie wirklich den gesamten Redis-Cache leeren?')) return;
+            try {
+                const response = await valFetchWithTimeout('/data/api/v1/cache/clear', { method: 'POST' });
+                if (response.ok) {
+                    valLog('val-redis-log', 'Cache erfolgreich geleert', 'ok');
+                    valRunRedisTests();
+                } else {
+                    valLog('val-redis-log', 'Fehler beim Leeren des Cache', 'error');
+                }
+            } catch (e) {
+                valLog('val-redis-log', `Fehler: ${e.message}`, 'error');
+            }
+        }
+
+        // API Endpoints Tests
+        const VAL_ENDPOINTS = [
+            { service: 'data', method: 'GET', path: '/data/health', name: 'Health Check' },
+            { service: 'data', method: 'GET', path: '/data/api/v1/symbols', name: 'Symbole Liste' },
+            { service: 'data', method: 'GET', path: '/data/api/v1/easyinsight/status', name: 'EasyInsight Status' },
+            { service: 'data', method: 'GET', path: '/data/api/v1/db/stats', name: 'DB Stats' },
+            { service: 'data', method: 'GET', path: '/data/api/v1/cache/stats', name: 'Cache Stats' },
+            { service: 'nhits', method: 'GET', path: '/nhits/health', name: 'Health Check' },
+            { service: 'tcn', method: 'GET', path: '/tcn/health', name: 'Health Check' },
+            { service: 'hmm', method: 'GET', path: '/hmm/health', name: 'Health Check' },
+            { service: 'candlestick', method: 'GET', path: '/candlestick/health', name: 'Health Check' },
+            { service: 'cnn-lstm', method: 'GET', path: '/cnn-lstm/health', name: 'Health Check' },
+            { service: 'rag', method: 'GET', path: '/rag/health', name: 'Health Check' },
+            { service: 'llm', method: 'GET', path: '/llm/health', name: 'Health Check' },
+            { service: 'watchdog', method: 'GET', path: '/watchdog/health', name: 'Health Check' },
+            { service: 'watchdog', method: 'GET', path: '/watchdog/api/v1/services/status', name: 'Services Status' },
+        ];
+
+        async function valRunEndpointTests() {
+            if (valTestRunning) return { ok: 0, warning: 0, error: 0 };
+            valTestRunning = true;
+            valClearLog('val-endpoint-log');
+            valLog('val-endpoint-log', 'Starte Endpoint Tests...', 'info');
+
+            const body = document.getElementById('val-endpoints-body');
+            body.innerHTML = '';
+
+            let completed = 0;
+            let stats = { ok: 0, warning: 0, error: 0 };
+
+            for (const ep of VAL_ENDPOINTS) {
+                const row = document.createElement('tr');
+                row.dataset.service = ep.service;
+                row.innerHTML = `<td>${ep.service}</td><td>${ep.path}</td><td>${ep.method}</td>
+                    <td class="val-status-pending">Testing...</td><td>-</td><td>${ep.name}</td>`;
+                body.appendChild(row);
+
+                const start = performance.now();
+                try {
+                    const response = await valFetchWithTimeout(ep.path, { method: ep.method });
+                    const latency = Math.round(performance.now() - start);
+                    if (response.ok) {
+                        row.children[3].className = 'val-status-ok';
+                        row.children[3].textContent = `✓ ${response.status}`;
+                        stats.ok++;
+                    } else {
+                        row.children[3].className = 'val-status-error';
+                        row.children[3].textContent = `✗ ${response.status}`;
+                        stats.error++;
+                    }
+                    row.children[4].textContent = `${latency}ms`;
+                } catch (e) {
+                    row.children[3].className = 'val-status-error';
+                    row.children[3].textContent = '✗ Error';
+                    row.children[4].textContent = '-';
+                    stats.error++;
+                }
+                completed++;
+                valUpdateProgress('val-endpoint-progress', (completed / VAL_ENDPOINTS.length) * 100);
+            }
+
+            valLog('val-endpoint-log', `Abgeschlossen: ${stats.ok} OK, ${stats.error} Fehler`, stats.error > 0 ? 'warning' : 'ok');
+            valTestRunning = false;
+            valTestResults.endpoints = stats;
+            return stats;
+        }
+
+        function valFilterEndpoints() {
+            const serviceFilter = document.getElementById('val-endpoint-service').value;
+            const statusFilter = document.getElementById('val-endpoint-status').value;
+
+            document.querySelectorAll('#val-endpoints-body tr').forEach(row => {
+                const service = row.dataset.service;
+                const status = row.children[3].classList.contains('val-status-ok') ? 'ok' :
+                              row.children[3].classList.contains('val-status-error') ? 'error' : 'pending';
+                const matchService = serviceFilter === 'all' || service === serviceFilter;
+                const matchStatus = statusFilter === 'all' || status === statusFilter;
+                row.style.display = matchService && matchStatus ? '' : 'none';
+            });
+        }
+
+        // Run All Validation Tests
+        async function valRunAllTests() {
+            if (valTestRunning) return;
+
+            valResetTestResults();
+            valClearErrorDetails();
+            valClearLog('val-main-log');
+            valLog('val-main-log', 'Starte vollständige Validierung...', 'info');
+            valUpdateProgress('val-overall-progress', 0, 'Initialisiere...');
+
+            // Phase 1: TwelveData (20%)
+            valLog('val-main-log', '--- Phase 1: TwelveData ---', 'info');
+            valUpdateProgress('val-overall-progress', 5, 'TwelveData Tests...');
+            await valRunTwelveDataTests();
+            document.getElementById('val-twelvedata-status').textContent = '✓';
+            document.getElementById('val-twelvedata-status').className = 'value success';
+            valUpdateProgress('val-overall-progress', 20);
+
+            // Phase 2: EasyInsight (40%)
+            valLog('val-main-log', '--- Phase 2: EasyInsight ---', 'info');
+            valUpdateProgress('val-overall-progress', 25, 'EasyInsight Tests...');
+            await valRunEasyInsightTests();
+            document.getElementById('val-easyinsight-status').textContent = '✓';
+            document.getElementById('val-easyinsight-status').className = 'value success';
+            valUpdateProgress('val-overall-progress', 40);
+
+            // Phase 3: Yahoo Finance (55%)
+            valLog('val-main-log', '--- Phase 3: Yahoo Finance ---', 'info');
+            valUpdateProgress('val-overall-progress', 45, 'Yahoo Finance Tests...');
+            await valRunYahooFinanceTests();
+            document.getElementById('val-yfinance-status').textContent = '✓';
+            document.getElementById('val-yfinance-status').className = 'value success';
+            valUpdateProgress('val-overall-progress', 55);
+
+            // Phase 4: TimescaleDB (70%)
+            valLog('val-main-log', '--- Phase 4: TimescaleDB ---', 'info');
+            valUpdateProgress('val-overall-progress', 60, 'TimescaleDB Tests...');
+            await valRunTimescaleDBTests();
+            document.getElementById('val-timescaledb-status').textContent = '✓';
+            document.getElementById('val-timescaledb-status').className = 'value success';
+            valUpdateProgress('val-overall-progress', 70);
+
+            // Phase 5: Redis (85%)
+            valLog('val-main-log', '--- Phase 5: Redis ---', 'info');
+            valUpdateProgress('val-overall-progress', 75, 'Redis Tests...');
+            await valRunRedisTests();
+            document.getElementById('val-redis-status').textContent = '✓';
+            document.getElementById('val-redis-status').className = 'value success';
+            valUpdateProgress('val-overall-progress', 85);
+
+            // Phase 6: API Endpoints (100%)
+            valLog('val-main-log', '--- Phase 6: API Endpoints ---', 'info');
+            valUpdateProgress('val-overall-progress', 90, 'API Endpoint Tests...');
+            await valRunEndpointTests();
+            valUpdateProgress('val-overall-progress', 100, 'Abgeschlossen!');
+
+            document.getElementById('val-overall-status').textContent = '✓';
+            document.getElementById('val-overall-status').className = 'value success';
+            valLog('val-main-log', 'Alle Tests abgeschlossen!', 'ok');
+
+            valDisplayResults();
+        }
+
+        function valDisplayResults() {
+            const resultsDiv = document.getElementById('val-overview-results');
+            const timestamp = new Date().toLocaleString('de-DE');
+
+            let totalOk = 0, totalWarning = 0, totalError = 0;
+            for (const key of Object.keys(valTestResults)) {
+                totalOk += valTestResults[key].ok || 0;
+                totalWarning += valTestResults[key].warning || 0;
+                totalError += valTestResults[key].error || 0;
+            }
+            const totalTests = totalOk + totalWarning + totalError;
+            const successRate = totalTests > 0 ? ((totalOk / totalTests) * 100).toFixed(1) : 0;
+
+            resultsDiv.innerHTML = `
+                <div style="margin-bottom: 1rem;"><strong>Testlauf:</strong> ${timestamp}</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="background: rgba(34, 197, 94, 0.15); padding: 1rem; border-radius: 8px; border-left: 4px solid #22c55e;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #22c55e;">${totalOk}</div>
+                        <div style="color: #86efac;">Erfolgreich</div>
+                    </div>
+                    <div style="background: rgba(234, 179, 8, 0.15); padding: 1rem; border-radius: 8px; border-left: 4px solid #eab308;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #eab308;">${totalWarning}</div>
+                        <div style="color: #fde047;">Warnungen</div>
+                    </div>
+                    <div style="background: rgba(239, 68, 68, 0.15); padding: 1rem; border-radius: 8px; border-left: 4px solid #ef4444;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #ef4444;">${totalError}</div>
+                        <div style="color: #fca5a5;">Fehler</div>
+                    </div>
+                    <div style="background: rgba(100, 200, 255, 0.15); padding: 1rem; border-radius: 8px; border-left: 4px solid #64c8ff;">
+                        <div style="font-size: 2rem; font-weight: bold; color: #64c8ff;">${successRate}%</div>
+                        <div style="color: #93c5fd;">Erfolgsrate</div>
+                    </div>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <th style="text-align: left; padding: 0.5rem;">Komponente</th>
+                            <th style="text-align: center; padding: 0.5rem; color: #22c55e;">OK</th>
+                            <th style="text-align: center; padding: 0.5rem; color: #eab308;">Warn</th>
+                            <th style="text-align: center; padding: 0.5rem; color: #ef4444;">Fehler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 0.5rem;">TwelveData API</td><td style="text-align: center; color: #22c55e;">${valTestResults.twelvedata.ok}</td><td style="text-align: center; color: #eab308;">${valTestResults.twelvedata.warning}</td><td style="text-align: center; color: #ef4444;">${valTestResults.twelvedata.error}</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 0.5rem;">EasyInsight API</td><td style="text-align: center; color: #22c55e;">${valTestResults.easyinsight.ok}</td><td style="text-align: center; color: #eab308;">${valTestResults.easyinsight.warning}</td><td style="text-align: center; color: #ef4444;">${valTestResults.easyinsight.error}</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 0.5rem;">Yahoo Finance</td><td style="text-align: center; color: #22c55e;">${valTestResults.yfinance.ok}</td><td style="text-align: center; color: #eab308;">${valTestResults.yfinance.warning}</td><td style="text-align: center; color: #ef4444;">${valTestResults.yfinance.error}</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 0.5rem;">TimescaleDB</td><td style="text-align: center; color: #22c55e;">${valTestResults.timescaledb.ok}</td><td style="text-align: center; color: #eab308;">${valTestResults.timescaledb.warning}</td><td style="text-align: center; color: #ef4444;">${valTestResults.timescaledb.error}</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 0.5rem;">Redis Cache</td><td style="text-align: center; color: #22c55e;">${valTestResults.redis.ok}</td><td style="text-align: center; color: #eab308;">${valTestResults.redis.warning}</td><td style="text-align: center; color: #ef4444;">${valTestResults.redis.error}</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 0.5rem;">API Endpoints</td><td style="text-align: center; color: #22c55e;">${valTestResults.endpoints.ok}</td><td style="text-align: center; color: #eab308;">${valTestResults.endpoints.warning}</td><td style="text-align: center; color: #ef4444;">${valTestResults.endpoints.error}</td></tr>
+                        <tr style="font-weight: bold; background: rgba(255,255,255,0.05);"><td style="padding: 0.5rem;">GESAMT</td><td style="text-align: center; color: #22c55e;">${totalOk}</td><td style="text-align: center; color: #eab308;">${totalWarning}</td><td style="text-align: center; color: #ef4444;">${totalError}</td></tr>
+                    </tbody>
+                </table>
+                ${(totalWarning + totalError) > 0 ? `
+                <div style="margin-top: 1.5rem; text-align: center;">
+                    <button class="btn btn-danger" onclick="valShowErrorDetails()" style="padding: 0.75rem 2rem;">
+                        &#128269; Fehlerdetails anzeigen (${valErrorDetails.length} Einträge)
+                    </button>
+                </div>` : ''}
+            `;
+        }
+
+        function valStopAllTests() {
+            valTestRunning = false;
+            valLog('val-main-log', 'Tests abgebrochen', 'warning');
+        }
+
+        // Export Functions
+        function valExportErrorsForClaude() {
+            if (valErrorDetails.length === 0) {
+                alert('Keine Fehler zum Exportieren vorhanden.');
+                return;
+            }
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            let markdown = `# Data Validation Error Report\n\n**Exported:** ${new Date().toLocaleString('de-DE')}\n**Total Errors:** ${valErrorDetails.length}\n\n`;
+            const bySource = {};
+            valErrorDetails.forEach(e => {
+                if (!bySource[e.source]) bySource[e.source] = [];
+                bySource[e.source].push(e);
+            });
+            for (const [source, errors] of Object.entries(bySource)) {
+                markdown += `## ${source} (${errors.length} Fehler)\n\n`;
+                errors.forEach(e => {
+                    markdown += `- **${e.symbol}** (${e.timeframe}): ${e.error}\n`;
+                });
+                markdown += '\n';
+            }
+            const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `data-validation-errors-${timestamp}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function valExportErrorsAsJSON() {
+            if (valErrorDetails.length === 0) {
+                alert('Keine Fehler zum Exportieren vorhanden.');
+                return;
+            }
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const jsonData = {
+                _meta: { exportedAt: new Date().toISOString(), totalErrors: valErrorDetails.length },
+                errors: valErrorDetails
+            };
+            const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `data-validation-errors-${timestamp}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize Validation Tab when it becomes visible
+        document.querySelector('[data-tab="validation"]').addEventListener('click', () => {
+            setTimeout(() => {
+                if (valManagedSymbols.length === 0) {
+                    valLoadManagedSymbols();
+                }
+            }, 100);
+        });
+
+        // Initial status check for validation
+        async function valCheckInitialStatus() {
+            try {
+                const response = await valFetchWithTimeout('/data/health');
+                if (response.ok) {
+                    const health = await response.json();
+                    if (health.redis?.connected) {
+                        document.getElementById('val-redis-status').textContent = '✓';
+                        document.getElementById('val-redis-status').className = 'value success';
+                    }
+                    if (health.timescaledb?.status === 'healthy') {
+                        document.getElementById('val-timescaledb-status').textContent = '✓';
+                        document.getElementById('val-timescaledb-status').className = 'value success';
+                    }
+                }
+            } catch (e) {
+                console.log('Validation initial status check failed:', e);
+            }
+        }
+
+        // Run initial validation check
+        valCheckInitialStatus();
     </script>
 </body>
 </html>
