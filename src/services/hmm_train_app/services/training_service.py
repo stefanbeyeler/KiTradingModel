@@ -574,13 +574,13 @@ class HMMTrainingService:
                 job.version_id = self._get_registry().create_version(job.job_id)
                 logger.info(f"Created version {job.version_id} for validation")
 
-            # Get symbols
+            # Get symbols - use ALL available symbols from Data Service
             symbols = job.symbols
             if not symbols:
                 symbols = await self._get_available_symbols()
                 if not symbols:
                     raise RuntimeError("No symbols available for training")
-                job.symbols = symbols[:30]  # Limit symbols
+                job.symbols = symbols  # Train ALL symbols
 
             job.total_models = len(job.symbols) if job.model_type != ModelType.SCORER else 1
             if job.model_type == ModelType.BOTH:
@@ -637,7 +637,7 @@ class HMMTrainingService:
 
                 # Fetch data for scorer if not already fetched
                 if not data_by_symbol:
-                    for symbol in job.symbols[:10]:  # Use 10 symbols for scorer
+                    for symbol in job.symbols:  # Use ALL symbols for scorer
                         data = await self._fetch_training_data(
                             symbol, job.timeframe, job.lookback_days
                         )
@@ -928,7 +928,7 @@ class HMMTrainingService:
                         symbol=None,
                         candidate_path=model_path,
                         timeframe=job.timeframe,
-                        symbols_for_scorer=job.symbols[:10],
+                        symbols_for_scorer=job.symbols,  # Use ALL symbols
                         training_job_id=job.job_id
                     )
 

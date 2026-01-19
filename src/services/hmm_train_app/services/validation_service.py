@@ -664,7 +664,7 @@ class ValidationService:
             y_val = []
             returns_for_signals = []
 
-            for symbol in symbols[:10]:  # Use up to 10 symbols
+            for symbol in symbols:  # Use ALL symbols for validation
                 data = await self.fetch_data(symbol, timeframe)
                 if len(data) < 100:
                     continue
@@ -710,7 +710,7 @@ class ValidationService:
             returns_arr = np.array(returns_for_signals)
 
             metrics.validation_samples = len(X)
-            metrics.symbols_used = symbols[:10]
+            metrics.symbols_used = symbols  # ALL symbols used
 
             # Get predictions
             y_pred_proba = model.predict(X)  # Returns probabilities for 3 classes
