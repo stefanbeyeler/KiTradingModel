@@ -3,16 +3,23 @@ TCN Pattern History Service - Persists and manages detected chart patterns.
 
 Stores TCN pattern detections (Head & Shoulders, Double Top, Triangles, etc.)
 with timestamps for historical analysis.
+
+IMPORTANT: This service uses asyncio.to_thread() for blocking I/O operations
+to prevent blocking the event loop and causing health check timeouts.
 """
 
 import os
 import json
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, List
 from loguru import logger
+
+# Thread pool for CPU-intensive and I/O operations
+_thread_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="tcn_scan_")
 
 
 @dataclass
@@ -136,8 +143,8 @@ class TCNPatternHistoryService:
         else:
             self._history = []
 
-    def _save_history(self) -> None:
-        """Save history to JSON file."""
+    def _save_history_sync(self) -> None:
+        """Save history to JSON file (synchronous, for use in thread)."""
         try:
             with open(self._history_file, "w", encoding="utf-8") as f:
                 json.dump(
@@ -148,6 +155,14 @@ class TCNPatternHistoryService:
                 )
         except Exception as e:
             logger.error(f"Error saving history: {e}")
+
+    async def _save_history_async(self) -> None:
+        """Save history to JSON file (async, non-blocking)."""
+        await asyncio.to_thread(self._save_history_sync)
+
+    def _save_history(self) -> None:
+        """Save history to JSON file (legacy sync method for backwards compatibility)."""
+        self._save_history_sync()
 
     def _get_category(self, pattern_type: str) -> str:
         """Get the category for a pattern type."""
@@ -209,7 +224,7 @@ class TCNPatternHistoryService:
 
         return removed
 
-    def add_pattern(
+    def _create_pattern_entry(
         self,
         symbol: str,
         timeframe: str,
@@ -225,26 +240,7 @@ class TCNPatternHistoryService:
         pattern_points: Optional[List[dict]] = None,
         ohlcv_data: Optional[List[dict]] = None
     ) -> Optional[TCNPatternHistoryEntry]:
-        """
-        Add a detected pattern to history.
-
-        Args:
-            symbol: Trading symbol
-            timeframe: Timeframe
-            pattern_type: Pattern type
-            confidence: Detection confidence (0-1)
-            pattern_start_time: When the pattern started forming (ISO 8601)
-            pattern_end_time: When the pattern completed (ISO 8601)
-            direction: bullish, bearish, or neutral
-            price_at_detection: Price when pattern was detected
-            price_target: Projected price target
-            invalidation_level: Level where pattern is invalidated
-            pattern_height: Height of the pattern
-            pattern_points: Key points for visualization
-            ohlcv_data: OHLCV candles used for detection (for retrospective analysis)
-
-        Returns the entry if added, None if duplicate.
-        """
+        """Create a pattern entry and add to history (internal, no save)."""
         now = datetime.now(timezone.utc).isoformat()
 
         # Generate unique ID
@@ -279,11 +275,109 @@ class TCNPatternHistoryService:
         # Add entry
         self._history.append(entry)
 
-        # Cleanup and save
+        # Cleanup
         self._cleanup_old_entries()
-        self._save_history()
 
         logger.debug(f"Added TCN pattern: {symbol} {pattern_type} ({confidence:.2%})")
+
+        return entry
+
+    def add_pattern(
+        self,
+        symbol: str,
+        timeframe: str,
+        pattern_type: str,
+        confidence: float,
+        pattern_start_time: str,
+        pattern_end_time: str,
+        direction: str,
+        price_at_detection: float,
+        price_target: Optional[float] = None,
+        invalidation_level: Optional[float] = None,
+        pattern_height: Optional[float] = None,
+        pattern_points: Optional[List[dict]] = None,
+        ohlcv_data: Optional[List[dict]] = None
+    ) -> Optional[TCNPatternHistoryEntry]:
+        """
+        Add a detected pattern to history (synchronous version).
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe
+            pattern_type: Pattern type
+            confidence: Detection confidence (0-1)
+            pattern_start_time: When the pattern started forming (ISO 8601)
+            pattern_end_time: When the pattern completed (ISO 8601)
+            direction: bullish, bearish, or neutral
+            price_at_detection: Price when pattern was detected
+            price_target: Projected price target
+            invalidation_level: Level where pattern is invalidated
+            pattern_height: Height of the pattern
+            pattern_points: Key points for visualization
+            ohlcv_data: OHLCV candles used for detection (for retrospective analysis)
+
+        Returns the entry if added, None if duplicate.
+        """
+        entry = self._create_pattern_entry(
+            symbol, timeframe, pattern_type, confidence,
+            pattern_start_time, pattern_end_time, direction,
+            price_at_detection, price_target, invalidation_level,
+            pattern_height, pattern_points, ohlcv_data
+        )
+
+        if entry:
+            self._save_history_sync()
+
+        return entry
+
+    async def add_pattern_async(
+        self,
+        symbol: str,
+        timeframe: str,
+        pattern_type: str,
+        confidence: float,
+        pattern_start_time: str,
+        pattern_end_time: str,
+        direction: str,
+        price_at_detection: float,
+        price_target: Optional[float] = None,
+        invalidation_level: Optional[float] = None,
+        pattern_height: Optional[float] = None,
+        pattern_points: Optional[List[dict]] = None,
+        ohlcv_data: Optional[List[dict]] = None
+    ) -> Optional[TCNPatternHistoryEntry]:
+        """
+        Add a detected pattern to history (async, non-blocking version).
+
+        This version uses asyncio.to_thread() for file I/O to prevent
+        blocking the event loop and causing health check timeouts.
+
+        Args:
+            symbol: Trading symbol
+            timeframe: Timeframe
+            pattern_type: Pattern type
+            confidence: Detection confidence (0-1)
+            pattern_start_time: When the pattern started forming (ISO 8601)
+            pattern_end_time: When the pattern completed (ISO 8601)
+            direction: bullish, bearish, or neutral
+            price_at_detection: Price when pattern was detected
+            price_target: Projected price target
+            invalidation_level: Level where pattern is invalidated
+            pattern_height: Height of the pattern
+            pattern_points: Key points for visualization
+            ohlcv_data: OHLCV candles used for detection (for retrospective analysis)
+
+        Returns the entry if added, None if duplicate.
+        """
+        entry = self._create_pattern_entry(
+            symbol, timeframe, pattern_type, confidence,
+            pattern_start_time, pattern_end_time, direction,
+            price_at_detection, price_target, invalidation_level,
+            pattern_height, pattern_points, ohlcv_data
+        )
+
+        if entry:
+            await self._save_history_async()
 
         return entry
 
@@ -416,6 +510,9 @@ class TCNPatternHistoryService:
         """
         Scan all symbols for patterns and add to history.
 
+        This method yields control back to the event loop regularly to ensure
+        health check endpoints can respond promptly.
+
         Args:
             timeframes: Timeframes to scan (default: ["1h", "4h", "1d"])
             threshold: Minimum confidence threshold
@@ -442,9 +539,16 @@ class TCNPatternHistoryService:
 
             patterns_found = 0
             patterns_added = 0
+            scan_counter = 0
 
             for symbol in symbols:
                 for timeframe in timeframes:
+                    scan_counter += 1
+
+                    # Yield control to event loop every 3 scans to allow health checks
+                    if scan_counter % 3 == 0:
+                        await asyncio.sleep(0)
+
                     try:
                         # Detect patterns
                         response = await pattern_detection_service.detect_patterns(
@@ -468,8 +572,8 @@ class TCNPatternHistoryService:
                                     for p in pattern.pattern_points
                                 ]
 
-                            # Add to history (including OHLCV data for retrospective analysis)
-                            entry = self.add_pattern(
+                            # Add to history using async version (non-blocking file I/O)
+                            entry = await self.add_pattern_async(
                                 symbol=symbol,
                                 timeframe=timeframe,
                                 pattern_type=pattern.pattern_type,
@@ -534,6 +638,9 @@ class TCNPatternHistoryService:
         patterns_added = 0
 
         for timeframe in timeframes:
+            # Yield control to event loop to allow health checks
+            await asyncio.sleep(0)
+
             try:
                 # Detect patterns
                 response = await pattern_detection_service.detect_patterns(
@@ -557,8 +664,8 @@ class TCNPatternHistoryService:
                             for p in pattern.pattern_points
                         ]
 
-                    # Add to history (including OHLCV data for retrospective analysis)
-                    entry = self.add_pattern(
+                    # Add to history using async version (non-blocking file I/O)
+                    entry = await self.add_pattern_async(
                         symbol=symbol,
                         timeframe=timeframe,
                         pattern_type=pattern.pattern_type,
