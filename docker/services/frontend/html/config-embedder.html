@@ -1091,31 +1091,35 @@ Bitcoin bearish Signal</textarea>
             try {
                 const text = document.getElementById('embed-text').value;
                 const model = document.getElementById('embed-model').value;
+                const useFinbert = model === 'finbert';
 
                 const response = await fetch(`${API_BASE}/text/embed`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text, model })
+                    body: JSON.stringify({ texts: [text], use_finbert: useFinbert })
                 });
 
                 if (!response.ok) throw new Error('Embedding failed');
 
                 const data = await response.json();
                 const container = document.getElementById('text-embedding-result');
+                const embedding = data.embeddings?.[0] || [];
 
                 container.innerHTML = `
                     <div style="margin-bottom: 1rem;">
-                        <div style="color: #888; margin-bottom: 0.5rem;">Dimension: <span style="color: #64c8ff;">${data.dimension || data.embedding?.length || '-'}</span></div>
-                        <div style="color: #888;">Modell: <span style="color: #64c8ff;">${model}</span></div>
+                        <div style="color: #888; margin-bottom: 0.5rem;">Dimension: <span style="color: #64c8ff;">${data.dimension || embedding.length || '-'}</span></div>
+                        <div style="color: #888;">Modell: <span style="color: #64c8ff;">${data.model || model}</span></div>
+                        <div style="color: #888;">Cached: <span style="color: ${data.cached ? '#4CAF50' : '#ff9800'};">${data.cached ? 'Ja' : 'Nein'}</span></div>
                     </div>
                     <div style="color: #888; margin-bottom: 0.5rem; font-size: 0.85rem;">Embedding (erste 20 Werte):</div>
                     <div class="embedding-preview">
-                        [${(data.embedding || []).slice(0, 20).map(v => v.toFixed(6)).join(', ')}${data.embedding?.length > 20 ? ', ...' : ''}]
+                        [${embedding.slice(0, 20).map(v => v.toFixed(6)).join(', ')}${embedding.length > 20 ? ', ...' : ''}]
                     </div>
                 `;
 
                 showToast('Text erfolgreich eingebettet');
             } catch (error) {
+                console.error('Embed error:', error);
                 showToast('Fehler beim Einbetten', 'error');
             } finally {
                 btn.classList.remove('btn-loading');
