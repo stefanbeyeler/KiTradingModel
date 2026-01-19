@@ -11,6 +11,12 @@ Architecture:
 Training Types:
     1. HMM Models: Per-symbol regime detection (Bull/Bear/Sideways/High Volatility)
     2. LightGBM Scorer: Signal scoring model (trained across all symbols)
+
+Validation Pipeline (NEW):
+    - After training, models are validated against held-out data
+    - A/B comparison against current production models
+    - Automatic deployment if quality improves or stays stable
+    - Automatic rejection if quality regresses beyond threshold
 """
 
 import os
@@ -107,6 +113,12 @@ class TrainingJob:
     failed: int = 0
     error_message: Optional[str] = None
     results: Dict[str, Any] = None
+    # Validation pipeline fields
+    version_id: Optional[str] = None
+    validation_metrics: Dict[str, Any] = None
+    deployment_decisions: Dict[str, Any] = None
+    deployed_count: int = 0
+    rejected_count: int = 0
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
@@ -120,6 +132,10 @@ class TrainingJob:
 DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
 HMM_SERVICE_URL = os.getenv("HMM_SERVICE_URL", "http://trading-hmm:3004")
 MODEL_DIR = os.getenv("MODEL_DIR", "/app/data/models/hmm")
+
+# Validation settings
+ENABLE_VALIDATION = os.getenv("HMM_ENABLE_VALIDATION", "true").lower() == "true"
+VALIDATION_SPLIT = float(os.getenv("HMM_VALIDATION_SPLIT", "0.2"))
 
 
 class HMMTrainingService:
@@ -151,7 +167,13 @@ class HMMTrainingService:
         self._history_file = self._model_path / "training_history.json"
         self._load_history()
 
-        logger.info(f"HMMTrainingService initialized (model_dir: {MODEL_DIR})")
+        # Initialize validation services (lazy load)
+        self._model_registry = None
+        self._validation_service = None
+        self._rollback_service = None
+        self._validation_enabled = ENABLE_VALIDATION
+
+        logger.info(f"HMMTrainingService initialized (model_dir: {MODEL_DIR}, validation: {ENABLE_VALIDATION})")
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client."""
@@ -382,28 +404,42 @@ class HMMTrainingService:
             # Map states to regimes
             regime_mapping = self._map_states_to_regimes(model, features)
 
+            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+
+            # Determine save path based on validation mode
+            if self._validation_enabled and job.version_id:
+                # Save to version directory
+                version_path = self._get_version_path(job.version_id)
+                version_path.mkdir(parents=True, exist_ok=True)
+                model_filename = f"hmm_{symbol}.pkl"
+                model_path = version_path / model_filename
+            else:
+                # Legacy: save directly to model directory
+                model_filename = f"hmm_{symbol}.pkl"
+                model_path = self._model_path / model_filename
+
             # Save model
-            model_filename = f"hmm_{symbol}.pkl"
-            model_path = self._model_path / model_filename
             joblib.dump({
                 "model": model,
                 "regime_mapping": {k: v.value for k, v in regime_mapping.items()},
                 "symbol": symbol,
                 "trained_at": datetime.now(timezone.utc).isoformat(),
-                "samples": len(features)
+                "samples": len(features),
+                "version_id": job.version_id
             }, model_path)
 
-            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
-
-            # Notify inference service
-            await self._notify_hmm_service(symbol, str(model_path), "hmm")
-
-            return {
+            result = {
                 "success": True,
                 "samples": len(features),
                 "duration_seconds": duration,
                 "model_path": str(model_path)
             }
+
+            # If validation is disabled, notify inference service directly
+            if not self._validation_enabled:
+                await self._notify_hmm_service(symbol, str(model_path), "hmm")
+
+            return result
 
         except Exception as e:
             logger.error(f"HMM training failed for {symbol}: {e}")
@@ -481,24 +517,32 @@ class HMMTrainingService:
             }
             model = lightgbm.train(params, train_data, num_boost_round=100)
 
+            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+
+            # Determine save path based on validation mode
+            if self._validation_enabled and job.version_id:
+                # Save to version directory
+                version_path = self._get_version_path(job.version_id)
+                version_path.mkdir(parents=True, exist_ok=True)
+                model_filename = "scorer_lightgbm.pkl"
+                model_path = version_path / model_filename
+            else:
+                # Legacy: save directly to model directory
+                model_filename = "scorer_lightgbm.pkl"
+                model_path = self._model_path / model_filename
+
             # Save model
-            model_filename = "scorer_lightgbm.pkl"
-            model_path = self._model_path / model_filename
             joblib.dump({
                 "model": model,
                 "trained_at": datetime.now(timezone.utc).isoformat(),
                 "samples": len(X),
                 "symbols_used": list(data_by_symbol.keys()),
-                "is_fitted": True,  # Add this flag for inference service
-                "feature_importance": {}  # Placeholder for feature importance
+                "is_fitted": True,
+                "feature_importance": {},
+                "version_id": job.version_id
             }, model_path)
 
-            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
-
-            # Notify inference service
-            await self._notify_hmm_service("scorer", str(model_path), "scorer")
-
-            return {
+            result = {
                 "success": True,
                 "samples": len(X),
                 "duration_seconds": duration,
@@ -506,18 +550,29 @@ class HMMTrainingService:
                 "symbols_used": len(data_by_symbol)
             }
 
+            # If validation is disabled, notify inference service directly
+            if not self._validation_enabled:
+                await self._notify_hmm_service("scorer", str(model_path), "scorer")
+
+            return result
+
         except Exception as e:
             logger.error(f"Scorer training failed: {e}")
             return {"success": False, "error": str(e)}
 
     async def _run_training(self, job: TrainingJob):
-        """Execute the training job."""
+        """Execute the training job with optional validation pipeline."""
         try:
             job.status = TrainingStatus.PREPARING
             job.started_at = datetime.now(timezone.utc).isoformat()
             self._save_history()
 
             logger.info(f"Starting training job {job.job_id} (type: {job.model_type.value})")
+
+            # Create version for validation if enabled
+            if self._validation_enabled:
+                job.version_id = self._get_registry().create_version(job.job_id)
+                logger.info(f"Created version {job.version_id} for validation")
 
             # Get symbols
             symbols = job.symbols
@@ -604,6 +659,10 @@ class HMMTrainingService:
                 job.completed_models += 1
                 job.progress = 100
 
+            # Run validation pipeline if enabled
+            if self._validation_enabled and job.version_id and job.status != TrainingStatus.CANCELLED:
+                await self._run_validation_pipeline(job, data_by_symbol)
+
             if job.status != TrainingStatus.CANCELLED:
                 job.status = TrainingStatus.COMPLETED
 
@@ -612,7 +671,8 @@ class HMMTrainingService:
 
             logger.info(
                 f"Training job {job.job_id} {job.status.value}: "
-                f"{job.successful} successful, {job.failed} failed"
+                f"{job.successful} successful, {job.failed} failed, "
+                f"{job.deployed_count} deployed, {job.rejected_count} rejected"
             )
 
         except Exception as e:
@@ -727,6 +787,263 @@ class HMMTrainingService:
                     pass
 
         return sorted(models, key=lambda x: x["created"], reverse=True)
+
+    # =========================================================================
+    # Validation Pipeline Methods
+    # =========================================================================
+
+    def _get_registry(self):
+        """Lazy load model registry."""
+        if self._model_registry is None:
+            from .model_registry import model_registry
+            self._model_registry = model_registry
+        return self._model_registry
+
+    def _get_validation_service(self):
+        """Lazy load validation service."""
+        if self._validation_service is None:
+            from .validation_service import validation_service
+            self._validation_service = validation_service
+        return self._validation_service
+
+    def _get_rollback_service(self):
+        """Lazy load rollback service."""
+        if self._rollback_service is None:
+            from .rollback_service import rollback_service
+            self._rollback_service = rollback_service
+        return self._rollback_service
+
+    def _get_version_path(self, version_id: str) -> Path:
+        """Get the path for a version directory."""
+        return self._model_path / "versions" / version_id
+
+    async def _run_validation_pipeline(
+        self,
+        job: TrainingJob,
+        data_by_symbol: Dict[str, List[Dict]]
+    ):
+        """
+        Run validation and A/B comparison for trained models.
+
+        For each successfully trained model:
+        1. Register in model registry
+        2. Run validation metrics
+        3. Compare against production (A/B)
+        4. Deploy or reject based on comparison
+        """
+        logger.info(f"Running validation pipeline for job {job.job_id}")
+
+        registry = self._get_registry()
+        rollback_svc = self._get_rollback_service()
+
+        job.validation_metrics = {}
+        job.deployment_decisions = {}
+        job.deployed_count = 0
+        job.rejected_count = 0
+
+        # Process HMM models
+        if job.model_type in [ModelType.HMM, ModelType.BOTH]:
+            for symbol in job.symbols:
+                result_key = f"hmm_{symbol}"
+                result = job.results.get(result_key, {})
+
+                if not result.get("success"):
+                    continue
+
+                try:
+                    model_path = result.get("model_path")
+
+                    # Register model in registry
+                    registry.register_model(
+                        version_id=job.version_id,
+                        model_type="hmm",
+                        symbol=symbol,
+                        training_job_id=job.job_id,
+                        samples_used=result.get("samples", 0),
+                        training_duration=result.get("duration_seconds", 0),
+                        timeframe=job.timeframe,
+                        model_path=f"{job.version_id}/hmm_{symbol}.pkl"
+                    )
+
+                    # Run validation and deployment decision
+                    decision = await rollback_svc.process_training_result(
+                        version_id=job.version_id,
+                        model_type="hmm",
+                        symbol=symbol,
+                        candidate_path=model_path,
+                        timeframe=job.timeframe,
+                        training_job_id=job.job_id
+                    )
+
+                    # Record results
+                    job.deployment_decisions[result_key] = {
+                        "action": decision.action,
+                        "reason": decision.reason
+                    }
+
+                    if decision.action == "deployed":
+                        job.deployed_count += 1
+                    elif decision.action == "rejected":
+                        job.rejected_count += 1
+
+                    # Store validation metrics from comparison
+                    if decision.comparison_result:
+                        job.validation_metrics[result_key] = decision.comparison_result.get(
+                            "candidate_metrics", {}
+                        )
+
+                    logger.info(f"HMM {symbol}: {decision.action} - {decision.reason}")
+
+                except Exception as e:
+                    logger.error(f"Validation failed for HMM {symbol}: {e}")
+                    job.deployment_decisions[result_key] = {
+                        "action": "error",
+                        "reason": str(e)
+                    }
+
+        # Process scorer model
+        if job.model_type in [ModelType.SCORER, ModelType.BOTH]:
+            result = job.results.get("scorer", {})
+
+            if result.get("success"):
+                try:
+                    model_path = result.get("model_path")
+
+                    # Register model
+                    registry.register_model(
+                        version_id=job.version_id,
+                        model_type="scorer",
+                        symbol=None,
+                        training_job_id=job.job_id,
+                        samples_used=result.get("samples", 0),
+                        training_duration=result.get("duration_seconds", 0),
+                        timeframe=job.timeframe,
+                        model_path=f"{job.version_id}/scorer_lightgbm.pkl"
+                    )
+
+                    # Run validation and deployment
+                    decision = await rollback_svc.process_training_result(
+                        version_id=job.version_id,
+                        model_type="scorer",
+                        symbol=None,
+                        candidate_path=model_path,
+                        timeframe=job.timeframe,
+                        symbols_for_scorer=job.symbols[:10],
+                        training_job_id=job.job_id
+                    )
+
+                    job.deployment_decisions["scorer"] = {
+                        "action": decision.action,
+                        "reason": decision.reason
+                    }
+
+                    if decision.action == "deployed":
+                        job.deployed_count += 1
+                    elif decision.action == "rejected":
+                        job.rejected_count += 1
+
+                    if decision.comparison_result:
+                        job.validation_metrics["scorer"] = decision.comparison_result.get(
+                            "candidate_metrics", {}
+                        )
+
+                    logger.info(f"Scorer: {decision.action} - {decision.reason}")
+
+                except Exception as e:
+                    logger.error(f"Validation failed for scorer: {e}")
+                    job.deployment_decisions["scorer"] = {
+                        "action": "error",
+                        "reason": str(e)
+                    }
+
+        # Cleanup old versions
+        try:
+            deleted = registry.cleanup_old_versions()
+            if deleted > 0:
+                logger.info(f"Cleaned up {deleted} old model versions")
+        except Exception as e:
+            logger.warning(f"Version cleanup failed: {e}")
+
+        logger.info(
+            f"Validation pipeline complete: {job.deployed_count} deployed, "
+            f"{job.rejected_count} rejected"
+        )
+
+    # =========================================================================
+    # Validation Query Methods
+    # =========================================================================
+
+    def get_model_versions(
+        self,
+        model_type: Optional[str] = None,
+        symbol: Optional[str] = None,
+        limit: int = 20
+    ) -> List[Dict[str, Any]]:
+        """Get model version history."""
+        if not self._validation_enabled:
+            return []
+
+        registry = self._get_registry()
+        versions = registry.list_versions(model_type=model_type, symbol=symbol, limit=limit)
+        return [v.to_dict() for v in versions]
+
+    def get_production_models(self) -> Dict[str, Any]:
+        """Get all current production models."""
+        if not self._validation_enabled:
+            return {}
+
+        registry = self._get_registry()
+        production = registry.get_production_versions()
+        return {k: v.to_dict() for k, v in production.items()}
+
+    def get_deployment_history(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get deployment decision history."""
+        if not self._validation_enabled:
+            return []
+
+        rollback_svc = self._get_rollback_service()
+        decisions = rollback_svc.get_deployment_history(limit=limit)
+        return [d.to_dict() for d in decisions]
+
+    async def rollback_model(
+        self,
+        model_type: str,
+        symbol: Optional[str],
+        target_version: str,
+        reason: str = "Manual rollback"
+    ) -> Dict[str, Any]:
+        """Manually rollback to a previous version."""
+        if not self._validation_enabled:
+            return {"success": False, "error": "Validation not enabled"}
+
+        rollback_svc = self._get_rollback_service()
+        decision = await rollback_svc.rollback_to_version(
+            model_type=model_type,
+            symbol=symbol,
+            target_version=target_version,
+            reason=reason
+        )
+        return decision.to_dict()
+
+    async def force_deploy_version(
+        self,
+        version_id: str,
+        model_type: str,
+        symbol: Optional[str],
+        reason: str = "Manual deployment"
+    ) -> Dict[str, Any]:
+        """Force deploy a model version (bypass validation)."""
+        if not self._validation_enabled:
+            return {"success": False, "error": "Validation not enabled"}
+
+        rollback_svc = self._get_rollback_service()
+        decision = await rollback_svc.force_deploy(
+            version_id=version_id,
+            model_type=model_type,
+            symbol=symbol,
+            reason=reason
+        )
+        return decision.to_dict()
 
 
 # Global singleton

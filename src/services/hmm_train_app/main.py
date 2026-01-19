@@ -28,6 +28,7 @@ from loguru import logger
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 
 from src.services.hmm_train_app.routers import training_router, system_router
+from src.services.hmm_train_app.routers.training_router import validation_router
 from src.services.hmm_train_app.services.training_service import training_service
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import get_test_unhealthy_status
@@ -67,6 +68,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(training_router, prefix="/api/v1")
+app.include_router(validation_router, prefix="/api/v1")
 app.include_router(system_router, prefix="/api/v1")
 
 # Test-Health-Router
@@ -81,6 +83,7 @@ async def startup_event():
     logger.info(f"Model directory: {os.getenv('MODEL_DIR', '/app/data/models/hmm')}")
     logger.info(f"Data Service URL: {os.getenv('DATA_SERVICE_URL', 'http://trading-data:3001')}")
     logger.info(f"HMM Service URL: {os.getenv('HMM_SERVICE_URL', 'http://trading-hmm:3004')}")
+    logger.info(f"Validation enabled: {os.getenv('HMM_ENABLE_VALIDATION', 'true')}")
 
     # Check library availability
     try:

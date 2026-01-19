@@ -1,13 +1,16 @@
 """Training endpoints for HMM Training Service."""
 
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from loguru import logger
 
 from ..services.training_service import training_service, TrainingStatus, ModelType
 
 router = APIRouter(prefix="/train", tags=["HMM Training"])
+
+# Create separate router for validation/versioning endpoints
+validation_router = APIRouter(prefix="/models", tags=["Model Versioning"])
 
 
 class TrainingRequest(BaseModel):
@@ -182,4 +185,229 @@ async def list_models():
     return {
         "models": models,
         "total": len(models)
+    }
+
+
+# =============================================================================
+# Model Versioning & Validation Endpoints
+# =============================================================================
+
+class RollbackRequest(BaseModel):
+    """Request to rollback a model."""
+    model_type: str = Field(..., description="Model type: 'hmm' or 'scorer'")
+    symbol: Optional[str] = Field(default=None, description="Symbol for HMM models")
+    target_version: str = Field(..., description="Version ID to rollback to")
+    reason: str = Field(default="Manual rollback", description="Reason for rollback")
+
+
+class ForceDeployRequest(BaseModel):
+    """Request to force deploy a model version."""
+    model_type: str = Field(..., description="Model type: 'hmm' or 'scorer'")
+    symbol: Optional[str] = Field(default=None, description="Symbol for HMM models")
+    reason: str = Field(default="Manual deployment", description="Reason for deployment")
+
+
+@validation_router.get("/versions")
+async def list_model_versions(
+    model_type: Optional[str] = Query(default=None, description="Filter by model type"),
+    symbol: Optional[str] = Query(default=None, description="Filter by symbol"),
+    limit: int = Query(default=20, ge=1, le=100, description="Max results")
+):
+    """
+    List all model versions with their status.
+
+    Returns version history for trained models including:
+    - Validation metrics
+    - Deployment status (candidate, production, archived, rejected)
+    - Training information
+    """
+    versions = training_service.get_model_versions(
+        model_type=model_type,
+        symbol=symbol,
+        limit=limit
+    )
+    return {
+        "versions": versions,
+        "total": len(versions),
+        "validation_enabled": training_service._validation_enabled
+    }
+
+
+@validation_router.get("/versions/{version_id}")
+async def get_version_details(version_id: str):
+    """Get detailed information about a specific version."""
+    if not training_service._validation_enabled:
+        raise HTTPException(status_code=400, detail="Validation not enabled")
+
+    registry = training_service._get_registry()
+    version_data = registry.get_version(version_id)
+
+    if not version_data:
+        raise HTTPException(status_code=404, detail=f"Version not found: {version_id}")
+
+    return {
+        "version_id": version_id,
+        "models": {k: v.to_dict() for k, v in version_data.items()}
+    }
+
+
+@validation_router.get("/production")
+async def get_production_models():
+    """
+    Get all currently deployed production models.
+
+    Returns the active model for each symbol/type combination.
+    """
+    production = training_service.get_production_models()
+    return {
+        "production_models": production,
+        "total": len(production),
+        "validation_enabled": training_service._validation_enabled
+    }
+
+
+@validation_router.post("/rollback")
+async def rollback_model(request: RollbackRequest):
+    """
+    Manually rollback to a previous model version.
+
+    This will:
+    1. Update the production symlink to the target version
+    2. Notify the inference service to reload the model
+    3. Record the rollback in deployment history
+
+    Use this when a deployed model is not performing well.
+    """
+    if not training_service._validation_enabled:
+        raise HTTPException(status_code=400, detail="Validation not enabled")
+
+    result = await training_service.rollback_model(
+        model_type=request.model_type,
+        symbol=request.symbol,
+        target_version=request.target_version,
+        reason=request.reason
+    )
+
+    if result.get("action") == "rolled_back":
+        return {
+            "status": "success",
+            "message": f"Rolled back to version {request.target_version}",
+            "decision": result
+        }
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Rollback failed: {result.get('reason', 'Unknown error')}"
+        )
+
+
+@validation_router.post("/force-deploy/{version_id}")
+async def force_deploy_model(version_id: str, request: ForceDeployRequest):
+    """
+    Force deploy a model version (bypasses A/B validation).
+
+    **Use with caution** - this skips quality validation.
+    Only use when you're certain the model should be deployed.
+    """
+    if not training_service._validation_enabled:
+        raise HTTPException(status_code=400, detail="Validation not enabled")
+
+    result = await training_service.force_deploy_version(
+        version_id=version_id,
+        model_type=request.model_type,
+        symbol=request.symbol,
+        reason=request.reason
+    )
+
+    if result.get("action") == "deployed":
+        return {
+            "status": "success",
+            "message": f"Force deployed version {version_id}",
+            "decision": result
+        }
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Force deploy failed: {result.get('reason', 'Unknown error')}"
+        )
+
+
+@validation_router.get("/deployment-history")
+async def get_deployment_history(
+    limit: int = Query(default=50, ge=1, le=200, description="Max results")
+):
+    """
+    Get deployment decision history.
+
+    Shows all deployment decisions including:
+    - Successful deployments
+    - Rejections with reasons
+    - Rollbacks
+    - A/B comparison results
+    """
+    history = training_service.get_deployment_history(limit=limit)
+    return {
+        "history": history,
+        "total": len(history)
+    }
+
+
+@validation_router.get("/comparison-history")
+async def get_comparison_history(
+    limit: int = Query(default=50, ge=1, le=200, description="Max results")
+):
+    """
+    Get A/B comparison history.
+
+    Shows detailed comparison results between candidate and production models.
+    """
+    if not training_service._validation_enabled:
+        raise HTTPException(status_code=400, detail="Validation not enabled")
+
+    rollback_svc = training_service._get_rollback_service()
+    comparisons = rollback_svc.get_comparison_history(limit=limit)
+
+    return {
+        "comparisons": comparisons,
+        "total": len(comparisons)
+    }
+
+
+@validation_router.get("/validation-metrics/{job_id}")
+async def get_validation_metrics(job_id: str):
+    """
+    Get validation metrics for a specific training job.
+
+    Returns metrics calculated during the validation pipeline.
+    """
+    job = training_service.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+
+    return {
+        "job_id": job_id,
+        "validation_metrics": job.validation_metrics or {},
+        "deployment_decisions": job.deployment_decisions or {},
+        "deployed_count": job.deployed_count,
+        "rejected_count": job.rejected_count,
+        "version_id": job.version_id
+    }
+
+
+@validation_router.get("/stats")
+async def get_registry_stats():
+    """Get model registry statistics."""
+    if not training_service._validation_enabled:
+        return {
+            "validation_enabled": False,
+            "message": "Validation pipeline not enabled"
+        }
+
+    registry = training_service._get_registry()
+    rollback_svc = training_service._get_rollback_service()
+
+    return {
+        "validation_enabled": True,
+        "registry": registry.get_stats(),
+        "deployment": rollback_svc.get_stats()
     }

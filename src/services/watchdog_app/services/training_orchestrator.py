@@ -83,6 +83,12 @@ class TrainingJob:
     progress: float = 0.0
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
+    # Validation pipeline fields (for HMM)
+    validation_status: Optional[str] = None  # "pending", "passed", "partial", "failed"
+    validation_metrics: Optional[Dict[str, Any]] = None
+    deployment_decisions: Optional[Dict[str, Any]] = None
+    deployed_count: int = 0
+    rejected_count: int = 0
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -429,6 +435,28 @@ class TrainingOrchestrator:
                     if remote_status in ["completed", "done"]:
                         job.status = JobStatus.COMPLETED
                         job.result = current_job.get("results")
+
+                        # Extract validation info for HMM training
+                        if job.service_type == TrainingServiceType.HMM:
+                            job.validation_metrics = current_job.get("validation_metrics")
+                            job.deployment_decisions = current_job.get("deployment_decisions")
+                            job.deployed_count = current_job.get("deployed_count", 0)
+                            job.rejected_count = current_job.get("rejected_count", 0)
+
+                            # Determine validation status
+                            if job.deployed_count > 0 and job.rejected_count == 0:
+                                job.validation_status = "passed"
+                            elif job.deployed_count > 0 and job.rejected_count > 0:
+                                job.validation_status = "partial"
+                            elif job.rejected_count > 0:
+                                job.validation_status = "failed"
+                            else:
+                                job.validation_status = "pending"
+
+                            logger.info(
+                                f"HMM training completed: {job.deployed_count} deployed, "
+                                f"{job.rejected_count} rejected (validation: {job.validation_status})"
+                            )
                         break
                     elif remote_status in ["failed", "error"]:
                         job.status = JobStatus.FAILED

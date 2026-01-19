@@ -344,3 +344,79 @@ async def quick_train(service: str, symbols: Optional[List[str]] = None):
         symbols=symbols,
         priority="normal"
     ))
+
+
+# ============ HMM Validation Pipeline Endpoints ============
+
+class DeploymentUpdateRequest(BaseModel):
+    """Request from HMM-Train service to report deployment decision."""
+    decision_id: str
+    model_type: str
+    symbol: Optional[str] = None
+    version_id: str
+    action: str  # deployed, rejected, pending_review
+    reason: str
+    timestamp: str
+
+
+@router.post("/deployment-update")
+async def receive_deployment_update(request: DeploymentUpdateRequest):
+    """
+    Receive deployment decision updates from HMM-Train service.
+
+    This endpoint is called by the HMM-Train service after each model
+    goes through the validation pipeline. It allows the Watchdog to
+    track validation results in real-time.
+    """
+    logger.info(
+        f"Deployment update: {request.model_type}/{request.symbol or 'global'} - "
+        f"{request.action}: {request.reason}"
+    )
+
+    # Store the update in the orchestrator's state
+    # This could be extended to trigger alerts or notifications
+    return {
+        "status": "received",
+        "decision_id": request.decision_id
+    }
+
+
+@router.get("/validation-summary/{job_id}")
+async def get_validation_summary(job_id: str):
+    """
+    Get validation summary for an HMM training job.
+
+    Returns detailed information about the validation pipeline results,
+    including which models were deployed, rejected, or pending review.
+    """
+    # Check completed jobs
+    for job in training_orchestrator._completed_jobs:
+        if job.job_id == job_id:
+            if job.service_type != TrainingServiceType.HMM:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Validation summary only available for HMM training jobs"
+                )
+
+            return {
+                "job_id": job_id,
+                "status": job.status.value,
+                "validation_status": job.validation_status,
+                "deployed_count": job.deployed_count,
+                "rejected_count": job.rejected_count,
+                "validation_metrics": job.validation_metrics,
+                "deployment_decisions": job.deployment_decisions,
+                "completed_at": job.completed_at
+            }
+
+    # Check running job
+    if training_orchestrator._current_job and training_orchestrator._current_job.job_id == job_id:
+        job = training_orchestrator._current_job
+        return {
+            "job_id": job_id,
+            "status": job.status.value,
+            "validation_status": "in_progress",
+            "progress": job.progress
+        }
+
+    raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
