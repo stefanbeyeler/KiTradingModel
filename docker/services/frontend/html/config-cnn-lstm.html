@@ -1835,11 +1835,17 @@
         }
 
         async function loadTrainingHistory() {
+            const container = document.getElementById('training-history');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Lade Historie...</p></div>';
+
             try {
                 const response = await fetch('/cnn-lstm-train/api/v1/train/history');
-                const data = await response.json();
 
-                const container = document.getElementById('training-history');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
 
                 if (!data.history || data.history.length === 0) {
                     container.innerHTML = '<div class="empty-state"><p>Keine Training-Historie vorhanden</p></div>';
@@ -1847,31 +1853,41 @@
                 }
 
                 container.innerHTML = `
+                    <div style="margin-bottom: 0.5rem; font-size: 0.8rem; color: #888;">
+                        Gesamt: ${data.total_jobs || 0} Jobs | Erfolgreich: ${data.successful_jobs || 0} | Fehlgeschlagen: ${data.failed_jobs || 0}
+                    </div>
                     <table class="feature-table">
                         <thead>
                             <tr>
                                 <th>Datum</th>
+                                <th>Job-ID</th>
                                 <th>Symbole</th>
+                                <th>TF</th>
                                 <th>Epochen</th>
                                 <th>Loss</th>
+                                <th>Dauer</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${data.history.map(h => `
                                 <tr>
-                                    <td>${new Date(h.started_at).toLocaleString('de-DE')}</td>
+                                    <td>${new Date(h.started_at).toLocaleString('de-DE', {dateStyle: 'short', timeStyle: 'short'})}</td>
+                                    <td style="font-size: 0.7rem; font-family: monospace;">${(h.job_id || '').slice(-12)}</td>
                                     <td>${h.symbols?.join(', ') || '-'}</td>
-                                    <td>${h.epochs || '-'}</td>
-                                    <td>${h.final_loss?.toFixed(4) || '-'}</td>
-                                    <td><span class="prediction-badge ${h.status === 'completed' ? 'bullish' : 'bearish'}">${h.status}</span></td>
+                                    <td>${h.timeframes?.join(', ') || '-'}</td>
+                                    <td>${h.epochs_completed || h.epochs || '-'}</td>
+                                    <td>${h.final_loss != null ? h.final_loss.toFixed(4) : '-'}</td>
+                                    <td>${h.duration_seconds ? Math.round(h.duration_seconds) + 's' : '-'}</td>
+                                    <td><span class="prediction-badge ${h.status === 'completed' ? 'bullish' : h.status === 'running' ? 'neutral' : 'bearish'}">${h.status}</span></td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>
                 `;
             } catch (error) {
-                showToast(error.message, 'error');
+                container.innerHTML = `<div class="empty-state"><p style="color: #e57373;">Fehler: ${error.message}</p></div>`;
+                showToast('Training-Historie konnte nicht geladen werden: ' + error.message, 'error');
             }
         }
 
