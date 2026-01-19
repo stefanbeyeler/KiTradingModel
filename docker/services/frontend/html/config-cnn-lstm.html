@@ -1098,14 +1098,14 @@
                             <option value="GBPUSD">GBPUSD</option>
                             <option value="USDJPY">USDJPY</option>
                         </select>
-                        <select class="timeframe-select" id="history-feedback-filter" onchange="loadPredictionHistory()">
-                            <option value="">Alle Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="confirmed">Bestätigt</option>
-                            <option value="corrected">Korrigiert</option>
-                            <option value="rejected">Abgelehnt</option>
+                        <select class="timeframe-select" id="history-result-filter" onchange="loadPredictionHistory()">
+                            <option value="">Alle Ergebnisse</option>
+                            <option value="correct">Korrekt</option>
+                            <option value="wrong">Falsch</option>
+                            <option value="pending">Ausstehend</option>
                         </select>
                         <button class="btn btn-primary" onclick="loadPredictionHistory()">&#128260; Laden</button>
+                        <button class="btn btn-success" onclick="runAutoBacktest()" title="Validiert alle offenen Predictions gegen echte Marktdaten">&#9989; Auto-Backtest</button>
                     </div>
                 </div>
                 <div id="prediction-history-content">
@@ -1252,9 +1252,13 @@
                     <div class="form-group">
                         <label class="form-label">Timeframes</label>
                         <select class="form-select" id="train-timeframe">
-                            <option value="H1">H1 (1 Stunde)</option>
+                            <option value="M5">M5 (5 Minuten)</option>
+                            <option value="M15">M15 (15 Minuten)</option>
+                            <option value="M30">M30 (30 Minuten)</option>
+                            <option value="H1" selected>H1 (1 Stunde)</option>
                             <option value="H4">H4 (4 Stunden)</option>
                             <option value="D1">D1 (1 Tag)</option>
+                            <option value="W1">W1 (1 Woche)</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -1734,7 +1738,7 @@
 
                 showToast('Training gestartet', 'success');
                 document.getElementById('training-progress').style.display = 'block';
-                pollTrainingStatus();
+                startTrainingPolling();
 
             } catch (error) {
                 showToast(error.message, 'error');
@@ -1754,32 +1758,116 @@
             }
         }
 
-        async function checkTrainingStatus() {
+        let trainingPollingInterval = null;
+
+        async function checkTrainingStatus(showToastMessage = true) {
             try {
                 const response = await fetch('/cnn-lstm-train/api/v1/train/status');
                 const data = await response.json();
 
                 const indicator = document.getElementById('training-indicator');
                 const statusText = document.getElementById('training-status-text');
+                const progressContainer = document.getElementById('training-progress');
+                const progressBar = document.getElementById('training-progress-bar');
+                const progressText = document.getElementById('training-progress-text');
 
-                if (data.is_training) {
+                // Check if training is active based on status field
+                const activeStatuses = ['pending', 'preparing', 'training', 'validating', 'saving'];
+                const isTraining = activeStatuses.includes(data.status);
+
+                if (isTraining) {
                     indicator.className = 'status-indicator running';
-                    statusText.textContent = `Training... Epoche ${data.current_epoch || 0}/${data.total_epochs || '?'}`;
-                    document.getElementById('training-progress').style.display = 'block';
 
-                    const progress = data.total_epochs ? (data.current_epoch / data.total_epochs * 100) : 0;
-                    document.getElementById('training-progress-bar').style.width = progress + '%';
-                    document.getElementById('training-progress-text').textContent = progress.toFixed(0) + '%';
+                    // Get progress from nested progress object
+                    const progress = data.progress || {};
+                    const currentEpoch = progress.current_epoch || 0;
+                    const totalEpochs = progress.total_epochs || 0;
+                    const currentSymbol = progress.current_symbol || '';
+                    const symbolsCompleted = progress.symbols_completed || 0;
+                    const totalSymbols = progress.total_symbols || 0;
+
+                    // Build status message
+                    let statusMsg = `Training läuft`;
+                    if (data.status === 'preparing') {
+                        statusMsg = 'Vorbereitung...';
+                    } else if (data.status === 'saving') {
+                        statusMsg = 'Speichere Modell...';
+                    } else if (data.status === 'validating') {
+                        statusMsg = 'Validierung...';
+                    } else {
+                        if (currentSymbol) statusMsg += ` - ${currentSymbol}`;
+                        if (totalSymbols > 1) statusMsg += ` (${symbolsCompleted + 1}/${totalSymbols})`;
+                        if (totalEpochs > 0) statusMsg += ` - Epoche ${currentEpoch}/${totalEpochs}`;
+                    }
+
+                    statusText.textContent = statusMsg;
+                    progressContainer.style.display = 'block';
+
+                    // Calculate progress percentage
+                    const progressPercent = totalEpochs > 0 ? (currentEpoch / totalEpochs * 100) : 0;
+                    progressBar.style.width = progressPercent + '%';
+                    progressText.textContent = progressPercent.toFixed(0) + '%';
+
+                    // Start polling if not already running
+                    if (!trainingPollingInterval) {
+                        startTrainingPolling();
+                    }
                 } else {
                     indicator.className = 'status-indicator idle';
-                    statusText.textContent = data.status || 'Idle';
-                    document.getElementById('training-progress').style.display = 'none';
+
+                    // Show appropriate status message
+                    const statusMessages = {
+                        'idle': 'Bereit',
+                        'completed': 'Abgeschlossen',
+                        'failed': 'Fehlgeschlagen',
+                        'cancelled': 'Abgebrochen'
+                    };
+                    statusText.textContent = statusMessages[data.status] || data.status || 'Bereit';
+
+                    // If completed, show 100%
+                    if (data.status === 'completed') {
+                        progressContainer.style.display = 'block';
+                        progressBar.style.width = '100%';
+                        progressText.textContent = '100%';
+                    } else {
+                        progressContainer.style.display = 'none';
+                    }
+
+                    // Stop polling if running
+                    if (trainingPollingInterval) {
+                        clearInterval(trainingPollingInterval);
+                        trainingPollingInterval = null;
+                    }
                 }
 
-                showToast('Status aktualisiert', 'info');
+                if (showToastMessage) {
+                    showToast('Status aktualisiert', 'info');
+                }
+
+                return isTraining;
             } catch (error) {
-                showToast(error.message, 'error');
+                if (showToastMessage) {
+                    showToast(error.message, 'error');
+                }
+                console.error('Training status check failed:', error);
+                return false;
             }
+        }
+
+        function startTrainingPolling() {
+            if (trainingPollingInterval) {
+                clearInterval(trainingPollingInterval);
+            }
+
+            trainingPollingInterval = setInterval(async () => {
+                const isTraining = await checkTrainingStatus(false);
+                if (!isTraining) {
+                    clearInterval(trainingPollingInterval);
+                    trainingPollingInterval = null;
+                    showToast('Training abgeschlossen!', 'success');
+                    loadTrainingHistory(); // Reload history when done
+                }
+            }, 3000); // Poll every 3 seconds
         }
 
         async function queueViaWatchdog() {
@@ -1807,32 +1895,6 @@
             }
         }
 
-        function pollTrainingStatus() {
-            const interval = setInterval(async () => {
-                try {
-                    const response = await fetch('/cnn-lstm-train/api/v1/train/status');
-                    const data = await response.json();
-
-                    if (!data.is_training) {
-                        clearInterval(interval);
-                        document.getElementById('training-indicator').className = 'status-indicator idle';
-                        document.getElementById('training-status-text').textContent = 'Abgeschlossen';
-                        document.getElementById('training-progress-bar').style.width = '100%';
-                        document.getElementById('training-progress-text').textContent = '100%';
-                        showToast('Training abgeschlossen!', 'success');
-                        return;
-                    }
-
-                    const progress = data.total_epochs ? (data.current_epoch / data.total_epochs * 100) : 0;
-                    document.getElementById('training-progress-bar').style.width = progress + '%';
-                    document.getElementById('training-progress-text').textContent = progress.toFixed(0) + '%';
-                    document.getElementById('training-status-text').textContent = `Epoche ${data.current_epoch}/${data.total_epochs}`;
-
-                } catch (error) {
-                    console.error('Polling error:', error);
-                }
-            }, 5000);
-        }
 
         async function loadTrainingHistory() {
             const container = document.getElementById('training-history');
@@ -2124,19 +2186,48 @@
         async function loadPredictionHistory() {
             const container = document.getElementById('prediction-history-content');
             const symbolFilter = document.getElementById('history-symbol-filter').value;
-            const feedbackFilter = document.getElementById('history-feedback-filter').value;
+            const resultFilter = document.getElementById('history-result-filter').value;
 
             container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Lade History...</p></div>';
 
             try {
-                let url = '/cnn-lstm/api/v1/history?limit=50';
-                if (symbolFilter) url += `&symbol=${symbolFilter}`;
-                if (feedbackFilter) url += `&feedback_status=${feedbackFilter}`;
+                // Fetch predictions and backtest results in parallel
+                let historyUrl = '/cnn-lstm/api/v1/history?limit=50';
+                if (symbolFilter) historyUrl += `&symbol=${symbolFilter}`;
 
-                const response = await fetch(url);
-                const data = await response.json();
+                const [historyResponse, backtestResponse] = await Promise.all([
+                    fetch(historyUrl),
+                    fetch('/cnn-lstm/api/v1/backtest/results?limit=200')
+                ]);
 
-                if (!data.predictions || data.predictions.length === 0) {
+                const data = await historyResponse.json();
+                const backtestData = await backtestResponse.json();
+
+                // Create lookup map for backtest results by prediction_id
+                const backtestMap = {};
+                if (backtestData.results) {
+                    backtestData.results.forEach(bt => {
+                        backtestMap[bt.prediction_id] = bt;
+                    });
+                }
+
+                // Merge backtest results into predictions
+                let predictions = data.predictions || [];
+                predictions = predictions.map(p => ({
+                    ...p,
+                    backtest_result: backtestMap[p.id] || null
+                }));
+
+                // Apply result filter
+                if (resultFilter === 'correct') {
+                    predictions = predictions.filter(p => p.backtest_result?.price_direction_correct === true);
+                } else if (resultFilter === 'wrong') {
+                    predictions = predictions.filter(p => p.backtest_result?.price_direction_correct === false);
+                } else if (resultFilter === 'pending') {
+                    predictions = predictions.filter(p => !p.backtest_result);
+                }
+
+                if (predictions.length === 0) {
                     container.innerHTML = '<div class="empty-state"><p>Keine Predictions gefunden</p></div>';
                     return;
                 }
@@ -2151,32 +2242,25 @@
                                 <th>Richtung</th>
                                 <th>Konfidenz</th>
                                 <th>Regime</th>
-                                <th>Status</th>
-                                <th>Aktionen</th>
+                                <th>Ergebnis</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${data.predictions.map(p => `
+                            ${predictions.map(p => `
                                 <tr>
                                     <td>${new Date(p.timestamp).toLocaleString('de-DE', {dateStyle: 'short', timeStyle: 'short'})}</td>
                                     <td><strong>${p.symbol}</strong></td>
                                     <td>${p.timeframe}</td>
                                     <td><span class="prediction-badge ${p.price_direction}">${p.price_direction}</span></td>
-                                    <td>${(p.price_confidence * 100).toFixed(0)}%</td>
+                                    <td>${((p.price_confidence || 0) * 100).toFixed(0)}%</td>
                                     <td>${formatRegimeName(p.regime_current)}</td>
-                                    <td><span class="prediction-badge ${getFeedbackClass(p.feedback_status)}">${p.feedback_status}</span></td>
-                                    <td>
-                                        <button class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
-                                            onclick="submitFeedback('${p.id}', 'confirmed', '${p.symbol}', '${p.timeframe}', '${p.timestamp}')">&#10003;</button>
-                                        <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
-                                            onclick="submitFeedback('${p.id}', 'rejected', '${p.symbol}', '${p.timeframe}', '${p.timestamp}')">&#10007;</button>
-                                    </td>
+                                    <td>${formatBacktestResult(p)}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>
                     <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #888;">
-                        Zeige ${data.predictions.length} von ${data.count} Predictions
+                        Zeige ${predictions.length} von ${data.count || predictions.length} Predictions
                     </div>
                 `;
 
@@ -2185,29 +2269,97 @@
             }
         }
 
-        // Submit Feedback
-        async function submitFeedback(predictionId, feedbackType, symbol, timeframe, timestamp) {
+        // Format backtest result for display
+        function formatBacktestResult(prediction) {
+            // Check if backtest data is available
+            if (prediction.backtest_result) {
+                const bt = prediction.backtest_result;
+                if (bt.price_direction_correct) {
+                    return '<span class="prediction-badge bullish" title="Richtung korrekt">&#10003; Korrekt</span>';
+                } else {
+                    return '<span class="prediction-badge bearish" title="Richtung falsch">&#10007; Falsch</span>';
+                }
+            }
+
+            // Check based on feedback_status (for backward compatibility)
+            if (prediction.feedback_status === 'confirmed') {
+                return '<span class="prediction-badge bullish">&#10003; Korrekt</span>';
+            } else if (prediction.feedback_status === 'rejected') {
+                return '<span class="prediction-badge bearish">&#10007; Falsch</span>';
+            }
+
+            // Check if enough time has passed for backtest (based on timeframe)
+            const predTime = new Date(prediction.timestamp);
+            const now = new Date();
+            const hoursPassed = (now - predTime) / (1000 * 60 * 60);
+
+            // Minimum wait times per timeframe
+            const waitHours = {
+                'M5': 0.5, 'M15': 1, 'M30': 2, 'H1': 4, 'H4': 12, 'D1': 48, 'W1': 336
+            };
+            const minWait = waitHours[prediction.timeframe] || 4;
+
+            if (hoursPassed < minWait) {
+                return `<span class="prediction-badge neutral" title="Warte auf Validierung">&#8987; Ausstehend</span>`;
+            }
+
+            return '<span class="prediction-badge neutral" title="Noch nicht validiert">- Offen</span>';
+        }
+
+        // Run Auto-Backtest - validates predictions against real market data
+        async function runAutoBacktest() {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '&#8987; Läuft...';
+            btn.disabled = true;
+
             try {
-                const response = await fetch('/cnn-lstm/api/v1/feedback', {
+                // Start backtest
+                const response = await fetch('/cnn-lstm/api/v1/backtest/run', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        prediction_id: predictionId,
-                        feedback_type: feedbackType,
-                        symbol: symbol,
-                        timeframe: timeframe,
-                        prediction_timestamp: timestamp
+                        symbols: [], // Empty = all symbols
+                        timeframes: [], // Empty = all timeframes
+                        days_back: 7
                     })
                 });
 
-                if (!response.ok) throw new Error('Feedback speichern fehlgeschlagen');
+                if (!response.ok) {
+                    throw new Error('Backtest fehlgeschlagen');
+                }
 
-                showToast(`Feedback gespeichert: ${feedbackType}`, 'success');
+                const result = await response.json();
+
+                showToast(`Backtest abgeschlossen: ${result.backtested || 0} Predictions validiert`, 'success');
+
+                // Reload history to show updated results
                 loadPredictionHistory();
                 loadHistoryStats();
+                loadBacktestSummary();
 
             } catch (error) {
-                showToast('Fehler: ' + error.message, 'error');
+                showToast('Fehler beim Backtest: ' + error.message, 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Load Backtest Summary
+        async function loadBacktestSummary() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/backtest/summary');
+                const data = await response.json();
+
+                // Update stats if elements exist
+                if (document.getElementById('stat-backtest-accuracy')) {
+                    document.getElementById('stat-backtest-accuracy').textContent =
+                        data.price_direction_accuracy ? (data.price_direction_accuracy * 100).toFixed(1) + '%' : '-';
+                }
+
+            } catch (error) {
+                console.error('Backtest summary error:', error);
             }
         }
 
@@ -2655,6 +2807,9 @@
             updateHeaderStatus();
             updateSymbolSetDropdown();
             applySymbolSet(); // Apply default set
+
+            // Check if training is already running
+            checkTrainingStatus(false);
         });
     </script>
 
