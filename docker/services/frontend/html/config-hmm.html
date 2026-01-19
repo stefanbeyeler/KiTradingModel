@@ -574,6 +574,7 @@
             <button class="tab-btn" onclick="showTab('detection')">&#128269; Regime-Erkennung</button>
             <button class="tab-btn" onclick="showTab('scoring')">&#127919; Trade Scoring</button>
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
+            <button class="tab-btn" onclick="showTab('validation')">&#128203; Validierung</button>
         </div>
 
         <!-- Overview Tab -->
@@ -821,6 +822,164 @@
                 <div id="feature-list">
                     <div class="loading"><div class="spinner"></div></div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Validation Tab -->
+        <div id="tab-validation" class="tab-content">
+            <!-- Validation Status -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128203; Validierungs-Pipeline Status</h3>
+                    <button class="btn btn-primary btn-sm" onclick="loadValidationStatus()">&#8635; Aktualisieren</button>
+                </div>
+                <div id="validation-status">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+
+            <div class="grid-2-equal">
+                <!-- Production Models -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#127937; Produktions-Modelle</h3>
+                    </div>
+                    <div id="production-models">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+
+                <!-- Registry Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">&#128202; Registry-Statistiken</h3>
+                    </div>
+                    <div id="registry-stats">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Versions -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128203; Modell-Versionen</h3>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select class="form-control" id="version-filter-type" style="width: auto;">
+                            <option value="">Alle Typen</option>
+                            <option value="hmm">HMM</option>
+                            <option value="scorer">Scorer</option>
+                        </select>
+                        <select class="form-control" id="version-filter-symbol" style="width: auto;">
+                            <option value="">Alle Symbole</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="loadModelVersions()">&#128269; Filtern</button>
+                    </div>
+                </div>
+                <div id="model-versions">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+
+            <!-- Deployment History -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128203; Deployment-Historie</h3>
+                </div>
+                <div id="deployment-history">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+
+            <!-- Manual Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#9888;&#65039; Manuelle Aktionen</h3>
+                </div>
+                <div class="info-box" style="margin-bottom: 1rem; background: rgba(255, 152, 0, 0.1); border-color: rgba(255, 152, 0, 0.3); color: #ffb74d;">
+                    <strong>Vorsicht:</strong> Diese Aktionen überschreiben die automatische Validierung. Nur verwenden, wenn Sie sicher sind, dass das Modell produktionsreif ist.
+                </div>
+
+                <div class="grid-2-equal">
+                    <!-- Force Deploy -->
+                    <div style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <h4 style="margin-bottom: 1rem; color: #64c8ff;">Force Deploy</h4>
+                        <div class="form-group">
+                            <label>Version ID</label>
+                            <select class="form-control" id="force-deploy-version">
+                                <option value="">Version wählen...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Modell-Typ</label>
+                            <select class="form-control" id="force-deploy-type">
+                                <option value="hmm">HMM</option>
+                                <option value="scorer">Scorer</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Symbol (nur für HMM)</label>
+                            <select class="form-control" id="force-deploy-symbol">
+                                <option value="">- Nicht anwendbar -</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Grund</label>
+                            <input type="text" class="form-control" id="force-deploy-reason" placeholder="Grund für manuelles Deployment">
+                        </div>
+                        <button class="btn btn-warning" id="btn-force-deploy" onclick="forceDeploy()">&#9889; Force Deploy</button>
+                    </div>
+
+                    <!-- Rollback -->
+                    <div style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <h4 style="margin-bottom: 1rem; color: #e57373;">Rollback</h4>
+                        <div class="form-group">
+                            <label>Modell-Typ</label>
+                            <select class="form-control" id="rollback-type">
+                                <option value="hmm">HMM</option>
+                                <option value="scorer">Scorer</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Symbol (nur für HMM)</label>
+                            <select class="form-control" id="rollback-symbol">
+                                <option value="">- Nicht anwendbar -</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Ziel-Version</label>
+                            <select class="form-control" id="rollback-version">
+                                <option value="">Version wählen...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Grund</label>
+                            <input type="text" class="form-control" id="rollback-reason" placeholder="Grund für Rollback">
+                        </div>
+                        <button class="btn btn-danger" id="btn-rollback" onclick="rollbackModel()">&#8617; Rollback</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Reload -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128260; Modell Hot-Reload</h3>
+                </div>
+                <div class="info-box" style="margin-bottom: 1rem;">
+                    Lädt Modelle neu aus dem Dateisystem, ohne den Service neu zu starten. Nützlich nach manuellem Deployment.
+                </div>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="reloadAllModels()">&#128260; Alle Modelle neu laden</button>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select class="form-control" id="reload-symbol" style="width: auto;">
+                            <option value="">Symbol wählen...</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="reloadHMMModel()">HMM neu laden</button>
+                    </div>
+                    <button class="btn btn-primary" onclick="reloadScorer()">Scorer neu laden</button>
+                </div>
+                <div id="reload-result" style="margin-top: 1rem;"></div>
             </div>
         </div>
     </div>
@@ -1375,6 +1534,518 @@
             }
         }
 
+        // ==================== Validation Tab Functions ====================
+
+        // Load Validation Status
+        async function loadValidationStatus() {
+            const container = document.getElementById('validation-status');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/stats`);
+                if (!response.ok) throw new Error('Failed to load validation status');
+
+                const data = await response.json();
+
+                if (!data.validation_enabled) {
+                    container.innerHTML = `
+                        <div class="info-box" style="background: rgba(255, 152, 0, 0.1); border-color: rgba(255, 152, 0, 0.3); color: #ffb74d;">
+                            <strong>Validierung deaktiviert:</strong> ${data.message || 'Die Validierungs-Pipeline ist nicht aktiviert.'}
+                        </div>
+                    `;
+                    return;
+                }
+
+                const registry = data.registry || {};
+                const deployment = data.deployment || {};
+
+                container.innerHTML = `
+                    <div class="grid-4">
+                        <div class="stat-item">
+                            <div class="stat-value" style="color: #4caf50;">${registry.total_versions || 0}</div>
+                            <div class="stat-label">Versionen gesamt</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" style="color: #64c8ff;">${registry.production_count || 0}</div>
+                            <div class="stat-label">In Produktion</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" style="color: #4caf50;">${deployment.deployed_count || 0}</div>
+                            <div class="stat-label">Deployed</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" style="color: #f44336;">${deployment.rejected_count || 0}</div>
+                            <div class="stat-label">Abgelehnt</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="color: #888;">Validierung:</span>
+                            <span style="color: #4caf50;">&#10004; Aktiviert</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #888;">Versions-Limit:</span>
+                            <span>${registry.keep_versions || 5} Versionen</span>
+                        </div>
+                    </div>
+                `;
+
+                // Also load other sections
+                loadProductionModels();
+                loadRegistryStats();
+                loadModelVersions();
+                loadDeploymentHistory();
+                loadSymbolsForValidation();
+
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="info-box" style="background: rgba(244, 67, 54, 0.1); border-color: rgba(244, 67, 54, 0.3); color: #e57373;">
+                        Fehler beim Laden: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Load Production Models
+        async function loadProductionModels() {
+            const container = document.getElementById('production-models');
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/production`);
+                if (!response.ok) throw new Error('Failed to load production models');
+
+                const data = await response.json();
+                const models = data.production_models || {};
+
+                if (Object.keys(models).length === 0) {
+                    container.innerHTML = '<div class="info-box">Keine Produktions-Modelle vorhanden.</div>';
+                    return;
+                }
+
+                let html = '<table class="data-table"><tr><th>Modell</th><th>Version</th><th>Status</th><th>Deployed</th></tr>';
+                for (const [key, model] of Object.entries(models)) {
+                    const deployedAt = model.promoted_at ? new Date(model.promoted_at).toLocaleString('de-CH') : '-';
+                    html += `
+                        <tr>
+                            <td><strong>${key}</strong></td>
+                            <td><code style="background: rgba(100,200,255,0.1); padding: 0.2rem 0.4rem; border-radius: 4px;">${model.version_id || '-'}</code></td>
+                            <td><span style="color: #4caf50;">&#10004; ${model.status || 'production'}</span></td>
+                            <td style="color: #888; font-size: 0.85rem;">${deployedAt}</td>
+                        </tr>
+                    `;
+                }
+                html += '</table>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                container.innerHTML = `<div class="info-box" style="color: #e57373;">Fehler: ${error.message}</div>`;
+            }
+        }
+
+        // Load Registry Stats
+        async function loadRegistryStats() {
+            const container = document.getElementById('registry-stats');
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/stats`);
+                if (!response.ok) throw new Error('Failed to load stats');
+
+                const data = await response.json();
+                const registry = data.registry || {};
+                const deployment = data.deployment || {};
+
+                container.innerHTML = `
+                    <table class="data-table">
+                        <tr><td style="color: #888;">Validierung aktiv</td><td>${data.validation_enabled ? '<span style="color: #4caf50;">Ja</span>' : '<span style="color: #f44336;">Nein</span>'}</td></tr>
+                        <tr><td style="color: #888;">Versionen gesamt</td><td>${registry.total_versions || 0}</td></tr>
+                        <tr><td style="color: #888;">In Produktion</td><td>${registry.production_count || 0}</td></tr>
+                        <tr><td style="color: #888;">Archiviert</td><td>${registry.archived_count || 0}</td></tr>
+                        <tr><td style="color: #888;">Deployed</td><td style="color: #4caf50;">${deployment.deployed_count || 0}</td></tr>
+                        <tr><td style="color: #888;">Abgelehnt</td><td style="color: #f44336;">${deployment.rejected_count || 0}</td></tr>
+                        <tr><td style="color: #888;">Rollbacks</td><td style="color: #ffb74d;">${deployment.rollback_count || 0}</td></tr>
+                    </table>
+                `;
+            } catch (error) {
+                container.innerHTML = `<div class="info-box" style="color: #e57373;">Fehler: ${error.message}</div>`;
+            }
+        }
+
+        // Load Model Versions
+        async function loadModelVersions() {
+            const container = document.getElementById('model-versions');
+            const typeFilter = document.getElementById('version-filter-type').value;
+            const symbolFilter = document.getElementById('version-filter-symbol').value;
+
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                let url = `${TRAIN_API_BASE}/models/versions?limit=20`;
+                if (typeFilter) url += `&model_type=${typeFilter}`;
+                if (symbolFilter) url += `&symbol=${symbolFilter}`;
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to load versions');
+
+                const data = await response.json();
+                const versions = data.versions || [];
+
+                // Populate version dropdowns
+                populateVersionDropdowns(versions);
+
+                if (versions.length === 0) {
+                    container.innerHTML = '<div class="info-box">Keine Versionen gefunden.</div>';
+                    return;
+                }
+
+                let html = `
+                    <table class="data-table">
+                        <tr>
+                            <th>Version</th>
+                            <th>Typ</th>
+                            <th>Symbol</th>
+                            <th>Status</th>
+                            <th>Metriken</th>
+                            <th>Erstellt</th>
+                        </tr>
+                `;
+
+                for (const v of versions) {
+                    const statusColor = getStatusColor(v.status);
+                    const metrics = v.validation_metrics || {};
+                    const metricsDisplay = Object.entries(metrics).slice(0, 2).map(([k, val]) =>
+                        `${k}: ${typeof val === 'number' ? (val * 100).toFixed(1) + '%' : val}`
+                    ).join(', ') || '-';
+
+                    html += `
+                        <tr>
+                            <td><code style="background: rgba(100,200,255,0.1); padding: 0.2rem 0.4rem; border-radius: 4px;">${v.version_id || '-'}</code></td>
+                            <td>${v.model_type || '-'}</td>
+                            <td>${v.symbol || '-'}</td>
+                            <td><span style="color: ${statusColor};">${getStatusIcon(v.status)} ${v.status || '-'}</span></td>
+                            <td style="font-size: 0.8rem; color: #888;">${metricsDisplay}</td>
+                            <td style="color: #888; font-size: 0.85rem;">${v.created_at ? new Date(v.created_at).toLocaleString('de-CH') : '-'}</td>
+                        </tr>
+                    `;
+                }
+
+                html += '</table>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                container.innerHTML = `<div class="info-box" style="color: #e57373;">Fehler: ${error.message}</div>`;
+            }
+        }
+
+        // Load Deployment History
+        async function loadDeploymentHistory() {
+            const container = document.getElementById('deployment-history');
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/deployment-history?limit=20`);
+                if (!response.ok) throw new Error('Failed to load history');
+
+                const data = await response.json();
+                const history = data.history || [];
+
+                if (history.length === 0) {
+                    container.innerHTML = '<div class="info-box">Keine Deployment-Historie vorhanden.</div>';
+                    return;
+                }
+
+                let html = `
+                    <table class="data-table">
+                        <tr>
+                            <th>Zeitpunkt</th>
+                            <th>Modell</th>
+                            <th>Aktion</th>
+                            <th>Grund</th>
+                        </tr>
+                `;
+
+                for (const d of history) {
+                    const actionColor = d.action === 'deployed' ? '#4caf50' : d.action === 'rejected' ? '#f44336' : '#ffb74d';
+                    const modelName = d.symbol ? `${d.model_type}/${d.symbol}` : d.model_type;
+
+                    html += `
+                        <tr>
+                            <td style="color: #888; font-size: 0.85rem;">${d.timestamp ? new Date(d.timestamp).toLocaleString('de-CH') : '-'}</td>
+                            <td>${modelName || '-'}</td>
+                            <td><span style="color: ${actionColor}; font-weight: 500;">${d.action || '-'}</span></td>
+                            <td style="font-size: 0.85rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${d.reason || '-'}</td>
+                        </tr>
+                    `;
+                }
+
+                html += '</table>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                container.innerHTML = `<div class="info-box" style="color: #e57373;">Fehler: ${error.message}</div>`;
+            }
+        }
+
+        // Load symbols for validation dropdowns
+        async function loadSymbolsForValidation() {
+            try {
+                const response = await fetch('/data/api/v1/managed-symbols');
+                if (!response.ok) return;
+
+                const symbols = await response.json();
+                const symbolList = symbols.map(s => s.symbol);
+
+                // Populate all symbol dropdowns in validation tab
+                const dropdowns = ['version-filter-symbol', 'force-deploy-symbol', 'rollback-symbol', 'reload-symbol'];
+                for (const id of dropdowns) {
+                    const select = document.getElementById(id);
+                    if (select) {
+                        const currentValue = select.value;
+                        select.innerHTML = '<option value="">- Alle/Keine -</option>';
+                        for (const symbol of symbolList) {
+                            select.innerHTML += `<option value="${symbol}">${symbol}</option>`;
+                        }
+                        if (currentValue) select.value = currentValue;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load symbols:', error);
+            }
+        }
+
+        // Populate version dropdowns
+        function populateVersionDropdowns(versions) {
+            const forceDeploySelect = document.getElementById('force-deploy-version');
+            const rollbackSelect = document.getElementById('rollback-version');
+
+            if (forceDeploySelect) {
+                forceDeploySelect.innerHTML = '<option value="">Version wählen...</option>';
+                for (const v of versions) {
+                    forceDeploySelect.innerHTML += `<option value="${v.version_id}">${v.version_id} (${v.model_type}${v.symbol ? '/' + v.symbol : ''} - ${v.status})</option>`;
+                }
+            }
+
+            if (rollbackSelect) {
+                rollbackSelect.innerHTML = '<option value="">Version wählen...</option>';
+                for (const v of versions) {
+                    if (v.status !== 'rejected') {
+                        rollbackSelect.innerHTML += `<option value="${v.version_id}">${v.version_id} (${v.model_type}${v.symbol ? '/' + v.symbol : ''} - ${v.status})</option>`;
+                    }
+                }
+            }
+        }
+
+        // Helper functions
+        function getStatusColor(status) {
+            const colors = {
+                'production': '#4caf50',
+                'candidate': '#64c8ff',
+                'archived': '#888',
+                'rejected': '#f44336'
+            };
+            return colors[status] || '#888';
+        }
+
+        function getStatusIcon(status) {
+            const icons = {
+                'production': '&#10004;',
+                'candidate': '&#9881;',
+                'archived': '&#128230;',
+                'rejected': '&#10060;'
+            };
+            return icons[status] || '';
+        }
+
+        // Force Deploy
+        async function forceDeploy() {
+            const btn = document.getElementById('btn-force-deploy');
+            const versionId = document.getElementById('force-deploy-version').value;
+            const modelType = document.getElementById('force-deploy-type').value;
+            const symbol = document.getElementById('force-deploy-symbol').value || null;
+            const reason = document.getElementById('force-deploy-reason').value || 'Manual deployment via UI';
+
+            if (!versionId) {
+                showToast('Bitte Version auswählen', 'error');
+                return;
+            }
+
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/force-deploy/${versionId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_type: modelType,
+                        symbol: symbol,
+                        reason: reason
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Force deploy failed');
+                }
+
+                const data = await response.json();
+                showToast(`Version ${versionId} erfolgreich deployed!`, 'success');
+                loadValidationStatus();
+
+            } catch (error) {
+                showToast(`Fehler: ${error.message}`, 'error');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Rollback Model
+        async function rollbackModel() {
+            const btn = document.getElementById('btn-rollback');
+            const modelType = document.getElementById('rollback-type').value;
+            const symbol = document.getElementById('rollback-symbol').value || null;
+            const targetVersion = document.getElementById('rollback-version').value;
+            const reason = document.getElementById('rollback-reason').value || 'Manual rollback via UI';
+
+            if (!targetVersion) {
+                showToast('Bitte Ziel-Version auswählen', 'error');
+                return;
+            }
+
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/rollback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_type: modelType,
+                        symbol: symbol,
+                        target_version: targetVersion,
+                        reason: reason
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Rollback failed');
+                }
+
+                const data = await response.json();
+                showToast(`Rollback zu ${targetVersion} erfolgreich!`, 'success');
+                loadValidationStatus();
+
+            } catch (error) {
+                showToast(`Fehler: ${error.message}`, 'error');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Reload All Models
+        async function reloadAllModels() {
+            const container = document.getElementById('reload-result');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/model/reload-all`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error('Reload failed');
+
+                const data = await response.json();
+                container.innerHTML = `
+                    <div class="info-box" style="background: rgba(76, 175, 80, 0.1); border-color: rgba(76, 175, 80, 0.3); color: #81c784;">
+                        &#10004; Alle Modelle neu geladen!<br>
+                        HMM-Caches geleert: ${(data.hmm_models_cleared || []).join(', ') || 'keine'}<br>
+                        Scorer neu geladen: ${data.scorer_reloaded ? 'Ja' : 'Nein'}
+                    </div>
+                `;
+                showToast('Alle Modelle neu geladen', 'success');
+                loadInfo();
+
+            } catch (error) {
+                container.innerHTML = `<div class="info-box" style="color: #e57373;">Fehler: ${error.message}</div>`;
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
+        // Reload HMM Model
+        async function reloadHMMModel() {
+            const symbol = document.getElementById('reload-symbol').value;
+            if (!symbol) {
+                showToast('Bitte Symbol auswählen', 'error');
+                return;
+            }
+
+            const container = document.getElementById('reload-result');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/model/reload`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_type: 'hmm',
+                        symbol: symbol
+                    })
+                });
+
+                if (!response.ok) throw new Error('Reload failed');
+
+                const data = await response.json();
+                container.innerHTML = `
+                    <div class="info-box" style="background: rgba(76, 175, 80, 0.1); border-color: rgba(76, 175, 80, 0.3); color: #81c784;">
+                        &#10004; HMM-Modell für ${symbol} neu geladen!<br>
+                        Status: ${data.status}<br>
+                        Modell geladen: ${data.model_loaded ? 'Ja' : 'Nein'}
+                    </div>
+                `;
+                showToast(`HMM für ${symbol} neu geladen`, 'success');
+                loadInfo();
+
+            } catch (error) {
+                container.innerHTML = `<div class="info-box" style="color: #e57373;">Fehler: ${error.message}</div>`;
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
+        // Reload Scorer
+        async function reloadScorer() {
+            const container = document.getElementById('reload-result');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/model/reload`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_type: 'scorer'
+                    })
+                });
+
+                if (!response.ok) throw new Error('Reload failed');
+
+                const data = await response.json();
+                container.innerHTML = `
+                    <div class="info-box" style="background: rgba(76, 175, 80, 0.1); border-color: rgba(76, 175, 80, 0.3); color: #81c784;">
+                        &#10004; Scorer neu geladen!<br>
+                        Status: ${data.status}<br>
+                        Pfad: ${data.path || '-'}<br>
+                        Fitted: ${data.is_fitted ? 'Ja' : 'Nein'}
+                    </div>
+                `;
+                showToast('Scorer neu geladen', 'success');
+                loadInfo();
+
+            } catch (error) {
+                container.innerHTML = `<div class="info-box" style="color: #e57373;">Fehler: ${error.message}</div>`;
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadInfo();
@@ -1382,6 +2053,14 @@
 
             // Auto-refresh every 30 seconds
             setInterval(loadInfo, 30000);
+
+            // Load validation status when tab is shown
+            const validationTabBtn = document.querySelector('.tab-btn:nth-child(5)');
+            if (validationTabBtn) {
+                validationTabBtn.addEventListener('click', () => {
+                    loadValidationStatus();
+                });
+            }
         });
     </script>
 </body>

@@ -578,7 +578,7 @@
                 </div>
             </div>
 
-            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System (4 Endpoints)</h3>
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">System (6 Endpoints)</h3>
             <div class="endpoint-list">
                 <div class="endpoint">
                     <span class="method">GET</span>
@@ -599,6 +599,16 @@
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/config</span>
                     <span class="endpoint-desc">Service-Konfiguration</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/model/reload</span>
+                    <span class="endpoint-desc">Modell Hot-Reload (HMM/Scorer)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/model/reload-all</span>
+                    <span class="endpoint-desc">Alle Modelle neu laden</span>
                 </div>
             </div>
 
@@ -621,9 +631,91 @@
                 </div>
             </div>
 
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Validierung & Versioning (HMM-Train, 10 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/models/versions</span>
+                    <span class="endpoint-desc">Alle Modell-Versionen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/models/versions/{id}</span>
+                    <span class="endpoint-desc">Version-Details</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/models/production</span>
+                    <span class="endpoint-desc">Aktuelle Produktions-Modelle</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/models/rollback</span>
+                    <span class="endpoint-desc">Manuelles Rollback</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/models/force-deploy/{id}</span>
+                    <span class="endpoint-desc">Force Deploy (bypass Validation)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/models/deployment-history</span>
+                    <span class="endpoint-desc">Deployment-Entscheidungen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/models/comparison-history</span>
+                    <span class="endpoint-desc">A/B-Vergleichs-Historie</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/models/validation-metrics/{job}</span>
+                    <span class="endpoint-desc">Validierungs-Metriken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/models/stats</span>
+                    <span class="endpoint-desc">Registry-Statistiken</span>
+                </div>
+            </div>
+
             <div class="info-box" style="margin-top: 1.5rem;">
-                <strong>Vollständige API:</strong> Über 25 Endpoints für Regime-Erkennung, Signal-Scoring und Training.
-                Siehe <a href="/hmm/docs" target="_blank" style="color: #64c8ff;">/hmm/docs</a> für die interaktive Swagger-Dokumentation.
+                <strong>Vollständige API:</strong> Über 35 Endpoints für Regime-Erkennung, Signal-Scoring, Training und Validierung.
+                Siehe <a href="/hmm/docs" target="_blank" style="color: #64c8ff;">/hmm/docs</a> und
+                <a href="/hmm-train/docs" target="_blank" style="color: #64c8ff;">/hmm-train/docs</a> für die interaktive Swagger-Dokumentation.
+            </div>
+        </div>
+
+        <div class="content-card">
+            <h2>&#128203; Validierungs-Pipeline</h2>
+            <p>
+                Nach jedem Training durchläuft das Modell eine automatische Validierungs-Pipeline
+                mit A/B-Vergleich gegen das aktuelle Produktionsmodell.
+            </p>
+
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>&#128203; Model Versioning</h4>
+                    <p>Jede Training-Session erstellt eine versionierte Kopie mit Metadaten.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128202; Validierungsmetriken</h4>
+                    <p>Accuracy, F1-Score, Log-Likelihood auf gehaltenen Validierungsdaten.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128260; A/B-Vergleich</h4>
+                    <p>Neues Modell wird gegen Produktion verglichen, Entscheidung automatisch.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#8617; Automatisches Rollback</h4>
+                    <p>Bei Qualitätsregression wird das alte Modell beibehalten.</p>
+                </div>
+            </div>
+
+            <div class="info-box success" style="margin-top: 1rem;">
+                <strong>Schwellenwerte:</strong> Regime Accuracy > 50%, F1-Score > 45%, Confidence Calibration > 70%.
+                Modelle die unter diesen Werten liegen werden automatisch abgelehnt.
             </div>
         </div>
 
