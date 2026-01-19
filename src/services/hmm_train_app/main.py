@@ -28,8 +28,9 @@ from loguru import logger
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 
 from src.services.hmm_train_app.routers import training_router, system_router
-from src.services.hmm_train_app.routers.training_router import validation_router
+from src.services.hmm_train_app.routers.training_router import validation_router, scheduler_router
 from src.services.hmm_train_app.services.training_service import training_service
+from src.services.hmm_train_app.services.scheduler_service import scheduler_service
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import get_test_unhealthy_status
 
@@ -69,6 +70,7 @@ app.add_middleware(
 # Include routers
 app.include_router(training_router, prefix="/api/v1")
 app.include_router(validation_router, prefix="/api/v1")
+app.include_router(scheduler_router, prefix="/api/v1")
 app.include_router(system_router, prefix="/api/v1")
 
 # Test-Health-Router
@@ -98,6 +100,10 @@ async def startup_event():
     except ImportError:
         logger.warning("lightgbm not available - Scorer training disabled")
 
+    # Start the scheduler
+    await scheduler_service.start()
+    logger.info("HMM Scheduler started")
+
     logger.info("HMM Training Service started successfully")
 
 
@@ -105,6 +111,10 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down HMM Training Service...")
+
+    # Stop the scheduler
+    await scheduler_service.stop()
+    logger.info("HMM Scheduler stopped")
 
     # Cancel any running training
     if training_service.is_training():

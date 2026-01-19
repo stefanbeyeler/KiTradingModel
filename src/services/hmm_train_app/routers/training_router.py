@@ -6,11 +6,15 @@ from pydantic import BaseModel, Field
 from loguru import logger
 
 from ..services.training_service import training_service, TrainingStatus, ModelType
+from ..services.scheduler_service import scheduler_service
 
 router = APIRouter(prefix="/train", tags=["HMM Training"])
 
 # Create separate router for validation/versioning endpoints
 validation_router = APIRouter(prefix="/models", tags=["Model Versioning"])
+
+# Create router for scheduling endpoints
+scheduler_router = APIRouter(prefix="/schedules", tags=["Training Schedules"])
 
 
 class TrainingRequest(BaseModel):
@@ -411,3 +415,267 @@ async def get_registry_stats():
         "registry": registry.get_stats(),
         "deployment": rollback_svc.get_stats()
     }
+
+
+# =============================================================================
+# Training Schedule Endpoints
+# =============================================================================
+
+class ScheduleCreateRequest(BaseModel):
+    """Request to create a training schedule."""
+    interval: str = Field(
+        default="daily",
+        description="Schedule interval: 'hourly', 'daily', or 'weekly'"
+    )
+    symbols: Optional[List[str]] = Field(
+        default=None,
+        description="Symbols to train (empty/null = all symbols)"
+    )
+    timeframe: str = Field(
+        default="1h",
+        description="Timeframe for training data"
+    )
+    lookback_days: int = Field(
+        default=365,
+        ge=30,
+        le=730,
+        description="Days of historical data to use"
+    )
+    train_hmm: bool = Field(
+        default=True,
+        description="Train HMM regime detection models"
+    )
+    train_scorer: bool = Field(
+        default=True,
+        description="Train LightGBM signal scorer"
+    )
+    custom_hour: int = Field(
+        default=3,
+        ge=0,
+        le=23,
+        description="Hour of day for daily/weekly schedules (UTC)"
+    )
+    custom_weekday: int = Field(
+        default=0,
+        ge=0,
+        le=6,
+        description="Day of week for weekly schedule (0=Monday)"
+    )
+    enabled: bool = Field(
+        default=True,
+        description="Enable schedule immediately"
+    )
+
+
+class ScheduleUpdateRequest(BaseModel):
+    """Request to update a training schedule."""
+    interval: Optional[str] = Field(
+        default=None,
+        description="Schedule interval: 'hourly', 'daily', or 'weekly'"
+    )
+    symbols: Optional[List[str]] = Field(
+        default=None,
+        description="Symbols to train (empty list = all symbols)"
+    )
+    timeframe: Optional[str] = Field(
+        default=None,
+        description="Timeframe for training data"
+    )
+    lookback_days: Optional[int] = Field(
+        default=None,
+        ge=30,
+        le=730,
+        description="Days of historical data to use"
+    )
+    train_hmm: Optional[bool] = Field(
+        default=None,
+        description="Train HMM regime detection models"
+    )
+    train_scorer: Optional[bool] = Field(
+        default=None,
+        description="Train LightGBM signal scorer"
+    )
+    custom_hour: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=23,
+        description="Hour of day for daily/weekly schedules (UTC)"
+    )
+    custom_weekday: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=6,
+        description="Day of week for weekly schedule (0=Monday)"
+    )
+    enabled: Optional[bool] = Field(
+        default=None,
+        description="Enable/disable schedule"
+    )
+
+
+class ScheduleResponse(BaseModel):
+    """Response for schedule operations."""
+    schedule_id: str
+    interval: str
+    enabled: bool
+    symbols: Optional[List[str]]
+    timeframe: str
+    lookback_days: int
+    train_hmm: bool
+    train_scorer: bool
+    custom_hour: int
+    custom_weekday: int
+    next_run: Optional[str]
+    last_run: Optional[str]
+    last_status: Optional[str]
+
+
+@scheduler_router.get("", summary="List all schedules")
+async def list_schedules():
+    """
+    List all HMM training schedules.
+
+    Returns all configured schedules with their status and next run time.
+    """
+    schedules = scheduler_service.get_all_schedules()
+    return {
+        "schedules": [s.to_dict() for s in schedules],
+        "total": len(schedules),
+        "scheduler_status": scheduler_service.get_status()
+    }
+
+
+@scheduler_router.post("", summary="Create schedule")
+async def create_schedule(request: ScheduleCreateRequest):
+    """
+    Create a new HMM training schedule.
+
+    Intervals:
+    - **hourly**: Run every hour at minute 0
+    - **daily**: Run once per day at specified hour (UTC)
+    - **weekly**: Run once per week on specified weekday and hour (UTC)
+
+    Symbols:
+    - Leave empty or null to train ALL symbols from the Data Service
+    - Provide a list to train only specific symbols
+    """
+    try:
+        schedule = scheduler_service.create_schedule(
+            interval=request.interval,
+            symbols=request.symbols,
+            timeframe=request.timeframe,
+            lookback_days=request.lookback_days,
+            train_hmm=request.train_hmm,
+            train_scorer=request.train_scorer,
+            custom_hour=request.custom_hour,
+            custom_weekday=request.custom_weekday,
+            enabled=request.enabled
+        )
+
+        return {
+            "status": "created",
+            "schedule": schedule.to_dict(),
+            "message": f"Schedule created, next run: {schedule.next_run}"
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to create schedule: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@scheduler_router.get("/{schedule_id}", summary="Get schedule details")
+async def get_schedule(schedule_id: str):
+    """Get details of a specific schedule."""
+    schedule = scheduler_service.get_schedule(schedule_id)
+    if not schedule:
+        raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
+    return schedule.to_dict()
+
+
+@scheduler_router.put("/{schedule_id}", summary="Update schedule")
+async def update_schedule(schedule_id: str, request: ScheduleUpdateRequest):
+    """
+    Update an existing schedule.
+
+    Only provided fields will be updated.
+    """
+    schedule = scheduler_service.update_schedule(
+        schedule_id=schedule_id,
+        interval=request.interval,
+        symbols=request.symbols,
+        timeframe=request.timeframe,
+        lookback_days=request.lookback_days,
+        train_hmm=request.train_hmm,
+        train_scorer=request.train_scorer,
+        custom_hour=request.custom_hour,
+        custom_weekday=request.custom_weekday,
+        enabled=request.enabled
+    )
+
+    if not schedule:
+        raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
+
+    return {
+        "status": "updated",
+        "schedule": schedule.to_dict()
+    }
+
+
+@scheduler_router.delete("/{schedule_id}", summary="Delete schedule")
+async def delete_schedule(schedule_id: str):
+    """Delete a schedule."""
+    if scheduler_service.delete_schedule(schedule_id):
+        return {
+            "status": "deleted",
+            "schedule_id": schedule_id
+        }
+    else:
+        raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
+
+
+@scheduler_router.post("/{schedule_id}/toggle", summary="Enable/disable schedule")
+async def toggle_schedule(
+    schedule_id: str,
+    enabled: bool = Query(..., description="Enable (true) or disable (false) the schedule")
+):
+    """Enable or disable a schedule."""
+    schedule = scheduler_service.toggle_schedule(schedule_id, enabled)
+    if not schedule:
+        raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
+
+    return {
+        "status": "toggled",
+        "schedule_id": schedule_id,
+        "enabled": schedule.enabled,
+        "next_run": schedule.next_run
+    }
+
+
+@scheduler_router.post("/{schedule_id}/trigger", summary="Trigger immediate run")
+async def trigger_schedule(schedule_id: str):
+    """
+    Trigger a schedule to run immediately.
+
+    The training will start in the next scheduler cycle (within 1 minute).
+    """
+    if not scheduler_service.trigger_now(schedule_id):
+        raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
+
+    return {
+        "status": "triggered",
+        "schedule_id": schedule_id,
+        "message": "Training will start within 1 minute"
+    }
+
+
+@scheduler_router.get("/status/overview", summary="Get scheduler status")
+async def get_scheduler_status():
+    """
+    Get scheduler service status.
+
+    Returns:
+    - Whether the scheduler is running
+    - Total and active schedules count
+    - Next scheduled run information
+    """
+    return scheduler_service.get_status()

@@ -680,8 +680,52 @@
                 </div>
             </div>
 
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Training Scheduling (HMM-Train, 7 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/schedules</span>
+                    <span class="endpoint-desc">Alle Schedules auflisten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/schedules</span>
+                    <span class="endpoint-desc">Neuen Schedule erstellen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/schedules/{id}</span>
+                    <span class="endpoint-desc">Schedule-Details</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method put">PUT</span>
+                    <span class="endpoint-path">/api/v1/schedules/{id}</span>
+                    <span class="endpoint-desc">Schedule aktualisieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method delete">DELETE</span>
+                    <span class="endpoint-path">/api/v1/schedules/{id}</span>
+                    <span class="endpoint-desc">Schedule löschen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/schedules/{id}/toggle</span>
+                    <span class="endpoint-desc">Schedule aktivieren/deaktivieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/schedules/{id}/trigger</span>
+                    <span class="endpoint-desc">Sofortige Ausführung triggern</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/schedules/status/overview</span>
+                    <span class="endpoint-desc">Scheduler-Status</span>
+                </div>
+            </div>
+
             <div class="info-box" style="margin-top: 1.5rem;">
-                <strong>Vollständige API:</strong> Über 35 Endpoints für Regime-Erkennung, Signal-Scoring, Training und Validierung.
+                <strong>Vollständige API:</strong> Über 45 Endpoints für Regime-Erkennung, Signal-Scoring, Training, Validierung und Scheduling.
                 Siehe <a href="/hmm/docs" target="_blank" style="color: #64c8ff;">/hmm/docs</a> und
                 <a href="/hmm-train/docs" target="_blank" style="color: #64c8ff;">/hmm-train/docs</a> für die interaktive Swagger-Dokumentation.
             </div>
