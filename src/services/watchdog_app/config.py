@@ -12,6 +12,10 @@ class WatchdogSettings(BaseSettings):
     timeout_seconds: int = 10
     max_retries: int = 3
 
+    # Data Service Konfiguration (für Service Runs API)
+    data_host: str = "trading-data"
+    data_port: int = 3001
+
     # Telegram Konfiguration
     telegram_enabled: bool = True
     telegram_bot_token: str = ""

@@ -73,6 +73,15 @@ except ImportError:
     _prediction_routes_available = False
     logger.warning("Prediction routes not available")
 
+# Service Runs History routes
+try:
+    from src.services.data_app.api.service_runs_routes import router as service_runs_router
+    _service_runs_routes_available = True
+except ImportError:
+    service_runs_router = None
+    _service_runs_routes_available = False
+    logger.warning("Service runs routes not available")
+
 from src.service_registry import register_service
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import is_test_unhealthy, get_test_unhealthy_status
@@ -171,6 +180,10 @@ openapi_tags = [
         "name": "15. Prediction History",
         "description": "Vorhersagen aller Services speichern und evaluieren"
     },
+    {
+        "name": "16. Service Runs",
+        "description": "Service-Läufe protokollieren und auswerten"
+    },
 ]
 
 # Create FastAPI application
@@ -248,6 +261,10 @@ if _validation_routes_available and validation_router:
 # Include Prediction History router if available
 if _prediction_routes_available and prediction_router:
     app.include_router(prediction_router, prefix="/api/v1", tags=["15. Prediction History"])
+
+# Include Service Runs History router if available
+if _service_runs_routes_available and service_runs_router:
+    app.include_router(service_runs_router, prefix="/api/v1", tags=["16. Service Runs"])
 
 
 async def _periodic_cache_cleanup():

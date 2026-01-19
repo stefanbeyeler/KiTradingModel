@@ -664,6 +664,26 @@
             background: #1a1a2e;
         }
 
+        .symbol-select {
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .symbol-select option {
+            background: #1a1a2e;
+        }
+
+        .symbol-select optgroup {
+            background: #1a1a2e;
+            color: #64c8ff;
+            font-weight: 600;
+        }
+
         /* Model Info */
         .model-info-grid {
             display: grid;
@@ -1004,7 +1024,49 @@
                 </p>
 
                 <div class="symbol-input-group">
-                    <input type="text" class="symbol-input" id="prediction-symbol" placeholder="Symbol (z.B. BTCUSD, EURUSD)" value="BTCUSD">
+                    <select class="symbol-select" id="prediction-symbol" style="min-width: 180px;">
+                        <optgroup label="Krypto">
+                            <option value="BTCUSD" selected>BTCUSD</option>
+                            <option value="ETHUSD">ETHUSD</option>
+                            <option value="XRPUSD">XRPUSD</option>
+                            <option value="SOLUSD">SOLUSD</option>
+                            <option value="ADAUSD">ADAUSD</option>
+                            <option value="DOTUSD">DOTUSD</option>
+                            <option value="LINKUSD">LINKUSD</option>
+                            <option value="AVAXUSD">AVAXUSD</option>
+                        </optgroup>
+                        <optgroup label="Forex">
+                            <option value="EURUSD">EURUSD</option>
+                            <option value="GBPUSD">GBPUSD</option>
+                            <option value="USDJPY">USDJPY</option>
+                            <option value="USDCHF">USDCHF</option>
+                            <option value="AUDUSD">AUDUSD</option>
+                            <option value="USDCAD">USDCAD</option>
+                            <option value="NZDUSD">NZDUSD</option>
+                            <option value="EURGBP">EURGBP</option>
+                        </optgroup>
+                        <optgroup label="Aktien">
+                            <option value="AAPL">AAPL</option>
+                            <option value="MSFT">MSFT</option>
+                            <option value="NVDA">NVDA</option>
+                            <option value="GOOGL">GOOGL</option>
+                            <option value="AMZN">AMZN</option>
+                            <option value="META">META</option>
+                            <option value="TSLA">TSLA</option>
+                            <option value="AMD">AMD</option>
+                        </optgroup>
+                        <optgroup label="Indizes">
+                            <option value="SPX">SPX (S&amp;P 500)</option>
+                            <option value="NDX">NDX (Nasdaq 100)</option>
+                            <option value="DJI">DJI (Dow Jones)</option>
+                            <option value="DAX">DAX</option>
+                        </optgroup>
+                        <optgroup label="Rohstoffe">
+                            <option value="XAUUSD">XAUUSD (Gold)</option>
+                            <option value="XAGUSD">XAGUSD (Silber)</option>
+                            <option value="WTIUSD">WTIUSD (Öl)</option>
+                        </optgroup>
+                    </select>
                     <select class="timeframe-select" id="prediction-timeframe">
                         <option value="M1">M1</option>
                         <option value="M5">M5</option>
@@ -1596,7 +1658,7 @@
 
         // Load Prediction
         async function loadPrediction() {
-            const symbol = document.getElementById('prediction-symbol').value.toUpperCase();
+            const symbol = document.getElementById('prediction-symbol').value;
             const timeframe = document.getElementById('prediction-timeframe').value;
             const container = document.getElementById('prediction-content');
 
@@ -1746,7 +1808,7 @@
 
         // Load Analysis
         async function loadAnalysis() {
-            const symbol = document.getElementById('prediction-symbol').value.toUpperCase();
+            const symbol = document.getElementById('prediction-symbol').value;
             const timeframe = document.getElementById('prediction-timeframe').value;
 
             if (!symbol) {

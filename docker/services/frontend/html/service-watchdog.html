@@ -420,6 +420,10 @@
                     <h4>&#128250; Live Test-Streaming</h4>
                     <p>Echtzeit-Updates via Server-Sent Events (SSE) während Test-Runs.</p>
                 </div>
+                <div class="feature-item">
+                    <h4>&#128202; Service Runs History</h4>
+                    <p>Detaillierte Historie aller Validierungen, Trainings und Scans über alle Services hinweg.</p>
+                </div>
             </div>
 
             <div class="info-box">
@@ -662,6 +666,40 @@
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/training/history</span>
                     <span class="endpoint-desc">Training-Historie</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; color: #f472b6;">Service Runs History (6 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/service-runs/</span>
+                    <span class="endpoint-desc">Service Runs auflisten (gefiltert)</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/service-runs/stats</span>
+                    <span class="endpoint-desc">Statistiken pro Service</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/service-runs/{run_id}</span>
+                    <span class="endpoint-desc">Run-Details abrufen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method delete">DEL</span>
+                    <span class="endpoint-path">/api/v1/service-runs/{run_id}</span>
+                    <span class="endpoint-desc">Run löschen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/service-runs/cleanup</span>
+                    <span class="endpoint-desc">Alte Runs bereinigen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/service-runs/by-service/{name}</span>
+                    <span class="endpoint-desc">Runs für Service abrufen</span>
                 </div>
             </div>
 

@@ -950,6 +950,7 @@
             <button class="tab-btn active" onclick="switchTab('overview')">Übersicht</button>
             <button class="tab-btn" onclick="switchTab('monitoring')">Überwachung</button>
             <button class="tab-btn" onclick="switchTab('alerts')">Alarmierung</button>
+            <button class="tab-btn" onclick="switchTab('service-runs')">Service Runs</button>
             <button class="tab-btn" onclick="switchTab('testing')">Testing</button>
             <button class="tab-btn" onclick="switchTab('training')">Training</button>
         </div>
@@ -1105,6 +1106,122 @@
                     <div class="empty-state">
                         <div class="icon">&#128202;</div>
                         <div>Health-Historie wird geladen...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Runs Tab -->
+        <div id="tab-service-runs" class="tab-content">
+            <!-- Stats Bar -->
+            <div class="stats-bar" id="service-runs-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-runs-total">-</div>
+                    <div class="stat-label">Gesamt Runs</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value success" id="stat-runs-completed">-</div>
+                    <div class="stat-label">Abgeschlossen</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value danger" id="stat-runs-failed">-</div>
+                    <div class="stat-label">Fehlgeschlagen</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value warning" id="stat-runs-running">-</div>
+                    <div class="stat-label">Laufend</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-runs-avg-duration">-</div>
+                    <div class="stat-label">Ø Dauer</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <!-- Filters -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Filter</h2>
+                        <button class="btn btn-sm btn-primary" onclick="loadServiceRuns()">Aktualisieren</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                        <div class="form-group">
+                            <label>Service</label>
+                            <select class="form-control" id="filter-runs-service" onchange="loadServiceRuns()">
+                                <option value="">Alle Services</option>
+                                <option value="data">Data Service</option>
+                                <option value="nhits">NHITS Service</option>
+                                <option value="tcn">TCN Service</option>
+                                <option value="hmm">HMM Service</option>
+                                <option value="candlestick">Candlestick Service</option>
+                                <option value="cnn-lstm">CNN-LSTM Service</option>
+                                <option value="rag">RAG Service</option>
+                                <option value="llm">LLM Service</option>
+                                <option value="workplace">Workplace Service</option>
+                                <option value="watchdog">Watchdog Service</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Run-Typ</label>
+                            <select class="form-control" id="filter-runs-type" onchange="loadServiceRuns()">
+                                <option value="">Alle Typen</option>
+                                <option value="validation">Validierung</option>
+                                <option value="training">Training</option>
+                                <option value="prediction">Prediction</option>
+                                <option value="analysis">Analyse</option>
+                                <option value="scan">Scan</option>
+                                <option value="health_check">Health Check</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select class="form-control" id="filter-runs-status" onchange="loadServiceRuns()">
+                                <option value="">Alle Status</option>
+                                <option value="running">Laufend</option>
+                                <option value="completed">Abgeschlossen</option>
+                                <option value="failed">Fehlgeschlagen</option>
+                                <option value="aborted">Abgebrochen</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Anzahl</label>
+                            <select class="form-control" id="filter-runs-limit" onchange="loadServiceRuns()">
+                                <option value="25">25</option>
+                                <option value="50" selected>50</option>
+                                <option value="100">100</option>
+                                <option value="200">200</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn btn-sm btn-danger" onclick="cleanupServiceRuns()">
+                            Alte Runs bereinigen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats by Service -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Statistik pro Service</h2>
+                    </div>
+                    <div id="service-runs-by-service">
+                        <div class="empty-state">
+                            <span class="loading-spinner"></span> Lade Statistik...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Runs List -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Service Runs Historie</h2>
+                    <div id="service-runs-count" style="font-size: 0.85rem; opacity: 0.7;"></div>
+                </div>
+                <div id="service-runs-list">
+                    <div class="empty-state">
+                        <span class="loading-spinner"></span> Lade Runs...
                     </div>
                 </div>
             </div>
@@ -1819,6 +1936,10 @@
                 loadAlertHistory();
                 loadTelegramConfig();
                 loadAlertConfig();
+            }
+            if (tabName === 'service-runs') {
+                loadServiceRuns();
+                loadServiceRunsStats();
             }
         }
 
@@ -2958,6 +3079,203 @@
             toast.className = 'toast show' + (type === 'error' ? ' error' : type === 'success' ? ' success' : '');
             if (toastTimeout) clearTimeout(toastTimeout);
             toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ==================== Service Runs Functions ====================
+
+        // Format duration in human-readable format
+        function formatDuration(ms) {
+            if (!ms) return '-';
+            if (ms < 1000) return `${ms}ms`;
+            if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+            if (ms < 3600000) return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+            return `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
+        }
+
+        // Get status color and icon
+        function getRunStatusInfo(status) {
+            const statusMap = {
+                'running': { color: '#60a5fa', icon: '⏳', label: 'Laufend' },
+                'completed': { color: '#81c784', icon: '✓', label: 'Abgeschlossen' },
+                'failed': { color: '#e57373', icon: '✗', label: 'Fehlgeschlagen' },
+                'aborted': { color: '#ffb74d', icon: '⚠', label: 'Abgebrochen' }
+            };
+            return statusMap[status] || { color: '#888', icon: '?', label: status };
+        }
+
+        // Load service runs list
+        async function loadServiceRuns() {
+            const container = document.getElementById('service-runs-list');
+            const countEl = document.getElementById('service-runs-count');
+
+            // Get filter values
+            const service = document.getElementById('filter-runs-service').value;
+            const runType = document.getElementById('filter-runs-type').value;
+            const status = document.getElementById('filter-runs-status').value;
+            const limit = document.getElementById('filter-runs-limit').value;
+
+            try {
+                // Build query params
+                const params = new URLSearchParams({ limit });
+                if (service) params.append('service', service);
+                if (runType) params.append('run_type', runType);
+                if (status) params.append('status', status);
+
+                const res = await fetch(`${API_BASE}/service-runs/?${params.toString()}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+
+                // Update count
+                countEl.textContent = `${data.count} von ${data.total} Runs`;
+
+                if (data.runs && data.runs.length > 0) {
+                    let tableHtml = '<table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">';
+                    tableHtml += '<thead><tr style="background: rgba(0,0,0,0.3); text-align: left;">';
+                    tableHtml += '<th style="padding: 0.6rem 0.75rem;">Status</th>';
+                    tableHtml += '<th style="padding: 0.6rem 0.75rem;">Service</th>';
+                    tableHtml += '<th style="padding: 0.6rem 0.75rem;">Typ</th>';
+                    tableHtml += '<th style="padding: 0.6rem 0.75rem;">Symbol</th>';
+                    tableHtml += '<th style="padding: 0.6rem 0.75rem;">Gestartet</th>';
+                    tableHtml += '<th style="padding: 0.6rem 0.75rem;">Dauer</th>';
+                    tableHtml += '<th style="padding: 0.6rem 0.75rem;">Erfolg</th>';
+                    tableHtml += '<th style="padding: 0.6rem 0.75rem;">Auslöser</th>';
+                    tableHtml += '</tr></thead><tbody>';
+
+                    data.runs.forEach(run => {
+                        const statusInfo = getRunStatusInfo(run.status);
+                        const startedAt = new Date(run.started_at).toLocaleString('de-CH');
+                        const duration = formatDuration(run.duration_ms);
+                        const successRate = run.success_rate !== null ? `${run.success_rate.toFixed(1)}%` : '-';
+                        const successColor = run.success_rate >= 90 ? '#81c784' : run.success_rate >= 70 ? '#ffb74d' : '#e57373';
+
+                        tableHtml += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">`;
+                        tableHtml += `<td style="padding: 0.5rem 0.75rem;">
+                            <span style="color: ${statusInfo.color}; font-weight: 600;">
+                                ${statusInfo.icon} ${statusInfo.label}
+                            </span>
+                        </td>`;
+                        tableHtml += `<td style="padding: 0.5rem 0.75rem; font-weight: 500;">${run.service}</td>`;
+                        tableHtml += `<td style="padding: 0.5rem 0.75rem;">${run.run_type}</td>`;
+                        tableHtml += `<td style="padding: 0.5rem 0.75rem; font-family: monospace;">${run.symbol || '-'}</td>`;
+                        tableHtml += `<td style="padding: 0.5rem 0.75rem; font-family: monospace; font-size: 0.8rem;">${startedAt}</td>`;
+                        tableHtml += `<td style="padding: 0.5rem 0.75rem; font-family: monospace;">${duration}</td>`;
+                        tableHtml += `<td style="padding: 0.5rem 0.75rem; color: ${successColor}; font-weight: 500;">${successRate}</td>`;
+                        tableHtml += `<td style="padding: 0.5rem 0.75rem; font-size: 0.8rem; opacity: 0.7;">${run.triggered_by}</td>`;
+                        tableHtml += `</tr>`;
+                    });
+
+                    tableHtml += '</tbody></table>';
+                    container.innerHTML = tableHtml;
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">📋</div>
+                            <div>Keine Service Runs gefunden</div>
+                            <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem;">
+                                Mit den aktuellen Filtern wurden keine Runs gefunden.
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error('Error loading service runs:', err);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">⚠️</div>
+                        <div>Fehler beim Laden der Service Runs</div>
+                        <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem;">
+                            ${err.message}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Load service runs statistics
+        async function loadServiceRunsStats() {
+            try {
+                const res = await fetch(`${API_BASE}/service-runs/stats`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+
+                // Update overall stats
+                const stats = data.stats;
+                document.getElementById('stat-runs-total').textContent = stats.total_runs || 0;
+                document.getElementById('stat-runs-completed').textContent = stats.completed_runs || 0;
+                document.getElementById('stat-runs-failed').textContent = stats.failed_runs || 0;
+                document.getElementById('stat-runs-running').textContent = stats.running_runs || 0;
+                document.getElementById('stat-runs-avg-duration').textContent = formatDuration(stats.avg_duration_ms);
+
+                // Update by-service stats
+                const byServiceContainer = document.getElementById('service-runs-by-service');
+                const byService = data.by_service;
+
+                if (byService && Object.keys(byService).length > 0) {
+                    let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem;">';
+
+                    Object.entries(byService).sort((a, b) => b[1].total_runs - a[1].total_runs).forEach(([service, svcStats]) => {
+                        const successRate = svcStats.avg_success_rate !== null ? svcStats.avg_success_rate : null;
+                        const successColor = successRate === null ? '#888' :
+                            (successRate >= 90 ? '#81c784' : successRate >= 70 ? '#ffb74d' : '#e57373');
+
+                        html += `
+                            <div style="padding: 0.6rem; background: rgba(0,0,0,0.2); border-radius: 6px; border-left: 3px solid ${successColor};">
+                                <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.3rem;">${service}</div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.8;">
+                                    <span>${svcStats.total_runs} Runs</span>
+                                    <span style="color: ${successColor};">${successRate !== null ? successRate.toFixed(0) + '%' : '-'}</span>
+                                </div>
+                                <div style="font-size: 0.7rem; opacity: 0.6; margin-top: 0.2rem;">
+                                    ✓ ${svcStats.completed_runs} | ✗ ${svcStats.failed_runs}
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                    byServiceContainer.innerHTML = html;
+                } else {
+                    byServiceContainer.innerHTML = `
+                        <div class="empty-state" style="padding: 1rem;">
+                            <div>Keine Statistiken verfügbar</div>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error('Error loading service runs stats:', err);
+                document.getElementById('service-runs-by-service').innerHTML = `
+                    <div class="empty-state" style="padding: 1rem;">
+                        <div>Fehler beim Laden der Statistiken</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Cleanup old service runs
+        async function cleanupServiceRuns() {
+            if (!confirm('Möchten Sie alte Service Runs bereinigen? Es werden die neuesten 100 Runs pro Service/Typ behalten.')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/service-runs/cleanup?keep_count=100`, {
+                    method: 'POST'
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+                showToast(`${data.deleted_count} alte Runs gelöscht`, 'success');
+
+                // Reload data
+                loadServiceRuns();
+                loadServiceRunsStats();
+            } catch (err) {
+                console.error('Error cleaning up service runs:', err);
+                showToast('Fehler beim Bereinigen: ' + err.message, 'error');
+            }
         }
 
         // Initial load

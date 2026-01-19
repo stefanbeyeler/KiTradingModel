@@ -16,6 +16,7 @@ from src.shared.health import get_test_unhealthy_status
 
 from .api.routes import router
 from .api.training_routes import router as training_router
+from .api.service_runs_routes import router as service_runs_router
 from .config import settings
 from .services.alert_manager import AlertManager
 from .services.health_checker import HealthChecker
@@ -145,6 +146,7 @@ app = FastAPI(
 
 app.include_router(router, prefix="/api/v1")
 app.include_router(training_router, prefix="/api/v1")
+app.include_router(service_runs_router, prefix="/api/v1")
 
 # Test-Health-Router für alle Services (vom Watchdog aus steuerbar)
 test_health_router = create_test_health_router("watchdog")
