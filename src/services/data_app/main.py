@@ -54,6 +54,15 @@ except ImportError:
     db_router = None
     _db_routes_available = False
     logger.warning("DB routes not available - asyncpg not installed")
+
+# Validation History routes
+try:
+    from src.services.data_app.api.validation_routes import router as validation_router
+    _validation_routes_available = True
+except ImportError:
+    validation_router = None
+    _validation_routes_available = False
+    logger.warning("Validation routes not available")
 from src.service_registry import register_service
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import is_test_unhealthy, get_test_unhealthy_status
@@ -144,6 +153,10 @@ openapi_tags = [
         "name": "13. Testing",
         "description": "Test-Suite und Quality Assurance"
     },
+    {
+        "name": "14. Validation History",
+        "description": "Validierungsläufe speichern und abrufen"
+    },
 ]
 
 # Create FastAPI application
@@ -213,6 +226,10 @@ app.include_router(testing_router, prefix="/api/v1/testing", tags=["13. Testing"
 # Test-Health-Router für Test-Unhealthy-Endpoint
 test_health_router = create_test_health_router("data")
 app.include_router(test_health_router, prefix="/api/v1", tags=["13. Testing"])
+
+# Include Validation History router if available
+if _validation_routes_available and validation_router:
+    app.include_router(validation_router, prefix="/api/v1", tags=["14. Validation History"])
 
 
 async def _periodic_cache_cleanup():

@@ -2641,6 +2641,7 @@
             <!-- Sub-Tabs Navigation -->
             <div class="validation-subtabs">
                 <button class="validation-subtab-btn active" data-subtab="val-overview">&#128200; Übersicht</button>
+                <button class="validation-subtab-btn" data-subtab="val-history">&#128218; Historie</button>
                 <button class="validation-subtab-btn" data-subtab="val-twelvedata">&#128201; TwelveData</button>
                 <button class="validation-subtab-btn" data-subtab="val-easyinsight">&#128202; EasyInsight</button>
                 <button class="validation-subtab-btn" data-subtab="val-yfinance">&#128203; Yahoo Finance</button>
@@ -2707,6 +2708,82 @@
                     <h2 style="color: #64c8ff; margin-bottom: 1rem;">&#128202; Letzte Ergebnisse</h2>
                     <div id="val-overview-results">
                         <p style="color: #6b7280; margin-top: 1rem;">Noch keine Tests ausgeführt</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Sub-Tab -->
+            <div id="val-history" class="validation-subtab-content">
+                <div class="val-test-panel">
+                    <div class="val-panel-header">
+                        <h2>&#128218; Validierungs-Historie</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="valLoadHistory()">
+                                &#128260; Aktualisieren
+                            </button>
+                            <button class="btn btn-danger" onclick="valCleanupHistory()">
+                                &#128465; Alte Eintraege bereinigen
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- History Stats -->
+                    <div class="val-summary-grid" style="margin-bottom: 1.5rem;">
+                        <div class="val-summary-card">
+                            <h3>Gesamt</h3>
+                            <div class="value" id="val-history-total">-</div>
+                        </div>
+                        <div class="val-summary-card">
+                            <h3>Erfolgreich</h3>
+                            <div class="value success" id="val-history-completed">-</div>
+                        </div>
+                        <div class="val-summary-card">
+                            <h3>Fehlgeschlagen</h3>
+                            <div class="value error" id="val-history-failed">-</div>
+                        </div>
+                        <div class="val-summary-card">
+                            <h3>Erfolgsrate (Durchschnitt)</h3>
+                            <div class="value" id="val-history-avg-rate">-</div>
+                        </div>
+                    </div>
+
+                    <!-- History Table -->
+                    <div class="table-container" style="max-height: calc(100vh - 450px);">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Datum/Zeit</th>
+                                    <th>Status</th>
+                                    <th>Ausgelöst durch</th>
+                                    <th>Tests</th>
+                                    <th>OK</th>
+                                    <th>Warnungen</th>
+                                    <th>Fehler</th>
+                                    <th>Erfolgsrate</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="val-history-body">
+                                <tr>
+                                    <td colspan="9" style="text-align: center; color: #6b7280; padding: 2rem;">
+                                        Lade Historie...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Detail Modal Placeholder -->
+                <div id="val-history-detail-modal" class="modal" style="display: none;">
+                    <div class="modal-content" style="max-width: 900px;">
+                        <div class="modal-header">
+                            <h2>&#128218; Validierungsdetails</h2>
+                            <button class="modal-close" onclick="valCloseHistoryModal()">&times;</button>
+                        </div>
+                        <div class="modal-body" id="val-history-detail-content">
+                            <!-- Details werden hier geladen -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -8523,6 +8600,9 @@
             });
         }
 
+        // Current validation run ID (for saving)
+        let valCurrentRunId = null;
+
         // Run All Validation Tests
         async function valRunAllTests() {
             if (valTestRunning) return;
@@ -8532,6 +8612,12 @@
             valClearLog('val-main-log');
             valLog('val-main-log', 'Starte vollständige Validierung...', 'info');
             valUpdateProgress('val-overall-progress', 0, 'Initialisiere...');
+
+            // Create a new validation run in the database
+            valCurrentRunId = await valCreateRun();
+            if (valCurrentRunId) {
+                valLog('val-main-log', `Validierungslauf erstellt: ${valCurrentRunId.substring(0, 8)}...`, 'info');
+            }
 
             // Phase 1: TwelveData (20%)
             valLog('val-main-log', '--- Phase 1: TwelveData ---', 'info');
@@ -8583,7 +8669,54 @@
             document.getElementById('val-overall-status').className = 'value success';
             valLog('val-main-log', 'Alle Tests abgeschlossen!', 'ok');
 
+            // Save validation results to database
+            if (valCurrentRunId) {
+                const saved = await valSaveResults(valCurrentRunId);
+                if (saved) {
+                    valLog('val-main-log', 'Ergebnisse in Datenbank gespeichert', 'ok');
+                } else {
+                    valLog('val-main-log', 'Fehler beim Speichern der Ergebnisse', 'warning');
+                }
+            }
+
             valDisplayResults();
+        }
+
+        // Create a new validation run
+        async function valCreateRun() {
+            try {
+                const response = await valFetchWithTimeout('/data/api/v1/validation/runs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ triggered_by: 'manual' })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.run_id;
+                }
+            } catch (e) {
+                console.error('Failed to create validation run:', e);
+            }
+            return null;
+        }
+
+        // Save validation results
+        async function valSaveResults(runId) {
+            try {
+                const response = await valFetchWithTimeout(`/data/api/v1/validation/runs/${runId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'completed',
+                        results: valTestResults,
+                        error_details: valErrorDetails
+                    })
+                });
+                return response.ok;
+            } catch (e) {
+                console.error('Failed to save validation results:', e);
+                return false;
+            }
         }
 
         function valDisplayResults() {
@@ -8699,6 +8832,218 @@
             a.click();
             URL.revokeObjectURL(url);
         }
+
+        // ==================== Validation History Functions ====================
+
+        // Load validation history
+        async function valLoadHistory() {
+            const tbody = document.getElementById('val-history-body');
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #6b7280; padding: 2rem;">Lade Historie...</td></tr>';
+
+            try {
+                // Load stats first
+                const statsResponse = await valFetchWithTimeout('/data/api/v1/validation/stats');
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    document.getElementById('val-history-total').textContent = stats.total_runs || 0;
+                    document.getElementById('val-history-completed').textContent = stats.completed_runs || 0;
+                    document.getElementById('val-history-failed').textContent = stats.failed_runs || 0;
+                    document.getElementById('val-history-avg-rate').textContent = stats.avg_success_rate
+                        ? `${stats.avg_success_rate.toFixed(1)}%`
+                        : '-';
+                }
+
+                // Load history list
+                const response = await valFetchWithTimeout('/data/api/v1/validation/runs?limit=50');
+                if (!response.ok) {
+                    throw new Error('Failed to load history');
+                }
+
+                const runs = await response.json();
+
+                if (runs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #6b7280; padding: 2rem;">Keine Validierungslaeufe vorhanden</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                for (const run of runs) {
+                    const row = document.createElement('tr');
+                    const startedAt = new Date(run.started_at).toLocaleString('de-DE');
+                    const statusClass = run.status === 'completed' ? 'badge-success' :
+                                       run.status === 'failed' ? 'badge-danger' :
+                                       run.status === 'running' ? 'badge-warning' : 'badge-secondary';
+                    const statusText = run.status === 'completed' ? 'Erfolgreich' :
+                                      run.status === 'failed' ? 'Fehlgeschlagen' :
+                                      run.status === 'running' ? 'Laeuft...' : run.status;
+                    const triggeredBy = run.triggered_by === 'manual' ? 'Manuell' :
+                                       run.triggered_by === 'scheduled' ? 'Geplant' :
+                                       run.triggered_by === 'api' ? 'API' : run.triggered_by;
+                    const successRate = run.success_rate !== null ? `${run.success_rate.toFixed(1)}%` : '-';
+
+                    row.innerHTML = `
+                        <td>${startedAt}</td>
+                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                        <td>${triggeredBy}</td>
+                        <td>${run.total_tests}</td>
+                        <td style="color: #22c55e;">${run.tests_ok}</td>
+                        <td style="color: #eab308;">${run.tests_warning}</td>
+                        <td style="color: #ef4444;">${run.tests_error}</td>
+                        <td>${successRate}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="valShowRunDetails('${run.run_id}')" title="Details anzeigen">
+                                &#128269;
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="valDeleteRun('${run.run_id}')" title="Loeschen">
+                                &#128465;
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            } catch (e) {
+                console.error('Failed to load validation history:', e);
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #ef4444; padding: 2rem;">Fehler beim Laden der Historie</td></tr>';
+            }
+        }
+
+        // Show run details in modal
+        async function valShowRunDetails(runId) {
+            const modal = document.getElementById('val-history-detail-modal');
+            const content = document.getElementById('val-history-detail-content');
+            content.innerHTML = '<p style="text-align: center; padding: 2rem;">Lade Details...</p>';
+            modal.style.display = 'flex';
+
+            try {
+                const response = await valFetchWithTimeout(`/data/api/v1/validation/runs/${runId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to load run details');
+                }
+
+                const run = await response.json();
+                const startedAt = new Date(run.started_at).toLocaleString('de-DE');
+                const completedAt = run.completed_at ? new Date(run.completed_at).toLocaleString('de-DE') : '-';
+                const duration = run.completed_at && run.started_at
+                    ? Math.round((new Date(run.completed_at) - new Date(run.started_at)) / 1000)
+                    : '-';
+
+                let resultsHtml = '';
+                if (run.results) {
+                    resultsHtml = '<h4 style="margin-top: 1.5rem; color: #64c8ff;">Komponenten-Ergebnisse</h4>';
+                    resultsHtml += '<table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem;">';
+                    resultsHtml += '<thead><tr style="border-bottom: 1px solid rgba(255,255,255,0.1);"><th style="text-align: left; padding: 0.5rem;">Komponente</th><th style="text-align: center; padding: 0.5rem; color: #22c55e;">OK</th><th style="text-align: center; padding: 0.5rem; color: #eab308;">Warnungen</th><th style="text-align: center; padding: 0.5rem; color: #ef4444;">Fehler</th></tr></thead><tbody>';
+                    for (const [component, stats] of Object.entries(run.results)) {
+                        resultsHtml += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 0.5rem;">${component}</td><td style="text-align: center; color: #22c55e;">${stats.ok || 0}</td><td style="text-align: center; color: #eab308;">${stats.warning || 0}</td><td style="text-align: center; color: #ef4444;">${stats.error || 0}</td></tr>`;
+                    }
+                    resultsHtml += '</tbody></table>';
+                }
+
+                let errorsHtml = '';
+                if (run.error_details && run.error_details.length > 0) {
+                    errorsHtml = '<h4 style="margin-top: 1.5rem; color: #ef4444;">Fehlerdetails</h4>';
+                    errorsHtml += '<div style="max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; margin-top: 0.5rem;">';
+                    for (const err of run.error_details.slice(0, 50)) {
+                        errorsHtml += `<div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <strong style="color: ${err.severity === 'error' ? '#ef4444' : '#eab308'};">${err.source || err.component || 'Unknown'}</strong>
+                            ${err.symbol ? `<span style="color: #64c8ff;"> - ${err.symbol}</span>` : ''}
+                            ${err.timeframe ? `<span style="color: #6b7280;"> (${err.timeframe})</span>` : ''}
+                            <br><span style="color: #e8e8e8;">${err.error || err.message || 'Unknown error'}</span>
+                        </div>`;
+                    }
+                    if (run.error_details.length > 50) {
+                        errorsHtml += `<p style="color: #6b7280; text-align: center;">... und ${run.error_details.length - 50} weitere Fehler</p>`;
+                    }
+                    errorsHtml += '</div>';
+                }
+
+                content.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div><strong style="color: #6b7280;">Run ID:</strong><br>${run.run_id.substring(0, 8)}...</div>
+                        <div><strong style="color: #6b7280;">Gestartet:</strong><br>${startedAt}</div>
+                        <div><strong style="color: #6b7280;">Beendet:</strong><br>${completedAt}</div>
+                        <div><strong style="color: #6b7280;">Dauer:</strong><br>${duration !== '-' ? duration + 's' : '-'}</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: rgba(100, 200, 255, 0.15); padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #64c8ff;">${run.total_tests}</div>
+                            <div style="color: #93c5fd; font-size: 0.85rem;">Tests</div>
+                        </div>
+                        <div style="background: rgba(34, 197, 94, 0.15); padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #22c55e;">${run.tests_ok}</div>
+                            <div style="color: #86efac; font-size: 0.85rem;">OK</div>
+                        </div>
+                        <div style="background: rgba(234, 179, 8, 0.15); padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #eab308;">${run.tests_warning}</div>
+                            <div style="color: #fde047; font-size: 0.85rem;">Warnungen</div>
+                        </div>
+                        <div style="background: rgba(239, 68, 68, 0.15); padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #ef4444;">${run.tests_error}</div>
+                            <div style="color: #fca5a5; font-size: 0.85rem;">Fehler</div>
+                        </div>
+                    </div>
+                    ${resultsHtml}
+                    ${errorsHtml}
+                `;
+            } catch (e) {
+                console.error('Failed to load run details:', e);
+                content.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 2rem;">Fehler beim Laden der Details</p>';
+            }
+        }
+
+        // Close history detail modal
+        function valCloseHistoryModal() {
+            document.getElementById('val-history-detail-modal').style.display = 'none';
+        }
+
+        // Delete a validation run
+        async function valDeleteRun(runId) {
+            if (!confirm('Moechten Sie diesen Validierungslauf wirklich loeschen?')) {
+                return;
+            }
+
+            try {
+                const response = await valFetchWithTimeout(`/data/api/v1/validation/runs/${runId}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    valLoadHistory();
+                } else {
+                    alert('Fehler beim Loeschen des Validierungslaufs');
+                }
+            } catch (e) {
+                console.error('Failed to delete validation run:', e);
+                alert('Fehler beim Loeschen des Validierungslaufs');
+            }
+        }
+
+        // Cleanup old validation runs
+        async function valCleanupHistory() {
+            const keepCount = prompt('Wie viele Eintraege sollen behalten werden?', '50');
+            if (!keepCount || isNaN(parseInt(keepCount))) {
+                return;
+            }
+
+            try {
+                const response = await valFetchWithTimeout(`/data/api/v1/validation/cleanup?keep_count=${parseInt(keepCount)}`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`${data.deleted_count} alte Eintraege wurden geloescht.`);
+                    valLoadHistory();
+                } else {
+                    alert('Fehler beim Bereinigen der Historie');
+                }
+            } catch (e) {
+                console.error('Failed to cleanup validation history:', e);
+                alert('Fehler beim Bereinigen der Historie');
+            }
+        }
+
+        // Initialize history when history tab is clicked
+        document.querySelector('[data-subtab="val-history"]')?.addEventListener('click', () => {
+            setTimeout(valLoadHistory, 100);
+        });
 
         // Initialize Validation Tab when it becomes visible
         document.querySelector('[data-tab="validation"]').addEventListener('click', () => {
