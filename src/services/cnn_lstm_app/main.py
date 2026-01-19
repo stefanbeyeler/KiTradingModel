@@ -94,12 +94,26 @@ async def lifespan(app: FastAPI):
     except ImportError:
         logger.info("PyTorch not available - running in limited mode")
 
+    # Auto-Start Backtest Scheduler wenn via Umgebungsvariable aktiviert
+    try:
+        from .services.backtesting_service import backtesting_service
+        await backtesting_service.auto_start_if_enabled()
+    except Exception as e:
+        logger.warning(f"Could not auto-start backtest scheduler: {e}")
+
     logger.info(f"{SERVICE_NAME} service started successfully")
 
     yield
 
     # Shutdown
     logger.info(f"Shutting down {SERVICE_NAME} service")
+
+    # Stoppe Auto-Backtest Scheduler
+    try:
+        from .services.backtesting_service import backtesting_service
+        await backtesting_service.stop_auto_backtest()
+    except Exception as e:
+        logger.warning(f"Could not stop backtest scheduler: {e}")
 
 
 # =============================================================================

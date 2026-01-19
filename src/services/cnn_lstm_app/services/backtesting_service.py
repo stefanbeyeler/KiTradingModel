@@ -20,6 +20,10 @@ from loguru import logger
 
 DATA_DIR = os.getenv("DATA_DIR", "/app/data")
 
+# Auto-Backtest Konfiguration via Umgebungsvariablen
+AUTO_BACKTEST_ENABLED = os.getenv("AUTO_BACKTEST_ENABLED", "true").lower() == "true"
+AUTO_BACKTEST_INTERVAL_HOURS = float(os.getenv("AUTO_BACKTEST_INTERVAL_HOURS", "6"))
+
 
 @dataclass
 class BacktestResult:
@@ -99,8 +103,26 @@ class BacktestingService:
 
         self._data_service_url = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
 
+        # Scheduler state
+        self._scheduler_running = False
+        self._scheduler_task = None
+        self._scheduler_interval = 6 * 3600  # 6 hours default
+        self._last_auto_backtest: Optional[datetime] = None
+        self._last_auto_backtest_result: Optional[dict] = None
+
+        # Auto-Start Konfiguration
+        self._auto_start_enabled = AUTO_BACKTEST_ENABLED
+        self._auto_start_interval = AUTO_BACKTEST_INTERVAL_HOURS
+
         self._load_results()
         logger.info(f"BacktestingService initialized - {len(self._results)} results loaded")
+        logger.info(f"Auto-Backtest: enabled={self._auto_start_enabled}, interval={self._auto_start_interval}h")
+
+    async def auto_start_if_enabled(self):
+        """Starte Auto-Backtest wenn via Umgebungsvariable aktiviert."""
+        if self._auto_start_enabled and not self._scheduler_running:
+            logger.info(f"Auto-starting backtest scheduler (AUTO_BACKTEST_ENABLED=true)")
+            await self.start_auto_backtest(self._auto_start_interval)
 
     def _load_results(self):
         """Lade Backtest-Ergebnisse aus Datei."""
@@ -513,6 +535,137 @@ class BacktestingService:
         self._results = []
         logger.info(f"Backtest memory cleared: {count} results")
         return {"cleared": True, "results_cleared": count}
+
+    # =========================================================================
+    # Auto-Backtest Scheduler
+    # =========================================================================
+
+    async def start_auto_backtest(self, interval_hours: float = 6.0):
+        """
+        Starte automatischen Backtest-Scheduler.
+
+        Args:
+            interval_hours: Intervall in Stunden (default: 6)
+        """
+        import asyncio
+
+        if self._scheduler_running:
+            logger.warning("Auto-backtest scheduler already running")
+            return
+
+        self._scheduler_running = True
+        self._scheduler_interval = interval_hours * 3600  # Convert to seconds
+        logger.info(f"Starting auto-backtest scheduler (interval: {interval_hours}h)")
+
+        self._scheduler_task = asyncio.create_task(self._scheduler_loop())
+
+    async def stop_auto_backtest(self):
+        """Stoppe automatischen Backtest-Scheduler."""
+        if not self._scheduler_running:
+            return
+
+        self._scheduler_running = False
+        if self._scheduler_task:
+            self._scheduler_task.cancel()
+            try:
+                await self._scheduler_task
+            except asyncio.CancelledError:
+                pass
+            self._scheduler_task = None
+
+        logger.info("Auto-backtest scheduler stopped")
+
+    async def _scheduler_loop(self):
+        """Interne Scheduler-Loop."""
+        import asyncio
+
+        while self._scheduler_running:
+            try:
+                # Warte auf naechsten Durchlauf
+                await asyncio.sleep(self._scheduler_interval)
+
+                if not self._scheduler_running:
+                    break
+
+                # Fuehre Auto-Backtest durch
+                logger.info("Auto-backtest triggered by scheduler")
+                result = await self._run_auto_backtest()
+                self._last_auto_backtest = datetime.now(timezone.utc)
+                self._last_auto_backtest_result = result
+
+                logger.info(
+                    f"Auto-backtest completed: {result.get('new_backtests', 0)} new, "
+                    f"{result.get('skipped', 0)} skipped"
+                )
+
+                # Pruefe ob Re-Training noetig ist (Closed-Loop)
+                await self._check_retrain_trigger()
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error in auto-backtest scheduler: {e}")
+                # Warte kurz bevor wir es erneut versuchen
+                await asyncio.sleep(60)
+
+    async def _run_auto_backtest(self) -> dict:
+        """Fuehre Auto-Backtest fuer alle offenen Predictions durch."""
+        try:
+            # Import hier um zirkulaere Importe zu vermeiden
+            from .prediction_history_service import prediction_history_service
+
+            # Hole alle Predictions die noch nicht getestet wurden
+            predictions = prediction_history_service.get_history(limit=200)
+
+            if not predictions:
+                return {"new_backtests": 0, "skipped": 0, "errors": 0, "message": "No predictions"}
+
+            return await self.run_backtests(predictions, max_backtests=100)
+
+        except Exception as e:
+            logger.error(f"Error in auto-backtest: {e}")
+            return {"new_backtests": 0, "skipped": 0, "errors": 1, "error": str(e)}
+
+    async def _check_retrain_trigger(self):
+        """Pruefe ob Re-Training basierend auf Backtest-Ergebnissen noetig ist."""
+        try:
+            from .auto_retrain_service import auto_retrain_service
+
+            # Hole aktuelle Backtest-Summary
+            summary = self.get_summary()
+
+            # Pruefe und triggere Re-Training falls noetig
+            event = await auto_retrain_service.check_and_trigger_retrain(summary)
+
+            if event:
+                logger.info(
+                    f"Auto-retrain triggered: {event.reason}, "
+                    f"job_id={event.training_job_id}"
+                )
+
+        except Exception as e:
+            logger.warning(f"Error checking retrain trigger: {e}")
+
+    def get_scheduler_status(self) -> dict:
+        """Hole Status des Auto-Backtest Schedulers."""
+        return {
+            "running": self._scheduler_running,
+            "interval_hours": self._scheduler_interval / 3600 if self._scheduler_interval else 6.0,
+            "last_run": self._last_auto_backtest.isoformat() if self._last_auto_backtest else None,
+            "last_result": self._last_auto_backtest_result,
+            "next_run_in_seconds": self._calculate_next_run(),
+            "auto_start_enabled": self._auto_start_enabled,
+            "auto_start_interval": self._auto_start_interval
+        }
+
+    def _calculate_next_run(self) -> Optional[int]:
+        """Berechne Sekunden bis zum naechsten Auto-Backtest."""
+        if not self._scheduler_running or not self._last_auto_backtest:
+            return None
+
+        elapsed = (datetime.now(timezone.utc) - self._last_auto_backtest).total_seconds()
+        remaining = max(0, self._scheduler_interval - elapsed)
+        return int(remaining)
 
 
 # Global singleton

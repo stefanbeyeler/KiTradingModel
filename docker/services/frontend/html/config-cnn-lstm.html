@@ -1085,6 +1085,106 @@
                 </div>
             </div>
 
+            <!-- Backtest Statistics & Scheduler -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#9989; Backtest-Validierung</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="runAutoBacktest()" title="Validiert alle offenen Predictions gegen echte Marktdaten">&#9989; Jetzt ausführen</button>
+                        <button class="btn btn-primary" id="scheduler-toggle-btn" onclick="toggleBacktestScheduler()">&#9202; Scheduler starten</button>
+                    </div>
+                </div>
+                <div class="stats-grid" id="backtest-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-backtest-total">-</div>
+                        <div class="stat-label">Backtests</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success" id="stat-backtest-accuracy">-</div>
+                        <div class="stat-label">Richtungs-Genauigkeit</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-backtest-regime">-</div>
+                        <div class="stat-label">Regime-Genauigkeit</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-scheduler-status">Inaktiv</div>
+                        <div class="stat-label">Auto-Scheduler</div>
+                    </div>
+                </div>
+                <div id="scheduler-config" style="padding: 1rem; display: none;">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <label style="color: #aaa;">Intervall:</label>
+                        <select class="timeframe-select" id="scheduler-interval">
+                            <option value="1">1 Stunde</option>
+                            <option value="2">2 Stunden</option>
+                            <option value="4">4 Stunden</option>
+                            <option value="6" selected>6 Stunden</option>
+                            <option value="12">12 Stunden</option>
+                            <option value="24">24 Stunden</option>
+                        </select>
+                        <span id="scheduler-next-run" style="color: #888; font-size: 0.85rem;"></span>
+                        <span id="scheduler-auto-start" style="color: #81c784; font-size: 0.85rem;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Self-Learning System -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#129302; Self-Learning System</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-purple" id="retrain-toggle-btn" onclick="toggleSelfLearning()">&#9989; Aktiviert</button>
+                        <button class="btn btn-warning" onclick="triggerManualRetrain()">&#9881; Manuell trainieren</button>
+                    </div>
+                </div>
+                <p class="card-description">
+                    Automatisches Re-Training wenn Backtest-Accuracy unter Schwellwert fällt.
+                    Das System lernt kontinuierlich aus seinen Fehlern.
+                </p>
+                <div class="stats-grid" id="retrain-stats">
+                    <div class="stat-card">
+                        <div class="stat-value purple" id="stat-retrain-threshold">60%</div>
+                        <div class="stat-label">Accuracy-Schwelle</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-retrain-total">0</div>
+                        <div class="stat-label">Re-Trainings</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success" id="stat-retrain-improvement">-</div>
+                        <div class="stat-label">Avg. Verbesserung</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-retrain-cooldown">-</div>
+                        <div class="stat-label">Cooldown</div>
+                    </div>
+                </div>
+                <div id="retrain-config" style="padding: 1rem; background: rgba(167, 139, 250, 0.1); border-radius: 8px; margin-top: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <label style="color: #aaa;">Accuracy-Schwelle:</label>
+                        <select class="timeframe-select" id="retrain-threshold-select" onchange="updateRetrainConfig()">
+                            <option value="50">50%</option>
+                            <option value="55">55%</option>
+                            <option value="60" selected>60%</option>
+                            <option value="65">65%</option>
+                            <option value="70">70%</option>
+                        </select>
+                        <label style="color: #aaa;">Cooldown:</label>
+                        <select class="timeframe-select" id="retrain-cooldown-select" onchange="updateRetrainConfig()">
+                            <option value="6">6h</option>
+                            <option value="12">12h</option>
+                            <option value="24" selected>24h</option>
+                            <option value="48">48h</option>
+                        </select>
+                        <label style="color: #aaa; display: flex; align-items: center; gap: 0.3rem;">
+                            <input type="checkbox" id="retrain-focus-errors" checked onchange="updateRetrainConfig()">
+                            Fehler-fokussiert
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Prediction History Table -->
             <div class="card">
                 <div class="card-header">
@@ -1105,7 +1205,6 @@
                             <option value="pending">Ausstehend</option>
                         </select>
                         <button class="btn btn-primary" onclick="loadPredictionHistory()">&#128260; Laden</button>
-                        <button class="btn btn-success" onclick="runAutoBacktest()" title="Validiert alle offenen Predictions gegen echte Marktdaten">&#9989; Auto-Backtest</button>
                     </div>
                 </div>
                 <div id="prediction-history-content">
@@ -2352,15 +2451,155 @@
                 const response = await fetch('/cnn-lstm/api/v1/backtest/summary');
                 const data = await response.json();
 
-                // Update stats if elements exist
-                if (document.getElementById('stat-backtest-accuracy')) {
-                    document.getElementById('stat-backtest-accuracy').textContent =
-                        data.price_direction_accuracy ? (data.price_direction_accuracy * 100).toFixed(1) + '%' : '-';
-                }
+                // Update stats
+                document.getElementById('stat-backtest-total').textContent = data.backtested || 0;
+                document.getElementById('stat-backtest-accuracy').textContent =
+                    data.price_direction_accuracy ? data.price_direction_accuracy.toFixed(1) + '%' : '-';
+                document.getElementById('stat-backtest-regime').textContent =
+                    data.regime_accuracy ? data.regime_accuracy.toFixed(1) + '%' : '-';
 
             } catch (error) {
                 console.error('Backtest summary error:', error);
             }
+        }
+
+        // Toggle Backtest Scheduler
+        async function toggleBacktestScheduler() {
+            const btn = document.getElementById('scheduler-toggle-btn');
+            const configDiv = document.getElementById('scheduler-config');
+
+            try {
+                // Check current status first
+                const statusResponse = await fetch('/cnn-lstm/api/v1/backtest/scheduler/status');
+                const status = await statusResponse.json();
+
+                if (status.running) {
+                    // Stop scheduler
+                    const response = await fetch('/cnn-lstm/api/v1/backtest/scheduler/stop', {
+                        method: 'POST'
+                    });
+
+                    if (!response.ok) throw new Error('Scheduler stoppen fehlgeschlagen');
+
+                    btn.innerHTML = '&#9202; Scheduler starten';
+                    btn.classList.remove('btn-warning');
+                    btn.classList.add('btn-primary');
+                    configDiv.style.display = 'none';
+                    document.getElementById('stat-scheduler-status').textContent = 'Inaktiv';
+                    showToast('Auto-Backtest Scheduler gestoppt', 'info');
+
+                } else {
+                    // Start scheduler
+                    const intervalHours = parseFloat(document.getElementById('scheduler-interval').value);
+
+                    const response = await fetch('/cnn-lstm/api/v1/backtest/scheduler/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ interval_hours: intervalHours })
+                    });
+
+                    if (!response.ok) throw new Error('Scheduler starten fehlgeschlagen');
+
+                    btn.innerHTML = '&#9209; Scheduler stoppen';
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-warning');
+                    configDiv.style.display = 'block';
+                    document.getElementById('stat-scheduler-status').textContent = `Aktiv (${intervalHours}h)`;
+                    showToast(`Auto-Backtest Scheduler gestartet (Intervall: ${intervalHours}h)`, 'success');
+
+                    // Start polling for status updates
+                    startSchedulerStatusPolling();
+                }
+
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // Load scheduler status
+        async function loadSchedulerStatus() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/backtest/scheduler/status');
+                const status = await response.json();
+
+                const btn = document.getElementById('scheduler-toggle-btn');
+                const configDiv = document.getElementById('scheduler-config');
+
+                if (status.running) {
+                    btn.innerHTML = '&#9209; Scheduler stoppen';
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-warning');
+                    configDiv.style.display = 'block';
+                    document.getElementById('stat-scheduler-status').textContent = `Aktiv (${status.interval_hours}h)`;
+
+                    // Update next run info
+                    if (status.next_run_in_seconds !== null) {
+                        const mins = Math.floor(status.next_run_in_seconds / 60);
+                        document.getElementById('scheduler-next-run').textContent =
+                            `Nächster Backtest in ${mins} Minuten`;
+                    }
+
+                    // Show auto-start info
+                    const autoStartSpan = document.getElementById('scheduler-auto-start');
+                    if (status.auto_start_enabled) {
+                        autoStartSpan.innerHTML = '&#x2705; Auto-Start aktiviert';
+                    } else {
+                        autoStartSpan.textContent = '';
+                    }
+                } else {
+                    btn.innerHTML = '&#9202; Scheduler starten';
+                    btn.classList.remove('btn-warning');
+                    btn.classList.add('btn-primary');
+                    configDiv.style.display = 'none';
+
+                    // Show hint if auto-start is enabled
+                    if (status.auto_start_enabled) {
+                        document.getElementById('stat-scheduler-status').innerHTML =
+                            `<span style="color: #81c784;">Auto-Start (${status.auto_start_interval}h)</span>`;
+                    } else {
+                        document.getElementById('stat-scheduler-status').textContent = 'Inaktiv';
+                    }
+                }
+
+            } catch (error) {
+                console.error('Scheduler status error:', error);
+            }
+        }
+
+        let schedulerPollingInterval = null;
+
+        function startSchedulerStatusPolling() {
+            if (schedulerPollingInterval) return;
+
+            schedulerPollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/cnn-lstm/api/v1/backtest/scheduler/status');
+                    const status = await response.json();
+
+                    if (!status.running) {
+                        clearInterval(schedulerPollingInterval);
+                        schedulerPollingInterval = null;
+                        loadSchedulerStatus();
+                        return;
+                    }
+
+                    // Update next run info
+                    if (status.next_run_in_seconds !== null) {
+                        const mins = Math.floor(status.next_run_in_seconds / 60);
+                        document.getElementById('scheduler-next-run').textContent =
+                            `Nächster Backtest in ${mins} Minuten`;
+                    }
+
+                    // If a backtest just completed, reload data
+                    if (status.last_result && status.last_result.new_backtests > 0) {
+                        loadBacktestSummary();
+                        loadPredictionHistory();
+                    }
+
+                } catch (error) {
+                    console.error('Scheduler polling error:', error);
+                }
+            }, 30000); // Poll every 30 seconds
         }
 
         // Load Feedback Statistics
@@ -2802,6 +3041,155 @@
             select.innerHTML = html;
         }
 
+        // =================================================================
+        // Self-Learning System Functions
+        // =================================================================
+
+        async function loadSelfLearningStatus() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/retrain/status');
+                const status = await response.json();
+
+                const btn = document.getElementById('retrain-toggle-btn');
+
+                if (status.enabled) {
+                    btn.innerHTML = '&#9989; Aktiviert';
+                    btn.classList.remove('btn-danger');
+                    btn.classList.add('btn-purple');
+                } else {
+                    btn.innerHTML = '&#10060; Deaktiviert';
+                    btn.classList.remove('btn-purple');
+                    btn.classList.add('btn-danger');
+                }
+
+                // Update stats
+                document.getElementById('stat-retrain-threshold').textContent =
+                    `${status.config.accuracy_threshold}%`;
+
+                // Update cooldown display
+                if (status.cooldown_active && status.cooldown_remaining_seconds) {
+                    const hours = Math.floor(status.cooldown_remaining_seconds / 3600);
+                    const mins = Math.floor((status.cooldown_remaining_seconds % 3600) / 60);
+                    document.getElementById('stat-retrain-cooldown').textContent = `${hours}h ${mins}m`;
+                } else {
+                    document.getElementById('stat-retrain-cooldown').textContent = 'Bereit';
+                }
+
+                // Update selects to match current config
+                document.getElementById('retrain-threshold-select').value =
+                    status.config.accuracy_threshold.toString();
+                document.getElementById('retrain-cooldown-select').value =
+                    status.config.cooldown_hours.toString();
+                document.getElementById('retrain-focus-errors').checked =
+                    status.config.focus_on_errors;
+
+                // Load statistics
+                await loadRetrainStatistics();
+
+            } catch (error) {
+                console.error('Error loading self-learning status:', error);
+            }
+        }
+
+        async function loadRetrainStatistics() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/retrain/statistics');
+                const stats = await response.json();
+
+                document.getElementById('stat-retrain-total').textContent = stats.total_retrains;
+
+                if (stats.average_improvement !== 0) {
+                    const sign = stats.average_improvement > 0 ? '+' : '';
+                    document.getElementById('stat-retrain-improvement').textContent =
+                        `${sign}${stats.average_improvement.toFixed(1)}%`;
+                } else {
+                    document.getElementById('stat-retrain-improvement').textContent = '-';
+                }
+
+            } catch (error) {
+                console.error('Error loading retrain statistics:', error);
+            }
+        }
+
+        async function toggleSelfLearning() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/retrain/status');
+                const status = await response.json();
+
+                // Toggle enabled state
+                const newEnabled = !status.enabled;
+
+                await fetch('/cnn-lstm/api/v1/retrain/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: newEnabled })
+                });
+
+                await loadSelfLearningStatus();
+                showNotification(
+                    newEnabled ? 'Self-Learning aktiviert' : 'Self-Learning deaktiviert',
+                    newEnabled ? 'success' : 'warning'
+                );
+
+            } catch (error) {
+                console.error('Error toggling self-learning:', error);
+                showNotification('Fehler beim Umschalten', 'error');
+            }
+        }
+
+        async function updateRetrainConfig() {
+            try {
+                const threshold = parseFloat(document.getElementById('retrain-threshold-select').value);
+                const cooldown = parseFloat(document.getElementById('retrain-cooldown-select').value);
+                const focusErrors = document.getElementById('retrain-focus-errors').checked;
+
+                await fetch('/cnn-lstm/api/v1/retrain/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        accuracy_threshold: threshold,
+                        cooldown_hours: cooldown,
+                        focus_on_errors: focusErrors
+                    })
+                });
+
+                await loadSelfLearningStatus();
+
+            } catch (error) {
+                console.error('Error updating retrain config:', error);
+            }
+        }
+
+        async function triggerManualRetrain() {
+            if (!confirm('Manuelles Re-Training starten? Dies kann einige Zeit dauern.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/retrain/trigger', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (result.status === 'triggered') {
+                    showNotification(
+                        `Re-Training gestartet: ${result.event.training_job_id}`,
+                        'success'
+                    );
+                    await loadSelfLearningStatus();
+                } else {
+                    showNotification(
+                        result.message || 'Re-Training konnte nicht gestartet werden',
+                        'error'
+                    );
+                }
+
+            } catch (error) {
+                console.error('Error triggering manual retrain:', error);
+                showNotification('Fehler beim Starten des Re-Trainings', 'error');
+            }
+        }
+
         // Initial Load
         document.addEventListener('DOMContentLoaded', () => {
             updateHeaderStatus();
@@ -2810,6 +3198,13 @@
 
             // Check if training is already running
             checkTrainingStatus(false);
+
+            // Load backtest stats and scheduler status
+            loadBacktestSummary();
+            loadSchedulerStatus();
+
+            // Load self-learning status
+            loadSelfLearningStatus();
         });
     </script>
 

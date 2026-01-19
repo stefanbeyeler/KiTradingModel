@@ -636,6 +636,240 @@ async def clear_backtest_results():
 
 
 # =============================================================================
+# Auto-Backtest Scheduler Endpoints
+# =============================================================================
+
+class AutoBacktestConfig(BaseModel):
+    """Konfiguration fuer Auto-Backtest Scheduler."""
+    interval_hours: float = Field(
+        default=6.0,
+        ge=0.5,
+        le=168,
+        description="Intervall in Stunden (0.5 - 168)"
+    )
+
+
+@router.post("/backtest/scheduler/start")
+async def start_auto_backtest_scheduler(config: AutoBacktestConfig):
+    """
+    Starte den automatischen Backtest-Scheduler.
+
+    Der Scheduler fuehrt periodisch Backtests fuer alle offenen
+    Predictions durch und aktualisiert die Ergebnisse automatisch.
+
+    - **interval_hours**: Intervall zwischen Backtests (default: 6h)
+    """
+    try:
+        await backtesting_service.start_auto_backtest(config.interval_hours)
+        return {
+            "status": "started",
+            "interval_hours": config.interval_hours,
+            "message": f"Auto-Backtest Scheduler gestartet (Intervall: {config.interval_hours}h)"
+        }
+
+    except Exception as e:
+        logger.error(f"Error starting auto-backtest: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/backtest/scheduler/stop")
+async def stop_auto_backtest_scheduler():
+    """Stoppe den automatischen Backtest-Scheduler."""
+    try:
+        await backtesting_service.stop_auto_backtest()
+        return {
+            "status": "stopped",
+            "message": "Auto-Backtest Scheduler gestoppt"
+        }
+
+    except Exception as e:
+        logger.error(f"Error stopping auto-backtest: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/backtest/scheduler/status")
+async def get_auto_backtest_status():
+    """
+    Hole Status des Auto-Backtest Schedulers.
+
+    Gibt zurueck:
+    - running: Ob Scheduler aktiv ist
+    - interval_hours: Konfiguriertes Intervall
+    - last_run: Zeitpunkt des letzten Durchlaufs
+    - next_run_in_seconds: Sekunden bis zum naechsten Durchlauf
+    - last_result: Ergebnis des letzten Backtests
+    """
+    try:
+        status = backtesting_service.get_scheduler_status()
+        return status
+
+    except Exception as e:
+        logger.error(f"Error getting auto-backtest status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Auto-Retrain Endpoints (Self-Learning System)
+# =============================================================================
+
+class AutoRetrainConfig(BaseModel):
+    """Konfiguration fuer Auto-Retrain."""
+    enabled: Optional[bool] = Field(None, description="Auto-Retrain aktivieren/deaktivieren")
+    accuracy_threshold: Optional[float] = Field(
+        None, ge=30, le=90,
+        description="Accuracy-Schwellwert in % (default: 60)"
+    )
+    min_samples: Optional[int] = Field(
+        None, ge=5, le=100,
+        description="Mindestanzahl Backtests (default: 20)"
+    )
+    cooldown_hours: Optional[float] = Field(
+        None, ge=1, le=168,
+        description="Mindestwartezeit zwischen Trainings in Stunden (default: 24)"
+    )
+    focus_on_errors: Optional[bool] = Field(
+        None,
+        description="Fehler-gewichtetes Training aktivieren"
+    )
+
+
+@router.get("/retrain/status", tags=["7. Self-Learning"])
+async def get_auto_retrain_status():
+    """
+    Hole Status des Auto-Retrain Systems.
+
+    Zeigt:
+    - Ob Self-Learning aktiviert ist
+    - Aktuelle Konfiguration (Schwellwerte)
+    - Cooldown-Status
+    - Laufendes Training
+    """
+    try:
+        from ..services.auto_retrain_service import auto_retrain_service
+        return auto_retrain_service.get_status()
+
+    except Exception as e:
+        logger.error(f"Error getting auto-retrain status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/retrain/config", tags=["7. Self-Learning"])
+async def update_auto_retrain_config(config: AutoRetrainConfig):
+    """
+    Aktualisiere Auto-Retrain Konfiguration.
+
+    Parameter:
+    - **enabled**: Self-Learning ein/ausschalten
+    - **accuracy_threshold**: Unter diesem Wert wird Re-Training getriggert
+    - **min_samples**: Mindestanzahl Backtests bevor geprueft wird
+    - **cooldown_hours**: Mindestwartezeit zwischen Trainings
+    - **focus_on_errors**: Trainiere gezielt auf fehlerhaften Symbolen
+    """
+    try:
+        from ..services.auto_retrain_service import auto_retrain_service
+
+        # Nur gesetzte Felder aktualisieren
+        updates = {k: v for k, v in config.model_dump().items() if v is not None}
+
+        if not updates:
+            raise HTTPException(
+                status_code=400,
+                detail="No configuration values provided"
+            )
+
+        result = auto_retrain_service.update_config(**updates)
+        return {"status": "updated", "config": result}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating auto-retrain config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/retrain/history", tags=["7. Self-Learning"])
+async def get_retrain_history(
+    limit: int = Query(20, ge=1, le=100, description="Anzahl Eintraege")
+):
+    """
+    Hole Historie aller automatischen Re-Trainings.
+
+    Zeigt fuer jedes Training:
+    - Ausloeser (Grund)
+    - Accuracy vorher/nachher
+    - Verbesserung
+    - Training-Status
+    """
+    try:
+        from ..services.auto_retrain_service import auto_retrain_service
+        return {
+            "history": auto_retrain_service.get_history(limit=limit),
+            "statistics": auto_retrain_service.get_statistics()
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting retrain history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/retrain/trigger", tags=["7. Self-Learning"])
+async def manual_retrain_trigger():
+    """
+    Manuell ein Re-Training triggern.
+
+    Ignoriert Cooldown und Accuracy-Schwellwert.
+    Nuetzlich fuer Tests oder wenn sofortiges Training gewuenscht ist.
+    """
+    try:
+        from ..services.auto_retrain_service import auto_retrain_service
+
+        # Hole aktuelle Backtest-Summary
+        summary = backtesting_service.get_summary()
+
+        # Force trigger (ignoriere Checks)
+        event = await auto_retrain_service._trigger_retrain(
+            reason="Manual trigger",
+            accuracy_before=summary.get("price_direction_accuracy", 0),
+            samples_count=summary.get("backtested", 0),
+            backtest_summary=summary
+        )
+
+        if event:
+            return {
+                "status": "triggered",
+                "event": event.to_dict()
+            }
+        else:
+            return {
+                "status": "failed",
+                "message": "Could not trigger re-training"
+            }
+
+    except Exception as e:
+        logger.error(f"Error triggering manual retrain: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/retrain/statistics", tags=["7. Self-Learning"])
+async def get_retrain_statistics():
+    """
+    Hole Statistiken ueber alle Re-Trainings.
+
+    Zeigt:
+    - Anzahl Trainings (gesamt, erfolgreich, fehlgeschlagen)
+    - Durchschnittliche Verbesserung
+    - Beste/schlechteste Verbesserung
+    """
+    try:
+        from ..services.auto_retrain_service import auto_retrain_service
+        return auto_retrain_service.get_statistics()
+
+    except Exception as e:
+        logger.error(f"Error getting retrain statistics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
 # Claude Vision Validation Endpoints
 # =============================================================================
 
