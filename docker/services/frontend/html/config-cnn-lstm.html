@@ -279,6 +279,118 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #1a1a2e;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            color: #64c8ff;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #e57373;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        .symbol-set-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .symbol-set-item.editing {
+            border-color: #64c8ff;
+        }
+
+        .symbol-set-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .symbol-set-name {
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .symbol-set-symbols {
+            font-size: 0.85rem;
+            color: #888;
+            word-break: break-all;
+        }
+
+        .symbol-set-input {
+            width: 100%;
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: #e8e8e8;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
         .btn-group {
             display: flex;
             gap: 0.5rem;
@@ -1119,9 +1231,23 @@
                 </div>
 
                 <div class="training-form">
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label class="form-label">Symbol-Set</label>
+                        <select class="form-select" id="train-symbol-set" onchange="applySymbolSet()">
+                            <option value="custom">Benutzerdefiniert</option>
+                            <option value="core" selected>Kern (Krypto + Forex)</option>
+                            <option value="crypto">Krypto Top 5</option>
+                            <option value="forex">Forex Majors</option>
+                            <option value="mixed">Gemischt (Maximum)</option>
+                            <option value="stocks">US Aktien</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
                         <label class="form-label">Symbole (kommagetrennt)</label>
-                        <input type="text" class="form-input" id="train-symbols" value="BTCUSD,EURUSD,AAPL" placeholder="BTCUSD,EURUSD">
+                        <input type="text" class="form-input" id="train-symbols" value="BTCUSD,ETHUSD,EURUSD,GBPUSD,USDJPY" placeholder="BTCUSD,EURUSD">
+                        <small style="color: #888; font-size: 0.75rem; margin-top: 0.25rem; display: block;" id="symbol-set-description">
+                            2 Krypto + 3 Forex Major Pairs - gute Datenverfügbarkeit
+                        </small>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Timeframes</label>
@@ -1142,6 +1268,12 @@
                             <option value="32" selected>32</option>
                             <option value="64">64</option>
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sets verwalten</label>
+                        <button class="btn btn-primary" onclick="openSymbolSetManager()" style="width: 100%;">
+                            &#9881; Bearbeiten
+                        </button>
                     </div>
                 </div>
 
@@ -2310,10 +2442,221 @@
             return classes[status] || 'neutral';
         }
 
+        // =====================================================
+        // Symbol Set Management
+        // =====================================================
+
+        // Default Symbol Sets (can be customized)
+        const defaultSymbolSets = {
+            core: {
+                name: 'Kern (Krypto + Forex)',
+                symbols: 'BTCUSD,ETHUSD,EURUSD,GBPUSD,USDJPY',
+                description: '2 Krypto + 3 Forex Major Pairs - gute Datenverfügbarkeit'
+            },
+            crypto: {
+                name: 'Krypto Top 5',
+                symbols: 'BTCUSD,ETHUSD,SOLUSD,XRPUSD,BNBUSD',
+                description: 'Top 5 Kryptowährungen nach Marktkapitalisierung'
+            },
+            forex: {
+                name: 'Forex Majors',
+                symbols: 'EURUSD,GBPUSD,USDJPY,USDCHF,AUDUSD,USDCAD',
+                description: '6 Major Forex Pairs mit hoher Liquidität'
+            },
+            mixed: {
+                name: 'Gemischt (Maximum)',
+                symbols: 'BTCUSD,ETHUSD,EURUSD,GBPUSD,USDJPY,XAUUSD,SPX500',
+                description: 'Krypto + Forex + Gold + Index - maximale Diversifikation'
+            },
+            stocks: {
+                name: 'US Aktien',
+                symbols: 'AAPL,MSFT,GOOGL,AMZN,NVDA',
+                description: 'Top 5 US Tech-Aktien'
+            }
+        };
+
+        // Load symbol sets from localStorage or use defaults
+        function loadSymbolSets() {
+            const saved = localStorage.getItem('cnnLstmSymbolSets');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return { ...defaultSymbolSets };
+        }
+
+        // Save symbol sets to localStorage
+        function saveSymbolSets(sets) {
+            localStorage.setItem('cnnLstmSymbolSets', JSON.stringify(sets));
+        }
+
+        let symbolSets = loadSymbolSets();
+
+        // Apply selected symbol set to the form
+        function applySymbolSet() {
+            const select = document.getElementById('train-symbol-set');
+            const symbolsInput = document.getElementById('train-symbols');
+            const description = document.getElementById('symbol-set-description');
+            const setKey = select.value;
+
+            if (setKey === 'custom') {
+                description.textContent = 'Eigene Symbole eingeben';
+                return;
+            }
+
+            const set = symbolSets[setKey];
+            if (set) {
+                symbolsInput.value = set.symbols;
+                description.textContent = set.description;
+            }
+        }
+
+        // Open Symbol Set Manager Modal
+        function openSymbolSetManager() {
+            renderSymbolSetList();
+            document.getElementById('symbol-set-modal').classList.add('active');
+        }
+
+        // Close Symbol Set Manager Modal
+        function closeSymbolSetManager() {
+            document.getElementById('symbol-set-modal').classList.remove('active');
+        }
+
+        // Render the list of symbol sets in the modal
+        function renderSymbolSetList() {
+            const container = document.getElementById('symbol-set-list');
+            let html = '';
+
+            for (const [key, set] of Object.entries(symbolSets)) {
+                html += `
+                    <div class="symbol-set-item" id="symbol-set-${key}">
+                        <div class="symbol-set-header">
+                            <span class="symbol-set-name">${set.name}</span>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="editSymbolSet('${key}')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                    &#9998; Bearbeiten
+                                </button>
+                                <button class="btn btn-danger" onclick="resetSymbolSet('${key}')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                    &#8635; Reset
+                                </button>
+                            </div>
+                        </div>
+                        <div class="symbol-set-symbols">${set.symbols}</div>
+                        <small style="color: #666; font-size: 0.7rem;">${set.description}</small>
+                        <div id="symbol-set-edit-${key}" style="display: none; margin-top: 0.5rem;">
+                            <input type="text" class="symbol-set-input" id="symbol-set-input-${key}" value="${set.symbols}" placeholder="Symbole kommagetrennt">
+                            <input type="text" class="symbol-set-input" id="symbol-set-desc-${key}" value="${set.description}" placeholder="Beschreibung" style="margin-top: 0.25rem;">
+                            <div class="btn-group" style="margin-top: 0.5rem;">
+                                <button class="btn btn-success" onclick="saveSymbolSetEdit('${key}')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                    &#10003; Speichern
+                                </button>
+                                <button class="btn btn-warning" onclick="cancelSymbolSetEdit('${key}')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                    &#10007; Abbrechen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Edit a symbol set
+        function editSymbolSet(key) {
+            document.getElementById(`symbol-set-${key}`).classList.add('editing');
+            document.getElementById(`symbol-set-edit-${key}`).style.display = 'block';
+        }
+
+        // Cancel editing a symbol set
+        function cancelSymbolSetEdit(key) {
+            document.getElementById(`symbol-set-${key}`).classList.remove('editing');
+            document.getElementById(`symbol-set-edit-${key}`).style.display = 'none';
+            // Reset input values
+            document.getElementById(`symbol-set-input-${key}`).value = symbolSets[key].symbols;
+            document.getElementById(`symbol-set-desc-${key}`).value = symbolSets[key].description;
+        }
+
+        // Save edited symbol set
+        function saveSymbolSetEdit(key) {
+            const newSymbols = document.getElementById(`symbol-set-input-${key}`).value.trim().toUpperCase();
+            const newDesc = document.getElementById(`symbol-set-desc-${key}`).value.trim();
+
+            if (!newSymbols) {
+                showToast('Symbole dürfen nicht leer sein', 'error');
+                return;
+            }
+
+            symbolSets[key].symbols = newSymbols;
+            symbolSets[key].description = newDesc || symbolSets[key].description;
+            saveSymbolSets(symbolSets);
+
+            document.getElementById(`symbol-set-${key}`).classList.remove('editing');
+            document.getElementById(`symbol-set-edit-${key}`).style.display = 'none';
+
+            renderSymbolSetList();
+            updateSymbolSetDropdown();
+            showToast(`Set "${symbolSets[key].name}" gespeichert`, 'success');
+        }
+
+        // Reset a symbol set to default
+        function resetSymbolSet(key) {
+            if (defaultSymbolSets[key]) {
+                symbolSets[key] = { ...defaultSymbolSets[key] };
+                saveSymbolSets(symbolSets);
+                renderSymbolSetList();
+                updateSymbolSetDropdown();
+                showToast(`Set "${symbolSets[key].name}" zurückgesetzt`, 'success');
+            }
+        }
+
+        // Reset all symbol sets to defaults
+        function resetAllSymbolSets() {
+            if (!confirm('Alle Symbol-Sets auf Standardwerte zurücksetzen?')) return;
+
+            symbolSets = { ...defaultSymbolSets };
+            saveSymbolSets(symbolSets);
+            renderSymbolSetList();
+            updateSymbolSetDropdown();
+            showToast('Alle Sets zurückgesetzt', 'success');
+        }
+
+        // Update the dropdown options (in case names changed)
+        function updateSymbolSetDropdown() {
+            const select = document.getElementById('train-symbol-set');
+            const currentValue = select.value;
+
+            // Keep custom option, update the rest
+            let html = '<option value="custom">Benutzerdefiniert</option>';
+            for (const [key, set] of Object.entries(symbolSets)) {
+                const selected = key === currentValue ? ' selected' : '';
+                html += `<option value="${key}"${selected}>${set.name}</option>`;
+            }
+            select.innerHTML = html;
+        }
+
         // Initial Load
         document.addEventListener('DOMContentLoaded', () => {
             updateHeaderStatus();
+            updateSymbolSetDropdown();
+            applySymbolSet(); // Apply default set
         });
     </script>
+
+    <!-- Symbol Set Manager Modal -->
+    <div class="modal-overlay" id="symbol-set-modal" onclick="if(event.target === this) closeSymbolSetManager()">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">&#9881; Symbol-Sets verwalten</h3>
+                <button class="modal-close" onclick="closeSymbolSetManager()">&times;</button>
+            </div>
+            <div class="modal-body" id="symbol-set-list">
+                <!-- Symbol sets will be rendered here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-warning" onclick="resetAllSymbolSets()">&#8635; Alle zurücksetzen</button>
+                <button class="btn btn-primary" onclick="closeSymbolSetManager()">Schliessen</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
