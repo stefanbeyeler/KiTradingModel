@@ -215,17 +215,32 @@ async def trigger_prediction_scan():
 @router.get("/history/scan/status")
 async def get_scan_status():
     """
-    Hole Status des Auto-Scans.
+    Hole detaillierten Status des Prediction-Scans.
 
-    Gibt zurueck ob der periodische Scan laeuft und das Scan-Intervall.
+    Gibt zurueck:
+    - scan_running: Ob ein Scan gerade laeuft
+    - total_symbols: Anzahl der zu scannenden Symbole
+    - processed_symbols: Anzahl der bereits gescannten Symbole
+    - current_symbol: Aktuell gescanntes Symbol
+    - new_predictions: Bisher neue Predictions im aktuellen Scan
+    - last_scan_completed: Zeitpunkt des letzten abgeschlossenen Scans
+    - total_new_predictions: Neue Predictions des letzten abgeschlossenen Scans
     """
     try:
+        progress = prediction_history_service.get_scan_progress()
         stats = prediction_history_service.get_statistics()
+
         return {
-            "running": stats.get("scan_running", False),
+            "scan_running": progress.get("scan_running", False),
+            "total_symbols": progress.get("total_symbols", 0),
+            "processed_symbols": progress.get("processed_symbols", 0),
+            "current_symbol": progress.get("current_symbol"),
+            "new_predictions": progress.get("new_predictions", 0),
+            "last_scan_completed": progress.get("last_scan_completed"),
+            "total_new_predictions": progress.get("total_new_predictions", 0),
+            "auto_scan_running": stats.get("scan_running", False),
             "interval_seconds": stats.get("scan_interval_seconds", 300),
             "total_predictions": stats.get("total_predictions", 0),
-            "last_prediction": stats.get("last_prediction")
         }
 
     except Exception as e:

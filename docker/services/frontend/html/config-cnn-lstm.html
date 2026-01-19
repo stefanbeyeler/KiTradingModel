@@ -209,6 +209,76 @@
             cursor: not-allowed;
         }
 
+        /* Progress Bar */
+        .progress-container {
+            display: none;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-title {
+            font-size: 0.9rem;
+            color: #64c8ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-title .spinner-small {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(100, 200, 255, 0.3);
+            border-top-color: #64c8ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .progress-stats {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .progress-bar-outer {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            height: 8px;
+            overflow: hidden;
+        }
+
+        .progress-bar-inner {
+            height: 100%;
+            background: linear-gradient(90deg, #64c8ff, #81c784);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-details {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         .btn-group {
             display: flex;
             gap: 0.5rem;
@@ -881,6 +951,24 @@
                     <div class="stat-card">
                         <div class="stat-value" id="stat-scan-status">-</div>
                         <div class="stat-label">Scan</div>
+                    </div>
+                </div>
+
+                <!-- Scan Progress Bar -->
+                <div class="progress-container" id="scan-progress-container">
+                    <div class="progress-header">
+                        <div class="progress-title">
+                            <div class="spinner-small"></div>
+                            <span>Prediction-Scan läuft...</span>
+                        </div>
+                        <div class="progress-stats" id="scan-progress-stats">0 / 0 Symbole</div>
+                    </div>
+                    <div class="progress-bar-outer">
+                        <div class="progress-bar-inner" id="scan-progress-bar"></div>
+                    </div>
+                    <div class="progress-details">
+                        <span id="scan-current-symbol">Initialisiere...</span>
+                        <span id="scan-new-predictions">Neue Predictions: 0</span>
                     </div>
                 </div>
             </div>
@@ -1784,17 +1872,102 @@
             }
         }
 
-        // Trigger Prediction Scan
-        async function triggerPredictionScan() {
-            try {
-                showToast('Starte Prediction-Scan...', 'info');
-                const response = await fetch('/cnn-lstm/api/v1/history/scan', { method: 'POST' });
-                const data = await response.json();
+        // Trigger Prediction Scan with Progress
+        let scanPollingInterval = null;
 
-                showToast(`Scan abgeschlossen: ${data.new_predictions} neue Predictions`, 'success');
-                loadHistoryStats();
+        async function triggerPredictionScan() {
+            const scanBtn = document.querySelector('button[onclick="triggerPredictionScan()"]');
+            const progressContainer = document.getElementById('scan-progress-container');
+            const progressBar = document.getElementById('scan-progress-bar');
+            const progressStats = document.getElementById('scan-progress-stats');
+            const currentSymbol = document.getElementById('scan-current-symbol');
+            const newPredictions = document.getElementById('scan-new-predictions');
+            const scanStatus = document.getElementById('stat-scan-status');
+
+            try {
+                // Disable button and show progress
+                scanBtn.disabled = true;
+                scanBtn.innerHTML = '&#9203; Läuft...';
+                progressContainer.classList.add('active');
+                progressBar.style.width = '0%';
+                scanStatus.textContent = 'Läuft';
+                scanStatus.style.color = '#64c8ff';
+
+                // Start scan (async)
+                const response = await fetch('/cnn-lstm/api/v1/history/scan', { method: 'POST' });
+
+                if (!response.ok) {
+                    throw new Error('Scan konnte nicht gestartet werden');
+                }
+
+                // Start polling for progress
+                let completed = false;
+                let pollCount = 0;
+                const maxPolls = 120; // Max 2 minutes
+
+                scanPollingInterval = setInterval(async () => {
+                    try {
+                        pollCount++;
+
+                        // Get scan status
+                        const statusResponse = await fetch('/cnn-lstm/api/v1/history/scan/status');
+                        const status = await statusResponse.json();
+
+                        // Update progress UI
+                        if (status.scan_running) {
+                            const progress = status.total_symbols > 0
+                                ? Math.round((status.processed_symbols / status.total_symbols) * 100)
+                                : 0;
+
+                            progressBar.style.width = progress + '%';
+                            progressStats.textContent = `${status.processed_symbols || 0} / ${status.total_symbols || 0} Symbole`;
+                            currentSymbol.textContent = status.current_symbol
+                                ? `Scanne: ${status.current_symbol}`
+                                : 'Verarbeite...';
+                            newPredictions.textContent = `Neue Predictions: ${status.new_predictions || 0}`;
+                        } else if (status.last_scan_completed || pollCount >= maxPolls) {
+                            // Scan completed or timeout
+                            completed = true;
+                            clearInterval(scanPollingInterval);
+                            scanPollingInterval = null;
+
+                            // Final update
+                            progressBar.style.width = '100%';
+                            progressStats.textContent = 'Abgeschlossen';
+                            currentSymbol.textContent = 'Scan beendet';
+                            newPredictions.textContent = `Neue Predictions: ${status.total_new_predictions || 0}`;
+
+                            // Hide progress after delay
+                            setTimeout(() => {
+                                progressContainer.classList.remove('active');
+                                scanBtn.disabled = false;
+                                scanBtn.innerHTML = '&#128269; Scan starten';
+                                scanStatus.textContent = 'Inaktiv';
+                                scanStatus.style.color = '#888';
+                            }, 2000);
+
+                            showToast(`Scan abgeschlossen: ${status.total_new_predictions || 0} neue Predictions`, 'success');
+                            loadHistoryStats();
+                        }
+
+                    } catch (pollError) {
+                        console.error('Polling error:', pollError);
+                    }
+                }, 1000); // Poll every second
 
             } catch (error) {
+                // Reset UI on error
+                progressContainer.classList.remove('active');
+                scanBtn.disabled = false;
+                scanBtn.innerHTML = '&#128269; Scan starten';
+                scanStatus.textContent = 'Fehler';
+                scanStatus.style.color = '#e57373';
+
+                if (scanPollingInterval) {
+                    clearInterval(scanPollingInterval);
+                    scanPollingInterval = null;
+                }
+
                 showToast('Fehler beim Scan: ' + error.message, 'error');
             }
         }

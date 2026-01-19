@@ -88,6 +88,15 @@ class PredictionHistoryService:
         ).split(",")
         self._scan_timeframes = ["H1", "H4", "D1"]
 
+        # Scan Progress Tracking
+        self._scan_in_progress = False
+        self._scan_total_symbols = 0
+        self._scan_processed_symbols = 0
+        self._scan_current_symbol = None
+        self._scan_new_predictions = 0
+        self._scan_last_completed = None
+        self._scan_total_new_predictions = 0
+
         # Lade bestehende History
         self._load_history()
 
@@ -238,12 +247,22 @@ class PredictionHistoryService:
         try:
             import httpx
 
+            # Initialize progress tracking
+            self._scan_in_progress = True
+            self._scan_total_symbols = len(self._scan_symbols)
+            self._scan_processed_symbols = 0
+            self._scan_current_symbol = None
+            self._scan_new_predictions = 0
+
             new_predictions = 0
             cnn_lstm_url = os.getenv("CNN_LSTM_SERVICE_URL", "http://trading-cnn-lstm:3007")
             data_service_url = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 for symbol in self._scan_symbols:
+                    # Update progress
+                    self._scan_current_symbol = symbol
+
                     for timeframe in self._scan_timeframes:
                         try:
                             # Hole Prediction
@@ -280,15 +299,28 @@ class PredictionHistoryService:
 
                             if entry:
                                 new_predictions += 1
+                                self._scan_new_predictions = new_predictions
 
                         except Exception as e:
                             logger.warning(f"Error scanning {symbol}/{timeframe}: {e}")
                             continue
 
+                    # Update processed count after each symbol
+                    self._scan_processed_symbols += 1
+
+            # Mark scan as completed
+            self._scan_in_progress = False
+            self._scan_last_completed = datetime.now(timezone.utc).isoformat()
+            self._scan_total_new_predictions = new_predictions
+            self._scan_current_symbol = None
+
             logger.info(f"Prediction scan complete: {new_predictions} new predictions")
             return new_predictions
 
         except Exception as e:
+            # Reset progress on error
+            self._scan_in_progress = False
+            self._scan_current_symbol = None
             logger.error(f"Error in prediction scan: {e}")
             return 0
 
@@ -436,6 +468,24 @@ class PredictionHistoryService:
             "last_prediction": self._history[-1].timestamp if self._history else None,
             "scan_running": self._running,
             "scan_interval_seconds": self._scan_interval,
+        }
+
+    def get_scan_progress(self) -> dict:
+        """
+        Hole detaillierten Scan-Fortschritt.
+
+        Returns:
+            Dict mit scan_running, total_symbols, processed_symbols,
+            current_symbol, new_predictions, last_scan_completed, total_new_predictions
+        """
+        return {
+            "scan_running": self._scan_in_progress,
+            "total_symbols": self._scan_total_symbols,
+            "processed_symbols": self._scan_processed_symbols,
+            "current_symbol": self._scan_current_symbol,
+            "new_predictions": self._scan_new_predictions,
+            "last_scan_completed": self._scan_last_completed,
+            "total_new_predictions": self._scan_total_new_predictions,
         }
 
     def update_feedback_status(self, prediction_id: str, status: str) -> bool:
