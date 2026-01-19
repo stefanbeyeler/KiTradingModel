@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from .routers import prediction_router, system_router
+from .routers import prediction_router, system_router, revalidation_router
 
 # =============================================================================
 # Configuration
@@ -120,6 +120,18 @@ openapi_tags = [
         "name": "3. Models",
         "description": "Modell-Verwaltung und Informationen"
     },
+    {
+        "name": "4. History",
+        "description": "Prediction-History und Statistiken"
+    },
+    {
+        "name": "5. Feedback",
+        "description": "Nutzer-Feedback und Korrekturen"
+    },
+    {
+        "name": "6. Backtesting",
+        "description": "Historische Validierung gegen Marktdaten"
+    },
 ]
 
 app = FastAPI(
@@ -164,6 +176,11 @@ app.add_middleware(
 
 app.include_router(system_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(prediction_router, prefix="/api/v1", tags=["2. Predictions"])
+app.include_router(
+    revalidation_router,
+    prefix="/api/v1",
+    tags=["4. History", "5. Feedback", "6. Backtesting"]
+)
 
 
 # =============================================================================

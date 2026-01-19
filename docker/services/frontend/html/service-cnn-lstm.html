@@ -685,6 +685,83 @@
                     <span class="endpoint-desc">Modelle neu laden</span>
                 </div>
             </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Prediction History &amp; Revalidierung</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/history</span>
+                    <span class="endpoint-desc">Prediction-History mit Filtern</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/history/statistics</span>
+                    <span class="endpoint-desc">Prediction-Statistiken</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/history/scan</span>
+                    <span class="endpoint-desc">Manuellen Prediction-Scan starten</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/feedback</span>
+                    <span class="endpoint-desc">Feedback zu einer Prediction speichern</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/feedback/pending-revalidation</span>
+                    <span class="endpoint-desc">Predictions zur Revalidierung</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/feedback/revalidate</span>
+                    <span class="endpoint-desc">Prediction als revalidiert markieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/feedback/revalidation-statistics</span>
+                    <span class="endpoint-desc">Verbesserungsrate nach Training</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Backtesting</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/backtest/run</span>
+                    <span class="endpoint-desc">Backtests durchführen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/backtest/results</span>
+                    <span class="endpoint-desc">Backtest-Ergebnisse abrufen</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/backtest/summary</span>
+                    <span class="endpoint-desc">Backtest-Zusammenfassung</span>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem; opacity: 0.8;">Claude Vision Validierung</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/v1/validate/claude</span>
+                    <span class="endpoint-desc">Prediction mit Claude AI validieren</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/validate/claude/history</span>
+                    <span class="endpoint-desc">Claude-Validierungshistorie</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/validate/claude/statistics</span>
+                    <span class="endpoint-desc">Claude-Agreement-Statistiken</span>
+                </div>
+            </div>
         </div>
 
         <div class="content-card">
