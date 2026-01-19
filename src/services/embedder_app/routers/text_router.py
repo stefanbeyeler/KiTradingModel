@@ -9,6 +9,7 @@ from ..models.schemas import (
     EmbeddingType,
     SimilarityRequest,
     SimilarityResponse,
+    BatchSimilarityRequest,
 )
 from ..services.embedding_service import embedding_service
 
@@ -80,39 +81,45 @@ async def compute_text_similarity(request: SimilarityRequest):
 
 
 @router.post("/batch-similarity")
-async def compute_batch_similarity(
-    texts: list[str],
-    use_finbert: bool = False
-):
+async def compute_batch_similarity(request: BatchSimilarityRequest):
     """
-    Compute pairwise similarities for multiple texts.
+    Compute similarity between a query and multiple candidate texts.
 
-    Returns similarity matrix.
+    Returns ranked results with similarity scores.
+
+    - **query**: The query text to compare
+    - **candidates**: List of candidate texts
+    - **use_finbert**: Use FinBERT for finance-specific comparison
     """
     try:
+        # Embed query and all candidates together
+        all_texts = [request.query] + request.candidates
         result = await embedding_service.embed_text(
-            texts=texts,
-            use_finbert=use_finbert
+            texts=all_texts,
+            use_finbert=request.use_finbert
         )
 
         embeddings = result.embedding
-        n = len(texts)
+        query_embedding = embeddings[0]
 
-        # Compute similarity matrix
-        similarities = []
-        for i in range(n):
-            row = []
-            for j in range(n):
-                sim = await embedding_service.compute_similarity(
-                    embeddings[i],
-                    embeddings[j]
-                )
-                row.append(round(sim, 4))
-            similarities.append(row)
+        # Compute similarity between query and each candidate
+        results = []
+        for i, candidate in enumerate(request.candidates):
+            sim = await embedding_service.compute_similarity(
+                query_embedding,
+                embeddings[i + 1]  # +1 because query is at index 0
+            )
+            results.append({
+                "text": candidate,
+                "similarity": round(sim, 4)
+            })
+
+        # Sort by similarity descending
+        results.sort(key=lambda x: x["similarity"], reverse=True)
 
         return {
-            "texts": texts,
-            "similarity_matrix": similarities,
+            "query": request.query,
+            "results": results,
             "model": result.model_name
         }
     except Exception as e:

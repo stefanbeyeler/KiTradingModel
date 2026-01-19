@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Embedder Service - Konfiguration</title>
     <style>
         * {
@@ -427,12 +430,15 @@
             resize: vertical;
         }
 
+        /* Select dropdown styling for better contrast */
         select.form-control {
             cursor: pointer;
             appearance: none;
             -webkit-appearance: none;
             -moz-appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-color: #1a1a2e;
+            color: #e8e8e8;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364c8ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
             background-repeat: no-repeat;
             background-position: right 0.7rem center;
             background-size: 1em;
@@ -440,16 +446,36 @@
         }
 
         select.form-control option {
-            background-color: #1a1a2e;
+            background-color: #1e2740;
             color: #e8e8e8;
-            padding: 0.5rem;
+            padding: 10px 12px;
+        }
+
+        select.form-control optgroup {
+            background-color: #0d1520;
+            color: #64c8ff;
+            font-weight: 700;
+            font-style: normal;
+            font-size: 0.95rem;
+            padding: 10px 8px;
+        }
+
+        select.form-control optgroup option {
+            background-color: #1e2740;
+            color: #d0d0d0;
+            font-weight: 400;
+            padding-left: 16px;
         }
 
         select.form-control option:hover,
-        select.form-control option:focus,
+        select.form-control option:focus {
+            background-color: #2a4060 !important;
+            color: #ffffff;
+        }
+
         select.form-control option:checked {
-            background-color: #2a2a4e;
-            color: #a78bfa;
+            background-color: #3a5080;
+            color: #ffffff;
         }
 
         /* Info Box */
@@ -684,10 +710,7 @@
                     <div class="form-group">
                         <label>Symbol</label>
                         <select class="form-control" id="ts-symbol">
-                            <option value="BTCUSD">BTCUSD</option>
-                            <option value="ETHUSD">ETHUSD</option>
-                            <option value="EURUSD">EURUSD</option>
-                            <option value="XAUUSD">XAUUSD</option>
+                            <option value="">Laden...</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -729,8 +752,7 @@
                     <div class="form-group" style="margin-bottom: 0; flex: 1;">
                         <label>Symbol</label>
                         <select class="form-control" id="similar-symbol">
-                            <option value="BTCUSD">BTCUSD</option>
-                            <option value="ETHUSD">ETHUSD</option>
+                            <option value="">Laden...</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
@@ -1130,40 +1152,65 @@ Bitcoin bearish Signal</textarea>
         // Embed Timeseries
         async function embedTimeseries() {
             const btn = document.getElementById('btn-embed-ts');
+            const container = document.getElementById('ts-embedding-result');
+
+            const symbol = document.getElementById('ts-symbol').value;
+            const timeframe = document.getElementById('ts-timeframe').value;
+            const sequenceLength = parseInt(document.getElementById('ts-lookback').value);
+
+            // Validate symbol
+            if (!symbol || symbol === '' || symbol === 'Laden...') {
+                showToast('Bitte wählen Sie ein Symbol aus', 'error');
+                return;
+            }
+
             btn.classList.add('btn-loading');
             btn.disabled = true;
 
             try {
-                const symbol = document.getElementById('ts-symbol').value;
-                const timeframe = document.getElementById('ts-timeframe').value;
-                const lookback = parseInt(document.getElementById('ts-lookback').value);
-
                 const response = await fetch(`${API_BASE}/timeseries/embed`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ symbol, timeframe, lookback })
+                    body: JSON.stringify({ symbol, timeframe, sequence_length: sequenceLength })
                 });
 
-                if (!response.ok) throw new Error('Embedding failed');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `HTTP ${response.status}`);
+                }
 
                 const data = await response.json();
-                const container = document.getElementById('ts-embedding-result');
+
+                // API returns embeddings (array of arrays), get first one
+                const embedding = data.embeddings?.[0] || data.embeddings || [];
+
+                if (!embedding || embedding.length === 0) {
+                    throw new Error('Keine Embedding-Daten erhalten');
+                }
 
                 container.innerHTML = `
                     <div style="margin-bottom: 1rem;">
                         <div style="color: #888; margin-bottom: 0.5rem;">Symbol: <span style="color: #64c8ff;">${symbol}</span></div>
-                        <div style="color: #888; margin-bottom: 0.5rem;">Dimension: <span style="color: #64c8ff;">${data.dimension || data.embedding?.length || '-'}</span></div>
-                        <div style="color: #888;">Perioden: <span style="color: #64c8ff;">${lookback}</span></div>
+                        <div style="color: #888; margin-bottom: 0.5rem;">Dimension: <span style="color: #64c8ff;">${data.dimension || embedding.length || '-'}</span></div>
+                        <div style="color: #888; margin-bottom: 0.5rem;">Perioden: <span style="color: #64c8ff;">${sequenceLength}</span></div>
+                        <div style="color: #888;">Modell: <span style="color: #64c8ff;">${data.model || 'ts2vec'}</span></div>
+                        <div style="color: #888;">Cached: <span style="color: ${data.cached ? '#4CAF50' : '#ff9800'};">${data.cached ? 'Ja' : 'Nein'}</span></div>
                     </div>
                     <div style="color: #888; margin-bottom: 0.5rem; font-size: 0.85rem;">Embedding (erste 20 Werte):</div>
                     <div class="embedding-preview">
-                        [${(data.embedding || []).slice(0, 20).map(v => v.toFixed(6)).join(', ')}${data.embedding?.length > 20 ? ', ...' : ''}]
+                        [${embedding.slice(0, 20).map(v => v.toFixed(6)).join(', ')}${embedding.length > 20 ? ', ...' : ''}]
                     </div>
                 `;
 
                 showToast('Zeitreihe erfolgreich eingebettet');
             } catch (error) {
-                showToast('Fehler beim Einbetten', 'error');
+                console.error('Timeseries embed error:', error);
+                container.innerHTML = `
+                    <div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">
+                        Fehler: ${error.message}
+                    </div>
+                `;
+                showToast('Fehler beim Einbetten: ' + error.message, 'error');
             } finally {
                 btn.classList.remove('btn-loading');
                 btn.disabled = false;
@@ -1327,11 +1374,70 @@ Bitcoin bearish Signal</textarea>
             }
         }
 
+        // Build grouped select options HTML from categories
+        function buildGroupedOptions(categories, defaultSymbol = 'BTCUSD') {
+            let html = '';
+            const order = ['Krypto', 'Forex', 'Indizes', 'Rohstoffe', 'Aktien', 'Andere'];
+
+            order.forEach(category => {
+                const symbols = categories[category];
+                if (symbols && symbols.length > 0) {
+                    html += `<optgroup label="${category} (${symbols.length})">`;
+                    symbols.forEach(s => {
+                        html += `<option value="${s}" ${s === defaultSymbol ? 'selected' : ''}>${s}</option>`;
+                    });
+                    html += '</optgroup>';
+                }
+            });
+
+            return html;
+        }
+
+        // Load available symbols from Data Service (with server-side categorization)
+        async function loadSymbols() {
+            try {
+                const response = await fetch('/data/api/v1/db/coverage');
+                if (!response.ok) throw new Error('Failed to load symbols');
+
+                const data = await response.json();
+
+                // Use categories from Data Service (already sorted server-side)
+                const categories = data.categories || {};
+                const optionsHtml = buildGroupedOptions(categories, 'BTCUSD');
+
+                // Populate both symbol dropdowns
+                const dropdowns = ['ts-symbol', 'similar-symbol'];
+                dropdowns.forEach(id => {
+                    const select = document.getElementById(id);
+                    if (select) {
+                        select.innerHTML = optionsHtml;
+                    }
+                });
+
+                const totalSymbols = Object.values(categories).flat().length;
+                const activeCategories = Object.keys(categories).filter(k => categories[k] && categories[k].length > 0).length;
+                console.log(`Loaded ${totalSymbols} symbols in ${activeCategories} categories from Data Service`);
+            } catch (error) {
+                console.error('Error loading symbols:', error);
+                // Fallback to default symbols (ungrouped)
+                const fallbackSymbols = ['BTCUSD', 'ETHUSD', 'EURUSD', 'XAUUSD'];
+                ['ts-symbol', 'similar-symbol'].forEach(id => {
+                    const select = document.getElementById(id);
+                    if (select) {
+                        select.innerHTML = fallbackSymbols.map(s =>
+                            `<option value="${s}">${s}</option>`
+                        ).join('');
+                    }
+                });
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadModels();
             loadDimensions();
             loadCacheStats();
+            loadSymbols();
 
             // Auto-refresh every 30 seconds
             setInterval(() => {

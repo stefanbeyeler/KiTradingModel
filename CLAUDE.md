@@ -342,6 +342,165 @@ In allen Service-Seiten und Unterseiten gilt folgendes Layout:
 </div>
 ```
 
+### Dropdown-Styling (Dark Theme)
+
+Select-Dropdowns mit `<optgroup>` erfordern spezielle Styling-Regeln für guten Kontrast im Dark Theme:
+
+```css
+/* Select dropdown styling for better contrast */
+select.form-control {
+    background-color: #1a1a2e;
+    color: #e8e8e8;
+    cursor: pointer;
+}
+
+select.form-control option {
+    background-color: #1e2740;
+    color: #e8e8e8;
+    padding: 10px 12px;
+}
+
+select.form-control optgroup {
+    background-color: #0d1520;      /* Dunkler als Options */
+    color: #64c8ff;                 /* Cyan für Kategorien */
+    font-weight: 700;
+    font-style: normal;             /* Kein Kursiv */
+}
+
+select.form-control optgroup option {
+    background-color: #1e2740;
+    color: #d0d0d0;
+    font-weight: 400;
+    padding-left: 16px;             /* Einrückung unter Kategorie */
+}
+
+select.form-control option:checked {
+    background-color: #3a5080;
+    color: #ffffff;
+}
+```
+
+**Farbhierarchie (Hell → Dunkel):**
+
+- Ausgewählte Option: `#3a5080` (hellster Hintergrund)
+- Hover/Focus: `#2a4060`
+- Normale Option: `#1e2740`
+- Optgroup-Header: `#0d1520` (dunkelster Hintergrund)
+- Select-Feld: `#1a1a2e`
+
+## Symbol-Kategorisierung (VERBINDLICH)
+
+### Zentrale Quelle: Data Service
+
+Symbole und deren Kategorisierung werden **ausschliesslich vom Data Service** bereitgestellt. Frontend-Komponenten dürfen **keine eigene Kategorisierungslogik** implementieren.
+
+### API-Endpoint
+
+```text
+GET /data/api/v1/db/coverage
+```
+
+**Response-Format:**
+```json
+{
+  "status": "ok",
+  "symbols_count": 42,
+  "symbols": { "BTCUSD": {...}, "EURUSD": {...}, ... },
+  "categories": {
+    "Krypto": ["BTCUSD", "ETHUSD", "XRPUSD", ...],
+    "Forex": ["EURUSD", "GBPUSD", "USDJPY", ...],
+    "Indizes": ["US30", "US500", "DAX", "UK100", ...],
+    "Rohstoffe": ["XAUUSD", "XAGUSD", "WTICOUSD", ...],
+    "Aktien": ["AAPL", "MSFT", "TSLA", ...],
+    "Andere": [...]
+  }
+}
+```
+
+### Kategorien
+
+| Kategorie | Beschreibung | Beispiele |
+|-----------|--------------|-----------|
+| **Krypto** | Kryptowährungen | BTCUSD, ETHUSD, XRPUSD, SOLUSD |
+| **Forex** | Währungspaare | EURUSD, GBPUSD, USDJPY, AUDUSD |
+| **Indizes** | Aktienindizes | US30, US500, DAX, UK100, JP225 |
+| **Rohstoffe** | Commodities | XAUUSD, XAGUSD, WTICOUSD, BRENTOIL |
+| **Aktien** | Einzelaktien | AAPL, MSFT, TSLA, GOOGL |
+| **Andere** | Nicht kategorisiert | - |
+
+### Frontend-Implementierung
+
+```javascript
+// ✅ RICHTIG: Kategorien vom Data Service verwenden
+async function loadSymbols() {
+    const response = await fetch('/data/api/v1/db/coverage');
+    const data = await response.json();
+
+    // Kategorien direkt aus API verwenden
+    const categories = data.categories || {};
+    const optionsHtml = buildGroupedOptions(categories, 'BTCUSD');
+    document.getElementById('symbol-select').innerHTML = optionsHtml;
+}
+
+function buildGroupedOptions(categories, defaultSymbol) {
+    let html = '';
+    const order = ['Krypto', 'Forex', 'Indizes', 'Rohstoffe', 'Aktien', 'Andere'];
+
+    order.forEach(category => {
+        const symbols = categories[category];
+        if (symbols && symbols.length > 0) {
+            html += `<optgroup label="${category} (${symbols.length})">`;
+            symbols.forEach(s => {
+                html += `<option value="${s}" ${s === defaultSymbol ? 'selected' : ''}>${s}</option>`;
+            });
+            html += '</optgroup>';
+        }
+    });
+    return html;
+}
+
+// ❌ FALSCH: Eigene Kategorisierungslogik im Frontend
+function categorizeSymbol(symbol) {
+    if (symbol.includes('BTC')) return 'Krypto';  // NICHT ERLAUBT
+    // ...
+}
+```
+
+### Backend-Implementierung
+
+Die Kategorisierungslogik befindet sich zentral in:
+
+```text
+src/services/data_app/api/db_routes.py
+```
+
+**Zentrale Datenstrukturen:**
+- `CRYPTO_BASES`: Set aller Krypto-Basiswährungen
+- `FOREX_CURRENCIES`: Set aller Forex-Währungen
+- `INDICES_EXACT`: Set aller Index-Symbole
+- `COMMODITIES_EXACT`: Set aller Rohstoff-Symbole
+- `STOCKS_EXACT`: Set aller Aktien-Symbole
+
+**Funktion:** `categorize_symbol(symbol: str) -> str`
+
+### Verbindliche Regeln
+
+1. **Niemals Kategorisierung im Frontend**
+   - ❌ Eigene `categorizeSymbol()` Funktion in JavaScript
+   - ✅ `categories` aus `/coverage` API-Response verwenden
+
+2. **Neue Symbole zentral hinzufügen**
+   - Neue Symbole werden in `db_routes.py` kategorisiert
+   - Sets wie `CRYPTO_BASES`, `INDICES_EXACT` erweitern
+
+3. **Konsistente Reihenfolge**
+   - Kategorien immer in dieser Reihenfolge anzeigen:
+   - Krypto → Forex → Indizes → Rohstoffe → Aktien → Andere
+
+4. **Fallback bei API-Fehler**
+   - Bei Fehler: Einfache Liste ohne Gruppierung anzeigen
+   - Mindestens Fallback-Symbole: `['BTCUSD', 'ETHUSD', 'EURUSD', 'XAUUSD']`
+
 ## Candlestick Pattern Charts (VERBINDLICH)
 
 ### Chart-Kontext-Regel

@@ -24,6 +24,124 @@ from ....config.database import SUPPORTED_TIMEFRAMES
 router = APIRouter(prefix="/db", tags=["5. Database"])
 
 
+# ==================== Symbol Categorization ====================
+
+# Known crypto base symbols
+CRYPTO_BASES = {
+    # Major coins
+    'BTC', 'ETH', 'XRP', 'LTC', 'BCH', 'ADA', 'DOT', 'LINK', 'LNK', 'BNB', 'SOL',
+    'DOGE', 'DOG', 'AVAX', 'MATIC', 'MTC', 'POL', 'UNI', 'ATOM', 'XLM', 'ALGO', 'FIL',
+    'KSM',  # Kusama
+    'TRX', 'ETC', 'XMR', 'AAVE', 'MKR', 'COMP', 'SNX', 'YFI', 'SUSHI', 'CRV',
+    # DeFi & Utility
+    'BAL', 'REN', 'KNC', 'ZRX', 'BAT', 'ENJ', 'MANA', 'SAND', 'AXS', 'CHZ',
+    'FLOW', 'NEAR', 'FTM', 'ONE', 'VET', 'THETA', 'EGLD', 'ICP', 'HNT', 'XTZ',
+    'EOS', 'NEO', 'WAVES', 'DASH', 'ZEC', 'QTUM', 'ICX', 'ZIL', 'ONT', 'IOST',
+    'NANO', 'BTT', 'WIN', 'SXP', 'STORJ', 'ANT', 'BAND', 'NMR', 'OGN', 'CELO',
+    'ANKR', 'SKL', 'GRT', 'LRC', 'PERP', 'DYDX', 'IMX', 'APE', 'GMT', 'OP',
+    # Layer 2 & New chains
+    'ARB', 'SUI', 'SEI', 'TIA', 'JUP', 'WIF', 'PEPE', 'SHIB', 'FLOKI', 'BONK',
+    'AVX', 'TON', 'RENDER', 'FET', 'INJ', 'STX', 'RUNE', 'ORDI', 'WLD', 'PYTH',
+    'JTO', 'BLUR', 'STRK', 'DYM', 'PIXEL', 'PORTAL', 'ALT', 'MANTA', 'PENDLE',
+    # Additional common coins
+    'HBAR', 'KAS', 'QNT', 'AR', 'TAO', 'MNT', 'BEAM', 'RNDR', 'TWT', 'CFX',
+    'GALA', 'ROSE', 'KAVA', 'AKT', 'GMX', 'MASK', 'ACH', 'API3', 'SSV', 'AGIX',
+    'OCEAN', 'JASMY', 'MAGIC', 'HIGH', 'LQTY', 'RPL', 'FXS', 'CVX', 'OSMO',
+    'KLAY', 'CAKE', 'LUNA', 'LUNC', 'UST', 'USDT', 'USDC', 'DAI', 'TUSD', 'BUSD',
+    # Meme coins & others
+    'BABYDOGE', 'ELON', 'SAFEMOON', 'WOJAK', 'TURBO', 'LADYS', 'MONG', 'BOB',
+    'BRETT', 'POPCAT', 'MOG', 'NEIRO', 'GOAT', 'PNUT', 'ACT', 'MOODENG',
+}
+
+# Known forex currency codes
+FOREX_CURRENCIES = {
+    'EUR', 'GBP', 'AUD', 'NZD', 'USD', 'CAD', 'CHF', 'JPY',
+    'SEK', 'NOK', 'DKK', 'PLN', 'HUF', 'CZK', 'TRY', 'ZAR',
+    'MXN', 'SGD', 'HKD', 'CNH', 'CNY',
+}
+
+# Known indices (exact matches)
+INDICES_EXACT = {
+    'US30', 'US500', 'US100', 'US2000',
+    'NAS100', 'NASDAQ', 'SPX', 'SPX500', 'DJ30', 'DJI',
+    'DAX', 'DAX30', 'DAX40', 'GER30', 'GER40', 'DE30', 'DE40',
+    'FTSE', 'FTSE100', 'UK100',
+    'CAC', 'CAC40', 'FRA40', 'FR40',
+    'STOXX', 'STOXX50', 'EU50', 'EUSTX50',
+    'NIKKEI', 'NIK225', 'NK225', 'JP225', 'JPN225',
+    'HANG', 'HSI', 'HK50', 'HANGSENG',
+    'AUS200', 'ASX200', 'AU200',
+    'IBEX', 'IBEX35', 'ESP35', 'ES35',
+    'SMI', 'SMI20', 'SUI20', 'CH20',
+    'MIB', 'FTMIB', 'IT40', 'ITA40',
+    'AEX', 'AEX25', 'NL25',
+    'CHINA50', 'CHINAH', 'CN50',
+    'INDIA50', 'NIFTY', 'SENSEX',
+    'RUSSELL', 'RUT', 'RTY',
+    'VIX', 'UVXY', 'SVXY',
+}
+
+# Known commodities (exact matches)
+COMMODITIES_EXACT = {
+    'XAU', 'XAUUSD', 'GOLD',
+    'XAG', 'XAGUSD', 'SILVER',
+    'XPT', 'XPTUSD', 'PLATINUM', 'PLAT',
+    'XPD', 'XPDUSD', 'PALLADIUM', 'PALL',
+    'XBRUSD', 'BRENT', 'UKOIL',
+    'XTIUSD', 'WTI', 'USOIL', 'CRUDEOIL', 'OIL',
+    'NGAS', 'NATGAS', 'XNGUSD',
+    'COPPER', 'XCU', 'HG',
+    'WHEAT', 'CORN', 'SOYBEAN', 'SOYBEANS',
+    'COFFEE', 'SUGAR', 'COCOA', 'COTTON',
+}
+
+# Common crypto pair suffixes
+CRYPTO_SUFFIXES = {
+    'USD', 'USDT', 'USDC', 'BUSD', 'TUSD', 'DAI', 'FDUSD',  # Stablecoins
+    'EUR', 'GBP', 'JPY', 'TRY', 'BRL', 'AUD',  # Fiat
+    'BTC', 'ETH', 'BNB', 'SOL',  # Crypto bases
+}
+
+
+def categorize_symbol(symbol: str) -> str:
+    """Categorize a trading symbol into asset class."""
+    import re
+    upper = symbol.upper()
+
+    # 1. Check for indices (exact match first)
+    if upper in INDICES_EXACT:
+        return 'Indizes'
+    # Index pattern match (e.g., UK100, JP225, etc.)
+    if re.match(r'^[A-Z]{2,6}\d{2,3}$', upper):
+        return 'Indizes'
+
+    # 2. Check for commodities (exact or starts with)
+    for com in COMMODITIES_EXACT:
+        if upper == com or upper.startswith(com):
+            return 'Rohstoffe'
+
+    # 3. Check for forex (6-char pairs of known currencies)
+    if len(upper) == 6:
+        base = upper[:3]
+        quote = upper[3:]
+        if base in FOREX_CURRENCIES and quote in FOREX_CURRENCIES:
+            return 'Forex'
+
+    # 4. Check for crypto (base + suffix)
+    for base in CRYPTO_BASES:
+        if upper.startswith(base):
+            suffix = upper[len(base):]
+            if suffix == '' or suffix in CRYPTO_SUFFIXES:
+                return 'Krypto'
+
+    # 5. Check for stocks (1-5 uppercase letters, not a forex currency)
+    if re.match(r'^[A-Z]{1,5}$', upper) and upper not in FOREX_CURRENCIES:
+        return 'Aktien'
+
+    # 6. Everything else
+    return 'Andere'
+
+
 # ==================== Response Models ====================
 
 class OHLCVResponse(BaseModel):
@@ -520,10 +638,28 @@ async def get_data_coverage():
                     logger.debug(f"Table {table} not found or error: {e}")
                     continue
 
+        # Categorize symbols
+        categories = {
+            'Krypto': [],
+            'Forex': [],
+            'Indizes': [],
+            'Rohstoffe': [],
+            'Aktien': [],
+            'Andere': [],
+        }
+        for symbol in coverage.keys():
+            cat = categorize_symbol(symbol)
+            categories[cat].append(symbol)
+
+        # Sort symbols within each category
+        for cat in categories:
+            categories[cat].sort()
+
         return {
             "status": "ok",
             "symbols_count": len(coverage),
             "symbols": coverage,
+            "categories": categories,
         }
     except Exception as e:
         logger.error(f"Failed to get data coverage: {e}")

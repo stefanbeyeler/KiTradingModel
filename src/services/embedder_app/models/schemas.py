@@ -62,6 +62,18 @@ class SimilarityResponse(BaseModel):
     model: str = Field(..., description="Model used")
 
 
+class BatchSimilarityRequest(BaseModel):
+    """Request for batch similarity (query vs candidates)."""
+    query: str = Field(..., description="Query text to compare against candidates")
+    candidates: List[str] = Field(..., description="List of candidate texts")
+    use_finbert: bool = Field(default=False, description="Use FinBERT for financial text")
+
+    model_config = {"json_schema_extra": {"example": {
+        "query": "Bitcoin Kaufsignal",
+        "candidates": ["BTC bullish Trend", "Ethereum steigt", "Gold fällt"]
+    }}}
+
+
 class SimilarPatternRequest(BaseModel):
     """Request for finding similar patterns."""
     symbol: str = Field(..., description="Trading symbol")

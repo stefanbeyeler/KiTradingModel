@@ -3,6 +3,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 import numpy as np
+import httpx
 from loguru import logger
 
 from ..models.schemas import (
@@ -13,8 +14,43 @@ from ..models.schemas import (
     SimilarPatternResponse,
 )
 from ..services.embedding_service import embedding_service
+from ..config import settings
 
 router = APIRouter()
+
+# HTTP Client for Data Service
+_http_client: Optional[httpx.AsyncClient] = None
+
+
+async def get_http_client() -> httpx.AsyncClient:
+    """Get or create HTTP client for Data Service."""
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(timeout=30.0)
+    return _http_client
+
+
+async def fetch_ohlcv_from_data_service(symbol: str, timeframe: str, limit: int) -> list:
+    """Fetch OHLCV data from Data Service via HTTP."""
+    client = await get_http_client()
+    data_service_url = getattr(settings, 'data_service_url', 'http://trading-data:3001')
+
+    url = f"{data_service_url}/api/v1/db/ohlcv/{symbol}"
+    params = {"timeframe": timeframe, "limit": limit}
+
+    try:
+        response = await client.get(url, params=params)
+        response.raise_for_status()
+        result = response.json()
+        # Handle both formats: {"data": [...]} or direct list
+        data = result.get("data", result) if isinstance(result, dict) else result
+        return data if isinstance(data, list) else []
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Data Service HTTP error: {e.response.status_code} - {e.response.text}")
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching data from Data Service: {e}")
+        raise
 
 
 @router.post("/embed", response_model=EmbeddingResponse)
@@ -29,13 +65,10 @@ async def embed_timeseries(request: TimeSeriesEmbeddingRequest):
     - **sequence_length**: Number of candles for embedding
     """
     try:
-        # Import data gateway for fetching OHLCV
-        from src.services.data_gateway_service import data_gateway
-
-        # Fetch OHLCV data
-        data = await data_gateway.get_historical_data(
+        # Fetch OHLCV data from Data Service via HTTP
+        data = await fetch_ohlcv_from_data_service(
             symbol=request.symbol,
-            interval=request.timeframe,
+            timeframe=request.timeframe,
             limit=request.sequence_length
         )
 
@@ -46,15 +79,28 @@ async def embed_timeseries(request: TimeSeriesEmbeddingRequest):
             )
 
         # Convert to numpy array (seq_len, 5) for OHLCV
+        # Handle None/null values for volume
         ohlcv = np.array([
-            [d['open'], d['high'], d['low'], d['close'], d.get('volume', 0)]
+            [
+                d['open'],
+                d['high'],
+                d['low'],
+                d['close'],
+                d.get('volume') if d.get('volume') is not None else 0.0
+            ]
             for d in data
         ], dtype=np.float32)
 
+        # Replace any NaN values with 0
+        ohlcv = np.nan_to_num(ohlcv, nan=0.0, posinf=0.0, neginf=0.0)
+
         result = await embedding_service.embed_timeseries(ohlcv)
 
+        # Ensure embeddings are JSON-serializable (no NaN/Inf)
+        embeddings = np.nan_to_num(result.embedding, nan=0.0, posinf=0.0, neginf=0.0)
+
         return EmbeddingResponse(
-            embeddings=result.embedding.tolist(),
+            embeddings=embeddings.tolist(),
             dimension=result.dimension,
             model=result.model_name,
             embedding_type=result.embedding_type,
@@ -117,14 +163,12 @@ async def embed_batch_timeseries(
     Returns embeddings for all requested symbols.
     """
     try:
-        from src.services.data_gateway_service import data_gateway
-
         results = []
         for req in requests:
             try:
-                data = await data_gateway.get_historical_data(
+                data = await fetch_ohlcv_from_data_service(
                     symbol=req.symbol,
-                    interval=req.timeframe,
+                    timeframe=req.timeframe,
                     limit=req.sequence_length
                 )
 
@@ -178,13 +222,10 @@ async def find_similar_patterns(request: SimilarPatternRequest):
     - **lookback_days**: How far back to search
     """
     try:
-        from src.services.data_gateway_service import data_gateway
-        from datetime import datetime, timedelta
-
         # Get current pattern (last 50 candles)
-        current_data = await data_gateway.get_historical_data(
+        current_data = await fetch_ohlcv_from_data_service(
             symbol=request.symbol,
-            interval=request.timeframe,
+            timeframe=request.timeframe,
             limit=50
         )
 
@@ -203,9 +244,9 @@ async def find_similar_patterns(request: SimilarPatternRequest):
         current_embedding = current_result.embedding[0]
 
         # Get historical data
-        historical_data = await data_gateway.get_historical_data(
+        historical_data = await fetch_ohlcv_from_data_service(
             symbol=request.symbol,
-            interval=request.timeframe,
+            timeframe=request.timeframe,
             limit=request.lookback_days * 24  # Approximation for hourly
         )
 
