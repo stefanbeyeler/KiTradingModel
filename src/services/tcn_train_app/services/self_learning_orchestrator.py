@@ -49,6 +49,11 @@ class OrchestratorConfig:
     enabled: bool = True
     check_interval_minutes: int = 60  # Check every hour
 
+    # Time-based scheduling (daily at specific time)
+    scheduled_training_enabled: bool = False  # Enable time-based scheduling
+    scheduled_hour: int = 2  # Hour (0-23) for scheduled training (default: 02:00)
+    scheduled_minute: int = 0  # Minute (0-59) for scheduled training
+
     # Training triggers
     min_samples_for_training: int = 100
     min_hours_between_training: int = 24
@@ -81,6 +86,7 @@ class OrchestratorStatus:
     last_training: Optional[str] = None
     last_training_trigger: Optional[str] = None
     next_check: Optional[str] = None
+    next_scheduled_training: Optional[str] = None  # Next scheduled training time
     training_count: int = 0
     successful_deployments: int = 0
     rejected_models: int = 0
@@ -97,6 +103,7 @@ class OrchestratorStatus:
             "last_training": self.last_training,
             "last_training_trigger": self.last_training_trigger,
             "next_check": self.next_check,
+            "next_scheduled_training": self.next_scheduled_training,
             "training_count": self.training_count,
             "successful_deployments": self.successful_deployments,
             "rejected_models": self.rejected_models,
@@ -208,6 +215,9 @@ class SelfLearningOrchestrator:
         """Main self-learning loop."""
         logger.info(f"Self-learning loop running (check interval: {self.config.check_interval_minutes}min)")
 
+        # Update next scheduled training time
+        self._update_next_scheduled_training()
+
         while self.status.loop_running:
             try:
                 await self._check_and_train()
@@ -224,6 +234,46 @@ class SelfLearningOrchestrator:
 
             # Wait for next check
             await asyncio.sleep(self.config.check_interval_minutes * 60)
+
+    def _update_next_scheduled_training(self) -> None:
+        """Calculate and update the next scheduled training time."""
+        if not self.config.scheduled_training_enabled:
+            self.status.next_scheduled_training = None
+            return
+
+        now = datetime.utcnow()
+        scheduled_time = now.replace(
+            hour=self.config.scheduled_hour,
+            minute=self.config.scheduled_minute,
+            second=0,
+            microsecond=0
+        )
+
+        # If scheduled time has passed today, schedule for tomorrow
+        if scheduled_time <= now:
+            scheduled_time += timedelta(days=1)
+
+        self.status.next_scheduled_training = scheduled_time.isoformat()
+
+    def _is_scheduled_training_time(self) -> bool:
+        """Check if current time is within the scheduled training window."""
+        if not self.config.scheduled_training_enabled:
+            return False
+
+        now = datetime.utcnow()
+
+        # Check if we're within 5 minutes of the scheduled time
+        scheduled_time = now.replace(
+            hour=self.config.scheduled_hour,
+            minute=self.config.scheduled_minute,
+            second=0,
+            microsecond=0
+        )
+
+        time_diff = abs((now - scheduled_time).total_seconds())
+
+        # Window of 5 minutes (300 seconds) to catch the scheduled time
+        return time_diff <= 300
 
     async def _check_and_train(self) -> None:
         """Check conditions and trigger training if needed."""
@@ -289,7 +339,21 @@ class SelfLearningOrchestrator:
                 logger.info("High drift detected with sufficient samples, triggering training")
                 return TrainingTrigger.DRIFT_DETECTED
 
-        # Check buffer readiness (scheduled-like behavior)
+        # Check time-based scheduling
+        if self._is_scheduled_training_time():
+            if buffer_stats.total_samples >= self.config.min_samples_for_training:
+                logger.info(
+                    f"Scheduled training time reached ({self.config.scheduled_hour:02d}:{self.config.scheduled_minute:02d} UTC)"
+                )
+                # Update next scheduled time after triggering
+                self._update_next_scheduled_training()
+                return TrainingTrigger.SCHEDULED
+            else:
+                logger.debug(
+                    f"Scheduled time reached but insufficient samples ({buffer_stats.total_samples} < {self.config.min_samples_for_training})"
+                )
+
+        # Check buffer readiness (max interval exceeded)
         if buffer_stats.total_samples >= self.config.min_samples_for_training:
             # Check if max time between trainings exceeded
             if self.status.last_training:
@@ -399,6 +463,9 @@ class SelfLearningOrchestrator:
         self,
         enabled: Optional[bool] = None,
         check_interval_minutes: Optional[int] = None,
+        scheduled_training_enabled: Optional[bool] = None,
+        scheduled_hour: Optional[int] = None,
+        scheduled_minute: Optional[int] = None,
         min_samples_for_training: Optional[int] = None,
         min_hours_between_training: Optional[int] = None,
         max_hours_between_training: Optional[int] = None,
@@ -412,6 +479,14 @@ class SelfLearningOrchestrator:
             self.config.enabled = enabled
         if check_interval_minutes is not None:
             self.config.check_interval_minutes = check_interval_minutes
+        if scheduled_training_enabled is not None:
+            self.config.scheduled_training_enabled = scheduled_training_enabled
+        if scheduled_hour is not None:
+            # Validate hour (0-23)
+            self.config.scheduled_hour = max(0, min(23, scheduled_hour))
+        if scheduled_minute is not None:
+            # Validate minute (0-59)
+            self.config.scheduled_minute = max(0, min(59, scheduled_minute))
         if min_samples_for_training is not None:
             self.config.min_samples_for_training = min_samples_for_training
         if min_hours_between_training is not None:
@@ -426,6 +501,10 @@ class SelfLearningOrchestrator:
             self.config.incremental_learning_rate = incremental_learning_rate
         if incremental_epochs is not None:
             self.config.incremental_epochs = incremental_epochs
+
+        # Update next scheduled training time if scheduling changed
+        if scheduled_training_enabled is not None or scheduled_hour is not None or scheduled_minute is not None:
+            self._update_next_scheduled_training()
 
         self._save_state()
         return self.config

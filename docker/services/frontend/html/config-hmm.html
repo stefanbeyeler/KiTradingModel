@@ -113,36 +113,36 @@
             display: block;
         }
 
-        /* Card */
+        /* Card - Compact */
         .card {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 1.5rem;
+            border-radius: 10px;
+            padding: 1rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
 
         .card-title {
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: #64c8ff;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
         }
 
-        /* Stats Bar */
+        /* Stats Bar - Compact */
         .stats-bar {
             display: flex;
-            gap: 2rem;
-            margin-bottom: 1.5rem;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
             flex-wrap: wrap;
         }
 
@@ -151,27 +151,49 @@
         }
 
         .stat-value {
-            font-size: 2rem;
+            font-size: 1.5rem;
             font-weight: 600;
             color: #64c8ff;
         }
 
         .stat-label {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             opacity: 0.7;
         }
 
-        /* Buttons */
+        /* Progress Bar */
+        .progress-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            height: 8px;
+            margin: 0.75rem 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #64c8ff, #4caf50);
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-top: 0.25rem;
+        }
+
+        /* Buttons - Compact */
         .btn {
-            padding: 0.6rem 1.2rem;
+            padding: 0.4rem 0.9rem;
             border: none;
-            border-radius: 8px;
-            font-size: 0.9rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.3rem;
         }
 
         .btn-primary {
@@ -390,26 +412,26 @@
             animation: spin 1s linear infinite;
         }
 
-        /* Form Elements */
+        /* Form Elements - Compact */
         .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.3rem;
             color: #aaa;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
         .form-control {
             width: 100%;
-            padding: 0.6rem 1rem;
+            padding: 0.4rem 0.75rem;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+            border-radius: 6px;
             color: #e8e8e8;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .form-control:focus {
@@ -644,12 +666,7 @@
                     <div class="form-group">
                         <label>Symbol</label>
                         <select class="form-control" id="detect-symbol">
-                            <option value="BTCUSD">BTCUSD</option>
-                            <option value="ETHUSD">ETHUSD</option>
-                            <option value="EURUSD">EURUSD</option>
-                            <option value="XAUUSD">XAUUSD</option>
-                            <option value="GER40">GER40</option>
-                            <option value="US500">US500</option>
+                            <option value="BTCUSD">Lade Symbole...</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -671,11 +688,14 @@
                     <div class="card-header">
                         <h3 class="card-title">&#128640; Multi-Symbol Scan</h3>
                     </div>
-                    <div class="info-box" style="margin-bottom: 1rem;">
-                        Erkennt das aktuelle Marktregime für alle aktiven Symbole.
-                    </div>
                     <button class="btn btn-primary" id="btn-scan" onclick="scanAll()">&#128640; Alle Symbole scannen</button>
-                    <div id="scan-results" style="margin-top: 1rem;"></div>
+                    <div id="scan-progress" style="display: none; margin-top: 0.75rem;">
+                        <div class="progress-container">
+                            <div class="progress-bar" id="scan-progress-bar" style="width: 0%;"></div>
+                        </div>
+                        <div class="progress-text" id="scan-progress-text">0 / 0 Symbole</div>
+                    </div>
+                    <div id="scan-results" style="margin-top: 0.75rem;"></div>
                 </div>
             </div>
 
@@ -685,9 +705,7 @@
                     <h3 class="card-title">&#128203; Regime-Verlauf</h3>
                     <div>
                         <select class="form-control" id="history-symbol" style="width: auto; display: inline-block;">
-                            <option value="BTCUSD">BTCUSD</option>
-                            <option value="ETHUSD">ETHUSD</option>
-                            <option value="EURUSD">EURUSD</option>
+                            <option value="BTCUSD">Lade Symbole...</option>
                         </select>
                         <button class="btn btn-primary btn-sm" onclick="loadHistory()">&#8635; Laden</button>
                     </div>
@@ -709,10 +727,7 @@
                     <div class="form-group">
                         <label>Symbol</label>
                         <select class="form-control" id="score-symbol">
-                            <option value="BTCUSD">BTCUSD</option>
-                            <option value="ETHUSD">ETHUSD</option>
-                            <option value="EURUSD">EURUSD</option>
-                            <option value="XAUUSD">XAUUSD</option>
+                            <option value="BTCUSD">Lade Symbole...</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -1323,14 +1338,18 @@
 
                 const data = await response.json();
                 const result = document.getElementById('detection-result');
-                const regime = getRegimeDisplay(data.regime);
+                // API returns current_regime, not regime
+                const currentRegime = data.current_regime || data.regime;
+                const regime = getRegimeDisplay(currentRegime);
+                // API returns transition_probabilities, not probabilities
+                const probabilities = data.transition_probabilities || data.probabilities || {};
 
                 result.innerHTML = `
                     <div class="grid-4" style="margin-bottom: 1rem;">
                         ${['bull_trend', 'bear_trend', 'sideways', 'high_volatility'].map(r => {
                             const d = getRegimeDisplay(r);
-                            const prob = data.probabilities?.[r] || 0;
-                            const isActive = data.regime === r;
+                            const prob = probabilities[r] || 0;
+                            const isActive = currentRegime === r;
                             return `
                                 <div class="regime-card ${r}" style="opacity: ${isActive ? 1 : 0.5};">
                                     <div class="regime-icon">${d.icon}</div>
@@ -1342,9 +1361,9 @@
                     </div>
                     <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
                         <div style="color: #888; margin-bottom: 0.5rem;">Aktuelles Regime</div>
-                        <span class="regime-badge ${data.regime}" style="font-size: 1.1rem;">${regime.icon} ${regime.name}</span>
+                        <span class="regime-badge ${currentRegime}" style="font-size: 1.1rem;">${regime.icon} ${regime.name}</span>
                         <div style="margin-top: 0.5rem; color: #888; font-size: 0.85rem;">
-                            Confidence: ${((data.probabilities?.[data.regime] || 0) * 100).toFixed(1)}%
+                            Confidence: ${((data.regime_probability || probabilities[currentRegime] || 0) * 100).toFixed(1)}%
                         </div>
                     </div>
                 `;
@@ -1359,11 +1378,18 @@
             }
         }
 
-        // Scan All Symbols
+        // Scan All Symbols with Progress
         async function scanAll() {
             const btn = document.getElementById('btn-scan');
+            const progressContainer = document.getElementById('scan-progress');
+            const progressBar = document.getElementById('scan-progress-bar');
+            const progressText = document.getElementById('scan-progress-text');
+            const resultsContainer = document.getElementById('scan-results');
+
             btn.classList.add('btn-loading');
             btn.disabled = true;
+            progressContainer.style.display = 'block';
+            resultsContainer.innerHTML = '';
 
             try {
                 // 1. Lade alle verfügbaren Symbole
@@ -1377,47 +1403,59 @@
                     throw new Error('Keine Symbole verfügbar');
                 }
 
-                // 2. Scanne alle Symbole (POST mit Array)
-                const response = await fetch(`${API_BASE}/regime/scan?timeframe=1h`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(symbols)
-                });
+                // 2. Scanne Symbole einzeln mit Fortschrittsanzeige
+                const results = [];
+                const total = symbols.length;
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Scan failed: ${errorText}`);
+                for (let i = 0; i < symbols.length; i++) {
+                    const symbol = symbols[i];
+                    const progress = ((i + 1) / total * 100).toFixed(0);
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `${i + 1} / ${total} Symbole (${symbol})`;
+
+                    try {
+                        const response = await fetch(`${API_BASE}/regime/detect/${symbol}?timeframe=H1`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            results.push({
+                                symbol: symbol,
+                                regime: data.current_regime || data.regime,
+                                probability: data.regime_probability || 0
+                            });
+                        }
+                    } catch (e) {
+                        console.warn(`Failed to scan ${symbol}:`, e);
+                    }
                 }
 
-                const data = await response.json();
-                const results = document.getElementById('scan-results');
+                // 3. Zeige Ergebnisse
+                if (results.length > 0) {
+                    // Sortiere nach Regime für bessere Übersicht
+                    results.sort((a, b) => a.regime.localeCompare(b.regime));
 
-                if (data.results && data.results.length > 0) {
                     let html = '<table class="data-table"><tr><th>Symbol</th><th>Regime</th><th>Confidence</th></tr>';
-                    for (const info of data.results) {
+                    for (const info of results) {
                         const regime = getRegimeDisplay(info.regime);
-                        const confidence = info.probability || 0;
                         html += `<tr>
                             <td>${info.symbol}</td>
                             <td><span class="regime-badge ${info.regime}">${regime.icon} ${regime.name}</span></td>
-                            <td>${(confidence * 100).toFixed(1)}%</td>
+                            <td>${(info.probability * 100).toFixed(1)}%</td>
                         </tr>`;
                     }
                     html += '</table>';
-                    results.innerHTML = html;
+                    resultsContainer.innerHTML = html;
                 } else {
-                    results.innerHTML = '<div class="info-box">Keine Ergebnisse.</div>';
+                    resultsContainer.innerHTML = '<div class="info-box">Keine Ergebnisse.</div>';
                 }
 
-                showToast(`Multi-Symbol Scan abgeschlossen (${data.results.length} Symbole)`);
+                showToast(`Scan abgeschlossen: ${results.length} Symbole`);
             } catch (error) {
                 showToast(`Fehler beim Scan: ${error.message}`, 'error');
                 console.error(error);
             } finally {
                 btn.classList.remove('btn-loading');
                 btn.disabled = false;
+                progressContainer.style.display = 'none';
             }
         }
 
@@ -2341,10 +2379,63 @@
             }
         });
 
+        // Load all symbols from Data Service and populate dropdowns
+        async function loadAllSymbols() {
+            try {
+                const response = await fetch('/data/api/v1/db/coverage');
+                if (!response.ok) throw new Error('Failed to load symbols');
+
+                const data = await response.json();
+                const categories = data.categories || {};
+
+                // Build grouped options HTML
+                const order = ['Krypto', 'Forex', 'Indizes', 'Rohstoffe', 'Aktien', 'Andere'];
+                let optionsHtml = '';
+
+                for (const category of order) {
+                    const symbols = categories[category];
+                    if (symbols && symbols.length > 0) {
+                        optionsHtml += `<optgroup label="${category} (${symbols.length})">`;
+                        for (const symbol of symbols) {
+                            optionsHtml += `<option value="${symbol}">${symbol}</option>`;
+                        }
+                        optionsHtml += '</optgroup>';
+                    }
+                }
+
+                // Populate all symbol dropdowns
+                const dropdownIds = ['detect-symbol', 'score-symbol', 'history-symbol', 'reload-symbol', 'force-deploy-symbol', 'rollback-symbol'];
+                for (const id of dropdownIds) {
+                    const dropdown = document.getElementById(id);
+                    if (dropdown) {
+                        const currentValue = dropdown.value;
+                        dropdown.innerHTML = optionsHtml;
+                        // Restore previous selection or default to BTCUSD
+                        if (currentValue && dropdown.querySelector(`option[value="${currentValue}"]`)) {
+                            dropdown.value = currentValue;
+                        } else if (dropdown.querySelector('option[value="BTCUSD"]')) {
+                            dropdown.value = 'BTCUSD';
+                        }
+                    }
+                }
+
+                // Also populate version filter dropdown
+                const versionFilterSymbol = document.getElementById('version-filter-symbol');
+                if (versionFilterSymbol) {
+                    versionFilterSymbol.innerHTML = '<option value="">Alle Symbole</option>' + optionsHtml;
+                }
+
+                console.log(`Loaded ${Object.values(categories).flat().length} symbols from Data Service`);
+            } catch (error) {
+                console.warn('Could not load symbols from Data Service:', error);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadInfo();
             loadFeatures();
+            loadAllSymbols();  // Load symbols for dropdowns
 
             // Auto-refresh every 30 seconds
             setInterval(loadInfo, 30000);

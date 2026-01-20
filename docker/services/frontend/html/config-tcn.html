@@ -250,6 +250,140 @@
             }
         }
 
+        /* Self-Learning Styles */
+        .info-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .info-section h4 {
+            color: #64c8ff;
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e8e8e8;
+        }
+
+        .stat-value.success { color: #81c784; }
+        .stat-value.warning { color: #ffb74d; }
+        .stat-value.danger { color: #e57373; }
+
+        .info-box {
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .info-box.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-color: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .info-box.warning {
+            background: rgba(255, 152, 0, 0.1);
+            border-color: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        .info-box.danger {
+            background: rgba(244, 67, 54, 0.1);
+            border-color: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
+        .drift-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .drift-item {
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .drift-item.danger {
+            background: rgba(244, 67, 54, 0.1);
+            border-left: 3px solid #e57373;
+        }
+
+        .drift-item.warning {
+            background: rgba(255, 152, 0, 0.1);
+            border-left: 3px solid #ffb74d;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.6rem 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .data-table th {
+            color: #888;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+
+        .data-table code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge.success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .badge.danger {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+        }
+
         /* Training Status */
         .training-status {
             font-size: 0.9rem;
@@ -1243,6 +1377,7 @@
             <button class="tab-btn active" onclick="showTab('status')">📊 Übersicht</button>
             <button class="tab-btn" onclick="showTab('detection')">&#128269; Pattern-Erkennung</button>
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
+            <button class="tab-btn" onclick="showTab('selflearning')">&#129302; Self-Learning</button>
         </div>
 
         <!-- Status Tab -->
@@ -1903,6 +2038,257 @@
                 </div>
                 <div id="pattern-history">
                     <div class="info-box">Wählen Sie ein Symbol und klicken Sie auf "Laden".</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Self-Learning Tab -->
+        <div id="tab-selflearning" class="tab-content">
+            <!-- Self-Learning Status Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#129302; Self-Learning Orchestrator</h3>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="sl-state-badge" class="service-badge">IDLE</span>
+                        <button class="btn btn-primary btn-sm" onclick="loadSelfLearningStatus()">&#8635; Aktualisieren</button>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <!-- Orchestrator Status -->
+                    <div class="info-section">
+                        <h4>Status</h4>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Loop aktiv</span>
+                                <span id="sl-loop-running" class="stat-value">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Letzter Check</span>
+                                <span id="sl-last-check" class="stat-value">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Nächster Check</span>
+                                <span id="sl-next-check" class="stat-value">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Geplantes Training</span>
+                                <span id="sl-next-scheduled" class="stat-value">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Trainings gesamt</span>
+                                <span id="sl-training-count" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Erfolgreiche Deployments</span>
+                                <span id="sl-successful-deployments" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Abgelehnte Modelle</span>
+                                <span id="sl-rejected-models" class="stat-value">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="info-section">
+                        <h4>Steuerung</h4>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <button id="sl-toggle-btn" class="btn btn-success" onclick="toggleSelfLearning()">
+                                &#9654; Loop Starten
+                            </button>
+                            <button class="btn btn-warning" onclick="triggerManualTraining()">
+                                &#128295; Manuelles Training
+                            </button>
+                            <button class="btn btn-primary" onclick="loadSelfLearningStatus()">
+                                &#8635; Status aktualisieren
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scheduling Configuration -->
+                <div class="info-section" style="margin-top: 1rem;">
+                    <h4>&#128337; Zeitgesteuertes Training</h4>
+                    <div class="grid-2" style="gap: 1rem; margin-top: 0.75rem;">
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="sl-scheduled-enabled" onchange="updateSchedulingConfig()">
+                                <span>Zeitgesteuertes Training aktivieren</span>
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                                <label style="min-width: 120px;">Trainingszeit (UTC):</label>
+                                <input type="number" id="sl-scheduled-hour" min="0" max="23" value="2"
+                                       style="width: 60px; padding: 0.25rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);">
+                                <span>:</span>
+                                <input type="number" id="sl-scheduled-minute" min="0" max="59" value="0"
+                                       style="width: 60px; padding: 0.25rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);">
+                                <span>Uhr</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div class="info-box" id="sl-schedule-info">
+                                <strong>Hinweis:</strong> Bei aktiviertem Scheduling wird das Training täglich zur
+                                angegebenen Uhrzeit ausgeführt, sofern genügend Samples im Feedback-Buffer vorhanden sind.
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="updateSchedulingConfig()">
+                                &#128190; Scheduling speichern
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drift Detection Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128200; Drift Detection</h3>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="drift-severity-badge" class="service-badge">NONE</span>
+                        <button class="btn btn-primary btn-sm" onclick="checkDrift()">&#128269; Drift prüfen</button>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="info-section">
+                        <h4>Drift Status</h4>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Schweregrad</span>
+                                <span id="drift-severity" class="stat-value">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Empfehlung</span>
+                                <span id="drift-recommendation" class="stat-value">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Letzter Check</span>
+                                <span id="drift-last-check" class="stat-value">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Beobachtungen</span>
+                                <span id="drift-observations" class="stat-value">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <h4>Aktive Drifts</h4>
+                        <div id="drift-active-list">
+                            <div class="info-box">Keine aktiven Drifts</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Outcome Statistics Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128202; Outcome Statistiken</h3>
+                    <button class="btn btn-primary btn-sm" onclick="loadOutcomeStatistics()">&#8635; Aktualisieren</button>
+                </div>
+
+                <div class="grid-2">
+                    <div class="info-section">
+                        <h4>Übersicht</h4>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Total verfolgt</span>
+                                <span id="outcome-total" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Abgeschlossen</span>
+                                <span id="outcome-completed" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Ausstehend</span>
+                                <span id="outcome-pending" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Erfolgsrate</span>
+                                <span id="outcome-success-rate" class="stat-value">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <h4>Performance</h4>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Erfolge</span>
+                                <span id="outcome-success" class="stat-value success">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Teilweise</span>
+                                <span id="outcome-partial" class="stat-value warning">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Fehlgeschlagen</span>
+                                <span id="outcome-failed" class="stat-value danger">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Profit Factor</span>
+                                <span id="outcome-profit-factor" class="stat-value">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback Buffer Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128230; Feedback Buffer</h3>
+                    <button class="btn btn-primary btn-sm" onclick="loadFeedbackBufferStats()">&#8635; Aktualisieren</button>
+                </div>
+
+                <div class="grid-2">
+                    <div class="info-section">
+                        <h4>Buffer Status</h4>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Samples gesamt</span>
+                                <span id="buffer-total" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Bereit für Training</span>
+                                <span id="buffer-ready" class="stat-value">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Positive Samples</span>
+                                <span id="buffer-positive" class="stat-value success">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Negative Samples</span>
+                                <span id="buffer-negative" class="stat-value danger">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <h4>Training Readiness</h4>
+                        <div id="buffer-readiness">
+                            <div class="info-box">Status wird geladen...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Versions Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128451; Modell-Versionen</h3>
+                    <button class="btn btn-primary btn-sm" onclick="loadModelVersions()">&#8635; Aktualisieren</button>
+                </div>
+
+                <div id="model-versions-list">
+                    <div class="info-box">Versionen werden geladen...</div>
+                </div>
+
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <button class="btn btn-danger" onclick="rollbackModel()">
+                        &#8617; Rollback zu vorheriger Version
+                    </button>
                 </div>
             </div>
         </div>
@@ -6286,6 +6672,402 @@
                     ctx.fillText(timeStr, x, height - chartPadding.bottom + 32);
                 }
             });
+        }
+
+        // =============================================================================
+        // Self-Learning Tab Functions
+        // =============================================================================
+
+        let selfLearningLoopRunning = false;
+
+        async function loadSelfLearningStatus() {
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/self-learning/status`);
+                const data = await response.json();
+
+                const status = data.status || {};
+                const config = data.config || {};
+
+                // Update state badge
+                const stateBadge = document.getElementById('sl-state-badge');
+                const state = status.state || 'idle';
+                stateBadge.textContent = state.toUpperCase();
+                stateBadge.className = 'service-badge';
+                if (state === 'training') {
+                    stateBadge.style.background = 'rgba(255, 152, 0, 0.2)';
+                    stateBadge.style.color = '#ffb74d';
+                } else if (state === 'monitoring') {
+                    stateBadge.style.background = 'rgba(76, 175, 80, 0.2)';
+                    stateBadge.style.color = '#81c784';
+                } else if (state === 'error') {
+                    stateBadge.style.background = 'rgba(244, 67, 54, 0.2)';
+                    stateBadge.style.color = '#e57373';
+                } else {
+                    stateBadge.style.background = 'rgba(158, 158, 158, 0.2)';
+                    stateBadge.style.color = '#9e9e9e';
+                }
+
+                // Update stats
+                selfLearningLoopRunning = status.loop_running || false;
+                document.getElementById('sl-loop-running').textContent = selfLearningLoopRunning ? 'Ja' : 'Nein';
+                document.getElementById('sl-last-check').textContent = formatDateTime(status.last_check);
+                document.getElementById('sl-next-check').textContent = formatDateTime(status.next_check);
+                document.getElementById('sl-training-count').textContent = status.training_count || 0;
+                document.getElementById('sl-successful-deployments').textContent = status.successful_deployments || 0;
+                document.getElementById('sl-rejected-models').textContent = status.rejected_models || 0;
+
+                // Update scheduled training display
+                const nextScheduledEl = document.getElementById('sl-next-scheduled');
+                if (config.scheduled_training_enabled && status.next_scheduled_training) {
+                    nextScheduledEl.textContent = formatDateTime(status.next_scheduled_training);
+                } else if (config.scheduled_training_enabled) {
+                    const hour = String(config.scheduled_hour || 2).padStart(2, '0');
+                    const minute = String(config.scheduled_minute || 0).padStart(2, '0');
+                    nextScheduledEl.textContent = `Täglich ${hour}:${minute} UTC`;
+                } else {
+                    nextScheduledEl.textContent = 'Deaktiviert';
+                }
+
+                // Update scheduling configuration inputs
+                document.getElementById('sl-scheduled-enabled').checked = config.scheduled_training_enabled || false;
+                document.getElementById('sl-scheduled-hour').value = config.scheduled_hour ?? 2;
+                document.getElementById('sl-scheduled-minute').value = config.scheduled_minute ?? 0;
+
+                // Update toggle button
+                const toggleBtn = document.getElementById('sl-toggle-btn');
+                if (selfLearningLoopRunning) {
+                    toggleBtn.innerHTML = '&#9724; Loop Stoppen';
+                    toggleBtn.className = 'btn btn-danger';
+                } else {
+                    toggleBtn.innerHTML = '&#9654; Loop Starten';
+                    toggleBtn.className = 'btn btn-success';
+                }
+
+            } catch (error) {
+                console.error('Error loading self-learning status:', error);
+            }
+        }
+
+        async function toggleSelfLearning() {
+            const endpoint = selfLearningLoopRunning ? 'stop' : 'start';
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/self-learning/${endpoint}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                showNotification(data.message || `Self-Learning ${endpoint === 'start' ? 'gestartet' : 'gestoppt'}`, 'success');
+                await loadSelfLearningStatus();
+            } catch (error) {
+                showNotification('Fehler beim Umschalten des Self-Learning Loops', 'error');
+            }
+        }
+
+        async function triggerManualTraining() {
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/self-learning/trigger`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.status === 'failed') {
+                    showNotification(data.message || 'Training konnte nicht gestartet werden', 'error');
+                } else {
+                    showNotification('Manuelles Training gestartet', 'success');
+                    await loadSelfLearningStatus();
+                }
+            } catch (error) {
+                showNotification('Fehler beim Starten des Trainings', 'error');
+            }
+        }
+
+        async function updateSchedulingConfig() {
+            try {
+                const enabled = document.getElementById('sl-scheduled-enabled').checked;
+                const hour = parseInt(document.getElementById('sl-scheduled-hour').value) || 2;
+                const minute = parseInt(document.getElementById('sl-scheduled-minute').value) || 0;
+
+                const response = await fetch(`${TRAIN_API_BASE}/self-learning/config`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        scheduled_training_enabled: enabled,
+                        scheduled_hour: Math.max(0, Math.min(23, hour)),
+                        scheduled_minute: Math.max(0, Math.min(59, minute))
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === 'updated') {
+                    const hourStr = String(hour).padStart(2, '0');
+                    const minuteStr = String(minute).padStart(2, '0');
+                    const msg = enabled
+                        ? `Zeitgesteuertes Training aktiviert (${hourStr}:${minuteStr} UTC)`
+                        : 'Zeitgesteuertes Training deaktiviert';
+                    showNotification(msg, 'success');
+                    await loadSelfLearningStatus();
+                } else {
+                    showNotification('Fehler beim Speichern der Konfiguration', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating scheduling config:', error);
+                showNotification('Fehler beim Speichern der Scheduling-Konfiguration', 'error');
+            }
+        }
+
+        async function loadDriftStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/drift/status`);
+                const data = await response.json();
+
+                // Update severity badge
+                const severityBadge = document.getElementById('drift-severity-badge');
+                const severity = data.overall_severity || 'none';
+                severityBadge.textContent = severity.toUpperCase();
+                severityBadge.className = 'service-badge';
+                if (severity === 'critical') {
+                    severityBadge.style.background = 'rgba(244, 67, 54, 0.2)';
+                    severityBadge.style.color = '#e57373';
+                } else if (severity === 'high') {
+                    severityBadge.style.background = 'rgba(255, 152, 0, 0.2)';
+                    severityBadge.style.color = '#ffb74d';
+                } else if (severity === 'medium') {
+                    severityBadge.style.background = 'rgba(255, 193, 7, 0.2)';
+                    severityBadge.style.color = '#ffc107';
+                } else {
+                    severityBadge.style.background = 'rgba(76, 175, 80, 0.2)';
+                    severityBadge.style.color = '#81c784';
+                }
+
+                document.getElementById('drift-severity').textContent = severity;
+                document.getElementById('drift-recommendation').textContent = data.recommendation || '-';
+                document.getElementById('drift-last-check').textContent = formatDateTime(data.last_check);
+
+                // Load statistics for observations count
+                const statsResponse = await fetch(`${API_BASE}/drift/statistics`);
+                const stats = await statsResponse.json();
+                document.getElementById('drift-observations').textContent = stats.observations_count || 0;
+
+                // Update active drifts list
+                const activeList = document.getElementById('drift-active-list');
+                const driftCount = data.active_drifts_count || 0;
+                if (driftCount > 0) {
+                    let html = '<div class="drift-list">';
+                    if (data.accuracy_drift) {
+                        html += `<div class="drift-item danger">
+                            <strong>Accuracy Drift:</strong> ${data.accuracy_drift.message}
+                        </div>`;
+                    }
+                    if (data.confidence_drift) {
+                        html += `<div class="drift-item warning">
+                            <strong>Confidence Drift:</strong> ${data.confidence_drift.message}
+                        </div>`;
+                    }
+                    if (data.distribution_drift) {
+                        html += `<div class="drift-item warning">
+                            <strong>Distribution Drift:</strong> ${data.distribution_drift.message}
+                        </div>`;
+                    }
+                    html += '</div>';
+                    activeList.innerHTML = html;
+                } else {
+                    activeList.innerHTML = '<div class="info-box success">Keine aktiven Drifts erkannt</div>';
+                }
+
+            } catch (error) {
+                console.error('Error loading drift status:', error);
+            }
+        }
+
+        async function checkDrift() {
+            try {
+                const response = await fetch(`${API_BASE}/drift/check`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                showNotification('Drift-Check durchgeführt', 'success');
+                await loadDriftStatus();
+            } catch (error) {
+                showNotification('Fehler beim Drift-Check', 'error');
+            }
+        }
+
+        async function loadOutcomeStatistics() {
+            try {
+                const response = await fetch(`${API_BASE}/outcomes/statistics`);
+                const data = await response.json();
+
+                document.getElementById('outcome-total').textContent = data.total_tracked || 0;
+                document.getElementById('outcome-completed').textContent = data.total_completed || 0;
+                document.getElementById('outcome-pending').textContent = data.pending || 0;
+                document.getElementById('outcome-success-rate').textContent = ((data.success_rate || 0) * 100).toFixed(1) + '%';
+
+                document.getElementById('outcome-success').textContent = data.success_count || 0;
+                document.getElementById('outcome-partial').textContent = data.partial_count || 0;
+                document.getElementById('outcome-failed').textContent = data.failed_count || 0;
+                document.getElementById('outcome-profit-factor').textContent = (data.profit_factor || 0).toFixed(2);
+
+            } catch (error) {
+                console.error('Error loading outcome statistics:', error);
+            }
+        }
+
+        async function loadFeedbackBufferStats() {
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/feedback-buffer/statistics`);
+                const data = await response.json();
+
+                document.getElementById('buffer-total').textContent = data.total_samples || 0;
+                document.getElementById('buffer-positive').textContent = data.positive_samples || 0;
+                document.getElementById('buffer-negative').textContent = data.negative_samples || 0;
+
+                // Check readiness
+                const readyResponse = await fetch(`${TRAIN_API_BASE}/feedback-buffer/ready?min_samples=100`);
+                const readyData = await readyResponse.json();
+
+                const readyEl = document.getElementById('buffer-ready');
+                readyEl.textContent = readyData.ready ? 'Ja' : 'Nein';
+
+                const readinessEl = document.getElementById('buffer-readiness');
+                if (readyData.ready) {
+                    readinessEl.innerHTML = `
+                        <div class="info-box success">
+                            <strong>Bereit für Training!</strong><br>
+                            ${readyData.samples_available} von ${readyData.samples_required} benötigten Samples verfügbar.
+                        </div>`;
+                } else {
+                    const reasons = readyData.reasons || [];
+                    readinessEl.innerHTML = `
+                        <div class="info-box warning">
+                            <strong>Nicht bereit für Training</strong><br>
+                            ${reasons.join('<br>')}
+                        </div>`;
+                }
+
+            } catch (error) {
+                console.error('Error loading feedback buffer stats:', error);
+                document.getElementById('buffer-readiness').innerHTML = '<div class="info-box danger">Fehler beim Laden</div>';
+            }
+        }
+
+        async function loadModelVersions() {
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/versions`);
+                const data = await response.json();
+
+                const container = document.getElementById('model-versions-list');
+                const versions = data.versions || [];
+                const current = data.current_version;
+
+                if (versions.length === 0) {
+                    container.innerHTML = '<div class="info-box">Keine Modell-Versionen gefunden</div>';
+                    return;
+                }
+
+                let html = '<table class="data-table"><thead><tr>';
+                html += '<th>Version</th><th>Typ</th><th>Status</th><th>Erstellt</th><th>Aktion</th>';
+                html += '</tr></thead><tbody>';
+
+                versions.forEach(v => {
+                    const isActive = v.status === 'active';
+                    const statusClass = isActive ? 'success' : (v.status === 'rolled_back' ? 'danger' : '');
+                    html += `<tr>
+                        <td><code>${v.version_id}</code></td>
+                        <td>${v.training_type}</td>
+                        <td><span class="badge ${statusClass}">${v.status}</span></td>
+                        <td>${formatDateTime(v.created_at)}</td>
+                        <td>
+                            ${!isActive ? `<button class="btn btn-primary btn-sm" onclick="deployVersion('${v.version_id}')">Deploy</button>` : '<span class="badge success">Aktiv</span>'}
+                        </td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading model versions:', error);
+                document.getElementById('model-versions-list').innerHTML = '<div class="info-box danger">Fehler beim Laden</div>';
+            }
+        }
+
+        async function deployVersion(versionId) {
+            if (!confirm(`Modell-Version ${versionId} deployen?`)) return;
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/deploy/${versionId}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.status === 'deployed') {
+                    showNotification(`Version ${versionId} erfolgreich deployed`, 'success');
+                    await loadModelVersions();
+                } else {
+                    showNotification(data.message || 'Deployment fehlgeschlagen', 'error');
+                }
+            } catch (error) {
+                showNotification('Fehler beim Deployment', 'error');
+            }
+        }
+
+        async function rollbackModel() {
+            if (!confirm('Zur vorherigen Modell-Version zurückkehren?')) return;
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/rollback`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.status === 'deployed') {
+                    showNotification(`Rollback erfolgreich zu ${data.version_id}`, 'success');
+                    await loadModelVersions();
+                } else {
+                    showNotification(data.message || 'Rollback fehlgeschlagen', 'error');
+                }
+            } catch (error) {
+                showNotification('Fehler beim Rollback', 'error');
+            }
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) return '-';
+            try {
+                const date = new Date(isoString);
+                return date.toLocaleString('de-CH', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch {
+                return '-';
+            }
+        }
+
+        // Load self-learning tab data when switching to it
+        const originalShowTab = showTab;
+        showTab = function(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'status') {
+                refreshStatusTab();
+            } else if (tabName === 'selflearning') {
+                loadSelfLearningData();
+            }
+        };
+
+        async function loadSelfLearningData() {
+            await Promise.all([
+                loadSelfLearningStatus(),
+                loadDriftStatus(),
+                loadOutcomeStatistics(),
+                loadFeedbackBufferStats(),
+                loadModelVersions()
+            ]);
         }
     </script>
 

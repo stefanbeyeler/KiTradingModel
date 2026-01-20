@@ -14,6 +14,9 @@ class OrchestratorConfigUpdate(BaseModel):
     """Configuration update request."""
     enabled: Optional[bool] = None
     check_interval_minutes: Optional[int] = Field(None, ge=5, le=1440)
+    scheduled_training_enabled: Optional[bool] = None
+    scheduled_hour: Optional[int] = Field(None, ge=0, le=23)
+    scheduled_minute: Optional[int] = Field(None, ge=0, le=59)
     min_samples_for_training: Optional[int] = Field(None, ge=10)
     min_hours_between_training: Optional[int] = Field(None, ge=1)
     max_hours_between_training: Optional[int] = Field(None, ge=24)
@@ -98,6 +101,9 @@ async def update_config(config: OrchestratorConfigUpdate):
     updated = self_learning_orchestrator.update_config(
         enabled=config.enabled,
         check_interval_minutes=config.check_interval_minutes,
+        scheduled_training_enabled=config.scheduled_training_enabled,
+        scheduled_hour=config.scheduled_hour,
+        scheduled_minute=config.scheduled_minute,
         min_samples_for_training=config.min_samples_for_training,
         min_hours_between_training=config.min_hours_between_training,
         max_hours_between_training=config.max_hours_between_training,
