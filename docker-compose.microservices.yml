@@ -452,6 +452,7 @@ services:
       - "${TCN_SERVICE_PORT:-3003}:${TCN_SERVICE_PORT:-3003}"
     volumes:
       - tcn-models:/app/data/models/tcn
+      - tcn-data:/app/data/tcn
       - symbols-data:/app/data/symbols
       - ./src/services/tcn_app:/app/src/services/tcn_app:ro
       - ./src/services/data_gateway_service.py:/app/src/services/data_gateway_service.py:ro
@@ -980,6 +981,8 @@ volumes:
 
   # TCN Service Volumes
   tcn-models:
+    driver: local
+  tcn-data:
     driver: local
 
   # Candlestick Service Volumes

@@ -443,7 +443,7 @@ class TCNClaudeValidatorService:
 
         # Validation history
         self._validation_history: List[Dict] = []
-        self._history_file = Path(os.getenv("DATA_DIR", "/app/data")) / "tcn_claude_validations.json"
+        self._history_file = Path(os.getenv("DATA_DIR", "/app/data")) / "tcn" / "tcn_claude_validations.json"
         self._load_history()
 
         # Rate limiting

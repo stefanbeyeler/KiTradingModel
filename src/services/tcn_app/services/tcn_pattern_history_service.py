@@ -94,7 +94,7 @@ class TCNPatternHistoryService:
 
     def __init__(
         self,
-        history_file: str = "data/tcn_pattern_history.json",
+        history_file: str = "data/tcn/tcn_pattern_history.json",
         max_entries: int = 2000,
         max_age_hours: int = 168,  # 7 days
         scan_interval_seconds: int = 300  # 5 minutes

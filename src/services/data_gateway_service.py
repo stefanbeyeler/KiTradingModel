@@ -382,10 +382,13 @@ class DataGatewayService:
                 close_val = float(row.get("close", 0))
                 volume_val = float(row.get("volume", 0)) if row.get("volume") else 0
 
+                dt_value = row.get("datetime")
                 entry = {
                     "symbol": symbol,
                     "timeframe": tf_str,  # Standardized timeframe field
-                    "snapshot_time": row.get("datetime"),
+                    "datetime": dt_value,  # Primary timestamp field
+                    "snapshot_time": dt_value,  # Legacy alias
+                    "timestamp": dt_value,  # Alternative alias
                     # Standard OHLCV fields (for downstream services)
                     "open": open_val,
                     "high": high_val,
@@ -631,9 +634,11 @@ class DataGatewayService:
             if result.get("status") == "ok" and result.get("values"):
                 # Convert to standardized format
                 for row in result.get("values", []):
+                    dt_value = row.get("datetime")
                     rows.append({
-                        "timestamp": row.get("datetime"),
-                        "snapshot_time": row.get("datetime"),
+                        "datetime": dt_value,  # Primary timestamp field
+                        "timestamp": dt_value,  # Alternative alias
+                        "snapshot_time": dt_value,  # Legacy alias
                         "symbol": symbol,
                         "timeframe": tf.value,
                         "open": float(row.get("open", 0)),

@@ -117,7 +117,7 @@ class DriftDetectionService:
     distribution to detect when the model needs retraining.
     """
 
-    HISTORY_FILE = "data/tcn_drift_history.json"
+    HISTORY_FILE = "data/tcn/tcn_drift_history.json"
     MAX_OBSERVATIONS = 1000  # Max stored observations
 
     def __init__(self):

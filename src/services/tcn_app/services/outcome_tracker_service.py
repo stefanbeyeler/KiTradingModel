@@ -180,7 +180,7 @@ class OutcomeTrackerService:
 
     def __init__(
         self,
-        outcomes_file: str = "data/tcn_pattern_outcomes.json",
+        outcomes_file: str = "data/tcn/tcn_pattern_outcomes.json",
         max_entries: int = 5000,
         max_age_days: int = 30,
         update_interval_seconds: int = 900,  # 15 minutes

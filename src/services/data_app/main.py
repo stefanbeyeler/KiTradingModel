@@ -82,6 +82,15 @@ except ImportError:
     _service_runs_routes_available = False
     logger.warning("Service runs routes not available")
 
+# Kanban Board routes
+try:
+    from src.services.data_app.api.kanban_routes import router as kanban_router
+    _kanban_routes_available = True
+except ImportError:
+    kanban_router = None
+    _kanban_routes_available = False
+    logger.warning("Kanban routes not available")
+
 from src.service_registry import register_service
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import is_test_unhealthy, get_test_unhealthy_status
@@ -184,6 +193,10 @@ openapi_tags = [
         "name": "16. Service Runs",
         "description": "Service-Läufe protokollieren und auswerten"
     },
+    {
+        "name": "17. Kanban Board",
+        "description": "Task-Management Board mit Backend-Persistenz"
+    },
 ]
 
 # Create FastAPI application
@@ -265,6 +278,10 @@ if _prediction_routes_available and prediction_router:
 # Include Service Runs History router if available
 if _service_runs_routes_available and service_runs_router:
     app.include_router(service_runs_router, prefix="/api/v1", tags=["16. Service Runs"])
+
+# Include Kanban Board router if available
+if _kanban_routes_available and kanban_router:
+    app.include_router(kanban_router, prefix="/api/v1", tags=["17. Kanban Board"])
 
 
 async def _periodic_cache_cleanup():

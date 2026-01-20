@@ -851,6 +851,9 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
+        // API Base URL
+        const API_BASE = '/data/api/v1/kanban';
+
         // Micro-Services list (alphabetisch sortiert)
         const MICROSERVICES = [
             { value: 'candlestick', label: 'Candlestick Service' },
@@ -889,16 +892,58 @@
             cards: []
         };
 
+        // Loading indicator
+        let isLoading = false;
+
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            loadState();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadState();
             populateServiceDropdowns();
             renderBoard();
             updateStats();
         });
 
-        // Load state from localStorage
-        function loadState() {
+        // Load state from Backend API (with localStorage fallback)
+        async function loadState() {
+            isLoading = true;
+            try {
+                const response = await fetch(`${API_BASE}/state`);
+                if (response.ok) {
+                    state = await response.json();
+                    console.log('Loaded state from backend:', state.cards.length, 'cards');
+                    // Migrate localStorage data if exists and backend is empty
+                    await migrateLocalStorageData();
+                } else {
+                    throw new Error('Backend not available');
+                }
+            } catch (e) {
+                console.warn('Backend not available, falling back to localStorage:', e.message);
+                loadStateFromLocalStorage();
+            }
+            isLoading = false;
+        }
+
+        // Migrate data from localStorage to backend (one-time migration)
+        async function migrateLocalStorageData() {
+            const localData = localStorage.getItem('kanban-state');
+            if (localData && state.cards.length === 0) {
+                try {
+                    const localState = JSON.parse(localData);
+                    if (localState.cards && localState.cards.length > 0) {
+                        console.log('Migrating', localState.cards.length, 'cards from localStorage to backend');
+                        state = localState;
+                        await saveState();
+                        localStorage.removeItem('kanban-state');
+                        showToast(`${localState.cards.length} Aufgaben migriert`, 'success');
+                    }
+                } catch (e) {
+                    console.error('Migration failed:', e);
+                }
+            }
+        }
+
+        // Load from localStorage (fallback)
+        function loadStateFromLocalStorage() {
             const saved = localStorage.getItem('kanban-state');
             if (saved) {
                 try {
@@ -921,9 +966,23 @@
             saveState();
         }
 
-        // Save state to localStorage
-        function saveState() {
+        // Save state to Backend API (with localStorage fallback)
+        async function saveState() {
+            // Always save to localStorage as backup
             localStorage.setItem('kanban-state', JSON.stringify(state));
+
+            try {
+                const response = await fetch(`${API_BASE}/state`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(state)
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to save to backend');
+                }
+            } catch (e) {
+                console.warn('Could not save to backend, using localStorage only:', e.message);
+            }
         }
 
         // Populate service dropdowns
