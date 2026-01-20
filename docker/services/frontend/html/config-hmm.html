@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HMM Regime Service - Konfiguration</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -695,6 +696,24 @@
                     <div class="loading"><div class="spinner"></div></div>
                 </div>
             </div>
+
+            <!-- Learning Progress Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128200; Lernfortschritt</h3>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select class="form-control" id="metrics-model-type" style="padding: 0.25rem; font-size: 0.85rem; width: auto;" onchange="loadMetricsHistory()">
+                            <option value="hmm">HMM Modelle</option>
+                            <option value="scorer">Scorer</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="loadMetricsHistory()" style="padding: 0.25rem 0.5rem;">&#8635;</button>
+                    </div>
+                </div>
+                <div style="position: relative; height: 200px; padding: 0.5rem;">
+                    <canvas id="metrics-chart"></canvas>
+                </div>
+                <div id="metrics-summary" style="padding: 0.5rem 1rem; font-size: 0.8rem; color: #888; border-top: 1px solid rgba(255,255,255,0.05);"></div>
+            </div>
         </div>
 
         <!-- Detection Tab -->
@@ -1305,6 +1324,148 @@
                 console.error(error);
                 document.getElementById('status-badge').textContent = 'Offline';
                 document.getElementById('status-badge').className = 'service-badge offline';
+            }
+        }
+
+        // Metrics History Chart
+        let metricsChart = null;
+
+        async function loadMetricsHistory() {
+            const modelType = document.getElementById('metrics-model-type').value;
+            const summaryEl = document.getElementById('metrics-summary');
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/metrics-history?model_type=${modelType}&limit=30`);
+                if (!response.ok) throw new Error('Failed to load metrics history');
+
+                const data = await response.json();
+                const history = data.history || [];
+
+                if (history.length === 0) {
+                    summaryEl.innerHTML = 'Keine Metriken-Historie verfügbar. Trainieren Sie Modelle, um den Lernfortschritt zu verfolgen.';
+                    if (metricsChart) {
+                        metricsChart.destroy();
+                        metricsChart = null;
+                    }
+                    return;
+                }
+
+                // Prepare chart data
+                const labels = history.map(h => h.date);
+                const accuracyData = history.map(h => h.avg_accuracy);
+                const f1Data = history.map(h => h.avg_f1);
+                const deployRateData = history.map(h => h.deploy_rate);
+
+                const ctx = document.getElementById('metrics-chart').getContext('2d');
+
+                // Destroy existing chart
+                if (metricsChart) {
+                    metricsChart.destroy();
+                }
+
+                // Create new chart
+                metricsChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Accuracy %',
+                                data: accuracyData,
+                                borderColor: '#4caf50',
+                                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'F1-Score %',
+                                data: f1Data,
+                                borderColor: '#64c8ff',
+                                backgroundColor: 'rgba(100, 200, 255, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'Deploy-Rate %',
+                                data: deployRateData,
+                                borderColor: '#ffb74d',
+                                backgroundColor: 'rgba(255, 183, 77, 0.1)',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.3,
+                                pointRadius: 3,
+                                borderDash: [5, 5]
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    color: '#888',
+                                    font: { size: 11 },
+                                    boxWidth: 12,
+                                    padding: 8
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                                titleColor: '#fff',
+                                bodyColor: '#ccc',
+                                borderColor: 'rgba(100, 200, 255, 0.3)',
+                                borderWidth: 1
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#666', font: { size: 10 } }
+                            },
+                            y: {
+                                min: 0,
+                                max: 100,
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: {
+                                    color: '#666',
+                                    font: { size: 10 },
+                                    callback: v => v + '%'
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Calculate trend
+                const latestAcc = accuracyData[accuracyData.length - 1] || 0;
+                const firstAcc = accuracyData[0] || 0;
+                const accTrend = latestAcc - firstAcc;
+                const totalDeployed = history.reduce((sum, h) => sum + h.deployed, 0);
+                const totalRejected = history.reduce((sum, h) => sum + h.rejected, 0);
+
+                const trendIcon = accTrend > 0 ? '&#128200;' : accTrend < 0 ? '&#128201;' : '&#8596;';
+                const trendColor = accTrend > 0 ? '#4caf50' : accTrend < 0 ? '#f44336' : '#888';
+
+                summaryEl.innerHTML = `
+                    <span style="margin-right: 1rem;">${trendIcon} Trend: <span style="color: ${trendColor};">${accTrend > 0 ? '+' : ''}${accTrend.toFixed(1)}%</span></span>
+                    <span style="margin-right: 1rem;">Letzte Accuracy: <strong>${latestAcc.toFixed(1)}%</strong></span>
+                    <span style="margin-right: 1rem;">Deployed: <span style="color: #4caf50;">${totalDeployed}</span></span>
+                    <span>Rejected: <span style="color: #f44336;">${totalRejected}</span></span>
+                `;
+
+            } catch (error) {
+                console.error('Failed to load metrics history:', error);
+                summaryEl.innerHTML = '<span style="color: #e57373;">Fehler beim Laden der Metriken-Historie</span>';
             }
         }
 
@@ -2693,6 +2854,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadInfo();
             loadFeatures();
+            loadMetricsHistory();  // Load learning progress chart
             loadAllSymbols();  // Load symbols for dropdowns
 
             // Auto-refresh every 30 seconds

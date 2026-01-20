@@ -417,6 +417,108 @@ async def get_registry_stats():
     }
 
 
+@validation_router.get("/metrics-history")
+async def get_metrics_history(
+    model_type: str = Query(default="hmm", description="Model type: hmm or scorer"),
+    limit: int = Query(default=50, ge=10, le=200)
+):
+    """
+    Get historical metrics for tracking model improvement over time.
+
+    Returns aggregated metrics from deployment decisions, grouped by training run.
+    Useful for visualizing how model performance evolves with each training cycle.
+    """
+    if not training_service._validation_enabled:
+        return {
+            "validation_enabled": False,
+            "history": []
+        }
+
+    rollback_svc = training_service._get_rollback_service()
+    history_objects = rollback_svc.get_deployment_history(limit=limit * 2)  # Get more to filter
+
+    # Aggregate metrics by training job
+    from collections import defaultdict
+    from datetime import datetime
+
+    job_metrics = defaultdict(lambda: {
+        "accuracies": [],
+        "f1_scores": [],
+        "deployed": 0,
+        "rejected": 0,
+        "total": 0
+    })
+
+    for entry_obj in history_objects:
+        # Convert DeploymentDecision to dict if needed
+        entry = entry_obj.to_dict() if hasattr(entry_obj, 'to_dict') else entry_obj
+
+        if entry.get("model_type") != model_type:
+            continue
+
+        comparison = entry.get("comparison_result") or {}
+        candidate_metrics = comparison.get("candidate_metrics") or {}
+
+        if not candidate_metrics:
+            continue
+
+        # Extract timestamp for grouping (by day)
+        timestamp = entry.get("timestamp", "")
+        if timestamp:
+            try:
+                dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                date_key = dt.strftime("%Y-%m-%d")
+            except (ValueError, TypeError):
+                continue
+        else:
+            continue
+
+        # Collect metrics
+        if model_type == "hmm":
+            accuracy = candidate_metrics.get("regime_accuracy", 0)
+            f1 = candidate_metrics.get("regime_f1_weighted", 0)
+        else:
+            accuracy = candidate_metrics.get("accuracy", 0)
+            f1 = candidate_metrics.get("f1_weighted", 0)
+
+        if accuracy > 0:
+            job_metrics[date_key]["accuracies"].append(accuracy)
+        if f1 > 0:
+            job_metrics[date_key]["f1_scores"].append(f1)
+
+        job_metrics[date_key]["total"] += 1
+        if entry.get("action") == "deployed":
+            job_metrics[date_key]["deployed"] += 1
+        else:
+            job_metrics[date_key]["rejected"] += 1
+
+    # Convert to list sorted by date
+    result = []
+    for date_key in sorted(job_metrics.keys()):
+        metrics = job_metrics[date_key]
+        if metrics["accuracies"]:
+            avg_accuracy = sum(metrics["accuracies"]) / len(metrics["accuracies"])
+            avg_f1 = sum(metrics["f1_scores"]) / len(metrics["f1_scores"]) if metrics["f1_scores"] else 0
+            deploy_rate = metrics["deployed"] / metrics["total"] if metrics["total"] > 0 else 0
+
+            result.append({
+                "date": date_key,
+                "avg_accuracy": round(avg_accuracy * 100, 1),
+                "avg_f1": round(avg_f1 * 100, 1),
+                "deployed": metrics["deployed"],
+                "rejected": metrics["rejected"],
+                "total": metrics["total"],
+                "deploy_rate": round(deploy_rate * 100, 1)
+            })
+
+    return {
+        "validation_enabled": True,
+        "model_type": model_type,
+        "history": result[-limit:],  # Return last N entries
+        "total_entries": len(result)
+    }
+
+
 # =============================================================================
 # Training Schedule Endpoints
 # =============================================================================
