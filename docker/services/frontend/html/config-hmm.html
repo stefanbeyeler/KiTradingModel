@@ -745,71 +745,64 @@
 
         <!-- Scoring Tab -->
         <div id="tab-scoring" class="tab-content">
+            <!-- Kompakte 2-Spalten-Ansicht -->
             <div class="grid-2">
-                <!-- Score Calculator -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#127919; Trade Score berechnen</h3>
-                    </div>
-                    <div class="form-group">
-                        <label>Symbol</label>
-                        <select class="form-control" id="score-symbol">
-                            <option value="BTCUSD">Lade Symbole...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Richtung</label>
-                        <select class="form-control" id="score-direction">
-                            <option value="long">Long</option>
-                            <option value="short">Short</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Timeframe</label>
-                        <select class="form-control" id="score-timeframe">
-                            <option value="H1" selected>H1</option>
-                            <option value="H4">H4</option>
-                            <option value="D1">D1</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-success" id="btn-score" onclick="calculateScore()">&#127919; Score berechnen</button>
-                </div>
-
-                <!-- Score Result -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#128202; Ergebnis</h3>
-                    </div>
-                    <div id="score-result">
-                        <div class="score-display">
-                            <div style="color: #888; margin-bottom: 0.5rem;">Trade Score</div>
-                            <div class="score-value neutral" id="score-value">-</div>
-                            <div id="score-details" style="margin-top: 1rem; font-size: 0.9rem; color: #888;"></div>
+                <!-- Trade Score berechnen -->
+                <div class="card" style="padding: 1rem;">
+                    <h3 class="card-title" style="margin-bottom: 0.75rem; font-size: 1rem;">&#127919; Trade Score</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 80px 70px auto; gap: 0.5rem; align-items: end;">
+                        <div>
+                            <label style="font-size: 0.75rem; margin-bottom: 0.25rem; display: block;">Symbol</label>
+                            <select class="form-control" id="score-symbol" style="padding: 0.4rem;">
+                                <option value="BTCUSD">Lade...</option>
+                            </select>
                         </div>
+                        <div>
+                            <label style="font-size: 0.75rem; margin-bottom: 0.25rem; display: block;">Richtung</label>
+                            <select class="form-control" id="score-direction" style="padding: 0.4rem;">
+                                <option value="long">Long</option>
+                                <option value="short">Short</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; margin-bottom: 0.25rem; display: block;">TF</label>
+                            <select class="form-control" id="score-timeframe" style="padding: 0.4rem;">
+                                <option value="H1" selected>H1</option>
+                                <option value="H4">H4</option>
+                                <option value="D1">D1</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-success btn-sm" id="btn-score" onclick="calculateScore()" style="padding: 0.4rem 0.75rem;">Score</button>
+                    </div>
+                    <div id="score-result" style="margin-top: 0.75rem; display: flex; align-items: center; gap: 1rem;">
+                        <div class="score-value neutral" id="score-value" style="font-size: 2rem; min-width: 60px;">-</div>
+                        <div id="score-details" style="font-size: 0.8rem; color: #888; flex: 1;"></div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Alignment Check -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128260; Alignment Check</h3>
-                </div>
-                <div class="info-box" style="margin-bottom: 1rem;">
-                    Pruft die Ubereinstimmung von Regime und technischen Indikatoren uber mehrere Timeframes.
-                </div>
-                <div style="display: flex; gap: 1rem; align-items: flex-end;">
-                    <div class="form-group" style="margin-bottom: 0; flex: 1;">
-                        <label>Symbol</label>
-                        <select class="form-control" id="align-symbol">
-                            <option value="BTCUSD">BTCUSD</option>
-                            <option value="ETHUSD">ETHUSD</option>
-                            <option value="EURUSD">EURUSD</option>
-                        </select>
+                <!-- Alignment Check -->
+                <div class="card" style="padding: 1rem;">
+                    <h3 class="card-title" style="margin-bottom: 0.75rem; font-size: 1rem;">&#128260; Alignment Check</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 80px auto; gap: 0.5rem; align-items: end;">
+                        <div>
+                            <label style="font-size: 0.75rem; margin-bottom: 0.25rem; display: block;">Symbol</label>
+                            <select class="form-control" id="align-symbol" style="padding: 0.4rem;">
+                                <option value="BTCUSD">BTCUSD</option>
+                                <option value="ETHUSD">ETHUSD</option>
+                                <option value="EURUSD">EURUSD</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; margin-bottom: 0.25rem; display: block;">Signal</label>
+                            <select class="form-control" id="align-signal" style="padding: 0.4rem;">
+                                <option value="long">Long</option>
+                                <option value="short">Short</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="checkAlignment()" style="padding: 0.4rem 0.75rem;">Prüfen</button>
                     </div>
-                    <button class="btn btn-primary" onclick="checkAlignment()">&#128260; Prufen</button>
+                    <div id="alignment-result" style="margin-top: 0.75rem;"></div>
                 </div>
-                <div id="alignment-result" style="margin-top: 1rem;"></div>
             </div>
         </div>
 
@@ -824,21 +817,17 @@
                     <div class="form-group">
                         <label>Symbol</label>
                         <select class="form-control" id="train-symbol">
-                            <option value="BTCUSD">BTCUSD</option>
-                            <option value="ETHUSD">ETHUSD</option>
-                            <option value="EURUSD">EURUSD</option>
-                            <option value="XAUUSD">XAUUSD</option>
+                            <option value="BTCUSD">Lade Symbole...</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Trainingsdaten (Tage)</label>
-                        <input type="number" class="form-control" id="train-days" value="90" min="30" max="365">
+                        <input type="number" class="form-control" id="train-days" value="365" min="30" max="730">
                     </div>
-                    <div class="form-group">
-                        <label>Anzahl Zustande</label>
-                        <input type="number" class="form-control" id="train-states" value="4" min="2" max="8">
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-success" id="btn-train-hmm" onclick="trainHMM()">&#9654; Symbol trainieren</button>
+                        <button class="btn btn-primary" id="btn-train-all" onclick="trainAllHMM()">&#9654; Alle trainieren</button>
                     </div>
-                    <button class="btn btn-success" id="btn-train-hmm" onclick="trainHMM()">&#9654; HMM trainieren</button>
                     <div id="hmm-training-result" style="margin-top: 1rem;"></div>
                 </div>
 
@@ -847,13 +836,11 @@
                     <div class="card-header">
                         <h3 class="card-title">&#128295; Scorer Training</h3>
                     </div>
-                    <div class="info-box" style="margin-bottom: 1rem;">
-                        Trainiert den Trade-Scorer mit historischen Daten. Der Scorer bewertet Trade-Setups basierend auf 18 Features.
-                    </div>
                     <div id="scorer-status" style="margin-bottom: 1rem;">
                         <div class="loading"><div class="spinner"></div></div>
                     </div>
                     <button class="btn btn-success" id="btn-train-scorer" onclick="trainScorer()">&#9654; Scorer trainieren</button>
+                    <div id="scorer-training-result" style="margin-top: 1rem;"></div>
                 </div>
             </div>
 
@@ -1569,7 +1556,7 @@
                 const direction = document.getElementById('score-direction').value;
                 const timeframe = document.getElementById('score-timeframe').value;
 
-                const response = await fetch(`${API_BASE}/scoring/score/${symbol}?direction=${direction}&timeframe=${timeframe}`);
+                const response = await fetch(`${API_BASE}/scoring/score/${symbol}?signal_type=${direction}&timeframe=${timeframe}`);
                 if (!response.ok) throw new Error('Scoring failed');
 
                 const data = await response.json();
@@ -1582,7 +1569,8 @@
 
                 detailsEl.innerHTML = `
                     <div>Richtung: ${direction.toUpperCase()}</div>
-                    <div>Regime: ${data.regime || '-'}</div>
+                    <div>Regime: ${data.current_regime || '-'}</div>
+                    <div>Alignment: ${data.regime_alignment || '-'}</div>
                     ${data.recommendation ? `<div style="margin-top: 0.5rem; color: ${score >= 60 ? '#4caf50' : '#f44336'};">${data.recommendation}</div>` : ''}
                 `;
 
@@ -1599,40 +1587,42 @@
         // Check Alignment
         async function checkAlignment() {
             const symbol = document.getElementById('align-symbol').value;
+            const signalType = document.getElementById('align-signal').value;
             const container = document.getElementById('alignment-result');
-            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            container.innerHTML = '<div class="spinner" style="width: 20px; height: 20px;"></div>';
 
             try {
-                const response = await fetch(`${API_BASE}/scoring/alignment-check/${symbol}`);
+                const response = await fetch(`${API_BASE}/scoring/alignment-check/${symbol}?signal_type=${signalType}`);
                 if (!response.ok) throw new Error('Alignment check failed');
 
                 const data = await response.json();
 
+                // Determine alignment color and icon
+                const alignColor = data.alignment === 'aligned' ? '#4caf50' :
+                                   data.alignment === 'neutral' ? '#ffc107' : '#f44336';
+                const alignIcon = data.alignment === 'aligned' ? '✓' :
+                                  data.alignment === 'neutral' ? '○' : '✗';
+                const regime = getRegimeDisplay(data.current_regime);
+
+                // Kompakte Inline-Darstellung
                 container.innerHTML = `
-                    <div class="grid-3" style="margin-top: 1rem;">
-                        ${Object.entries(data.timeframes || {}).map(([tf, info]) => {
-                            const regime = getRegimeDisplay(info.regime);
-                            return `
-                                <div style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; text-align: center;">
-                                    <div style="font-weight: 600; margin-bottom: 0.5rem;">${tf}</div>
-                                    <span class="regime-badge ${info.regime}">${regime.icon} ${regime.name}</span>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                    <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; text-align: center;">
-                        <div style="color: #888; margin-bottom: 0.5rem;">Alignment Score</div>
-                        <div style="font-size: 2rem; font-weight: 700; color: ${data.alignment_score >= 0.7 ? '#4caf50' : data.alignment_score >= 0.4 ? '#ffc107' : '#f44336'};">
-                            ${((data.alignment_score || 0) * 100).toFixed(0)}%
-                        </div>
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <span class="regime-badge ${data.current_regime}" style="font-size: 0.8rem;">${regime.icon} ${regime.name}</span>
+                        <span style="color: ${signalType === 'long' ? '#4caf50' : '#f44336'}; font-weight: 600;">
+                            ${signalType === 'long' ? '↑ Long' : '↓ Short'}
+                        </span>
+                        <span style="font-weight: 700; color: ${alignColor}; font-size: 1.1rem;">
+                            ${alignIcon} ${data.alignment || 'unknown'}
+                        </span>
+                        <span style="color: #888; font-size: 0.8rem;">${data.recommendation || ''}</span>
                     </div>
                 `;
             } catch (error) {
-                container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler beim Alignment Check.</div>';
+                container.innerHTML = '<span style="color: #e57373; font-size: 0.85rem;">Fehler beim Alignment Check</span>';
             }
         }
 
-        // Train HMM
+        // Train HMM (single symbol)
         async function trainHMM() {
             const btn = document.getElementById('btn-train-hmm');
             btn.classList.add('btn-loading');
@@ -1641,12 +1631,15 @@
             try {
                 const symbol = document.getElementById('train-symbol').value;
                 const days = parseInt(document.getElementById('train-days').value);
-                const states = parseInt(document.getElementById('train-states').value);
 
-                const response = await fetch(`${API_BASE}/train/hmm/${symbol}`, {
+                const response = await fetch(`${TRAIN_API_BASE}/train/start`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ days, n_states: states })
+                    body: JSON.stringify({
+                        model_type: 'hmm',
+                        symbols: [symbol],
+                        lookback_days: days
+                    })
                 });
 
                 if (!response.ok) throw new Error('Training failed');
@@ -1654,16 +1647,16 @@
                 const data = await response.json();
                 document.getElementById('hmm-training-result').innerHTML = `
                     <div class="info-box" style="border-color: rgba(76,175,80,0.3); color: #81c784;">
-                        HMM-Modell für ${symbol} erfolgreich trainiert!
+                        Training für ${symbol} gestartet!<br>
+                        <small>Job-ID: ${data.job_id}</small>
                     </div>
                 `;
 
-                showToast(`HMM für ${symbol} trainiert`);
-                loadInfo();
+                showToast(`HMM Training für ${symbol} gestartet`);
             } catch (error) {
                 document.getElementById('hmm-training-result').innerHTML = `
                     <div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">
-                        Fehler beim Training: ${error.message}
+                        Fehler: ${error.message}
                     </div>
                 `;
                 showToast('Fehler beim HMM Training', 'error');
@@ -1673,70 +1666,274 @@
             }
         }
 
+        // Train ALL HMM models
+        async function trainAllHMM() {
+            const btn = document.getElementById('btn-train-all');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+
+            try {
+                const days = parseInt(document.getElementById('train-days').value);
+
+                const response = await fetch(`${TRAIN_API_BASE}/train/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_type: 'hmm',
+                        symbols: null,  // null = alle Symbole
+                        lookback_days: days
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Training failed');
+                }
+
+                const data = await response.json();
+                document.getElementById('hmm-training-result').innerHTML = `
+                    <div class="info-box" style="border-color: rgba(33,150,243,0.3); color: #64b5f6;">
+                        Training für ALLE Symbole gestartet!<br>
+                        <small>Job-ID: ${data.job_id}</small>
+                    </div>
+                    <div id="training-progress" style="margin-top: 0.5rem;"></div>
+                `;
+
+                showToast('Training für alle Symbole gestartet');
+                // Start progress polling
+                pollTrainingProgress(data.job_id);
+            } catch (error) {
+                document.getElementById('hmm-training-result').innerHTML = `
+                    <div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">
+                        Fehler: ${error.message}
+                    </div>
+                `;
+                showToast('Fehler beim Training', 'error');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Poll training progress
+        let progressInterval = null;
+        let currentTrainingJobId = null;
+        async function pollTrainingProgress(jobId) {
+            if (progressInterval) clearInterval(progressInterval);
+            currentTrainingJobId = jobId;
+            let trainingStarted = false;
+
+            const container = document.getElementById('training-progress');
+            if (container) {
+                container.innerHTML = '<div style="color: #888; font-size: 0.8rem;">⏳ Training wird gestartet...</div>';
+            }
+
+            const updateProgress = async () => {
+                try {
+                    const response = await fetch(`${TRAIN_API_BASE}/train/status`);
+                    if (!response.ok) return;
+
+                    const data = await response.json();
+                    const container = document.getElementById('training-progress');
+                    if (!container) return;
+
+                    if (data.status === 'training' && data.current_job) {
+                        trainingStarted = true;
+                        const job = data.current_job;
+                        const pct = job.progress || 0;
+                        container.innerHTML = `
+                            <div style="background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; height: 20px;">
+                                <div style="background: linear-gradient(90deg, #2196f3, #64b5f6); height: 100%; width: ${pct}%; transition: width 0.3s;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-top: 0.25rem; color: #888;">
+                                <span>${job.completed_models || 0} / ${job.total_models || 0} Modelle</span>
+                                <span>${pct.toFixed(1)}%</span>
+                            </div>
+                            ${job.current_symbol ? `<div style="font-size: 0.75rem; color: #64b5f6; margin-top: 0.25rem;">Aktuell: ${job.current_symbol}</div>` : ''}
+                        `;
+                    } else if (data.status === 'idle' && trainingStarted) {
+                        container.innerHTML = `
+                            <div class="info-box" style="border-color: rgba(100,200,255,0.3); color: #64c8ff; margin-top: 0.5rem;">
+                                ⏳ Modelle werden im Inference Service geladen...
+                            </div>
+                        `;
+                        clearInterval(progressInterval);
+                        progressInterval = null;
+
+                        // Trigger reload-all in HMM Inference Service
+                        try {
+                            const reloadResponse = await fetch(`${API_BASE}/model/reload-all`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+
+                            if (reloadResponse.ok) {
+                                container.innerHTML = `
+                                    <div class="info-box" style="border-color: rgba(76,175,80,0.3); color: #81c784; margin-top: 0.5rem;">
+                                        ✓ HMM Training abgeschlossen und Modelle geladen!
+                                    </div>
+                                `;
+                            } else {
+                                container.innerHTML = `
+                                    <div class="info-box" style="border-color: rgba(255,152,0,0.3); color: #ffb74d; margin-top: 0.5rem;">
+                                        ✓ Training abgeschlossen, Reload fehlgeschlagen. Bitte Container neu starten.
+                                    </div>
+                                `;
+                            }
+                        } catch (reloadError) {
+                            console.warn('HMM reload error:', reloadError);
+                            container.innerHTML = `
+                                <div class="info-box" style="border-color: rgba(255,152,0,0.3); color: #ffb74d; margin-top: 0.5rem;">
+                                    ✓ Training abgeschlossen. Reload-Aufruf fehlgeschlagen.
+                                </div>
+                            `;
+                        }
+
+                        loadInfo(); // Refresh status
+                    }
+                } catch (e) {
+                    console.warn('Progress poll error:', e);
+                }
+            };
+
+            // Warte kurz bevor wir anfangen zu pollen (Training braucht Zeit zum Starten)
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await updateProgress();
+            progressInterval = setInterval(updateProgress, 2000);
+        }
+
         // Train Scorer
         async function trainScorer() {
             const btn = document.getElementById('btn-train-scorer');
-            const originalText = btn.innerHTML;
-
             btn.classList.add('btn-loading');
             btn.disabled = true;
-            btn.innerHTML = '⏳ Training läuft...';
 
             try {
-                const response = await fetch(`${TRAIN_API_BASE}/train/scorer`, { method: 'POST' });
+                const response = await fetch(`${TRAIN_API_BASE}/train/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_type: 'scorer',
+                        symbols: null,  // Scorer wird über alle Symbole trainiert
+                        lookback_days: 365
+                    })
+                });
+
                 if (!response.ok) {
                     const error = await response.json();
                     throw new Error(error.detail || 'Training failed');
                 }
 
-                const result = await response.json();
+                const data = await response.json();
+                document.getElementById('scorer-training-result').innerHTML = `
+                    <div class="info-box" style="border-color: rgba(33,150,243,0.3); color: #64b5f6;">
+                        Scorer Training gestartet!<br>
+                        <small>Job-ID: ${data.job_id}</small>
+                    </div>
+                    <div id="scorer-progress" style="margin-top: 0.5rem;"></div>
+                `;
 
-                // Warte auf Training-Abschluss (Polling)
-                let attempts = 0;
-                const maxAttempts = 30; // 30 Sekunden max
-
-                while (attempts < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-
-                    const statusRes = await fetch(`${TRAIN_API_BASE}/train/status`);
-                    const status = await statusRes.json();
-
-                    if (!status.current_job || status.status === 'idle') {
-                        // Training abgeschlossen
-                        btn.innerHTML = '✅ Erfolgreich trainiert!';
-                        showToast(`Scorer erfolgreich trainiert (Job: ${result.job_id})`, 'success');
-                        await loadInfo();
-
-                        // Zurücksetzen nach 3 Sekunden
-                        setTimeout(() => {
-                            btn.innerHTML = originalText;
-                        }, 3000);
-                        break;
-                    }
-
-                    attempts++;
-                }
-
-                if (attempts >= maxAttempts) {
-                    btn.innerHTML = '⚠️ Training läuft noch...';
-                    showToast('Training läuft im Hintergrund weiter', 'info');
-                    setTimeout(() => {
-                        btn.innerHTML = originalText;
-                    }, 3000);
-                }
-
+                showToast('Scorer Training gestartet');
+                // Start progress polling
+                pollScorerProgress(data.job_id);
             } catch (error) {
-                btn.innerHTML = '❌ Training fehlgeschlagen';
-                showToast(`Fehler beim Scorer Training: ${error.message}`, 'error');
-                console.error('Scorer training error:', error);
-
-                setTimeout(() => {
-                    btn.innerHTML = originalText;
-                }, 3000);
+                document.getElementById('scorer-training-result').innerHTML = `
+                    <div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">
+                        Fehler: ${error.message}
+                    </div>
+                `;
+                showToast('Fehler beim Scorer Training', 'error');
             } finally {
                 btn.classList.remove('btn-loading');
                 btn.disabled = false;
             }
+        }
+
+        // Poll scorer training progress
+        let scorerProgressInterval = null;
+        async function pollScorerProgress(jobId) {
+            if (scorerProgressInterval) clearInterval(scorerProgressInterval);
+            let trainingStarted = false;
+
+            const container = document.getElementById('scorer-progress');
+            if (container) {
+                container.innerHTML = '<div style="color: #888; font-size: 0.8rem;">⏳ Training wird gestartet...</div>';
+            }
+
+            const updateProgress = async () => {
+                try {
+                    const response = await fetch(`${TRAIN_API_BASE}/train/status`);
+                    if (!response.ok) return;
+
+                    const data = await response.json();
+                    const container = document.getElementById('scorer-progress');
+                    if (!container) return;
+
+                    if (data.status === 'training' && data.current_job) {
+                        trainingStarted = true;
+                        const job = data.current_job;
+                        const pct = job.progress || 0;
+                        container.innerHTML = `
+                            <div style="background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; height: 20px;">
+                                <div style="background: linear-gradient(90deg, #9c27b0, #ce93d8); height: 100%; width: ${pct}%; transition: width 0.3s;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-top: 0.25rem; color: #888;">
+                                <span>${job.completed_models || 0} / ${job.total_models || 0} Symbole</span>
+                                <span>${pct.toFixed(1)}%</span>
+                            </div>
+                            ${job.current_symbol ? `<div style="font-size: 0.75rem; color: #ce93d8; margin-top: 0.25rem;">Aktuell: ${job.current_symbol}</div>` : ''}
+                        `;
+                    } else if (data.status === 'idle' && trainingStarted) {
+                        container.innerHTML = `
+                            <div class="info-box" style="border-color: rgba(100,200,255,0.3); color: #64c8ff; margin-top: 0.5rem;">
+                                ⏳ Scorer wird im Inference Service geladen...
+                            </div>
+                        `;
+                        clearInterval(scorerProgressInterval);
+                        scorerProgressInterval = null;
+
+                        // Trigger reload in HMM Inference Service
+                        try {
+                            const reloadResponse = await fetch(`${API_BASE}/model/reload`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ model_type: 'scorer' })
+                            });
+
+                            if (reloadResponse.ok) {
+                                const reloadData = await reloadResponse.json();
+                                container.innerHTML = `
+                                    <div class="info-box" style="border-color: rgba(76,175,80,0.3); color: #81c784; margin-top: 0.5rem;">
+                                        ✓ Scorer Training abgeschlossen und geladen!
+                                    </div>
+                                `;
+                            } else {
+                                container.innerHTML = `
+                                    <div class="info-box" style="border-color: rgba(255,152,0,0.3); color: #ffb74d; margin-top: 0.5rem;">
+                                        ✓ Training abgeschlossen, Reload fehlgeschlagen. Bitte Container neu starten.
+                                    </div>
+                                `;
+                            }
+                        } catch (reloadError) {
+                            console.warn('Scorer reload error:', reloadError);
+                            container.innerHTML = `
+                                <div class="info-box" style="border-color: rgba(255,152,0,0.3); color: #ffb74d; margin-top: 0.5rem;">
+                                    ✓ Training abgeschlossen. Reload-Aufruf fehlgeschlagen.
+                                </div>
+                            `;
+                        }
+
+                        loadInfo(); // Refresh status
+                    }
+                } catch (e) {
+                    console.warn('Scorer progress poll error:', e);
+                }
+            };
+
+            // Warte kurz bevor wir anfangen zu pollen (Training braucht Zeit zum Starten)
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await updateProgress();
+            scorerProgressInterval = setInterval(updateProgress, 2000);
         }
 
         // ==================== Validation Tab Functions ====================
@@ -2469,17 +2666,16 @@
                 }
 
                 // Populate all symbol dropdowns
-                const dropdownIds = ['detect-symbol', 'score-symbol', 'history-symbol', 'reload-symbol', 'force-deploy-symbol', 'rollback-symbol'];
+                const dropdownIds = ['detect-symbol', 'score-symbol', 'align-symbol', 'train-symbol', 'history-symbol', 'reload-symbol', 'force-deploy-symbol', 'rollback-symbol'];
+                const placeholderHtml = '<option value="" disabled selected>-- Symbol wählen --</option>';
                 for (const id of dropdownIds) {
                     const dropdown = document.getElementById(id);
                     if (dropdown) {
                         const currentValue = dropdown.value;
-                        dropdown.innerHTML = optionsHtml;
-                        // Restore previous selection or default to BTCUSD
+                        dropdown.innerHTML = placeholderHtml + optionsHtml;
+                        // Restore previous selection if exists, otherwise keep placeholder
                         if (currentValue && dropdown.querySelector(`option[value="${currentValue}"]`)) {
                             dropdown.value = currentValue;
-                        } else if (dropdown.querySelector('option[value="BTCUSD"]')) {
-                            dropdown.value = 'BTCUSD';
                         }
                     }
                 }

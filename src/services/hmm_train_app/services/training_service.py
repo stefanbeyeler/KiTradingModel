@@ -633,18 +633,30 @@ class HMMTrainingService:
 
             # Train scorer if requested
             if job.model_type in [ModelType.SCORER, ModelType.BOTH] and not self._stop_requested:
-                job.current_symbol = "scorer"
-
                 # Fetch data for scorer if not already fetched
                 if not data_by_symbol:
-                    for symbol in job.symbols:  # Use ALL symbols for scorer
+                    # Update total_models to reflect data fetching progress
+                    job.total_models = len(job.symbols)
+                    job.completed_models = 0
+
+                    for idx, symbol in enumerate(job.symbols):  # Use ALL symbols for scorer
+                        if self._stop_requested:
+                            break
+                        job.current_symbol = f"Daten: {symbol}"
                         data = await self._fetch_training_data(
                             symbol, job.timeframe, job.lookback_days
                         )
                         if data:
                             data_by_symbol[symbol] = data
+                        job.completed_models = idx + 1
+                        job.progress = job.completed_models / job.total_models * 50  # 0-50% for data
+                        await asyncio.sleep(0)
+
+                job.current_symbol = "scorer"
+                job.progress = 50  # Data fetched, now training
 
                 if data_by_symbol:
+                    job.current_symbol = f"Training ({len(data_by_symbol)} Symbole)"
                     result = await self._train_scorer_model(job.symbols, data_by_symbol, job)
                     job.results["scorer"] = result
 
@@ -656,7 +668,8 @@ class HMMTrainingService:
                     job.results["scorer"] = {"success": False, "error": "No data available"}
                     job.failed += 1
 
-                job.completed_models += 1
+                job.current_symbol = "scorer"
+                job.completed_models = job.total_models
                 job.progress = 100
 
             # Run validation pipeline if enabled
