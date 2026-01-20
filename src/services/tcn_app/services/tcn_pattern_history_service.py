@@ -352,6 +352,8 @@ class TCNPatternHistoryService:
         This version uses asyncio.to_thread() for file I/O to prevent
         blocking the event loop and causing health check timeouts.
 
+        Also registers the pattern with the Outcome Tracker for self-learning.
+
         Args:
             symbol: Trading symbol
             timeframe: Timeframe
@@ -378,6 +380,13 @@ class TCNPatternHistoryService:
 
         if entry:
             await self._save_history_async()
+
+            # Register with Outcome Tracker for self-learning
+            try:
+                from .outcome_tracker_service import outcome_tracker_service
+                await outcome_tracker_service.track_pattern(entry)
+            except Exception as e:
+                logger.debug(f"Could not register pattern with outcome tracker: {e}")
 
         return entry
 

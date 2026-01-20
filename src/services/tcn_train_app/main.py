@@ -22,7 +22,10 @@ from loguru import logger
 
 from .services.training_service import training_service
 from .services.training_scheduler import training_scheduler
-from .routers import training_router, system_router
+from .services.feedback_buffer_service import feedback_buffer_service
+from .services.self_learning_orchestrator import self_learning_orchestrator
+from .routers import training_router, system_router, feedback_router
+from .routers.self_learning_router import router as self_learning_router
 
 # Import für Test-Health-Funktionalität
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
@@ -61,7 +64,18 @@ async def lifespan(app: FastAPI):
         training_scheduler.start()
         logger.info("Training scheduler started")
 
+    # Start self-learning loop if enabled
+    self_learning_enabled = os.getenv("TCN_SELF_LEARNING", "true").lower() == "true"
+    if self_learning_enabled:
+        await self_learning_orchestrator.start_loop()
+        logger.info("Self-learning orchestrator started")
+
     yield
+
+    # Stop self-learning orchestrator
+    if self_learning_orchestrator.status.loop_running:
+        await self_learning_orchestrator.stop_loop()
+        logger.info("Self-learning orchestrator stopped")
 
     # Stop scheduler
     training_scheduler.stop()
@@ -115,6 +129,8 @@ app.add_middleware(
 # Include routers
 app.include_router(system_router, prefix="/api/v1", tags=["1. System & Monitoring"])
 app.include_router(training_router, prefix="/api/v1", tags=["2. Training"])
+app.include_router(feedback_router, prefix="/api/v1", tags=["3. Feedback Buffer"])
+app.include_router(self_learning_router, prefix="/api/v1", tags=["4. Self-Learning"])
 
 # Test-Health-Router
 test_health_router = create_test_health_router("tcn-train")
@@ -133,9 +149,22 @@ async def root():
             "train": "/api/v1/train",
             "train_status": "/api/v1/train/status",
             "train_history": "/api/v1/train/history",
+            "train_incremental": "/api/v1/train/incremental",
+            "train_incremental_status": "/api/v1/train/incremental/status",
             "models": "/api/v1/models",
             "scheduler": "/api/v1/scheduler",
-            "scheduler_config": "/api/v1/scheduler/config"
+            "scheduler_config": "/api/v1/scheduler/config",
+            "feedback_buffer_stats": "/api/v1/feedback-buffer/statistics",
+            "feedback_buffer_samples": "/api/v1/feedback-buffer/samples",
+            "feedback_buffer_ready": "/api/v1/feedback-buffer/ready",
+            "self_learning_status": "/api/v1/self-learning/status",
+            "self_learning_start": "/api/v1/self-learning/start",
+            "self_learning_stop": "/api/v1/self-learning/stop",
+            "self_learning_trigger": "/api/v1/self-learning/trigger",
+            "self_learning_config": "/api/v1/self-learning/config",
+            "model_versions": "/api/v1/models/versions",
+            "model_deploy": "/api/v1/models/deploy/{version_id}",
+            "model_rollback": "/api/v1/models/rollback"
         }
     }
 

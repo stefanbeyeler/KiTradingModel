@@ -21,9 +21,13 @@ from loguru import logger
 
 from .routers import detection_router, system_router, history_router, crt_router
 from .routers.claude_validator_router import router as claude_validator_router
+from .routers.outcome_router import router as outcome_router
+from .routers.drift_router import router as drift_router
 from .routers.system_router import test_health_router
 from .services.pattern_detection_service import pattern_detection_service
 from .services.tcn_pattern_history_service import tcn_pattern_history_service
+from .services.outcome_tracker_service import outcome_tracker_service
+from .services.drift_detection_service import drift_detection_service
 
 # Import für Test-Health-Funktionalität
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
@@ -70,12 +74,23 @@ async def lifespan(app: FastAPI):
         await tcn_pattern_history_service.start_auto_scan()
         logger.info("TCN Pattern History auto-scan started")
 
+    # Start outcome tracker update loop
+    outcome_tracking_enabled = os.getenv("TCN_OUTCOME_TRACKING", "true").lower() == "true"
+    if outcome_tracking_enabled:
+        await outcome_tracker_service.start_update_loop()
+        logger.info("TCN Outcome Tracker update loop started")
+
     yield
 
     # Stop auto-scan on shutdown
     if tcn_pattern_history_service.is_scan_running():
         await tcn_pattern_history_service.stop_auto_scan()
         logger.info("TCN Pattern History auto-scan stopped")
+
+    # Stop outcome tracker on shutdown
+    if outcome_tracker_service.is_update_running():
+        await outcome_tracker_service.stop_update_loop()
+        logger.info("TCN Outcome Tracker update loop stopped")
 
     logger.info("Shutting down TCN-Pattern Service...")
 
@@ -147,6 +162,8 @@ app.include_router(detection_router, prefix="/api/v1", tags=["2. Pattern Detecti
 app.include_router(history_router, prefix="/api/v1", tags=["3. Pattern History"])
 app.include_router(crt_router, prefix="/api/v1", tags=["4. CRT (Candle Range Theory)"])
 app.include_router(claude_validator_router, prefix="/api/v1/claude", tags=["5. Claude Validation"])
+app.include_router(outcome_router, prefix="/api/v1", tags=["6. Outcome Tracking"])
+app.include_router(drift_router, prefix="/api/v1", tags=["7. Drift Detection"])
 
 
 @app.get("/")
@@ -174,7 +191,14 @@ async def root():
             "crt_ranges": "/api/v1/crt/ranges",
             "claude_validate": "/api/v1/claude/validate",
             "claude_history": "/api/v1/claude/history",
-            "claude_statistics": "/api/v1/claude/statistics"
+            "claude_statistics": "/api/v1/claude/statistics",
+            "outcomes": "/api/v1/outcomes",
+            "outcomes_active": "/api/v1/outcomes/active",
+            "outcomes_completed": "/api/v1/outcomes/completed",
+            "outcomes_statistics": "/api/v1/outcomes/statistics",
+            "drift_status": "/api/v1/drift/status",
+            "drift_check": "/api/v1/drift/check",
+            "drift_statistics": "/api/v1/drift/statistics"
         }
     }
 

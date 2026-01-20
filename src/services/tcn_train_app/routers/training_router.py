@@ -7,6 +7,9 @@ from loguru import logger
 
 from ..services.training_service import training_service, TrainingConfig
 from ..services.training_scheduler import training_scheduler
+from ..services.ewc_trainer import EWCConfig
+from ..services.feedback_buffer_service import feedback_buffer_service
+from ..services.tcn_rollback_service import rollback_service
 
 router = APIRouter()
 
@@ -275,3 +278,206 @@ async def run_auto_training(request: AutoTrainingRunRequest, background_tasks: B
         "status": "started",
         "message": "Auto-training started in background"
     }
+
+
+# =============================================================================
+# Incremental Training (EWC-based Self-Learning)
+# =============================================================================
+
+class IncrementalTrainRequest(BaseModel):
+    """Request for incremental training."""
+    min_samples: int = Field(50, ge=10, description="Minimum samples required")
+    ewc_lambda: float = Field(1000.0, ge=0, description="EWC regularization strength")
+    learning_rate: float = Field(1e-5, gt=0, description="Learning rate for fine-tuning")
+    epochs: int = Field(10, ge=1, le=50, description="Training epochs")
+    batch_size: int = Field(16, ge=1, description="Batch size")
+
+
+@router.post("/train/incremental")
+async def start_incremental_training(
+    request: IncrementalTrainRequest,
+    background_tasks: BackgroundTasks
+):
+    """
+    Start incremental training using feedback samples.
+
+    Uses Elastic Weight Consolidation (EWC) to prevent catastrophic
+    forgetting of previously learned patterns while fine-tuning on
+    new feedback data.
+    """
+    if training_service.is_training():
+        raise HTTPException(
+            status_code=409,
+            detail="Training already in progress"
+        )
+
+    # Check if enough samples in feedback buffer
+    buffer_stats = feedback_buffer_service.get_statistics()
+    if buffer_stats.total_samples < request.min_samples:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient samples in feedback buffer ({buffer_stats.total_samples} < {request.min_samples})"
+        )
+
+    # Get training batch from feedback buffer
+    batch = feedback_buffer_service.get_training_batch(
+        batch_size=buffer_stats.total_samples,  # Get all available
+        stratified=True
+    )
+
+    if not batch:
+        raise HTTPException(
+            status_code=400,
+            detail="No samples available in feedback buffer"
+        )
+
+    # Extract sequences and labels from batch
+    import numpy as np
+    sequences = np.array([s.ohlcv_sequence for s in batch])
+    labels = np.array([s.label_vector for s in batch])
+    sample_ids = [s.sample_id for s in batch]
+
+    config = EWCConfig(
+        ewc_lambda=request.ewc_lambda,
+        learning_rate=request.learning_rate,
+        epochs=request.epochs,
+        batch_size=request.batch_size,
+        min_samples=request.min_samples
+    )
+
+    async def run_incremental():
+        result = await training_service.incremental_train(
+            sequences=sequences,
+            labels=labels,
+            config=config
+        )
+        # Mark samples as used if training succeeded
+        if result.get("status") == "completed":
+            feedback_buffer_service.mark_as_used(sample_ids)
+            logger.info(f"Marked {len(sample_ids)} samples as used after incremental training")
+
+    background_tasks.add_task(run_incremental)
+
+    return {
+        "status": "started",
+        "message": "Incremental training started in background",
+        "samples_count": len(batch),
+        "config": {
+            "ewc_lambda": config.ewc_lambda,
+            "learning_rate": config.learning_rate,
+            "epochs": config.epochs
+        }
+    }
+
+
+@router.get("/train/incremental/status")
+async def get_incremental_status():
+    """Get incremental training status and EWC statistics."""
+    training_status = training_service.get_training_status()
+    ewc_stats = training_service.get_ewc_statistics()
+    buffer_stats = feedback_buffer_service.get_statistics()
+
+    return {
+        "training": training_status,
+        "ewc": ewc_stats,
+        "feedback_buffer": {
+            "total_samples": buffer_stats.total_samples,
+            "ready_for_training": buffer_stats.ready_for_training
+        }
+    }
+
+
+@router.get("/train/incremental/ready")
+async def check_incremental_ready(min_samples: int = 50):
+    """Check if incremental training can be started."""
+    buffer_stats = feedback_buffer_service.get_statistics()
+
+    ready = (
+        not training_service.is_training() and
+        buffer_stats.total_samples >= min_samples
+    )
+
+    return {
+        "ready": ready,
+        "samples_available": buffer_stats.total_samples,
+        "samples_required": min_samples,
+        "training_in_progress": training_service.is_training(),
+        "reasons": [] if ready else _get_not_ready_reasons(buffer_stats, min_samples)
+    }
+
+
+def _get_not_ready_reasons(buffer_stats, min_samples: int) -> List[str]:
+    """Get reasons why incremental training is not ready."""
+    reasons = []
+    if training_service.is_training():
+        reasons.append("Training already in progress")
+    if buffer_stats.total_samples < min_samples:
+        reasons.append(f"Insufficient samples ({buffer_stats.total_samples}/{min_samples})")
+    return reasons
+
+
+# =============================================================================
+# Model Versioning & Rollback
+# =============================================================================
+
+@router.get("/models/versions")
+async def get_model_versions(limit: int = 20):
+    """Get model version history."""
+    versions = rollback_service.get_versions(limit)
+    current = rollback_service.get_current_version()
+
+    return {
+        "versions": [v.to_dict() for v in versions],
+        "current_version": current.to_dict() if current else None,
+        "count": len(versions)
+    }
+
+
+@router.get("/models/versions/{version_id}")
+async def get_model_version(version_id: str):
+    """Get a specific model version."""
+    version = rollback_service._get_version(version_id)
+    if not version:
+        raise HTTPException(status_code=404, detail=f"Version {version_id} not found")
+
+    return version.to_dict()
+
+
+@router.post("/models/deploy/{version_id}")
+async def deploy_model_version(version_id: str, force: bool = False):
+    """
+    Deploy a specific model version.
+
+    Args:
+        version_id: The version to deploy
+        force: Skip validation checks
+    """
+    result = await rollback_service.deploy_model(version_id, force)
+
+    if result.get("status") == "failed":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+
+    return result
+
+
+@router.post("/models/rollback")
+async def rollback_model(version_id: Optional[str] = None):
+    """
+    Rollback to a previous model version.
+
+    Args:
+        version_id: Specific version to rollback to.
+                   If not provided, rolls back to previous version.
+    """
+    result = await rollback_service.rollback(version_id)
+
+    if result.get("status") == "failed":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+
+    return result
+
+
+@router.get("/models/rollback/statistics")
+async def get_rollback_statistics():
+    """Get rollback service statistics."""
+    return rollback_service.get_statistics()

@@ -5,7 +5,7 @@ import json
 import asyncio
 import httpx
 from typing import List, Optional, Dict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 import numpy as np
@@ -13,6 +13,9 @@ from loguru import logger
 
 # Lazy imports for PyTorch
 torch = None
+
+# EWC Trainer for incremental learning
+from .ewc_trainer import incremental_trainer, EWCConfig
 
 
 def _load_torch():
@@ -637,6 +640,154 @@ class TCNTrainingService:
             "deleted_models": deleted_models,
             "freed_mb": round(deleted_size_mb, 2)
         }
+
+    async def incremental_train(
+        self,
+        sequences: np.ndarray,
+        labels: np.ndarray,
+        config: Optional[EWCConfig] = None
+    ) -> Dict:
+        """
+        Perform incremental training using EWC (Elastic Weight Consolidation).
+
+        This method fine-tunes the existing model on new feedback samples
+        without catastrophic forgetting of previously learned patterns.
+
+        Args:
+            sequences: Training sequences (N, seq_len, features)
+            labels: Training labels (N, num_classes)
+            config: EWC training configuration
+
+        Returns:
+            Training results dictionary
+        """
+        if self._training_in_progress:
+            return {
+                "status": "failed",
+                "message": "Training already in progress"
+            }
+
+        config = config or EWCConfig()
+        job_id = f"tcn_incr_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        self._training_in_progress = True
+        self._current_job = {
+            "job_id": job_id,
+            "type": "incremental",
+            "status": TrainingStatus.PREPARING,
+            "started_at": datetime.now(),
+            "samples_count": len(sequences)
+        }
+
+        try:
+            logger.info(f"Starting incremental training job {job_id} with {len(sequences)} samples")
+
+            # Load current model if not already loaded
+            if self._model is None:
+                if os.path.exists(self.LATEST_MODEL_LINK):
+                    device = self._init_model()
+                    # Load weights from latest model
+                    checkpoint = torch.load(
+                        self.LATEST_MODEL_LINK,
+                        map_location=device
+                    )
+                    self._model.load_state_dict(checkpoint['model_state_dict'])
+                    logger.info("Loaded existing model for incremental training")
+                else:
+                    logger.warning("No existing model found, initializing new model")
+                    self._init_model()
+
+            self._current_job["status"] = TrainingStatus.TRAINING
+
+            # Use EWC incremental trainer
+            result = await incremental_trainer.incremental_train(
+                model=self._model,
+                sequences=sequences,
+                labels=labels,
+                config=config,
+                progress_callback=lambda e, t, l: self._update_incremental_progress(e, t, l)
+            )
+
+            if result["status"] == "completed":
+                # Save updated model
+                model_path = os.path.join(self.MODEL_DIR, f"{job_id}.pt")
+                torch.save({
+                    'model_state_dict': self._model.state_dict(),
+                    'pattern_classes': self.PATTERN_CLASSES,
+                    'training_type': 'incremental',
+                    'ewc_config': {
+                        'ewc_lambda': config.ewc_lambda,
+                        'learning_rate': config.learning_rate,
+                        'epochs': config.epochs
+                    },
+                    'metrics': result
+                }, model_path)
+
+                # Update latest link
+                self._update_latest_link(model_path)
+
+                # Update history
+                self._current_job["status"] = TrainingStatus.COMPLETED
+                self._current_job["completed_at"] = datetime.now()
+                self._current_job["model_path"] = model_path
+                self._current_job["metrics"] = result
+                self._training_history.append(self._current_job.copy())
+                self._save_history()
+
+                # Cleanup old models
+                cleanup_result = self.cleanup_old_models()
+                if cleanup_result["deleted"] > 0:
+                    logger.info(
+                        f"Cleaned up {cleanup_result['deleted']} old models, "
+                        f"freed {cleanup_result['freed_mb']} MB"
+                    )
+
+                # Notify TCN inference service
+                await self._notify_tcn_service(model_path)
+
+                logger.info(f"Incremental training completed: {result}")
+
+                return {
+                    "status": "completed",
+                    "job_id": job_id,
+                    "message": "Incremental training completed successfully",
+                    "metrics": result,
+                    "model_path": model_path
+                }
+
+            else:
+                # Training was skipped or failed
+                self._current_job["status"] = TrainingStatus.FAILED if result["status"] == "failed" else TrainingStatus.COMPLETED
+                return {
+                    "status": result["status"],
+                    "job_id": job_id,
+                    "message": result.get("reason") or result.get("error", "Unknown"),
+                    "metrics": result
+                }
+
+        except Exception as e:
+            logger.error(f"Incremental training failed: {e}")
+            self._current_job["status"] = TrainingStatus.FAILED
+            return {
+                "status": "failed",
+                "job_id": job_id,
+                "message": str(e)
+            }
+
+        finally:
+            self._training_in_progress = False
+
+    def _update_incremental_progress(self, epoch: int, total: int, loss: float) -> None:
+        """Update progress during incremental training."""
+        if self._current_job:
+            self._current_job["current_epoch"] = epoch
+            self._current_job["total_epochs"] = total
+            self._current_job["progress"] = epoch / total
+            self._current_job["best_loss"] = loss
+
+    def get_ewc_statistics(self) -> Dict:
+        """Get EWC trainer statistics."""
+        return incremental_trainer.get_statistics()
 
 
 # Singleton instance
