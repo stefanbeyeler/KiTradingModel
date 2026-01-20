@@ -451,16 +451,40 @@
             padding-right: 2.5rem;
         }
 
-        select.form-control option {
+        /* Select dropdown styling for better contrast */
+        select.form-control {
             background-color: #1a1a2e;
             color: #e8e8e8;
-            padding: 0.5rem;
+        }
+
+        select.form-control option {
+            background-color: #1e2740;
+            color: #e8e8e8;
+            padding: 10px 12px;
+        }
+
+        select.form-control optgroup {
+            background-color: #0d1520;
+            color: #64c8ff;
+            font-weight: 700;
+            font-style: normal;
+        }
+
+        select.form-control optgroup option {
+            background-color: #1e2740;
+            color: #d0d0d0;
+            font-weight: 400;
+            padding-left: 16px;
+        }
+
+        select.form-control option:checked {
+            background-color: #3a5080;
+            color: #ffffff;
         }
 
         select.form-control option:hover,
-        select.form-control option:focus,
-        select.form-control option:checked {
-            background-color: #2a2a4e;
+        select.form-control option:focus {
+            background-color: #2a4060;
             color: #64c8ff;
         }
 
