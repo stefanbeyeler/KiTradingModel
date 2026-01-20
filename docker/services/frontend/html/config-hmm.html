@@ -681,20 +681,22 @@
 
         <!-- Detection Tab -->
         <div id="tab-detection" class="tab-content">
-            <div class="grid-2">
-                <!-- Detection Form -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#128269; Regime erkennen</h3>
-                    </div>
-                    <div class="form-group">
-                        <label>Symbol</label>
+            <!-- Combined Detection Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128269; Regime-Erkennung</h3>
+                </div>
+                <!-- Single row with all controls -->
+                <div style="display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
+                    <!-- Single Symbol Detection -->
+                    <div class="form-group" style="margin-bottom: 0; min-width: 150px;">
+                        <label style="font-size: 0.75rem;">Symbol</label>
                         <select class="form-control" id="detect-symbol">
                             <option value="BTCUSD">Lade Symbole...</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>Timeframe</label>
+                    <div class="form-group" style="margin-bottom: 0; min-width: 80px;">
+                        <label style="font-size: 0.75rem;">Timeframe</label>
                         <select class="form-control" id="detect-timeframe">
                             <option value="M15">M15</option>
                             <option value="H1" selected>H1</option>
@@ -702,24 +704,25 @@
                             <option value="D1">D1</option>
                         </select>
                     </div>
-                    <button class="btn btn-success" id="btn-detect" onclick="detectRegime()">&#128269; Regime erkennen</button>
+                    <button class="btn btn-success" id="btn-detect" onclick="detectRegime()" style="white-space: nowrap;">&#128269; Erkennen</button>
 
-                    <div id="detection-result" style="margin-top: 1.5rem;"></div>
-                </div>
+                    <!-- Separator -->
+                    <div style="width: 1px; height: 32px; background: rgba(255,255,255,0.2); margin: 0 0.5rem;"></div>
 
-                <!-- Multi-Symbol Scan -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#128640; Multi-Symbol Scan</h3>
-                    </div>
-                    <button class="btn btn-primary" id="btn-scan" onclick="scanAll()">&#128640; Alle Symbole scannen</button>
-                    <div id="scan-progress" style="display: none; margin-top: 0.75rem;">
-                        <div class="progress-container">
+                    <!-- Multi-Symbol Scan -->
+                    <button class="btn btn-primary" id="btn-scan" onclick="scanAll()" style="white-space: nowrap;">&#128640; Alle scannen</button>
+                    <div id="scan-progress" style="display: none; min-width: 120px;">
+                        <div class="progress-container" style="margin-bottom: 0.25rem;">
                             <div class="progress-bar" id="scan-progress-bar" style="width: 0%;"></div>
                         </div>
-                        <div class="progress-text" id="scan-progress-text">0 / 0 Symbole</div>
+                        <div class="progress-text" id="scan-progress-text" style="font-size: 0.75rem;">0 / 0</div>
                     </div>
-                    <div id="scan-results" style="margin-top: 0.75rem;"></div>
+                </div>
+
+                <!-- Results row -->
+                <div class="grid-2" style="gap: 1rem; margin-top: 0.75rem;">
+                    <div id="detection-result"></div>
+                    <div id="scan-results" style="max-height: 300px; overflow-y: auto;"></div>
                 </div>
             </div>
 
@@ -1494,23 +1497,61 @@
                 if (!response.ok) throw new Error('Failed to load history');
 
                 const data = await response.json();
+                // API returns "entries" not "history", and "probability" not "confidence"
+                const entries = data.entries || data.history || [];
 
-                if (data.history && data.history.length > 0) {
+                if (entries.length > 0) {
+                    // Show distribution summary
+                    const dist = data.regime_distribution || {};
+                    const distHtml = Object.entries(dist).map(([r, pct]) => {
+                        const d = getRegimeDisplay(r);
+                        return `<span style="margin-right: 1rem;"><span class="regime-badge ${r}">${d.icon}</span> ${(pct * 100).toFixed(0)}%</span>`;
+                    }).join('');
+
                     container.innerHTML = `
+                        <div style="margin-bottom: 0.75rem; font-size: 0.85rem; color: #888;">
+                            Verteilung: ${distHtml}
+                        </div>
                         <table class="data-table">
-                            <tr><th>Zeitpunkt</th><th>Regime</th><th>Confidence</th></tr>
-                            ${data.history.slice(0, 20).map(h => {
+                            <tr><th>Zeitpunkt</th><th>Regime</th><th>Wahrscheinlichkeit</th></tr>
+                            ${entries.slice(-20).reverse().map(h => {
                                 const regime = getRegimeDisplay(h.regime);
+                                const prob = h.probability || h.confidence || 0;
+                                // Parse timestamp - handle various formats
+                                let timeStr = '-';
+                                if (h.timestamp) {
+                                    try {
+                                        // Try parsing as ISO string or Unix timestamp
+                                        let date;
+                                        if (typeof h.timestamp === 'number') {
+                                            // Unix timestamp (seconds or milliseconds)
+                                            date = new Date(h.timestamp > 1e12 ? h.timestamp : h.timestamp * 1000);
+                                        } else {
+                                            // String format - try direct parse
+                                            date = new Date(h.timestamp);
+                                        }
+                                        if (!isNaN(date.getTime())) {
+                                            timeStr = date.toLocaleString('de-CH');
+                                        } else {
+                                            timeStr = h.timestamp; // Show raw if parse fails
+                                        }
+                                    } catch (e) {
+                                        timeStr = h.timestamp;
+                                    }
+                                }
                                 return `<tr>
-                                    <td>${new Date(h.timestamp).toLocaleString('de-CH')}</td>
+                                    <td>${timeStr}</td>
                                     <td><span class="regime-badge ${h.regime}">${regime.icon} ${regime.name}</span></td>
-                                    <td>${(h.confidence * 100).toFixed(1)}%</td>
+                                    <td>${(prob * 100).toFixed(1)}%</td>
                                 </tr>`;
                             }).join('')}
                         </table>
+                        <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #888;">
+                            ${data.total_count || entries.length} Einträge insgesamt (zeige letzte 20)
+                        </div>
                     `;
                 } else {
-                    container.innerHTML = '<div class="info-box">Keine Historie für dieses Symbol.</div>';
+                    container.innerHTML = '<div class="info-box">Keine Historie für dieses Symbol. Führen Sie zuerst einen Scan durch.</div>';
                 }
             } catch (error) {
                 container.innerHTML = '<div class="info-box" style="border-color: rgba(244,67,54,0.3); color: #e57373;">Fehler beim Laden.</div>';

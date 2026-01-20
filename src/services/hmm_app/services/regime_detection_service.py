@@ -85,7 +85,10 @@ class RegimeDetectionService:
 
             # Extract prices
             closes = np.array([d['close'] for d in data], dtype=np.float64)
-            timestamps = [d.get('timestamp', d.get('time', '')) for d in data]
+            timestamps = [
+                d.get('datetime') or d.get('timestamp') or d.get('snapshot_time') or d.get('time') or ''
+                for d in data
+            ]
 
             # Get model
             model = self.get_model(symbol)
@@ -177,7 +180,10 @@ class RegimeDetectionService:
                 )
 
             closes = np.array([d['close'] for d in data], dtype=np.float64)
-            timestamps = [d.get('timestamp', d.get('time', '')) for d in data]
+            timestamps = [
+                d.get('datetime') or d.get('timestamp') or d.get('snapshot_time') or d.get('time') or ''
+                for d in data
+            ]
 
             model = self.get_model(symbol)
             if not model.is_fitted():
