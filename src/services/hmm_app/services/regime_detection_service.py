@@ -214,7 +214,7 @@ class RegimeDetectionService:
             return RegimeHistoryResponse(
                 symbol=symbol,
                 timeframe=timeframe,
-                entries=entries[-100:],  # Limit to last 100
+                entries=entries[:100],  # Limit to first 100 (newest, since data is newest-first)
                 total_count=len(entries),
                 regime_distribution=distribution
             )

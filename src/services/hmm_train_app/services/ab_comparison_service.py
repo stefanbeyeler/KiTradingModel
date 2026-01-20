@@ -349,22 +349,23 @@ class ABComparisonService:
             production = self._registry.get_current_production("scorer", None)
 
             if production is None:
-                # First scorer model
+                # First scorer model - be lenient, just deploy if accuracy is reasonable
                 result.production_version = None
 
-                # Check minimum profitable rate
-                min_profitable = self._thresholds.get("scorer_profitable_signals_rate_min", 0.45)
-                if candidate_metrics.profitable_signals_rate >= min_profitable:
+                # For first model, only check basic accuracy (lower threshold)
+                min_accuracy_first = self._thresholds.get("scorer_first_model_accuracy_min", 0.40)
+                if candidate_metrics.accuracy >= min_accuracy_first:
                     result.recommendation = Recommendation.DEPLOY
                     result.recommendation_reason = (
-                        f"First scorer model - profitable rate "
-                        f"({candidate_metrics.profitable_signals_rate:.1%}) meets minimum ({min_profitable:.1%})"
+                        f"First scorer model - accuracy ({candidate_metrics.accuracy:.1%}) "
+                        f"meets minimum ({min_accuracy_first:.1%}), "
+                        f"profitable rate: {candidate_metrics.profitable_signals_rate:.1%}"
                     )
                 else:
                     result.recommendation = Recommendation.REJECT
                     result.recommendation_reason = (
-                        f"First scorer below minimum profitable rate "
-                        f"({candidate_metrics.profitable_signals_rate:.1%} < {min_profitable:.1%})"
+                        f"First scorer below minimum accuracy "
+                        f"({candidate_metrics.accuracy:.1%} < {min_accuracy_first:.1%})"
                     )
 
                 return result

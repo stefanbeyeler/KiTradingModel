@@ -546,6 +546,24 @@
             font-size: 1.5rem;
             font-weight: 700;
         }
+
+        /* Collapsible sections */
+        .collapsible-header {
+            transition: background-color 0.2s;
+        }
+        .collapsible-header:hover {
+            background-color: rgba(100, 200, 255, 0.05);
+        }
+        .collapse-icon {
+            display: inline-block;
+            width: 1rem;
+            font-size: 0.7rem;
+            margin-right: 0.3rem;
+            color: #64c8ff;
+        }
+        .collapsible-content {
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
     </style>
 </head>
 <body>
@@ -734,11 +752,17 @@
                         <select class="form-control" id="history-symbol" style="width: auto; display: inline-block;">
                             <option value="BTCUSD">Lade Symbole...</option>
                         </select>
+                        <select class="form-control" id="history-timeframe" style="width: auto; display: inline-block;" onchange="loadHistory()">
+                            <option value="M15">M15</option>
+                            <option value="H1" selected>H1</option>
+                            <option value="H4">H4</option>
+                            <option value="D1">D1</option>
+                        </select>
                         <button class="btn btn-primary btn-sm" onclick="loadHistory()">&#8635; Laden</button>
                     </div>
                 </div>
                 <div id="regime-history">
-                    <div class="info-box">Wahlen Sie ein Symbol und klicken Sie auf "Laden".</div>
+                    <div class="info-box">Wählen Sie ein Symbol und Timeframe und klicken Sie auf "Laden".</div>
                 </div>
             </div>
         </div>
@@ -857,159 +881,120 @@
 
         <!-- Validation Tab -->
         <div id="tab-validation" class="tab-content">
-            <!-- Validation Status -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128203; Validierungs-Pipeline Status</h3>
-                    <button class="btn btn-primary btn-sm" onclick="loadValidationStatus()">&#8635; Aktualisieren</button>
+            <!-- Ultra-compact: Status + Production + Registry in one row -->
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                <div class="card" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                    <div class="card-header" style="padding: 0.3rem 0.6rem;">
+                        <span style="font-size: 0.85rem; font-weight: 600;">&#128203; Pipeline</span>
+                        <button class="btn btn-primary btn-sm" onclick="loadValidationStatus()" style="padding: 0.15rem 0.4rem; font-size: 0.75rem;">&#8635;</button>
+                    </div>
+                    <div id="validation-status" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;"></div>
                 </div>
-                <div id="validation-status">
-                    <div class="loading"><div class="spinner"></div></div>
+                <div class="card" style="margin-bottom: 0; flex: 1.5; min-width: 220px;">
+                    <div class="card-header" style="padding: 0.3rem 0.6rem;">
+                        <span style="font-size: 0.85rem; font-weight: 600;">&#127937; Produktion</span>
+                    </div>
+                    <div id="production-models" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; max-height: 60px; overflow-y: auto;"></div>
                 </div>
-            </div>
-
-            <div class="grid-2-equal">
-                <!-- Production Models -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#127937; Produktions-Modelle</h3>
+                <div class="card" style="margin-bottom: 0; flex: 0.8; min-width: 120px;">
+                    <div class="card-header" style="padding: 0.3rem 0.6rem;">
+                        <span style="font-size: 0.85rem; font-weight: 600;">&#128202; Registry</span>
                     </div>
-                    <div id="production-models">
-                        <div class="loading"><div class="spinner"></div></div>
-                    </div>
-                </div>
-
-                <!-- Registry Stats -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#128202; Registry-Statistiken</h3>
-                    </div>
-                    <div id="registry-stats">
-                        <div class="loading"><div class="spinner"></div></div>
-                    </div>
+                    <div id="registry-stats" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;"></div>
                 </div>
             </div>
 
-            <!-- Model Versions -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128203; Modell-Versionen</h3>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <select class="form-control" id="version-filter-type" style="width: auto;">
-                            <option value="">Alle Typen</option>
+            <!-- Collapsible sections in compact format -->
+            <div class="card" style="margin-bottom: 0.4rem;">
+                <div class="collapsible-header" style="padding: 0.35rem 0.6rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleCollapsible('versions-content', this)">
+                    <span style="font-size: 0.85rem;"><span class="collapse-icon">&#9654;</span> Modell-Versionen</span>
+                    <div style="display: flex; gap: 0.3rem; align-items: center;" onclick="event.stopPropagation();">
+                        <select class="form-control" id="version-filter-type" style="padding: 0.15rem; font-size: 0.75rem; width: 60px;">
+                            <option value="">Alle</option>
                             <option value="hmm">HMM</option>
                             <option value="scorer">Scorer</option>
                         </select>
-                        <select class="form-control" id="version-filter-symbol" style="width: auto;">
-                            <option value="">Alle Symbole</option>
+                        <select class="form-control" id="version-filter-symbol" style="padding: 0.15rem; font-size: 0.75rem; width: 80px;">
+                            <option value="">Symbol</option>
                         </select>
-                        <button class="btn btn-primary btn-sm" onclick="loadModelVersions()">&#128269; Filtern</button>
+                        <button class="btn btn-primary btn-sm" onclick="loadModelVersions()" style="padding: 0.1rem 0.3rem; font-size: 0.7rem;">&#128269;</button>
                     </div>
                 </div>
-                <div id="model-versions">
-                    <div class="loading"><div class="spinner"></div></div>
+                <div id="versions-content" class="collapsible-content" style="display: none; padding: 0.3rem 0.6rem; max-height: 150px; overflow-y: auto;">
+                    <div id="model-versions"></div>
                 </div>
             </div>
 
-            <!-- Deployment History -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128203; Deployment-Historie</h3>
+            <div class="card" style="margin-bottom: 0.4rem;">
+                <div class="collapsible-header" style="padding: 0.35rem 0.6rem; cursor: pointer;" onclick="toggleCollapsible('deployment-content', this)">
+                    <span style="font-size: 0.85rem;"><span class="collapse-icon">&#9654;</span> Deployment-Historie</span>
                 </div>
-                <div id="deployment-history">
-                    <div class="loading"><div class="spinner"></div></div>
+                <div id="deployment-content" class="collapsible-content" style="display: none; padding: 0.3rem 0.6rem; max-height: 120px; overflow-y: auto;">
+                    <div id="deployment-history"></div>
                 </div>
             </div>
 
-            <!-- Manual Actions -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#9888;&#65039; Manuelle Aktionen</h3>
+            <div class="card" style="margin-bottom: 0.4rem;">
+                <div class="collapsible-header" style="padding: 0.35rem 0.6rem; cursor: pointer;" onclick="toggleCollapsible('manual-actions-content', this)">
+                    <span style="font-size: 0.85rem;"><span class="collapse-icon">&#9654;</span> &#9888;&#65039; Manuelle Aktionen</span>
                 </div>
-                <div class="info-box" style="margin-bottom: 1rem; background: rgba(255, 152, 0, 0.1); border-color: rgba(255, 152, 0, 0.3); color: #ffb74d;">
-                    <strong>Vorsicht:</strong> Diese Aktionen überschreiben die automatische Validierung. Nur verwenden, wenn Sie sicher sind, dass das Modell produktionsreif ist.
-                </div>
-
-                <div class="grid-2-equal">
-                    <!-- Force Deploy -->
-                    <div style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
-                        <h4 style="margin-bottom: 1rem; color: #64c8ff;">Force Deploy</h4>
-                        <div class="form-group">
-                            <label>Version ID</label>
-                            <select class="form-control" id="force-deploy-version">
-                                <option value="">Version wählen...</option>
+                <div id="manual-actions-content" class="collapsible-content" style="display: none; padding: 0.4rem 0.6rem;">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <!-- Force Deploy compact -->
+                        <div style="flex: 1; padding: 0.4rem; background: rgba(255,255,255,0.03); border-radius: 4px;">
+                            <div style="font-size: 0.8rem; color: #64c8ff; margin-bottom: 0.3rem; font-weight: 600;">Deploy</div>
+                            <select class="form-control" id="force-deploy-version" style="padding: 0.2rem; font-size: 0.75rem; margin-bottom: 0.25rem; width: 100%;">
+                                <option value="">Version...</option>
                             </select>
+                            <div style="display: flex; gap: 0.25rem; margin-bottom: 0.25rem;">
+                                <select class="form-control" id="force-deploy-type" style="padding: 0.2rem; font-size: 0.75rem; flex: 1;">
+                                    <option value="hmm">HMM</option>
+                                    <option value="scorer">Scorer</option>
+                                </select>
+                                <select class="form-control" id="force-deploy-symbol" style="padding: 0.2rem; font-size: 0.75rem; flex: 1;">
+                                    <option value="">Sym</option>
+                                </select>
+                            </div>
+                            <input type="text" class="form-control" id="force-deploy-reason" placeholder="Grund" style="padding: 0.2rem; font-size: 0.75rem; margin-bottom: 0.25rem;">
+                            <button class="btn btn-warning btn-sm" onclick="forceDeploy()" style="width: 100%; padding: 0.2rem; font-size: 0.75rem;">&#9889; Deploy</button>
                         </div>
-                        <div class="form-group">
-                            <label>Modell-Typ</label>
-                            <select class="form-control" id="force-deploy-type">
-                                <option value="hmm">HMM</option>
-                                <option value="scorer">Scorer</option>
+                        <!-- Rollback compact -->
+                        <div style="flex: 1; padding: 0.4rem; background: rgba(255,255,255,0.03); border-radius: 4px;">
+                            <div style="font-size: 0.8rem; color: #e57373; margin-bottom: 0.3rem; font-weight: 600;">Rollback</div>
+                            <div style="display: flex; gap: 0.25rem; margin-bottom: 0.25rem;">
+                                <select class="form-control" id="rollback-type" style="padding: 0.2rem; font-size: 0.75rem; flex: 1;">
+                                    <option value="hmm">HMM</option>
+                                    <option value="scorer">Scorer</option>
+                                </select>
+                                <select class="form-control" id="rollback-symbol" style="padding: 0.2rem; font-size: 0.75rem; flex: 1;">
+                                    <option value="">Sym</option>
+                                </select>
+                            </div>
+                            <select class="form-control" id="rollback-version" style="padding: 0.2rem; font-size: 0.75rem; margin-bottom: 0.25rem; width: 100%;">
+                                <option value="">Ziel-Version...</option>
                             </select>
+                            <input type="text" class="form-control" id="rollback-reason" placeholder="Grund" style="padding: 0.2rem; font-size: 0.75rem; margin-bottom: 0.25rem;">
+                            <button class="btn btn-danger btn-sm" onclick="rollbackModel()" style="width: 100%; padding: 0.2rem; font-size: 0.75rem;">&#8617; Rollback</button>
                         </div>
-                        <div class="form-group">
-                            <label>Symbol (nur für HMM)</label>
-                            <select class="form-control" id="force-deploy-symbol">
-                                <option value="">- Nicht anwendbar -</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Grund</label>
-                            <input type="text" class="form-control" id="force-deploy-reason" placeholder="Grund für manuelles Deployment">
-                        </div>
-                        <button class="btn btn-warning" id="btn-force-deploy" onclick="forceDeploy()">&#9889; Force Deploy</button>
-                    </div>
-
-                    <!-- Rollback -->
-                    <div style="padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
-                        <h4 style="margin-bottom: 1rem; color: #e57373;">Rollback</h4>
-                        <div class="form-group">
-                            <label>Modell-Typ</label>
-                            <select class="form-control" id="rollback-type">
-                                <option value="hmm">HMM</option>
-                                <option value="scorer">Scorer</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Symbol (nur für HMM)</label>
-                            <select class="form-control" id="rollback-symbol">
-                                <option value="">- Nicht anwendbar -</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Ziel-Version</label>
-                            <select class="form-control" id="rollback-version">
-                                <option value="">Version wählen...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Grund</label>
-                            <input type="text" class="form-control" id="rollback-reason" placeholder="Grund für Rollback">
-                        </div>
-                        <button class="btn btn-danger" id="btn-rollback" onclick="rollbackModel()">&#8617; Rollback</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Model Reload -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128260; Modell Hot-Reload</h3>
+            <div class="card" style="margin-bottom: 0;">
+                <div class="collapsible-header" style="padding: 0.35rem 0.6rem; cursor: pointer;" onclick="toggleCollapsible('reload-content', this)">
+                    <span style="font-size: 0.85rem;"><span class="collapse-icon">&#9654;</span> &#128260; Hot-Reload</span>
                 </div>
-                <div class="info-box" style="margin-bottom: 1rem;">
-                    Lädt Modelle neu aus dem Dateisystem, ohne den Service neu zu starten. Nützlich nach manuellem Deployment.
-                </div>
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <button class="btn btn-primary" onclick="reloadAllModels()">&#128260; Alle Modelle neu laden</button>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <select class="form-control" id="reload-symbol" style="width: auto;">
-                            <option value="">Symbol wählen...</option>
+                <div id="reload-content" class="collapsible-content" style="display: none; padding: 0.4rem 0.6rem;">
+                    <div style="display: flex; gap: 0.3rem; flex-wrap: wrap; align-items: center;">
+                        <button class="btn btn-primary btn-sm" onclick="reloadAllModels()" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;">Alle</button>
+                        <select class="form-control" id="reload-symbol" style="padding: 0.2rem; font-size: 0.75rem; width: 80px;">
+                            <option value="">Symbol</option>
                         </select>
-                        <button class="btn btn-primary btn-sm" onclick="reloadHMMModel()">HMM neu laden</button>
+                        <button class="btn btn-primary btn-sm" onclick="reloadHMMModel()" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;">HMM</button>
+                        <button class="btn btn-primary btn-sm" onclick="reloadScorer()" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;">Scorer</button>
                     </div>
-                    <button class="btn btn-primary" onclick="reloadScorer()">Scorer neu laden</button>
+                    <div id="reload-result" style="margin-top: 0.3rem; font-size: 0.75rem;"></div>
                 </div>
-                <div id="reload-result" style="margin-top: 1rem;"></div>
             </div>
         </div>
 
@@ -1192,6 +1177,19 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
             event.target.classList.add('active');
+        }
+
+        // Toggle Collapsible Section
+        function toggleCollapsible(contentId, headerEl) {
+            const content = document.getElementById(contentId);
+            const icon = headerEl.querySelector('.collapse-icon');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                if (icon) icon.innerHTML = '&#9660;'; // Down arrow
+            } else {
+                content.style.display = 'none';
+                if (icon) icon.innerHTML = '&#9654;'; // Right arrow
+            }
         }
 
         // Toast Notification
@@ -1476,11 +1474,12 @@
         // Load Regime History
         async function loadHistory() {
             const symbol = document.getElementById('history-symbol').value;
+            const timeframe = document.getElementById('history-timeframe').value;
             const container = document.getElementById('regime-history');
             container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
             try {
-                const response = await fetch(`${API_BASE}/regime/history/${symbol}`);
+                const response = await fetch(`${API_BASE}/regime/history/${symbol}?timeframe=${timeframe}`);
                 if (!response.ok) throw new Error('Failed to load history');
 
                 const data = await response.json();
@@ -1501,7 +1500,7 @@
                         </div>
                         <table class="data-table">
                             <tr><th>Zeitpunkt</th><th>Regime</th><th>Wahrscheinlichkeit</th></tr>
-                            ${entries.slice(-20).reverse().map(h => {
+                            ${entries.slice(0, 20).map(h => {
                                 const regime = getRegimeDisplay(h.regime);
                                 const prob = h.probability || h.confidence || 0;
                                 // Parse timestamp - handle various formats
@@ -1534,7 +1533,7 @@
                             }).join('')}
                         </table>
                         <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #888;">
-                            ${data.total_count || entries.length} Einträge insgesamt (zeige letzte 20)
+                            ${data.total_count || entries.length} Einträge insgesamt (zeige neueste 20)
                         </div>
                     `;
                 } else {
@@ -2018,29 +2017,30 @@
 
                 const data = await response.json();
                 const models = data.production_models || {};
+                const total = data.total || Object.keys(models).length;
 
                 if (Object.keys(models).length === 0) {
-                    container.innerHTML = '<div class="info-box">Keine Produktions-Modelle vorhanden.</div>';
+                    container.innerHTML = '<span style="color: #888;">Keine Modelle</span>';
                     return;
                 }
 
-                let html = '<table class="data-table"><tr><th>Modell</th><th>Version</th><th>Status</th><th>Deployed</th></tr>';
+                // Count by type
+                let hmmCount = 0, scorerCount = 0;
                 for (const [key, model] of Object.entries(models)) {
-                    const deployedAt = model.promoted_at ? new Date(model.promoted_at).toLocaleString('de-CH') : '-';
-                    html += `
-                        <tr>
-                            <td><strong>${key}</strong></td>
-                            <td><code style="background: rgba(100,200,255,0.1); padding: 0.2rem 0.4rem; border-radius: 4px;">${model.version_id || '-'}</code></td>
-                            <td><span style="color: #4caf50;">&#10004; ${model.status || 'production'}</span></td>
-                            <td style="color: #888; font-size: 0.85rem;">${deployedAt}</td>
-                        </tr>
-                    `;
+                    if (model.model_type === 'scorer') scorerCount++;
+                    else hmmCount++;
                 }
-                html += '</table>';
-                container.innerHTML = html;
+
+                // Compact summary display
+                container.innerHTML = `
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="color: #4caf50;">&#10004; ${total} Modelle</span>
+                        <span style="color: #888;">(${hmmCount} HMM, ${scorerCount} Scorer)</span>
+                    </div>
+                `;
 
             } catch (error) {
-                container.innerHTML = `<div class="info-box" style="color: #e57373;">Fehler: ${error.message}</div>`;
+                container.innerHTML = `<span style="color: #e57373;">Fehler</span>`;
             }
         }
 
@@ -2056,19 +2056,16 @@
                 const registry = data.registry || {};
                 const deployment = data.deployment || {};
 
+                // Ultra-compact display
                 container.innerHTML = `
-                    <table class="data-table">
-                        <tr><td style="color: #888;">Validierung aktiv</td><td>${data.validation_enabled ? '<span style="color: #4caf50;">Ja</span>' : '<span style="color: #f44336;">Nein</span>'}</td></tr>
-                        <tr><td style="color: #888;">Versionen gesamt</td><td>${registry.total_versions || 0}</td></tr>
-                        <tr><td style="color: #888;">In Produktion</td><td>${registry.production_count || 0}</td></tr>
-                        <tr><td style="color: #888;">Archiviert</td><td>${registry.archived_count || 0}</td></tr>
-                        <tr><td style="color: #888;">Deployed</td><td style="color: #4caf50;">${deployment.deployed_count || 0}</td></tr>
-                        <tr><td style="color: #888;">Abgelehnt</td><td style="color: #f44336;">${deployment.rejected_count || 0}</td></tr>
-                        <tr><td style="color: #888;">Rollbacks</td><td style="color: #ffb74d;">${deployment.rollback_count || 0}</td></tr>
-                    </table>
+                    <div style="line-height: 1.4;">
+                        <div>${data.validation_enabled ? '<span style="color: #4caf50;">&#10004;</span>' : '<span style="color: #f44336;">&#10008;</span>'} Validierung</div>
+                        <div style="color: #888;">${registry.total_versions || 0} Vers. | ${registry.production_count || 0} Prod.</div>
+                        <div><span style="color: #4caf50;">${deployment.deployed_count || 0}</span>/<span style="color: #f44336;">${deployment.rejected_count || 0}</span>/<span style="color: #ffb74d;">${deployment.rollback_count || 0}</span></div>
+                    </div>
                 `;
             } catch (error) {
-                container.innerHTML = `<div class="info-box" style="color: #e57373;">Fehler: ${error.message}</div>`;
+                container.innerHTML = `<span style="color: #e57373;">Fehler</span>`;
             }
         }
 
