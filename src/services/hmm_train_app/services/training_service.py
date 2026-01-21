@@ -451,47 +451,94 @@ class HMMTrainingService:
         data_by_symbol: Dict[str, List[Dict]],
         job: TrainingJob
     ) -> Dict[str, Any]:
-        """Train LightGBM signal scorer across all symbols."""
+        """Train LightGBM signal scorer across all symbols.
+
+        Uses the shared LightGBMSignalScorer to ensure feature consistency
+        between training and inference (18 features).
+        """
         if not _load_lightgbm():
             return {"success": False, "error": "lightgbm not available"}
 
         try:
-            start_time = datetime.now(timezone.utc)
+            # Import the shared scorer
+            import sys
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
+            from src.shared.lightgbm_scorer import LightGBMSignalScorer
 
-            # Prepare training data
+            start_time = datetime.now(timezone.utc)
+            scorer = LightGBMSignalScorer()
+
+            # Prepare training data using OHLCV arrays
             X_all = []
             y_all = []
 
             for symbol, data in data_by_symbol.items():
-                if len(data) < 50:
+                if len(data) < 100:
+                    logger.debug(f"Skipping {symbol}: insufficient data ({len(data)} rows)")
                     continue
 
-                for i in range(20, len(data) - 5):
-                    row = data[i]
-
-                    # Extract features
-                    features = [
-                        row.get("rsi", 50) or 50,
-                        row.get("macd_main", 0) or 0,
-                        row.get("adx_main", 25) or 25,
-                        row.get("atr_pct_d1", 1) or 1,
-                        row.get("strength_1d", 0) or 0,
+                # Convert to OHLCV numpy array
+                ohlcv = np.array([
+                    [
+                        float(row.get("open") or row.get("h1_open") or 0),
+                        float(row.get("high") or row.get("h1_high") or 0),
+                        float(row.get("low") or row.get("h1_low") or 0),
+                        float(row.get("close") or row.get("h1_close") or 0),
+                        float(row.get("volume") or row.get("h1_volume") or 0)
                     ]
+                    for row in data
+                ], dtype=np.float64)
 
-                    # Calculate target (future returns)
-                    close_now = float(row.get("close") or row.get("h1_close") or 0)
-                    close_future = float(data[i + 5].get("close") or data[i + 5].get("h1_close") or 0)
+                # Generate training samples with sliding window
+                for i in range(60, len(ohlcv) - 20):
+                    window = ohlcv[i-60:i]
+
+                    # Create regime probabilities (estimated from price action)
+                    closes = window[:, 3]
+                    returns = np.diff(closes) / closes[:-1]
+                    avg_return = np.mean(returns[-20:])
+                    volatility = np.std(returns[-20:])
+
+                    # Estimate regime probabilities
+                    if avg_return > 0.001 and volatility < 0.03:
+                        regime_probs = {"bull_trend": 0.6, "bear_trend": 0.1, "sideways": 0.2, "high_volatility": 0.1}
+                    elif avg_return < -0.001 and volatility < 0.03:
+                        regime_probs = {"bull_trend": 0.1, "bear_trend": 0.6, "sideways": 0.2, "high_volatility": 0.1}
+                    elif volatility > 0.03:
+                        regime_probs = {"bull_trend": 0.15, "bear_trend": 0.15, "sideways": 0.2, "high_volatility": 0.5}
+                    else:
+                        regime_probs = {"bull_trend": 0.2, "bear_trend": 0.2, "sideways": 0.5, "high_volatility": 0.1}
+
+                    # Calculate features using shared scorer (18 features)
+                    try:
+                        features = scorer.calculate_features(window, regime_probs, regime_duration=10)
+                    except Exception as e:
+                        logger.debug(f"Feature calculation failed at {i}: {e}")
+                        continue
+
+                    # Calculate target (future returns -> signal score 0-100)
+                    close_now = ohlcv[i, 3]
+                    close_future = ohlcv[i + 20, 3]
 
                     if close_now > 0 and close_future > 0:
                         future_return = (close_future - close_now) / close_now
-                        # Convert to signal: 1 = buy, 0 = hold, -1 = sell
-                        if future_return > 0.01:
-                            y_all.append(1)
-                        elif future_return < -0.01:
-                            y_all.append(-1)
+
+                        # Convert return to signal quality score (0-100)
+                        # Positive returns = good long signal, negative = good short signal
+                        if future_return > 0.02:
+                            score = 80 + min(future_return * 500, 20)  # 80-100 for strong long
+                        elif future_return > 0:
+                            score = 50 + future_return * 1500  # 50-80 for weak long
+                        elif future_return > -0.02:
+                            score = 50 + future_return * 1500  # 20-50 for weak short
                         else:
-                            y_all.append(0)
+                            score = max(0, 20 + future_return * 500)  # 0-20 for strong short
+
                         X_all.append(features)
+                        y_all.append(score)
+
+                logger.debug(f"Generated {len(X_all)} samples from {symbol}")
 
             if len(X_all) < 100:
                 return {
@@ -503,51 +550,42 @@ class HMMTrainingService:
             X = np.array(X_all)
             y = np.array(y_all)
 
-            # Train LightGBM
-            train_data = lightgbm.Dataset(X, label=y + 1)  # Shift to 0, 1, 2
-            params = {
-                "objective": "multiclass",
-                "num_class": 3,
-                "metric": "multi_logloss",
-                "boosting_type": "gbdt",
-                "num_leaves": 31,
-                "learning_rate": 0.05,
-                "feature_fraction": 0.9,
-                "verbose": -1
-            }
-            model = lightgbm.train(params, train_data, num_boost_round=100)
+            logger.info(f"Training scorer with {len(X)} samples, {X.shape[1]} features")
+
+            # Split for validation
+            n_samples = len(X)
+            n_val = int(n_samples * 0.2)
+            indices = np.random.permutation(n_samples)
+
+            train_X = X[indices[n_val:]]
+            train_y = y[indices[n_val:]]
+            val_X = X[indices[:n_val]]
+            val_y = y[indices[:n_val]]
+
+            # Train using the shared scorer's fit method
+            scorer.fit(train_X, train_y, eval_set=(val_X, val_y))
 
             duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
             # Determine save path based on validation mode
             if self._validation_enabled and job.version_id:
-                # Save to version directory
                 version_path = self._get_version_path(job.version_id)
                 version_path.mkdir(parents=True, exist_ok=True)
-                model_filename = "scorer_lightgbm.pkl"
-                model_path = version_path / model_filename
+                model_path = version_path / "scorer_lightgbm.pkl"
             else:
-                # Legacy: save directly to model directory
-                model_filename = "scorer_lightgbm.pkl"
-                model_path = self._model_path / model_filename
+                model_path = self._model_path / "scorer_lightgbm.pkl"
 
-            # Save model
-            joblib.dump({
-                "model": model,
-                "trained_at": datetime.now(timezone.utc).isoformat(),
-                "samples": len(X),
-                "symbols_used": list(data_by_symbol.keys()),
-                "is_fitted": True,
-                "feature_importance": {},
-                "version_id": job.version_id
-            }, model_path)
+            # Save model using scorer's save method
+            scorer.save(str(model_path))
 
             result = {
                 "success": True,
                 "samples": len(X),
+                "features": X.shape[1],
                 "duration_seconds": duration,
                 "model_path": str(model_path),
-                "symbols_used": len(data_by_symbol)
+                "symbols_used": len(data_by_symbol),
+                "is_fitted": scorer.is_fitted()
             }
 
             # If validation is disabled, notify inference service directly
@@ -558,6 +596,8 @@ class HMMTrainingService:
 
         except Exception as e:
             logger.error(f"Scorer training failed: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return {"success": False, "error": str(e)}
 
     async def _run_training(self, job: TrainingJob):
