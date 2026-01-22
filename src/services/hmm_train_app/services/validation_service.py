@@ -25,6 +25,16 @@ from loguru import logger
 joblib = None
 sklearn_metrics = None
 
+# Import shared LightGBM scorer for consistent feature calculation
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
+try:
+    from src.shared.lightgbm_scorer import LightGBMSignalScorer as SharedScorer
+    SHARED_SCORER_AVAILABLE = True
+except ImportError:
+    SHARED_SCORER_AVAILABLE = False
+
 
 def _load_sklearn():
     global sklearn_metrics
@@ -664,6 +674,11 @@ class ValidationService:
             y_val = []
             returns_for_signals = []
 
+            # Use shared scorer for consistent 18-feature calculation
+            temp_scorer = None
+            if SHARED_SCORER_AVAILABLE:
+                temp_scorer = SharedScorer()
+
             for symbol in symbols:  # Use ALL symbols for validation
                 data = await self.fetch_data(symbol, timeframe)
                 if len(data) < 100:
@@ -672,34 +687,70 @@ class ValidationService:
                 # Use validation split
                 _, val_data = self.split_data(data)
 
-                for i in range(20, len(val_data) - 5):
-                    row = val_data[i]
+                # Build OHLCV array for feature calculation
+                ohlcv_list = []
+                for row in val_data:
+                    open_p = float(row.get("open") or row.get("h1_open") or 0)
+                    high_p = float(row.get("high") or row.get("h1_high") or 0)
+                    low_p = float(row.get("low") or row.get("h1_low") or 0)
+                    close_p = float(row.get("close") or row.get("h1_close") or 0)
+                    volume = float(row.get("volume") or row.get("h1_volume") or 0)
+                    ohlcv_list.append([open_p, high_p, low_p, close_p, volume])
 
-                    # Extract features (same as training)
-                    features = [
-                        row.get("rsi", 50) or 50,
-                        row.get("macd_main", 0) or 0,
-                        row.get("adx_main", 25) or 25,
-                        row.get("atr_pct_d1", 1) or 1,
-                        row.get("strength_1d", 0) or 0,
-                    ]
+                if len(ohlcv_list) < 100:
+                    continue
+
+                ohlcv = np.array(ohlcv_list, dtype=np.float64)
+
+                for i in range(100, len(ohlcv) - 5):
+                    window = ohlcv[i-100:i]
+                    close_now = ohlcv[i, 3]
+                    close_future = ohlcv[i + 5, 3]
+
+                    if close_now <= 0 or close_future <= 0:
+                        continue
+
+                    # Calculate features using shared scorer (18 features)
+                    if temp_scorer is not None:
+                        # Estimate regime probs from recent price action
+                        recent_returns = np.diff(np.log(window[-20:, 3] + 1e-10))
+                        mean_ret = np.mean(recent_returns)
+                        volatility = np.std(recent_returns)
+                        vol_threshold = np.percentile(np.abs(recent_returns), 80)
+
+                        if volatility > vol_threshold:
+                            regime_probs = {"bull_trend": 0.1, "bear_trend": 0.1, "sideways": 0.1, "high_volatility": 0.7}
+                        elif mean_ret > 0.001:
+                            regime_probs = {"bull_trend": 0.6, "bear_trend": 0.1, "sideways": 0.2, "high_volatility": 0.1}
+                        elif mean_ret < -0.001:
+                            regime_probs = {"bull_trend": 0.1, "bear_trend": 0.6, "sideways": 0.2, "high_volatility": 0.1}
+                        else:
+                            regime_probs = {"bull_trend": 0.2, "bear_trend": 0.2, "sideways": 0.5, "high_volatility": 0.1}
+
+                        features = temp_scorer.calculate_features(window, regime_probs, 10)
+                    else:
+                        # Fallback to simple 5 features if shared scorer not available
+                        row = val_data[i]
+                        features = np.array([
+                            row.get("rsi", 50) or 50,
+                            row.get("macd_main", 0) or 0,
+                            row.get("adx_main", 25) or 25,
+                            row.get("atr_pct_d1", 1) or 1,
+                            row.get("strength_1d", 0) or 0,
+                        ])
 
                     # Calculate target
-                    close_now = float(row.get("close") or row.get("h1_close") or 0)
-                    close_future = float(val_data[i + 5].get("close") or val_data[i + 5].get("h1_close") or 0)
+                    future_return = (close_future - close_now) / close_now
 
-                    if close_now > 0 and close_future > 0:
-                        future_return = (close_future - close_now) / close_now
+                    if future_return > 0.01:
+                        y_val.append(1)
+                    elif future_return < -0.01:
+                        y_val.append(-1)
+                    else:
+                        y_val.append(0)
 
-                        if future_return > 0.01:
-                            y_val.append(1)
-                        elif future_return < -0.01:
-                            y_val.append(-1)
-                        else:
-                            y_val.append(0)
-
-                        X_val.append(features)
-                        returns_for_signals.append(future_return)
+                    X_val.append(features)
+                    returns_for_signals.append(future_return)
 
             if len(X_val) < 50:
                 logger.warning(f"Insufficient scorer validation samples: {len(X_val)}")
@@ -712,11 +763,20 @@ class ValidationService:
             metrics.validation_samples = len(X)
             metrics.symbols_used = symbols  # ALL symbols used
 
-            # Get predictions
-            y_pred_proba = model.predict(X)  # Returns probabilities for 3 classes
+            # Get predictions - model returns regression scores (0-100)
+            y_pred_scores = model.predict(X)
 
-            # Convert probabilities to class predictions
-            y_pred = np.argmax(y_pred_proba, axis=1) - 1  # Shift back to -1, 0, 1
+            # Handle both 1D and 2D outputs
+            if y_pred_scores.ndim > 1:
+                y_pred_scores = y_pred_scores.flatten()
+
+            # Convert scores to signals:
+            # Score > 60 -> buy (1)
+            # Score < 40 -> sell (-1)
+            # 40-60 -> hold (0)
+            y_pred = np.zeros_like(y_pred_scores, dtype=np.int32)
+            y_pred[y_pred_scores > 60] = 1
+            y_pred[y_pred_scores < 40] = -1
 
             # Classification metrics
             metrics.accuracy = sklearn_metrics.accuracy_score(y, y_pred)
@@ -766,17 +826,27 @@ class ValidationService:
 
             # MAE/RMSE for score prediction (convert y to 0-100 scale)
             y_scaled = (y + 1) * 33.33  # -1->0, 0->33, 1->66
-            y_pred_scaled = np.max(y_pred_proba, axis=1) * 100
+            y_pred_scaled = y_pred_scores  # Already in 0-100 range
 
             metrics.mae = sklearn_metrics.mean_absolute_error(y_scaled, y_pred_scaled)
             metrics.rmse = np.sqrt(sklearn_metrics.mean_squared_error(y_scaled, y_pred_scaled))
 
             # Feature importance
             try:
-                feature_names = ["RSI", "MACD", "ADX", "ATR%", "Trend"]
+                # 18 features from shared scorer
+                feature_names = [
+                    "bull_trend_prob", "bear_trend_prob", "sideways_prob", "high_vol_prob",
+                    "regime_duration",
+                    "rsi", "rsi_slope", "macd_hist", "macd_slope", "adx",
+                    "volatility_ratio", "atr_pct",
+                    "close_vs_sma20", "close_vs_sma50", "bb_position",
+                    "volume_ratio", "price_momentum", "recent_high_dist"
+                ]
                 importance = model.feature_importance()
+                # Handle case where importance length differs
+                names_to_use = feature_names[:len(importance)] if len(importance) <= len(feature_names) else feature_names + [f"feature_{i}" for i in range(len(feature_names), len(importance))]
                 metrics.top_features = sorted(
-                    zip(feature_names, importance.tolist()),
+                    zip(names_to_use, importance.tolist()),
                     key=lambda x: x[1],
                     reverse=True
                 )

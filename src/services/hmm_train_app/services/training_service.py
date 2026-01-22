@@ -388,18 +388,40 @@ class HMMTrainingService:
 
             start_time = datetime.now(timezone.utc)
 
-            # Train HMM with improved parameters for numerical stability
-            model = hmmlearn_hmm.GaussianHMM(
-                n_components=4,
-                covariance_type="diag",  # Diagonal covariance is more stable than full
-                n_iter=200,  # More iterations for better convergence
-                random_state=42,
-                tol=1e-3,  # Convergence tolerance
-                min_covar=1e-3,  # Minimum covariance to prevent singular matrices
-                init_params="stmc",  # Initialize all parameters
-                params="stmc"  # Update all parameters
-            )
-            model.fit(features)
+            # Train HMM with optimized parameters for regime detection
+            # Key improvements:
+            # - More iterations (300) for better convergence
+            # - Lower tolerance (1e-4) for more precise fit
+            # - Multiple random restarts to find better solution
+            best_model = None
+            best_score = float('-inf')
+
+            for random_seed in [42, 123, 456]:  # Multiple random restarts
+                model = hmmlearn_hmm.GaussianHMM(
+                    n_components=4,
+                    covariance_type="diag",  # Diagonal covariance is more stable than full
+                    n_iter=300,  # More iterations for better convergence (was 200)
+                    random_state=random_seed,
+                    tol=1e-4,  # Lower tolerance for more precise fit (was 1e-3)
+                    min_covar=1e-3,  # Minimum covariance to prevent singular matrices
+                    init_params="stmc",  # Initialize all parameters
+                    params="stmc"  # Update all parameters
+                )
+                try:
+                    model.fit(features)
+                    score = model.score(features)
+                    if score > best_score:
+                        best_score = score
+                        best_model = model
+                except Exception as e:
+                    logger.debug(f"HMM fit with seed {random_seed} failed: {e}")
+                    continue
+
+            if best_model is None:
+                return {"success": False, "error": "All HMM fits failed"}
+
+            model = best_model
+            logger.debug(f"Best HMM score for {symbol}: {best_score:.2f}")
 
             # Map states to regimes
             regime_mapping = self._map_states_to_regimes(model, features)
