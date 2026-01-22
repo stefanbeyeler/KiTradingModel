@@ -330,6 +330,103 @@
             font-size: 0.85rem;
         }
 
+        /* Configuration Form Styles */
+        .config-group {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .config-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .config-row:last-child {
+            border-bottom: none;
+        }
+
+        .config-row label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .config-input {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.4rem 0.5rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .config-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(100, 200, 255, 0.2);
+        }
+
+        .config-input-small {
+            width: 50px;
+            text-align: center;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .toggle-switch input {
+            display: none;
+        }
+
+        .toggle-slider {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            transition: background 0.3s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            background: #888;
+            border-radius: 50%;
+            transition: transform 0.3s, background 0.3s;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(20px);
+            background: #81c784;
+        }
+
+        .toggle-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .toggle-switch input:checked ~ .toggle-label {
+            color: #81c784;
+        }
+
         .drift-item.danger {
             background: rgba(244, 67, 54, 0.1);
             border-left: 3px solid #e57373;
@@ -2107,34 +2204,93 @@
                     </div>
                 </div>
 
-                <!-- Scheduling Configuration -->
+                <!-- Scheduling & Training Configuration Card -->
                 <div class="info-section" style="margin-top: 1rem;">
-                    <h4>&#128337; Zeitgesteuertes Training</h4>
-                    <div class="grid-2" style="gap: 1rem; margin-top: 0.75rem;">
-                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                <input type="checkbox" id="sl-scheduled-enabled" onchange="updateSchedulingConfig()">
-                                <span>Zeitgesteuertes Training aktivieren</span>
+                    <h4>&#128337; Training-Konfiguration</h4>
+                    <div class="grid-2" style="gap: 1.5rem; margin-top: 0.75rem;">
+                        <!-- Zeitgesteuertes Training -->
+                        <div class="config-group">
+                            <h5 style="color: var(--accent-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">Zeitgesteuertes Training</h5>
+                            <label class="toggle-switch" style="margin-bottom: 0.75rem;">
+                                <input type="checkbox" id="sl-scheduled-enabled">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Aktiviert</span>
                             </label>
-                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-                                <label style="min-width: 120px;">Trainingszeit (UTC):</label>
-                                <input type="number" id="sl-scheduled-hour" min="0" max="23" value="2"
-                                       style="width: 60px; padding: 0.25rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);">
-                                <span>:</span>
-                                <input type="number" id="sl-scheduled-minute" min="0" max="59" value="0"
-                                       style="width: 60px; padding: 0.25rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);">
-                                <span>Uhr</span>
+                            <div class="config-row">
+                                <label>Trainingszeit (UTC):</label>
+                                <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                    <input type="number" id="sl-scheduled-hour" min="0" max="23" value="2" class="config-input config-input-small">
+                                    <span style="font-weight: bold;">:</span>
+                                    <input type="number" id="sl-scheduled-minute" min="0" max="59" value="0" class="config-input config-input-small">
+                                    <span style="color: var(--text-secondary); margin-left: 0.25rem;">Uhr</span>
+                                </div>
+                            </div>
+                            <div class="config-row">
+                                <label>Check-Intervall:</label>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="number" id="sl-check-interval" min="5" max="1440" value="60" class="config-input" style="width: 80px;">
+                                    <span style="color: var(--text-secondary);">Minuten</span>
+                                </div>
                             </div>
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                            <div class="info-box" id="sl-schedule-info">
-                                <strong>Hinweis:</strong> Bei aktiviertem Scheduling wird das Training täglich zur
-                                angegebenen Uhrzeit ausgeführt, sofern genügend Samples im Feedback-Buffer vorhanden sind.
+
+                        <!-- Training Trigger Bedingungen -->
+                        <div class="config-group">
+                            <h5 style="color: var(--accent-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">Training-Bedingungen</h5>
+                            <div class="config-row">
+                                <label>Min. Samples für Training:</label>
+                                <input type="number" id="sl-min-samples" min="10" max="10000" value="100" class="config-input" style="width: 100px;">
                             </div>
-                            <button class="btn btn-primary btn-sm" onclick="updateSchedulingConfig()">
-                                &#128190; Scheduling speichern
-                            </button>
+                            <div class="config-row">
+                                <label>Min. Stunden zwischen Trainings:</label>
+                                <input type="number" id="sl-min-hours" min="1" max="168" value="24" class="config-input" style="width: 80px;">
+                            </div>
+                            <div class="config-row">
+                                <label>Max. Stunden zwischen Trainings:</label>
+                                <input type="number" id="sl-max-hours" min="24" max="720" value="168" class="config-input" style="width: 80px;">
+                            </div>
                         </div>
+
+                        <!-- EWC Parameter -->
+                        <div class="config-group">
+                            <h5 style="color: var(--accent-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">EWC (Elastic Weight Consolidation)</h5>
+                            <div class="config-row">
+                                <label>EWC Lambda:</label>
+                                <input type="number" id="sl-ewc-lambda" min="0" max="100000" step="100" value="1000" class="config-input" style="width: 100px;">
+                            </div>
+                            <div class="config-row">
+                                <label>Learning Rate:</label>
+                                <input type="number" id="sl-learning-rate" min="0.000001" max="0.01" step="0.000001" value="0.00001" class="config-input" style="width: 120px;">
+                            </div>
+                            <div class="config-row">
+                                <label>Epochen:</label>
+                                <input type="number" id="sl-epochs" min="1" max="100" value="10" class="config-input" style="width: 80px;">
+                            </div>
+                        </div>
+
+                        <!-- Deployment Optionen -->
+                        <div class="config-group">
+                            <h5 style="color: var(--accent-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">Deployment-Optionen</h5>
+                            <label class="toggle-switch" style="margin-bottom: 0.5rem;">
+                                <input type="checkbox" id="sl-auto-deploy" checked>
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Auto-Deploy bei Verbesserung</span>
+                            </label>
+                            <div class="info-box" style="margin-top: 0.5rem; font-size: 0.8rem;">
+                                <strong>Hinweis:</strong> Bei aktiviertem Auto-Deploy wird ein neues Modell automatisch deployed,
+                                wenn es bessere Metriken als das aktuelle Modell zeigt.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Speichern Button -->
+                    <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        <button class="btn btn-secondary btn-sm" onclick="loadSelfLearningStatus()">
+                            &#8635; Zurücksetzen
+                        </button>
+                        <button class="btn btn-primary" onclick="saveAllSelfLearningConfig()">
+                            &#128190; Alle Einstellungen speichern
+                        </button>
                     </div>
                 </div>
             </div>
@@ -6732,6 +6888,20 @@
                 document.getElementById('sl-scheduled-enabled').checked = config.scheduled_training_enabled || false;
                 document.getElementById('sl-scheduled-hour').value = config.scheduled_hour ?? 2;
                 document.getElementById('sl-scheduled-minute').value = config.scheduled_minute ?? 0;
+                document.getElementById('sl-check-interval').value = config.check_interval_minutes ?? 60;
+
+                // Update training condition inputs
+                document.getElementById('sl-min-samples').value = config.min_samples_for_training ?? 100;
+                document.getElementById('sl-min-hours').value = config.min_hours_between_training ?? 24;
+                document.getElementById('sl-max-hours').value = config.max_hours_between_training ?? 168;
+
+                // Update EWC inputs
+                document.getElementById('sl-ewc-lambda').value = config.ewc_lambda ?? 1000;
+                document.getElementById('sl-learning-rate').value = config.incremental_learning_rate ?? 0.00001;
+                document.getElementById('sl-epochs').value = config.incremental_epochs ?? 10;
+
+                // Update deployment options
+                document.getElementById('sl-auto-deploy').checked = config.auto_deploy_on_improvement ?? true;
 
                 // Update toggle button
                 const toggleBtn = document.getElementById('sl-toggle-btn');
@@ -6779,37 +6949,46 @@
             }
         }
 
-        async function updateSchedulingConfig() {
+        async function saveAllSelfLearningConfig() {
             try {
-                const enabled = document.getElementById('sl-scheduled-enabled').checked;
-                const hour = parseInt(document.getElementById('sl-scheduled-hour').value) || 2;
-                const minute = parseInt(document.getElementById('sl-scheduled-minute').value) || 0;
+                // Collect all configuration values
+                const config = {
+                    // Scheduling
+                    scheduled_training_enabled: document.getElementById('sl-scheduled-enabled').checked,
+                    scheduled_hour: Math.max(0, Math.min(23, parseInt(document.getElementById('sl-scheduled-hour').value) || 2)),
+                    scheduled_minute: Math.max(0, Math.min(59, parseInt(document.getElementById('sl-scheduled-minute').value) || 0)),
+                    check_interval_minutes: Math.max(5, Math.min(1440, parseInt(document.getElementById('sl-check-interval').value) || 60)),
+
+                    // Training conditions
+                    min_samples_for_training: Math.max(10, parseInt(document.getElementById('sl-min-samples').value) || 100),
+                    min_hours_between_training: Math.max(1, parseInt(document.getElementById('sl-min-hours').value) || 24),
+                    max_hours_between_training: Math.max(24, parseInt(document.getElementById('sl-max-hours').value) || 168),
+
+                    // EWC parameters
+                    ewc_lambda: Math.max(0, parseFloat(document.getElementById('sl-ewc-lambda').value) || 1000),
+                    incremental_learning_rate: Math.max(0.000001, Math.min(0.01, parseFloat(document.getElementById('sl-learning-rate').value) || 0.00001)),
+                    incremental_epochs: Math.max(1, Math.min(100, parseInt(document.getElementById('sl-epochs').value) || 10)),
+
+                    // Deployment
+                    auto_deploy_on_improvement: document.getElementById('sl-auto-deploy').checked
+                };
 
                 const response = await fetch(`${TRAIN_API_BASE}/self-learning/config`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        scheduled_training_enabled: enabled,
-                        scheduled_hour: Math.max(0, Math.min(23, hour)),
-                        scheduled_minute: Math.max(0, Math.min(59, minute))
-                    })
+                    body: JSON.stringify(config)
                 });
 
                 const data = await response.json();
                 if (data.status === 'updated') {
-                    const hourStr = String(hour).padStart(2, '0');
-                    const minuteStr = String(minute).padStart(2, '0');
-                    const msg = enabled
-                        ? `Zeitgesteuertes Training aktiviert (${hourStr}:${minuteStr} UTC)`
-                        : 'Zeitgesteuertes Training deaktiviert';
-                    showNotification(msg, 'success');
+                    showNotification('Self-Learning Konfiguration gespeichert', 'success');
                     await loadSelfLearningStatus();
                 } else {
                     showNotification('Fehler beim Speichern der Konfiguration', 'error');
                 }
             } catch (error) {
-                console.error('Error updating scheduling config:', error);
-                showNotification('Fehler beim Speichern der Scheduling-Konfiguration', 'error');
+                console.error('Error saving self-learning config:', error);
+                showNotification('Fehler beim Speichern der Konfiguration', 'error');
             }
         }
 
