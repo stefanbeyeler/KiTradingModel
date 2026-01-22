@@ -363,6 +363,8 @@
             color: var(--text-primary);
             font-size: 0.9rem;
             transition: border-color 0.2s, box-shadow 0.2s;
+            text-align: right;
+            min-width: 100px;
         }
 
         .config-input:focus {
@@ -2265,11 +2267,11 @@
                             </div>
                             <div class="config-row">
                                 <label>Min. Stunden zwischen Trainings:</label>
-                                <input type="number" id="sl-min-hours" min="1" max="168" value="24" class="config-input" style="width: 80px;">
+                                <input type="number" id="sl-min-hours" min="1" max="168" value="24" class="config-input" style="width: 100px;">
                             </div>
                             <div class="config-row">
                                 <label>Max. Stunden zwischen Trainings:</label>
-                                <input type="number" id="sl-max-hours" min="24" max="720" value="168" class="config-input" style="width: 80px;">
+                                <input type="number" id="sl-max-hours" min="24" max="720" value="168" class="config-input" style="width: 100px;">
                             </div>
                         </div>
 
@@ -2278,7 +2280,7 @@
                             <h5 style="color: var(--accent-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">EWC (Elastic Weight Consolidation)</h5>
                             <div class="config-row">
                                 <label>EWC Lambda:</label>
-                                <input type="number" id="sl-ewc-lambda" min="0" max="100000" step="100" value="1000" class="config-input" style="width: 100px;">
+                                <input type="number" id="sl-ewc-lambda" min="0" max="100000" step="100" value="1000" class="config-input" style="width: 120px;">
                             </div>
                             <div class="config-row">
                                 <label>Learning Rate:</label>
@@ -2286,7 +2288,7 @@
                             </div>
                             <div class="config-row">
                                 <label>Epochen:</label>
-                                <input type="number" id="sl-epochs" min="1" max="100" value="10" class="config-input" style="width: 80px;">
+                                <input type="number" id="sl-epochs" min="1" max="100" value="10" class="config-input" style="width: 120px;">
                             </div>
                         </div>
 
