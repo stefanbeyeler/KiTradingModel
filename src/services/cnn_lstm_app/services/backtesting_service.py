@@ -24,6 +24,12 @@ DATA_DIR = os.getenv("DATA_DIR", "/app/data")
 AUTO_BACKTEST_ENABLED = os.getenv("AUTO_BACKTEST_ENABLED", "true").lower() == "true"
 AUTO_BACKTEST_INTERVAL_HOURS = float(os.getenv("AUTO_BACKTEST_INTERVAL_HOURS", "6"))
 
+# Continuous Optimization Konfiguration
+CONTINUOUS_OPTIMIZATION_ENABLED = os.getenv("CONTINUOUS_OPTIMIZATION_ENABLED", "true").lower() == "true"
+DRIFT_DETECTION_WINDOW = int(os.getenv("DRIFT_DETECTION_WINDOW", "20"))  # Sliding window size
+DRIFT_THRESHOLD = float(os.getenv("DRIFT_THRESHOLD", "15.0"))  # Accuracy drop in % that triggers alert
+IMMEDIATE_RETRAIN_ON_DRIFT = os.getenv("IMMEDIATE_RETRAIN_ON_DRIFT", "true").lower() == "true"
+
 
 @dataclass
 class BacktestResult:
@@ -114,9 +120,20 @@ class BacktestingService:
         self._auto_start_enabled = AUTO_BACKTEST_ENABLED
         self._auto_start_interval = AUTO_BACKTEST_INTERVAL_HOURS
 
+        # Continuous Optimization State
+        self._continuous_enabled = CONTINUOUS_OPTIMIZATION_ENABLED
+        self._drift_window = DRIFT_DETECTION_WINDOW
+        self._drift_threshold = DRIFT_THRESHOLD
+        self._immediate_retrain = IMMEDIATE_RETRAIN_ON_DRIFT
+        self._baseline_accuracy: Optional[float] = None
+        self._drift_detected = False
+        self._last_drift_check: Optional[datetime] = None
+
         self._load_results()
+        self._update_baseline_accuracy()
         logger.info(f"BacktestingService initialized - {len(self._results)} results loaded")
         logger.info(f"Auto-Backtest: enabled={self._auto_start_enabled}, interval={self._auto_start_interval}h")
+        logger.info(f"Continuous Optimization: enabled={self._continuous_enabled}, drift_window={self._drift_window}, drift_threshold={self._drift_threshold}%")
 
     async def auto_start_if_enabled(self):
         """Starte Auto-Backtest wenn via Umgebungsvariable aktiviert."""
@@ -666,6 +683,169 @@ class BacktestingService:
         elapsed = (datetime.now(timezone.utc) - self._last_auto_backtest).total_seconds()
         remaining = max(0, self._scheduler_interval - elapsed)
         return int(remaining)
+
+    # =========================================================================
+    # Continuous Optimization - Drift Detection
+    # =========================================================================
+
+    def _update_baseline_accuracy(self):
+        """Berechne Baseline-Accuracy aus historischen Ergebnissen."""
+        if len(self._results) < self._drift_window:
+            self._baseline_accuracy = None
+            return
+
+        # Berechne Accuracy der aeltesten N Ergebnisse als Baseline
+        older_results = self._results[:-self._drift_window] if len(self._results) > self._drift_window * 2 else self._results[:self._drift_window]
+        if older_results:
+            correct = sum(1 for r in older_results if r.price_direction_correct)
+            self._baseline_accuracy = (correct / len(older_results)) * 100
+
+    def get_sliding_window_accuracy(self) -> Optional[float]:
+        """Berechne aktuelle Accuracy im Sliding Window."""
+        if len(self._results) < self._drift_window:
+            return None
+
+        recent = self._results[-self._drift_window:]
+        correct = sum(1 for r in recent if r.price_direction_correct)
+        return (correct / len(recent)) * 100
+
+    def check_drift(self) -> dict:
+        """
+        Pruefe auf Performance-Drift.
+
+        Returns:
+            Dict mit drift_detected, current_accuracy, baseline_accuracy, drop
+        """
+        current = self.get_sliding_window_accuracy()
+        self._last_drift_check = datetime.now(timezone.utc)
+
+        if current is None or self._baseline_accuracy is None:
+            return {
+                "drift_detected": False,
+                "current_accuracy": current,
+                "baseline_accuracy": self._baseline_accuracy,
+                "drop": None,
+                "threshold": self._drift_threshold,
+                "message": "Insufficient data for drift detection"
+            }
+
+        drop = self._baseline_accuracy - current
+        drift_detected = drop >= self._drift_threshold
+
+        if drift_detected and not self._drift_detected:
+            self._drift_detected = True
+            logger.warning(
+                f"DRIFT DETECTED: Accuracy dropped from {self._baseline_accuracy:.1f}% "
+                f"to {current:.1f}% (drop: {drop:.1f}%)"
+            )
+
+        return {
+            "drift_detected": drift_detected,
+            "current_accuracy": round(current, 2),
+            "baseline_accuracy": round(self._baseline_accuracy, 2),
+            "drop": round(drop, 2),
+            "threshold": self._drift_threshold,
+            "window_size": self._drift_window,
+            "message": "Drift detected - retraining recommended" if drift_detected else "Performance stable"
+        }
+
+    async def on_prediction_completed(self, prediction: dict):
+        """
+        Hook der nach jeder Prediction aufgerufen wird.
+        Prueft ob die Prediction sofort backtested werden kann.
+
+        Args:
+            prediction: Die gerade erstellte Prediction
+        """
+        if not self._continuous_enabled:
+            return
+
+        try:
+            # Pruefe ob alte Predictions jetzt backtestbar sind
+            await self._backtest_ready_predictions()
+
+            # Pruefe auf Drift nach jedem Backtest
+            if len(self._results) >= self._drift_window:
+                drift_result = self.check_drift()
+
+                if drift_result["drift_detected"] and self._immediate_retrain:
+                    logger.info("Drift detected - triggering immediate retrain check")
+                    await self._check_retrain_trigger()
+
+        except Exception as e:
+            logger.warning(f"Error in continuous optimization hook: {e}")
+
+    async def _backtest_ready_predictions(self):
+        """Backteste alle Predictions die bereit sind (genug Zeit vergangen)."""
+        try:
+            from .prediction_history_service import prediction_history_service
+
+            # Hole Predictions der letzten 24h
+            predictions = prediction_history_service.get_history(limit=50)
+
+            if not predictions:
+                return
+
+            # Finde Predictions die alt genug sind fuer Backtest
+            now = datetime.now(timezone.utc)
+            backtested_ids = {r.prediction_id for r in self._results}
+            ready_predictions = []
+
+            for pred in predictions:
+                pred_id = pred.get("id") or pred.get("prediction_id")
+                if pred_id in backtested_ids:
+                    continue
+
+                # Parse timestamp
+                timestamp_str = pred.get("timestamp")
+                if not timestamp_str:
+                    continue
+
+                try:
+                    pred_time = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                    age_hours = (now - pred_time).total_seconds() / 3600
+
+                    # Mindestens 1h alt fuer 1h-Horizon Backtest
+                    if age_hours >= 1.0:
+                        ready_predictions.append(pred)
+                except Exception:
+                    continue
+
+            # Backteste ready predictions (max 10 pro Durchlauf)
+            if ready_predictions:
+                result = await self.run_backtests(ready_predictions[:10], max_backtests=10)
+                if result.get("new_backtests", 0) > 0:
+                    logger.info(
+                        f"Continuous backtest: {result['new_backtests']} new backtests completed"
+                    )
+
+        except Exception as e:
+            logger.warning(f"Error in continuous backtest: {e}")
+
+    def reset_drift_state(self):
+        """Setze Drift-State zurueck (z.B. nach erfolgreichem Retrain)."""
+        self._drift_detected = False
+        self._update_baseline_accuracy()
+        logger.info("Drift state reset - new baseline established")
+
+    def get_continuous_optimization_status(self) -> dict:
+        """Hole Status der fortlaufenden Optimierung."""
+        drift_info = self.check_drift()
+
+        return {
+            "enabled": self._continuous_enabled,
+            "drift_detection": {
+                "window_size": self._drift_window,
+                "threshold": self._drift_threshold,
+                "baseline_accuracy": self._baseline_accuracy,
+                "current_accuracy": drift_info.get("current_accuracy"),
+                "drift_detected": drift_info.get("drift_detected"),
+                "drop": drift_info.get("drop")
+            },
+            "immediate_retrain_enabled": self._immediate_retrain,
+            "last_drift_check": self._last_drift_check.isoformat() if self._last_drift_check else None,
+            "total_backtest_results": len(self._results)
+        }
 
 
 # Global singleton

@@ -231,6 +231,14 @@ class PredictionHistoryService:
             self._save_history()
 
             logger.debug(f"Added prediction for {symbol}/{timeframe}")
+
+            # Trigger continuous optimization hook
+            try:
+                from .backtesting_service import backtesting_service
+                await backtesting_service.on_prediction_completed(entry.to_dict())
+            except Exception as hook_error:
+                logger.debug(f"Continuous optimization hook error: {hook_error}")
+
             return entry
 
         except Exception as e:

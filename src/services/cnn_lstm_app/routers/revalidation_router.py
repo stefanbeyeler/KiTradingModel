@@ -870,6 +870,82 @@ async def get_retrain_statistics():
 
 
 # =============================================================================
+# Continuous Optimization Endpoints
+# =============================================================================
+
+@router.get("/continuous/status", tags=["7. Self-Learning"])
+async def get_continuous_optimization_status():
+    """
+    Hole Status der fortlaufenden Optimierung.
+
+    Zeigt:
+    - Drift Detection Status (Baseline vs Current Accuracy)
+    - Sliding Window Konfiguration
+    - Aktuelle Performance-Metriken
+    """
+    try:
+        from ..services.backtesting_service import backtesting_service
+        return backtesting_service.get_continuous_optimization_status()
+
+    except Exception as e:
+        logger.error(f"Error getting continuous optimization status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/continuous/drift", tags=["7. Self-Learning"])
+async def check_drift():
+    """
+    Pruefe auf Performance-Drift.
+
+    Vergleicht aktuelle Accuracy mit Baseline und meldet Drift wenn Unterschied > Threshold.
+    """
+    try:
+        from ..services.backtesting_service import backtesting_service
+        return backtesting_service.check_drift()
+
+    except Exception as e:
+        logger.error(f"Error checking drift: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/continuous/reset-drift", tags=["7. Self-Learning"])
+async def reset_drift_state():
+    """
+    Setze Drift-State zurueck.
+
+    Sollte nach erfolgreichem Retrain aufgerufen werden um neue Baseline zu etablieren.
+    """
+    try:
+        from ..services.backtesting_service import backtesting_service
+        backtesting_service.reset_drift_state()
+        return {"status": "ok", "message": "Drift state reset, new baseline established"}
+
+    except Exception as e:
+        logger.error(f"Error resetting drift state: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/continuous/trigger-backtest", tags=["7. Self-Learning"])
+async def trigger_continuous_backtest():
+    """
+    Manuelles Triggern eines Backtest-Durchlaufs fuer alle bereiten Predictions.
+    """
+    try:
+        from ..services.backtesting_service import backtesting_service
+        await backtesting_service._backtest_ready_predictions()
+        drift = backtesting_service.check_drift()
+        return {
+            "status": "ok",
+            "message": "Continuous backtest triggered",
+            "drift_status": drift
+        }
+
+    except Exception as e:
+        logger.error(f"Error triggering continuous backtest: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
 # Claude Vision Validation Endpoints
 # =============================================================================
 
