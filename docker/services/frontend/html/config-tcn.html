@@ -599,6 +599,17 @@
             }
         }
 
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
         /* Loading Spinner */
         .loading {
             display: flex;
@@ -2480,6 +2491,36 @@
         const TRAIN_API_BASE = '/tcn-train/api/v1';
         let trainingInterval = null;
         let tcnMetricsChart = null;
+
+        // Toast Notification
+        function showNotification(message, type = 'info') {
+            // Remove existing notifications
+            const existing = document.querySelector('.toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 8px;
+                color: white;
+                font-size: 0.9rem;
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'};
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
 
         // =============================================================================
         // Pattern Detail Data (basierend auf docs/tcn_patterns/)
@@ -7232,14 +7273,28 @@
 
         async function checkDrift() {
             try {
+                showNotification('Drift-Check wird durchgeführt...', 'info');
                 const response = await fetch(`${API_BASE}/drift/check`, {
                     method: 'POST'
                 });
                 const data = await response.json();
-                showNotification('Drift-Check durchgeführt', 'success');
+
+                // Show result with severity
+                const severity = data.result?.overall_severity || 'none';
+                const recommendation = data.result?.recommendation || '';
+
+                if (severity === 'none') {
+                    showNotification(`✓ Kein Drift erkannt. ${recommendation}`, 'success');
+                } else if (severity === 'low' || severity === 'medium') {
+                    showNotification(`⚠ Drift erkannt: ${severity}`, 'info');
+                } else {
+                    showNotification(`⚠ Drift erkannt: ${severity} - Training empfohlen`, 'error');
+                }
+
                 await loadDriftStatus();
             } catch (error) {
-                showNotification('Fehler beim Drift-Check', 'error');
+                console.error('Drift check error:', error);
+                showNotification('Fehler beim Drift-Check: ' + error.message, 'error');
             }
         }
 
