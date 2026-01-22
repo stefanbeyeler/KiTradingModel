@@ -17,6 +17,9 @@ torch = None
 # EWC Trainer for incremental learning
 from .ewc_trainer import incremental_trainer, EWCConfig
 
+# Rollback service for model versioning
+from .tcn_rollback_service import rollback_service
+
 
 def _load_torch():
     global torch
@@ -405,6 +408,14 @@ class TCNTrainingService:
             # Update latest link
             self._update_latest_link(model_path)
 
+            # Register model with rollback service for versioning
+            rollback_service.register_model(
+                model_path=model_path,
+                training_type="full",
+                metrics=result,
+                notes=f"Full training with {len(sequences)} samples"
+            )
+
             # Update history
             self._current_job["status"] = TrainingStatus.COMPLETED
             self._current_job["best_loss"] = result["best_loss"]
@@ -725,6 +736,14 @@ class TCNTrainingService:
 
                 # Update latest link
                 self._update_latest_link(model_path)
+
+                # Register model with rollback service for versioning
+                rollback_service.register_model(
+                    model_path=model_path,
+                    training_type="incremental",
+                    metrics=result,
+                    notes=f"Incremental EWC training with {len(sequences)} samples"
+                )
 
                 # Update history
                 self._current_job["status"] = TrainingStatus.COMPLETED

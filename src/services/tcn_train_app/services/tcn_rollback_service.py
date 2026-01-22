@@ -410,6 +410,71 @@ class TCNRollbackService:
             "backup_directory": self.BACKUP_DIR
         }
 
+    def discover_existing_models(self) -> int:
+        """
+        Discover and register existing model files that are not yet tracked.
+
+        Returns:
+            Number of newly registered models
+        """
+        registered = 0
+        existing_ids = {v.version_id for v in self._versions}
+
+        if os.path.exists(self.MODEL_DIR):
+            for filename in os.listdir(self.MODEL_DIR):
+                if filename.endswith('.pt') and filename != 'latest.pt':
+                    version_id = filename.replace('.pt', '')
+
+                    if version_id not in existing_ids:
+                        model_path = os.path.join(self.MODEL_DIR, filename)
+                        if os.path.isfile(model_path):
+                            # Determine training type from filename
+                            training_type = "incremental" if "_incr_" in filename else "full"
+
+                            # Get creation time
+                            created_at = datetime.fromtimestamp(
+                                os.path.getctime(model_path)
+                            ).isoformat()
+
+                            version = ModelVersion(
+                                version_id=version_id,
+                                model_path=model_path,
+                                training_type=training_type,
+                                status=DeploymentStatus.CANDIDATE,
+                                created_at=created_at,
+                                notes="Automatically discovered"
+                            )
+
+                            self._versions.append(version)
+                            registered += 1
+                            logger.info(f"Discovered existing model: {version_id}")
+
+        if registered > 0:
+            # Check if latest.pt points to one of these models
+            if os.path.exists(self.LATEST_MODEL_LINK):
+                try:
+                    linked_path = os.path.realpath(self.LATEST_MODEL_LINK)
+                    linked_name = os.path.basename(linked_path).replace('.pt', '')
+
+                    for v in self._versions:
+                        if v.version_id == linked_name:
+                            v.status = DeploymentStatus.ACTIVE
+                            v.deployed_at = datetime.utcnow().isoformat()
+                            self._current_version = linked_name
+                            logger.info(f"Marked {linked_name} as active (linked by latest.pt)")
+                            break
+                except Exception as e:
+                    logger.warning(f"Could not determine active model: {e}")
+
+            self._save_versions()
+
+        return registered
+
 
 # Singleton instance
 rollback_service = TCNRollbackService()
+
+# Auto-discover existing models on startup
+_discovered = rollback_service.discover_existing_models()
+if _discovered > 0:
+    logger.info(f"Auto-discovered {_discovered} existing model(s)")
