@@ -1480,6 +1480,27 @@
 
         <!-- Status Tab -->
         <div id="tab-status" class="tab-content active">
+            <!-- Learning Progress Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">&#128200; Lernfortschritt</h3>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select class="form-control" id="tcn-metrics-training-type" style="padding: 0.25rem; font-size: 0.85rem; width: auto;" onchange="loadTcnMetricsHistory()">
+                            <option value="all">Alle Trainings</option>
+                            <option value="full">Vollständige Trainings</option>
+                            <option value="incremental">Inkrementelle Trainings</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="loadTcnMetricsHistory()" style="padding: 0.25rem 0.5rem;">&#8635;</button>
+                    </div>
+                </div>
+                <div style="position: relative; height: 200px; padding: 0.5rem;">
+                    <canvas id="tcn-metrics-chart"></canvas>
+                </div>
+                <div id="tcn-metrics-summary" style="padding: 0.5rem 1rem; font-size: 0.8rem; color: #888; border-top: 1px solid rgba(255,255,255,0.05);">
+                    Lade Metriken...
+                </div>
+            </div>
+
             <!-- Pattern Overview Card -->
             <div class="card">
                 <div class="card-header">
@@ -1777,27 +1798,6 @@
                         </div>
                         <div class="pattern-overview-signal">Signal: Short • Typ: Trend</div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Learning Progress Chart -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128200; Lernfortschritt</h3>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <select class="form-control" id="tcn-metrics-training-type" style="padding: 0.25rem; font-size: 0.85rem; width: auto;" onchange="loadTcnMetricsHistory()">
-                            <option value="all">Alle Trainings</option>
-                            <option value="full">Vollständige Trainings</option>
-                            <option value="incremental">Inkrementelle Trainings</option>
-                        </select>
-                        <button class="btn btn-primary btn-sm" onclick="loadTcnMetricsHistory()" style="padding: 0.25rem 0.5rem;">&#8635;</button>
-                    </div>
-                </div>
-                <div style="position: relative; height: 200px; padding: 0.5rem;">
-                    <canvas id="tcn-metrics-chart"></canvas>
-                </div>
-                <div id="tcn-metrics-summary" style="padding: 0.5rem 1rem; font-size: 0.8rem; color: #888; border-top: 1px solid rgba(255,255,255,0.05);">
-                    Lade Metriken...
                 </div>
             </div>
 
