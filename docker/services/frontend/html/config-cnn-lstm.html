@@ -958,6 +958,7 @@
             background: rgba(100, 200, 255, 0.2);
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header>
@@ -1002,8 +1003,8 @@
     <div class="container">
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab" onclick="switchTab('features')">&#128200; Features</button>
-            <button class="tab active" onclick="switchTab('predictions')">&#127919; Live Predictions</button>
+            <button class="tab active" onclick="switchTab('features')">&#128200; Features</button>
+            <button class="tab" onclick="switchTab('predictions')">&#127919; Live Predictions</button>
             <button class="tab" onclick="switchTab('revalidation')">&#128202; Revalidierung</button>
             <button class="tab" onclick="switchTab('selflearning')">&#129302; Self-Learning</button>
             <button class="tab" onclick="switchTab('training')">&#128203; Training</button>
@@ -1011,7 +1012,7 @@
         </div>
 
         <!-- Live Predictions Tab -->
-        <div id="tab-predictions" class="tab-content active">
+        <div id="tab-predictions" class="tab-content">
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">&#127919; Multi-Task Vorhersage</h2>
@@ -1600,7 +1601,28 @@
         </div>
 
         <!-- Features Tab -->
-        <div id="tab-features" class="tab-content">
+        <div id="tab-features" class="tab-content active">
+            <!-- Learning Progress Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128200; Lernfortschritt</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select class="timeframe-select" id="cnn-lstm-metrics-training-type" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" onchange="loadCnnLstmMetricsHistory()">
+                            <option value="all">Alle Trainings</option>
+                            <option value="full">Vollständige Trainings</option>
+                            <option value="incremental">Inkrementelle</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="loadCnnLstmMetricsHistory()" style="padding: 0.4rem 0.6rem;">&#8635;</button>
+                    </div>
+                </div>
+                <div style="position: relative; height: 220px; padding: 0.5rem;">
+                    <canvas id="cnn-lstm-metrics-chart"></canvas>
+                </div>
+                <div id="cnn-lstm-metrics-summary" style="padding: 0.75rem 1rem; font-size: 0.85rem; color: #888; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                    Lade Metriken...
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">&#128200; Input-Features (25 Dimensionen)</h2>
@@ -1771,6 +1793,13 @@
 
             document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
             document.getElementById(`tab-${tabId}`).classList.add('active');
+
+            // Load tab-specific content
+            if (tabId === 'features') {
+                loadCnnLstmMetricsHistory();
+            } else if (tabId === 'selflearning') {
+                loadSelfLearningStatus();
+            }
         }
 
         // Toast Notifications
@@ -3446,6 +3475,240 @@
             }
         }
 
+        // =================================================================
+        // Learning Progress Chart Functions
+        // =================================================================
+
+        let cnnLstmMetricsChart = null;
+
+        async function loadCnnLstmMetricsHistory() {
+            const trainingType = document.getElementById('cnn-lstm-metrics-training-type')?.value || 'all';
+            const summaryEl = document.getElementById('cnn-lstm-metrics-summary');
+            const chartCanvas = document.getElementById('cnn-lstm-metrics-chart');
+
+            if (!chartCanvas) return;
+
+            try {
+                // Load from CNN-LSTM Train Service
+                const response = await fetch('/cnn-lstm-train/api/v1/models/metrics-history?limit=30');
+
+                if (!response.ok) {
+                    // Fallback: Try to build from retrain history
+                    await loadMetricsFromRetrainHistory();
+                    return;
+                }
+
+                const data = await response.json();
+                let history = data.history || [];
+
+                if (history.length === 0) {
+                    // Fallback: Try to build from retrain history
+                    await loadMetricsFromRetrainHistory();
+                    return;
+                }
+
+                renderMetricsChart(history, summaryEl, chartCanvas);
+
+            } catch (error) {
+                console.error('Failed to load CNN-LSTM metrics history:', error);
+                // Fallback: Try to build from retrain history
+                await loadMetricsFromRetrainHistory();
+            }
+        }
+
+        async function loadMetricsFromRetrainHistory() {
+            const summaryEl = document.getElementById('cnn-lstm-metrics-summary');
+            const chartCanvas = document.getElementById('cnn-lstm-metrics-chart');
+
+            try {
+                // Load backtest summary for accuracy trend
+                const backtestResponse = await fetch('/cnn-lstm/api/v1/backtest/results?limit=50');
+                const backtestData = await backtestResponse.json();
+                const results = backtestData.results || backtestData || [];
+
+                // Load retrain history for training events
+                const retrainResponse = await fetch('/cnn-lstm/api/v1/retrain/history?limit=30');
+                const retrainData = await retrainResponse.json();
+                const retrainHistory = retrainData.history || [];
+
+                if (results.length === 0 && retrainHistory.length === 0) {
+                    summaryEl.innerHTML = 'Keine Metriken-Historie verfügbar. Trainieren Sie Modelle und führen Sie Backtests durch.';
+                    if (cnnLstmMetricsChart) {
+                        cnnLstmMetricsChart.destroy();
+                        cnnLstmMetricsChart = null;
+                    }
+                    return;
+                }
+
+                // Build history from backtest results (group by date)
+                const historyByDate = {};
+
+                for (const result of results) {
+                    const date = result.backtest_timestamp?.split('T')[0] || result.prediction_timestamp?.split('T')[0];
+                    if (!date) continue;
+
+                    if (!historyByDate[date]) {
+                        historyByDate[date] = {
+                            date: date,
+                            correct: 0,
+                            total: 0,
+                            regime_correct: 0
+                        };
+                    }
+
+                    historyByDate[date].total++;
+                    if (result.price_direction_correct) {
+                        historyByDate[date].correct++;
+                    }
+                    if (result.regime_correct) {
+                        historyByDate[date].regime_correct++;
+                    }
+                }
+
+                // Convert to array and sort by date
+                const history = Object.values(historyByDate)
+                    .sort((a, b) => a.date.localeCompare(b.date))
+                    .map(h => ({
+                        date: h.date,
+                        avg_accuracy: h.total > 0 ? (h.correct / h.total * 100) : 0,
+                        avg_f1: h.total > 0 ? (h.regime_correct / h.total * 100) : 0,
+                        deploy_rate: 100,
+                        deployed: retrainHistory.filter(r => r.training_status === 'completed').length,
+                        rejected: retrainHistory.filter(r => r.training_status === 'failed').length
+                    }));
+
+                if (history.length === 0) {
+                    summaryEl.innerHTML = 'Keine Metriken-Historie verfügbar. Führen Sie Backtests durch, um den Lernfortschritt zu verfolgen.';
+                    return;
+                }
+
+                renderMetricsChart(history, summaryEl, chartCanvas);
+
+            } catch (error) {
+                console.error('Error building metrics from retrain history:', error);
+                if (summaryEl) {
+                    summaryEl.innerHTML = '<span style="color: #e57373;">Fehler beim Laden der Metriken-Historie</span>';
+                }
+            }
+        }
+
+        function renderMetricsChart(history, summaryEl, chartCanvas) {
+            const labels = history.map(h => h.date);
+            const accuracyData = history.map(h => h.avg_accuracy || 0);
+            const f1Data = history.map(h => h.avg_f1 || 0);
+            const deployRateData = history.map(h => h.deploy_rate || 100);
+
+            const ctx = chartCanvas.getContext('2d');
+
+            // Destroy existing chart
+            if (cnnLstmMetricsChart) {
+                cnnLstmMetricsChart.destroy();
+            }
+
+            // Create new chart
+            cnnLstmMetricsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Accuracy %',
+                            data: accuracyData,
+                            borderColor: '#4caf50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Regime-Accuracy %',
+                            data: f1Data,
+                            borderColor: '#64c8ff',
+                            backgroundColor: 'rgba(100, 200, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Deploy-Rate %',
+                            data: deployRateData,
+                            borderColor: '#ffb74d',
+                            backgroundColor: 'rgba(255, 183, 77, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            borderDash: [5, 5]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#888',
+                                font: { size: 11 },
+                                boxWidth: 12,
+                                padding: 10
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#ccc',
+                            borderColor: 'rgba(100, 200, 255, 0.3)',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#666', font: { size: 10 } }
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: {
+                                color: '#666',
+                                font: { size: 10 },
+                                callback: v => v + '%'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Calculate trend
+            const latestAcc = accuracyData[accuracyData.length - 1] || 0;
+            const firstAcc = accuracyData[0] || 0;
+            const accTrend = latestAcc - firstAcc;
+
+            // Get deployed/rejected from retrain history
+            const totalDeployed = history.reduce((sum, h) => sum + (h.deployed || 0), 0) ||
+                                  history.filter(h => h.avg_accuracy >= 60).length;
+            const totalRejected = history.reduce((sum, h) => sum + (h.rejected || 0), 0);
+
+            const trendIcon = accTrend > 0 ? '&#128200;' : accTrend < 0 ? '&#128201;' : '&#8596;';
+            const trendColor = accTrend > 0 ? '#4caf50' : accTrend < 0 ? '#f44336' : '#888';
+
+            summaryEl.innerHTML = `
+                <span>${trendIcon} Trend: <span style="color: ${trendColor}; font-weight: 600;">${accTrend > 0 ? '+' : ''}${accTrend.toFixed(1)}%</span></span>
+                <span>Letzte Accuracy: <strong>${latestAcc.toFixed(1)}%</strong></span>
+                <span>Deployed: <span style="color: #4caf50; font-weight: 600;">${totalDeployed}</span></span>
+                <span>Rejected: <span style="color: #f44336; font-weight: 600;">${totalRejected}</span></span>
+            `;
+        }
+
         async function toggleSelfLearning() {
             try {
                 const response = await fetch('/cnn-lstm/api/v1/retrain/status');
@@ -3550,6 +3813,9 @@
 
             // Load self-learning status
             loadSelfLearningStatus();
+
+            // Load Lernfortschritt chart (Features tab is default)
+            loadCnnLstmMetricsHistory();
         });
     </script>
 
