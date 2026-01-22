@@ -78,25 +78,24 @@ class ABComparisonService:
     """
 
     # Default thresholds (can be overridden via environment)
-    # NOTE: Thresholds lowered for gradual learning - HMM regime detection
-    # is inherently difficult and models improve over time with more data
+    # Balanced thresholds - strict enough to ensure quality, lenient enough for learning
     DEFAULT_THRESHOLDS = {
         # HMM thresholds - max allowed regression (negative = worse)
-        "hmm_regime_accuracy_min": -0.05,       # Max 5% accuracy drop (was -0.03)
-        "hmm_regime_f1_weighted_min": -0.08,    # Max 8% F1 drop (was -0.05)
-        "hmm_log_likelihood_min": -0.15,        # Max 15% LL drop (was -0.10)
-        "hmm_confidence_calibration_min": -0.15,
+        "hmm_regime_accuracy_min": -0.02,       # Max 2% accuracy drop (stricter)
+        "hmm_regime_f1_weighted_min": -0.03,    # Max 3% F1 drop (stricter)
+        "hmm_log_likelihood_min": -0.10,        # Max 10% LL drop
+        "hmm_confidence_calibration_min": -0.10,
 
-        # Scorer thresholds - more lenient for 18-feature model
-        "scorer_accuracy_min": -0.05,           # Max 5% accuracy drop (was -0.03)
-        "scorer_f1_weighted_min": -0.08,        # Max 8% F1 drop (was -0.05)
-        "scorer_profitable_signals_rate_min": 0.40,  # Minimum 40% profitable (was 0.45)
-        "scorer_mae_max_increase": 0.15,        # Max 15% MAE increase (was 0.10)
+        # Scorer thresholds
+        "scorer_accuracy_min": -0.03,           # Max 3% accuracy drop
+        "scorer_f1_weighted_min": -0.05,        # Max 5% F1 drop
+        "scorer_profitable_signals_rate_min": 0.45,  # Minimum 45% profitable
+        "scorer_mae_max_increase": 0.10,        # Max 10% MAE increase
 
         # General thresholds
-        "improvement_threshold": 0.01,          # 1% improvement considered significant (was 0.02)
-        "first_model_min_accuracy": 0.35,       # Minimum accuracy for first deployment (was 0.50)
-        "scorer_first_model_accuracy_min": 0.35,  # Minimum accuracy for first scorer (was 0.40)
+        "improvement_threshold": 0.01,          # 1% improvement considered significant
+        "first_model_min_accuracy": 0.40,       # Minimum 40% accuracy for first deployment
+        "scorer_first_model_accuracy_min": 0.35,  # Minimum 35% accuracy for first scorer (18-feature)
     }
 
     def __init__(

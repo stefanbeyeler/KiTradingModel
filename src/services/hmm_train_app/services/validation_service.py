@@ -337,11 +337,11 @@ class ValidationService:
         """
         Generate ground truth regime labels based on price action.
 
-        Uses a rule-based approach:
-        - BULL_TREND: Positive returns + low volatility
-        - BEAR_TREND: Negative returns + high volatility
-        - SIDEWAYS: Low absolute returns + low volatility
-        - HIGH_VOLATILITY: High volatility regardless of direction
+        Improved rule-based approach using percentile-based thresholds:
+        - BULL_TREND (0): Strongly positive returns (top 30%)
+        - BEAR_TREND (1): Strongly negative returns (bottom 30%)
+        - SIDEWAYS (2): Low absolute returns + low volatility (middle 40%)
+        - HIGH_VOLATILITY (3): High volatility (top 20% volatility)
 
         Returns:
             Array of regime indices (0-3)
@@ -353,7 +353,7 @@ class ValidationService:
         # Calculate rolling metrics
         returns = np.diff(np.log(prices + 1e-10))
 
-        # Rolling mean return
+        # Rolling mean return (smoothed)
         mean_returns = np.array([
             np.mean(returns[max(0, i-lookback):i+1])
             for i in range(len(returns))
@@ -365,24 +365,29 @@ class ValidationService:
             for i in range(len(returns))
         ])
 
-        # Normalize for threshold calculation
-        vol_median = np.median(volatility[lookback:])
-        vol_high = np.percentile(volatility[lookback:], 80)
-        ret_threshold = 0.0005  # ~0.05% daily return threshold
+        # Use percentile-based thresholds for more balanced distribution
+        # This ensures roughly equal representation of each regime
+        vol_p80 = np.percentile(volatility[lookback:], 80)  # Top 20% = high vol
+        ret_p70 = np.percentile(mean_returns[lookback:], 70)  # Top 30% = bull
+        ret_p30 = np.percentile(mean_returns[lookback:], 30)  # Bottom 30% = bear
 
-        # Assign regimes
+        # Assign regimes with priority: HIGH_VOL > BULL/BEAR > SIDEWAYS
         regimes = np.zeros(len(returns), dtype=np.int32)
 
         for i in range(len(returns)):
             vol = volatility[i]
             ret = mean_returns[i]
 
-            if vol > vol_high:
+            # High volatility takes priority (regardless of direction)
+            if vol > vol_p80:
                 regimes[i] = 3  # HIGH_VOLATILITY
-            elif ret > ret_threshold and vol <= vol_median:
+            # Strong positive trend
+            elif ret > ret_p70:
                 regimes[i] = 0  # BULL_TREND
-            elif ret < -ret_threshold and vol <= vol_high:
+            # Strong negative trend
+            elif ret < ret_p30:
                 regimes[i] = 1  # BEAR_TREND
+            # Everything else is sideways
             else:
                 regimes[i] = 2  # SIDEWAYS
 
