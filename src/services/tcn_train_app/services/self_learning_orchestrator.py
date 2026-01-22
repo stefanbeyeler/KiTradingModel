@@ -50,8 +50,8 @@ class OrchestratorConfig:
     check_interval_minutes: int = 60  # Check every hour
 
     # Time-based scheduling (daily at specific time)
-    scheduled_training_enabled: bool = False  # Enable time-based scheduling
-    scheduled_hour: int = 2  # Hour (0-23) for scheduled training (default: 02:00)
+    scheduled_training_enabled: bool = True  # Enable time-based scheduling
+    scheduled_hour: int = 3  # Hour (0-23) for scheduled training (default: 03:00 UTC)
     scheduled_minute: int = 0  # Minute (0-59) for scheduled training
 
     # Training triggers
