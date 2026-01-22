@@ -2225,16 +2225,37 @@
                     <!-- Controls -->
                     <div class="info-section">
                         <h4>Steuerung</h4>
+                        <!-- Feedback Buffer Status -->
+                        <div id="sl-buffer-status" style="margin-bottom: 0.75rem; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 4px; font-size: 0.8rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #888;">Feedback Buffer:</span>
+                                <span id="sl-buffer-count" style="color: #f5a623; font-weight: 500;">0 / 100 Samples</span>
+                            </div>
+                            <div style="background: #1a1a2e; border-radius: 3px; height: 4px; margin-top: 0.25rem; overflow: hidden;">
+                                <div id="sl-buffer-bar" style="background: #f5a623; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
                         <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                             <button id="sl-toggle-btn" class="btn btn-success" onclick="toggleSelfLearning()">
                                 &#9654; Loop Starten
                             </button>
-                            <button class="btn btn-warning" onclick="triggerManualTraining()">
+                            <button id="sl-manual-train-btn" class="btn btn-warning" onclick="triggerManualTraining()">
                                 &#128295; Manuelles Training
                             </button>
                             <button class="btn btn-primary" onclick="loadSelfLearningStatus()">
                                 &#8635; Status aktualisieren
                             </button>
+                        </div>
+                        <!-- Training Progress Bar -->
+                        <div id="sl-training-progress" style="display: none; margin-top: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                                <span style="font-size: 0.8rem; color: #888;">Training-Fortschritt</span>
+                                <span id="sl-training-status" style="font-size: 0.8rem; color: #64c8ff;">Initialisiere...</span>
+                            </div>
+                            <div style="background: #1a1a2e; border-radius: 4px; height: 8px; overflow: hidden;">
+                                <div id="sl-training-bar" style="background: linear-gradient(90deg, #f5a623, #ffcc00); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                            </div>
+                            <div id="sl-training-details" style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;"></div>
                         </div>
                     </div>
                 </div>
@@ -7118,6 +7139,27 @@
                 // Update deployment options
                 document.getElementById('sl-auto-deploy').checked = config.auto_deploy_on_improvement ?? true;
 
+                // Update feedback buffer status
+                const bufferSamples = status.feedback_buffer_samples || 0;
+                const minSamples = config.min_samples_for_training || 100;
+                const bufferPercent = Math.min(100, (bufferSamples / minSamples) * 100);
+                const bufferCountEl = document.getElementById('sl-buffer-count');
+                const bufferBarEl = document.getElementById('sl-buffer-bar');
+
+                bufferCountEl.textContent = `${bufferSamples} / ${minSamples} Samples`;
+                bufferBarEl.style.width = bufferPercent + '%';
+
+                if (bufferSamples >= minSamples) {
+                    bufferCountEl.style.color = '#81c784';
+                    bufferBarEl.style.background = '#4caf50';
+                } else if (bufferSamples > minSamples * 0.5) {
+                    bufferCountEl.style.color = '#ffb74d';
+                    bufferBarEl.style.background = '#ff9800';
+                } else {
+                    bufferCountEl.style.color = '#f5a623';
+                    bufferBarEl.style.background = '#f5a623';
+                }
+
                 // Update toggle button
                 const toggleBtn = document.getElementById('sl-toggle-btn');
                 if (selfLearningLoopRunning) {
@@ -7147,20 +7189,137 @@
             }
         }
 
+        let trainingProgressInterval = null;
+
         async function triggerManualTraining() {
+            const btn = document.getElementById('sl-manual-train-btn');
+            const progressDiv = document.getElementById('sl-training-progress');
+            const progressBar = document.getElementById('sl-training-bar');
+            const statusText = document.getElementById('sl-training-status');
+            const detailsText = document.getElementById('sl-training-details');
+
             try {
+                // Disable button and show progress
+                btn.disabled = true;
+                btn.innerHTML = '&#9203; Training läuft...';
+                progressDiv.style.display = 'block';
+                progressBar.style.width = '5%';
+                statusText.textContent = 'Initialisiere...';
+                detailsText.textContent = '';
+
                 const response = await fetch(`${TRAIN_API_BASE}/self-learning/trigger`, {
                     method: 'POST'
                 });
                 const data = await response.json();
+
                 if (data.status === 'failed') {
                     showNotification(data.message || 'Training konnte nicht gestartet werden', 'error');
+                    resetTrainingProgress();
+                } else if (data.status === 'skipped') {
+                    // Training was skipped (e.g., no samples available)
+                    showNotification(`Training übersprungen: ${data.reason || 'Keine Samples verfügbar'}`, 'info');
+                    progressBar.style.width = '100%';
+                    progressBar.style.background = '#888';
+                    statusText.textContent = 'Übersprungen';
+                    detailsText.textContent = data.reason || 'Keine Feedback-Samples im Buffer';
+                    setTimeout(() => resetTrainingProgress(), 3000);
+                } else if (data.status === 'completed') {
+                    // Training completed immediately
+                    showNotification('Training abgeschlossen', 'success');
+                    progressBar.style.width = '100%';
+                    progressBar.style.background = 'linear-gradient(90deg, #4caf50, #81c784)';
+                    statusText.textContent = 'Abgeschlossen!';
+                    setTimeout(() => {
+                        resetTrainingProgress();
+                        loadSelfLearningStatus();
+                    }, 2000);
                 } else {
+                    // Training started
                     showNotification('Manuelles Training gestartet', 'success');
-                    await loadSelfLearningStatus();
+                    progressBar.style.width = '10%';
+                    statusText.textContent = 'Training gestartet...';
+
+                    // Start polling for training status
+                    startTrainingProgressPolling();
                 }
             } catch (error) {
                 showNotification('Fehler beim Starten des Trainings', 'error');
+                resetTrainingProgress();
+            }
+        }
+
+        function startTrainingProgressPolling() {
+            if (trainingProgressInterval) clearInterval(trainingProgressInterval);
+
+            let progress = 10;
+            trainingProgressInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${TRAIN_API_BASE}/self-learning/status`);
+                    const data = await response.json();
+                    const state = data.status?.state || 'unknown';
+
+                    const progressBar = document.getElementById('sl-training-bar');
+                    const statusText = document.getElementById('sl-training-status');
+                    const detailsText = document.getElementById('sl-training-details');
+
+                    if (state === 'training') {
+                        // Increment progress slowly while training
+                        progress = Math.min(progress + 5, 85);
+                        progressBar.style.width = progress + '%';
+                        statusText.textContent = 'Training läuft...';
+                        detailsText.textContent = `Trainings: ${data.status?.training_count || 0} | Deployed: ${data.status?.successful_deployments || 0}`;
+                    } else if (state === 'validating') {
+                        progress = 90;
+                        progressBar.style.width = '90%';
+                        statusText.textContent = 'Validierung...';
+                    } else if (state === 'deploying') {
+                        progress = 95;
+                        progressBar.style.width = '95%';
+                        statusText.textContent = 'Deployment...';
+                    } else if (state === 'monitoring' || state === 'idle') {
+                        // Training completed
+                        progressBar.style.width = '100%';
+                        progressBar.style.background = 'linear-gradient(90deg, #4caf50, #81c784)';
+                        statusText.textContent = 'Abgeschlossen!';
+                        detailsText.textContent = `Trainings: ${data.status?.training_count || 0} | Deployed: ${data.status?.successful_deployments || 0} | Abgelehnt: ${data.status?.rejected_models || 0}`;
+
+                        setTimeout(() => {
+                            resetTrainingProgress();
+                            loadSelfLearningStatus();
+                        }, 2000);
+
+                        clearInterval(trainingProgressInterval);
+                        trainingProgressInterval = null;
+                    } else if (state === 'error') {
+                        progressBar.style.background = '#f44336';
+                        statusText.textContent = 'Fehler!';
+                        detailsText.textContent = data.status?.error_message || 'Unbekannter Fehler';
+                        showNotification('Training fehlgeschlagen', 'error');
+
+                        setTimeout(() => resetTrainingProgress(), 3000);
+                        clearInterval(trainingProgressInterval);
+                        trainingProgressInterval = null;
+                    }
+                } catch (error) {
+                    console.error('Error polling training status:', error);
+                }
+            }, 2000);
+        }
+
+        function resetTrainingProgress() {
+            const btn = document.getElementById('sl-manual-train-btn');
+            const progressDiv = document.getElementById('sl-training-progress');
+            const progressBar = document.getElementById('sl-training-bar');
+
+            btn.disabled = false;
+            btn.innerHTML = '&#128295; Manuelles Training';
+            progressDiv.style.display = 'none';
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'linear-gradient(90deg, #f5a623, #ffcc00)';
+
+            if (trainingProgressInterval) {
+                clearInterval(trainingProgressInterval);
+                trainingProgressInterval = null;
             }
         }
 
