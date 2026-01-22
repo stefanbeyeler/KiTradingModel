@@ -1005,6 +1005,7 @@
             <button class="tab" onclick="switchTab('features')">&#128200; Features</button>
             <button class="tab active" onclick="switchTab('predictions')">&#127919; Live Predictions</button>
             <button class="tab" onclick="switchTab('revalidation')">&#128202; Revalidierung</button>
+            <button class="tab" onclick="switchTab('selflearning')">&#129302; Self-Learning</button>
             <button class="tab" onclick="switchTab('training')">&#128203; Training</button>
             <button class="tab" onclick="switchTab('model')">&#129516; Modell-Info</button>
         </div>
@@ -1191,62 +1192,6 @@
                 </div>
             </div>
 
-            <!-- Self-Learning System -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">&#129302; Self-Learning System</h2>
-                    <div class="btn-group">
-                        <button class="btn btn-purple" id="retrain-toggle-btn" onclick="toggleSelfLearning()">&#9989; Aktiviert</button>
-                        <button class="btn btn-warning" onclick="triggerManualRetrain()">&#9881; Manuell trainieren</button>
-                    </div>
-                </div>
-                <p class="card-description">
-                    Automatisches Re-Training wenn Backtest-Accuracy unter Schwellwert fällt.
-                    Das System lernt kontinuierlich aus seinen Fehlern.
-                </p>
-                <div class="stats-grid" id="retrain-stats">
-                    <div class="stat-card">
-                        <div class="stat-value purple" id="stat-retrain-threshold">60%</div>
-                        <div class="stat-label">Accuracy-Schwelle</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="stat-retrain-total">0</div>
-                        <div class="stat-label">Re-Trainings</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value success" id="stat-retrain-improvement">-</div>
-                        <div class="stat-label">Avg. Verbesserung</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="stat-retrain-cooldown">-</div>
-                        <div class="stat-label">Cooldown</div>
-                    </div>
-                </div>
-                <div id="retrain-config" style="padding: 1rem; background: rgba(167, 139, 250, 0.1); border-radius: 8px; margin-top: 1rem;">
-                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                        <label style="color: #aaa;">Accuracy-Schwelle:</label>
-                        <select class="timeframe-select" id="retrain-threshold-select" onchange="updateRetrainConfig()">
-                            <option value="50">50%</option>
-                            <option value="55">55%</option>
-                            <option value="60" selected>60%</option>
-                            <option value="65">65%</option>
-                            <option value="70">70%</option>
-                        </select>
-                        <label style="color: #aaa;">Cooldown:</label>
-                        <select class="timeframe-select" id="retrain-cooldown-select" onchange="updateRetrainConfig()">
-                            <option value="6">6h</option>
-                            <option value="12">12h</option>
-                            <option value="24" selected>24h</option>
-                            <option value="48">48h</option>
-                        </select>
-                        <label style="color: #aaa; display: flex; align-items: center; gap: 0.3rem;">
-                            <input type="checkbox" id="retrain-focus-errors" checked onchange="updateRetrainConfig()">
-                            Fehler-fokussiert
-                        </label>
-                    </div>
-                </div>
-            </div>
-
             <!-- Prediction History Table -->
             <div class="card">
                 <div class="card-header">
@@ -1369,6 +1314,186 @@
                     <div class="stat-card">
                         <div class="stat-value" id="stat-claude-status">-</div>
                         <div class="stat-label">API Status</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Self-Learning Tab -->
+        <div id="tab-selflearning" class="tab-content">
+            <!-- Closed-Loop Visualization -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#129302; Self-Learning System</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-purple" id="retrain-toggle-btn" onclick="toggleSelfLearning()">&#9989; Aktiviert</button>
+                        <button class="btn btn-warning" onclick="triggerManualRetrain()">&#9881; Manuell trainieren</button>
+                    </div>
+                </div>
+                <p class="card-description">
+                    Das System lernt kontinuierlich aus seinen Fehlern durch einen geschlossenen Feedback-Loop.
+                    Bei schlechter Performance wird automatisch ein Re-Training getriggert.
+                </p>
+
+                <!-- Closed-Loop Diagram -->
+                <div style="background: rgba(167, 139, 250, 0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h3 style="color: #a78bfa; margin-bottom: 1rem; font-size: 1rem;">Closed-Loop Feedback</h3>
+                    <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(100, 200, 255, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">&#127919;</div>
+                            <div style="font-size: 0.85rem; color: #64c8ff;">1. Prediction</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">→</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(129, 199, 132, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">&#9989;</div>
+                            <div style="font-size: 0.85rem; color: #81c784;">2. Backtest</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">→</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255, 183, 77, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">&#128202;</div>
+                            <div style="font-size: 0.85rem; color: #ffb74d;">3. Analyse</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">→</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(167, 139, 250, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">&#129302;</div>
+                            <div style="font-size: 0.85rem; color: #a78bfa;">4. Re-Train</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">↩</div>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid" id="retrain-stats">
+                    <div class="stat-card">
+                        <div class="stat-value purple" id="stat-retrain-threshold">60%</div>
+                        <div class="stat-label">Accuracy-Schwelle</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-retrain-total">0</div>
+                        <div class="stat-label">Re-Trainings</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success" id="stat-retrain-improvement">-</div>
+                        <div class="stat-label">Avg. Verbesserung</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-retrain-cooldown">-</div>
+                        <div class="stat-label">Cooldown</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-retrain-successful">0</div>
+                        <div class="stat-label">Erfolgreich</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value error" id="stat-retrain-failed">0</div>
+                        <div class="stat-label">Fehlgeschlagen</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#9881; Konfiguration</h2>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Accuracy-Schwelle</label>
+                        <select class="timeframe-select" id="retrain-threshold-select" onchange="updateRetrainConfig()" style="width: 100%;">
+                            <option value="50">50% (Niedrig)</option>
+                            <option value="55">55%</option>
+                            <option value="60" selected>60% (Standard)</option>
+                            <option value="65">65%</option>
+                            <option value="70">70% (Hoch)</option>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">Re-Training wenn Accuracy darunter fällt</small>
+                    </div>
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Cooldown-Periode</label>
+                        <select class="timeframe-select" id="retrain-cooldown-select" onchange="updateRetrainConfig()" style="width: 100%;">
+                            <option value="6">6 Stunden</option>
+                            <option value="12">12 Stunden</option>
+                            <option value="24" selected>24 Stunden (Standard)</option>
+                            <option value="48">48 Stunden</option>
+                            <option value="72">72 Stunden</option>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">Mindestwartezeit zwischen Trainings</small>
+                    </div>
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Min. Backtests</label>
+                        <select class="timeframe-select" id="retrain-min-samples-select" onchange="updateRetrainConfig()" style="width: 100%;">
+                            <option value="10">10</option>
+                            <option value="20" selected>20 (Standard)</option>
+                            <option value="30">30</option>
+                            <option value="50">50</option>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">Mindestanzahl Backtests für Trigger</small>
+                    </div>
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Training-Fokus</label>
+                        <div style="padding: 0.6rem; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="retrain-focus-errors" checked onchange="updateRetrainConfig()">
+                                <span>Fehler-fokussiertes Training</span>
+                            </label>
+                            <small style="color: #666; display: block; margin-top: 0.3rem;">Trainiert gezielt auf schwachen Symbolen</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Retrain History Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128203; Re-Training History</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="loadRetrainHistory()">&#128260; Aktualisieren</button>
+                    </div>
+                </div>
+                <div class="table-container" id="retrain-history-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Zeitpunkt</th>
+                                <th>Auslöser</th>
+                                <th>Accuracy vorher</th>
+                                <th>Accuracy nachher</th>
+                                <th>Verbesserung</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="retrain-history-body">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2rem; color: #666;">
+                                    Noch keine Re-Trainings durchgeführt
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Current Accuracy Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128200; Aktuelle Performance</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-current-accuracy">-</div>
+                        <div class="stat-label">Aktuelle Accuracy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-backtest-count">-</div>
+                        <div class="stat-label">Backtests gesamt</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-trigger-status">-</div>
+                        <div class="stat-label">Trigger-Status</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-next-check">-</div>
+                        <div class="stat-label">Nächster Check</div>
                     </div>
                 </div>
             </div>
@@ -3145,8 +3270,16 @@
                 document.getElementById('retrain-focus-errors').checked =
                     status.config.focus_on_errors;
 
-                // Load statistics
+                // Update min_samples select if it exists
+                const minSamplesSelect = document.getElementById('retrain-min-samples-select');
+                if (minSamplesSelect) {
+                    minSamplesSelect.value = status.config.min_samples.toString();
+                }
+
+                // Load statistics and history
                 await loadRetrainStatistics();
+                await loadRetrainHistory();
+                await loadCurrentPerformance();
 
             } catch (error) {
                 console.error('Error loading self-learning status:', error);
@@ -3168,8 +3301,148 @@
                     document.getElementById('stat-retrain-improvement').textContent = '-';
                 }
 
+                // Update successful/failed counts
+                const successfulEl = document.getElementById('stat-retrain-successful');
+                const failedEl = document.getElementById('stat-retrain-failed');
+                if (successfulEl) successfulEl.textContent = stats.successful || 0;
+                if (failedEl) failedEl.textContent = stats.failed || 0;
+
             } catch (error) {
                 console.error('Error loading retrain statistics:', error);
+            }
+        }
+
+        async function loadRetrainHistory() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/retrain/history?limit=20');
+                const data = await response.json();
+                const history = data.history || [];
+
+                const tbody = document.getElementById('retrain-history-body');
+                if (!tbody) return;
+
+                if (history.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 2rem; color: #666;">
+                                Noch keine Re-Trainings durchgeführt
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = history.map(event => {
+                    const timestamp = new Date(event.timestamp).toLocaleString('de-CH');
+                    const accuracyBefore = event.accuracy_before ? `${event.accuracy_before.toFixed(1)}%` : '-';
+                    const accuracyAfter = event.accuracy_after ? `${event.accuracy_after.toFixed(1)}%` : '-';
+
+                    let improvement = '-';
+                    let improvementClass = '';
+                    if (event.improvement !== null && event.improvement !== undefined) {
+                        const sign = event.improvement > 0 ? '+' : '';
+                        improvement = `${sign}${event.improvement.toFixed(1)}%`;
+                        improvementClass = event.improvement > 0 ? 'color: #81c784;' : 'color: #e57373;';
+                    }
+
+                    let statusBadge = '';
+                    switch (event.training_status) {
+                        case 'completed':
+                            statusBadge = '<span class="prediction-badge bullish">Abgeschlossen</span>';
+                            break;
+                        case 'running':
+                            statusBadge = '<span class="prediction-badge neutral">Läuft...</span>';
+                            break;
+                        case 'failed':
+                            statusBadge = '<span class="prediction-badge bearish">Fehlgeschlagen</span>';
+                            break;
+                        case 'skipped':
+                            statusBadge = '<span class="prediction-badge neutral">Übersprungen</span>';
+                            break;
+                        default:
+                            statusBadge = '<span class="prediction-badge neutral">Ausstehend</span>';
+                    }
+
+                    return `
+                        <tr>
+                            <td>${timestamp}</td>
+                            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${event.reason}</td>
+                            <td>${accuracyBefore}</td>
+                            <td>${accuracyAfter}</td>
+                            <td style="${improvementClass}">${improvement}</td>
+                            <td>${statusBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error loading retrain history:', error);
+            }
+        }
+
+        async function loadCurrentPerformance() {
+            try {
+                // Load backtest summary for current accuracy
+                const backtestResponse = await fetch('/cnn-lstm/api/v1/backtest/summary');
+                const backtestData = await backtestResponse.json();
+
+                const currentAccuracyEl = document.getElementById('stat-current-accuracy');
+                const backtestCountEl = document.getElementById('stat-backtest-count');
+                const triggerStatusEl = document.getElementById('stat-trigger-status');
+                const nextCheckEl = document.getElementById('stat-next-check');
+
+                if (currentAccuracyEl) {
+                    const accuracy = backtestData.price_direction_accuracy || 0;
+                    currentAccuracyEl.textContent = `${accuracy.toFixed(1)}%`;
+                    currentAccuracyEl.style.color = accuracy >= 60 ? '#81c784' : '#e57373';
+                }
+
+                if (backtestCountEl) {
+                    backtestCountEl.textContent = backtestData.backtested || 0;
+                }
+
+                // Load retrain status for trigger info
+                const retrainResponse = await fetch('/cnn-lstm/api/v1/retrain/status');
+                const retrainData = await retrainResponse.json();
+
+                if (triggerStatusEl) {
+                    const accuracy = backtestData.price_direction_accuracy || 0;
+                    const threshold = retrainData.config.accuracy_threshold || 60;
+                    const minSamples = retrainData.config.min_samples || 20;
+                    const currentSamples = backtestData.backtested || 0;
+
+                    if (currentSamples < minSamples) {
+                        triggerStatusEl.textContent = `${currentSamples}/${minSamples} Samples`;
+                        triggerStatusEl.style.color = '#ffb74d';
+                    } else if (accuracy < threshold) {
+                        triggerStatusEl.textContent = 'Trigger bereit';
+                        triggerStatusEl.style.color = '#e57373';
+                    } else {
+                        triggerStatusEl.textContent = 'OK';
+                        triggerStatusEl.style.color = '#81c784';
+                    }
+                }
+
+                // Load scheduler status for next check
+                const schedulerResponse = await fetch('/cnn-lstm/api/v1/backtest/scheduler/status');
+                const schedulerData = await schedulerResponse.json();
+
+                if (nextCheckEl) {
+                    if (schedulerData.running && schedulerData.next_run_in_seconds !== null) {
+                        const mins = Math.floor(schedulerData.next_run_in_seconds / 60);
+                        const hours = Math.floor(mins / 60);
+                        if (hours > 0) {
+                            nextCheckEl.textContent = `${hours}h ${mins % 60}m`;
+                        } else {
+                            nextCheckEl.textContent = `${mins}m`;
+                        }
+                    } else {
+                        nextCheckEl.textContent = schedulerData.running ? 'Bald' : 'Inaktiv';
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error loading current performance:', error);
             }
         }
 
@@ -3205,14 +3478,24 @@
                 const cooldown = parseFloat(document.getElementById('retrain-cooldown-select').value);
                 const focusErrors = document.getElementById('retrain-focus-errors').checked;
 
+                // Get min_samples if element exists
+                const minSamplesEl = document.getElementById('retrain-min-samples-select');
+                const minSamples = minSamplesEl ? parseInt(minSamplesEl.value) : null;
+
+                const config = {
+                    accuracy_threshold: threshold,
+                    cooldown_hours: cooldown,
+                    focus_on_errors: focusErrors
+                };
+
+                if (minSamples !== null) {
+                    config.min_samples = minSamples;
+                }
+
                 await fetch('/cnn-lstm/api/v1/retrain/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        accuracy_threshold: threshold,
-                        cooldown_hours: cooldown,
-                        focus_on_errors: focusErrors
-                    })
+                    body: JSON.stringify(config)
                 });
 
                 await loadSelfLearningStatus();
