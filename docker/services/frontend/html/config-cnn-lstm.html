@@ -1571,7 +1571,6 @@
                 <div class="btn-group">
                     <button class="btn btn-success" onclick="startTraining()">&#9654; Training starten</button>
                     <button class="btn btn-danger" onclick="cancelTraining()">&#9632; Abbrechen</button>
-                    <button class="btn btn-warning" onclick="queueViaWatchdog()">&#128230; Via Watchdog</button>
                 </div>
 
                 <div id="training-progress" style="margin-top: 1rem; display: none;">
@@ -2184,32 +2183,6 @@
                 }
             }, 3000); // Poll every 3 seconds
         }
-
-        async function queueViaWatchdog() {
-            const symbols = document.getElementById('train-symbols').value.split(',').map(s => s.trim());
-
-            try {
-                const response = await fetch('/watchdog/api/v1/training/queue', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        service: 'cnn-lstm',
-                        symbols: symbols,
-                        priority: 'normal'
-                    })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Queue failed');
-                }
-
-                showToast('Training via Watchdog eingereiht', 'success');
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        }
-
 
         async function loadTrainingHistory() {
             const container = document.getElementById('training-history');

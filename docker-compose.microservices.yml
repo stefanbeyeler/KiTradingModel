@@ -713,6 +713,7 @@ services:
       - "${CNN_LSTM_SERVICE_PORT:-3007}:${CNN_LSTM_SERVICE_PORT:-3007}"
     volumes:
       - cnn-lstm-models:/app/data/models/cnn-lstm
+      - cnn-lstm-data:/app/data
       - symbols-data:/app/data/symbols
       - logs-data:/app/logs
     environment:
@@ -721,6 +722,15 @@ services:
       - ROOT_PATH=/cnn-lstm
       - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
       - MODEL_DIR=/app/data/models/cnn-lstm
+      - DATA_DIR=/app/data
+      # Self-Learning Configuration
+      - CNN_LSTM_TRAIN_SERVICE_URL=http://trading-cnn-lstm-train:${CNN_LSTM_TRAIN_SERVICE_PORT:-3017}
+      - AUTO_BACKTEST_ENABLED=${CNN_LSTM_AUTO_BACKTEST_ENABLED:-true}
+      - AUTO_BACKTEST_INTERVAL_HOURS=${CNN_LSTM_AUTO_BACKTEST_INTERVAL:-6}
+      - AUTO_RETRAIN_ENABLED=${CNN_LSTM_AUTO_RETRAIN_ENABLED:-true}
+      - AUTO_RETRAIN_ACCURACY_THRESHOLD=${CNN_LSTM_RETRAIN_ACCURACY_THRESHOLD:-60.0}
+      - AUTO_RETRAIN_MIN_SAMPLES=${CNN_LSTM_RETRAIN_MIN_SAMPLES:-20}
+      - AUTO_RETRAIN_COOLDOWN_HOURS=${CNN_LSTM_RETRAIN_COOLDOWN_HOURS:-24}
       # Limit CPU threads
       - OMP_NUM_THREADS=2
       - MKL_NUM_THREADS=2
@@ -997,6 +1007,8 @@ volumes:
 
   # CNN-LSTM Service Volumes
   cnn-lstm-models:
+    driver: local
+  cnn-lstm-data:
     driver: local
 
   # Embedder Service Volumes
