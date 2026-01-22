@@ -425,19 +425,10 @@ async def get_metrics_history(
     """
     Get historical metrics for tracking model improvement over time.
 
-    Returns aggregated metrics from deployment decisions, grouped by training run.
+    Returns aggregated metrics from training jobs, grouped by day.
+    Uses both deployment decisions and training history for complete data.
     Useful for visualizing how model performance evolves with each training cycle.
     """
-    if not training_service._validation_enabled:
-        return {
-            "validation_enabled": False,
-            "history": []
-        }
-
-    rollback_svc = training_service._get_rollback_service()
-    history_objects = rollback_svc.get_deployment_history(limit=limit * 2)  # Get more to filter
-
-    # Aggregate metrics by training job
     from collections import defaultdict
     from datetime import datetime
 
@@ -449,55 +440,120 @@ async def get_metrics_history(
         "total": 0
     })
 
-    for entry_obj in history_objects:
-        # Convert DeploymentDecision to dict if needed
-        entry = entry_obj.to_dict() if hasattr(entry_obj, 'to_dict') else entry_obj
-
-        if entry.get("model_type") != model_type:
+    # Source 1: Training history (contains validation_metrics directly)
+    for job in training_service._jobs.values():
+        if job.status.value != "completed":
             continue
 
-        comparison = entry.get("comparison_result") or {}
-        candidate_metrics = comparison.get("candidate_metrics") or {}
-
-        if not candidate_metrics:
+        completed_at = job.completed_at
+        if not completed_at:
             continue
 
-        # Extract timestamp for grouping (by day)
-        timestamp = entry.get("timestamp", "")
-        if timestamp:
-            try:
-                dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                date_key = dt.strftime("%Y-%m-%d")
-            except (ValueError, TypeError):
+        try:
+            dt = datetime.fromisoformat(completed_at.replace("Z", "+00:00"))
+            date_key = dt.strftime("%Y-%m-%d")
+        except (ValueError, TypeError):
+            continue
+
+        # Extract metrics from validation_metrics
+        val_metrics = job.validation_metrics or {}
+
+        for key, metrics in val_metrics.items():
+            # Check if this is the right model type
+            is_hmm = key.startswith("hmm_")
+            is_scorer = key == "scorer"
+
+            if model_type == "hmm" and not is_hmm:
                 continue
-        else:
-            continue
+            if model_type == "scorer" and not is_scorer:
+                continue
 
-        # Collect metrics
-        if model_type == "hmm":
-            accuracy = candidate_metrics.get("regime_accuracy", 0)
-            f1 = candidate_metrics.get("regime_f1_weighted", 0)
-        else:
-            accuracy = candidate_metrics.get("accuracy", 0)
-            f1 = candidate_metrics.get("f1_weighted", 0)
+            if model_type == "hmm":
+                accuracy = metrics.get("regime_accuracy", 0)
+                f1 = metrics.get("regime_f1_weighted", 0)
+            else:
+                accuracy = metrics.get("accuracy", 0)
+                f1 = metrics.get("f1_weighted", 0)
 
-        if accuracy > 0:
-            job_metrics[date_key]["accuracies"].append(accuracy)
-        if f1 > 0:
-            job_metrics[date_key]["f1_scores"].append(f1)
+            if accuracy > 0:
+                job_metrics[date_key]["accuracies"].append(accuracy)
+            if f1 > 0:
+                job_metrics[date_key]["f1_scores"].append(f1)
 
-        job_metrics[date_key]["total"] += 1
-        if entry.get("action") == "deployed":
-            job_metrics[date_key]["deployed"] += 1
-        else:
-            job_metrics[date_key]["rejected"] += 1
+        # Count deployments from deployment_decisions
+        deploy_decisions = job.deployment_decisions or {}
+        for key, decision in deploy_decisions.items():
+            is_hmm = key.startswith("hmm_")
+            is_scorer = key == "scorer"
+
+            if model_type == "hmm" and not is_hmm:
+                continue
+            if model_type == "scorer" and not is_scorer:
+                continue
+
+            job_metrics[date_key]["total"] += 1
+            action = decision.get("action", "")
+            if action == "deployed":
+                job_metrics[date_key]["deployed"] += 1
+            elif action in ("rejected", "pending_review"):
+                job_metrics[date_key]["rejected"] += 1
+
+    # Source 2: Deployment decisions (fallback for older data without training history)
+    if training_service._validation_enabled:
+        try:
+            rollback_svc = training_service._get_rollback_service()
+            history_objects = rollback_svc.get_deployment_history(limit=limit * 2)
+
+            for entry_obj in history_objects:
+                entry = entry_obj.to_dict() if hasattr(entry_obj, 'to_dict') else entry_obj
+
+                if entry.get("model_type") != model_type:
+                    continue
+
+                comparison = entry.get("comparison_result") or {}
+                candidate_metrics = comparison.get("candidate_metrics") or {}
+
+                if not candidate_metrics:
+                    continue
+
+                timestamp = entry.get("timestamp", "")
+                if timestamp:
+                    try:
+                        dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                        date_key = dt.strftime("%Y-%m-%d")
+                    except (ValueError, TypeError):
+                        continue
+                else:
+                    continue
+
+                # Only add if not already counted from training history
+                if job_metrics[date_key]["total"] == 0:
+                    if model_type == "hmm":
+                        accuracy = candidate_metrics.get("regime_accuracy", 0)
+                        f1 = candidate_metrics.get("regime_f1_weighted", 0)
+                    else:
+                        accuracy = candidate_metrics.get("accuracy", 0)
+                        f1 = candidate_metrics.get("f1_weighted", 0)
+
+                    if accuracy > 0:
+                        job_metrics[date_key]["accuracies"].append(accuracy)
+                    if f1 > 0:
+                        job_metrics[date_key]["f1_scores"].append(f1)
+
+                    job_metrics[date_key]["total"] += 1
+                    if entry.get("action") == "deployed":
+                        job_metrics[date_key]["deployed"] += 1
+                    else:
+                        job_metrics[date_key]["rejected"] += 1
+        except Exception as e:
+            logger.debug(f"Could not load deployment history: {e}")
 
     # Convert to list sorted by date
     result = []
     for date_key in sorted(job_metrics.keys()):
         metrics = job_metrics[date_key]
-        if metrics["accuracies"]:
-            avg_accuracy = sum(metrics["accuracies"]) / len(metrics["accuracies"])
+        if metrics["accuracies"] or metrics["total"] > 0:
+            avg_accuracy = sum(metrics["accuracies"]) / len(metrics["accuracies"]) if metrics["accuracies"] else 0
             avg_f1 = sum(metrics["f1_scores"]) / len(metrics["f1_scores"]) if metrics["f1_scores"] else 0
             deploy_rate = metrics["deployed"] / metrics["total"] if metrics["total"] > 0 else 0
 
@@ -512,7 +568,7 @@ async def get_metrics_history(
             })
 
     return {
-        "validation_enabled": True,
+        "validation_enabled": training_service._validation_enabled,
         "model_type": model_type,
         "history": result[-limit:],  # Return last N entries
         "total_entries": len(result)
