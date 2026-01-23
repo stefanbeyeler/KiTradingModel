@@ -746,6 +746,110 @@ async def run_quality_check():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== Market Snapshot Endpoint ====================
+
+class MarketSnapshotResponse(BaseModel):
+    """Market snapshot response model for Trading Workplace."""
+    symbol: str
+    timeframe: str
+    timestamp: Optional[str]
+    price: dict
+    indicators: dict
+
+
+@router.get("/market-snapshot/{symbol}", response_model=MarketSnapshotResponse)
+async def get_market_snapshot(
+    symbol: str,
+    timeframe: str = Query(default="H1"),
+):
+    """
+    Aktueller Markt-Snapshot mit allen Indikatoren für Trading Workplace.
+
+    Aggregiert die neuesten Indikatordaten in einem strukturierten Format
+    für die Signal-Aggregation im Trading Workplace Service.
+    """
+    try:
+        tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
+
+        # Get latest OHLCV data for current price
+        ohlcv_data, _ = await data_repository.get_ohlcv(
+            symbol=symbol.upper(),
+            timeframe=tf.value,
+            limit=1,
+        )
+
+        if not ohlcv_data:
+            raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
+
+        latest_ohlcv = ohlcv_data[0] if ohlcv_data else {}
+        current_price = float(latest_ohlcv.get("close", 0))
+        timestamp = latest_ohlcv.get("snapshot_time") or latest_ohlcv.get("timestamp")
+
+        # Get latest momentum indicators (RSI, MACD, Stochastic)
+        momentum_data = await timescaledb_service.get_momentum_indicators(
+            symbol.upper(), tf.value, limit=1
+        )
+
+        # Get latest volatility indicators (Bollinger Bands, ATR)
+        volatility_data = await timescaledb_service.get_volatility_indicators(
+            symbol.upper(), tf.value, limit=1
+        )
+
+        # Build response structure
+        momentum = momentum_data[0] if momentum_data else {}
+        volatility = volatility_data[0] if volatility_data else {}
+
+        indicators = {
+            "rsi": {
+                "value": float(momentum.get("rsi_14")) if momentum.get("rsi_14") is not None else None,
+                "rsi_7": float(momentum.get("rsi_7")) if momentum.get("rsi_7") is not None else None,
+                "rsi_21": float(momentum.get("rsi_21")) if momentum.get("rsi_21") is not None else None,
+            },
+            "macd": {
+                "main": float(momentum.get("macd_line")) if momentum.get("macd_line") is not None else None,
+                "signal": float(momentum.get("macd_signal")) if momentum.get("macd_signal") is not None else None,
+                "histogram": float(momentum.get("macd_histogram")) if momentum.get("macd_histogram") is not None else None,
+            },
+            "stochastic": {
+                "k": float(momentum.get("stoch_k")) if momentum.get("stoch_k") is not None else None,
+                "d": float(momentum.get("stoch_d")) if momentum.get("stoch_d") is not None else None,
+            },
+            "adx": {
+                "value": float(momentum.get("adx")) if momentum.get("adx") is not None else None,
+                "plus_di": float(momentum.get("plus_di")) if momentum.get("plus_di") is not None else None,
+                "minus_di": float(momentum.get("minus_di")) if momentum.get("minus_di") is not None else None,
+            },
+            "bollinger": {
+                "upper": float(volatility.get("bb_upper")) if volatility.get("bb_upper") is not None else None,
+                "middle": float(volatility.get("bb_middle")) if volatility.get("bb_middle") is not None else None,
+                "lower": float(volatility.get("bb_lower")) if volatility.get("bb_lower") is not None else None,
+            },
+            "atr": {
+                "value": float(volatility.get("atr_14")) if volatility.get("atr_14") is not None else None,
+            },
+        }
+
+        return MarketSnapshotResponse(
+            symbol=symbol.upper(),
+            timeframe=tf.value,
+            timestamp=timestamp.isoformat() if hasattr(timestamp, 'isoformat') else str(timestamp) if timestamp else None,
+            price={
+                "open": float(latest_ohlcv.get("open", 0)),
+                "high": float(latest_ohlcv.get("high", 0)),
+                "low": float(latest_ohlcv.get("low", 0)),
+                "close": current_price,
+                "last": current_price,
+                "volume": float(latest_ohlcv.get("volume", 0)) if latest_ohlcv.get("volume") else 0,
+            },
+            indicators=indicators,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get market snapshot for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/summary")
 async def get_db_summary():
     """

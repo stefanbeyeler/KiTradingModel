@@ -271,8 +271,8 @@ class SignalAggregatorService:
     ) -> TechnicalSignal:
         """Holt technische Indikatoren vom Data Service."""
         try:
-            url = f"{settings.data_service_url}/api/v1/market-snapshot/{symbol}"
-            response = await client.get(url)
+            url = f"{settings.data_service_url}/api/v1/db/market-snapshot/{symbol}"
+            response = await client.get(url, params={"timeframe": timeframe})
 
             if response.status_code != 200:
                 return TechnicalSignal(available=False)
