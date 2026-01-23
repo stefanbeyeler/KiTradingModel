@@ -91,11 +91,45 @@ class LLMService:
             logger.error(f"Error pulling model: {e}")
             return False
 
+    async def get_available_models(self) -> list[str]:
+        """Get list of available models from Ollama."""
+        try:
+            client = self._get_client()
+            result = client.list()
+            available = []
+
+            # Handle different response formats from Ollama client
+            if isinstance(result, dict):
+                models_data = result.get("models", [])
+            elif hasattr(result, 'models'):
+                models_data = result.models
+            else:
+                models_data = result if isinstance(result, list) else []
+
+            for m in models_data:
+                if isinstance(m, dict):
+                    name = m.get("name") or m.get("model")
+                elif hasattr(m, 'model'):
+                    name = m.model
+                elif hasattr(m, 'name'):
+                    name = m.name
+                else:
+                    name = str(m)
+
+                if name:
+                    available.append(name)
+
+            return available
+        except Exception as e:
+            logger.error(f"Error listing models: {e}")
+            return []
+
     async def generate(
         self,
         prompt: str,
         system: Optional[str] = None,
-        max_tokens: int = 1000
+        max_tokens: int = 1000,
+        model: Optional[str] = None
     ) -> str:
         """
         Generate a response from the LLM.
@@ -104,12 +138,14 @@ class LLMService:
             prompt: The user prompt
             system: Optional system prompt
             max_tokens: Maximum tokens in response
+            model: Optional model override (default: configured model)
 
         Returns:
             The generated text response
         """
         try:
             client = self._get_client()
+            use_model = model or self.model
 
             messages = []
             if system:
@@ -120,7 +156,7 @@ class LLMService:
             options = {**self._options, "num_predict": max_tokens}
 
             response = client.chat(
-                model=self.model,
+                model=use_model,
                 messages=messages,
                 options=options
             )

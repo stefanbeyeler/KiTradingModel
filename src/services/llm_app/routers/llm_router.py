@@ -73,7 +73,8 @@ async def chat_with_llm(
     query: str,
     symbol: Optional[str] = None,
     use_rag: bool = True,
-    session_id: Optional[str] = None
+    session_id: Optional[str] = None,
+    model: Optional[str] = None
 ):
     """
     Chat endpoint with conversation memory.
@@ -86,6 +87,7 @@ async def chat_with_llm(
         symbol: Optional trading symbol for context
         use_rag: Whether to use RAG for enhanced context (default: True)
         session_id: Optional session ID for conversation continuity
+        model: Optional model override (e.g., "qwen2.5:7b", "llama3.1:8b")
 
     Returns:
         LLM response with session info and optional RAG context
@@ -205,14 +207,16 @@ WICHTIG: Verwende IMMER die aktuellen Marktdaten unten für Preisangaben. Erfind
 
         # Call LLM
         start_llm = time.time()
+        used_model = model or llm_service.model
         response = await llm_service.generate(
             prompt=query,
             system=system_prompt,
-            max_tokens=1000
+            max_tokens=1000,
+            model=model
         )
         llm_time = time.time() - start_llm
         total_time = time.time() - start_total
-        logger.info(f"LLM generation: {llm_time:.2f}s | Total: {total_time:.2f}s | Session: {current_session_id}")
+        logger.info(f"LLM generation: {llm_time:.2f}s | Total: {total_time:.2f}s | Session: {current_session_id} | Model: {used_model}")
 
         # Store exchange in conversation memory
         memory.add_exchange(current_session_id, query, response)
@@ -223,7 +227,7 @@ WICHTIG: Verwende IMMER die aktuellen Marktdaten unten für Preisangaben. Erfind
             "message_count": session.get_message_count(),
             "symbol_detected": detected_symbol,
             "rag_context_used": len(rag_context) > 0,
-            "model": llm_service.model,
+            "model": used_model,
             "timing": {
                 "total_seconds": round(total_time, 2),
                 "llm_seconds": round(llm_time, 2)
@@ -276,3 +280,19 @@ async def get_memory_stats():
     """Get conversation memory statistics."""
     memory = get_conversation_memory()
     return memory.get_stats()
+
+
+@llm_router.get("/llm/models")
+async def get_available_models():
+    """Get list of available LLM models."""
+    llm_service = get_llm_service()
+    try:
+        models = await llm_service.get_available_models()
+        return {
+            "default_model": llm_service.model,
+            "available_models": models,
+            "usage": "Pass 'model' parameter to /llm/chat to use a different model"
+        }
+    except Exception as e:
+        logger.error(f"Failed to list models: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
