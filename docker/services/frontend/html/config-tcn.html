@@ -2186,6 +2186,84 @@
                     </div>
                 </div>
 
+                <p style="opacity: 0.8; margin-bottom: 1rem;">
+                    Das System lernt kontinuierlich aus seinen Pattern-Erkennungen durch einen geschlossenen Feedback-Loop.
+                    Bei schlechter Performance wird automatisch ein Re-Training mit EWC (Elastic Weight Consolidation) getriggert.
+                </p>
+
+                <!-- Closed-Loop Diagram -->
+                <div style="background: rgba(100, 200, 255, 0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h3 style="color: #64c8ff; margin-bottom: 1rem; font-size: 1rem;">Closed-Loop Feedback</h3>
+                    <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(100, 200, 255, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">🎯</div>
+                            <div style="font-size: 0.85rem; color: #64c8ff;">1. Pattern-Erkennung</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">→</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(129, 199, 132, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">✅</div>
+                            <div style="font-size: 0.85rem; color: #81c784;">2. Outcome-Tracking</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">→</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255, 183, 77, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">📊</div>
+                            <div style="font-size: 0.85rem; color: #ffb74d;">3. Feedback-Analyse</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">→</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(167, 139, 250, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">🤖</div>
+                            <div style="font-size: 0.85rem; color: #a78bfa;">4. EWC Re-Train</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">↩</div>
+                    </div>
+                </div>
+
+                <!-- Technical Architecture Diagram (Collapsible) -->
+                <details class="architecture-diagram" style="margin-bottom: 1.5rem;">
+                    <summary style="cursor: pointer; color: var(--text-secondary); padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 4px;">📐 Technische Architektur</summary>
+                    <div style="background: #0d1520; padding: 1rem; border-radius: 0 0 8px 8px; overflow-x: auto;">
+                        <pre style="font-family: 'Fira Code', monospace; font-size: 0.75rem; color: #81c784; margin: 0; line-height: 1.4;">
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         TCN Self-Learning Pipeline                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+  │   TCN        │      │  Marktdaten  │      │   Pattern    │
+  │   Modell     │─────▶│  eintreffen  │─────▶│  erkennen    │
+  │              │      │              │      │              │
+  └──────────────┘      └──────────────┘      └──────┬───────┘
+         ▲                                          │
+         │                                          ▼
+         │                                   ┌──────────────┐
+         │                                   │   Outcome    │
+         │                                   │   Tracker    │
+         │                                   │  (24-72h)    │
+         │                                   └──────┬───────┘
+         │                                          │
+         │                                          │ Evaluationszeit erreicht
+         │                                          ▼
+  ┌──────┴───────┐      ┌──────────────┐      ┌──────────────┐
+  │   EWC        │      │  Genug       │      │   Feedback   │
+  │   Training   │◀─────│  Samples?    │◀─────│   Buffer     │
+  │              │ JA   │  (≥100)      │      │              │
+  └──────────────┘      └──────┬───────┘      └──────────────┘
+         │                     │ NEIN
+         │                     ▼
+         │              ┌──────────────┐
+         │              │   Weiter     │
+         │              │   sammeln    │
+         │              └──────────────┘
+         │
+         ▼
+  ┌──────────────┐      ┌──────────────┐
+  │   A/B        │      │   Auto       │
+  │   Vergleich  │─────▶│   Deploy     │
+  │              │ OK   │              │
+  └──────────────┘      └──────────────┘
+</pre>
+                    </div>
+                </details>
+
                 <div class="grid-2">
                     <!-- Orchestrator Status -->
                     <div class="info-section">
