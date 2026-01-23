@@ -20,7 +20,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 
 from src.config import settings
 from src.version import VERSION
-from src.api.routes import llm_router, rag_router, trading_router
+# Use dedicated LLM routers (no asyncpg dependency)
+from src.services.llm_app.routers import llm_router, rag_router, trading_router
+from src.services.llm_app.routers.llm_router import set_llm_service as set_llm_router_service
+from src.services.llm_app.routers.trading_router import set_llm_service as set_trading_router_service
 from src.services.llm_service import LLMService
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import get_test_unhealthy_status
@@ -102,18 +105,24 @@ async def startup_event():
     # Initialize LLM Service
     try:
         llm_service = LLMService()
-        logger.info("LLM Service initialized")
+        # Set LLM service in routers
+        set_llm_router_service(llm_service)
+        set_trading_router_service(llm_service)
+        logger.info("LLM Service initialized and registered with routers")
     except Exception as e:
         logger.error(f"Failed to initialize LLM Service: {e}")
 
-    # Pre-cache symbols for faster first request
+    # Pre-cache symbols via Data Service HTTP (not direct import)
     try:
-        from src.services.analysis_service import AnalysisService
-        analysis_svc = AnalysisService()
-        symbols = await analysis_svc.get_available_symbols()
-        logger.info(f"Pre-cached {len(symbols)} symbols for faster access")
+        import httpx
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{os.getenv('DATA_SERVICE_URL', 'http://trading-data:3001')}/api/v1/db/coverage")
+            if response.status_code == 200:
+                data = response.json()
+                symbols_count = data.get("symbols_count", 0)
+                logger.info(f"Data Service has {symbols_count} symbols available")
     except Exception as e:
-        logger.warning(f"Could not pre-cache symbols (will be loaded on first request): {e}")
+        logger.warning(f"Could not check Data Service symbols: {e}")
 
     logger.info("LLM Service started successfully")
 
