@@ -861,11 +861,16 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">LLM Chat</h2>
-                    <button class="btn btn-sm btn-danger" onclick="clearChat()">Chat leeren</button>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select id="chat-model-select" class="btn btn-primary" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(100,200,255,0.3); padding: 0.4rem 0.8rem; cursor: pointer;">
+                            <option value="">Standard-Modell</option>
+                        </select>
+                        <button class="btn btn-sm btn-danger" onclick="clearChat()">Chat leeren</button>
+                    </div>
                 </div>
                 <p style="opacity: 0.7; margin-bottom: 1rem;">
                     Stellen Sie Fragen zu Marktanalysen, Trading-Strategien oder Symbol-Informationen.
-                    <br><span style="color: #64b5f6; font-size: 0.85rem;">Modell: llama3.1:8b - Antwortzeit typisch unter 1 Sekunde.</span>
+                    <br><span id="chat-model-info" style="color: #64b5f6; font-size: 0.85rem;">Modell: llama3.1:8b (Standard)</span>
                 </p>
                 <div class="chat-container">
                     <div class="chat-messages" id="chat-messages">
@@ -1266,6 +1271,48 @@
         }
 
         // Chat functions
+        let chatSessionId = null;
+        let defaultModel = 'llama3.1:8b';
+
+        // Load available models for chat dropdown
+        async function loadChatModels() {
+            try {
+                const res = await fetch(`${API_BASE}/llm/models`);
+                const data = await res.json();
+
+                defaultModel = data.default_model || 'llama3.1:8b';
+                const models = data.available_models || [];
+
+                const select = document.getElementById('chat-model-select');
+                select.innerHTML = `<option value="">Standard (${defaultModel})</option>`;
+
+                models.forEach(model => {
+                    if (model !== defaultModel) {
+                        select.innerHTML += `<option value="${model}">${model}</option>`;
+                    }
+                });
+
+                // Update model info text
+                updateChatModelInfo();
+
+            } catch (err) {
+                console.error('Error loading chat models:', err);
+            }
+        }
+
+        // Update model info text when selection changes
+        function updateChatModelInfo() {
+            const select = document.getElementById('chat-model-select');
+            const infoEl = document.getElementById('chat-model-info');
+            const selectedModel = select.value || defaultModel;
+
+            const modelInfo = MODEL_METADATA[selectedModel] || { latency: '-' };
+            infoEl.textContent = `Modell: ${selectedModel} - Latenz: ${modelInfo.latency}`;
+        }
+
+        // Add event listener for model selection change
+        document.getElementById('chat-model-select').addEventListener('change', updateChatModelInfo);
+
         function handleChatKeydown(event) {
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
@@ -1280,6 +1327,7 @@
 
             const messagesDiv = document.getElementById('chat-messages');
             const btnSend = document.getElementById('btn-send-chat');
+            const selectedModel = document.getElementById('chat-model-select').value;
 
             // Add user message
             messagesDiv.innerHTML += `
@@ -1295,9 +1343,10 @@
             const loadingId = 'loading-' + Date.now();
             const timerId = 'timer-' + Date.now();
             const startTime = Date.now();
+            const modelName = selectedModel || 'Standard';
             messagesDiv.innerHTML += `
                 <div class="chat-message assistant" id="${loadingId}">
-                    <div class="role">Assistent</div>
+                    <div class="role">Assistent <span style="opacity: 0.5; font-size: 0.75rem;">(${modelName})</span></div>
                     <div class="content">
                         <span class="loading-spinner"></span> Denke nach...
                         <span id="${timerId}" style="color: #ffb74d; font-size: 0.85rem;">(0s)</span>
@@ -1317,11 +1366,14 @@
             }, 1000);
 
             try {
-                // Use the new /llm/chat endpoint which doesn't require a symbol
+                // Use the new /llm/chat endpoint with optional model parameter
                 const params = new URLSearchParams({
                     query: message,
                     use_rag: 'true'
                 });
+                if (selectedModel) {
+                    params.append('model', selectedModel);
+                }
                 const res = await fetch(`${API_BASE}/llm/chat?${params}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
@@ -1342,11 +1394,13 @@
                 const response = data.response || data.analysis || data.answer || 'Keine Antwort erhalten.';
                 const symbolDetected = data.symbol_detected;
                 const ragUsed = data.rag_context_used;
+                const usedModel = data.model || 'Standard';
 
                 // Build info badges
                 let infoBadges = '';
+                infoBadges += `<span style="background: rgba(167,139,250,0.2); color: #a78bfa; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">${usedModel}</span>`;
                 if (symbolDetected) {
-                    infoBadges += `<span style="background: rgba(100,200,255,0.2); color: #64c8ff; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">${symbolDetected}</span>`;
+                    infoBadges += `<span style="background: rgba(100,200,255,0.2); color: #64c8ff; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.3rem;">${symbolDetected}</span>`;
                 }
                 if (ragUsed) {
                     infoBadges += `<span style="background: rgba(156,39,176,0.2); color: #ce93d8; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.3rem;">RAG</span>`;
@@ -1611,7 +1665,8 @@
             await Promise.all([
                 checkHealth(),
                 refreshStatus(),
-                loadOllamaModels()
+                loadOllamaModels(),
+                loadChatModels()
             ]);
         }
 
