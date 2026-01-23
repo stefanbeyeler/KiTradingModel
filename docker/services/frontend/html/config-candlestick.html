@@ -2245,7 +2245,7 @@
     <main class="container">
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('status')">Status</button>
+            <button class="tab active" onclick="switchTab('status')">Übersicht</button>
             <button class="tab" onclick="switchTab('detection')">Detection & History</button>
             <button class="tab" onclick="switchTab('training')">Training</button>
             <button class="tab" onclick="switchTab('revalidation')">Re-Validierung <span id="revalidationBadge" class="tab-badge" style="display: none;">0</span></button>
@@ -2354,6 +2354,88 @@
                     <span>Training: <span style="color: #64c8ff;">Port 3016</span></span>
                     <span>Version: <span style="color: #64c8ff;" id="statusVersion">-</span></span>
                     <span>Gestartet: <span style="color: #64c8ff;" id="statusStarted">-</span></span>
+                </div>
+            </div>
+
+            <!-- Self-Learning Success Card -->
+            <div class="card" style="border: 1px solid rgba(156, 39, 176, 0.2);">
+                <div class="card-header">
+                    <h2 class="card-title" style="font-size: 1.1rem;">🧠 Self-Learning Erfolg</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span class="service-badge" id="overviewSLStatus">-</span>
+                        <button class="btn btn-secondary" onclick="loadOverviewSelfLearning()" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">Aktualisieren</button>
+                    </div>
+                </div>
+
+                <!-- Compact Pipeline Visualization -->
+                <div style="background: rgba(156, 39, 176, 0.08); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                        <div style="text-align: center; flex: 1; min-width: 60px;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: rgba(100, 200, 255, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.4rem; font-size: 1.3rem;">🔍</div>
+                            <div style="font-size: 0.7rem; color: #64c8ff;">Detection</div>
+                        </div>
+                        <div style="color: #666; font-size: 1rem;">→</div>
+                        <div style="text-align: center; flex: 1; min-width: 60px;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: rgba(255, 152, 0, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.4rem; font-size: 1.3rem;">⏱️</div>
+                            <div style="font-size: 0.7rem; color: #ffb74d;">Tracking</div>
+                        </div>
+                        <div style="color: #666; font-size: 1rem;">→</div>
+                        <div style="text-align: center; flex: 1; min-width: 60px;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: rgba(156, 39, 176, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.4rem; font-size: 1.3rem;">📊</div>
+                            <div style="font-size: 0.7rem; color: #ce93d8;">Analyse</div>
+                        </div>
+                        <div style="color: #666; font-size: 1rem;">→</div>
+                        <div style="text-align: center; flex: 1; min-width: 60px;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: rgba(76, 175, 80, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.4rem; font-size: 1.3rem;">⚙️</div>
+                            <div style="font-size: 0.7rem; color: #81c784;">Optimierung</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Success Metrics Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <!-- Outcome-Statistiken -->
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: #81c784;" id="overviewSuccessRate">-</div>
+                        <div style="font-size: 0.75rem; color: #888;">Bestätigungsrate</div>
+                        <div style="font-size: 0.65rem; color: #666; margin-top: 0.25rem;">
+                            <span id="overviewSuccessCount" style="color: #81c784;">0</span> /
+                            <span id="overviewTotalOutcomes">0</span> Feedbacks
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: #ffb74d;" id="overviewPendingCount">-</div>
+                        <div style="font-size: 0.75rem; color: #888;">Korrigiert</div>
+                        <div style="font-size: 0.65rem; color: #666; margin-top: 0.25rem;">Pattern-Korrekturen</div>
+                    </div>
+
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: #ce93d8;" id="overviewFeedbackSamples">-</div>
+                        <div style="font-size: 0.75rem; color: #888;">Feedback Samples</div>
+                        <div style="font-size: 0.65rem; color: #666; margin-top: 0.25rem;" id="overviewBufferStatus">Buffer-Status</div>
+                    </div>
+
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: 700; color: #64c8ff;" id="overviewOptimizations">-</div>
+                        <div style="font-size: 0.75rem; color: #888;">Optimierungen</div>
+                        <div style="font-size: 0.65rem; color: #666; margin-top: 0.25rem;" id="overviewLastOptimization">-</div>
+                    </div>
+                </div>
+
+                <!-- Loop Status & Quick Actions -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem;">
+                            Loop: <span id="overviewLoopStatus" style="color: #888;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem;">
+                            Letzte Prüfung: <span id="overviewLastCheck" style="color: #64c8ff;">-</span>
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-primary btn-sm" onclick="switchTab('selflearning')" style="font-size: 0.75rem;">Details →</button>
+                    </div>
                 </div>
             </div>
 
@@ -4804,6 +4886,7 @@ Evaluierungszeiträume:
             if (tabName === 'status') {
                 loadStatusDashboard();
                 loadPatternTypes();
+                loadOverviewSelfLearning();
 
                 // Stop auto-refresh
                 if (trainingRefreshInterval) {
@@ -9473,6 +9556,95 @@ Evaluierungszeiträume:
 
         // === Self-Learning Functions ===
 
+        // Self-Learning Overview for Status/Übersicht tab
+        async function loadOverviewSelfLearning() {
+            try {
+                // Load feedback statistics from inference service (Candlestick uses feedback-based evaluation)
+                let confirmedCount = 0;
+                let totalFeedback = 0;
+                let correctedCount = 0;
+                let confirmationRate = 0;
+
+                try {
+                    const feedbackResponse = await fetch(`${CANDLESTICK_API}/feedback/statistics`);
+                    if (feedbackResponse.ok) {
+                        const feedbackStats = await feedbackResponse.json();
+                        confirmedCount = feedbackStats.by_type?.confirmed || 0;
+                        const rejectedCount = feedbackStats.by_type?.rejected || 0;
+                        correctedCount = (feedbackStats.by_type?.corrected || 0) + rejectedCount;
+                        totalFeedback = feedbackStats.total || 0;
+                        // Calculate confirmation rate (100 - correction_rate)
+                        confirmationRate = totalFeedback > 0 ? (100 - (feedbackStats.correction_rate || 0)) : 0;
+                    }
+                } catch (e) {
+                    console.warn('Feedback stats not available:', e);
+                }
+
+                // Update feedback stats in overview (adapted terminology for Candlestick)
+                document.getElementById('overviewSuccessRate').textContent = confirmationRate.toFixed(1) + '%';
+                document.getElementById('overviewSuccessRate').style.color = confirmationRate >= 80 ? '#81c784' : confirmationRate >= 60 ? '#ffb74d' : '#e57373';
+                document.getElementById('overviewSuccessCount').textContent = confirmedCount;
+                document.getElementById('overviewTotalOutcomes').textContent = totalFeedback;
+                document.getElementById('overviewPendingCount').textContent = correctedCount;
+
+                // Load orchestrator status from training service
+                try {
+                    const orchestratorResponse = await fetch(`${CANDLESTICK_TRAIN_API}/self-learning/status`);
+                    if (orchestratorResponse.ok) {
+                        const data = await orchestratorResponse.json();
+                        const status = data.status || {};
+
+                        // Feedback samples
+                        const feedbackSamples = status.feedback_buffer_samples || 0;
+                        document.getElementById('overviewFeedbackSamples').textContent = feedbackSamples;
+                        const minSamples = data.config?.min_samples_for_optimization || 100;
+                        document.getElementById('overviewBufferStatus').textContent = feedbackSamples >= minSamples ? 'Training bereit' : `${feedbackSamples}/${minSamples} für Training`;
+                        document.getElementById('overviewBufferStatus').style.color = feedbackSamples >= minSamples ? '#81c784' : '#888';
+
+                        // Optimizations count
+                        document.getElementById('overviewOptimizations').textContent = status.optimization_count || 0;
+                        document.getElementById('overviewLastOptimization').textContent = status.last_optimization ? new Date(status.last_optimization).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Noch keine';
+
+                        // Loop status
+                        const loopRunning = status.loop_running;
+                        document.getElementById('overviewLoopStatus').textContent = loopRunning ? 'Aktiv' : 'Gestoppt';
+                        document.getElementById('overviewLoopStatus').style.color = loopRunning ? '#81c784' : '#e57373';
+
+                        // Last check
+                        document.getElementById('overviewLastCheck').textContent = status.last_check ? new Date(status.last_check).toLocaleString('de-CH', { hour: '2-digit', minute: '2-digit' }) : '-';
+
+                        // Status badge
+                        const state = status.state || 'idle';
+                        const badge = document.getElementById('overviewSLStatus');
+                        badge.textContent = state.toUpperCase();
+                        if (state === 'idle' && loopRunning) {
+                            badge.className = 'service-badge';
+                            badge.style.background = 'rgba(76, 175, 80, 0.2)';
+                            badge.style.color = '#81c784';
+                        } else if (state === 'idle') {
+                            badge.className = 'service-badge offline';
+                        } else {
+                            badge.className = 'service-badge';
+                            badge.style.background = 'rgba(255, 152, 0, 0.2)';
+                            badge.style.color = '#ffb74d';
+                        }
+                    } else {
+                        document.getElementById('overviewSLStatus').textContent = 'OFFLINE';
+                        document.getElementById('overviewSLStatus').className = 'service-badge offline';
+                        document.getElementById('overviewLoopStatus').textContent = 'Nicht erreichbar';
+                        document.getElementById('overviewLoopStatus').style.color = '#e57373';
+                    }
+                } catch (e) {
+                    console.warn('Orchestrator status not available:', e);
+                    document.getElementById('overviewSLStatus').textContent = 'OFFLINE';
+                    document.getElementById('overviewSLStatus').className = 'service-badge offline';
+                }
+
+            } catch (error) {
+                console.error('Overview Self-Learning Fehler:', error);
+            }
+        }
+
         async function loadSelfLearningStatus() {
             try {
                 // Load outcome statistics from inference service
@@ -9483,6 +9655,8 @@ Evaluierungszeiträume:
                     document.getElementById('slOutcomesSuccess').textContent = outcomeStats.by_status?.success || 0;
                     document.getElementById('slOutcomesFailed').textContent = outcomeStats.by_status?.failed || 0;
                     document.getElementById('slSuccessRate').textContent = (outcomeStats.success_rate || 0).toFixed(1) + '%';
+                } else {
+                    console.warn('Outcome statistics not available:', outcomeResponse.status);
                 }
 
                 // Load orchestrator status from training service
@@ -9501,9 +9675,20 @@ Evaluierungszeiträume:
                     // Update button states
                     document.getElementById('btnStartSLLoop').disabled = status.loop_running;
                     document.getElementById('btnStopSLLoop').disabled = !status.loop_running;
+                } else {
+                    const errorData = await orchestratorResponse.json().catch(() => ({}));
+                    console.error('Orchestrator status error:', orchestratorResponse.status, errorData);
+                    document.getElementById('slOrchestratorState').textContent = 'Fehler';
+                    document.getElementById('slOrchestratorState').style.color = '#e57373';
+                    document.getElementById('slOrchestratorLoop').textContent = 'Nicht erreichbar';
+                    document.getElementById('slOrchestratorLoop').style.color = '#e57373';
                 }
             } catch (error) {
                 console.error('Self-Learning Status Fehler:', error);
+                document.getElementById('slOrchestratorState').textContent = 'Fehler';
+                document.getElementById('slOrchestratorState').style.color = '#e57373';
+                document.getElementById('slOrchestratorLoop').textContent = 'Verbindung fehlgeschlagen';
+                document.getElementById('slOrchestratorLoop').style.color = '#e57373';
             }
         }
 
@@ -9511,13 +9696,22 @@ Evaluierungszeiträume:
             try {
                 const response = await fetch(`${CANDLESTICK_TRAIN_API}/self-learning/start`, { method: 'POST' });
                 if (response.ok) {
-                    showToast('Self-Learning Loop gestartet', 'success');
+                    const result = await response.json();
+                    if (result.status === 'already_running') {
+                        showToast('Self-Learning Loop läuft bereits', 'info');
+                    } else {
+                        showToast('Self-Learning Loop gestartet', 'success');
+                    }
                     await loadSelfLearningStatus();
                 } else {
-                    showToast('Fehler beim Starten des Loops', 'error');
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMsg = errorData.detail || errorData.message || `HTTP ${response.status}`;
+                    console.error('Start SL Loop Error:', errorData);
+                    showToast('Fehler: ' + errorMsg, 'error');
                 }
             } catch (error) {
-                showToast('Fehler: ' + error.message, 'error');
+                console.error('Start SL Loop Exception:', error);
+                showToast('Verbindungsfehler: ' + error.message, 'error');
             }
         }
 
@@ -9525,13 +9719,22 @@ Evaluierungszeiträume:
             try {
                 const response = await fetch(`${CANDLESTICK_TRAIN_API}/self-learning/stop`, { method: 'POST' });
                 if (response.ok) {
-                    showToast('Self-Learning Loop gestoppt', 'warning');
+                    const result = await response.json();
+                    if (result.status === 'not_running') {
+                        showToast('Self-Learning Loop ist bereits gestoppt', 'info');
+                    } else {
+                        showToast('Self-Learning Loop gestoppt', 'warning');
+                    }
                     await loadSelfLearningStatus();
                 } else {
-                    showToast('Fehler beim Stoppen des Loops', 'error');
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMsg = errorData.detail || errorData.message || `HTTP ${response.status}`;
+                    console.error('Stop SL Loop Error:', errorData);
+                    showToast('Fehler: ' + errorMsg, 'error');
                 }
             } catch (error) {
-                showToast('Fehler: ' + error.message, 'error');
+                console.error('Stop SL Loop Exception:', error);
+                showToast('Verbindungsfehler: ' + error.message, 'error');
             }
         }
 
@@ -9564,6 +9767,7 @@ Evaluierungszeiträume:
             // Status Dashboard laden (da Status standardmäßig aktiv ist)
             await loadStatusDashboard();
             await loadPatternTypes();
+            await loadOverviewSelfLearning();
 
             // Training-Status beim Start laden (um Button zu deaktivieren wenn Training läuft)
             await loadTrainingStatus();
@@ -9588,6 +9792,7 @@ Evaluierungszeiträume:
                 // Also refresh status dashboard if active
                 if (document.getElementById('tab-status').classList.contains('active')) {
                     await loadStatusDashboard();
+                    await loadOverviewSelfLearning();
                 }
             }, 30000);
         });
