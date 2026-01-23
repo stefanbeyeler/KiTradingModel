@@ -16,7 +16,7 @@ from ..config import settings
 
 
 class DataServiceClient:
-    """HTTP client for Data Service external sources API."""
+    """HTTP client for Data Service external sources API and ML Inference Services."""
 
     def __init__(
         self,
@@ -24,28 +24,41 @@ class DataServiceClient:
         candlestick_url: Optional[str] = None,
         tcn_url: Optional[str] = None,
         hmm_url: Optional[str] = None,
-        nhits_url: Optional[str] = None
+        nhits_url: Optional[str] = None,
+        embedder_url: Optional[str] = None,
+        cnn_lstm_url: Optional[str] = None
     ):
         """Initialize the client.
 
         Args:
             base_url: Data Service URL, defaults to settings.data_service_url
             candlestick_url: Candlestick Service URL, defaults to settings.candlestick_service_url
-            tcn_url: TCN Service URL, defaults to trading-tcn:3003
-            hmm_url: HMM Service URL, defaults to trading-hmm:3004
-            nhits_url: NHITS Service URL, defaults to trading-nhits:3002
+            tcn_url: TCN Service URL, defaults to settings.tcn_service_url
+            hmm_url: HMM Service URL, defaults to settings.hmm_service_url
+            nhits_url: NHITS Service URL, defaults to settings.nhits_service_url
+            embedder_url: Embedder Service URL, defaults to settings.embedder_service_url
+            cnn_lstm_url: CNN-LSTM Service URL, defaults to settings.cnn_lstm_service_url
         """
-        self._base_url = base_url or getattr(settings, 'data_service_url', 'http://localhost:3001')
-        self._candlestick_url = candlestick_url or getattr(settings, 'candlestick_service_url', 'http://trading-candlestick:3006')
-        self._tcn_url = tcn_url or getattr(settings, 'tcn_service_url', 'http://trading-tcn:3003')
-        self._hmm_url = hmm_url or getattr(settings, 'hmm_service_url', 'http://trading-hmm:3004')
-        self._nhits_url = nhits_url or getattr(settings, 'nhits_service_url', 'http://trading-nhits:3002')
+        # Data Service Gateway
+        self._base_url = base_url or settings.data_service_url
+
+        # ML Inference Services (use settings with proper defaults)
+        self._nhits_url = nhits_url or settings.nhits_service_url
+        self._tcn_url = tcn_url or settings.tcn_service_url
+        self._hmm_url = hmm_url or settings.hmm_service_url
+        self._embedder_url = embedder_url or settings.embedder_service_url
+        self._candlestick_url = candlestick_url or settings.candlestick_service_url
+        self._cnn_lstm_url = cnn_lstm_url or settings.cnn_lstm_service_url
+
         self._timeout = 30.0
-        logger.info(f"DataServiceClient initialized with base URL: {self._base_url}")
-        logger.info(f"DataServiceClient using Candlestick Service: {self._candlestick_url}")
-        logger.info(f"DataServiceClient using TCN Service: {self._tcn_url}")
-        logger.info(f"DataServiceClient using HMM Service: {self._hmm_url}")
-        logger.info(f"DataServiceClient using NHITS Service: {self._nhits_url}")
+        logger.info(f"DataServiceClient initialized:")
+        logger.info(f"  Data Service: {self._base_url}")
+        logger.info(f"  NHITS Service: {self._nhits_url}")
+        logger.info(f"  TCN Service: {self._tcn_url}")
+        logger.info(f"  HMM Service: {self._hmm_url}")
+        logger.info(f"  Embedder Service: {self._embedder_url}")
+        logger.info(f"  Candlestick Service: {self._candlestick_url}")
+        logger.info(f"  CNN-LSTM Service: {self._cnn_lstm_url}")
 
     async def _get(self, endpoint: str, params: Optional[dict] = None) -> dict:
         """Make GET request to Data Service."""
@@ -120,6 +133,51 @@ class DataServiceClient:
             return {"error": str(e), "status_code": e.response.status_code}
         except Exception as e:
             logger.error(f"Error calling NHITS Service: {e}")
+            return {"error": str(e)}
+
+    async def _get_embedder(self, endpoint: str, params: Optional[dict] = None) -> dict:
+        """Make GET request to Embedder Service."""
+        url = f"{self._embedder_url}/api/v1{endpoint}"
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from Embedder Service: {e.response.status_code} - {e.response.text}")
+            return {"error": str(e), "status_code": e.response.status_code}
+        except Exception as e:
+            logger.error(f"Error calling Embedder Service: {e}")
+            return {"error": str(e)}
+
+    async def _post_embedder(self, endpoint: str, json: Optional[dict] = None) -> dict:
+        """Make POST request to Embedder Service."""
+        url = f"{self._embedder_url}/api/v1{endpoint}"
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:  # Longer timeout for embeddings
+                response = await client.post(url, json=json)
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from Embedder Service: {e.response.status_code} - {e.response.text}")
+            return {"error": str(e), "status_code": e.response.status_code}
+        except Exception as e:
+            logger.error(f"Error calling Embedder Service: {e}")
+            return {"error": str(e)}
+
+    async def _get_cnn_lstm(self, endpoint: str, params: Optional[dict] = None) -> dict:
+        """Make GET request to CNN-LSTM Service."""
+        url = f"{self._cnn_lstm_url}/api/v1{endpoint}"
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:  # Longer timeout for predictions
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from CNN-LSTM Service: {e.response.status_code} - {e.response.text}")
+            return {"error": str(e), "status_code": e.response.status_code}
+        except Exception as e:
+            logger.error(f"Error calling CNN-LSTM Service: {e}")
             return {"error": str(e)}
 
     async def _post(self, endpoint: str, json: Optional[dict] = None) -> dict:
@@ -581,6 +639,81 @@ class DataServiceClient:
     async def get_nhits_status(self) -> dict:
         """Get NHITS service status."""
         return await self._get_nhits("/forecast/status")
+
+    # -------------------------------------------------------------------------
+    # Embedder Feature Embedding Methods (Port 3005)
+    # -------------------------------------------------------------------------
+
+    async def get_embeddings(
+        self,
+        symbol: str,
+        timeframe: str = "H1",
+        lookback: int = 100
+    ) -> dict:
+        """Get feature embeddings for a symbol.
+
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSD")
+            timeframe: Timeframe for data
+            lookback: Number of candles to embed
+
+        Returns:
+            Dict with embeddings and metadata
+        """
+        params = {
+            "timeframe": timeframe,
+            "lookback": lookback,
+        }
+        return await self._get_embedder(f"/embed/{symbol}", params)
+
+    async def get_embedder_status(self) -> dict:
+        """Get Embedder service status."""
+        return await self._get_embedder("/status")
+
+    async def embed_text(self, texts: list[str]) -> dict:
+        """Generate embeddings for text inputs.
+
+        Args:
+            texts: List of text strings to embed
+
+        Returns:
+            Dict with embeddings array
+        """
+        return await self._post_embedder("/embed/text", {"texts": texts})
+
+    # -------------------------------------------------------------------------
+    # CNN-LSTM Multi-Task Prediction Methods (Port 3007)
+    # -------------------------------------------------------------------------
+
+    async def get_cnn_lstm_prediction(
+        self,
+        symbol: str,
+        timeframe: str = "H1"
+    ) -> dict:
+        """Get CNN-LSTM multi-task predictions for a symbol.
+
+        The CNN-LSTM model provides three outputs:
+        - Price predictions (4 horizons)
+        - Pattern classifications (16 classes)
+        - Regime detection (4 classes)
+
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSD")
+            timeframe: Timeframe for analysis
+
+        Returns:
+            Dict with price, patterns, and regime predictions
+        """
+        params = {"timeframe": timeframe}
+        return await self._get_cnn_lstm(f"/predict/{symbol}", params)
+
+    async def get_cnn_lstm_status(self) -> dict:
+        """Get CNN-LSTM service status."""
+        return await self._get_cnn_lstm("/status")
+
+    async def get_cnn_lstm_model_info(self) -> dict:
+        """Get CNN-LSTM model information."""
+        return await self._get_cnn_lstm("/model/info")
 
 
 # Singleton instance

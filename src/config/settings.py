@@ -121,6 +121,32 @@ class Settings(BaseSettings):
         description="URL of the Data Service for external data access"
     )
 
+    # ML Inference Service URLs
+    nhits_service_url: str = Field(
+        default="http://trading-nhits:3002",
+        description="URL of the NHITS Price Forecast Service"
+    )
+    tcn_service_url: str = Field(
+        default="http://trading-tcn:3003",
+        description="URL of the TCN Chart Pattern Detection Service"
+    )
+    hmm_service_url: str = Field(
+        default="http://trading-hmm:3004",
+        description="URL of the HMM Regime Detection Service"
+    )
+    embedder_service_url: str = Field(
+        default="http://trading-embedder:3005",
+        description="URL of the Embedder Feature Embedding Service"
+    )
+    candlestick_service_url: str = Field(
+        default="http://trading-candlestick:3006",
+        description="URL of the Candlestick Pattern Detection Service"
+    )
+    cnn_lstm_service_url: str = Field(
+        default="http://trading-cnn-lstm:3007",
+        description="URL of the CNN-LSTM Multi-Task Prediction Service"
+    )
+
     # Trading Analysis Configuration
     default_lookback_days: int = Field(
         default=30,

@@ -290,7 +290,15 @@ services:
       - FAISS_USE_GPU=1
       - EMBEDDING_DEVICE=cuda
       - FAISS_PERSIST_DIRECTORY=/app/data/faiss
+      # Data Service Gateway
       - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
+      # ML Inference Service URLs
+      - NHITS_SERVICE_URL=http://trading-nhits:${NHITS_SERVICE_PORT:-3002}
+      - TCN_SERVICE_URL=http://trading-tcn:${TCN_SERVICE_PORT:-3003}
+      - HMM_SERVICE_URL=http://trading-hmm:${HMM_SERVICE_PORT:-3004}
+      - EMBEDDER_SERVICE_URL=http://trading-embedder:${EMBEDDER_SERVICE_PORT:-3005}
+      - CANDLESTICK_SERVICE_URL=http://trading-candlestick:${CANDLESTICK_SERVICE_PORT:-3006}
+      - CNN_LSTM_SERVICE_URL=http://trading-cnn-lstm:${CNN_LSTM_SERVICE_PORT:-3007}
       # Build version info
       - BUILD_VERSION=${BUILD_VERSION:-}
       - BUILD_COMMIT=${BUILD_COMMIT:-}
@@ -303,6 +311,11 @@ services:
     restart: unless-stopped
     depends_on:
       - data-service
+      - nhits-service
+      - tcn-service
+      - hmm-service
+      - embedder-service
+      - candlestick-service
     deploy:
       resources:
         limits:
