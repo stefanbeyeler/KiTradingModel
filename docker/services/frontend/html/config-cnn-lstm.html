@@ -1327,9 +1327,24 @@
                     <h2 class="card-title">&#129302; Self-Learning System</h2>
                     <div class="btn-group">
                         <button class="btn btn-purple" id="retrain-toggle-btn" onclick="toggleSelfLearning()">&#9989; Aktiviert</button>
-                        <button class="btn btn-warning" onclick="triggerManualRetrain()">&#9881; Manuell trainieren</button>
+                        <button class="btn btn-warning" id="manual-retrain-btn" onclick="triggerManualRetrain()">&#9881; Manuell trainieren</button>
                     </div>
                 </div>
+
+                <!-- Manual Retrain Progress -->
+                <div id="manual-retrain-progress" style="margin: 1rem 0; display: none;">
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span id="manual-retrain-status">Training läuft...</span>
+                            <span id="manual-retrain-progress-text">0%</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div id="manual-retrain-progress-bar" style="background: #ffb74d; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <div id="manual-retrain-details" style="margin-top: 0.5rem; font-size: 0.8rem; color: #888;"></div>
+                    </div>
+                </div>
+
                 <p class="card-description">
                     Das System lernt kontinuierlich aus seinen Fehlern durch einen geschlossenen Feedback-Loop.
                     Bei schlechter Performance wird automatisch ein Re-Training getriggert.
@@ -3803,12 +3818,30 @@
             }
         }
 
+        let manualRetrainPolling = null;
+
         async function triggerManualRetrain() {
             if (!confirm('Manuelles Re-Training starten? Dies kann einige Zeit dauern.')) {
                 return;
             }
 
+            const btn = document.getElementById('manual-retrain-btn');
+            const progressContainer = document.getElementById('manual-retrain-progress');
+            const progressBar = document.getElementById('manual-retrain-progress-bar');
+            const progressText = document.getElementById('manual-retrain-progress-text');
+            const statusText = document.getElementById('manual-retrain-status');
+            const detailsText = document.getElementById('manual-retrain-details');
+
             try {
+                // Show progress bar and disable button
+                btn.disabled = true;
+                btn.innerHTML = '&#8987; Training läuft...';
+                progressContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+                statusText.textContent = 'Training wird gestartet...';
+                detailsText.textContent = '';
+
                 const response = await fetch('/cnn-lstm/api/v1/retrain/trigger', {
                     method: 'POST'
                 });
@@ -3819,17 +3852,93 @@
                         `Re-Training gestartet: ${result.event.training_job_id}`,
                         'success'
                     );
-                    await loadSelfLearningStatus();
+                    statusText.textContent = 'Training läuft...';
+
+                    // Start polling for progress
+                    pollManualRetrainProgress(result.event.training_job_id);
                 } else {
                     showNotification(
                         result.message || 'Re-Training konnte nicht gestartet werden',
                         'error'
                     );
+                    resetManualRetrainUI();
                 }
 
             } catch (error) {
                 console.error('Error triggering manual retrain:', error);
                 showNotification('Fehler beim Starten des Re-Trainings', 'error');
+                resetManualRetrainUI();
+            }
+        }
+
+        function pollManualRetrainProgress(jobId) {
+            if (manualRetrainPolling) {
+                clearInterval(manualRetrainPolling);
+            }
+
+            const progressBar = document.getElementById('manual-retrain-progress-bar');
+            const progressText = document.getElementById('manual-retrain-progress-text');
+            const statusText = document.getElementById('manual-retrain-status');
+            const detailsText = document.getElementById('manual-retrain-details');
+
+            let progress = 5;
+            progressBar.style.width = '5%';
+            progressText.textContent = '5%';
+
+            manualRetrainPolling = setInterval(async () => {
+                try {
+                    const response = await fetch('/cnn-lstm-train/api/v1/train/status');
+                    const status = await response.json();
+
+                    if (status.is_training) {
+                        // Update progress (estimate based on time or epochs if available)
+                        progress = Math.min(progress + 2, 95);
+                        progressBar.style.width = progress + '%';
+                        progressText.textContent = progress + '%';
+                        statusText.textContent = `Training läuft... (${status.current_epoch || '-'}/${status.total_epochs || '-'} Epochs)`;
+
+                        if (status.current_loss) {
+                            detailsText.textContent = `Loss: ${status.current_loss.toFixed(4)}`;
+                        }
+                    } else {
+                        // Training completed or stopped
+                        clearInterval(manualRetrainPolling);
+                        manualRetrainPolling = null;
+
+                        progressBar.style.width = '100%';
+                        progressBar.style.background = '#81c784';
+                        progressText.textContent = '100%';
+                        statusText.textContent = '✓ Training abgeschlossen';
+
+                        showNotification('Re-Training abgeschlossen', 'success');
+
+                        // Reload status after short delay
+                        setTimeout(async () => {
+                            await loadSelfLearningStatus();
+                            resetManualRetrainUI();
+                        }, 2000);
+                    }
+                } catch (error) {
+                    console.error('Error polling retrain status:', error);
+                    detailsText.textContent = 'Status-Abfrage fehlgeschlagen';
+                }
+            }, 3000);
+        }
+
+        function resetManualRetrainUI() {
+            const btn = document.getElementById('manual-retrain-btn');
+            const progressContainer = document.getElementById('manual-retrain-progress');
+            const progressBar = document.getElementById('manual-retrain-progress-bar');
+
+            btn.disabled = false;
+            btn.innerHTML = '&#9881; Manuell trainieren';
+            progressContainer.style.display = 'none';
+            progressBar.style.width = '0%';
+            progressBar.style.background = '#ffb74d';
+
+            if (manualRetrainPolling) {
+                clearInterval(manualRetrainPolling);
+                manualRetrainPolling = null;
             }
         }
 
