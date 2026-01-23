@@ -802,6 +802,10 @@ async def get_retrain_history(
     """
     try:
         from ..services.auto_retrain_service import auto_retrain_service
+
+        # Update Status von laufenden Trainings bevor History geladen wird
+        await auto_retrain_service.check_training_status()
+
         return {
             "history": auto_retrain_service.get_history(limit=limit),
             "statistics": auto_retrain_service.get_statistics()

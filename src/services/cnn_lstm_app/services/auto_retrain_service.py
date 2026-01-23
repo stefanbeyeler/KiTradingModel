@@ -335,6 +335,8 @@ class AutoRetrainService:
     async def check_training_status(self) -> Optional[dict]:
         """Pruefe Status des aktuellen Trainings."""
         if not self._current_training_job:
+            # Pruefe trotzdem ob Training laeuft und update offene Events
+            await self._update_pending_events()
             return None
 
         try:
@@ -345,23 +347,62 @@ class AutoRetrainService:
 
                 if response.status_code == 200:
                     status = response.json()
+                    training_status = status.get("status", "unknown")
 
                     # Update letztes Event
                     if self._retrain_history:
                         last_event = self._retrain_history[-1]
                         if last_event.training_job_id == self._current_training_job:
-                            last_event.training_status = status.get("status", "unknown")
-
-                            if status.get("status") == "completed":
+                            # Map training service status to retrain status
+                            if training_status in ["completed", "failed", "cancelled"]:
+                                last_event.training_status = training_status
                                 self._current_training_job = None
                                 self._save_history()
+                                logger.info(f"Training {last_event.training_job_id} finished: {training_status}")
+                            else:
+                                last_event.training_status = "running"
 
                     return status
+                elif response.status_code == 400:
+                    # No training in progress - mark as completed if we had a running job
+                    if self._retrain_history:
+                        last_event = self._retrain_history[-1]
+                        if last_event.training_status == "running":
+                            last_event.training_status = "completed"
+                            self._current_training_job = None
+                            self._save_history()
+                            logger.info(f"Training {last_event.training_job_id} completed (no active training)")
 
         except Exception as e:
             logger.warning(f"Error checking training status: {e}")
 
         return None
+
+    async def _update_pending_events(self):
+        """Update alle Events die noch auf 'running' stehen."""
+        if not self._retrain_history:
+            return
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(
+                    f"{self._train_service_url}/api/v1/train/status"
+                )
+
+                # Wenn kein Training laeuft, alle "running" Events auf "completed" setzen
+                if response.status_code == 400:  # No training in progress
+                    updated = False
+                    for event in self._retrain_history:
+                        if event.training_status == "running":
+                            event.training_status = "completed"
+                            updated = True
+                            logger.info(f"Marked stale training {event.training_job_id} as completed")
+
+                    if updated:
+                        self._save_history()
+
+        except Exception as e:
+            logger.debug(f"Could not update pending events: {e}")
 
     async def update_accuracy_after_training(self, new_accuracy: float):
         """

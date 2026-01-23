@@ -397,6 +397,56 @@
             flex-wrap: wrap;
         }
 
+        /* Data Tables */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .data-table th {
+            background: rgba(0, 0, 0, 0.2);
+            color: #64c8ff;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(100, 200, 255, 0.05);
+        }
+
+        .data-table td {
+            color: #d0d0d0;
+        }
+
+        /* Column widths for Re-Training History */
+        .data-table th:nth-child(1),
+        .data-table td:nth-child(1) { width: 18%; }  /* Zeitpunkt */
+        .data-table th:nth-child(2),
+        .data-table td:nth-child(2) { width: 30%; }  /* Auslöser */
+        .data-table th:nth-child(3),
+        .data-table td:nth-child(3) { width: 13%; text-align: center; }  /* Accuracy vorher */
+        .data-table th:nth-child(4),
+        .data-table td:nth-child(4) { width: 13%; text-align: center; }  /* Accuracy nachher */
+        .data-table th:nth-child(5),
+        .data-table td:nth-child(5) { width: 13%; text-align: center; }  /* Verbesserung */
+        .data-table th:nth-child(6),
+        .data-table td:nth-child(6) { width: 13%; text-align: center; }  /* Status */
+
         /* Tabs */
         .tabs {
             display: flex;
@@ -1406,6 +1456,52 @@
                 </div>
             </div>
 
+            <!-- Self-Learning Orchestrator Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#9881; Self-Learning Orchestrator</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-success" id="btn-start-sl-loop" onclick="startSLOrchestratorLoop()">&#9654; Loop starten</button>
+                        <button class="btn btn-danger" id="btn-stop-sl-loop" onclick="stopSLOrchestratorLoop()">&#9632; Loop stoppen</button>
+                        <button class="btn btn-warning" onclick="triggerSLTraining()">&#9889; Manuelles Training</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        Status: <span id="sl-orchestrator-state" style="color: #81c784;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        Loop: <span id="sl-orchestrator-loop" style="color: #888;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        Feedback Samples: <span id="sl-feedback-samples" style="color: #64c8ff;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        Trainings: <span id="sl-training-count" style="color: #ffb74d;">-</span>
+                    </span>
+                </div>
+
+                <!-- Technical Architecture (Collapsible) -->
+                <details style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                    <summary style="cursor: pointer; color: #64c8ff; font-weight: 600;">Technische Architektur</summary>
+                    <div style="margin-top: 1rem; font-size: 0.85rem; color: #aaa;">
+                        <pre style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 4px; overflow-x: auto; font-size: 0.75rem; line-height: 1.4;">
+Prediction → Outcome Tracking → Feedback Buffer → EWC Training
+       ↑                                               ↓
+   Hot-Reload ←── A/B Comparison ←── Model Validation ←─┘
+
+Komponenten:
+• Outcome Tracker (cnn_lstm_app): Verfolgt Multi-Task Outcomes
+• Feedback Buffer (cnn_lstm_train_app): Sammelt gewichtete Samples
+• Self-Learning Orchestrator: Koordiniert EWC-basiertes Training
+
+Evaluierungszeiträume:
+• H1: 24h | H4: 72h | D1: 14 Tage
+                        </pre>
+                    </div>
+                </details>
+            </div>
+
             <!-- Configuration Card -->
             <div class="card">
                 <div class="card-header">
@@ -1561,51 +1657,6 @@
                 </div>
             </div>
 
-            <!-- Self-Learning Orchestrator Card -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">&#9881; Self-Learning Orchestrator</h2>
-                    <div class="btn-group">
-                        <button class="btn btn-success" id="btn-start-sl-loop" onclick="startSLOrchestratorLoop()">&#9654; Loop starten</button>
-                        <button class="btn btn-danger" id="btn-stop-sl-loop" onclick="stopSLOrchestratorLoop()">&#9632; Loop stoppen</button>
-                        <button class="btn btn-warning" onclick="triggerSLTraining()">&#9889; Manuelles Training</button>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
-                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
-                        Status: <span id="sl-orchestrator-state" style="color: #81c784;">-</span>
-                    </span>
-                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
-                        Loop: <span id="sl-orchestrator-loop" style="color: #888;">-</span>
-                    </span>
-                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
-                        Feedback Samples: <span id="sl-feedback-samples" style="color: #64c8ff;">-</span>
-                    </span>
-                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
-                        Trainings: <span id="sl-training-count" style="color: #ffb74d;">-</span>
-                    </span>
-                </div>
-
-                <!-- Technical Architecture (Collapsible) -->
-                <details style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
-                    <summary style="cursor: pointer; color: #64c8ff; font-weight: 600;">Technische Architektur</summary>
-                    <div style="margin-top: 1rem; font-size: 0.85rem; color: #aaa;">
-                        <pre style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 4px; overflow-x: auto; font-size: 0.75rem; line-height: 1.4;">
-Prediction → Outcome Tracking → Feedback Buffer → EWC Training
-       ↑                                               ↓
-   Hot-Reload ←── A/B Comparison ←── Model Validation ←─┘
-
-Komponenten:
-• Outcome Tracker (cnn_lstm_app): Verfolgt Multi-Task Outcomes
-• Feedback Buffer (cnn_lstm_train_app): Sammelt gewichtete Samples
-• Self-Learning Orchestrator: Koordiniert EWC-basiertes Training
-
-Evaluierungszeiträume:
-• H1: 24h | H4: 72h | D1: 14 Tage
-                        </pre>
-                    </div>
-                </details>
-            </div>
         </div>
 
         <!-- Training Tab -->
@@ -3541,10 +3592,10 @@ Evaluierungszeiträume:
                     return `
                         <tr>
                             <td>${timestamp}</td>
-                            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${event.reason}</td>
+                            <td>${event.reason}</td>
                             <td>${accuracyBefore}</td>
                             <td>${accuracyAfter}</td>
-                            <td style="${improvementClass}">${improvement}</td>
+                            <td style="${improvementClass} font-weight: 600;">${improvement}</td>
                             <td>${statusBadge}</td>
                         </tr>
                     `;
