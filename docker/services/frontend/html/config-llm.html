@@ -865,7 +865,7 @@
                 </div>
                 <p style="opacity: 0.7; margin-bottom: 1rem;">
                     Stellen Sie Fragen zu Marktanalysen, Trading-Strategien oder Symbol-Informationen.
-                    <br><span style="color: #ffb74d; font-size: 0.85rem;">Hinweis: Das 70B-Modell kann 30-60 Sekunden für eine Antwort benötigen.</span>
+                    <br><span style="color: #64b5f6; font-size: 0.85rem;">Modell: llama3.1:8b - Antwortzeit typisch unter 1 Sekunde.</span>
                 </p>
                 <div class="chat-container">
                     <div class="chat-messages" id="chat-messages">
@@ -1442,22 +1442,15 @@
         }
 
         // Model metadata for display
+        // Note: llama3.1:70b removed - too large (~42GB), causes system blocking
         const MODEL_METADATA = {
-            'llama3.1:70b': {
-                tier: 'complex',
-                tierLabel: 'Komplex',
-                latency: '2-3s',
-                useCases: ['Trading-Strategien', 'Komplexe Analysen', 'Multi-Step Reasoning', 'Code-Generierung'],
-                description: 'Haupt-Modell für komplexe Trading-Analysen und Empfehlungen',
-                primary: true
-            },
             'llama3.1:8b': {
-                tier: 'fast',
-                tierLabel: 'Schnell',
-                latency: '~200ms',
-                useCases: ['Sentiment-Analyse', 'Klassifikation', 'Entity-Extraction', 'Kurze Zusammenfassungen'],
-                description: 'Schnelles Modell für einfache Aufgaben mit niedriger Latenz',
-                primary: false
+                tier: 'standard',
+                tierLabel: 'Standard',
+                latency: '~500ms',
+                useCases: ['Trading-Analysen', 'Sentiment-Analyse', 'Klassifikation', 'Zusammenfassungen'],
+                description: 'Haupt-Modell für Trading-Analysen - gute Balance zwischen Qualität und Geschwindigkeit',
+                primary: true
             },
             'qwen2.5:7b': {
                 tier: 'fast',
@@ -1465,6 +1458,14 @@
                 latency: '~180ms',
                 useCases: ['Multilingual', 'Sentiment', 'Klassifikation'],
                 description: 'Alternatives schnelles Modell mit Multilingual-Support',
+                primary: false
+            },
+            'llama3.2:3b': {
+                tier: 'fast',
+                tierLabel: 'Ultra-Schnell',
+                latency: '~100ms',
+                useCases: ['Echtzeit-Klassifikation', 'Schnelle Sentiment', 'Alerts'],
+                description: 'Kleineres Modell für Echtzeit-Aufgaben mit minimaler Latenz',
                 primary: false
             }
         };
@@ -1553,13 +1554,13 @@
                     </div>
                     <div class="model-card primary">
                         <div class="model-card-header">
-                            <span class="model-card-name">llama3.1:70b</span>
-                            <span class="model-card-tier complex">Komplex</span>
+                            <span class="model-card-name">llama3.1:8b</span>
+                            <span class="model-card-tier standard">Standard</span>
                         </div>
-                        <div class="model-card-size">~42 GB - Haupt-Modell</div>
+                        <div class="model-card-size">~4.9 GB - Haupt-Modell</div>
                         <div class="model-card-stats">
                             <div class="model-card-stat">
-                                <div class="model-card-stat-value">2-3s</div>
+                                <div class="model-card-stat-value">~500ms</div>
                                 <div class="model-card-stat-label">Latenz</div>
                             </div>
                             <div class="model-card-stat">
@@ -1570,21 +1571,21 @@
                         <div class="model-card-usecases">
                             <div class="model-card-usecases-title">Einsatzgebiete:</div>
                             <div class="model-card-usecases-list">
-                                <span class="usecase-tag">Trading-Strategien</span>
-                                <span class="usecase-tag">Komplexe Analysen</span>
-                                <span class="usecase-tag">Multi-Step Reasoning</span>
+                                <span class="usecase-tag">Trading-Analysen</span>
+                                <span class="usecase-tag">Sentiment-Analyse</span>
+                                <span class="usecase-tag">Zusammenfassungen</span>
                             </div>
                         </div>
                     </div>
                     <div class="model-card fast">
                         <div class="model-card-header">
-                            <span class="model-card-name">llama3.1:8b</span>
+                            <span class="model-card-name">qwen2.5:7b</span>
                             <span class="model-card-tier fast">Schnell</span>
                         </div>
-                        <div class="model-card-size">~4.9 GB - Speed-optimiert</div>
+                        <div class="model-card-size">~4.4 GB - Multilingual</div>
                         <div class="model-card-stats">
                             <div class="model-card-stat">
-                                <div class="model-card-stat-value fast">~200ms</div>
+                                <div class="model-card-stat-value fast">~180ms</div>
                                 <div class="model-card-stat-label">Latenz</div>
                             </div>
                             <div class="model-card-stat">

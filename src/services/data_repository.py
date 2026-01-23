@@ -600,7 +600,7 @@ class DataRepository:
             Timeframe.M5: timedelta(minutes=30),     # was 10 min
             Timeframe.M15: timedelta(hours=1),       # was 30 min
             Timeframe.M30: timedelta(hours=2),       # was 1 hour
-            Timeframe.H1: timedelta(hours=6),        # was 2 hours
+            Timeframe.H1: timedelta(hours=12),       # 12h für Forex ausserhalb Handelszeiten
             Timeframe.H4: timedelta(hours=24),       # was 8 hours
             Timeframe.D1: timedelta(days=3),         # was 1 day
             Timeframe.W1: timedelta(days=14),        # was 7 days

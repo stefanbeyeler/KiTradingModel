@@ -10,8 +10,9 @@ from src.config import settings
 
 llm_router = APIRouter()
 
-# RAG Service URL (accessed via HTTP, not direct import)
+# Service URLs (accessed via HTTP)
 RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://trading-rag:3008")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
 
 # Global LLM service reference (set by main.py)
 _llm_service = None
@@ -86,9 +87,10 @@ async def chat_with_llm(query: str, symbol: Optional[str] = None, use_rag: bool 
         # Try to extract symbol from query if not provided
         detected_symbol = symbol
         if not detected_symbol:
-            # Known trading symbols
+            # Known trading symbols (including common names)
             known_crypto = ['BTCUSD', 'ETHUSD', 'SOLUSD', 'ADAUSD', 'XRPUSD', 'BNBUSD', 'DOTUSD', 'LTCUSD',
-                           'BTC', 'ETH', 'SOL', 'ADA', 'XRP', 'BNB', 'DOT', 'LTC', 'DOGE', 'SHIB']
+                           'BTC', 'ETH', 'SOL', 'ADA', 'XRP', 'BNB', 'DOT', 'LTC', 'DOGE', 'SHIB',
+                           'BITCOIN', 'ETHEREUM', 'SOLANA', 'CARDANO', 'RIPPLE', 'DOGECOIN']
             known_forex = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD',
                           'EURGBP', 'EURJPY', 'GBPJPY']
             known_commodities = ['XAUUSD', 'XAGUSD', 'GOLD', 'SILVER']
@@ -101,10 +103,54 @@ async def chat_with_llm(query: str, symbol: Optional[str] = None, use_rag: bool 
             for sym in all_known:
                 if sym in query_upper:
                     detected_symbol = sym
-                    # Normalize crypto symbols
-                    if detected_symbol in ['BTC', 'ETH', 'SOL', 'ADA', 'XRP', 'BNB', 'DOT', 'LTC', 'DOGE', 'SHIB']:
-                        detected_symbol = detected_symbol + 'USD'
+                    # Normalize crypto symbols to XXXUSD format
+                    crypto_name_map = {
+                        'BITCOIN': 'BTCUSD', 'ETHEREUM': 'ETHUSD', 'SOLANA': 'SOLUSD',
+                        'CARDANO': 'ADAUSD', 'RIPPLE': 'XRPUSD', 'DOGECOIN': 'DOGEUSD',
+                        'BTC': 'BTCUSD', 'ETH': 'ETHUSD', 'SOL': 'SOLUSD',
+                        'ADA': 'ADAUSD', 'XRP': 'XRPUSD', 'BNB': 'BNBUSD',
+                        'DOT': 'DOTUSD', 'LTC': 'LTCUSD', 'DOGE': 'DOGEUSD', 'SHIB': 'SHIBUSD'
+                    }
+                    if detected_symbol in crypto_name_map:
+                        detected_symbol = crypto_name_map[detected_symbol]
                     break
+
+        # Get current market data if symbol detected
+        market_data_text = ""
+        if detected_symbol:
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    # Get latest OHLCV data from Data Service
+                    response = await client.get(
+                        f"{DATA_SERVICE_URL}/api/v1/db/ohlcv/{detected_symbol}",
+                        params={"timeframe": "H1", "limit": 1}
+                    )
+                    if response.status_code == 200:
+                        data = response.json()
+                        candles = data.get("data", [])
+                        if candles:
+                            latest = candles[-1]
+                            current_price = latest.get("close", 0)
+                            high_24h = latest.get("high", 0)
+                            low_24h = latest.get("low", 0)
+                            # Format price without $ for forex pairs
+                            if current_price < 100:
+                                price_format = f"{current_price:.5f}"
+                                high_format = f"{high_24h:.5f}"
+                                low_format = f"{low_24h:.5f}"
+                            else:
+                                price_format = f"${current_price:,.2f}"
+                                high_format = f"${high_24h:,.2f}"
+                                low_format = f"${low_24h:,.2f}"
+                            market_data_text = f"""
+AKTUELLE MARKTDATEN für {detected_symbol} (WICHTIG - verwende diese Preise!):
+- Aktueller Kurs: {price_format}
+- Hoch (letzte Kerze): {high_format}
+- Tief (letzte Kerze): {low_format}
+"""
+                            logger.info(f"Market data for {detected_symbol}: {price_format}")
+            except Exception as e:
+                logger.warning(f"Could not fetch market data for {detected_symbol}: {e}")
 
         # Get RAG context if enabled (via HTTP API)
         rag_context = []
@@ -124,10 +170,13 @@ async def chat_with_llm(query: str, symbol: Optional[str] = None, use_rag: bool 
         # Build prompt with context
         context_text = ""
         if rag_context:
-            context_text = "\n\nRelevanter Kontext:\n" + "\n---\n".join(rag_context)
+            context_text = "\n\nRelevanter Kontext aus Wissensbasis:\n" + "\n---\n".join(rag_context)
 
         system_prompt = f"""Du bist ein erfahrener Trading-Assistent. Beantworte Fragen zu Märkten,
 Trading-Strategien und Finanzanalysen auf Deutsch. Sei präzise und hilfreich.
+
+WICHTIG: Verwende IMMER die aktuellen Marktdaten unten für Preisangaben. Erfinde KEINE Preise!
+{market_data_text}
 {context_text}"""
 
         # Call LLM
