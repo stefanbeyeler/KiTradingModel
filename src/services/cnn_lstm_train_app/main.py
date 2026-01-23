@@ -16,7 +16,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from .routers import training_router, system_router
+from .routers import training_router, system_router, feedback_router, self_learning_router
 
 # =============================================================================
 # Configuration
@@ -92,12 +92,31 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Could not load training history: {e}")
 
+    # Start Self-Learning Orchestrator
+    self_learning_enabled = os.getenv("SELF_LEARNING_ENABLED", "true").lower() == "true"
+    if self_learning_enabled:
+        try:
+            from .services.self_learning_orchestrator import self_learning_orchestrator
+            await self_learning_orchestrator.start_loop()
+            logger.info("Self-learning orchestrator started")
+        except Exception as e:
+            logger.warning(f"Could not start self-learning orchestrator: {e}")
+
     logger.info(f"{SERVICE_NAME} service started successfully")
 
     yield
 
     # Shutdown
     logger.info(f"Shutting down {SERVICE_NAME} service")
+
+    # Stop Self-Learning Orchestrator
+    try:
+        from .services.self_learning_orchestrator import self_learning_orchestrator
+        if self_learning_orchestrator._running:
+            await self_learning_orchestrator.stop_loop()
+            logger.info("Self-learning orchestrator stopped")
+    except Exception as e:
+        logger.warning(f"Could not stop self-learning orchestrator: {e}")
 
     # Speichere Training-Historie
     try:
@@ -132,7 +151,15 @@ openapi_tags = [
         "description": "Training-Jobs starten, ueberwachen und verwalten"
     },
     {
-        "name": "3. Models",
+        "name": "3. Feedback Buffer",
+        "description": "Feedback-Sammlung für Self-Learning"
+    },
+    {
+        "name": "4. Self-Learning",
+        "description": "Selbstlernende Modell-Optimierung"
+    },
+    {
+        "name": "5. Models",
         "description": "Trainierte Modelle verwalten"
     },
 ]
@@ -182,6 +209,8 @@ app.add_middleware(
 
 app.include_router(system_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(training_router, prefix="/api/v1", tags=["2. Training"])
+app.include_router(feedback_router, prefix="/api/v1", tags=["3. Feedback Buffer"])
+app.include_router(self_learning_router, prefix="/api/v1", tags=["4. Self-Learning"])
 
 
 # =============================================================================

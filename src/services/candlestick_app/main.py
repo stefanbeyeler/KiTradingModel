@@ -25,6 +25,7 @@ from .routers import detection_router, system_router, history_router, claude_val
 from .routers.system_router import test_health_router
 from .routers.auto_optimization_router import router as auto_optimization_router
 from .routers.rule_optimizer_router import router as rule_optimizer_router
+from .routers.outcome_router import router as outcome_router
 from .services.pattern_detection_service import candlestick_pattern_service
 
 # Import für Test-Health-Funktionalität
@@ -33,6 +34,7 @@ from src.shared.health import get_test_unhealthy_status
 from .services.pattern_history_service import pattern_history_service
 from .services.claude_validator_service import claude_validator_service
 from .services.auto_optimization_service import auto_optimization_service
+from .services.outcome_tracker_service import outcome_tracker_service
 
 # Configuration
 VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
@@ -73,7 +75,18 @@ async def lifespan(app: FastAPI):
         await auto_optimization_service.start()
         logger.info("Auto-optimization service started")
 
+    # Start outcome tracker loop
+    outcome_tracking_enabled = os.getenv("OUTCOME_TRACKING_ENABLED", "true").lower() == "true"
+    if outcome_tracking_enabled:
+        await outcome_tracker_service.start_loop()
+        logger.info("Outcome tracker loop started")
+
     yield
+
+    # Stop outcome tracker on shutdown
+    if outcome_tracker_service.is_running():
+        await outcome_tracker_service.stop_loop()
+        logger.info("Outcome tracker loop stopped")
 
     # Stop auto-optimization on shutdown
     if auto_optimization_service._running:
@@ -120,6 +133,10 @@ openapi_tags = [
     {
         "name": "7. Auto-Optimization",
         "description": "Automatische Regeloptimierung basierend auf Feedback"
+    },
+    {
+        "name": "8. Outcome Tracking",
+        "description": "Pattern-Outcome-Tracking für Self-Learning"
     },
 ]
 
@@ -182,6 +199,7 @@ app.include_router(claude_validator_router, prefix="/api/v1/claude", tags=["4. C
 app.include_router(rule_optimizer_router, tags=["5. Rule Optimizer"])
 app.include_router(pattern_examples_router, prefix="/api/v1/examples", tags=["6. Pattern Examples"])
 app.include_router(auto_optimization_router, prefix="/api/v1", tags=["7. Auto-Optimization"])
+app.include_router(outcome_router, prefix="/api/v1", tags=["8. Outcome Tracking"])
 
 
 @app.get("/")

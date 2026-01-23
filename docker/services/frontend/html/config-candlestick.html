@@ -2251,6 +2251,7 @@
             <button class="tab" onclick="switchTab('revalidation')">Re-Validierung <span id="revalidationBadge" class="tab-badge" style="display: none;">0</span></button>
             <button class="tab" onclick="switchTab('ruleoptimizer')">⚙️ Regelwerk</button>
             <button class="tab" onclick="switchTab('claudeqa')">🤖 Claude QA</button>
+            <button class="tab" onclick="switchTab('selflearning')">🧠 Self-Learning</button>
         </div>
 
         <!-- Tab: Status (Dashboard) -->
@@ -3409,6 +3410,128 @@
                 </div>
             </div>
         </div><!-- End Tab: Claude QA -->
+
+        <!-- Tab: Self-Learning -->
+        <div id="tab-selflearning" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🧠 Self-Learning System</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary btn-sm" onclick="loadSelfLearningStatus()">Aktualisieren</button>
+                    </div>
+                </div>
+
+                <!-- Closed-Loop Feedback Diagram -->
+                <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <h3 style="color: #64c8ff; font-size: 1rem; margin-bottom: 0.75rem;">Closed-Loop Feedback</h3>
+                    <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <!-- Phase 1: Detection -->
+                        <div style="text-align: center;">
+                            <div style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #2196f3, #1976d2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem;">
+                                <span style="font-size: 1.8rem;">🔍</span>
+                            </div>
+                            <div style="font-size: 0.85rem; font-weight: 600;">Detection</div>
+                            <div style="font-size: 0.7rem; color: #888;">Pattern erkannt</div>
+                        </div>
+                        <div style="color: #64c8ff; font-size: 1.5rem;">→</div>
+                        <!-- Phase 2: Evaluation -->
+                        <div style="text-align: center;">
+                            <div style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #ff9800, #f57c00); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem;">
+                                <span style="font-size: 1.8rem;">⏱️</span>
+                            </div>
+                            <div style="font-size: 0.85rem; font-weight: 600;">Evaluierung</div>
+                            <div style="font-size: 0.7rem; color: #888;">24-72h Tracking</div>
+                        </div>
+                        <div style="color: #64c8ff; font-size: 1.5rem;">→</div>
+                        <!-- Phase 3: Analysis -->
+                        <div style="text-align: center;">
+                            <div style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #9c27b0, #7b1fa2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem;">
+                                <span style="font-size: 1.8rem;">📊</span>
+                            </div>
+                            <div style="font-size: 0.85rem; font-weight: 600;">Analyse</div>
+                            <div style="font-size: 0.7rem; color: #888;">Feedback-Buffer</div>
+                        </div>
+                        <div style="color: #64c8ff; font-size: 1.5rem;">→</div>
+                        <!-- Phase 4: Optimization -->
+                        <div style="text-align: center;">
+                            <div style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #4caf50, #388e3c); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem;">
+                                <span style="font-size: 1.8rem;">⚙️</span>
+                            </div>
+                            <div style="font-size: 0.85rem; font-weight: 600;">Optimierung</div>
+                            <div style="font-size: 0.7rem; color: #888;">Regel-Anpassung</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Row -->
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+                    <div class="stat-card">
+                        <div class="stat-value" id="slOutcomesPending">-</div>
+                        <div class="stat-label">Outcomes Pending</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success" id="slOutcomesSuccess">-</div>
+                        <div class="stat-label">Erfolgreiche</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value warning" id="slOutcomesFailed">-</div>
+                        <div class="stat-label">Fehlgeschlagene</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="slFeedbackSamples">-</div>
+                        <div class="stat-label">Feedback Samples</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success" id="slSuccessRate">-</div>
+                        <div class="stat-label">Erfolgsrate</div>
+                    </div>
+                </div>
+
+                <!-- Orchestrator Status -->
+                <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <h4 style="color: #ce93d8; margin-bottom: 0.75rem;">Self-Learning Orchestrator</h4>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Status: <span id="slOrchestratorState" style="color: #81c784;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Loop: <span id="slOrchestratorLoop" style="color: #888;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Letzte Prüfung: <span id="slLastCheck" style="color: #64c8ff;">-</span>
+                        </span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                            Optimierungen: <span id="slOptimizationCount" style="color: #ffb74d;">-</span>
+                        </span>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-success btn-sm" onclick="startSelfLearningLoop()" id="btnStartSLLoop">▶ Loop starten</button>
+                        <button class="btn btn-danger btn-sm" onclick="stopSelfLearningLoop()" id="btnStopSLLoop">⏹ Loop stoppen</button>
+                        <button class="btn btn-warning btn-sm" onclick="triggerManualOptimization()">⚡ Manuelle Optimierung</button>
+                    </div>
+                </div>
+
+                <!-- Technical Architecture (Collapsible) -->
+                <details style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                    <summary style="cursor: pointer; color: #64c8ff; font-weight: 600;">Technische Architektur</summary>
+                    <div style="margin-top: 1rem; font-size: 0.85rem; color: #aaa;">
+                        <pre style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 4px; overflow-x: auto; font-size: 0.75rem; line-height: 1.4;">
+Pattern Detection → Outcome Tracking → Feedback Buffer → Rule Optimization
+       ↑                                                        ↓
+   Updated Rules ←─────────────────────────────────────── Parameter Tuning
+
+Komponenten:
+• Outcome Tracker (candlestick_app): Verfolgt Pattern-Outcomes über 24-72h
+• Feedback Buffer (candlestick_train_app): Sammelt evaluierte Outcomes
+• Self-Learning Orchestrator: Koordiniert Regel-Parameter-Optimierung
+
+Evaluierungszeiträume:
+• H1: 24 Stunden | H4: 72 Stunden | D1: 14 Tage
+                        </pre>
+                    </div>
+                </details>
+            </div>
+        </div><!-- End Tab: Self-Learning -->
 
     </main>
 
@@ -4729,6 +4852,14 @@
                 loadClaudeStatus();
                 loadAutoOptStatus();
                 loadFeedbackLoopData();
+
+                // Stop training auto-refresh
+                if (trainingRefreshInterval) {
+                    clearInterval(trainingRefreshInterval);
+                    trainingRefreshInterval = null;
+                }
+            } else if (tabName === 'selflearning') {
+                loadSelfLearningStatus();
 
                 // Stop training auto-refresh
                 if (trainingRefreshInterval) {
@@ -9336,6 +9467,88 @@
 
             } catch (error) {
                 console.error('Failed to factory reset:', error);
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        // === Self-Learning Functions ===
+
+        async function loadSelfLearningStatus() {
+            try {
+                // Load outcome statistics from inference service
+                const outcomeResponse = await fetch(`${CANDLESTICK_API}/outcomes/statistics`);
+                if (outcomeResponse.ok) {
+                    const outcomeStats = await outcomeResponse.json();
+                    document.getElementById('slOutcomesPending').textContent = outcomeStats.pending || 0;
+                    document.getElementById('slOutcomesSuccess').textContent = outcomeStats.by_status?.success || 0;
+                    document.getElementById('slOutcomesFailed').textContent = outcomeStats.by_status?.failed || 0;
+                    document.getElementById('slSuccessRate').textContent = (outcomeStats.success_rate || 0).toFixed(1) + '%';
+                }
+
+                // Load orchestrator status from training service
+                const orchestratorResponse = await fetch(`${CANDLESTICK_TRAIN_API}/self-learning/status`);
+                if (orchestratorResponse.ok) {
+                    const data = await orchestratorResponse.json();
+                    const status = data.status || {};
+
+                    document.getElementById('slFeedbackSamples').textContent = status.feedback_buffer_samples || 0;
+                    document.getElementById('slOrchestratorState').textContent = status.state || 'idle';
+                    document.getElementById('slOrchestratorLoop').textContent = status.loop_running ? 'Aktiv' : 'Gestoppt';
+                    document.getElementById('slOrchestratorLoop').style.color = status.loop_running ? '#81c784' : '#e57373';
+                    document.getElementById('slLastCheck').textContent = status.last_check ? new Date(status.last_check).toLocaleString('de-CH') : '-';
+                    document.getElementById('slOptimizationCount').textContent = status.optimization_count || 0;
+
+                    // Update button states
+                    document.getElementById('btnStartSLLoop').disabled = status.loop_running;
+                    document.getElementById('btnStopSLLoop').disabled = !status.loop_running;
+                }
+            } catch (error) {
+                console.error('Self-Learning Status Fehler:', error);
+            }
+        }
+
+        async function startSelfLearningLoop() {
+            try {
+                const response = await fetch(`${CANDLESTICK_TRAIN_API}/self-learning/start`, { method: 'POST' });
+                if (response.ok) {
+                    showToast('Self-Learning Loop gestartet', 'success');
+                    await loadSelfLearningStatus();
+                } else {
+                    showToast('Fehler beim Starten des Loops', 'error');
+                }
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        async function stopSelfLearningLoop() {
+            try {
+                const response = await fetch(`${CANDLESTICK_TRAIN_API}/self-learning/stop`, { method: 'POST' });
+                if (response.ok) {
+                    showToast('Self-Learning Loop gestoppt', 'warning');
+                    await loadSelfLearningStatus();
+                } else {
+                    showToast('Fehler beim Stoppen des Loops', 'error');
+                }
+            } catch (error) {
+                showToast('Fehler: ' + error.message, 'error');
+            }
+        }
+
+        async function triggerManualOptimization() {
+            try {
+                const response = await fetch(`${CANDLESTICK_TRAIN_API}/self-learning/trigger`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.status === 'completed') {
+                    showToast(`Optimierung abgeschlossen: ${data.recommendations || 0} Empfehlungen`, 'success');
+                } else if (data.status === 'skipped') {
+                    showToast(`Optimierung übersprungen: ${data.reason}`, 'warning');
+                } else {
+                    showToast('Optimierung gestartet', 'info');
+                }
+                await loadSelfLearningStatus();
+            } catch (error) {
                 showToast('Fehler: ' + error.message, 'error');
             }
         }

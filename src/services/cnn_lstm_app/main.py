@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from .routers import prediction_router, system_router, revalidation_router
+from .routers import prediction_router, system_router, revalidation_router, outcome_router
 
 # =============================================================================
 # Configuration
@@ -101,12 +101,31 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Could not auto-start backtest scheduler: {e}")
 
+    # Start Outcome Tracker loop
+    outcome_tracking_enabled = os.getenv("OUTCOME_TRACKING_ENABLED", "true").lower() == "true"
+    if outcome_tracking_enabled:
+        try:
+            from .services.outcome_tracker_service import outcome_tracker_service
+            await outcome_tracker_service.start_loop()
+            logger.info("Outcome tracker loop started")
+        except Exception as e:
+            logger.warning(f"Could not start outcome tracker: {e}")
+
     logger.info(f"{SERVICE_NAME} service started successfully")
 
     yield
 
     # Shutdown
     logger.info(f"Shutting down {SERVICE_NAME} service")
+
+    # Stop Outcome Tracker loop
+    try:
+        from .services.outcome_tracker_service import outcome_tracker_service
+        if outcome_tracker_service.is_running():
+            await outcome_tracker_service.stop_loop()
+            logger.info("Outcome tracker loop stopped")
+    except Exception as e:
+        logger.warning(f"Could not stop outcome tracker: {e}")
 
     # Stoppe Auto-Backtest Scheduler
     try:
@@ -145,6 +164,10 @@ openapi_tags = [
     {
         "name": "6. Backtesting",
         "description": "Historische Validierung gegen Marktdaten"
+    },
+    {
+        "name": "7. Outcome Tracking",
+        "description": "Prediction-Outcome-Tracking für Self-Learning"
     },
 ]
 
@@ -195,6 +218,7 @@ app.include_router(
     prefix="/api/v1",
     tags=["4. History", "5. Feedback", "6. Backtesting"]
 )
+app.include_router(outcome_router, prefix="/api/v1", tags=["7. Outcome Tracking"])
 
 
 # =============================================================================

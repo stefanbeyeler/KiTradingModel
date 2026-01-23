@@ -20,8 +20,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from .routers import training_router, system_router
+from .routers.feedback_router import router as feedback_router
+from .routers.self_learning_router import router as self_learning_router
 from .services.training_service import training_service
 from .services.training_scheduler import training_scheduler
+from .services.self_learning_orchestrator import self_learning_orchestrator
 
 # Import für Test-Health-Funktionalität
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
@@ -58,7 +61,18 @@ async def lifespan(app: FastAPI):
     # Start scheduler if enabled
     await training_scheduler.start()
 
+    # Start self-learning orchestrator if enabled
+    self_learning_enabled = os.getenv("SELF_LEARNING_ENABLED", "true").lower() == "true"
+    if self_learning_enabled:
+        await self_learning_orchestrator.start_loop()
+        logger.info("Self-learning orchestrator started")
+
     yield
+
+    # Stop self-learning orchestrator
+    if self_learning_orchestrator._running:
+        await self_learning_orchestrator.stop_loop()
+        logger.info("Self-learning orchestrator stopped")
 
     # Stop scheduler
     await training_scheduler.stop()
@@ -78,6 +92,14 @@ openapi_tags = [
     {
         "name": "2. Training",
         "description": "Training-Jobs starten, überwachen und verwalten"
+    },
+    {
+        "name": "3. Feedback Buffer",
+        "description": "Feedback-Samples für Self-Learning verwalten"
+    },
+    {
+        "name": "4. Self-Learning",
+        "description": "Self-Learning Orchestrator steuern"
     },
 ]
 
@@ -123,6 +145,8 @@ app.add_middleware(
 # Include routers
 app.include_router(system_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(training_router, prefix="/api/v1", tags=["2. Training"])
+app.include_router(feedback_router, prefix="/api/v1", tags=["3. Feedback Buffer"])
+app.include_router(self_learning_router, prefix="/api/v1", tags=["4. Self-Learning"])
 
 # Test-Health-Router
 test_health_router = create_test_health_router("candlestick-train")

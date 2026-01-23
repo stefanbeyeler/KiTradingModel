@@ -1512,6 +1512,100 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Outcome Tracking Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128202; Outcome Tracking</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="loadOutcomeStats()">Aktualisieren</button>
+                    </div>
+                </div>
+                <p class="card-description">
+                    Verfolgt die Preisentwicklung nach Vorhersagen und evaluiert die tatsächliche Genauigkeit über 24-72 Stunden.
+                </p>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-outcomes-pending">-</div>
+                        <div class="stat-label">Outcomes Pending</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success" id="stat-outcomes-success">-</div>
+                        <div class="stat-label">Erfolgreiche</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value error" id="stat-outcomes-failed">-</div>
+                        <div class="stat-label">Fehlgeschlagene</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value purple" id="stat-outcomes-rate">-</div>
+                        <div class="stat-label">Erfolgsrate</div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <h4 style="color: #64c8ff; margin-bottom: 0.5rem;">Task-Genauigkeit</h4>
+                    <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-task-price">-</div>
+                            <div class="stat-label">Preis-Task</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-task-pattern">-</div>
+                            <div class="stat-label">Pattern-Task</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-task-regime">-</div>
+                            <div class="stat-label">Regime-Task</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Self-Learning Orchestrator Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#9881; Self-Learning Orchestrator</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-success" id="btn-start-sl-loop" onclick="startSLOrchestratorLoop()">&#9654; Loop starten</button>
+                        <button class="btn btn-danger" id="btn-stop-sl-loop" onclick="stopSLOrchestratorLoop()">&#9632; Loop stoppen</button>
+                        <button class="btn btn-warning" onclick="triggerSLTraining()">&#9889; Manuelles Training</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        Status: <span id="sl-orchestrator-state" style="color: #81c784;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        Loop: <span id="sl-orchestrator-loop" style="color: #888;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        Feedback Samples: <span id="sl-feedback-samples" style="color: #64c8ff;">-</span>
+                    </span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                        Trainings: <span id="sl-training-count" style="color: #ffb74d;">-</span>
+                    </span>
+                </div>
+
+                <!-- Technical Architecture (Collapsible) -->
+                <details style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                    <summary style="cursor: pointer; color: #64c8ff; font-weight: 600;">Technische Architektur</summary>
+                    <div style="margin-top: 1rem; font-size: 0.85rem; color: #aaa;">
+                        <pre style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 4px; overflow-x: auto; font-size: 0.75rem; line-height: 1.4;">
+Prediction → Outcome Tracking → Feedback Buffer → EWC Training
+       ↑                                               ↓
+   Hot-Reload ←── A/B Comparison ←── Model Validation ←─┘
+
+Komponenten:
+• Outcome Tracker (cnn_lstm_app): Verfolgt Multi-Task Outcomes
+• Feedback Buffer (cnn_lstm_train_app): Sammelt gewichtete Samples
+• Self-Learning Orchestrator: Koordiniert EWC-basiertes Training
+
+Evaluierungszeiträume:
+• H1: 24h | H4: 72h | D1: 14 Tage
+                        </pre>
+                    </div>
+                </details>
+            </div>
         </div>
 
         <!-- Training Tab -->
@@ -1815,6 +1909,8 @@
                 loadCnnLstmMetricsHistory();
             } else if (tabId === 'selflearning') {
                 loadSelfLearningStatus();
+                loadOutcomeStats();
+                loadSLOrchestratorStatus();
             }
         }
 
@@ -3942,6 +4038,194 @@
             }
         }
 
+        // =================================================================
+        // Outcome Tracking Functions
+        // =================================================================
+
+        async function loadOutcomeStats() {
+            try {
+                const response = await fetch('/cnn-lstm/api/v1/outcomes/statistics');
+                if (!response.ok) {
+                    console.warn('Outcome statistics not available');
+                    return;
+                }
+                const stats = await response.json();
+
+                // Update outcome counts
+                document.getElementById('stat-outcomes-pending').textContent = stats.pending || 0;
+                document.getElementById('stat-outcomes-success').textContent = stats.successful || 0;
+                document.getElementById('stat-outcomes-failed').textContent = stats.failed || 0;
+
+                // Calculate success rate
+                const total = (stats.successful || 0) + (stats.failed || 0);
+                const rate = total > 0 ? ((stats.successful || 0) / total * 100).toFixed(1) : '-';
+                document.getElementById('stat-outcomes-rate').textContent = rate !== '-' ? `${rate}%` : '-';
+
+                // Update task accuracy
+                const taskStats = stats.by_task || {};
+
+                // Price task accuracy
+                if (taskStats.price) {
+                    const priceTotal = (taskStats.price.successful || 0) + (taskStats.price.failed || 0);
+                    const priceAcc = priceTotal > 0 ? ((taskStats.price.successful || 0) / priceTotal * 100).toFixed(1) : '-';
+                    document.getElementById('stat-task-price').textContent = priceAcc !== '-' ? `${priceAcc}%` : '-';
+                } else {
+                    document.getElementById('stat-task-price').textContent = '-';
+                }
+
+                // Pattern task accuracy
+                if (taskStats.pattern) {
+                    const patternTotal = (taskStats.pattern.successful || 0) + (taskStats.pattern.failed || 0);
+                    const patternAcc = patternTotal > 0 ? ((taskStats.pattern.successful || 0) / patternTotal * 100).toFixed(1) : '-';
+                    document.getElementById('stat-task-pattern').textContent = patternAcc !== '-' ? `${patternAcc}%` : '-';
+                } else {
+                    document.getElementById('stat-task-pattern').textContent = '-';
+                }
+
+                // Regime task accuracy
+                if (taskStats.regime) {
+                    const regimeTotal = (taskStats.regime.successful || 0) + (taskStats.regime.failed || 0);
+                    const regimeAcc = regimeTotal > 0 ? ((taskStats.regime.successful || 0) / regimeTotal * 100).toFixed(1) : '-';
+                    document.getElementById('stat-task-regime').textContent = regimeAcc !== '-' ? `${regimeAcc}%` : '-';
+                } else {
+                    document.getElementById('stat-task-regime').textContent = '-';
+                }
+
+            } catch (error) {
+                console.error('Error loading outcome stats:', error);
+            }
+        }
+
+        // =================================================================
+        // Self-Learning Orchestrator Functions (CNN-LSTM Train Service)
+        // =================================================================
+
+        async function loadSLOrchestratorStatus() {
+            try {
+                const response = await fetch('/cnn-lstm-train/api/v1/self-learning/status');
+                if (!response.ok) {
+                    console.warn('Self-learning status not available');
+                    return;
+                }
+                const status = await response.json();
+
+                // Update orchestrator state
+                const stateEl = document.getElementById('sl-orchestrator-state');
+                if (stateEl) {
+                    stateEl.textContent = status.state || 'IDLE';
+                    stateEl.style.color = status.state === 'TRAINING' ? '#ffb74d' :
+                                          status.state === 'IDLE' ? '#81c784' : '#64c8ff';
+                }
+
+                // Update loop status
+                const loopEl = document.getElementById('sl-orchestrator-loop');
+                if (loopEl) {
+                    loopEl.textContent = status.loop_running ? 'Aktiv' : 'Inaktiv';
+                    loopEl.style.color = status.loop_running ? '#81c784' : '#888';
+                }
+
+                // Update button states
+                const startBtn = document.getElementById('btn-start-sl-loop');
+                const stopBtn = document.getElementById('btn-stop-sl-loop');
+                if (startBtn && stopBtn) {
+                    startBtn.disabled = status.loop_running;
+                    stopBtn.disabled = !status.loop_running;
+                }
+
+                // Update training count
+                const trainingCountEl = document.getElementById('sl-training-count');
+                if (trainingCountEl) {
+                    trainingCountEl.textContent = status.training_count || 0;
+                }
+
+                // Load feedback buffer stats
+                await loadFeedbackBufferStats();
+
+            } catch (error) {
+                console.error('Error loading SL orchestrator status:', error);
+            }
+        }
+
+        async function loadFeedbackBufferStats() {
+            try {
+                const response = await fetch('/cnn-lstm-train/api/v1/feedback-buffer/statistics');
+                if (!response.ok) return;
+                const stats = await response.json();
+
+                const samplesEl = document.getElementById('sl-feedback-samples');
+                if (samplesEl) {
+                    samplesEl.textContent = stats.total_samples || 0;
+                }
+
+            } catch (error) {
+                console.error('Error loading feedback buffer stats:', error);
+            }
+        }
+
+        async function startSLOrchestratorLoop() {
+            try {
+                const response = await fetch('/cnn-lstm-train/api/v1/self-learning/start', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast('Self-Learning Loop gestartet', 'success');
+                    await loadSLOrchestratorStatus();
+                } else {
+                    showToast(result.detail || 'Fehler beim Starten', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error starting SL orchestrator:', error);
+                showToast('Fehler beim Starten des Self-Learning Loops', 'error');
+            }
+        }
+
+        async function stopSLOrchestratorLoop() {
+            try {
+                const response = await fetch('/cnn-lstm-train/api/v1/self-learning/stop', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast('Self-Learning Loop gestoppt', 'success');
+                    await loadSLOrchestratorStatus();
+                } else {
+                    showToast(result.detail || 'Fehler beim Stoppen', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error stopping SL orchestrator:', error);
+                showToast('Fehler beim Stoppen des Self-Learning Loops', 'error');
+            }
+        }
+
+        async function triggerSLTraining() {
+            if (!confirm('Manuelles Self-Learning Training starten? Dies trainiert das Modell mit den gesammelten Feedback-Samples.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/cnn-lstm-train/api/v1/self-learning/trigger', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast(`Training gestartet: ${result.message || 'OK'}`, 'success');
+                    await loadSLOrchestratorStatus();
+                } else {
+                    showToast(result.detail || 'Fehler beim Triggern', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error triggering SL training:', error);
+                showToast('Fehler beim Triggern des Self-Learning Trainings', 'error');
+            }
+        }
+
         // Initial Load
         document.addEventListener('DOMContentLoaded', () => {
             updateHeaderStatus();
@@ -3955,8 +4239,14 @@
             loadBacktestSummary();
             loadSchedulerStatus();
 
-            // Load self-learning status
+            // Load self-learning status (old retrain system)
             loadSelfLearningStatus();
+
+            // Load outcome tracking stats
+            loadOutcomeStats();
+
+            // Load Self-Learning Orchestrator status
+            loadSLOrchestratorStatus();
 
             // Load Lernfortschritt chart (Features tab is default)
             loadCnnLstmMetricsHistory();
