@@ -698,7 +698,6 @@
             <button class="tab-btn" onclick="showTab('scoring')">&#127919; Trade Scoring</button>
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
             <button class="tab-btn" onclick="showTab('validation')">&#128203; Validierung</button>
-            <button class="tab-btn" onclick="showTab('scheduling')">&#128197; Scheduling</button>
             <button class="tab-btn" onclick="showTab('selflearning')">&#129302; Self-Learning</button>
         </div>
 
@@ -1058,88 +1057,6 @@
         </div>
 
         <!-- Scheduling Tab -->
-        <div id="tab-scheduling" class="tab-content">
-            <!-- Scheduler Status -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">&#128197; Scheduler Status</h3>
-                    <button class="btn btn-primary btn-sm" onclick="loadSchedulerStatus()">&#8635; Aktualisieren</button>
-                </div>
-                <div id="scheduler-status">
-                    <div class="loading"><div class="spinner"></div></div>
-                </div>
-            </div>
-
-            <div class="grid-2-equal">
-                <!-- Schedule List -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#128203; Training-Schedules</h3>
-                    </div>
-                    <div id="schedule-list">
-                        <div class="loading"><div class="spinner"></div></div>
-                    </div>
-                </div>
-
-                <!-- Create Schedule -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">&#10133; Neuer Schedule</h3>
-                    </div>
-                    <div class="form-group">
-                        <label>Intervall</label>
-                        <select class="form-control" id="schedule-interval">
-                            <option value="hourly">Stündlich</option>
-                            <option value="daily" selected>Täglich</option>
-                            <option value="weekly">Wöchentlich</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Stunde (UTC, 0-23)</label>
-                        <input type="number" class="form-control" id="schedule-hour" value="3" min="0" max="23">
-                    </div>
-                    <div class="form-group" id="weekday-group" style="display: none;">
-                        <label>Wochentag</label>
-                        <select class="form-control" id="schedule-weekday">
-                            <option value="0">Montag</option>
-                            <option value="1">Dienstag</option>
-                            <option value="2">Mittwoch</option>
-                            <option value="3">Donnerstag</option>
-                            <option value="4">Freitag</option>
-                            <option value="5">Samstag</option>
-                            <option value="6">Sonntag</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Timeframe</label>
-                        <select class="form-control" id="schedule-timeframe">
-                            <option value="1h" selected>H1</option>
-                            <option value="4h">H4</option>
-                            <option value="1day">D1</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Lookback (Tage)</label>
-                        <input type="number" class="form-control" id="schedule-lookback" value="365" min="30" max="730">
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="schedule-train-hmm" checked> HMM trainieren
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="schedule-train-scorer" checked> Scorer trainieren
-                        </label>
-                    </div>
-                    <div class="info-box" style="margin-bottom: 1rem;">
-                        <strong>Hinweis:</strong> Leere Symbol-Liste = Alle Symbole aus dem Data Service werden trainiert.
-                    </div>
-                    <button class="btn btn-success" onclick="createSchedule()">&#10133; Schedule erstellen</button>
-                </div>
-            </div>
-        </div>
-
         <!-- Self-Learning Tab -->
         <div id="tab-selflearning" class="tab-content">
             <!-- Closed-Loop Visualization -->
@@ -1306,6 +1223,79 @@
                 </div>
             </div>
 
+            <!-- Scheduling Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128197; Training-Scheduling</h2>
+                    <button class="btn btn-primary btn-sm" onclick="loadSchedulerStatus()">&#8635; Aktualisieren</button>
+                </div>
+                <div id="scheduler-status" style="margin-bottom: 1rem;">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+
+                <div class="grid-2-equal">
+                    <!-- Schedule List -->
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                        <h4 style="color: #64c8ff; margin-bottom: 1rem; font-size: 0.9rem;">&#128203; Aktive Schedules</h4>
+                        <div id="schedule-list">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Create Schedule -->
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                        <h4 style="color: #81c784; margin-bottom: 1rem; font-size: 0.9rem;">&#10133; Neuer Schedule</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.8rem;">Intervall</label>
+                                <select class="form-control" id="schedule-interval" style="font-size: 0.85rem;">
+                                    <option value="hourly">Stündlich</option>
+                                    <option value="daily" selected>Täglich</option>
+                                    <option value="weekly">Wöchentlich</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.8rem;">Stunde (UTC)</label>
+                                <input type="number" class="form-control" id="schedule-hour" value="3" min="0" max="23" style="font-size: 0.85rem;">
+                            </div>
+                            <div class="form-group" id="weekday-group" style="display: none; margin-bottom: 0;">
+                                <label style="font-size: 0.8rem;">Wochentag</label>
+                                <select class="form-control" id="schedule-weekday" style="font-size: 0.85rem;">
+                                    <option value="0">Montag</option>
+                                    <option value="1">Dienstag</option>
+                                    <option value="2">Mittwoch</option>
+                                    <option value="3">Donnerstag</option>
+                                    <option value="4">Freitag</option>
+                                    <option value="5">Samstag</option>
+                                    <option value="6">Sonntag</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.8rem;">Timeframe</label>
+                                <select class="form-control" id="schedule-timeframe" style="font-size: 0.85rem;">
+                                    <option value="1h" selected>H1</option>
+                                    <option value="4h">H4</option>
+                                    <option value="1day">D1</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.8rem;">Lookback (Tage)</label>
+                                <input type="number" class="form-control" id="schedule-lookback" value="365" min="30" max="730" style="font-size: 0.85rem;">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 1.5rem; margin: 0.75rem 0;">
+                            <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem;">
+                                <input type="checkbox" id="schedule-train-hmm" checked> HMM
+                            </label>
+                            <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem;">
+                                <input type="checkbox" id="schedule-train-scorer" checked> Scorer
+                            </label>
+                        </div>
+                        <button class="btn btn-success btn-sm" onclick="createSchedule()" style="width: 100%;">&#10133; Schedule erstellen</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Deployment History Table -->
             <div class="card">
                 <div class="card-header">
@@ -1319,11 +1309,10 @@
                         <thead>
                             <tr>
                                 <th>Zeitpunkt</th>
-                                <th>Version</th>
-                                <th>Entscheidung</th>
+                                <th>Typ</th>
+                                <th>Status</th>
                                 <th>Accuracy</th>
                                 <th>F1-Score</th>
-                                <th>Änderung</th>
                             </tr>
                         </thead>
                         <tbody id="hmm-deployment-tbody">
@@ -1348,11 +1337,10 @@
                         <thead>
                             <tr>
                                 <th>Typ</th>
-                                <th>Symbol</th>
                                 <th>Erstellt</th>
                                 <th>Samples</th>
                                 <th>Status</th>
-                                <th>Grund</th>
+                                <th>Details</th>
                             </tr>
                         </thead>
                         <tbody id="hmm-versions-tbody">
@@ -1467,6 +1455,7 @@
             // Load data for specific tabs
             if (tabName === 'selflearning') {
                 loadHmmSelfLearningStats();
+                loadSchedulerStatus();
                 loadHmmDeploymentHistory();
                 loadHmmModelVersions();
             }
@@ -3217,56 +3206,94 @@
                 const data = await response.json();
                 const history = data.history || [];
 
-                if (history.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #666;">Keine Deployment-Historie vorhanden</td></tr>`;
+                // Filter: only show deployed, rejected, rolled_back (not pending_review)
+                const relevantActions = ['deployed', 'rejected', 'rolled_back', 'first_model'];
+                const filtered = history.filter(h => relevantActions.includes(h.action));
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #666;">Keine Deployment-Historie vorhanden</td></tr>`;
                     return;
                 }
 
-                tbody.innerHTML = history.slice(0, 25).map(item => {
+                // Group HMM entries by version_id, keep Scorer separate
+                const grouped = {};
+                const scorerEntries = [];
+
+                filtered.forEach(item => {
+                    if (item.model_type === 'scorer') {
+                        scorerEntries.push(item);
+                    } else {
+                        const vid = item.version_id || 'unknown';
+                        if (!grouped[vid]) {
+                            grouped[vid] = {
+                                timestamp: item.timestamp,
+                                version_id: vid,
+                                deployed: [], rejected: [], pending: []
+                            };
+                        }
+                        if (item.action === 'deployed') grouped[vid].deployed.push(item.symbol);
+                        else if (item.action === 'rejected') grouped[vid].rejected.push(item.symbol);
+                    }
+                });
+
+                // Build rows
+                let rows = [];
+
+                // Scorer entries first (with full metrics)
+                scorerEntries.forEach(item => {
                     const timestamp = item.timestamp ? new Date(item.timestamp).toLocaleString('de-CH', {
                         day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
                     }) : '-';
-                    const modelType = item.model_type || 'hmm';
-                    const symbol = item.symbol || (modelType === 'scorer' ? 'Scorer' : '-');
-                    const action = item.action || 'unknown';
 
-                    // Get metrics from comparison_result
                     const comp = item.comparison_result || {};
                     const candMetrics = comp.candidate_metrics || {};
                     const accuracy = candMetrics.accuracy ? (candMetrics.accuracy * 100).toFixed(1) + '%' : '-';
                     const f1 = candMetrics.f1_weighted ? (candMetrics.f1_weighted * 100).toFixed(1) + '%' : '-';
 
-                    // Get change info
-                    const improvements = comp.improvements || {};
-                    const accChange = improvements.accuracy !== undefined ?
-                        (improvements.accuracy >= 0 ? '+' : '') + (improvements.accuracy * 100).toFixed(1) + '%' : '-';
+                    const actionBadge = item.action === 'deployed'
+                        ? '<span style="background: rgba(76,175,80,0.2); color: #81c784; padding: 0.2rem 0.5rem; border-radius: 4px;">✓ Deploy</span>'
+                        : '<span style="background: rgba(244,67,54,0.2); color: #e57373; padding: 0.2rem 0.5rem; border-radius: 4px;">✗ Reject</span>';
 
-                    const actionBadge = {
-                        'deployed': '<span style="background: rgba(76,175,80,0.2); color: #81c784; padding: 0.2rem 0.5rem; border-radius: 4px;">✓ Deploy</span>',
-                        'rejected': '<span style="background: rgba(244,67,54,0.2); color: #e57373; padding: 0.2rem 0.5rem; border-radius: 4px;">✗ Reject</span>',
-                        'rolled_back': '<span style="background: rgba(255,152,0,0.2); color: #ffb74d; padding: 0.2rem 0.5rem; border-radius: 4px;">↩ Rollback</span>',
-                        'first_model': '<span style="background: rgba(100,200,255,0.2); color: #64c8ff; padding: 0.2rem 0.5rem; border-radius: 4px;">★ First</span>'
-                    }[action] || `<span style="opacity: 0.5">${action}</span>`;
-
-                    const changeColor = accChange.startsWith('+') ? '#81c784' : (accChange.startsWith('-') ? '#e57373' : '#888');
-
-                    // Type badge
-                    const typeBadge = modelType === 'scorer' ?
-                        '<span style="background: rgba(167,139,250,0.15); color: #a78bfa; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.7rem;">S</span>' :
-                        '<span style="background: rgba(100,200,255,0.15); color: #64c8ff; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.7rem;">H</span>';
-
-                    return `<tr>
+                    rows.push(`<tr>
                         <td style="font-size: 0.85rem;">${timestamp}</td>
-                        <td>${typeBadge} <span style="font-weight: 500;">${symbol}</span></td>
+                        <td><span style="background: rgba(167,139,250,0.2); color: #a78bfa; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">Scorer</span></td>
                         <td>${actionBadge}</td>
                         <td>${accuracy}</td>
                         <td>${f1}</td>
-                        <td style="color: ${changeColor}; font-size: 0.85rem;">${accChange}</td>
-                    </tr>`;
-                }).join('');
+                    </tr>`);
+                });
+
+                // Grouped HMM entries
+                Object.values(grouped).forEach(g => {
+                    const timestamp = g.timestamp ? new Date(g.timestamp).toLocaleString('de-CH', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                    }) : '-';
+
+                    const deployed = g.deployed.length;
+                    const rejected = g.rejected.length;
+                    const total = deployed + rejected;
+
+                    let statusHtml = '';
+                    if (deployed > 0) {
+                        statusHtml += `<span style="color: #81c784;">${deployed} deployed</span>`;
+                    }
+                    if (rejected > 0) {
+                        if (statusHtml) statusHtml += ', ';
+                        statusHtml += `<span style="color: #e57373;">${rejected} rejected</span>`;
+                    }
+
+                    rows.push(`<tr>
+                        <td style="font-size: 0.85rem;">${timestamp}</td>
+                        <td><span style="background: rgba(100,200,255,0.2); color: #64c8ff; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">HMM</span> <span style="opacity: 0.7; font-size: 0.8rem;">${total} Symbole</span></td>
+                        <td>${statusHtml}</td>
+                        <td colspan="2" style="font-size: 0.8rem; opacity: 0.7;">Pro Symbol validiert</td>
+                    </tr>`);
+                });
+
+                tbody.innerHTML = rows.join('');
 
             } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #e57373;">Fehler beim Laden: ${error.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #e57373;">Fehler beim Laden: ${error.message}</td></tr>`;
             }
         }
 
@@ -3281,69 +3308,94 @@
                 const versions = data.versions || [];
 
                 if (versions.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #666;">Keine Modell-Versionen vorhanden</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #666;">Keine Modell-Versionen vorhanden</td></tr>`;
                     return;
                 }
 
-                // Sort: production first, then by created_at descending
-                versions.sort((a, b) => {
-                    if (a.status === 'production' && b.status !== 'production') return -1;
-                    if (b.status === 'production' && a.status !== 'production') return 1;
+                // Group by version_id, separate Scorer and HMM
+                const grouped = {};
+                const scorerVersions = [];
+
+                versions.forEach(v => {
+                    if (v.model_type === 'scorer') {
+                        scorerVersions.push(v);
+                    } else {
+                        const vid = v.version_id || 'unknown';
+                        if (!grouped[vid]) {
+                            grouped[vid] = {
+                                version_id: vid,
+                                created_at: v.created_at,
+                                samples_total: 0,
+                                production: [], candidate: [], rejected: [], archived: []
+                            };
+                        }
+                        grouped[vid].samples_total += v.samples_used || 0;
+                        const status = v.status || 'archived';
+                        if (grouped[vid][status]) {
+                            grouped[vid][status].push(v.symbol);
+                        }
+                    }
+                });
+
+                let rows = [];
+
+                // Scorer versions first (with full details)
+                scorerVersions.sort((a, b) => {
+                    if (a.status === 'production') return -1;
+                    if (b.status === 'production') return 1;
                     return new Date(b.created_at) - new Date(a.created_at);
                 });
 
-                // Limit to 30 most recent entries
-                const limitedVersions = versions.slice(0, 30);
-
-                tbody.innerHTML = limitedVersions.map(v => {
-                    const modelType = v.model_type || 'hmm';
-                    const symbol = v.symbol || '-';
+                scorerVersions.forEach(v => {
                     const created = v.created_at ? new Date(v.created_at).toLocaleString('de-CH', {
                         day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
                     }) : '-';
                     const samples = v.samples_used ? v.samples_used.toLocaleString() : '-';
-                    const status = v.status || 'unknown';
 
-                    // Status badges
-                    const statusBadges = {
-                        'production': '<span style="background: rgba(76,175,80,0.2); color: #81c784; padding: 0.2rem 0.5rem; border-radius: 4px;">✓ Produktion</span>',
-                        'candidate': '<span style="background: rgba(100,200,255,0.2); color: #64c8ff; padding: 0.2rem 0.5rem; border-radius: 4px;">◎ Kandidat</span>',
-                        'rejected': '<span style="background: rgba(244,67,54,0.2); color: #e57373; padding: 0.2rem 0.5rem; border-radius: 4px;">✗ Abgelehnt</span>',
-                        'archived': '<span style="opacity: 0.5;">Archiv</span>'
-                    };
-                    const statusBadge = statusBadges[status] || `<span style="opacity: 0.5;">${status}</span>`;
+                    const statusBadge = v.status === 'production'
+                        ? '<span style="background: rgba(76,175,80,0.2); color: #81c784; padding: 0.2rem 0.5rem; border-radius: 4px;">✓ Produktion</span>'
+                        : '<span style="background: rgba(244,67,54,0.2); color: #e57373; padding: 0.2rem 0.5rem; border-radius: 4px;">Archiv</span>';
 
-                    // Model type badge
-                    const typeBadge = modelType === 'scorer' ?
-                        '<span style="background: rgba(167,139,250,0.2); color: #a78bfa; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">Scorer</span>' :
-                        '<span style="background: rgba(100,200,255,0.2); color: #64c8ff; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">HMM</span>';
-
-                    // Rejection reason (shortened)
-                    let reason = '-';
-                    if (v.rejected_reason) {
-                        // Extract key info from reason
-                        const match = v.rejected_reason.match(/accuracy: ([+-]?\d+\.?\d*)%/);
-                        if (match) {
-                            reason = `<span style="color: #e57373;">Acc: ${match[1]}%</span>`;
-                        } else {
-                            reason = '<span style="color: #e57373;" title="' + v.rejected_reason.replace(/"/g, '&quot;') + '">Regression</span>';
-                        }
-                    } else if (status === 'production') {
-                        reason = '<span style="color: #81c784;">Deployed</span>';
-                    }
-
-                    return `<tr>
-                        <td>${typeBadge}</td>
-                        <td style="font-weight: 500;">${symbol}</td>
+                    rows.push(`<tr>
+                        <td><span style="background: rgba(167,139,250,0.2); color: #a78bfa; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">Scorer</span></td>
                         <td style="font-size: 0.85rem;">${created}</td>
                         <td style="font-size: 0.85rem;">${samples}</td>
                         <td>${statusBadge}</td>
-                        <td style="font-size: 0.85rem;">${reason}</td>
-                    </tr>`;
-                }).join('');
+                        <td style="font-size: 0.8rem; opacity: 0.7;">Global</td>
+                    </tr>`);
+                });
+
+                // Grouped HMM versions
+                const groupedArr = Object.values(grouped).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                groupedArr.forEach(g => {
+                    const created = g.created_at ? new Date(g.created_at).toLocaleString('de-CH', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                    }) : '-';
+                    const samples = g.samples_total ? g.samples_total.toLocaleString() : '-';
+
+                    // Summary status
+                    let statusParts = [];
+                    if (g.production.length > 0) statusParts.push(`<span style="color: #81c784;">${g.production.length} prod</span>`);
+                    if (g.candidate.length > 0) statusParts.push(`<span style="color: #64c8ff;">${g.candidate.length} kand</span>`);
+                    if (g.rejected.length > 0) statusParts.push(`<span style="color: #e57373;">${g.rejected.length} rej</span>`);
+
+                    const total = g.production.length + g.candidate.length + g.rejected.length + g.archived.length;
+                    const statusSummary = statusParts.length > 0 ? statusParts.join(', ') : '<span style="opacity: 0.5;">-</span>';
+
+                    rows.push(`<tr>
+                        <td><span style="background: rgba(100,200,255,0.2); color: #64c8ff; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">HMM</span></td>
+                        <td style="font-size: 0.85rem;">${created}</td>
+                        <td style="font-size: 0.85rem;">${samples}</td>
+                        <td>${statusSummary}</td>
+                        <td style="font-size: 0.8rem; opacity: 0.7;">${total} Symbole</td>
+                    </tr>`);
+                });
+
+                tbody.innerHTML = rows.join('');
 
             } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #e57373;">Fehler beim Laden: ${error.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #e57373;">Fehler beim Laden: ${error.message}</td></tr>`;
             }
         }
 
