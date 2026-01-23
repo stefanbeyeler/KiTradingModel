@@ -8,6 +8,7 @@ from loguru import logger
 
 from ..models.hmm_regime_model import HMMRegimeModel, MarketRegime, RegimeState
 from ..models.schemas import RegimeDetectionResponse, RegimeHistoryResponse, RegimeHistoryEntry
+from .accuracy_tracker import accuracy_tracker
 
 
 class RegimeDetectionService:
@@ -120,6 +121,20 @@ class RegimeDetectionService:
                 for d in data
             ], dtype=np.float64)
             metrics = self._calculate_market_metrics(ohlcv)
+
+            # Record prediction for accuracy tracking (Self-Learning)
+            try:
+                regime_index = list(MarketRegime).index(regime_state.regime)
+                accuracy_tracker.record_prediction(
+                    symbol=symbol,
+                    predicted_regime=regime_index,
+                    confidence=regime_state.probability,
+                    price=closes[-1]
+                )
+                # Evaluate pending predictions with current price data
+                accuracy_tracker.evaluate_predictions(symbol, closes.tolist())
+            except Exception as e:
+                logger.debug(f"Accuracy tracking error: {e}")
 
             return RegimeDetectionResponse(
                 symbol=symbol,

@@ -10,6 +10,7 @@ import os
 
 from ..services.regime_detection_service import regime_detection_service
 from ..services.signal_scoring_service import signal_scoring_service
+from ..services.accuracy_tracker import accuracy_tracker
 
 # Import für Test-Health-Funktionalität
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
@@ -225,3 +226,125 @@ async def reload_all_models():
             "status": "error",
             "message": str(e)
         }
+
+
+# ==================== Self-Learning / Accuracy Tracking ====================
+
+
+class SelfLearningConfigRequest(BaseModel):
+    """Request to update self-learning configuration."""
+    enabled: Optional[bool] = Field(default=None, description="Enable/disable self-learning")
+    accuracy_threshold: Optional[float] = Field(default=None, ge=0.1, le=0.9, description="Accuracy threshold for retrain trigger (0.1-0.9)")
+    cooldown_hours: Optional[int] = Field(default=None, ge=1, le=48, description="Cooldown between retrains in hours (1-48)")
+
+
+@router.get("/accuracy/stats")
+async def get_accuracy_stats(symbol: Optional[str] = None):
+    """
+    Get accuracy statistics for Self-Learning feedback loop.
+
+    Returns rolling accuracy metrics used to determine when re-training is needed.
+
+    **Parameters:**
+    - **symbol**: Optional symbol to get stats for (default: global stats)
+
+    **Response:**
+    - Rolling accuracy over last N predictions
+    - Per-regime accuracy breakdown
+    - Self-learning configuration and status
+    """
+    if symbol:
+        return accuracy_tracker.get_stats(symbol)
+    return accuracy_tracker.get_all_stats()
+
+
+@router.get("/accuracy/should-retrain")
+async def should_trigger_retrain():
+    """
+    Check if accuracy has dropped below threshold and retrain should be triggered.
+
+    Used by HMM-Train service to implement closed-loop feedback.
+
+    **Response:**
+    - **should_retrain**: Boolean indicating if retraining is recommended
+    - **reason**: Explanation of why retrain is/isn't needed
+    - **current_accuracy**: Current rolling accuracy
+    - **threshold**: Configured accuracy threshold
+    """
+    stats = accuracy_tracker.get_all_stats()
+    should_retrain = accuracy_tracker.should_trigger_retrain()
+
+    reasons = []
+    if not stats["self_learning"]["enabled"]:
+        reasons.append("Self-learning is disabled")
+    elif stats["global"]["evaluated_predictions"] < 50:
+        reasons.append(f"Not enough evaluations ({stats['global']['evaluated_predictions']} < 50)")
+    elif stats["global"]["rolling_accuracy"] >= stats["self_learning"]["accuracy_threshold"]:
+        reasons.append(f"Accuracy ({stats['global']['rolling_accuracy']:.1%}) is above threshold ({stats['self_learning']['accuracy_threshold']:.1%})")
+    else:
+        reasons.append(f"Accuracy ({stats['global']['rolling_accuracy']:.1%}) dropped below threshold ({stats['self_learning']['accuracy_threshold']:.1%})")
+
+        # Check cooldown
+        if stats["self_learning"]["last_retrain_trigger"]:
+            reasons.append(f"Last retrain: {stats['self_learning']['last_retrain_trigger']}")
+
+    return {
+        "should_retrain": should_retrain,
+        "reason": "; ".join(reasons),
+        "current_accuracy": stats["global"]["rolling_accuracy"],
+        "threshold": stats["self_learning"]["accuracy_threshold"],
+        "evaluated_predictions": stats["global"]["evaluated_predictions"],
+        "self_learning_enabled": stats["self_learning"]["enabled"]
+    }
+
+
+@router.post("/accuracy/mark-retrain")
+async def mark_retrain_triggered():
+    """
+    Mark that a retrain was triggered.
+
+    Called by HMM-Train service after initiating a training job.
+    Resets the cooldown timer.
+    """
+    accuracy_tracker.mark_retrain_triggered()
+    return {
+        "status": "ok",
+        "message": "Retrain trigger recorded",
+        "cooldown_until": accuracy_tracker._last_retrain_trigger.isoformat() if accuracy_tracker._last_retrain_trigger else None
+    }
+
+
+@router.post("/self-learning/config")
+async def update_self_learning_config(request: SelfLearningConfigRequest):
+    """
+    Update self-learning configuration.
+
+    **Parameters:**
+    - **enabled**: Enable/disable automatic retrain triggers
+    - **accuracy_threshold**: Accuracy below which retrain is triggered (default: 0.40)
+    - **cooldown_hours**: Minimum hours between retrains (default: 6)
+    """
+    config = accuracy_tracker.set_config(
+        enabled=request.enabled,
+        threshold=request.accuracy_threshold,
+        cooldown_hours=request.cooldown_hours
+    )
+
+    return {
+        "status": "ok",
+        "config": config
+    }
+
+
+@router.get("/self-learning/config")
+async def get_self_learning_config():
+    """
+    Get current self-learning configuration.
+    """
+    stats = accuracy_tracker.get_all_stats()
+    return {
+        "enabled": stats["self_learning"]["enabled"],
+        "accuracy_threshold": stats["self_learning"]["accuracy_threshold"],
+        "cooldown_hours": stats["self_learning"]["cooldown_hours"],
+        "last_retrain_trigger": stats["self_learning"]["last_retrain_trigger"]
+    }

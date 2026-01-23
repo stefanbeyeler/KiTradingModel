@@ -28,9 +28,10 @@ from loguru import logger
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 
 from src.services.hmm_train_app.routers import training_router, system_router
-from src.services.hmm_train_app.routers.training_router import validation_router, scheduler_router
+from src.services.hmm_train_app.routers.training_router import validation_router, scheduler_router, self_learning_router
 from src.services.hmm_train_app.services.training_service import training_service
 from src.services.hmm_train_app.services.scheduler_service import scheduler_service
+from src.services.hmm_train_app.services.self_learning_service import self_learning_service
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import get_test_unhealthy_status
 
@@ -71,6 +72,7 @@ app.add_middleware(
 app.include_router(training_router, prefix="/api/v1")
 app.include_router(validation_router, prefix="/api/v1")
 app.include_router(scheduler_router, prefix="/api/v1")
+app.include_router(self_learning_router, prefix="/api/v1")
 app.include_router(system_router, prefix="/api/v1")
 
 # Test-Health-Router
@@ -104,6 +106,11 @@ async def startup_event():
     await scheduler_service.start()
     logger.info("HMM Scheduler started")
 
+    # Start self-learning monitor if enabled
+    if os.getenv("HMM_SELFLEARNING_ENABLED", "true").lower() == "true":
+        await self_learning_service.start_monitor()
+        logger.info("Self-Learning Monitor started")
+
     logger.info("HMM Training Service started successfully")
 
 
@@ -111,6 +118,10 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down HMM Training Service...")
+
+    # Stop self-learning monitor
+    await self_learning_service.stop_monitor()
+    logger.info("Self-Learning Monitor stopped")
 
     # Stop the scheduler
     await scheduler_service.stop()

@@ -3052,19 +3052,47 @@
         let hmmSelfLearningEnabled = true;
         let hmmRetrainPollingInterval = null;
 
-        function toggleHmmSelfLearning() {
-            hmmSelfLearningEnabled = !hmmSelfLearningEnabled;
+        async function toggleHmmSelfLearning() {
             const btn = document.getElementById('hmm-selflearn-toggle-btn');
-            if (hmmSelfLearningEnabled) {
-                btn.innerHTML = '&#10004; Aktiviert';
-                btn.classList.remove('btn-secondary');
-                btn.classList.add('btn-purple');
-                showToast('Self-Learning aktiviert', 'success');
-            } else {
-                btn.innerHTML = '&#10006; Deaktiviert';
-                btn.classList.remove('btn-purple');
-                btn.classList.add('btn-secondary');
-                showToast('Self-Learning deaktiviert', 'info');
+            const newState = !hmmSelfLearningEnabled;
+
+            try {
+                // Update on HMM Inference service (accuracy tracker config)
+                const inferenceResponse = await fetch('/hmm/api/v1/self-learning/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: newState })
+                });
+
+                // Update on HMM Train service (self-learning monitor)
+                const trainResponse = await fetch(`${TRAIN_API_BASE}/self-learning/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: newState })
+                });
+
+                // Start/stop monitor
+                if (newState) {
+                    await fetch(`${TRAIN_API_BASE}/self-learning/start`, { method: 'POST' });
+                } else {
+                    await fetch(`${TRAIN_API_BASE}/self-learning/stop`, { method: 'POST' });
+                }
+
+                hmmSelfLearningEnabled = newState;
+
+                if (hmmSelfLearningEnabled) {
+                    btn.innerHTML = '&#10004; Aktiviert';
+                    btn.classList.remove('btn-secondary');
+                    btn.classList.add('btn-purple');
+                    showToast('Self-Learning aktiviert', 'success');
+                } else {
+                    btn.innerHTML = '&#10006; Deaktiviert';
+                    btn.classList.remove('btn-purple');
+                    btn.classList.add('btn-secondary');
+                    showToast('Self-Learning deaktiviert', 'info');
+                }
+            } catch (error) {
+                showToast(`Fehler: ${error.message}`, 'error');
             }
         }
 
@@ -3153,35 +3181,70 @@
 
         async function loadHmmSelfLearningStats() {
             try {
+                // Load accuracy stats from HMM Inference service
+                const accuracyResponse = await fetch('/hmm/api/v1/accuracy/stats');
+                let accuracyData = null;
+                if (accuracyResponse.ok) {
+                    accuracyData = await accuracyResponse.json();
+                }
+
+                // Load self-learning status from HMM Train service
+                const slResponse = await fetch(`${TRAIN_API_BASE}/self-learning/status`);
+                let slData = null;
+                if (slResponse.ok) {
+                    slData = await slResponse.json();
+                }
+
                 // Load deployment history for stats
-                const response = await fetch(`${TRAIN_API_BASE}/deployment/history`);
-                if (!response.ok) return;
-
-                const data = await response.json();
-                const history = data.history || [];
-
-                // Calculate stats
+                const histResponse = await fetch(`${TRAIN_API_BASE}/models/deployment-history`);
                 let deployments = 0;
                 let rollbacks = 0;
-                let totalAccuracy = 0;
-                let accuracyCount = 0;
+                let totalRetrains = 0;
 
-                history.forEach(item => {
-                    if (item.decision === 'deploy') deployments++;
-                    if (item.decision === 'reject' || item.decision === 'rollback') rollbacks++;
-                    if (item.hmm_metrics && item.hmm_metrics.regime_accuracy) {
-                        totalAccuracy += item.hmm_metrics.regime_accuracy;
-                        accuracyCount++;
-                    }
-                });
+                if (histResponse.ok) {
+                    const histData = await histResponse.json();
+                    const history = histData.history || [];
+                    totalRetrains = history.length;
 
-                document.getElementById('hmm-sl-stat-total-retrains').textContent = history.length;
+                    history.forEach(item => {
+                        if (item.action === 'deployed') deployments++;
+                        if (item.action === 'rejected' || item.action === 'rolled_back') rollbacks++;
+                    });
+                }
+
+                // Update stats display
+                document.getElementById('hmm-sl-stat-total-retrains').textContent = totalRetrains;
                 document.getElementById('hmm-sl-stat-deployments').textContent = deployments;
                 document.getElementById('hmm-sl-stat-rollbacks').textContent = rollbacks;
 
-                if (accuracyCount > 0) {
-                    const avgAcc = (totalAccuracy / accuracyCount * 100).toFixed(1);
-                    document.getElementById('hmm-sl-stat-accuracy').textContent = `${avgAcc}%`;
+                // Update accuracy from accuracy tracker
+                if (accuracyData && accuracyData.global) {
+                    const acc = accuracyData.global.rolling_accuracy;
+                    document.getElementById('hmm-sl-stat-accuracy').textContent = acc > 0 ? `${(acc * 100).toFixed(1)}%` : '-';
+
+                    // Update self-learning enabled state
+                    if (accuracyData.self_learning) {
+                        hmmSelfLearningEnabled = accuracyData.self_learning.enabled;
+                        const btn = document.getElementById('hmm-selflearn-toggle-btn');
+                        if (hmmSelfLearningEnabled) {
+                            btn.innerHTML = '&#10004; Aktiviert';
+                            btn.classList.remove('btn-secondary');
+                            btn.classList.add('btn-purple');
+                        } else {
+                            btn.innerHTML = '&#10006; Deaktiviert';
+                            btn.classList.remove('btn-purple');
+                            btn.classList.add('btn-secondary');
+                        }
+
+                        // Update threshold/cooldown selects
+                        const thresholdSelect = document.getElementById('hmm-sl-threshold-select');
+                        const closestThreshold = findClosestOption(thresholdSelect, accuracyData.self_learning.accuracy_threshold);
+                        if (closestThreshold) thresholdSelect.value = closestThreshold;
+
+                        const cooldownSelect = document.getElementById('hmm-sl-cooldown-select');
+                        const closestCooldown = findClosestOption(cooldownSelect, accuracyData.self_learning.cooldown_hours);
+                        if (closestCooldown) cooldownSelect.value = closestCooldown;
+                    }
                 }
 
                 // Update threshold display
@@ -3194,6 +3257,19 @@
             } catch (error) {
                 console.error('Error loading self-learning stats:', error);
             }
+        }
+
+        function findClosestOption(selectElement, value) {
+            let closest = null;
+            let minDiff = Infinity;
+            for (const option of selectElement.options) {
+                const diff = Math.abs(parseFloat(option.value) - value);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = option.value;
+                }
+            }
+            return closest;
         }
 
         async function loadHmmDeploymentHistory() {
@@ -3424,16 +3500,38 @@
             }
         }
 
-        function updateHmmSelfLearnConfig() {
-            const threshold = document.getElementById('hmm-sl-threshold-select').value;
+        async function updateHmmSelfLearnConfig() {
+            const threshold = parseFloat(document.getElementById('hmm-sl-threshold-select').value);
             document.getElementById('hmm-sl-stat-threshold').textContent = `${Math.round(threshold * 100)}%`;
-            showToast(`Accuracy-Schwelle auf ${Math.round(threshold * 100)}% gesetzt`, 'info');
+
+            try {
+                // Update on HMM Inference service
+                await fetch('/hmm/api/v1/self-learning/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accuracy_threshold: threshold })
+                });
+                showToast(`Accuracy-Schwelle auf ${Math.round(threshold * 100)}% gesetzt`, 'success');
+            } catch (error) {
+                showToast(`Fehler beim Speichern: ${error.message}`, 'error');
+            }
         }
 
-        function updateHmmSelfLearnCooldown() {
-            const cooldown = document.getElementById('hmm-sl-cooldown-select').value;
+        async function updateHmmSelfLearnCooldown() {
+            const cooldown = parseInt(document.getElementById('hmm-sl-cooldown-select').value);
             document.getElementById('hmm-sl-stat-cooldown').textContent = `${cooldown}h`;
-            showToast(`Cooldown auf ${cooldown} Stunden gesetzt`, 'info');
+
+            try {
+                // Update on HMM Inference service
+                await fetch('/hmm/api/v1/self-learning/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cooldown_hours: cooldown })
+                });
+                showToast(`Cooldown auf ${cooldown} Stunden gesetzt`, 'success');
+            } catch (error) {
+                showToast(`Fehler beim Speichern: ${error.message}`, 'error');
+            }
         }
 
         // Show/hide weekday selector based on interval

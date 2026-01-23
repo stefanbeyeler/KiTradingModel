@@ -7,6 +7,7 @@ from loguru import logger
 
 from ..services.training_service import training_service, TrainingStatus, ModelType
 from ..services.scheduler_service import scheduler_service
+from ..services.self_learning_service import self_learning_service
 
 router = APIRouter(prefix="/train", tags=["HMM Training"])
 
@@ -15,6 +16,9 @@ validation_router = APIRouter(prefix="/models", tags=["Model Versioning"])
 
 # Create router for scheduling endpoints
 scheduler_router = APIRouter(prefix="/schedules", tags=["Training Schedules"])
+
+# Create router for self-learning endpoints
+self_learning_router = APIRouter(prefix="/self-learning", tags=["Self-Learning"])
 
 
 class TrainingRequest(BaseModel):
@@ -837,3 +841,101 @@ async def get_scheduler_status():
     - Next scheduled run information
     """
     return scheduler_service.get_status()
+
+
+# ==================== Self-Learning Endpoints ====================
+
+
+class SelfLearningConfigRequest(BaseModel):
+    """Request to update self-learning configuration."""
+    enabled: Optional[bool] = Field(default=None, description="Enable/disable self-learning monitor")
+    check_interval_seconds: Optional[int] = Field(default=None, ge=60, le=3600, description="Check interval (60-3600 seconds)")
+
+
+@self_learning_router.get("/status", summary="Get self-learning status")
+async def get_self_learning_status():
+    """
+    Get the current status of the self-learning monitor.
+
+    Returns:
+    - Whether self-learning is enabled
+    - Monitor running state
+    - Last accuracy check time and value
+    - Last retrain trigger time
+    """
+    return self_learning_service.status
+
+
+@self_learning_router.post("/start", summary="Start self-learning monitor")
+async def start_self_learning():
+    """
+    Start the self-learning background monitor.
+
+    The monitor periodically checks accuracy from the HMM Inference service
+    and triggers re-training when accuracy drops below threshold.
+    """
+    await self_learning_service.start_monitor()
+    return {
+        "status": "started",
+        "message": "Self-learning monitor started",
+        "check_interval_seconds": self_learning_service._status.check_interval_seconds
+    }
+
+
+@self_learning_router.post("/stop", summary="Stop self-learning monitor")
+async def stop_self_learning():
+    """
+    Stop the self-learning background monitor.
+    """
+    await self_learning_service.stop_monitor()
+    return {
+        "status": "stopped",
+        "message": "Self-learning monitor stopped"
+    }
+
+
+@self_learning_router.post("/check", summary="Manual accuracy check")
+async def manual_accuracy_check():
+    """
+    Manually trigger an accuracy check.
+
+    Returns the current accuracy status and whether retrain is needed.
+    """
+    return await self_learning_service.manual_check()
+
+
+@self_learning_router.post("/trigger-retrain", summary="Force retrain")
+async def force_retrain():
+    """
+    Force an immediate retrain regardless of accuracy.
+
+    Use this to manually trigger the self-learning loop.
+    """
+    return await self_learning_service.force_retrain()
+
+
+@self_learning_router.post("/config", summary="Update configuration")
+async def update_self_learning_config(request: SelfLearningConfigRequest):
+    """
+    Update self-learning configuration.
+
+    Parameters:
+    - **enabled**: Enable/disable self-learning
+    - **check_interval_seconds**: Time between accuracy checks (60-3600 seconds)
+    """
+    return self_learning_service.set_config(
+        enabled=request.enabled,
+        check_interval_seconds=request.check_interval_seconds
+    )
+
+
+@self_learning_router.get("/config", summary="Get configuration")
+async def get_self_learning_config():
+    """
+    Get current self-learning configuration.
+    """
+    return {
+        "enabled": self_learning_service._status.enabled,
+        "check_interval_seconds": self_learning_service._status.check_interval_seconds,
+        "inference_service_url": self_learning_service._status.inference_service_url
+    }
