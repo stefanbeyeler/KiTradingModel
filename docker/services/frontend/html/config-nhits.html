@@ -791,7 +791,8 @@
     <div class="container">
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('training')">Training</button>
+            <button class="tab-btn active" onclick="switchTab('overview')">📊 Übersicht</button>
+            <button class="tab-btn" onclick="switchTab('training')">Training</button>
             <button class="tab-btn" onclick="switchTab('models')">Modelle</button>
             <button class="tab-btn" onclick="switchTab('forecast')">Prognose</button>
             <button class="tab-btn" onclick="switchTab('performance')">Performance</button>
@@ -799,8 +800,127 @@
             <button class="tab-btn" onclick="switchTab('backup')">Backup / Restore</button>
         </div>
 
+        <!-- Übersicht Tab -->
+        <div id="tab-overview" class="tab-content active">
+            <!-- Lernfortschritt Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📈 Lernfortschritt</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select class="filter-select" id="overview-symbol-filter" style="padding: 0.4rem; font-size: 0.85rem; min-width: 150px;" onchange="loadLearningProgress()">
+                            <option value="all">Alle Symbole</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="loadLearningProgress()">🔄</button>
+                    </div>
+                </div>
+                <div style="position: relative; height: 220px; padding: 0.5rem;">
+                    <canvas id="learning-progress-chart"></canvas>
+                </div>
+                <div id="learning-progress-summary" style="padding: 0.75rem 1rem; font-size: 0.85rem; color: #888; border-top: 1px solid rgba(255,255,255,0.05);">
+                    Lade Metriken...
+                </div>
+            </div>
+
+            <!-- KPI Stats Cards -->
+            <div class="stats-bar" style="margin-bottom: 1rem;">
+                <div class="stat-item">
+                    <div class="stat-value" style="color: #4ade80;" id="overview-accuracy">-</div>
+                    <div class="stat-label">Ø Richtung</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" style="color: #64c8ff;" id="overview-error">-</div>
+                    <div class="stat-label">Ø Fehler</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="overview-evaluated">0</div>
+                    <div class="stat-label">Evaluiert</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="overview-pending">0</div>
+                    <div class="stat-label">Ausstehend</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" style="color: #a78bfa;" id="overview-retrains">0</div>
+                    <div class="stat-label">Re-Trainings</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="overview-models">0</div>
+                    <div class="stat-label">Modelle</div>
+                </div>
+            </div>
+
+            <!-- Performance by Symbol -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🎯 Performance nach Symbol</h2>
+                    <button class="btn btn-sm btn-primary" onclick="loadOverviewPerformance()">Aktualisieren</button>
+                </div>
+                <div style="position: relative; height: 180px; padding: 0.5rem;">
+                    <canvas id="symbol-performance-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Predictions & System Status Grid -->
+            <div class="grid-2">
+                <!-- Recent Predictions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🕐 Letzte Prognosen</h2>
+                    </div>
+                    <div class="table-container" style="max-height: 250px;">
+                        <table id="overview-recent-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Trend</th>
+                                    <th>Horizont</th>
+                                    <th>Zeit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="overview-recent-tbody">
+                                <tr><td colspan="4" style="text-align: center; color: #666; padding: 1rem;">Lade...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- System Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">⚙️ System Status</h2>
+                    </div>
+                    <div id="overview-system-status" style="padding: 0.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div style="padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                                <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.3rem;">Auto-Evaluation</div>
+                                <div id="overview-auto-eval-status" style="font-size: 1rem;">
+                                    <span class="badge badge-success">Aktiv</span>
+                                </div>
+                            </div>
+                            <div style="padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                                <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.3rem;">Auto-Retrain</div>
+                                <div id="overview-auto-retrain-status" style="font-size: 1rem;">
+                                    <span class="badge badge-success">Aktiv</span>
+                                </div>
+                            </div>
+                            <div style="padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                                <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.3rem;">Auto-Forecast</div>
+                                <div id="overview-auto-forecast-status" style="font-size: 1rem;">
+                                    <span class="badge badge-success">Aktiv</span>
+                                </div>
+                            </div>
+                            <div style="padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                                <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.3rem;">Retrain Cooldown</div>
+                                <div id="overview-cooldown" style="font-size: 1rem; color: #ffb74d;">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Training Tab -->
-        <div id="tab-training" class="tab-content active">
+        <div id="tab-training" class="tab-content">
             <div class="grid-2">
                 <!-- Training Status -->
                 <div class="card">
@@ -1599,6 +1719,326 @@
         let trainingInterval = null;
         let serviceStartTime = null;
 
+        // Chart instances
+        let learningProgressChart = null;
+        let symbolPerformanceChart = null;
+
+        // ==================== Overview Tab Functions ====================
+
+        async function loadOverviewData() {
+            await Promise.all([
+                loadLearningProgress(),
+                loadOverviewPerformance(),
+                loadOverviewRecentPredictions(),
+                loadOverviewSystemStatus()
+            ]);
+        }
+
+        async function loadLearningProgress() {
+            const summaryEl = document.getElementById('learning-progress-summary');
+            const chartCanvas = document.getElementById('learning-progress-chart');
+            const filterSelect = document.getElementById('overview-symbol-filter');
+
+            if (!chartCanvas) return;
+
+            try {
+                // Get evaluated predictions for the chart
+                const [evalRes, perfRes, autoRes] = await Promise.all([
+                    fetch(`${API_BASE}/forecast/evaluated?limit=100`),
+                    fetch(`${API_BASE}/forecast/performance`),
+                    fetch(`${API_BASE}/forecast/auto-status`)
+                ]);
+
+                const evalData = await evalRes.json();
+                const perfData = await perfRes.json();
+                const autoData = await autoRes.json();
+
+                // Update KPI stats
+                const predictions = autoData.predictions || {};
+                document.getElementById('overview-evaluated').textContent = predictions.evaluated_count || 0;
+                document.getElementById('overview-pending').textContent = predictions.pending_count || 0;
+                document.getElementById('overview-retrains').textContent = autoData.auto_retrain?.total_retrains || 0;
+
+                // Populate symbol filter
+                const symbols = Object.keys(perfData.by_symbol || {});
+                document.getElementById('overview-models').textContent = symbols.length;
+
+                if (filterSelect.options.length <= 1) {
+                    symbols.forEach(sym => {
+                        const opt = document.createElement('option');
+                        opt.value = sym;
+                        opt.textContent = sym;
+                        filterSelect.appendChild(opt);
+                    });
+                }
+
+                // Calculate overall metrics
+                let totalAcc = 0, totalErr = 0, symbolCount = 0;
+                for (const [sym, perf] of Object.entries(perfData.by_symbol || {})) {
+                    if (perf.evaluated > 0) {
+                        totalAcc += perf.direction_accuracy * 100;
+                        totalErr += perf.avg_error_pct || 0;
+                        symbolCount++;
+                    }
+                }
+
+                const avgAccuracy = symbolCount > 0 ? (totalAcc / symbolCount).toFixed(1) : '-';
+                const avgError = symbolCount > 0 ? (totalErr / symbolCount).toFixed(2) : '-';
+
+                document.getElementById('overview-accuracy').textContent = avgAccuracy !== '-' ? avgAccuracy + '%' : '-';
+                document.getElementById('overview-accuracy').style.color = parseFloat(avgAccuracy) >= 50 ? '#4ade80' : '#fbbf24';
+                document.getElementById('overview-error').textContent = avgError !== '-' ? avgError + '%' : '-';
+
+                // Group evaluations by date for the chart
+                const evalsByDate = {};
+                const selectedSymbol = filterSelect.value;
+
+                (evalData.predictions || []).forEach(pred => {
+                    if (selectedSymbol !== 'all' && pred.symbol !== selectedSymbol) return;
+
+                    const date = pred.evaluated_at ? pred.evaluated_at.split('T')[0] : null;
+                    if (!date) return;
+
+                    if (!evalsByDate[date]) {
+                        evalsByDate[date] = { correct: 0, total: 0, errorSum: 0 };
+                    }
+                    evalsByDate[date].total++;
+                    if (pred.direction_correct) evalsByDate[date].correct++;
+                    evalsByDate[date].errorSum += Math.abs(pred.prediction_error_pct || 0);
+                });
+
+                const dates = Object.keys(evalsByDate).sort();
+                const accuracyData = dates.map(d => (evalsByDate[d].correct / evalsByDate[d].total * 100).toFixed(1));
+                const errorData = dates.map(d => (evalsByDate[d].errorSum / evalsByDate[d].total).toFixed(2));
+
+                // Destroy existing chart
+                if (learningProgressChart) {
+                    learningProgressChart.destroy();
+                }
+
+                if (dates.length === 0) {
+                    summaryEl.innerHTML = 'Keine Metriken-Historie verfügbar. Erstellen Sie Prognosen und warten Sie auf Evaluierungen.';
+                    return;
+                }
+
+                // Create chart
+                const ctx = chartCanvas.getContext('2d');
+                learningProgressChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: [
+                            {
+                                label: 'Richtung %',
+                                data: accuracyData,
+                                borderColor: '#4ade80',
+                                backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 4
+                            },
+                            {
+                                label: 'Fehler %',
+                                data: errorData,
+                                borderColor: '#64c8ff',
+                                backgroundColor: 'rgba(100, 200, 255, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { intersect: false, mode: 'index' },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { color: '#888', font: { size: 11 }, boxWidth: 12, padding: 8 }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                                titleColor: '#fff',
+                                bodyColor: '#ccc',
+                                borderColor: 'rgba(100, 200, 255, 0.3)',
+                                borderWidth: 1
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#666', font: { size: 10 } }
+                            },
+                            y: {
+                                min: 0,
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#666', font: { size: 10 }, callback: v => v + '%' }
+                            }
+                        }
+                    }
+                });
+
+                // Calculate trend
+                const latestAcc = parseFloat(accuracyData[accuracyData.length - 1]) || 0;
+                const firstAcc = parseFloat(accuracyData[0]) || 0;
+                const accTrend = latestAcc - firstAcc;
+                const trendColor = accTrend > 0 ? '#4ade80' : accTrend < 0 ? '#f87171' : '#888';
+
+                summaryEl.innerHTML = `
+                    <span style="margin-right: 1.5rem;">📈 Trend: <span style="color: ${trendColor};">${accTrend > 0 ? '+' : ''}${accTrend.toFixed(1)}%</span></span>
+                    <span style="margin-right: 1.5rem;">Letzte Richtung: <strong>${latestAcc.toFixed(1)}%</strong></span>
+                    <span>Datenpunkte: ${dates.length}</span>
+                `;
+
+            } catch (err) {
+                console.error('Failed to load learning progress:', err);
+                summaryEl.innerHTML = '<span style="color: #f87171;">Fehler beim Laden</span>';
+            }
+        }
+
+        async function loadOverviewPerformance() {
+            const chartCanvas = document.getElementById('symbol-performance-chart');
+            if (!chartCanvas) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/forecast/performance`);
+                const data = await res.json();
+
+                const symbols = [];
+                const accuracyData = [];
+                const errorData = [];
+
+                for (const [sym, perf] of Object.entries(data.by_symbol || {})) {
+                    if (perf.evaluated > 0) {
+                        symbols.push(sym);
+                        accuracyData.push((perf.direction_accuracy * 100).toFixed(1));
+                        errorData.push(perf.avg_error_pct?.toFixed(2) || 0);
+                    }
+                }
+
+                // Destroy existing chart
+                if (symbolPerformanceChart) {
+                    symbolPerformanceChart.destroy();
+                }
+
+                if (symbols.length === 0) return;
+
+                const ctx = chartCanvas.getContext('2d');
+                symbolPerformanceChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: symbols,
+                        datasets: [
+                            {
+                                label: 'Richtung %',
+                                data: accuracyData,
+                                backgroundColor: 'rgba(74, 222, 128, 0.7)',
+                                borderColor: '#4ade80',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#888', font: { size: 10 } }
+                            },
+                            y: {
+                                min: 0,
+                                max: 100,
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#666', callback: v => v + '%' }
+                            }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error('Failed to load symbol performance:', err);
+            }
+        }
+
+        async function loadOverviewRecentPredictions() {
+            const tbody = document.getElementById('overview-recent-tbody');
+            if (!tbody) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/forecast/latest-per-model`);
+                const data = await res.json();
+
+                const predictions = (data.forecasts || []).slice(0, 10);
+
+                if (predictions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #666; padding: 1rem;">Keine Prognosen</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = predictions.map(p => {
+                    const trendIcon = p.trend === 'up' ? '↑' : p.trend === 'down' ? '↓' : '→';
+                    const trendColor = p.trend === 'up' ? '#4ade80' : p.trend === 'down' ? '#f87171' : '#888';
+                    const time = p.timestamp ? new Date(p.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '-';
+
+                    return `
+                        <tr>
+                            <td><strong>${p.symbol}</strong></td>
+                            <td style="color: ${trendColor}; font-size: 1.1rem;">${trendIcon}</td>
+                            <td>${p.horizon || '-'}</td>
+                            <td style="font-size: 0.85rem; color: #888;">${time}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Failed to load recent predictions:', err);
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #f87171;">Fehler</td></tr>';
+            }
+        }
+
+        async function loadOverviewSystemStatus() {
+            try {
+                const [autoRes, forecastRes] = await Promise.all([
+                    fetch(`${API_BASE}/forecast/auto-status`),
+                    fetch(`${API_BASE}/forecast/auto/status`)
+                ]);
+
+                const autoData = await autoRes.json();
+                const forecastData = await forecastRes.json();
+
+                // Auto-Evaluation Status
+                const evalStatus = autoData.auto_evaluation;
+                document.getElementById('overview-auto-eval-status').innerHTML = evalStatus.enabled && evalStatus.running
+                    ? '<span class="badge badge-success">Aktiv</span>'
+                    : '<span class="badge badge-failed">Inaktiv</span>';
+
+                // Auto-Retrain Status
+                const retrainStatus = autoData.auto_retrain;
+                document.getElementById('overview-auto-retrain-status').innerHTML = retrainStatus.enabled
+                    ? (retrainStatus.in_progress ? '<span class="badge badge-warning">Training...</span>' : '<span class="badge badge-success">Aktiv</span>')
+                    : '<span class="badge badge-failed">Inaktiv</span>';
+
+                // Auto-Forecast Status
+                const favoritesRunning = forecastData.favorites?.running || false;
+                document.getElementById('overview-auto-forecast-status').innerHTML = favoritesRunning
+                    ? '<span class="badge badge-success">Aktiv</span>'
+                    : '<span class="badge badge-failed">Inaktiv</span>';
+
+                // Cooldown
+                document.getElementById('overview-cooldown').textContent = `${retrainStatus.cooldown_hours || 4}h`;
+
+            } catch (err) {
+                console.error('Failed to load system status:', err);
+            }
+        }
+
         // ==================== Header Status Functions ====================
 
         async function updateHeaderStatus() {
@@ -1705,6 +2145,7 @@
             document.getElementById(`tab-${tabName}`).classList.add('active');
 
             // Load data for the selected tab
+            if (tabName === 'overview') loadOverviewData();
             if (tabName === 'models') loadModels();
             if (tabName === 'performance') {
                 loadPerformance();
@@ -4256,6 +4697,9 @@
 
         // Initial load of auto-forecast status after page load
         setTimeout(loadAutoForecastStatus, 1500);
+
+        // Load overview data on page load (overview is the default tab)
+        setTimeout(loadOverviewData, 500);
     </script>
 </body>
 </html>
