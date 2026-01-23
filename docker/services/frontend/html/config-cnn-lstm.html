@@ -1003,12 +1003,11 @@
     <div class="container">
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('features')">&#128200; Features</button>
+            <button class="tab active" onclick="switchTab('features')">&#128200; Übersicht</button>
             <button class="tab" onclick="switchTab('predictions')">&#127919; Live Predictions</button>
             <button class="tab" onclick="switchTab('revalidation')">&#128202; Revalidierung</button>
             <button class="tab" onclick="switchTab('selflearning')">&#129302; Self-Learning</button>
             <button class="tab" onclick="switchTab('training')">&#128203; Training</button>
-            <button class="tab" onclick="switchTab('model')">&#129516; Modell-Info</button>
         </div>
 
         <!-- Live Predictions Tab -->
@@ -1622,88 +1621,14 @@
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">&#128200; Input-Features (25 Dimensionen)</h2>
-                </div>
-                <p class="card-description">
-                    Das CNN-LSTM Modell verarbeitet 25 technische Features als Input.
-                </p>
-
-                <table class="feature-table">
-                    <thead>
-                        <tr>
-                            <th>Kategorie</th>
-                            <th>Feature</th>
-                            <th>Beschreibung</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Open</td><td>Eröffnungspreis</td></tr>
-                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>High</td><td>Höchstpreis</td></tr>
-                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Low</td><td>Tiefstpreis</td></tr>
-                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Close</td><td>Schlusspreis</td></tr>
-                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Volume</td><td>Handelsvolumen</td></tr>
-                        <tr><td><span class="feature-category returns">Returns</span></td><td>Log Return</td><td>Logarithmische Rendite</td></tr>
-                        <tr><td><span class="feature-category returns">Returns</span></td><td>Volatility 20</td><td>20-Perioden Volatilität</td></tr>
-                        <tr><td><span class="feature-category trend">Trend</span></td><td>SMA 20</td><td>Simple Moving Average (20)</td></tr>
-                        <tr><td><span class="feature-category trend">Trend</span></td><td>EMA 12</td><td>Exponential MA (12)</td></tr>
-                        <tr><td><span class="feature-category trend">Trend</span></td><td>EMA 26</td><td>Exponential MA (26)</td></tr>
-                        <tr><td><span class="feature-category trend">Trend</span></td><td>MACD</td><td>Moving Average Convergence</td></tr>
-                        <tr><td><span class="feature-category trend">Trend</span></td><td>MACD Signal</td><td>MACD Signal Line</td></tr>
-                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>RSI 14</td><td>Relative Strength Index</td></tr>
-                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>Stochastic K</td><td>Stochastic %K</td></tr>
-                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>Stochastic D</td><td>Stochastic %D</td></tr>
-                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>CCI 14</td><td>Commodity Channel Index</td></tr>
-                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>ATR 14</td><td>Average True Range</td></tr>
-                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>BB Upper</td><td>Bollinger Band Oben</td></tr>
-                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>BB Middle</td><td>Bollinger Band Mitte</td></tr>
-                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>BB Lower</td><td>Bollinger Band Unten</td></tr>
-                        <tr><td><span class="feature-category volume">Volume</span></td><td>OBV</td><td>On-Balance Volume (norm.)</td></tr>
-                        <tr><td><span class="feature-category volume">Volume</span></td><td>A/D Line</td><td>Accumulation/Distribution</td></tr>
-                        <tr><td><span class="feature-category position">Position</span></td><td>Price vs SMA</td><td>Preis relativ zu SMA</td></tr>
-                        <tr><td><span class="feature-category position">Position</span></td><td>BB Position</td><td>Position in Bollinger (0-1)</td></tr>
-                        <tr><td><span class="feature-category meta">Meta</span></td><td>Timeframe Enc</td><td>Timeframe-Kodierung</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">&#128337; Sequenzlängen pro Timeframe</h2>
-                </div>
-                <table class="timeframe-table">
-                    <thead>
-                        <tr>
-                            <th>Timeframe</th>
-                            <th>Sequenz</th>
-                            <th>Entspricht</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>M1</td><td>480</td><td>8 Stunden</td></tr>
-                        <tr><td>M5</td><td>288</td><td>24 Stunden</td></tr>
-                        <tr><td>M15</td><td>192</td><td>48 Stunden</td></tr>
-                        <tr><td>M30</td><td>192</td><td>4 Tage</td></tr>
-                        <tr><td>H1</td><td>168</td><td>1 Woche</td></tr>
-                        <tr><td>H4</td><td>168</td><td>4 Wochen</td></tr>
-                        <tr><td>D1</td><td>120</td><td>~6 Monate</td></tr>
-                        <tr><td>W1</td><td>52</td><td>1 Jahr</td></tr>
-                        <tr><td>MN</td><td>24</td><td>2 Jahre</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Model Info Tab -->
-        <div id="tab-model" class="tab-content">
+            <!-- Modell-Architektur -->
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">&#129516; Modell-Architektur</h2>
                     <button class="btn btn-primary" onclick="loadModelInfo()">&#128260; Aktualisieren</button>
                 </div>
 
-                <div id="model-info-content">
+                <div id="model-info-content-features">
                     <div class="model-info-grid">
                         <div class="model-info-item">
                             <span class="model-info-label">CNN Encoder</span>
@@ -1754,28 +1679,105 @@
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">&#128279; Verfügbare Modelle</h2>
-                    <button class="btn btn-primary" onclick="loadModels()">&#128260; Laden</button>
+            <!-- Verfügbare Modelle (aufklappbar) -->
+            <div class="card collapsible-card">
+                <div class="card-header collapsible-header" onclick="toggleModelsSection()" style="cursor: pointer;">
+                    <h2 class="card-title">
+                        <span id="models-toggle-icon" style="display: inline-block; transition: transform 0.2s;">&#9654;</span>
+                        &#128279; Verfügbare Modelle
+                    </h2>
+                    <span id="models-count-badge" class="badge" style="background: rgba(100, 200, 255, 0.2); color: #64c8ff; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">-</span>
                 </div>
-                <div id="models-list">
-                    <div class="empty-state">
-                        <p>Klicke auf "Laden" um verfügbare Modelle anzuzeigen</p>
+                <div id="models-section-content" style="display: none; padding-top: 1rem;">
+                    <div id="models-list-overview">
+                        <div class="loading"><div class="spinner"></div><p>Lade Modelle...</p></div>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">&#128640; Schnellzugriff</h2>
+            <!-- Input-Features (aufklappbar) -->
+            <div class="card collapsible-card">
+                <div class="card-header collapsible-header" onclick="toggleFeaturesSection()" style="cursor: pointer;">
+                    <h2 class="card-title">
+                        <span id="features-toggle-icon" style="display: inline-block; transition: transform 0.2s;">&#9654;</span>
+                        &#128200; Input-Features (25 Dimensionen)
+                    </h2>
+                    <span class="badge" style="background: rgba(100, 200, 255, 0.2); color: #64c8ff; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">25</span>
                 </div>
-                <div class="quick-links">
-                    <a href="/cnn-lstm/docs" target="_blank">&#128196; Inference API</a>
-                    <a href="/cnn-lstm-train/docs" target="_blank">&#128196; Training API</a>
-                    <a href="/cnn-lstm/health" target="_blank">&#128154; Health Check</a>
-                    <a href="/cnn-lstm/api/v1/models" target="_blank">&#128230; Modelle</a>
-                    <a href="/service-cnn-lstm.html">&#128214; Dokumentation</a>
+                <div id="features-section-content" style="display: none; padding-top: 1rem;">
+                    <p class="card-description">
+                        Das CNN-LSTM Modell verarbeitet 25 technische Features als Input.
+                    </p>
+
+                    <table class="feature-table">
+                    <thead>
+                        <tr>
+                            <th>Kategorie</th>
+                            <th>Feature</th>
+                            <th>Beschreibung</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Open</td><td>Eröffnungspreis</td></tr>
+                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>High</td><td>Höchstpreis</td></tr>
+                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Low</td><td>Tiefstpreis</td></tr>
+                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Close</td><td>Schlusspreis</td></tr>
+                        <tr><td><span class="feature-category ohlcv">OHLCV</span></td><td>Volume</td><td>Handelsvolumen</td></tr>
+                        <tr><td><span class="feature-category returns">Returns</span></td><td>Log Return</td><td>Logarithmische Rendite</td></tr>
+                        <tr><td><span class="feature-category returns">Returns</span></td><td>Volatility 20</td><td>20-Perioden Volatilität</td></tr>
+                        <tr><td><span class="feature-category trend">Trend</span></td><td>SMA 20</td><td>Simple Moving Average (20)</td></tr>
+                        <tr><td><span class="feature-category trend">Trend</span></td><td>EMA 12</td><td>Exponential MA (12)</td></tr>
+                        <tr><td><span class="feature-category trend">Trend</span></td><td>EMA 26</td><td>Exponential MA (26)</td></tr>
+                        <tr><td><span class="feature-category trend">Trend</span></td><td>MACD</td><td>Moving Average Convergence</td></tr>
+                        <tr><td><span class="feature-category trend">Trend</span></td><td>MACD Signal</td><td>MACD Signal Line</td></tr>
+                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>RSI 14</td><td>Relative Strength Index</td></tr>
+                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>Stochastic K</td><td>Stochastic %K</td></tr>
+                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>Stochastic D</td><td>Stochastic %D</td></tr>
+                        <tr><td><span class="feature-category momentum">Momentum</span></td><td>CCI 14</td><td>Commodity Channel Index</td></tr>
+                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>ATR 14</td><td>Average True Range</td></tr>
+                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>BB Upper</td><td>Bollinger Band Oben</td></tr>
+                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>BB Middle</td><td>Bollinger Band Mitte</td></tr>
+                        <tr><td><span class="feature-category volatility">Volatility</span></td><td>BB Lower</td><td>Bollinger Band Unten</td></tr>
+                        <tr><td><span class="feature-category volume">Volume</span></td><td>OBV</td><td>On-Balance Volume (norm.)</td></tr>
+                        <tr><td><span class="feature-category volume">Volume</span></td><td>A/D Line</td><td>Accumulation/Distribution</td></tr>
+                        <tr><td><span class="feature-category position">Position</span></td><td>Price vs SMA</td><td>Preis relativ zu SMA</td></tr>
+                        <tr><td><span class="feature-category position">Position</span></td><td>BB Position</td><td>Position in Bollinger (0-1)</td></tr>
+                        <tr><td><span class="feature-category meta">Meta</span></td><td>Timeframe Enc</td><td>Timeframe-Kodierung</td></tr>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
+            <!-- Sequenzlängen (aufklappbar) -->
+            <div class="card collapsible-card">
+                <div class="card-header collapsible-header" onclick="toggleSequenceSection()" style="cursor: pointer;">
+                    <h2 class="card-title">
+                        <span id="sequence-toggle-icon" style="display: inline-block; transition: transform 0.2s;">&#9654;</span>
+                        &#128337; Sequenzlängen pro Timeframe
+                    </h2>
+                    <span class="badge" style="background: rgba(100, 200, 255, 0.2); color: #64c8ff; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">9</span>
+                </div>
+                <div id="sequence-section-content" style="display: none; padding-top: 1rem;">
+                    <table class="timeframe-table">
+                    <thead>
+                        <tr>
+                            <th>Timeframe</th>
+                            <th>Sequenz</th>
+                            <th>Entspricht</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>M1</td><td>480</td><td>8 Stunden</td></tr>
+                        <tr><td>M5</td><td>288</td><td>24 Stunden</td></tr>
+                        <tr><td>M15</td><td>192</td><td>48 Stunden</td></tr>
+                        <tr><td>M30</td><td>192</td><td>4 Tage</td></tr>
+                        <tr><td>H1</td><td>168</td><td>1 Woche</td></tr>
+                        <tr><td>H4</td><td>168</td><td>4 Wochen</td></tr>
+                        <tr><td>D1</td><td>120</td><td>~6 Monate</td></tr>
+                        <tr><td>W1</td><td>52</td><td>1 Jahr</td></tr>
+                        <tr><td>MN</td><td>24</td><td>2 Jahre</td></tr>
+                    </tbody>
+                </table>
                 </div>
             </div>
         </div>
@@ -2242,17 +2244,42 @@
         }
 
         // Model Functions
-        async function loadModels() {
+        let modelsLoaded = false;
+
+        function toggleModelsSection() {
+            const content = document.getElementById('models-section-content');
+            const icon = document.getElementById('models-toggle-icon');
+            const isHidden = content.style.display === 'none';
+
+            if (isHidden) {
+                content.style.display = 'block';
+                icon.style.transform = 'rotate(90deg)';
+                // Auto-load models on first expand
+                if (!modelsLoaded) {
+                    loadModelsOverview();
+                }
+            } else {
+                content.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        async function loadModelsOverview() {
+            const container = document.getElementById('models-list-overview');
+            const badge = document.getElementById('models-count-badge');
+
             try {
                 const response = await fetch('/cnn-lstm/api/v1/models');
                 const data = await response.json();
 
-                const container = document.getElementById('models-list');
-
                 if (!data.models || data.models.length === 0) {
                     container.innerHTML = '<div class="empty-state"><p>Keine Modelle verfügbar. Starte ein Training!</p></div>';
+                    badge.textContent = '0';
                     return;
                 }
+
+                modelsLoaded = true;
+                badge.textContent = data.models.length;
 
                 container.innerHTML = `
                     <table class="feature-table">
@@ -2279,7 +2306,42 @@
                     </table>
                 `;
             } catch (error) {
+                container.innerHTML = '<div class="empty-state"><p>Fehler beim Laden der Modelle</p></div>';
                 showToast(error.message, 'error');
+            }
+        }
+
+        async function loadModels() {
+            await loadModelsOverview();
+        }
+
+        // Toggle Features Section
+        function toggleFeaturesSection() {
+            const content = document.getElementById('features-section-content');
+            const icon = document.getElementById('features-toggle-icon');
+            const isHidden = content.style.display === 'none';
+
+            if (isHidden) {
+                content.style.display = 'block';
+                icon.style.transform = 'rotate(90deg)';
+            } else {
+                content.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Toggle Sequence Section
+        function toggleSequenceSection() {
+            const content = document.getElementById('sequence-section-content');
+            const icon = document.getElementById('sequence-toggle-icon');
+            const isHidden = content.style.display === 'none';
+
+            if (isHidden) {
+                content.style.display = 'block';
+                icon.style.transform = 'rotate(90deg)';
+            } else {
+                content.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
             }
         }
 
