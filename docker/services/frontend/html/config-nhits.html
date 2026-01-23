@@ -740,6 +740,54 @@
             font-size: 1rem;
             font-weight: 500;
         }
+
+        /* Architecture Diagram - Collapsible */
+        .architecture-diagram {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            color: #e8e8e8;
+        }
+
+        .architecture-diagram summary {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            color: #64c8ff;
+            font-size: 0.9rem;
+            font-weight: 500;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .architecture-diagram summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .architecture-diagram summary::before {
+            content: '▶';
+            font-size: 0.7rem;
+            transition: transform 0.2s;
+        }
+
+        .architecture-diagram[open] summary::before {
+            transform: rotate(90deg);
+        }
+
+        .architecture-diagram .diagram-content {
+            padding: 0 1rem 1rem 1rem;
+        }
+
+        .architecture-diagram pre {
+            margin: 0;
+            white-space: pre;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -1323,67 +1371,6 @@
 
         <!-- Performance Tab -->
         <div id="tab-performance" class="tab-content">
-            <!-- Auto-Evaluation Status Card -->
-            <div class="card" style="margin-bottom: 1rem;">
-                <div class="card-header">
-                    <h2 class="card-title">Auto-Evaluierung & Retrain</h2>
-                    <button class="btn btn-sm btn-primary" onclick="loadAutoStatus()">Aktualisieren</button>
-                </div>
-                <div id="auto-status-content">
-                    <div class="grid-2-equal" style="margin-bottom: 1rem;">
-                        <!-- Auto-Evaluation Status -->
-                        <div style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                            <h4 style="margin: 0 0 0.5rem 0; opacity: 0.8;">Auto-Evaluierung</h4>
-                            <div id="auto-eval-status">
-                                <div style="opacity: 0.5;">Lade Status...</div>
-                            </div>
-                            <!-- Prediction Stats (KPIs) -->
-                            <div class="stats-bar" id="prediction-stats" style="margin-top: 0.75rem; padding: 0.5rem 0;">
-                                <div class="stat-item">
-                                    <div class="stat-value" id="stat-pending">-</div>
-                                    <div class="stat-label">Ausstehend total</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-value" id="stat-waiting">-</div>
-                                    <div class="stat-label">Warten auf Horizont</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-value" id="stat-ready">-</div>
-                                    <div class="stat-label">Bereit zur Eval.</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-value" id="stat-evaluated">-</div>
-                                    <div class="stat-label">Evaluiert</div>
-                                </div>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
-                                <button class="btn btn-sm" id="btn-toggle-auto-eval" onclick="toggleAutoEvaluation()">
-                                    ⏸️ Auto-Eval pausieren
-                                </button>
-                                <button class="btn btn-sm btn-success" id="btn-manual-eval" onclick="runManualEvaluation()">
-                                    📊 Jetzt evaluieren
-                                </button>
-                            </div>
-                        </div>
-                        <!-- Auto-Retrain Status -->
-                        <div style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                            <h4 style="margin: 0 0 0.5rem 0; opacity: 0.8;">Auto-Retrain</h4>
-                            <div id="auto-retrain-status">
-                                <div style="opacity: 0.5;">Lade Status...</div>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
-                                <button class="btn btn-sm" id="btn-toggle-auto-retrain" onclick="toggleAutoRetrain()">
-                                    ⏸️ Auto-Retrain pausieren
-                                </button>
-                                <button class="btn btn-sm btn-warning" id="btn-manual-retrain" onclick="runManualRetrain()">
-                                    🔄 Schlechte Modelle retrainieren
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Performance Table Card -->
             <div class="card">
                 <div class="card-header">
@@ -1487,6 +1474,45 @@
                         <div style="color: #666; font-size: 1.5rem;">↩</div>
                     </div>
                 </div>
+
+                <!-- Technical Architecture Diagram (Collapsible) -->
+                <details class="architecture-diagram">
+                    <summary>📐 Technische Architektur</summary>
+                    <div class="diagram-content">
+                        <pre>
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         NHITS Self-Learning Pipeline                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+  │   NHITS      │      │  Marktdaten  │      │  Prognose    │
+  │   Modell     │─────▶│  eintreffen  │─────▶│  erstellen   │
+  │              │      │              │      │              │
+  └──────────────┘      └──────────────┘      └──────┬───────┘
+         ▲                                          │
+         │                                          ▼
+         │                                   ┌──────────────┐
+         │                                   │  Prognose    │
+         │                                   │  speichern   │
+         │                                   │  (pending)   │
+         │                                   └──────┬───────┘
+         │                                          │
+         │                                          │ Horizont erreicht
+         │                                          ▼
+  ┌──────┴───────┐      ┌──────────────┐      ┌──────────────┐
+  │   Modell     │      │  Accuracy    │      │  Evaluierung │
+  │   neu        │◀─────│  < Schwelle? │◀─────│  ausführen   │
+  │   trainieren │ JA   │              │      │              │
+  └──────────────┘      └──────┬───────┘      └──────────────┘
+                               │ NEIN
+                               ▼
+                        ┌──────────────┐
+                        │   Weiter     │
+                        │   beobachten │
+                        └──────────────┘
+</pre>
+                    </div>
+                </details>
 
                 <!-- Stats Grid -->
                 <div class="stats-bar" id="selflearn-stats" style="margin-bottom: 0;">
