@@ -214,6 +214,16 @@
             background: rgba(255, 152, 0, 0.3);
         }
 
+        .btn-purple {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            border: 1px solid rgba(167, 139, 250, 0.3);
+        }
+
+        .btn-purple:hover {
+            background: rgba(167, 139, 250, 0.3);
+        }
+
         .btn-loading {
             position: relative;
             pointer-events: none;
@@ -785,6 +795,7 @@
             <button class="tab-btn" onclick="switchTab('models')">Modelle</button>
             <button class="tab-btn" onclick="switchTab('forecast')">Prognose</button>
             <button class="tab-btn" onclick="switchTab('performance')">Performance</button>
+            <button class="tab-btn" onclick="switchTab('selflearning')">🤖 Self-Learning</button>
             <button class="tab-btn" onclick="switchTab('backup')">Backup / Restore</button>
         </div>
 
@@ -1300,6 +1311,216 @@
             </div>
         </div>
 
+        <!-- Self-Learning Tab -->
+        <div id="tab-selflearning" class="tab-content">
+            <!-- Closed-Loop Visualization -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🤖 Self-Learning System</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-purple" id="selflearn-toggle-btn" onclick="toggleSelfLearning()">✅ Aktiviert</button>
+                        <button class="btn btn-warning" id="selflearn-manual-btn" onclick="triggerManualRetrain()">⚙️ Manuell trainieren</button>
+                    </div>
+                </div>
+
+                <!-- Manual Retrain Progress -->
+                <div id="selflearn-retrain-progress" style="margin: 1rem 0; display: none;">
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span id="selflearn-retrain-status">Training läuft...</span>
+                            <span id="selflearn-retrain-progress-text">0%</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div id="selflearn-retrain-progress-bar" style="background: #ffb74d; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <div id="selflearn-retrain-details" style="margin-top: 0.5rem; font-size: 0.8rem; color: #888;"></div>
+                    </div>
+                </div>
+
+                <p style="opacity: 0.8; margin-bottom: 1rem;">
+                    Das System lernt kontinuierlich aus seinen Prognose-Fehlern durch einen geschlossenen Feedback-Loop.
+                    Bei schlechter Performance wird automatisch ein Re-Training getriggert.
+                </p>
+
+                <!-- Closed-Loop Diagram -->
+                <div style="background: rgba(100, 200, 255, 0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h3 style="color: #64c8ff; margin-bottom: 1rem; font-size: 1rem;">Closed-Loop Feedback</h3>
+                    <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(100, 200, 255, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">🎯</div>
+                            <div style="font-size: 0.85rem; color: #64c8ff;">1. Prognose</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">→</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(129, 199, 132, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">✅</div>
+                            <div style="font-size: 0.85rem; color: #81c784;">2. Evaluierung</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">→</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255, 183, 77, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">📊</div>
+                            <div style="font-size: 0.85rem; color: #ffb74d;">3. Analyse</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">→</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(167, 139, 250, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">🤖</div>
+                            <div style="font-size: 0.85rem; color: #a78bfa;">4. Re-Train</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">↩</div>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-bar" id="selflearn-stats" style="margin-bottom: 0;">
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: #a78bfa;" id="sl-stat-threshold">45%</div>
+                        <div class="stat-label">Direction-Schwelle</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="sl-stat-total-retrains">0</div>
+                        <div class="stat-label">Re-Trainings</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: #81c784;" id="sl-stat-improvement">-</div>
+                        <div class="stat-label">Avg. Accuracy</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="sl-stat-cooldown">-</div>
+                        <div class="stat-label">Cooldown</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="sl-stat-pending">0</div>
+                        <div class="stat-label">Ausstehend</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="sl-stat-evaluated">0</div>
+                        <div class="stat-label">Evaluiert</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⚙️ Konfiguration</h2>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem;">
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Richtungs-Schwelle</label>
+                        <select class="filter-select" id="sl-threshold-select" onchange="updateSelfLearnConfig()" style="width: 100%;">
+                            <option value="0.40">40% (Niedrig)</option>
+                            <option value="0.45" selected>45% (Standard)</option>
+                            <option value="0.50">50%</option>
+                            <option value="0.55">55% (Hoch)</option>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">Re-Training wenn Accuracy darunter fällt</small>
+                    </div>
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Cooldown-Periode</label>
+                        <select class="filter-select" id="sl-cooldown-select" onchange="updateSelfLearnCooldown()" style="width: 100%;">
+                            <option value="2">2 Stunden</option>
+                            <option value="4" selected>4 Stunden (Standard)</option>
+                            <option value="6">6 Stunden</option>
+                            <option value="12">12 Stunden</option>
+                            <option value="24">24 Stunden</option>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">Mindestwartezeit zwischen Trainings</small>
+                    </div>
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Min. Evaluierungen</label>
+                        <select class="filter-select" id="sl-min-evals-select" style="width: 100%;">
+                            <option value="5">5</option>
+                            <option value="10" selected>10 (Standard)</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">Mindestanzahl Evaluierungen für Trigger</small>
+                    </div>
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Eval-Intervall</label>
+                        <select class="filter-select" id="sl-interval-select" style="width: 100%;">
+                            <option value="60">1 Minute</option>
+                            <option value="180">3 Minuten</option>
+                            <option value="300" selected>5 Minuten (Standard)</option>
+                            <option value="600">10 Minuten</option>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">Automatischer Evaluierungs-Zyklus</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Symbols Needing Retrain -->
+            <div class="card" id="sl-retrain-candidates-card" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">⚠️ Symbole mit schlechter Performance</h2>
+                    <button class="btn btn-sm btn-warning" onclick="triggerManualRetrain()">Alle retrainieren</button>
+                </div>
+                <div id="sl-retrain-candidates">
+                    <!-- Dynamisch befüllt -->
+                </div>
+            </div>
+
+            <!-- Recent Evaluations Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📋 Letzte Evaluierungen</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-sm btn-primary" onclick="loadSelfLearningEvaluations()">🔄 Aktualisieren</button>
+                        <button class="btn btn-sm btn-success" onclick="triggerManualEvaluation()">📊 Jetzt evaluieren</button>
+                    </div>
+                </div>
+                <div class="table-container" style="max-height: 400px;">
+                    <table id="sl-evaluations-table">
+                        <thead>
+                            <tr>
+                                <th>Zeitpunkt</th>
+                                <th>Symbol</th>
+                                <th>Horizont</th>
+                                <th>Prognose</th>
+                                <th>Tatsächlich</th>
+                                <th>Fehler</th>
+                                <th>Richtung</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sl-evaluations-tbody">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
+                                    Lade Evaluierungen...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Performance by Symbol -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📈 Performance nach Symbol</h2>
+                    <button class="btn btn-sm btn-primary" onclick="loadSelfLearningPerformance()">🔄 Aktualisieren</button>
+                </div>
+                <div class="table-container" style="max-height: 350px;">
+                    <table id="sl-performance-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Evaluiert</th>
+                                <th>Ø Fehler</th>
+                                <th>Richtung</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sl-performance-tbody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 2rem; color: #666;">
+                                    Lade Performance-Daten...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- Backup Tab -->
         <div id="tab-backup" class="tab-content">
             <div class="grid-2">
@@ -1491,6 +1712,7 @@
                 loadAutoStatus();
             }
             if (tabName === 'forecast') loadForecastSymbols();
+            if (tabName === 'selflearning') loadSelfLearningStatus();
             if (tabName === 'backup') loadBackupStatus();
         }
 
@@ -3059,6 +3281,340 @@
 
         // Load forecast symbols on page load
         loadForecastSymbols();
+
+        // ========== SELF-LEARNING TAB ==========
+        let selfLearningEnabled = true;
+        let selfLearningRetrainEnabled = true;
+
+        // Load Self-Learning status
+        async function loadSelfLearningStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/auto-status`);
+                const data = await res.json();
+
+                // Update stats
+                const evalStatus = data.auto_evaluation;
+                const retrainStatus = data.auto_retrain;
+                const predictions = data.predictions;
+
+                selfLearningEnabled = evalStatus.enabled;
+                selfLearningRetrainEnabled = retrainStatus.enabled;
+
+                // Update toggle button
+                const btn = document.getElementById('selflearn-toggle-btn');
+                if (selfLearningEnabled && selfLearningRetrainEnabled) {
+                    btn.innerHTML = '✅ Aktiviert';
+                    btn.classList.remove('btn-danger');
+                    btn.classList.add('btn-purple');
+                } else {
+                    btn.innerHTML = '❌ Deaktiviert';
+                    btn.classList.remove('btn-purple');
+                    btn.classList.add('btn-danger');
+                }
+
+                // Update cooldown
+                document.getElementById('sl-stat-cooldown').textContent = `${retrainStatus.cooldown_hours}h`;
+                document.getElementById('sl-cooldown-select').value = retrainStatus.cooldown_hours.toString();
+
+                // Update stats
+                document.getElementById('sl-stat-total-retrains').textContent = retrainStatus.total_retrains;
+                document.getElementById('sl-stat-pending').textContent = predictions.pending_count;
+                document.getElementById('sl-stat-evaluated').textContent = predictions.evaluated_count;
+
+                // Update interval select
+                const intervalSelect = document.getElementById('sl-interval-select');
+                if (evalStatus.interval_seconds) {
+                    intervalSelect.value = evalStatus.interval_seconds.toString();
+                }
+
+                // Show retrain candidates if any
+                const candidatesCard = document.getElementById('sl-retrain-candidates-card');
+                const candidatesDiv = document.getElementById('sl-retrain-candidates');
+
+                if (data.symbols_needing_retrain && data.symbols_needing_retrain.length > 0) {
+                    candidatesCard.style.display = 'block';
+                    candidatesDiv.innerHTML = data.symbols_needing_retrain.map(symbol => `
+                        <div style="display: inline-block; padding: 0.4rem 0.8rem; margin: 0.25rem; background: rgba(255,193,7,0.2); border-radius: 4px; font-size: 0.9rem;">
+                            <span style="color: #fbbf24;">⚠️</span> ${symbol}
+                        </div>
+                    `).join('');
+                } else {
+                    candidatesCard.style.display = 'none';
+                }
+
+                // Update manual retrain button
+                const manualBtn = document.getElementById('selflearn-manual-btn');
+                if (retrainStatus.in_progress) {
+                    manualBtn.disabled = true;
+                    manualBtn.innerHTML = '⏳ Training läuft...';
+                    manualBtn.classList.add('btn-loading');
+                    document.getElementById('selflearn-retrain-progress').style.display = 'block';
+                } else {
+                    manualBtn.disabled = false;
+                    manualBtn.innerHTML = '⚙️ Manuell trainieren';
+                    manualBtn.classList.remove('btn-loading');
+                    document.getElementById('selflearn-retrain-progress').style.display = 'none';
+                }
+
+                // Load evaluations and performance
+                await loadSelfLearningEvaluations();
+                await loadSelfLearningPerformance();
+
+            } catch (err) {
+                console.error('Failed to load self-learning status:', err);
+                showToast('Fehler beim Laden des Self-Learning Status');
+            }
+        }
+
+        // Load recent evaluations
+        async function loadSelfLearningEvaluations() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/evaluated?limit=30`);
+                const data = await res.json();
+
+                const tbody = document.getElementById('sl-evaluations-tbody');
+
+                if (!data.predictions || data.predictions.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
+                                Noch keine Evaluierungen vorhanden
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = data.predictions.map(pred => {
+                    const directionIcon = pred.direction_correct ?
+                        '<span style="color: #4ade80;">✓</span>' :
+                        '<span style="color: #f87171;">✗</span>';
+
+                    const errorColor = pred.prediction_error_pct < 0.5 ? '#4ade80' :
+                                       pred.prediction_error_pct < 1.0 ? '#fbbf24' : '#f87171';
+
+                    const formatPrice = (price) => {
+                        if (!price) return '-';
+                        if (price < 1) return price.toFixed(5);
+                        if (price < 100) return price.toFixed(4);
+                        return price.toFixed(2);
+                    };
+
+                    return `
+                        <tr>
+                            <td style="font-size: 0.85rem;">${pred.evaluated_at ? formatUTCTimestamp(pred.evaluated_at) : '-'}</td>
+                            <td><strong>${pred.symbol}</strong></td>
+                            <td>${pred.horizon}</td>
+                            <td>${formatPrice(pred.predicted_price)}</td>
+                            <td>${formatPrice(pred.actual_price)}</td>
+                            <td style="color: ${errorColor};">${pred.prediction_error_pct?.toFixed(3) || '-'}%</td>
+                            <td>${directionIcon}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Failed to load evaluations:', err);
+            }
+        }
+
+        // Load performance by symbol
+        async function loadSelfLearningPerformance() {
+            try {
+                const res = await fetch(`${API_BASE}/forecast/performance`);
+                const data = await res.json();
+
+                const tbody = document.getElementById('sl-performance-tbody');
+
+                if (!data.by_symbol || Object.keys(data.by_symbol).length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 2rem; color: #666;">
+                                Noch keine Performance-Daten vorhanden
+                            </td>
+                        </tr>
+                    `;
+                    // Update avg accuracy
+                    document.getElementById('sl-stat-improvement').textContent = '-';
+                    return;
+                }
+
+                // Calculate average accuracy
+                let totalAcc = 0;
+                let symbolCount = 0;
+
+                const symbols = Object.entries(data.by_symbol).sort((a, b) => b[1].evaluated - a[1].evaluated);
+
+                tbody.innerHTML = symbols.map(([symbol, perf]) => {
+                    const directionAcc = (perf.direction_accuracy * 100).toFixed(1);
+                    const avgError = perf.avg_error_pct?.toFixed(3) || '0.000';
+
+                    if (perf.evaluated > 0) {
+                        totalAcc += perf.direction_accuracy * 100;
+                        symbolCount++;
+                    }
+
+                    const directionColor = perf.direction_accuracy >= 0.5 ? '#4ade80' :
+                                          perf.direction_accuracy >= 0.45 ? '#fbbf24' : '#f87171';
+
+                    const statusBadge = perf.needs_retraining ?
+                        '<span class="badge badge-failed">Retrain</span>' :
+                        '<span class="badge badge-success">OK</span>';
+
+                    return `
+                        <tr>
+                            <td><strong>${symbol}</strong></td>
+                            <td>${perf.evaluated}</td>
+                            <td>${avgError}%</td>
+                            <td style="color: ${directionColor};">${directionAcc}%</td>
+                            <td>${statusBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // Update avg accuracy stat
+                if (symbolCount > 0) {
+                    const avgAcc = (totalAcc / symbolCount).toFixed(1);
+                    document.getElementById('sl-stat-improvement').textContent = `${avgAcc}%`;
+                    document.getElementById('sl-stat-improvement').style.color =
+                        parseFloat(avgAcc) >= 50 ? '#4ade80' : '#fbbf24';
+                }
+
+            } catch (err) {
+                console.error('Failed to load performance:', err);
+            }
+        }
+
+        // Toggle Self-Learning (both eval and retrain)
+        async function toggleSelfLearning() {
+            const newState = !(selfLearningEnabled && selfLearningRetrainEnabled);
+
+            try {
+                // Toggle both evaluation and retrain
+                await fetch(`${API_BASE}/forecast/auto-evaluation/toggle?enabled=${newState}`, { method: 'POST' });
+                await fetch(`${API_BASE}/forecast/auto-retrain/toggle?enabled=${newState}`, { method: 'POST' });
+
+                showToast(newState ? 'Self-Learning aktiviert' : 'Self-Learning deaktiviert');
+                await loadSelfLearningStatus();
+            } catch (err) {
+                console.error('Failed to toggle self-learning:', err);
+                showToast('Fehler beim Umschalten');
+            }
+        }
+
+        // Update Self-Learning config (placeholder - server-side config would be needed)
+        function updateSelfLearnConfig() {
+            const threshold = document.getElementById('sl-threshold-select').value;
+            document.getElementById('sl-stat-threshold').textContent = `${(parseFloat(threshold) * 100).toFixed(0)}%`;
+            showToast(`Schwelle auf ${(parseFloat(threshold) * 100).toFixed(0)}% gesetzt (Client-seitig)`);
+        }
+
+        // Update cooldown
+        async function updateSelfLearnCooldown() {
+            const hours = parseInt(document.getElementById('sl-cooldown-select').value);
+            try {
+                await fetch(`${API_BASE}/forecast/auto-retrain/cooldown?hours=${hours}`, { method: 'POST' });
+                showToast(`Cooldown auf ${hours}h gesetzt`);
+                document.getElementById('sl-stat-cooldown').textContent = `${hours}h`;
+            } catch (err) {
+                console.error('Failed to update cooldown:', err);
+                showToast('Fehler beim Setzen des Cooldowns');
+            }
+        }
+
+        // Trigger manual evaluation
+        async function triggerManualEvaluation() {
+            try {
+                showToast('Evaluierung gestartet...');
+                const res = await fetch(`${API_BASE}/forecast/evaluate`, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success) {
+                    const count = data.evaluated_count || 0;
+                    showToast(`${count} Prognosen evaluiert`);
+                    await loadSelfLearningStatus();
+                } else {
+                    showToast('Evaluierung fehlgeschlagen');
+                }
+            } catch (err) {
+                console.error('Failed to trigger evaluation:', err);
+                showToast('Fehler bei der Evaluierung');
+            }
+        }
+
+        // Trigger manual retrain
+        async function triggerManualRetrain() {
+            const btn = document.getElementById('selflearn-manual-btn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Training läuft...';
+            btn.classList.add('btn-loading');
+
+            document.getElementById('selflearn-retrain-progress').style.display = 'block';
+            document.getElementById('selflearn-retrain-status').textContent = 'Suche nach Symbolen für Retrain...';
+
+            try {
+                const res = await fetch(`${API_BASE}/forecast/retrain-poor-performers`, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success) {
+                    if (data.symbols && data.symbols.length > 0) {
+                        document.getElementById('selflearn-retrain-status').textContent =
+                            `Training für: ${data.symbols.join(', ')}`;
+                        showToast(`Retrain gestartet für ${data.symbols.length} Symbole`);
+
+                        // Start polling
+                        startSelfLearnRetrainPolling();
+                    } else {
+                        showToast(data.message || 'Keine Modelle benötigen Retraining');
+                        document.getElementById('selflearn-retrain-progress').style.display = 'none';
+                        btn.disabled = false;
+                        btn.innerHTML = '⚙️ Manuell trainieren';
+                        btn.classList.remove('btn-loading');
+                    }
+                } else {
+                    showToast('Fehler: ' + (data.detail || 'Unbekannter Fehler'));
+                    document.getElementById('selflearn-retrain-progress').style.display = 'none';
+                    btn.disabled = false;
+                    btn.innerHTML = '⚙️ Manuell trainieren';
+                    btn.classList.remove('btn-loading');
+                }
+            } catch (err) {
+                console.error('Manual retrain failed:', err);
+                showToast('Fehler: ' + err.message);
+                document.getElementById('selflearn-retrain-progress').style.display = 'none';
+                btn.disabled = false;
+                btn.innerHTML = '⚙️ Manuell trainieren';
+                btn.classList.remove('btn-loading');
+            }
+        }
+
+        // Poll for retrain status
+        let selfLearnRetrainPolling = null;
+        function startSelfLearnRetrainPolling() {
+            if (selfLearnRetrainPolling) return;
+
+            selfLearnRetrainPolling = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/forecast/auto-status`);
+                    const data = await res.json();
+
+                    if (!data.auto_retrain.in_progress) {
+                        clearInterval(selfLearnRetrainPolling);
+                        selfLearnRetrainPolling = null;
+
+                        document.getElementById('selflearn-retrain-progress').style.display = 'none';
+                        document.getElementById('selflearn-manual-btn').disabled = false;
+                        document.getElementById('selflearn-manual-btn').innerHTML = '⚙️ Manuell trainieren';
+                        document.getElementById('selflearn-manual-btn').classList.remove('btn-loading');
+
+                        showToast('Retrain abgeschlossen');
+                        await loadSelfLearningStatus();
+                    }
+                } catch (err) {
+                    console.error('Polling error:', err);
+                }
+            }, 3000);
+        }
 
         // ========== BACKUP TAB ==========
         let currentBackupData = null;
