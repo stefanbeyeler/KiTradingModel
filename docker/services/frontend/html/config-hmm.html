@@ -565,6 +565,64 @@
         .collapsible-content {
             border-top: 1px solid rgba(255,255,255,0.05);
         }
+
+        /* Architecture Diagram - Collapsible */
+        .architecture-diagram {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            color: #e8e8e8;
+        }
+
+        .architecture-diagram summary {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            color: #64c8ff;
+            font-size: 0.9rem;
+            font-weight: 500;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .architecture-diagram summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .architecture-diagram summary::before {
+            content: '▶';
+            font-size: 0.7rem;
+            transition: transform 0.2s;
+        }
+
+        .architecture-diagram[open] summary::before {
+            transform: rotate(90deg);
+        }
+
+        .architecture-diagram .diagram-content {
+            padding: 0 1rem 1rem 1rem;
+        }
+
+        .architecture-diagram pre {
+            margin: 0;
+            white-space: pre;
+        }
+
+        /* Self-Learning specific styles */
+        .btn-purple {
+            background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+            color: white;
+        }
+
+        .btn-purple:hover {
+            background: linear-gradient(135deg, #6d28d9, #7c3aed);
+        }
     </style>
 </head>
 <body>
@@ -641,6 +699,7 @@
             <button class="tab-btn" onclick="showTab('training')">&#9881; Training</button>
             <button class="tab-btn" onclick="showTab('validation')">&#128203; Validierung</button>
             <button class="tab-btn" onclick="showTab('scheduling')">&#128197; Scheduling</button>
+            <button class="tab-btn" onclick="showTab('selflearning')">&#129302; Self-Learning</button>
         </div>
 
         <!-- Overview Tab -->
@@ -1080,6 +1139,233 @@
                 </div>
             </div>
         </div>
+
+        <!-- Self-Learning Tab -->
+        <div id="tab-selflearning" class="tab-content">
+            <!-- Closed-Loop Visualization -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#129302; Self-Learning System</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-purple" id="hmm-selflearn-toggle-btn" onclick="toggleHmmSelfLearning()">&#10004; Aktiviert</button>
+                        <button class="btn btn-warning" id="hmm-selflearn-manual-btn" onclick="triggerHmmManualRetrain()">&#9881; Manuell trainieren</button>
+                    </div>
+                </div>
+
+                <!-- Manual Retrain Progress -->
+                <div id="hmm-selflearn-retrain-progress" style="margin: 1rem 0; display: none;">
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span id="hmm-selflearn-retrain-status">Training läuft...</span>
+                            <span id="hmm-selflearn-retrain-progress-text">0%</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div id="hmm-selflearn-retrain-progress-bar" style="background: #ffb74d; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <div id="hmm-selflearn-retrain-details" style="margin-top: 0.5rem; font-size: 0.8rem; color: #888;"></div>
+                    </div>
+                </div>
+
+                <p style="opacity: 0.8; margin-bottom: 1rem;">
+                    Das HMM-System lernt kontinuierlich aus der Regime-Erkennung durch einen geschlossenen Feedback-Loop.
+                    Bei schlechter Accuracy wird automatisch ein Re-Training getriggert.
+                </p>
+
+                <!-- Closed-Loop Diagram -->
+                <div style="background: rgba(100, 200, 255, 0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h3 style="color: #64c8ff; margin-bottom: 1rem; font-size: 1rem;">Closed-Loop Feedback</h3>
+                    <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(100, 200, 255, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">&#127919;</div>
+                            <div style="font-size: 0.85rem; color: #64c8ff;">1. Regime-Erkennung</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">&#8594;</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(129, 199, 132, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">&#10004;</div>
+                            <div style="font-size: 0.85rem; color: #81c784;">2. Validierung</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">&#8594;</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255, 183, 77, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">&#128202;</div>
+                            <div style="font-size: 0.85rem; color: #ffb74d;">3. A/B Vergleich</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">&#8594;</div>
+                        <div style="text-align: center;">
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(167, 139, 250, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 1.8rem;">&#129302;</div>
+                            <div style="font-size: 0.85rem; color: #a78bfa;">4. Re-Train/Rollback</div>
+                        </div>
+                        <div style="color: #666; font-size: 1.5rem;">&#8617;</div>
+                    </div>
+                </div>
+
+                <!-- Technical Architecture Diagram (Collapsible) -->
+                <details class="architecture-diagram">
+                    <summary>📐 Technische Architektur</summary>
+                    <div class="diagram-content">
+                        <pre>
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         HMM Self-Learning Pipeline                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+  │   HMM Model  │      │  Marktdaten  │      │    Regime    │
+  │   + Scorer   │─────▶│  eintreffen  │─────▶│   erkennen   │
+  │              │      │              │      │              │
+  └──────────────┘      └──────────────┘      └──────┬───────┘
+         ▲                                          │
+         │                                          ▼
+         │                                   ┌──────────────┐
+         │                                   │  Validierung │
+         │                                   │  vs Ground   │
+         │                                   │   Truth      │
+         │                                   └──────┬───────┘
+         │                                          │
+         │                                          ▼
+  ┌──────┴───────┐      ┌──────────────┐      ┌──────────────┐
+  │   Deploy     │      │    A/B       │      │  Accuracy    │
+  │   oder       │◀─────│  Vergleich   │◀─────│  berechnen   │
+  │   Rollback   │      │              │      │              │
+  └──────────────┘      └──────────────┘      └──────────────┘
+</pre>
+                    </div>
+                </details>
+
+                <!-- Stats Grid -->
+                <div class="stats-bar" id="hmm-selflearn-stats" style="margin-bottom: 0;">
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: #a78bfa;" id="hmm-sl-stat-threshold">40%</div>
+                        <div class="stat-label">Accuracy-Schwelle</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="hmm-sl-stat-total-retrains">0</div>
+                        <div class="stat-label">Re-Trainings</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: #81c784;" id="hmm-sl-stat-accuracy">-</div>
+                        <div class="stat-label">Avg. Accuracy</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="hmm-sl-stat-cooldown">-</div>
+                        <div class="stat-label">Cooldown</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="hmm-sl-stat-deployments">0</div>
+                        <div class="stat-label">Deployments</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="hmm-sl-stat-rollbacks">0</div>
+                        <div class="stat-label">Rollbacks</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#9881; Konfiguration</h2>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem;">
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Accuracy-Schwelle</label>
+                        <select class="form-control" id="hmm-sl-threshold-select" onchange="updateHmmSelfLearnConfig()" style="width: 100%;">
+                            <option value="0.35">35% (Niedrig)</option>
+                            <option value="0.40" selected>40% (Standard)</option>
+                            <option value="0.45">45%</option>
+                            <option value="0.50">50% (Hoch)</option>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">Re-Training wenn Accuracy darunter fällt</small>
+                    </div>
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Cooldown-Periode</label>
+                        <select class="form-control" id="hmm-sl-cooldown-select" onchange="updateHmmSelfLearnCooldown()" style="width: 100%;">
+                            <option value="4">4 Stunden</option>
+                            <option value="6" selected>6 Stunden (Standard)</option>
+                            <option value="12">12 Stunden</option>
+                            <option value="24">24 Stunden</option>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">Mindestwartezeit zwischen Trainings</small>
+                    </div>
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Regression-Toleranz</label>
+                        <select class="form-control" id="hmm-sl-regression-select" style="width: 100%;">
+                            <option value="0.02" selected>2% (Strikt)</option>
+                            <option value="0.03">3%</option>
+                            <option value="0.05">5% (Tolerant)</option>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">Max. Accuracy-Regression für Deployment</small>
+                    </div>
+                    <div>
+                        <label style="color: #aaa; display: block; margin-bottom: 0.5rem;">Training-Symbole</label>
+                        <select class="form-control" id="hmm-sl-symbols-select" style="width: 100%;">
+                            <option value="all" selected>Alle Symbole</option>
+                            <option value="crypto">Nur Krypto</option>
+                            <option value="forex">Nur Forex</option>
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">Welche Symbole sollen trainiert werden</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deployment History Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128203; Deployment-Historie</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-sm btn-primary" onclick="loadHmmDeploymentHistory()">&#128260; Aktualisieren</button>
+                    </div>
+                </div>
+                <div class="table-container" style="max-height: 400px;">
+                    <table id="hmm-deployment-table">
+                        <thead>
+                            <tr>
+                                <th>Zeitpunkt</th>
+                                <th>Version</th>
+                                <th>Entscheidung</th>
+                                <th>Accuracy</th>
+                                <th>F1-Score</th>
+                                <th>Änderung</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hmm-deployment-tbody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2rem; color: #666;">
+                                    Lade Deployment-Historie...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Model Versions Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">&#128230; Modell-Versionen</h2>
+                    <button class="btn btn-sm btn-primary" onclick="loadHmmModelVersions()">&#128260; Aktualisieren</button>
+                </div>
+                <div class="table-container" style="max-height: 350px;">
+                    <table id="hmm-versions-table">
+                        <thead>
+                            <tr>
+                                <th>Typ</th>
+                                <th>Symbol</th>
+                                <th>Erstellt</th>
+                                <th>Samples</th>
+                                <th>Status</th>
+                                <th>Grund</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hmm-versions-tbody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2rem; color: #666;">
+                                    Lade Modell-Versionen...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1177,6 +1463,13 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
             event.target.classList.add('active');
+
+            // Load data for specific tabs
+            if (tabName === 'selflearning') {
+                loadHmmSelfLearningStats();
+                loadHmmDeploymentHistory();
+                loadHmmModelVersions();
+            }
         }
 
         // Toggle Collapsible Section
@@ -2763,6 +3056,332 @@
             } catch (error) {
                 showToast(`Fehler: ${error.message}`, 'error');
             }
+        }
+
+        // ==================== Self-Learning Functions ====================
+
+        let hmmSelfLearningEnabled = true;
+        let hmmRetrainPollingInterval = null;
+
+        function toggleHmmSelfLearning() {
+            hmmSelfLearningEnabled = !hmmSelfLearningEnabled;
+            const btn = document.getElementById('hmm-selflearn-toggle-btn');
+            if (hmmSelfLearningEnabled) {
+                btn.innerHTML = '&#10004; Aktiviert';
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-purple');
+                showToast('Self-Learning aktiviert', 'success');
+            } else {
+                btn.innerHTML = '&#10006; Deaktiviert';
+                btn.classList.remove('btn-purple');
+                btn.classList.add('btn-secondary');
+                showToast('Self-Learning deaktiviert', 'info');
+            }
+        }
+
+        async function triggerHmmManualRetrain() {
+            const btn = document.getElementById('hmm-selflearn-manual-btn');
+            const progressDiv = document.getElementById('hmm-selflearn-retrain-progress');
+
+            btn.disabled = true;
+            btn.innerHTML = '&#9203; Training wird gestartet...';
+            progressDiv.style.display = 'block';
+
+            try {
+                // Start HMM training via the training service
+                const response = await fetch(`${TRAIN_API_BASE}/train/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_type: 'hmm',
+                        symbols: [],
+                        train_scorer: true
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to start training');
+                }
+
+                const data = await response.json();
+                const jobId = data.job_id;
+
+                showToast('Training gestartet', 'success');
+
+                // Start polling for progress
+                hmmRetrainPollingInterval = setInterval(async () => {
+                    await pollHmmTrainingProgress(jobId);
+                }, 2000);
+
+            } catch (error) {
+                showToast(`Fehler: ${error.message}`, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '&#9881; Manuell trainieren';
+                progressDiv.style.display = 'none';
+            }
+        }
+
+        async function pollHmmTrainingProgress(jobId) {
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/train/status/${jobId}`);
+                if (!response.ok) throw new Error('Status not available');
+
+                const data = await response.json();
+                const progress = data.progress || 0;
+                const status = data.status || 'unknown';
+                const currentSymbol = data.current_symbol || '';
+
+                document.getElementById('hmm-selflearn-retrain-progress-bar').style.width = `${progress}%`;
+                document.getElementById('hmm-selflearn-retrain-progress-text').textContent = `${Math.round(progress)}%`;
+                document.getElementById('hmm-selflearn-retrain-status').textContent = `Training: ${status}`;
+                document.getElementById('hmm-selflearn-retrain-details').textContent = currentSymbol ? `Aktuell: ${currentSymbol}` : '';
+
+                if (status === 'completed' || status === 'failed') {
+                    clearInterval(hmmRetrainPollingInterval);
+                    hmmRetrainPollingInterval = null;
+
+                    const btn = document.getElementById('hmm-selflearn-manual-btn');
+                    btn.disabled = false;
+                    btn.innerHTML = '&#9881; Manuell trainieren';
+
+                    if (status === 'completed') {
+                        showToast('Training erfolgreich abgeschlossen', 'success');
+                        // Reload stats
+                        loadHmmSelfLearningStats();
+                        loadHmmDeploymentHistory();
+                    } else {
+                        showToast('Training fehlgeschlagen', 'error');
+                    }
+
+                    setTimeout(() => {
+                        document.getElementById('hmm-selflearn-retrain-progress').style.display = 'none';
+                    }, 3000);
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+            }
+        }
+
+        async function loadHmmSelfLearningStats() {
+            try {
+                // Load deployment history for stats
+                const response = await fetch(`${TRAIN_API_BASE}/deployment/history`);
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const history = data.history || [];
+
+                // Calculate stats
+                let deployments = 0;
+                let rollbacks = 0;
+                let totalAccuracy = 0;
+                let accuracyCount = 0;
+
+                history.forEach(item => {
+                    if (item.decision === 'deploy') deployments++;
+                    if (item.decision === 'reject' || item.decision === 'rollback') rollbacks++;
+                    if (item.hmm_metrics && item.hmm_metrics.regime_accuracy) {
+                        totalAccuracy += item.hmm_metrics.regime_accuracy;
+                        accuracyCount++;
+                    }
+                });
+
+                document.getElementById('hmm-sl-stat-total-retrains').textContent = history.length;
+                document.getElementById('hmm-sl-stat-deployments').textContent = deployments;
+                document.getElementById('hmm-sl-stat-rollbacks').textContent = rollbacks;
+
+                if (accuracyCount > 0) {
+                    const avgAcc = (totalAccuracy / accuracyCount * 100).toFixed(1);
+                    document.getElementById('hmm-sl-stat-accuracy').textContent = `${avgAcc}%`;
+                }
+
+                // Update threshold display
+                const threshold = document.getElementById('hmm-sl-threshold-select').value;
+                document.getElementById('hmm-sl-stat-threshold').textContent = `${Math.round(threshold * 100)}%`;
+
+                const cooldown = document.getElementById('hmm-sl-cooldown-select').value;
+                document.getElementById('hmm-sl-stat-cooldown').textContent = `${cooldown}h`;
+
+            } catch (error) {
+                console.error('Error loading self-learning stats:', error);
+            }
+        }
+
+        async function loadHmmDeploymentHistory() {
+            const tbody = document.getElementById('hmm-deployment-tbody');
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/deployment-history`);
+                if (!response.ok) throw new Error('Failed to load history');
+
+                const data = await response.json();
+                const history = data.history || [];
+
+                if (history.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #666;">Keine Deployment-Historie vorhanden</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = history.slice(0, 25).map(item => {
+                    const timestamp = item.timestamp ? new Date(item.timestamp).toLocaleString('de-CH', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                    }) : '-';
+                    const modelType = item.model_type || 'hmm';
+                    const symbol = item.symbol || (modelType === 'scorer' ? 'Scorer' : '-');
+                    const action = item.action || 'unknown';
+
+                    // Get metrics from comparison_result
+                    const comp = item.comparison_result || {};
+                    const candMetrics = comp.candidate_metrics || {};
+                    const accuracy = candMetrics.accuracy ? (candMetrics.accuracy * 100).toFixed(1) + '%' : '-';
+                    const f1 = candMetrics.f1_weighted ? (candMetrics.f1_weighted * 100).toFixed(1) + '%' : '-';
+
+                    // Get change info
+                    const improvements = comp.improvements || {};
+                    const accChange = improvements.accuracy !== undefined ?
+                        (improvements.accuracy >= 0 ? '+' : '') + (improvements.accuracy * 100).toFixed(1) + '%' : '-';
+
+                    const actionBadge = {
+                        'deployed': '<span style="background: rgba(76,175,80,0.2); color: #81c784; padding: 0.2rem 0.5rem; border-radius: 4px;">✓ Deploy</span>',
+                        'rejected': '<span style="background: rgba(244,67,54,0.2); color: #e57373; padding: 0.2rem 0.5rem; border-radius: 4px;">✗ Reject</span>',
+                        'rolled_back': '<span style="background: rgba(255,152,0,0.2); color: #ffb74d; padding: 0.2rem 0.5rem; border-radius: 4px;">↩ Rollback</span>',
+                        'first_model': '<span style="background: rgba(100,200,255,0.2); color: #64c8ff; padding: 0.2rem 0.5rem; border-radius: 4px;">★ First</span>'
+                    }[action] || `<span style="opacity: 0.5">${action}</span>`;
+
+                    const changeColor = accChange.startsWith('+') ? '#81c784' : (accChange.startsWith('-') ? '#e57373' : '#888');
+
+                    // Type badge
+                    const typeBadge = modelType === 'scorer' ?
+                        '<span style="background: rgba(167,139,250,0.15); color: #a78bfa; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.7rem;">S</span>' :
+                        '<span style="background: rgba(100,200,255,0.15); color: #64c8ff; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.7rem;">H</span>';
+
+                    return `<tr>
+                        <td style="font-size: 0.85rem;">${timestamp}</td>
+                        <td>${typeBadge} <span style="font-weight: 500;">${symbol}</span></td>
+                        <td>${actionBadge}</td>
+                        <td>${accuracy}</td>
+                        <td>${f1}</td>
+                        <td style="color: ${changeColor}; font-size: 0.85rem;">${accChange}</td>
+                    </tr>`;
+                }).join('');
+
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #e57373;">Fehler beim Laden: ${error.message}</td></tr>`;
+            }
+        }
+
+        async function loadHmmModelVersions() {
+            const tbody = document.getElementById('hmm-versions-tbody');
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/versions`);
+                if (!response.ok) throw new Error('Failed to load versions');
+
+                const data = await response.json();
+                const versions = data.versions || [];
+
+                if (versions.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #666;">Keine Modell-Versionen vorhanden</td></tr>`;
+                    return;
+                }
+
+                // Sort: production first, then by created_at descending
+                versions.sort((a, b) => {
+                    if (a.status === 'production' && b.status !== 'production') return -1;
+                    if (b.status === 'production' && a.status !== 'production') return 1;
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+
+                // Limit to 30 most recent entries
+                const limitedVersions = versions.slice(0, 30);
+
+                tbody.innerHTML = limitedVersions.map(v => {
+                    const modelType = v.model_type || 'hmm';
+                    const symbol = v.symbol || '-';
+                    const created = v.created_at ? new Date(v.created_at).toLocaleString('de-CH', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                    }) : '-';
+                    const samples = v.samples_used ? v.samples_used.toLocaleString() : '-';
+                    const status = v.status || 'unknown';
+
+                    // Status badges
+                    const statusBadges = {
+                        'production': '<span style="background: rgba(76,175,80,0.2); color: #81c784; padding: 0.2rem 0.5rem; border-radius: 4px;">✓ Produktion</span>',
+                        'candidate': '<span style="background: rgba(100,200,255,0.2); color: #64c8ff; padding: 0.2rem 0.5rem; border-radius: 4px;">◎ Kandidat</span>',
+                        'rejected': '<span style="background: rgba(244,67,54,0.2); color: #e57373; padding: 0.2rem 0.5rem; border-radius: 4px;">✗ Abgelehnt</span>',
+                        'archived': '<span style="opacity: 0.5;">Archiv</span>'
+                    };
+                    const statusBadge = statusBadges[status] || `<span style="opacity: 0.5;">${status}</span>`;
+
+                    // Model type badge
+                    const typeBadge = modelType === 'scorer' ?
+                        '<span style="background: rgba(167,139,250,0.2); color: #a78bfa; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">Scorer</span>' :
+                        '<span style="background: rgba(100,200,255,0.2); color: #64c8ff; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">HMM</span>';
+
+                    // Rejection reason (shortened)
+                    let reason = '-';
+                    if (v.rejected_reason) {
+                        // Extract key info from reason
+                        const match = v.rejected_reason.match(/accuracy: ([+-]?\d+\.?\d*)%/);
+                        if (match) {
+                            reason = `<span style="color: #e57373;">Acc: ${match[1]}%</span>`;
+                        } else {
+                            reason = '<span style="color: #e57373;" title="' + v.rejected_reason.replace(/"/g, '&quot;') + '">Regression</span>';
+                        }
+                    } else if (status === 'production') {
+                        reason = '<span style="color: #81c784;">Deployed</span>';
+                    }
+
+                    return `<tr>
+                        <td>${typeBadge}</td>
+                        <td style="font-weight: 500;">${symbol}</td>
+                        <td style="font-size: 0.85rem;">${created}</td>
+                        <td style="font-size: 0.85rem;">${samples}</td>
+                        <td>${statusBadge}</td>
+                        <td style="font-size: 0.85rem;">${reason}</td>
+                    </tr>`;
+                }).join('');
+
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #e57373;">Fehler beim Laden: ${error.message}</td></tr>`;
+            }
+        }
+
+        async function rollbackToVersion(versionId) {
+            if (!confirm(`Möchten Sie wirklich zu Version ${versionId} zurückrollen?`)) return;
+
+            try {
+                const response = await fetch(`${TRAIN_API_BASE}/models/rollback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_type: 'hmm',
+                        target_version: versionId
+                    })
+                });
+
+                if (!response.ok) throw new Error('Rollback failed');
+
+                showToast('Rollback erfolgreich', 'success');
+                loadHmmModelVersions();
+                loadHmmDeploymentHistory();
+                loadHmmSelfLearningStats();
+
+            } catch (error) {
+                showToast(`Rollback fehlgeschlagen: ${error.message}`, 'error');
+            }
+        }
+
+        function updateHmmSelfLearnConfig() {
+            const threshold = document.getElementById('hmm-sl-threshold-select').value;
+            document.getElementById('hmm-sl-stat-threshold').textContent = `${Math.round(threshold * 100)}%`;
+            showToast(`Accuracy-Schwelle auf ${Math.round(threshold * 100)}% gesetzt`, 'info');
+        }
+
+        function updateHmmSelfLearnCooldown() {
+            const cooldown = document.getElementById('hmm-sl-cooldown-select').value;
+            document.getElementById('hmm-sl-stat-cooldown').textContent = `${cooldown}h`;
+            showToast(`Cooldown auf ${cooldown} Stunden gesetzt`, 'info');
         }
 
         // Show/hide weekday selector based on interval
