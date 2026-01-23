@@ -1,12 +1,14 @@
 """LLM Router - LLM-specific endpoints for the LLM Service."""
 
 import os
+import time
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 import httpx
 
 from src.config import settings
+from src.services.llm_app.services.conversation_memory import get_conversation_memory
 
 llm_router = APIRouter()
 
@@ -67,23 +69,35 @@ async def pull_llm_model():
 
 
 @llm_router.post("/llm/chat")
-async def chat_with_llm(query: str, symbol: Optional[str] = None, use_rag: bool = True):
+async def chat_with_llm(
+    query: str,
+    symbol: Optional[str] = None,
+    use_rag: bool = True,
+    session_id: Optional[str] = None
+):
     """
-    Simple chat endpoint for general trading questions.
+    Chat endpoint with conversation memory.
 
-    This endpoint allows free-form conversations without requiring a symbol.
-    If a symbol is mentioned in the query, it will be extracted automatically.
+    Supports multi-turn conversations with sliding window memory (last 10 messages).
+    Pass session_id to continue a conversation, or omit to start fresh.
 
     Args:
         query: The user's question or message
         symbol: Optional trading symbol for context
         use_rag: Whether to use RAG for enhanced context (default: True)
+        session_id: Optional session ID for conversation continuity
 
     Returns:
-        LLM response with optional RAG context
+        LLM response with session info and optional RAG context
     """
     llm_service = get_llm_service()
+    memory = get_conversation_memory()
+    start_total = time.time()
     try:
+        # Get or create conversation session
+        session = memory.get_or_create_session(session_id)
+        current_session_id = session.session_id
+        conversation_context = session.get_context()
         # Try to extract symbol from query if not provided
         detected_symbol = symbol
         if not detected_symbol:
@@ -118,6 +132,7 @@ async def chat_with_llm(query: str, symbol: Optional[str] = None, use_rag: bool 
         # Get current market data if symbol detected
         market_data_text = ""
         if detected_symbol:
+            start_market = time.time()
             try:
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     # Get latest OHLCV data from Data Service
@@ -148,13 +163,14 @@ AKTUELLE MARKTDATEN für {detected_symbol} (WICHTIG - verwende diese Preise!):
 - Hoch (letzte Kerze): {high_format}
 - Tief (letzte Kerze): {low_format}
 """
-                            logger.info(f"Market data for {detected_symbol}: {price_format}")
+                            logger.info(f"Market data for {detected_symbol}: {price_format} ({time.time() - start_market:.2f}s)")
             except Exception as e:
-                logger.warning(f"Could not fetch market data for {detected_symbol}: {e}")
+                logger.warning(f"Could not fetch market data for {detected_symbol}: {e} ({time.time() - start_market:.2f}s)")
 
         # Get RAG context if enabled (via HTTP API)
         rag_context = []
         if use_rag:
+            start_rag = time.time()
             try:
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     params = {"query": query, "n_results": 3}
@@ -164,35 +180,99 @@ AKTUELLE MARKTDATEN für {detected_symbol} (WICHTIG - verwende diese Preise!):
                     if response.status_code == 200:
                         rag_results = response.json()
                         rag_context = [doc.get("content", "") for doc in rag_results.get("results", [])]
+                logger.info(f"RAG query completed ({time.time() - start_rag:.2f}s, {len(rag_context)} results)")
             except Exception as e:
-                logger.warning(f"RAG query failed: {e}")
+                logger.warning(f"RAG query failed: {e} ({time.time() - start_rag:.2f}s)")
 
         # Build prompt with context
-        context_text = ""
+        rag_text = ""
         if rag_context:
-            context_text = "\n\nRelevanter Kontext aus Wissensbasis:\n" + "\n---\n".join(rag_context)
+            rag_text = "\n\nRelevanter Kontext aus Wissensbasis:\n" + "\n---\n".join(rag_context)
+
+        # Include conversation history if available
+        history_text = ""
+        if conversation_context:
+            history_text = f"\n\n{conversation_context}\n"
 
         system_prompt = f"""Du bist ein erfahrener Trading-Assistent. Beantworte Fragen zu Märkten,
 Trading-Strategien und Finanzanalysen auf Deutsch. Sei präzise und hilfreich.
+Beziehe dich auf den bisherigen Gesprächsverlauf, wenn relevant.
 
 WICHTIG: Verwende IMMER die aktuellen Marktdaten unten für Preisangaben. Erfinde KEINE Preise!
 {market_data_text}
-{context_text}"""
+{rag_text}
+{history_text}"""
 
         # Call LLM
+        start_llm = time.time()
         response = await llm_service.generate(
             prompt=query,
             system=system_prompt,
             max_tokens=1000
         )
+        llm_time = time.time() - start_llm
+        total_time = time.time() - start_total
+        logger.info(f"LLM generation: {llm_time:.2f}s | Total: {total_time:.2f}s | Session: {current_session_id}")
+
+        # Store exchange in conversation memory
+        memory.add_exchange(current_session_id, query, response)
 
         return {
             "response": response,
+            "session_id": current_session_id,
+            "message_count": session.get_message_count(),
             "symbol_detected": detected_symbol,
             "rag_context_used": len(rag_context) > 0,
-            "model": llm_service.model
+            "model": llm_service.model,
+            "timing": {
+                "total_seconds": round(total_time, 2),
+                "llm_seconds": round(llm_time, 2)
+            }
         }
 
     except Exception as e:
         logger.error(f"Chat failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@llm_router.post("/llm/session/create")
+async def create_session():
+    """Create a new conversation session."""
+    memory = get_conversation_memory()
+    session_id = memory.create_session()
+    return {
+        "session_id": session_id,
+        "message": "New session created"
+    }
+
+
+@llm_router.delete("/llm/session/{session_id}")
+async def clear_session(session_id: str):
+    """Clear a conversation session."""
+    memory = get_conversation_memory()
+    success = memory.clear_session(session_id)
+    if success:
+        return {"message": f"Session {session_id} cleared"}
+    raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+
+
+@llm_router.get("/llm/session/{session_id}")
+async def get_session_info(session_id: str):
+    """Get information about a conversation session."""
+    memory = get_conversation_memory()
+    session = memory.get_session(session_id)
+    if session:
+        return {
+            "session_id": session.session_id,
+            "message_count": session.get_message_count(),
+            "created_at": session.created_at,
+            "last_activity": session.last_activity
+        }
+    raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+
+
+@llm_router.get("/llm/memory/stats")
+async def get_memory_stats():
+    """Get conversation memory statistics."""
+    memory = get_conversation_memory()
+    return memory.get_stats()
