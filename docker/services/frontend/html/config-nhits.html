@@ -1033,31 +1033,30 @@
                         <h4 style="margin: 0 0 0.75rem 0; color: #fbbf24;">⭐ Favoriten (Timeframe-basiert)</h4>
                         <p style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.75rem;">
                             Automatische Prognosen für Favoriten:<br>
-                            • M15: alle 15 Minuten<br>
-                            • H1: jede Stunde<br>
-                            • D1: täglich
+                            • M5: 5 Min • M15: 15 Min • H1: 1 Std<br>
+                            • H4: 4 Std • D1: täglich • W1: wöchentlich
                         </p>
                         <div id="favorites-auto-status" style="margin-bottom: 0.75rem; font-size: 0.9rem;">
                             <span style="opacity: 0.5;">Status wird geladen...</span>
                         </div>
                         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
                             <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
-                                <input type="checkbox" id="auto-tf-m5"> M5
+                                <input type="checkbox" id="auto-tf-m5" onchange="saveTimeframeSelection()"> M5
                             </label>
                             <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
-                                <input type="checkbox" id="auto-tf-m15" checked> M15
+                                <input type="checkbox" id="auto-tf-m15" checked onchange="saveTimeframeSelection()"> M15
                             </label>
                             <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
-                                <input type="checkbox" id="auto-tf-h1" checked> H1
+                                <input type="checkbox" id="auto-tf-h1" checked onchange="saveTimeframeSelection()"> H1
                             </label>
                             <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
-                                <input type="checkbox" id="auto-tf-h4"> H4
+                                <input type="checkbox" id="auto-tf-h4" onchange="saveTimeframeSelection()"> H4
                             </label>
                             <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
-                                <input type="checkbox" id="auto-tf-d1" checked> D1
+                                <input type="checkbox" id="auto-tf-d1" checked onchange="saveTimeframeSelection()"> D1
                             </label>
                             <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem;">
-                                <input type="checkbox" id="auto-tf-w1"> W1
+                                <input type="checkbox" id="auto-tf-w1" onchange="saveTimeframeSelection()"> W1
                             </label>
                         </div>
                         <div style="display: flex; gap: 0.5rem;">
@@ -3368,17 +3367,32 @@
 
         // Load recent evaluations
         async function loadSelfLearningEvaluations() {
+            const tbody = document.getElementById('sl-evaluations-tbody');
+
             try {
                 const res = await fetch(`${API_BASE}/forecast/evaluated?limit=30`);
-                const data = await res.json();
 
-                const tbody = document.getElementById('sl-evaluations-tbody');
+                if (!res.ok) {
+                    console.error('API returned error:', res.status, res.statusText);
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 2rem; color: #f87171;">
+                                API-Fehler: ${res.status} ${res.statusText}
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                const data = await res.json();
+                console.log('Evaluations data:', data);
 
                 if (!data.predictions || data.predictions.length === 0) {
                     tbody.innerHTML = `
                         <tr>
                             <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
-                                Noch keine Evaluierungen vorhanden
+                                Noch keine Evaluierungen vorhanden.<br>
+                                <small style="opacity: 0.7;">Prognosen werden automatisch evaluiert, sobald der Horizont erreicht ist.</small>
                             </td>
                         </tr>
                     `;
@@ -3415,16 +3429,37 @@
 
             } catch (err) {
                 console.error('Failed to load evaluations:', err);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 2rem; color: #f87171;">
+                            Fehler: ${err.message}
+                        </td>
+                    </tr>
+                `;
             }
         }
 
         // Load performance by symbol
         async function loadSelfLearningPerformance() {
+            const tbody = document.getElementById('sl-performance-tbody');
+
             try {
                 const res = await fetch(`${API_BASE}/forecast/performance`);
-                const data = await res.json();
 
-                const tbody = document.getElementById('sl-performance-tbody');
+                if (!res.ok) {
+                    console.error('Performance API error:', res.status);
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 2rem; color: #f87171;">
+                                API-Fehler: ${res.status}
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                const data = await res.json();
+                console.log('Performance data:', data);
 
                 if (!data.by_symbol || Object.keys(data.by_symbol).length === 0) {
                     tbody.innerHTML = `
@@ -4078,6 +4113,51 @@
                 console.error('Failed to stop favorites auto-forecast:', err);
                 showToast('Fehler beim Stoppen: ' + err.message, 'error');
             }
+        }
+
+        // Save timeframe selection (called on checkbox change)
+        let saveTimeframeTimeout = null;
+        async function saveTimeframeSelection() {
+            // Debounce to avoid multiple rapid calls
+            if (saveTimeframeTimeout) {
+                clearTimeout(saveTimeframeTimeout);
+            }
+
+            saveTimeframeTimeout = setTimeout(async () => {
+                const timeframes = [];
+                if (document.getElementById('auto-tf-m5').checked) timeframes.push('M5');
+                if (document.getElementById('auto-tf-m15').checked) timeframes.push('M15');
+                if (document.getElementById('auto-tf-h1').checked) timeframes.push('H1');
+                if (document.getElementById('auto-tf-h4').checked) timeframes.push('H4');
+                if (document.getElementById('auto-tf-d1').checked) timeframes.push('D1');
+                if (document.getElementById('auto-tf-w1').checked) timeframes.push('W1');
+
+                if (timeframes.length === 0) {
+                    showToast('Mindestens ein Timeframe muss ausgewählt sein', 'warning');
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`${API_BASE}/forecast/auto/favorites/update-timeframes?timeframes=${timeframes.join(',')}`, {
+                        method: 'POST'
+                    });
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        if (data.running) {
+                            showToast(`Timeframes aktualisiert: ${timeframes.join(', ')}`, 'success');
+                        } else {
+                            showToast(`Timeframes gespeichert: ${timeframes.join(', ')}`, 'info');
+                        }
+                        await loadAutoForecastStatus();
+                    } else {
+                        showToast(data.detail || 'Fehler beim Speichern', 'error');
+                    }
+                } catch (err) {
+                    console.error('Failed to save timeframe selection:', err);
+                    showToast('Fehler beim Speichern: ' + err.message, 'error');
+                }
+            }, 500); // 500ms debounce
         }
 
         // Start daily auto-forecast

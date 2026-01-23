@@ -879,7 +879,11 @@ class ModelImprovementService:
             if val is None:
                 return None
             if hasattr(val, 'item'):  # numpy scalar
-                return val.item()
+                val = val.item()
+            # Handle NaN and Infinity (not JSON compliant)
+            if isinstance(val, float):
+                if math.isnan(val) or math.isinf(val):
+                    return None
             return val
 
         if symbol:
@@ -892,7 +896,7 @@ class ModelImprovementService:
                     "current_price": _to_native(fb.current_price),
                     "predicted_price": _to_native(fb.predicted_price),
                     "actual_price": _to_native(fb.actual_price),
-                    "prediction_error_pct": round(float(fb.prediction_error_pct), 4) if fb.prediction_error_pct is not None else None,
+                    "prediction_error_pct": _safe_round(fb.prediction_error_pct, 4) if fb.prediction_error_pct is not None else None,
                     "direction_correct": bool(fb.direction_correct) if fb.direction_correct is not None else None,
                     "evaluated_at": fb.evaluated_at.isoformat() if fb.evaluated_at else None,
                 })
@@ -906,7 +910,7 @@ class ModelImprovementService:
                         "current_price": _to_native(fb.current_price),
                         "predicted_price": _to_native(fb.predicted_price),
                         "actual_price": _to_native(fb.actual_price),
-                        "prediction_error_pct": round(float(fb.prediction_error_pct), 4) if fb.prediction_error_pct is not None else None,
+                        "prediction_error_pct": _safe_round(fb.prediction_error_pct, 4) if fb.prediction_error_pct is not None else None,
                         "direction_correct": bool(fb.direction_correct) if fb.direction_correct is not None else None,
                         "evaluated_at": fb.evaluated_at.isoformat() if fb.evaluated_at else None,
                     })

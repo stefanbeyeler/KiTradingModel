@@ -3221,6 +3221,53 @@ async def stop_favorites_auto_forecast(
     }
 
 
+@training_router.post("/forecast/auto/favorites/update-timeframes")
+async def update_favorites_timeframes(
+    timeframes: str = Query(..., description="Comma-separated list of timeframes (M5, M15, H1, H4, D1, W1)")
+):
+    """
+    Update the timeframes for favorites auto-forecast.
+
+    If the service is running, it will be restarted with the new timeframes.
+    If the service is not running, the timeframes will be saved for the next start.
+
+    Parameters:
+    - timeframes: Comma-separated list of timeframes (M5, M15, H1, H4, D1, W1).
+    """
+    from ..services.auto_forecast_service import auto_forecast_service
+
+    valid_timeframes = ["M5", "M15", "M30", "H1", "H4", "D1", "W1"]
+    tf_list = [tf.strip().upper() for tf in timeframes.split(",") if tf.strip()]
+
+    # Validate timeframes
+    invalid = [tf for tf in tf_list if tf not in valid_timeframes]
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid timeframes: {invalid}. Use {', '.join(valid_timeframes)}."
+        )
+
+    was_running = auto_forecast_service._favorites_running
+
+    # If running, restart with new timeframes
+    if was_running:
+        await auto_forecast_service.stop_favorites_auto_forecast()
+        await auto_forecast_service.start_favorites_auto_forecast(tf_list)
+        message = f"Favorites auto-forecast restarted with timeframes: {tf_list}"
+    else:
+        # Just save the config for next start
+        auto_forecast_service._favorites_enabled_timeframes = tf_list
+        auto_forecast_service._save_config()
+        message = f"Timeframes saved: {tf_list}. Start the service to apply."
+
+    return {
+        "status": "updated",
+        "timeframes": tf_list,
+        "running": auto_forecast_service._favorites_running,
+        "message": message,
+    }
+
+
 # ==================== Auto-Forecast: Daily (Non-Favorites) ====================
 
 @training_router.post("/forecast/auto/daily/start")
