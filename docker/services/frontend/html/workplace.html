@@ -2180,6 +2180,13 @@
         let llmAnalysisLoaded = false;
 
         async function openDetailModal(symbol, timeframe) {
+            // Validierung: Symbol muss vorhanden sein
+            if (!symbol) {
+                console.error('openDetailModal: Symbol ist nicht definiert');
+                showToast('Fehler: Symbol nicht gefunden', 'error');
+                return;
+            }
+
             currentDetailSymbol = symbol;
             currentDetailTimeframe = timeframe;
             llmAnalysisLoaded = false;
@@ -2868,16 +2875,22 @@
         });
 
         function selectTimeframeAndAnalyze(timeframe) {
-            if (!selectedPickerSymbol) return;
+            if (!selectedPickerSymbol) {
+                console.error('selectTimeframeAndAnalyze: Kein Symbol ausgewählt');
+                return;
+            }
 
-            // Timeframe-Modal schliessen
+            // Symbol zwischenspeichern bevor Modal geschlossen wird
+            const symbol = selectedPickerSymbol;
+
+            // Timeframe-Modal schliessen (setzt selectedPickerSymbol auf null)
             closeTimeframeModal();
 
             // Detail-Modal öffnen
-            openDetailModal(selectedPickerSymbol, timeframe);
+            openDetailModal(symbol, timeframe);
 
             // Auch Chart laden
-            loadChart(selectedPickerSymbol);
+            loadChart(symbol);
 
             // Timeframe im Chart-Dropdown setzen
             const intervalMap = {
