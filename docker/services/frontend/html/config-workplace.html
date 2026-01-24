@@ -458,7 +458,15 @@
         <!-- Scoring Tab -->
         <div id="scoring-tab" class="tab-content">
             <div class="card">
-                <h2>Scoring-Gewichte</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="margin-bottom: 0;">Scoring-Gewichte</h2>
+                    <button class="btn btn-secondary" onclick="resetScoringToDefaults()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; margin-right: 0.4rem; vertical-align: middle;">
+                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                        Auf Standard zurücksetzen
+                    </button>
+                </div>
                 <p style="margin-bottom: 1rem; opacity: 0.8;">
                     Die Summe aller Gewichte muss 1.0 (100%) ergeben.
                 </p>
@@ -466,29 +474,29 @@
                     <div class="form-group">
                         <label>NHITS Gewicht</label>
                         <input type="number" id="nhitsWeight" value="0.30" min="0" max="1" step="0.05" />
-                        <p class="info-text">Preis-Prognose (trend_probability)</p>
+                        <p class="info-text">Preis-Prognose (trend_probability)<br><span style="color: #64c8ff;">Standard: 0.30</span></p>
                     </div>
                     <div class="form-group">
                         <label>HMM Gewicht</label>
                         <input type="number" id="hmmWeight" value="0.25" min="0" max="1" step="0.05" />
-                        <p class="info-text">Regime-Detection (regime_confidence)</p>
+                        <p class="info-text">Regime-Detection (regime_confidence)<br><span style="color: #64c8ff;">Standard: 0.25</span></p>
                     </div>
                     <div class="form-group">
                         <label>TCN Gewicht</label>
                         <input type="number" id="tcnWeight" value="0.20" min="0" max="1" step="0.05" />
-                        <p class="info-text">Chart-Patterns (pattern_confidence)</p>
+                        <p class="info-text">Chart-Patterns (pattern_confidence)<br><span style="color: #64c8ff;">Standard: 0.20</span></p>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Candlestick Gewicht</label>
                         <input type="number" id="candlestickWeight" value="0.15" min="0" max="1" step="0.05" />
-                        <p class="info-text">Candlestick-Patterns (pattern_strength)</p>
+                        <p class="info-text">Candlestick-Patterns (pattern_strength)<br><span style="color: #64c8ff;">Standard: 0.15</span></p>
                     </div>
                     <div class="form-group">
                         <label>Technical Gewicht</label>
                         <input type="number" id="technicalWeight" value="0.10" min="0" max="1" step="0.05" />
-                        <p class="info-text">RSI, MACD (trend_alignment)</p>
+                        <p class="info-text">RSI, MACD (trend_alignment)<br><span style="color: #64c8ff;">Standard: 0.10</span></p>
                     </div>
                     <div class="form-group">
                         <label>Summe</label>
@@ -503,14 +511,17 @@
                     <div class="form-group">
                         <label>High Confidence (ab)</label>
                         <input type="number" id="highThreshold" value="75" min="0" max="100" />
+                        <p class="info-text"><span style="color: #64c8ff;">Standard: 75</span></p>
                     </div>
                     <div class="form-group">
                         <label>Moderate Confidence (ab)</label>
                         <input type="number" id="moderateThreshold" value="60" min="0" max="100" />
+                        <p class="info-text"><span style="color: #64c8ff;">Standard: 60</span></p>
                     </div>
                     <div class="form-group">
                         <label>Minimum Confidence</label>
                         <input type="number" id="minThreshold" value="50" min="0" max="100" />
+                        <p class="info-text"><span style="color: #64c8ff;">Standard: 50</span></p>
                     </div>
                 </div>
                 <p class="info-text">
@@ -524,12 +535,12 @@
                     <div class="form-group">
                         <label>Alignment-Bonus</label>
                         <input type="number" id="alignmentBonus" value="15" min="0" max="50" />
-                        <p class="info-text">Bonus wenn alle Signale übereinstimmen</p>
+                        <p class="info-text">Bonus wenn alle Signale übereinstimmen<br><span style="color: #64c8ff;">Standard: 15</span></p>
                     </div>
                     <div class="form-group">
                         <label>Alignment-Penalty</label>
                         <input type="number" id="alignmentPenalty" value="10" min="0" max="50" />
-                        <p class="info-text">Abzug bei widersprüchlichen Signalen</p>
+                        <p class="info-text">Abzug bei widersprüchlichen Signalen<br><span style="color: #64c8ff;">Standard: 10</span></p>
                     </div>
                 </div>
             </div>
@@ -959,6 +970,43 @@
             sumInput.style.background = Math.abs(sum - 1.0) < 0.01
                 ? 'rgba(16, 185, 129, 0.2)'
                 : 'rgba(239, 68, 68, 0.2)';
+        }
+
+        // Default scoring values
+        const SCORING_DEFAULTS = {
+            nhitsWeight: 0.30,
+            hmmWeight: 0.25,
+            tcnWeight: 0.20,
+            candlestickWeight: 0.15,
+            technicalWeight: 0.10,
+            highThreshold: 75,
+            moderateThreshold: 60,
+            minThreshold: 50,
+            alignmentBonus: 15,
+            alignmentPenalty: 10
+        };
+
+        function resetScoringToDefaults() {
+            if (!confirm('Möchten Sie alle Scoring-Einstellungen auf die Standard-Werte zurücksetzen?')) {
+                return;
+            }
+
+            // Reset all values to defaults
+            document.getElementById('nhitsWeight').value = SCORING_DEFAULTS.nhitsWeight;
+            document.getElementById('hmmWeight').value = SCORING_DEFAULTS.hmmWeight;
+            document.getElementById('tcnWeight').value = SCORING_DEFAULTS.tcnWeight;
+            document.getElementById('candlestickWeight').value = SCORING_DEFAULTS.candlestickWeight;
+            document.getElementById('technicalWeight').value = SCORING_DEFAULTS.technicalWeight;
+            document.getElementById('highThreshold').value = SCORING_DEFAULTS.highThreshold;
+            document.getElementById('moderateThreshold').value = SCORING_DEFAULTS.moderateThreshold;
+            document.getElementById('minThreshold').value = SCORING_DEFAULTS.minThreshold;
+            document.getElementById('alignmentBonus').value = SCORING_DEFAULTS.alignmentBonus;
+            document.getElementById('alignmentPenalty').value = SCORING_DEFAULTS.alignmentPenalty;
+
+            // Update weight sum display
+            updateWeightSum();
+
+            showToast('Scoring-Einstellungen auf Standard zurückgesetzt', 'success');
         }
 
         // TradingView Config Functions
