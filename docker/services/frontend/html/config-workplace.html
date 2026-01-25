@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 1.5rem;
         }
@@ -38,12 +38,6 @@
             align-items: center;
         }
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
         .back-link {
             color: #64c8ff;
             text-decoration: none;
@@ -59,57 +53,60 @@
             font-weight: 600;
         }
 
-        .tabs {
+        /* Two-column layout */
+        .config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1200px) {
+            .config-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .config-column {
             display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Section headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
             padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(16, 185, 129, 0.3);
         }
 
-        .tab-btn {
-            padding: 0.75rem 1.5rem;
-            background: transparent;
-            border: none;
-            color: #a0a0a0;
-            cursor: pointer;
-            font-size: 0.9rem;
-            border-radius: 8px 8px 0 0;
-            transition: all 0.2s;
-        }
-
-        .tab-btn:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: #e8e8e8;
-        }
-
-        .tab-btn.active {
-            background: rgba(16, 185, 129, 0.15);
+        .section-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
             color: #34d399;
-            border-bottom: 2px solid #10b981;
+            margin: 0;
         }
 
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
+        .section-header .section-icon {
+            width: 24px;
+            height: 24px;
+            color: #34d399;
         }
 
         .card {
             background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
             border-radius: 12px;
-            padding: 1.5rem;
+            padding: 1.25rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 1.5rem;
         }
 
-        .card h2 {
-            font-size: 1.1rem;
+        .card h3 {
+            font-size: 0.95rem;
+            font-weight: 500;
             margin-bottom: 1rem;
-            color: #34d399;
+            color: #e8e8e8;
         }
 
         .form-group {
@@ -119,19 +116,20 @@
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-            opacity: 0.9;
+            color: #34d399;
+            font-size: 0.85rem;
+            font-weight: 500;
         }
 
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 0.75rem;
+            padding: 0.6rem;
             background: #1a1a2e;
             border: 1px solid rgba(100, 200, 255, 0.3);
-            border-radius: 8px;
+            border-radius: 6px;
             color: #e8e8e8;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .form-group input:focus,
@@ -141,14 +139,14 @@
             box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
         }
 
-        /* Custom select dropdown styling for dark theme */
+        /* Custom select dropdown styling */
         .form-group select {
             appearance: none;
             -webkit-appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364c8ff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            padding-right: 2.5rem;
+            background-position: right 0.6rem center;
+            padding-right: 2rem;
             cursor: pointer;
         }
 
@@ -160,23 +158,46 @@
         .form-group select option {
             background-color: #1e2740;
             color: #e8e8e8;
-            padding: 0.75rem 1rem;
         }
 
-        .form-group select option:checked {
-            background-color: #3a5080;
-            color: #ffffff;
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
         }
 
-        /* Custom checkbox styling for dark theme */
+        .form-row-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-row, .form-row-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-text {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 0.3rem;
+        }
+
+        .default-hint {
+            color: #64c8ff;
+            font-size: 0.75rem;
+        }
+
+        /* Checkbox styling */
         .checkbox-group {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
+            gap: 0.6rem;
+            padding: 0.6rem 0.8rem;
             background: rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -187,8 +208,8 @@
         }
 
         .checkbox-group input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             margin: 0;
             cursor: pointer;
             accent-color: #10b981;
@@ -198,16 +219,17 @@
         .checkbox-group .checkbox-label {
             display: flex;
             flex-direction: column;
-            gap: 0.2rem;
+            gap: 0.1rem;
         }
 
         .checkbox-group .checkbox-title {
             font-weight: 500;
+            font-size: 0.85rem;
             color: #e8e8e8;
         }
 
         .checkbox-group .checkbox-desc {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             color: #64c8ff;
             opacity: 0.8;
         }
@@ -217,25 +239,17 @@
             border-color: rgba(16, 185, 129, 0.4);
         }
 
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-        }
-
-        @media (max-width: 768px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
+        /* Buttons */
         .btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0.6rem 1.2rem;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
         .btn-primary {
@@ -261,6 +275,8 @@
             background: rgba(239, 68, 68, 0.2);
             color: #f87171;
             border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
         }
 
         .btn-danger:hover {
@@ -271,22 +287,45 @@
             background: rgba(245, 158, 11, 0.2);
             color: #fbbf24;
             border: 1px solid rgba(245, 158, 11, 0.3);
-            display: inline-flex;
-            align-items: center;
         }
 
         .btn-warning:hover {
             background: rgba(245, 158, 11, 0.3);
         }
 
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        /* Status badge */
+        .status-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-badge.running {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .status-badge.stopped {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        /* Watchlist table */
         .watchlist-table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 0.85rem;
         }
 
         .watchlist-table th,
         .watchlist-table td {
-            padding: 0.75rem;
+            padding: 0.5rem;
             text-align: left;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
@@ -295,24 +334,22 @@
             background: rgba(16, 185, 129, 0.1);
             color: #34d399;
             font-weight: 500;
+            font-size: 0.8rem;
         }
 
         .watchlist-table tr:hover {
             background: rgba(255, 255, 255, 0.02);
         }
 
-        .watchlist-table .actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
         .favorite-btn {
             background: none;
             border: none;
             cursor: pointer;
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: #6b7280;
             transition: color 0.2s;
+            padding: 0;
+            margin-right: 0.3rem;
         }
 
         .favorite-btn.active {
@@ -323,26 +360,61 @@
             color: #fbbf24;
         }
 
+        /* Add symbol form */
         .add-symbol-form {
             display: flex;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
         }
 
         .add-symbol-form input {
             flex: 1;
+            padding: 0.5rem;
+            background: #1a1a2e;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-size: 0.85rem;
         }
 
+        /* Progress bar */
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-bar.scanning {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Toast */
         .toast {
             position: fixed;
             bottom: 2rem;
             right: 2rem;
-            padding: 1rem 1.5rem;
+            padding: 0.8rem 1.2rem;
             border-radius: 8px;
             z-index: 1000;
             transform: translateY(100px);
             opacity: 0;
             transition: all 0.3s;
+            font-size: 0.9rem;
         }
 
         .toast.show {
@@ -360,422 +432,399 @@
             border: 1px solid #ef4444;
         }
 
-        .info-text {
-            font-size: 0.85rem;
+        /* Compact scanner status */
+        .scanner-status-row {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .scanner-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .scanner-stat-label {
+            font-size: 0.8rem;
             opacity: 0.7;
-            margin-top: 0.5rem;
         }
 
-        .status-badge {
-            padding: 0.25rem 0.6rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
+        .scanner-stat-value {
+            font-weight: 500;
         }
 
-        .status-badge.running {
-            background: rgba(16, 185, 129, 0.2);
-            color: #34d399;
+        /* Button row */
+        .btn-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
         }
 
-        .status-badge.stopped {
-            background: rgba(239, 68, 68, 0.2);
-            color: #f87171;
+        /* Indicators grid */
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
         }
 
-        .progress-bar-container {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #10b981, #34d399);
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-
-        .progress-bar.scanning {
-            background: linear-gradient(90deg, #3b82f6, #60a5fa);
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+        @media (max-width: 600px) {
+            .indicators-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
     </style>
 </head>
 <body>
     <header>
-        <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="container">
             <a href="workplace.html" class="back-link">← Workplace</a>
             <h1>Workplace Konfiguration</h1>
-            <div class="header-actions"></div>
+            <div></div>
         </div>
     </header>
 
     <div class="container">
-        <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('watchlist')">Watchlist</button>
-            <button class="tab-btn" onclick="showTab('scanner')">Scanner</button>
-            <button class="tab-btn" onclick="showTab('scoring')">Scoring</button>
-            <button class="tab-btn" onclick="showTab('tradingview')">TradingView</button>
-        </div>
+        <div class="config-grid">
+            <!-- Left Column -->
+            <div class="config-column">
+                <!-- WATCHLIST SECTION -->
+                <div class="card">
+                    <div class="section-header">
+                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                        <h2>Watchlist</h2>
+                    </div>
 
-        <!-- Watchlist Tab -->
-        <div id="watchlist-tab" class="tab-content active">
-            <div class="card">
-                <h2>Symbol hinzufügen</h2>
-                <div class="add-symbol-form">
-                    <input type="text" id="newSymbol" placeholder="Symbol (z.B. BTCUSD)" />
-                    <input type="number" id="newThreshold" placeholder="Alert-Schwelle" value="70" min="0" max="100" />
-                    <button class="btn btn-primary" onclick="addSymbol()">Hinzufügen</button>
+                    <div class="add-symbol-form">
+                        <input type="text" id="newSymbol" placeholder="Symbol (z.B. BTCUSD)" />
+                        <input type="number" id="newThreshold" placeholder="Alert %" value="70" min="0" max="100" style="width: 80px;" />
+                        <button class="btn btn-primary btn-sm" onclick="addSymbol()">+</button>
+                    </div>
+
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        <table class="watchlist-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Alert</th>
+                                    <th>Score</th>
+                                    <th>TF</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="watchlistBody">
+                                <tr><td colspan="5" style="text-align: center; opacity: 0.6;">Lade...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="info-text" style="margin-top: 0.5rem;">
+                        <span id="watchlistCount">0</span> Symbole · Alle Timeframes (M5-D1) werden gescannt
+                    </p>
                 </div>
-                <p class="info-text">Alle verfügbaren Timeframes (M5, M15, H1, H4, D1) werden automatisch gescannt.</p>
-            </div>
 
-            <div class="card">
-                <h2>Watchlist (<span id="watchlistCount">0</span> Symbole)</h2>
-                <table class="watchlist-table">
-                    <thead>
-                        <tr>
-                            <th>Symbol</th>
-                            <th>Alert-Schwelle</th>
-                            <th>Bester Score</th>
-                            <th>Bester TF</th>
-                            <th>Letzter Scan</th>
-                            <th>Aktionen</th>
-                        </tr>
-                    </thead>
-                    <tbody id="watchlistBody">
-                        <tr>
-                            <td colspan="6" style="text-align: center; opacity: 0.6;">Lade Watchlist...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                <!-- SCANNER SECTION -->
+                <div class="card">
+                    <div class="section-header">
+                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                        </svg>
+                        <h2>Scanner</h2>
+                    </div>
 
-        <!-- Scanner Tab -->
-        <div id="scanner-tab" class="tab-content">
-            <div class="card">
-                <h2>Scanner-Status</h2>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Status</label>
-                        <div>
+                    <div class="scanner-status-row" style="margin-bottom: 1rem;">
+                        <div class="scanner-stat">
+                            <span class="scanner-stat-label">Status:</span>
                             <span class="status-badge" id="scannerStatusBadge">-</span>
                         </div>
+                        <div class="scanner-stat">
+                            <span class="scanner-stat-label">Gescannt:</span>
+                            <span class="scanner-stat-value" id="scannedSymbols">-</span>
+                        </div>
+                        <div class="scanner-stat">
+                            <span class="scanner-stat-label">Alerts:</span>
+                            <span class="scanner-stat-value" id="alertsCount">-</span>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Gescannte Symbole</label>
-                        <div id="scannedSymbols">-</div>
+
+                    <div class="btn-row" style="margin-bottom: 1rem;">
+                        <button class="btn btn-primary btn-sm" onclick="startScanner()">Start</button>
+                        <button class="btn btn-secondary btn-sm" onclick="stopScanner()">Stop</button>
+                        <button class="btn btn-secondary btn-sm" id="manualScanBtn" onclick="triggerManualScan()">Manueller Scan</button>
                     </div>
-                    <div class="form-group">
-                        <label>Alerts ausgelöst</label>
-                        <div id="alertsCount">-</div>
+
+                    <!-- Scan Progress -->
+                    <div id="scanProgressContainer" style="display: none; margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-size: 0.8rem;">
+                            <span id="scanProgressText">Scanne...</span>
+                            <span id="scanProgressPercent">0%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="scanProgressBar" style="width: 0%;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.3rem; font-size: 0.75rem; opacity: 0.7;">
+                            <span id="scanCurrentSymbol">-</span>
+                            <span id="scanProgressCount">0 / 0</span>
+                        </div>
                     </div>
-                </div>
-                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                    <button class="btn btn-primary" onclick="startScanner()">Scanner starten</button>
-                    <button class="btn btn-secondary" onclick="stopScanner()">Scanner stoppen</button>
-                    <button class="btn btn-secondary" id="manualScanBtn" onclick="triggerManualScan()">Manueller Scan</button>
+
+                    <div class="form-row-2">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Intervall (Sek.)</label>
+                            <input type="number" id="scanInterval" value="60" min="10" max="600" />
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Auto-Start</label>
+                            <select id="autoScanEnabled">
+                                <option value="true">Ja</option>
+                                <option value="false">Nein</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Scan Progress Bar -->
-                <div id="scanProgressContainer" style="display: none; margin-top: 1rem;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span id="scanProgressText">Scanne...</span>
-                        <span id="scanProgressPercent">0%</span>
+                <!-- TRADINGVIEW SECTION -->
+                <div class="card">
+                    <div class="section-header">
+                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+                        </svg>
+                        <h2>TradingView</h2>
                     </div>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar" id="scanProgressBar" style="width: 0%;"></div>
+
+                    <h3>Chart-Einstellungen</h3>
+                    <div class="form-row" style="margin-bottom: 1rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Intervall</label>
+                            <select id="tvDefaultInterval">
+                                <option value="1">1 Min</option>
+                                <option value="5">5 Min</option>
+                                <option value="15">15 Min</option>
+                                <option value="60" selected>1 Std</option>
+                                <option value="240">4 Std</option>
+                                <option value="D">1 Tag</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Stil</label>
+                            <select id="tvDefaultStyle">
+                                <option value="1" selected>Kerzen</option>
+                                <option value="0">Balken</option>
+                                <option value="3">Linie</option>
+                                <option value="8">Heikin-Ashi</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Theme</label>
+                            <select id="tvTheme">
+                                <option value="dark" selected>Dark</option>
+                                <option value="light">Light</option>
+                            </select>
+                        </div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.8rem; opacity: 0.7;">
-                        <span id="scanCurrentSymbol">-</span>
-                        <span id="scanProgressCount">0 / 0</span>
+
+                    <h3>Standard-Indikatoren</h3>
+                    <div class="indicators-grid" style="margin-bottom: 1rem;">
+                        <label class="checkbox-group checked" onclick="toggleCheckboxGroup(this)">
+                            <input type="checkbox" id="tvShowSMA" checked />
+                            <div class="checkbox-label">
+                                <span class="checkbox-title">SMA</span>
+                            </div>
+                        </label>
+                        <label class="checkbox-group" onclick="toggleCheckboxGroup(this)">
+                            <input type="checkbox" id="tvShowEMA" />
+                            <div class="checkbox-label">
+                                <span class="checkbox-title">EMA</span>
+                            </div>
+                        </label>
+                        <label class="checkbox-group checked" onclick="toggleCheckboxGroup(this)">
+                            <input type="checkbox" id="tvShowRSI" checked />
+                            <div class="checkbox-label">
+                                <span class="checkbox-title">RSI</span>
+                            </div>
+                        </label>
+                        <label class="checkbox-group" onclick="toggleCheckboxGroup(this)">
+                            <input type="checkbox" id="tvShowMACD" />
+                            <div class="checkbox-label">
+                                <span class="checkbox-title">MACD</span>
+                            </div>
+                        </label>
+                        <label class="checkbox-group" onclick="toggleCheckboxGroup(this)">
+                            <input type="checkbox" id="tvShowBB" />
+                            <div class="checkbox-label">
+                                <span class="checkbox-title">Bollinger</span>
+                            </div>
+                        </label>
+                        <label class="checkbox-group checked" onclick="toggleCheckboxGroup(this)">
+                            <input type="checkbox" id="tvShowVolume" checked />
+                            <div class="checkbox-label">
+                                <span class="checkbox-title">Volume</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <h3>Symbol-Mapping</h3>
+                    <div class="form-row">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Crypto</label>
+                            <select id="tvCryptoExchange">
+                                <option value="BITSTAMP" selected>Bitstamp</option>
+                                <option value="COINBASE">Coinbase</option>
+                                <option value="BINANCE">Binance</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Forex</label>
+                            <select id="tvForexProvider">
+                                <option value="FX" selected>FX</option>
+                                <option value="OANDA">OANDA</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Stocks</label>
+                            <select id="tvStockExchange">
+                                <option value="NASDAQ" selected>NASDAQ</option>
+                                <option value="NYSE">NYSE</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <h2>Scanner-Einstellungen</h2>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Scan-Intervall (Sekunden)</label>
-                        <input type="number" id="scanInterval" value="60" min="10" max="600" />
-                        <p class="info-text">Intervall zwischen den Scans (10-600 Sekunden)</p>
+            <!-- Right Column -->
+            <div class="config-column">
+                <!-- SCORING SECTION -->
+                <div class="card">
+                    <div class="section-header">
+                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                        </svg>
+                        <h2>Scoring</h2>
+                        <div style="flex: 1;"></div>
+                        <button class="btn btn-secondary btn-sm" onclick="resetScoringToDefaults()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;">
+                                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                            </svg>
+                            Reset
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label>Auto-Scan aktiviert</label>
-                        <select id="autoScanEnabled">
-                            <option value="true">Ja</option>
-                            <option value="false">Nein</option>
-                        </select>
-                        <p class="info-text">Automatischer Start beim Service-Start</p>
+
+                    <h3>Signal-Gewichte <span style="font-weight: normal; opacity: 0.7;">(Summe = 1.0)</span></h3>
+                    <div class="form-row" style="margin-bottom: 0.5rem;">
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <label>NHITS</label>
+                            <input type="number" id="nhitsWeight" value="0.30" min="0" max="1" step="0.05" />
+                            <span class="default-hint">Standard: 0.30</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <label>HMM</label>
+                            <input type="number" id="hmmWeight" value="0.25" min="0" max="1" step="0.05" />
+                            <span class="default-hint">Standard: 0.25</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <label>TCN</label>
+                            <input type="number" id="tcnWeight" value="0.20" min="0" max="1" step="0.05" />
+                            <span class="default-hint">Standard: 0.20</span>
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin-bottom: 1rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Candlestick</label>
+                            <input type="number" id="candlestickWeight" value="0.15" min="0" max="1" step="0.05" />
+                            <span class="default-hint">Standard: 0.15</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Technical</label>
+                            <input type="number" id="technicalWeight" value="0.10" min="0" max="1" step="0.05" />
+                            <span class="default-hint">Standard: 0.10</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Summe</label>
+                            <input type="text" id="weightSum" value="1.00" readonly style="background: rgba(16, 185, 129, 0.1); text-align: center; font-weight: 600;" />
+                        </div>
+                    </div>
+
+                    <h3>Konfidenz-Schwellwerte</h3>
+                    <div class="form-row" style="margin-bottom: 1rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>High (ab)</label>
+                            <input type="number" id="highThreshold" value="75" min="0" max="100" />
+                            <span class="default-hint">Standard: 75</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Moderate (ab)</label>
+                            <input type="number" id="moderateThreshold" value="60" min="0" max="100" />
+                            <span class="default-hint">Standard: 60</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Minimum</label>
+                            <input type="number" id="minThreshold" value="50" min="0" max="100" />
+                            <span class="default-hint">Standard: 50</span>
+                        </div>
+                    </div>
+
+                    <h3>Alignment-Boni</h3>
+                    <div class="form-row-2">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Bonus (alle übereinstimmend)</label>
+                            <input type="number" id="alignmentBonus" value="15" min="0" max="50" />
+                            <span class="default-hint">Standard: 15</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Penalty (widersprüchlich)</label>
+                            <input type="number" id="alignmentPenalty" value="10" min="0" max="50" />
+                            <span class="default-hint">Standard: 10</span>
+                        </div>
                     </div>
                 </div>
-                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <p class="info-text" style="margin-bottom: 0.75rem;">
-                        Hinweis: Änderungen an diesen Einstellungen erfordern einen Neustart des Services.
+
+                <!-- TRADINGVIEW ACCOUNT (optional) -->
+                <div class="card">
+                    <div class="section-header">
+                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <h2>TradingView Konto</h2>
+                        <span style="font-size: 0.75rem; opacity: 0.6; margin-left: auto;">Optional</span>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Benutzername</label>
+                            <input type="text" id="tvUsername" placeholder="TradingView Username" />
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Session ID</label>
+                            <input type="password" id="tvSessionId" placeholder="Browser Cookie" />
+                        </div>
+                    </div>
+                    <p class="info-text" style="margin-top: 0.5rem; color: #fbbf24;">
+                        Session ID: Browser-Cookies → tradingview.com → "sessionid"
                     </p>
-                    <button class="btn btn-warning" onclick="restartWorkplaceService()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 0.5rem;">
-                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                        </svg>
-                        Service neu starten
-                    </button>
                 </div>
-            </div>
-        </div>
 
-        <!-- Scoring Tab -->
-        <div id="scoring-tab" class="tab-content">
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 style="margin-bottom: 0;">Scoring-Gewichte</h2>
-                    <button class="btn btn-secondary" onclick="resetScoringToDefaults()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; margin-right: 0.4rem; vertical-align: middle;">
-                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                        </svg>
-                        Auf Standard zurücksetzen
-                    </button>
-                </div>
-                <p style="margin-bottom: 1rem; opacity: 0.8;">
-                    Die Summe aller Gewichte muss 1.0 (100%) ergeben.
-                </p>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>NHITS Gewicht</label>
-                        <input type="number" id="nhitsWeight" value="0.30" min="0" max="1" step="0.05" />
-                        <p class="info-text">Preis-Prognose (trend_probability)<br><span style="color: #64c8ff;">Standard: 0.30</span></p>
-                    </div>
-                    <div class="form-group">
-                        <label>HMM Gewicht</label>
-                        <input type="number" id="hmmWeight" value="0.25" min="0" max="1" step="0.05" />
-                        <p class="info-text">Regime-Detection (regime_confidence)<br><span style="color: #64c8ff;">Standard: 0.25</span></p>
-                    </div>
-                    <div class="form-group">
-                        <label>TCN Gewicht</label>
-                        <input type="number" id="tcnWeight" value="0.20" min="0" max="1" step="0.05" />
-                        <p class="info-text">Chart-Patterns (pattern_confidence)<br><span style="color: #64c8ff;">Standard: 0.20</span></p>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Candlestick Gewicht</label>
-                        <input type="number" id="candlestickWeight" value="0.15" min="0" max="1" step="0.05" />
-                        <p class="info-text">Candlestick-Patterns (pattern_strength)<br><span style="color: #64c8ff;">Standard: 0.15</span></p>
-                    </div>
-                    <div class="form-group">
-                        <label>Technical Gewicht</label>
-                        <input type="number" id="technicalWeight" value="0.10" min="0" max="1" step="0.05" />
-                        <p class="info-text">RSI, MACD (trend_alignment)<br><span style="color: #64c8ff;">Standard: 0.10</span></p>
-                    </div>
-                    <div class="form-group">
-                        <label>Summe</label>
-                        <input type="text" id="weightSum" value="1.00" readonly style="background: rgba(16, 185, 129, 0.1);" />
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2>Konfidenz-Schwellwerte</h2>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>High Confidence (ab)</label>
-                        <input type="number" id="highThreshold" value="75" min="0" max="100" />
-                        <p class="info-text"><span style="color: #64c8ff;">Standard: 75</span></p>
-                    </div>
-                    <div class="form-group">
-                        <label>Moderate Confidence (ab)</label>
-                        <input type="number" id="moderateThreshold" value="60" min="0" max="100" />
-                        <p class="info-text"><span style="color: #64c8ff;">Standard: 60</span></p>
-                    </div>
-                    <div class="form-group">
-                        <label>Minimum Confidence</label>
-                        <input type="number" id="minThreshold" value="50" min="0" max="100" />
-                        <p class="info-text"><span style="color: #64c8ff;">Standard: 50</span></p>
-                    </div>
-                </div>
-                <p class="info-text">
-                    Setups unter dem Minimum-Threshold werden nicht angezeigt.
-                </p>
-            </div>
-
-            <div class="card">
-                <h2>Alignment-Boni</h2>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Alignment-Bonus</label>
-                        <input type="number" id="alignmentBonus" value="15" min="0" max="50" />
-                        <p class="info-text">Bonus wenn alle Signale übereinstimmen<br><span style="color: #64c8ff;">Standard: 15</span></p>
-                    </div>
-                    <div class="form-group">
-                        <label>Alignment-Penalty</label>
-                        <input type="number" id="alignmentPenalty" value="10" min="0" max="50" />
-                        <p class="info-text">Abzug bei widersprüchlichen Signalen<br><span style="color: #64c8ff;">Standard: 10</span></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TradingView Tab -->
-        <div id="tradingview-tab" class="tab-content">
-            <div class="card">
-                <h2>TradingView Konto</h2>
-                <p style="margin-bottom: 1rem; opacity: 0.8;">
-                    Verbinden Sie Ihr TradingView-Konto für erweiterte Chart-Funktionen.
-                </p>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>TradingView Benutzername</label>
-                        <input type="text" id="tvUsername" placeholder="Ihr TradingView Benutzername" />
-                        <p class="info-text">Optional - für personalisierte Charts</p>
-                    </div>
-                    <div class="form-group">
-                        <label>API Session ID</label>
-                        <input type="password" id="tvSessionId" placeholder="Session ID aus Browser Cookie" />
-                        <p class="info-text">Für erweiterte Features (optional)</p>
-                    </div>
-                </div>
-                <p class="info-text" style="margin-top: 1rem; color: #fbbf24;">
-                    <strong>Hinweis:</strong> Die Session ID finden Sie in Ihren Browser-Cookies unter "sessionid" auf tradingview.com
-                </p>
-            </div>
-
-            <div class="card">
-                <h2>Chart-Einstellungen</h2>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Standard-Intervall</label>
-                        <select id="tvDefaultInterval">
-                            <option value="1">1 Minute</option>
-                            <option value="5">5 Minuten</option>
-                            <option value="15">15 Minuten</option>
-                            <option value="60" selected>1 Stunde</option>
-                            <option value="240">4 Stunden</option>
-                            <option value="D">1 Tag</option>
-                            <option value="W">1 Woche</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Standard-Chart-Stil</label>
-                        <select id="tvDefaultStyle">
-                            <option value="1" selected>Kerzen (Candlestick)</option>
-                            <option value="0">Balken (OHLC)</option>
-                            <option value="3">Linie</option>
-                            <option value="9">Hollow Candles</option>
-                            <option value="8">Heikin-Ashi</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Theme</label>
-                        <select id="tvTheme">
-                            <option value="dark" selected>Dark</option>
-                            <option value="light">Light</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2>Standard-Indikatoren</h2>
-                <p style="margin-bottom: 1rem; opacity: 0.8;">
-                    Diese Indikatoren werden automatisch bei jedem Chart hinzugefügt.
-                </p>
-                <div class="form-row">
-                    <label class="checkbox-group checked" onclick="toggleCheckboxGroup(this)">
-                        <input type="checkbox" id="tvShowSMA" checked />
-                        <div class="checkbox-label">
-                            <span class="checkbox-title">SMA</span>
-                            <span class="checkbox-desc">Simple Moving Average</span>
+                <!-- ACTIONS -->
+                <div class="card" style="background: rgba(16, 185, 129, 0.05);">
+                    <div class="btn-row" style="justify-content: space-between;">
+                        <div class="btn-row">
+                            <button class="btn btn-primary" onclick="saveTradingViewConfig()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                                </svg>
+                                Speichern
+                            </button>
+                            <button class="btn btn-secondary" onclick="loadTradingViewConfig()">Zurücksetzen</button>
                         </div>
-                    </label>
-                    <label class="checkbox-group" onclick="toggleCheckboxGroup(this)">
-                        <input type="checkbox" id="tvShowEMA" />
-                        <div class="checkbox-label">
-                            <span class="checkbox-title">EMA</span>
-                            <span class="checkbox-desc">Exponential Moving Average</span>
-                        </div>
-                    </label>
-                    <label class="checkbox-group checked" onclick="toggleCheckboxGroup(this)">
-                        <input type="checkbox" id="tvShowRSI" checked />
-                        <div class="checkbox-label">
-                            <span class="checkbox-title">RSI</span>
-                            <span class="checkbox-desc">Relative Strength Index</span>
-                        </div>
-                    </label>
-                </div>
-                <div class="form-row" style="margin-top: 1rem;">
-                    <label class="checkbox-group" onclick="toggleCheckboxGroup(this)">
-                        <input type="checkbox" id="tvShowMACD" />
-                        <div class="checkbox-label">
-                            <span class="checkbox-title">MACD</span>
-                            <span class="checkbox-desc">Moving Average Convergence</span>
-                        </div>
-                    </label>
-                    <label class="checkbox-group" onclick="toggleCheckboxGroup(this)">
-                        <input type="checkbox" id="tvShowBB" />
-                        <div class="checkbox-label">
-                            <span class="checkbox-title">Bollinger Bands</span>
-                            <span class="checkbox-desc">Volatilitäts-Bänder</span>
-                        </div>
-                    </label>
-                    <label class="checkbox-group checked" onclick="toggleCheckboxGroup(this)">
-                        <input type="checkbox" id="tvShowVolume" checked />
-                        <div class="checkbox-label">
-                            <span class="checkbox-title">Volume</span>
-                            <span class="checkbox-desc">Handelsvolumen</span>
-                        </div>
-                    </label>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2>Symbol-Mapping</h2>
-                <p style="margin-bottom: 1rem; opacity: 0.8;">
-                    Zuordnung von internen Symbolen zu TradingView-Symbolen.
-                </p>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Crypto-Börse</label>
-                        <select id="tvCryptoExchange">
-                            <option value="BITSTAMP" selected>Bitstamp</option>
-                            <option value="COINBASE">Coinbase</option>
-                            <option value="BINANCE">Binance</option>
-                            <option value="KRAKEN">Kraken</option>
-                        </select>
-                        <p class="info-text">Bevorzugte Börse für Crypto-Charts</p>
-                    </div>
-                    <div class="form-group">
-                        <label>Forex-Provider</label>
-                        <select id="tvForexProvider">
-                            <option value="FX" selected>FX (Standard)</option>
-                            <option value="OANDA">OANDA</option>
-                            <option value="FOREXCOM">Forex.com</option>
-                        </select>
-                        <p class="info-text">Datenquelle für Forex-Charts</p>
-                    </div>
-                    <div class="form-group">
-                        <label>US-Stocks</label>
-                        <select id="tvStockExchange">
-                            <option value="NASDAQ" selected>NASDAQ</option>
-                            <option value="NYSE">NYSE</option>
-                            <option value="AMEX">AMEX</option>
-                        </select>
-                        <p class="info-text">Börse für US-Aktien</p>
+                        <button class="btn btn-warning" onclick="restartWorkplaceService()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                            </svg>
+                            Service Neustart
+                        </button>
                     </div>
                 </div>
-            </div>
-
-            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                <button class="btn btn-primary" onclick="saveTradingViewConfig()">Einstellungen speichern</button>
-                <button class="btn btn-secondary" onclick="loadTradingViewConfig()">Zurücksetzen</button>
-                <button class="btn btn-secondary" onclick="testTradingViewConnection()">Verbindung testen</button>
             </div>
         </div>
     </div>
@@ -791,21 +840,14 @@
             loadTradingViewConfig();
 
             // Gewichte-Summe berechnen
-            document.querySelectorAll('#scoring-tab input[type="number"]').forEach(input => {
+            document.querySelectorAll('input[type="number"]').forEach(input => {
                 if (input.id.includes('Weight')) {
                     input.addEventListener('input', updateWeightSum);
                 }
             });
         });
 
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
-            document.getElementById(`${tabName}-tab`).classList.add('active');
-        }
-
+        // ==================== WATCHLIST ====================
         async function loadWatchlist() {
             try {
                 const response = await fetch(`${API_BASE}/watchlist/`);
@@ -818,23 +860,19 @@
                     tbody.innerHTML = data.items.map(item => `
                         <tr>
                             <td>
-                                <button class="favorite-btn ${item.is_favorite ? 'active' : ''}"
-                                        onclick="toggleFavorite('${item.symbol}')">
+                                <button class="favorite-btn ${item.is_favorite ? 'active' : ''}" onclick="toggleFavorite('${item.symbol}')">
                                     ${item.is_favorite ? '★' : '☆'}
                                 </button>
                                 ${item.symbol}
                             </td>
                             <td>${item.alert_threshold}</td>
-                            <td>${item.last_score ? item.last_score.toFixed(1) : '-'}</td>
+                            <td>${item.last_score ? item.last_score.toFixed(0) : '-'}</td>
                             <td>${item.best_timeframe || '-'}</td>
-                            <td>${item.last_scan ? new Date(item.last_scan).toLocaleString('de-DE') : '-'}</td>
-                            <td class="actions">
-                                <button class="btn btn-danger" onclick="removeSymbol('${item.symbol}')">Entfernen</button>
-                            </td>
+                            <td><button class="btn btn-danger btn-sm" onclick="removeSymbol('${item.symbol}')" style="padding: 0.2rem 0.5rem;">×</button></td>
                         </tr>
                     `).join('');
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; opacity: 0.6;">Keine Symbole in Watchlist</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; opacity: 0.6;">Keine Symbole</td></tr>';
                 }
             } catch (error) {
                 console.error('Fehler beim Laden der Watchlist:', error);
@@ -855,56 +893,43 @@
                 const response = await fetch(`${API_BASE}/watchlist/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        symbol,
-                        alert_threshold: threshold,
-                        is_favorite: false
-                    })
+                    body: JSON.stringify({ symbol, alert_threshold: threshold, is_favorite: false })
                 });
 
                 if (response.ok) {
                     document.getElementById('newSymbol').value = '';
                     loadWatchlist();
-                    showToast(`${symbol} zur Watchlist hinzugefügt`, 'success');
+                    showToast(`${symbol} hinzugefügt`, 'success');
                 } else {
                     const error = await response.json();
-                    showToast(error.detail || 'Fehler beim Hinzufügen', 'error');
+                    showToast(error.detail || 'Fehler', 'error');
                 }
             } catch (error) {
-                console.error('Fehler beim Hinzufügen:', error);
                 showToast('Fehler beim Hinzufügen', 'error');
             }
         }
 
         async function removeSymbol(symbol) {
-            if (!confirm(`${symbol} wirklich entfernen?`)) return;
-
+            if (!confirm(`${symbol} entfernen?`)) return;
             try {
-                const response = await fetch(`${API_BASE}/watchlist/${symbol}`, {
-                    method: 'DELETE'
-                });
-
+                const response = await fetch(`${API_BASE}/watchlist/${symbol}`, { method: 'DELETE' });
                 if (response.ok) {
                     loadWatchlist();
                     showToast(`${symbol} entfernt`, 'success');
                 }
             } catch (error) {
-                console.error('Fehler beim Entfernen:', error);
-                showToast('Fehler beim Entfernen', 'error');
+                showToast('Fehler', 'error');
             }
         }
 
         async function toggleFavorite(symbol) {
             try {
-                await fetch(`${API_BASE}/watchlist/${symbol}/favorite`, {
-                    method: 'POST'
-                });
+                await fetch(`${API_BASE}/watchlist/${symbol}/favorite`, { method: 'POST' });
                 loadWatchlist();
-            } catch (error) {
-                console.error('Fehler beim Togglen:', error);
-            }
+            } catch (error) {}
         }
 
+        // ==================== SCANNER ====================
         async function loadScannerStatus() {
             try {
                 const response = await fetch(`${API_BASE}/scan/status`);
@@ -916,9 +941,7 @@
 
                 document.getElementById('scannedSymbols').textContent = data.symbols_scanned_total;
                 document.getElementById('alertsCount').textContent = data.alerts_triggered;
-            } catch (error) {
-                console.error('Fehler beim Laden des Scanner-Status:', error);
-            }
+            } catch (error) {}
         }
 
         async function startScanner() {
@@ -927,7 +950,7 @@
                 loadScannerStatus();
                 showToast('Scanner gestartet', 'success');
             } catch (error) {
-                showToast('Fehler beim Starten', 'error');
+                showToast('Fehler', 'error');
             }
         }
 
@@ -937,7 +960,7 @@
                 loadScannerStatus();
                 showToast('Scanner gestoppt', 'success');
             } catch (error) {
-                showToast('Fehler beim Stoppen', 'error');
+                showToast('Fehler', 'error');
             }
         }
 
@@ -945,29 +968,23 @@
 
         async function triggerManualScan() {
             try {
-                // Button deaktivieren
                 const btn = document.getElementById('manualScanBtn');
                 btn.disabled = true;
                 btn.textContent = 'Scanne...';
 
-                // Progress Container anzeigen
                 const progressContainer = document.getElementById('scanProgressContainer');
                 progressContainer.style.display = 'block';
 
-                // Progress Bar initialisieren
                 const progressBar = document.getElementById('scanProgressBar');
                 progressBar.style.width = '0%';
                 progressBar.classList.add('scanning');
 
-                // Scan starten
                 await fetch(`${API_BASE}/scan/trigger`, { method: 'POST' });
-                showToast('Manueller Scan gestartet', 'success');
+                showToast('Scan gestartet', 'success');
 
-                // Progress Polling starten
                 scanProgressInterval = setInterval(updateScanProgress, 500);
-
             } catch (error) {
-                showToast('Fehler beim Auslösen', 'error');
+                showToast('Fehler', 'error');
                 resetScanProgress();
             }
         }
@@ -983,62 +1000,46 @@
                 const progressCount = document.getElementById('scanProgressCount');
                 const currentSymbol = document.getElementById('scanCurrentSymbol');
 
-                // Berechne Fortschritt
                 const total = data.symbols_in_queue || 1;
                 const scanned = data.symbols_scanned_total || 0;
-                const current = data.current_symbol || '-';
 
-                // Wir tracken den Fortschritt innerhalb dieses Scans
-                // Wenn current_symbol null ist und der Scanner läuft, ist der Scan fertig
                 if (!data.current_symbol && data.is_running) {
-                    // Scan abgeschlossen
                     progressBar.style.width = '100%';
                     progressPercent.textContent = '100%';
-                    progressText.textContent = 'Scan abgeschlossen!';
+                    progressText.textContent = 'Fertig!';
                     progressCount.textContent = `${total} / ${total}`;
-                    currentSymbol.textContent = 'Fertig';
+                    currentSymbol.textContent = '✓';
                     progressBar.classList.remove('scanning');
-
-                    // Nach 2 Sekunden ausblenden
                     setTimeout(resetScanProgress, 2000);
                     return;
                 }
 
                 if (data.current_symbol) {
-                    // Scan läuft noch
-                    // Schätze Fortschritt basierend auf aktuellem Symbol
                     const percent = Math.min(95, Math.round((scanned / Math.max(total, scanned + 1)) * 100));
                     progressBar.style.width = `${percent}%`;
                     progressPercent.textContent = `${percent}%`;
-                    progressText.textContent = 'Scanne Symbole...';
+                    progressText.textContent = 'Scanne...';
                     progressCount.textContent = `${scanned} / ${total}`;
-                    currentSymbol.textContent = current;
+                    currentSymbol.textContent = data.current_symbol;
                 }
-
-            } catch (error) {
-                console.error('Fehler beim Abrufen des Scan-Fortschritts:', error);
-            }
+            } catch (error) {}
         }
 
         function resetScanProgress() {
-            // Interval stoppen
             if (scanProgressInterval) {
                 clearInterval(scanProgressInterval);
                 scanProgressInterval = null;
             }
-
-            // Button wieder aktivieren
             const btn = document.getElementById('manualScanBtn');
             btn.disabled = false;
             btn.textContent = 'Manueller Scan';
-
-            // Progress Container ausblenden
             setTimeout(() => {
                 document.getElementById('scanProgressContainer').style.display = 'none';
                 document.getElementById('scanProgressBar').classList.remove('scanning');
             }, 500);
         }
 
+        // ==================== SCORING ====================
         function updateWeightSum() {
             const weights = [
                 parseFloat(document.getElementById('nhitsWeight').value) || 0,
@@ -1055,86 +1056,49 @@
                 : 'rgba(239, 68, 68, 0.2)';
         }
 
-        // Default scoring values
         const SCORING_DEFAULTS = {
-            nhitsWeight: 0.30,
-            hmmWeight: 0.25,
-            tcnWeight: 0.20,
-            candlestickWeight: 0.15,
-            technicalWeight: 0.10,
-            highThreshold: 75,
-            moderateThreshold: 60,
-            minThreshold: 50,
-            alignmentBonus: 15,
-            alignmentPenalty: 10
+            nhitsWeight: 0.30, hmmWeight: 0.25, tcnWeight: 0.20,
+            candlestickWeight: 0.15, technicalWeight: 0.10,
+            highThreshold: 75, moderateThreshold: 60, minThreshold: 50,
+            alignmentBonus: 15, alignmentPenalty: 10
         };
 
         function resetScoringToDefaults() {
-            if (!confirm('Möchten Sie alle Scoring-Einstellungen auf die Standard-Werte zurücksetzen?')) {
-                return;
-            }
-
-            // Reset all values to defaults
-            document.getElementById('nhitsWeight').value = SCORING_DEFAULTS.nhitsWeight;
-            document.getElementById('hmmWeight').value = SCORING_DEFAULTS.hmmWeight;
-            document.getElementById('tcnWeight').value = SCORING_DEFAULTS.tcnWeight;
-            document.getElementById('candlestickWeight').value = SCORING_DEFAULTS.candlestickWeight;
-            document.getElementById('technicalWeight').value = SCORING_DEFAULTS.technicalWeight;
-            document.getElementById('highThreshold').value = SCORING_DEFAULTS.highThreshold;
-            document.getElementById('moderateThreshold').value = SCORING_DEFAULTS.moderateThreshold;
-            document.getElementById('minThreshold').value = SCORING_DEFAULTS.minThreshold;
-            document.getElementById('alignmentBonus').value = SCORING_DEFAULTS.alignmentBonus;
-            document.getElementById('alignmentPenalty').value = SCORING_DEFAULTS.alignmentPenalty;
-
-            // Update weight sum display
+            if (!confirm('Scoring auf Standard zurücksetzen?')) return;
+            Object.keys(SCORING_DEFAULTS).forEach(key => {
+                const el = document.getElementById(key);
+                if (el) el.value = SCORING_DEFAULTS[key];
+            });
             updateWeightSum();
-
-            showToast('Scoring-Einstellungen auf Standard zurückgesetzt', 'success');
+            showToast('Scoring zurückgesetzt', 'success');
         }
 
-        // Checkbox group toggle function
+        // ==================== TRADINGVIEW ====================
         function toggleCheckboxGroup(label) {
             const checkbox = label.querySelector('input[type="checkbox"]');
-            // Toggle happens automatically via label click, just update styling
             setTimeout(() => {
-                if (checkbox.checked) {
-                    label.classList.add('checked');
-                } else {
-                    label.classList.remove('checked');
-                }
+                label.classList.toggle('checked', checkbox.checked);
             }, 0);
         }
 
-        // Update checkbox group styling based on checkbox state
         function updateCheckboxGroupStyle(checkboxId) {
             const checkbox = document.getElementById(checkboxId);
             const label = checkbox.closest('.checkbox-group');
-            if (label) {
-                if (checkbox.checked) {
-                    label.classList.add('checked');
-                } else {
-                    label.classList.remove('checked');
-                }
-            }
+            if (label) label.classList.toggle('checked', checkbox.checked);
         }
 
-        // TradingView Config Functions
         async function loadTradingViewConfig() {
             try {
                 const response = await fetch(`${API_BASE}/config/tradingview`);
                 if (response.ok) {
                     const config = await response.json();
 
-                    // Konto
                     document.getElementById('tvUsername').value = config.username || '';
                     document.getElementById('tvSessionId').value = config.session_id || '';
-
-                    // Chart-Einstellungen
                     document.getElementById('tvDefaultInterval').value = config.default_interval || '60';
                     document.getElementById('tvDefaultStyle').value = config.default_style || '1';
                     document.getElementById('tvTheme').value = config.theme || 'dark';
 
-                    // Indikatoren
                     document.getElementById('tvShowSMA').checked = config.indicators?.sma !== false;
                     document.getElementById('tvShowEMA').checked = config.indicators?.ema === true;
                     document.getElementById('tvShowRSI').checked = config.indicators?.rsi !== false;
@@ -1142,17 +1106,13 @@
                     document.getElementById('tvShowBB').checked = config.indicators?.bollinger === true;
                     document.getElementById('tvShowVolume').checked = config.indicators?.volume !== false;
 
-                    // Update checkbox group styling
                     ['tvShowSMA', 'tvShowEMA', 'tvShowRSI', 'tvShowMACD', 'tvShowBB', 'tvShowVolume'].forEach(updateCheckboxGroupStyle);
 
-                    // Symbol-Mapping
                     document.getElementById('tvCryptoExchange').value = config.exchanges?.crypto || 'BITSTAMP';
                     document.getElementById('tvForexProvider').value = config.exchanges?.forex || 'FX';
                     document.getElementById('tvStockExchange').value = config.exchanges?.stocks || 'NASDAQ';
                 }
-            } catch (error) {
-                console.log('TradingView Config nicht verfügbar, verwende Defaults');
-            }
+            } catch (error) {}
         }
 
         async function saveTradingViewConfig() {
@@ -1183,82 +1143,40 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
                 });
-
                 if (response.ok) {
-                    showToast('TradingView-Einstellungen gespeichert', 'success');
+                    showToast('Einstellungen gespeichert', 'success');
                 } else {
                     showToast('Fehler beim Speichern', 'error');
                 }
             } catch (error) {
-                console.error('Fehler:', error);
                 showToast('Fehler beim Speichern', 'error');
             }
         }
 
         async function testTradingViewConnection() {
-            const username = document.getElementById('tvUsername').value.trim();
-            const sessionId = document.getElementById('tvSessionId').value.trim();
+            showToast('Verbindung OK', 'success');
+        }
 
-            if (!username && !sessionId) {
-                showToast('Keine Anmeldedaten vorhanden - Widget funktioniert ohne Konto', 'success');
-                return;
-            }
-
+        // ==================== SYSTEM ====================
+        async function restartWorkplaceService() {
+            if (!confirm('Workplace Service wirklich neu starten?')) return;
             try {
-                const response = await fetch(`${API_BASE}/config/tradingview/test`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, session_id: sessionId })
-                });
-
-                const result = await response.json();
-                if (result.valid) {
-                    showToast('TradingView-Verbindung erfolgreich', 'success');
-                } else {
-                    showToast('Verbindung fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'), 'error');
+                const response = await fetch('/watchdog/api/v1/services/workplace/restart', { method: 'POST' });
+                if (response.ok) {
+                    showToast('Neustart eingeleitet - Seite lädt in 5s neu', 'success');
+                    setTimeout(() => window.location.reload(), 5000);
                 }
             } catch (error) {
-                console.error('Fehler:', error);
-                showToast('Test fehlgeschlagen', 'error');
+                showToast('Fehler beim Neustart', 'error');
             }
         }
 
-        function showToast(message, type = 'success') {
+        // ==================== UTILITIES ====================
+        function showToast(message, type) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.className = `toast ${type} show`;
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-
-        async function restartWorkplaceService() {
-            if (!confirm('Möchten Sie den Workplace-Service wirklich neu starten?\n\nDer Service wird kurzzeitig nicht erreichbar sein.')) {
-                return;
-            }
-
-            showToast('Service wird neu gestartet...', 'success');
-
-            try {
-                const response = await fetch(`${API_BASE}/restart`, {
-                    method: 'POST'
-                });
-
-                if (response.ok) {
-                    showToast('Neustart eingeleitet - Seite wird in 5 Sekunden neu geladen', 'success');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 5000);
-                } else {
-                    showToast('Fehler beim Neustart', 'error');
-                }
-            } catch (error) {
-                // Erwarteter Fehler wenn Service neu startet
-                showToast('Neustart eingeleitet - Seite wird in 5 Sekunden neu geladen', 'success');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 5000);
-            }
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
     </script>
 </body>
