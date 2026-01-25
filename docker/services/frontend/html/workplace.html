@@ -2605,7 +2605,7 @@
             `;
 
             try {
-                const response = await fetch(\`\${API_BASE}/analyze/\${currentDetailSymbol}\`, {
+                const response = await fetch(`${API_BASE}/analyze/${currentDetailSymbol}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ timeframe: currentDetailTimeframe, include_rag: true, include_llm: true })
@@ -2621,89 +2621,89 @@
                 container.innerHTML = renderLlmContent(data);
             } catch (error) {
                 console.error('LLM Analyse Fehler:', error);
-                container.innerHTML = \`
+                container.innerHTML = `
                     <div class="llm-analysis-box" style="border-left-color: #f87171;">
                         <p>Die LLM-Analyse konnte nicht geladen werden.</p>
-                        <p style="font-size: 0.75rem; opacity: 0.6; margin-top: 0.5rem;">\${error.message}</p>
+                        <p style="font-size: 0.75rem; opacity: 0.6; margin-top: 0.5rem;">${error.message}</p>
                         <button class="btn btn-secondary" style="margin-top: 0.75rem;" onclick="triggerLlmAnalysis()">Erneut versuchen</button>
                     </div>
-                \`;
+                `;
             }
         }
 
         function renderLlmContent(data) {
-            return \`
-                \${data.analysis_summary ? \`
+            return `
+                ${data.analysis_summary ? `
                 <div class="detail-section">
                     <h4><span class="icon">🤖</span> LLM Kurzanalyse</h4>
                     <div class="llm-analysis-box">
-                        <p>\${data.analysis_summary}</p>
+                        <p>${data.analysis_summary}</p>
                     </div>
                 </div>
-                \` : ''}
+                ` : ''}
 
-                \${data.entry_exit_levels ? \`
+                ${data.entry_exit_levels ? `
                 <div class="detail-section">
                     <h4><span class="icon">🎯</span> Entry/Exit Levels</h4>
                     <div class="detail-grid">
-                        \${data.entry_exit_levels.entry_price ? \`
+                        ${data.entry_exit_levels.entry_price ? `
                         <div class="detail-card">
                             <div class="detail-card-title">Entry</div>
-                            <div class="detail-card-value" style="color: #64c8ff">\${data.entry_exit_levels.entry_price?.toFixed(2)}</div>
+                            <div class="detail-card-value" style="color: #64c8ff">${data.entry_exit_levels.entry_price?.toFixed(2)}</div>
                         </div>
-                        \` : ''}
-                        \${data.entry_exit_levels.stop_loss ? \`
+                        ` : ''}
+                        ${data.entry_exit_levels.stop_loss ? `
                         <div class="detail-card">
                             <div class="detail-card-title">Stop Loss</div>
-                            <div class="detail-card-value" style="color: #f87171">\${data.entry_exit_levels.stop_loss?.toFixed(2)}</div>
+                            <div class="detail-card-value" style="color: #f87171">${data.entry_exit_levels.stop_loss?.toFixed(2)}</div>
                         </div>
-                        \` : ''}
-                        \${data.entry_exit_levels.take_profit_1 ? \`
+                        ` : ''}
+                        ${data.entry_exit_levels.take_profit_1 ? `
                         <div class="detail-card">
                             <div class="detail-card-title">Take Profit 1</div>
-                            <div class="detail-card-value" style="color: #34d399">\${data.entry_exit_levels.take_profit_1?.toFixed(2)}</div>
+                            <div class="detail-card-value" style="color: #34d399">${data.entry_exit_levels.take_profit_1?.toFixed(2)}</div>
                         </div>
-                        \` : ''}
-                        \${data.entry_exit_levels.take_profit_2 ? \`
+                        ` : ''}
+                        ${data.entry_exit_levels.take_profit_2 ? `
                         <div class="detail-card">
                             <div class="detail-card-title">Take Profit 2</div>
-                            <div class="detail-card-value" style="color: #34d399">\${data.entry_exit_levels.take_profit_2?.toFixed(2)}</div>
+                            <div class="detail-card-value" style="color: #34d399">${data.entry_exit_levels.take_profit_2?.toFixed(2)}</div>
                         </div>
-                        \` : ''}
-                        \${data.entry_exit_levels.risk_reward_ratio ? \`
+                        ` : ''}
+                        ${data.entry_exit_levels.risk_reward_ratio ? `
                         <div class="detail-card">
                             <div class="detail-card-title">Risk/Reward</div>
-                            <div class="detail-card-value">\${data.entry_exit_levels.risk_reward_ratio?.toFixed(2)}</div>
+                            <div class="detail-card-value">${data.entry_exit_levels.risk_reward_ratio?.toFixed(2)}</div>
                         </div>
-                        \` : ''}
+                        ` : ''}
                     </div>
                 </div>
-                \` : ''}
+                ` : ''}
 
-                \${data.risk_assessment ? \`
+                ${data.risk_assessment ? `
                 <div class="detail-section">
                     <h4><span class="icon">⚠️</span> Risiko-Bewertung</h4>
                     <div class="llm-analysis-box" style="border-left-color: #f59e0b;">
-                        <p>\${data.risk_assessment}</p>
+                        <p>${data.risk_assessment}</p>
                     </div>
                 </div>
-                \` : ''}
+                ` : ''}
 
-                \${data.rationale ? \`
+                ${data.rationale ? `
                 <div class="detail-section">
                     <h4><span class="icon">💡</span> Begründung</h4>
                     <div class="llm-analysis-box" style="border-left-color: #8b5cf6;">
-                        <p>\${data.rationale}</p>
+                        <p>${data.rationale}</p>
                     </div>
                 </div>
-                \` : ''}
+                ` : ''}
 
                 <div style="margin-top: 1rem; font-size: 0.75rem; opacity: 0.6;">
-                    <span>Analyse-Dauer: \${data.analysis_duration_ms?.toFixed(0) || '-'}ms</span>
-                    \${data.rag_sources_used ? \`<span style="margin-left: 1rem;">RAG-Quellen: \${data.rag_sources_used}</span>\` : ''}
-                    \${data.llm_model ? \`<span style="margin-left: 1rem;">Modell: \${data.llm_model}</span>\` : ''}
+                    <span>Analyse-Dauer: ${data.analysis_duration_ms?.toFixed(0) || '-'}ms</span>
+                    ${data.rag_sources_used ? `<span style="margin-left: 1rem;">RAG-Quellen: ${data.rag_sources_used}</span>` : ''}
+                    ${data.llm_model ? `<span style="margin-left: 1rem;">Modell: ${data.llm_model}</span>` : ''}
                 </div>
-            \`;
+            `;
         }
 
         // Hilfsfunktionen
