@@ -155,19 +155,24 @@ class ScoringService:
         return round(composite, 1), direction, drivers, alignment
 
     def _determine_direction(self, directions: list[SignalDirection]) -> SignalDirection:
-        """Bestimmt die Gesamt-Richtung aus allen Signal-Richtungen."""
+        """Bestimmt die Gesamt-Richtung aus allen Signal-Richtungen.
+
+        Verwendet relative Mehrheit: Die Richtung mit den meisten Stimmen gewinnt.
+        NEUTRAL wird nur bei Gleichstand zwischen LONG und SHORT zurückgegeben.
+        """
         if not directions:
             return SignalDirection.NEUTRAL
 
         long_count = sum(1 for d in directions if d == SignalDirection.LONG)
         short_count = sum(1 for d in directions if d == SignalDirection.SHORT)
-        total = len(directions)
 
-        if long_count > total / 2:
+        # Relative Mehrheit: Die Richtung mit mehr Stimmen gewinnt
+        if long_count > short_count:
             return SignalDirection.LONG
-        elif short_count > total / 2:
+        elif short_count > long_count:
             return SignalDirection.SHORT
         else:
+            # Gleichstand zwischen long und short → neutral
             return SignalDirection.NEUTRAL
 
     def _determine_alignment(self, directions: list[SignalDirection]) -> SignalAlignment:
