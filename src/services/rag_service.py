@@ -79,27 +79,34 @@ class RAGService:
         if self._index is None:
             index_path = os.path.join(self.persist_directory, "faiss.index")
             data_path = os.path.join(self.persist_directory, "data.pkl")
+            index_bak_path = index_path + ".bak"
+            data_bak_path = data_path + ".bak"
 
             os.makedirs(self.persist_directory, exist_ok=True)
 
+            loaded = False
+
+            # Try loading from primary files
             if os.path.exists(index_path) and os.path.exists(data_path):
-                self._index = faiss.read_index(index_path)
-                with open(data_path, "rb") as f:
-                    data = pickle.load(f)
-                    self._documents = data["documents"]
-                    self._metadatas = data["metadatas"]
-                    self._ids = data["ids"]
-                    # Load content hashes if available, otherwise rebuild from documents
-                    if "content_hashes" in data:
-                        self._content_hashes = data["content_hashes"]
-                    else:
-                        # Rebuild hashes from existing documents
-                        self._content_hashes = {
-                            self._compute_content_hash(doc) for doc in self._documents
-                        }
-                        logger.info(f"Rebuilt {len(self._content_hashes)} content hashes")
-                logger.info(f"Loaded FAISS index with {len(self._documents)} documents")
-            else:
+                loaded = self._try_load_index(index_path, data_path, "primary")
+
+            # If primary load failed, try backup files
+            if not loaded and os.path.exists(index_bak_path) and os.path.exists(data_bak_path):
+                logger.warning("Primary files corrupt, attempting to restore from backup...")
+                loaded = self._try_load_index(index_bak_path, data_bak_path, "backup")
+
+                if loaded:
+                    # Restore backup as primary
+                    try:
+                        import shutil
+                        shutil.copy2(data_bak_path, data_path)
+                        shutil.copy2(index_bak_path, index_path)
+                        logger.info("Restored backup files as primary")
+                    except Exception as e:
+                        logger.warning(f"Could not restore backup as primary: {e}")
+
+            # If all loading attempts failed, create new index
+            if not loaded:
                 self._index = faiss.IndexFlatL2(self._dimension)
                 self._documents = []
                 self._metadatas = []
@@ -112,6 +119,50 @@ class RAGService:
                 self._index = self._move_index_to_gpu(self._index)
 
         return self._index
+
+    def _try_load_index(self, index_path: str, data_path: str, source: str) -> bool:
+        """Try to load index from given paths. Returns True on success."""
+        try:
+            self._index = faiss.read_index(index_path)
+            with open(data_path, "rb") as f:
+                data = pickle.load(f)
+
+                if not isinstance(data, dict):
+                    raise ValueError("Invalid data format: not a dictionary")
+
+                self._documents = data.get("documents", [])
+                self._metadatas = data.get("metadatas", [])
+                self._ids = data.get("ids", [])
+
+                # Load content hashes if available, otherwise rebuild from documents
+                if "content_hashes" in data:
+                    self._content_hashes = data["content_hashes"]
+                else:
+                    # Rebuild hashes from existing documents
+                    self._content_hashes = {
+                        self._compute_content_hash(doc) for doc in self._documents
+                    }
+                    logger.info(f"Rebuilt {len(self._content_hashes)} content hashes")
+
+            logger.info(f"Loaded FAISS index from {source} with {len(self._documents)} documents")
+            return True
+
+        except (EOFError, pickle.UnpicklingError, ValueError) as e:
+            logger.error(f"Failed to load {source} index files (corrupt): {e}")
+            self._index = None
+            self._documents = []
+            self._metadatas = []
+            self._ids = []
+            self._content_hashes = set()
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error loading {source} index: {e}")
+            self._index = None
+            self._documents = []
+            self._metadatas = []
+            self._ids = []
+            self._content_hashes = set()
+            return False
 
     def _move_index_to_gpu(self, index):
         """Move FAISS index to GPU for faster search."""
@@ -492,30 +543,82 @@ Risiken: {', '.join(recommendation.risks)}
         return "\n".join(lines)
 
     async def persist(self):
-        """Persist the FAISS index and data to disk."""
+        """Persist the FAISS index and data to disk with atomic writes and backup."""
         index = self._get_index()
 
         os.makedirs(self.persist_directory, exist_ok=True)
 
         index_path = os.path.join(self.persist_directory, "faiss.index")
         data_path = os.path.join(self.persist_directory, "data.pkl")
+        index_tmp_path = index_path + ".tmp"
+        data_tmp_path = data_path + ".tmp"
+        index_bak_path = index_path + ".bak"
+        data_bak_path = data_path + ".bak"
 
-        # Convert GPU index back to CPU for saving
-        if self._use_gpu_faiss:
-            cpu_index = faiss.index_gpu_to_cpu(index)
-            faiss.write_index(cpu_index, index_path)
-        else:
-            faiss.write_index(index, index_path)
+        try:
+            # Step 1: Write to temporary files first
+            if self._use_gpu_faiss:
+                cpu_index = faiss.index_gpu_to_cpu(index)
+                faiss.write_index(cpu_index, index_tmp_path)
+            else:
+                faiss.write_index(index, index_tmp_path)
 
-        with open(data_path, "wb") as f:
-            pickle.dump({
-                "documents": self._documents,
-                "metadatas": self._metadatas,
-                "ids": self._ids,
-                "content_hashes": self._content_hashes
-            }, f)
+            with open(data_tmp_path, "wb") as f:
+                pickle.dump({
+                    "documents": self._documents,
+                    "metadatas": self._metadatas,
+                    "ids": self._ids,
+                    "content_hashes": self._content_hashes
+                }, f)
+                f.flush()
+                os.fsync(f.fileno())  # Force write to disk
 
-        logger.info(f"Persisted RAG database to disk ({len(self._documents)} docs, {len(self._content_hashes)} unique hashes)")
+            # Step 2: Verify the temp files are valid before replacing
+            self._verify_persisted_data(data_tmp_path, index_tmp_path)
+
+            # Step 3: Create backup of existing files (if they exist)
+            if os.path.exists(data_path):
+                if os.path.exists(data_bak_path):
+                    os.remove(data_bak_path)
+                os.rename(data_path, data_bak_path)
+
+            if os.path.exists(index_path):
+                if os.path.exists(index_bak_path):
+                    os.remove(index_bak_path)
+                os.rename(index_path, index_bak_path)
+
+            # Step 4: Atomic rename of temp files to final files
+            os.rename(data_tmp_path, data_path)
+            os.rename(index_tmp_path, index_path)
+
+            logger.info(f"Persisted RAG database to disk ({len(self._documents)} docs, {len(self._content_hashes)} unique hashes)")
+
+        except Exception as e:
+            # Cleanup temp files on failure
+            for tmp_path in [data_tmp_path, index_tmp_path]:
+                if os.path.exists(tmp_path):
+                    try:
+                        os.remove(tmp_path)
+                    except Exception:
+                        pass
+            logger.error(f"Failed to persist RAG database: {e}")
+            raise
+
+    def _verify_persisted_data(self, data_path: str, index_path: str):
+        """Verify that persisted files are valid and can be loaded."""
+        # Verify pickle file
+        with open(data_path, "rb") as f:
+            data = pickle.load(f)
+            if not isinstance(data, dict):
+                raise ValueError("Invalid data.pkl format: not a dictionary")
+            required_keys = {"documents", "metadatas", "ids"}
+            if not required_keys.issubset(data.keys()):
+                raise ValueError(f"Invalid data.pkl format: missing keys {required_keys - data.keys()}")
+
+        # Verify FAISS index
+        test_index = faiss.read_index(index_path)
+        if test_index is None:
+            raise ValueError("Invalid faiss.index: could not load")
 
     async def get_collection_stats(self) -> dict:
         """Get statistics about the RAG collection."""
