@@ -3728,7 +3728,25 @@ Evaluierungszeiträume:
                 const retrainData = await retrainResponse.json();
                 const retrainHistory = retrainData.history || [];
 
-                if (results.length === 0 && retrainHistory.length === 0) {
+                // Load training history from train service
+                let trainHistory = [];
+                try {
+                    const trainResponse = await fetch('/cnn-lstm-train/api/v1/train/history?limit=30');
+                    if (trainResponse.ok) {
+                        const trainData = await trainResponse.json();
+                        trainHistory = trainData.history || [];
+                    }
+                } catch (e) {
+                    console.log('Training history not available:', e);
+                }
+
+                // If we have training history but no backtests, show training loss chart
+                if (results.length === 0 && trainHistory.length > 0) {
+                    renderTrainingLossChart(trainHistory, summaryEl, chartCanvas);
+                    return;
+                }
+
+                if (results.length === 0 && retrainHistory.length === 0 && trainHistory.length === 0) {
                     summaryEl.innerHTML = 'Keine Metriken-Historie verfügbar. Trainieren Sie Modelle und führen Sie Backtests durch.';
                     if (cnnLstmMetricsChart) {
                         cnnLstmMetricsChart.destroy();
@@ -3775,6 +3793,11 @@ Evaluierungszeiträume:
                     }));
 
                 if (history.length === 0) {
+                    // Fallback to training history if no backtests
+                    if (trainHistory.length > 0) {
+                        renderTrainingLossChart(trainHistory, summaryEl, chartCanvas);
+                        return;
+                    }
                     summaryEl.innerHTML = 'Keine Metriken-Historie verfügbar. Führen Sie Backtests durch, um den Lernfortschritt zu verfolgen.';
                     return;
                 }
@@ -3787,6 +3810,164 @@ Evaluierungszeiträume:
                     summaryEl.innerHTML = '<span style="color: #e57373;">Fehler beim Laden der Metriken-Historie</span>';
                 }
             }
+        }
+
+        function renderTrainingLossChart(trainHistory, summaryEl, chartCanvas) {
+            // Filter only completed jobs and sort by date
+            const completedJobs = trainHistory
+                .filter(job => job.status === 'completed' && job.final_loss !== null)
+                .sort((a, b) => new Date(a.started_at) - new Date(b.started_at));
+
+            if (completedJobs.length === 0) {
+                summaryEl.innerHTML = 'Keine abgeschlossenen Trainings verfügbar.';
+                if (cnnLstmMetricsChart) {
+                    cnnLstmMetricsChart.destroy();
+                    cnnLstmMetricsChart = null;
+                }
+                return;
+            }
+
+            // Prepare data
+            const labels = completedJobs.map(job => {
+                const date = new Date(job.started_at);
+                return date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
+            });
+            const lossData = completedJobs.map(job => job.final_loss);
+            const durationData = completedJobs.map(job => Math.round(job.duration_seconds / 60));
+
+            // Calculate improvement
+            const firstLoss = lossData[0];
+            const lastLoss = lossData[lossData.length - 1];
+            const improvement = ((firstLoss - lastLoss) / firstLoss * 100).toFixed(1);
+
+            // Update summary
+            const totalJobs = completedJobs.length;
+            const avgLoss = (lossData.reduce((a, b) => a + b, 0) / lossData.length).toFixed(4);
+            const minLoss = Math.min(...lossData).toFixed(4);
+            summaryEl.innerHTML = `
+                <span style="color: #4caf50;">📊 ${totalJobs} Trainings</span> |
+                <span>Ø Loss: ${avgLoss}</span> |
+                <span style="color: #64c8ff;">Min: ${minLoss}</span> |
+                <span style="color: ${improvement > 0 ? '#4caf50' : '#e57373'};">
+                    ${improvement > 0 ? '↓' : '↑'} ${Math.abs(improvement)}% Verbesserung
+                </span>
+            `;
+
+            const ctx = chartCanvas.getContext('2d');
+
+            // Destroy existing chart
+            if (cnnLstmMetricsChart) {
+                cnnLstmMetricsChart.destroy();
+            }
+
+            // Create training loss chart
+            cnnLstmMetricsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Training Loss',
+                            data: lossData,
+                            borderColor: '#ff6b6b',
+                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#ff6b6b',
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Dauer (min)',
+                            data: durationData,
+                            borderColor: '#64c8ff',
+                            backgroundColor: 'rgba(100, 200, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 4,
+                            borderDash: [5, 5],
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#888',
+                                font: { size: 11 },
+                                boxWidth: 12,
+                                padding: 10
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#ccc',
+                            borderColor: 'rgba(100, 200, 255, 0.3)',
+                            borderWidth: 1,
+                            callbacks: {
+                                afterBody: function(context) {
+                                    const idx = context[0].dataIndex;
+                                    const job = completedJobs[idx];
+                                    return [
+                                        '',
+                                        `Symbole: ${job.symbols?.join(', ') || 'N/A'}`,
+                                        `Timeframes: ${job.timeframes?.join(', ') || 'N/A'}`,
+                                        `Epochen: ${job.epochs_completed || 1}`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#666', font: { size: 10 } }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Loss',
+                                color: '#ff6b6b'
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: {
+                                color: '#ff6b6b',
+                                font: { size: 10 },
+                                callback: (val) => val.toFixed(2)
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Minuten',
+                                color: '#64c8ff'
+                            },
+                            grid: { drawOnChartArea: false },
+                            ticks: {
+                                color: '#64c8ff',
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         function renderMetricsChart(history, summaryEl, chartCanvas) {
