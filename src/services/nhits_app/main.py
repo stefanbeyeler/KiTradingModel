@@ -9,11 +9,49 @@ Handles:
 """
 
 import uvicorn
+import json
+import math
+from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from loguru import logger
 import sys
 import os
+
+
+def sanitize_for_json(obj: Any) -> Any:
+    """Recursively sanitize an object to be JSON-safe (convert NaN/Inf to None)."""
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return [sanitize_for_json(item) for item in obj]
+    elif isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    elif hasattr(obj, '__dict__'):
+        # Handle Pydantic models and other objects with __dict__
+        return sanitize_for_json(obj.__dict__)
+    return obj
+
+
+class NaNSafeJSONResponse(JSONResponse):
+    """JSON Response that handles NaN and Infinity values by converting them to null."""
+
+    def render(self, content: Any) -> bytes:
+        # Pre-sanitize the content to replace NaN/Inf with None
+        sanitized = sanitize_for_json(content)
+        return json.dumps(
+            sanitized,
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
@@ -42,14 +80,15 @@ logger.add(
     level=settings.log_level
 )
 
-# Create FastAPI application
+# Create FastAPI application with NaN-safe JSON response
 app = FastAPI(
     title="NHITS Service",
     description="Neural Hierarchical Interpolation for Time Series - Training & Forecasting",
     version=VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
-    root_path=os.getenv("ROOT_PATH", "")
+    root_path=os.getenv("ROOT_PATH", ""),
+    default_response_class=NaNSafeJSONResponse,
 )
 
 # Configure CORS
@@ -60,6 +99,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Exception handler for NaN/Inf JSON serialization errors
+@app.exception_handler(ValueError)
+async def value_error_handler(request, exc):
+    """Handle ValueError exceptions, particularly NaN/Inf JSON errors."""
+    if "Out of range float values" in str(exc):
+        logger.warning(f"NaN/Inf value detected in response, returning sanitized error")
+        return NaNSafeJSONResponse(
+            status_code=500,
+            content={
+                "detail": "Response contained invalid float values (NaN/Infinity)",
+                "error_type": "invalid_float_values"
+            }
+        )
+    # Re-raise other ValueErrors
+    raise exc
+
 
 # Include routers
 # IMPORTANT: training_router must come before forecast_router because

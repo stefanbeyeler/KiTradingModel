@@ -340,17 +340,26 @@ class ModelImprovementService:
         recorded_count = 0
         normalized_tf = timeframe.upper()
         for horizon, pred_price in horizons:
-            if pred_price is not None:
-                feedback = PredictionFeedback(
-                    symbol=symbol,
-                    timestamp=now,
-                    horizon=horizon,
-                    current_price=current_price,
-                    predicted_price=pred_price,
-                    timeframe=normalized_tf,
-                )
-                self.pending_feedback[symbol].append(feedback)
-                recorded_count += 1
+            # Skip NaN/Inf/None predictions
+            if pred_price is None:
+                continue
+            if math.isnan(pred_price) or math.isinf(pred_price):
+                logger.warning(f"Skipping invalid prediction for {symbol}/{horizon}: {pred_price}")
+                continue
+            if math.isnan(current_price) or math.isinf(current_price) or current_price <= 0:
+                logger.warning(f"Skipping prediction with invalid current_price for {symbol}: {current_price}")
+                continue
+
+            feedback = PredictionFeedback(
+                symbol=symbol,
+                timestamp=now,
+                horizon=horizon,
+                current_price=current_price,
+                predicted_price=pred_price,
+                timeframe=normalized_tf,
+            )
+            self.pending_feedback[symbol].append(feedback)
+            recorded_count += 1
 
         # Update metrics count
         if symbol not in self.performance_metrics:
@@ -433,6 +442,16 @@ class ModelImprovementService:
                         # Sanity check: skip implausible predictions
                         if not self._is_prediction_plausible(fb, symbol):
                             continue  # Discard broken prediction
+
+                        # Skip if any value is NaN or zero (would cause invalid calculation)
+                        if (math.isnan(fb.predicted_price) or math.isnan(actual_price) or
+                            math.isnan(fb.current_price) or actual_price == 0):
+                            logger.warning(
+                                f"Skipping {symbol} evaluation: invalid values "
+                                f"(predicted={fb.predicted_price}, actual={actual_price}, "
+                                f"current={fb.current_price})"
+                            )
+                            continue
 
                         # Calculate error
                         fb.actual_price = actual_price
@@ -666,6 +685,16 @@ class ModelImprovementService:
                         # Sanity check: skip implausible predictions
                         if not self._is_prediction_plausible(fb, symbol):
                             continue  # Discard broken prediction
+
+                        # Skip if any value is NaN or zero (would cause invalid calculation)
+                        if (math.isnan(fb.predicted_price) or math.isnan(actual_price) or
+                            math.isnan(fb.current_price) or actual_price == 0):
+                            logger.warning(
+                                f"Skipping {symbol} evaluation: invalid values "
+                                f"(predicted={fb.predicted_price}, actual={actual_price}, "
+                                f"current={fb.current_price})"
+                            )
+                            continue
 
                         # Calculate error
                         fb.actual_price = actual_price
