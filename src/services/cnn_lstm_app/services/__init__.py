@@ -6,6 +6,8 @@ from .prediction_history_service import PredictionHistoryService, prediction_his
 from .prediction_feedback_service import PredictionFeedbackService, prediction_feedback_service
 from .backtesting_service import BacktestingService, backtesting_service
 from .claude_validator_service import ClaudePredictionValidatorService, claude_prediction_validator_service
+from .outcome_tracker_service import OutcomeTrackerService, outcome_tracker_service
+from .drift_detection_service import DriftDetectionService, drift_detection_service
 
 __all__ = [
     "InferenceService",
@@ -20,4 +22,8 @@ __all__ = [
     "backtesting_service",
     "ClaudePredictionValidatorService",
     "claude_prediction_validator_service",
+    "OutcomeTrackerService",
+    "outcome_tracker_service",
+    "DriftDetectionService",
+    "drift_detection_service",
 ]

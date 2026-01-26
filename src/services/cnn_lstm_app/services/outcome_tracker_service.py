@@ -336,6 +336,9 @@ class OutcomeTrackerService:
             f"(overall: {overall_accuracy:.2f}, tasks: {task_accuracies})"
         )
 
+        # Send observation to drift detection service
+        await self._send_to_drift_detection(outcome)
+
         # Send to feedback buffer
         await self._send_to_feedback_buffer(outcome)
 
@@ -481,6 +484,43 @@ class OutcomeTrackerService:
         except Exception as e:
             logger.debug(f"Failed to fetch price for {symbol}: {e}")
         return None
+
+    async def _send_to_drift_detection(self, outcome: PredictionOutcome):
+        """Send observation to drift detection service."""
+        try:
+            from .drift_detection_service import drift_detection_service
+
+            # Extract task-specific info for drift detection
+            price_outcome = outcome.price_outcome or {}
+            pattern_outcome = outcome.pattern_outcome or {}
+            regime_outcome = outcome.regime_outcome or {}
+
+            price_pred = outcome.original_predictions.get("price", {})
+            pattern_pred = outcome.original_predictions.get("patterns", {})
+            regime_pred = outcome.original_predictions.get("regime", {})
+
+            drift_detection_service.add_observation(
+                prediction_id=outcome.prediction_id,
+                symbol=outcome.symbol,
+                timeframe=outcome.timeframe,
+                # Price task
+                price_direction_correct=price_outcome.get("direction_correct"),
+                price_confidence=price_pred.get("confidence") if price_pred else None,
+                price_magnitude_error=price_outcome.get("magnitude_accuracy"),
+                # Pattern task
+                pattern_correct=pattern_outcome.get("accuracy", 0) >= 0.5 if pattern_outcome else None,
+                pattern_confidence=pattern_pred.get("confidence") if pattern_pred else None,
+                patterns_predicted=pattern_pred.get("detected_patterns") if pattern_pred else None,
+                # Regime task
+                regime_correct=regime_outcome.get("regime_correct"),
+                regime_confidence=regime_pred.get("confidence") if regime_pred else None,
+                regime_predicted=regime_pred.get("regime") if regime_pred else None,
+                # Overall
+                overall_accuracy=outcome.overall_accuracy,
+            )
+            logger.debug(f"Sent outcome {outcome.prediction_id} to drift detection")
+        except Exception as e:
+            logger.debug(f"Could not send to drift detection: {e}")
 
     async def _send_to_feedback_buffer(self, outcome: PredictionOutcome):
         """Send completed outcome to training service feedback buffer."""

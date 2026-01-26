@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from .routers import prediction_router, system_router, revalidation_router, outcome_router
+from .routers import prediction_router, system_router, revalidation_router, outcome_router, drift_router
 
 # =============================================================================
 # Configuration
@@ -169,6 +169,10 @@ openapi_tags = [
         "name": "7. Outcome Tracking",
         "description": "Prediction-Outcome-Tracking für Self-Learning"
     },
+    {
+        "name": "8. Drift Detection",
+        "description": "Performance-Drift-Erkennung für Self-Learning"
+    },
 ]
 
 app = FastAPI(
@@ -219,6 +223,7 @@ app.include_router(
     tags=["4. History", "5. Feedback", "6. Backtesting"]
 )
 app.include_router(outcome_router, prefix="/api/v1", tags=["7. Outcome Tracking"])
+app.include_router(drift_router, prefix="/api/v1", tags=["8. Drift Detection"])
 
 
 # =============================================================================
