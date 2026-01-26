@@ -6350,13 +6350,13 @@ async def get_easyinsight_strength(
 @easyinsight_router.get("/easyinsight/multi-strength/{symbol}")
 async def get_easyinsight_multi_strength(
     symbol: str,
-    outputsize: int = Query(50, ge=1, le=500, description="Number of data points per timeframe"),
+    days: int = Query(30, ge=7, le=365, description="Number of days to fetch (all timeframes cover same period)"),
 ):
     """
     Get EasyInsight Strength indicator for multiple timeframes (H4, D1, W1).
 
-    Returns strength values for all three timeframes in a format optimized
-    for charting libraries like Lightweight Charts.
+    All timeframes cover the same calendar period (specified by `days`).
+    This ensures the time axes align when displayed together.
 
     Response format:
     ```json
@@ -6373,13 +6373,18 @@ async def get_easyinsight_multi_strength(
     import asyncio
     from ..services.easyinsight_service import easyinsight_service
 
-    timeframes = ["4h", "1day", "1week"]
-    tf_names = ["H4", "D1", "W1"]
+    # Calculate outputsize for each timeframe to cover the same calendar period
+    # H4: 6 candles per day, D1: 1 candle per day, W1: 1 candle per 7 days
+    timeframe_config = [
+        ("4h", "H4", days * 6),       # 6 H4 candles per day
+        ("1day", "D1", days),          # 1 D1 candle per day
+        ("1week", "W1", max(days // 7, 4)),  # 1 W1 candle per week, min 4
+    ]
 
-    async def fetch_strength(interval: str) -> dict:
+    async def fetch_strength(interval: str, outputsize: int) -> dict:
         try:
             result = await easyinsight_service.get_strength(
-                symbol=symbol, interval=interval, outputsize=outputsize
+                symbol=symbol, interval=interval, outputsize=min(outputsize, 500)
             )
             if result.get("status") == "error":
                 return {"error": result.get("error")}
@@ -6405,15 +6410,19 @@ async def get_easyinsight_multi_strength(
         except Exception as e:
             return {"error": str(e)}
 
-    # Fetch all timeframes in parallel
-    results = await asyncio.gather(*[fetch_strength(tf) for tf in timeframes])
+    # Fetch all timeframes in parallel with their calculated outputsizes
+    results = await asyncio.gather(*[
+        fetch_strength(interval, outputsize)
+        for interval, _, outputsize in timeframe_config
+    ])
 
     response = {
         "symbol": symbol,
+        "days": days,
         "timeframes": {}
     }
 
-    for tf_name, result in zip(tf_names, results):
+    for (_, tf_name, _), result in zip(timeframe_config, results):
         if "error" in result:
             response["timeframes"][tf_name] = {"error": result["error"], "data": []}
         else:
