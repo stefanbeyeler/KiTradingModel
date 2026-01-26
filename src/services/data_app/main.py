@@ -94,6 +94,7 @@ except ImportError:
 from src.service_registry import register_service
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import is_test_unhealthy, get_test_unhealthy_status
+from src.services.data_app.middleware.rate_limiter import RateLimiter, RateLimitMiddleware
 import asyncio
 
 # Optional imports for RAG sync (requires sentence_transformers)
@@ -112,6 +113,7 @@ sync_service = None
 rag_service = None
 _cache_cleanup_task = None
 _prefetch_task = None
+rate_limiter = None
 
 # Configure logging
 logger.remove()
@@ -245,6 +247,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Configure Rate Limiting (will be connected in startup)
+rate_limiter = RateLimiter(
+    redis_url=os.getenv("REDIS_URL", "redis://trading-redis:6379"),
+    per_ip_limit=int(os.getenv("RATE_LIMIT_PER_IP", "100")),
+    strict_limit=int(os.getenv("RATE_LIMIT_STRICT", "10")),
+    window_seconds=60,
+)
+app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
+
 # Include routers - Reihenfolge bestimmt Swagger UI Darstellung
 app.include_router(system_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(general_router, prefix="/api/v1", tags=["1. System"])
@@ -306,11 +317,21 @@ async def _periodic_cache_cleanup():
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup."""
-    global sync_service, rag_service, _cache_cleanup_task, _prefetch_task
+    global sync_service, rag_service, _cache_cleanup_task, _prefetch_task, rate_limiter
 
     logger.info("Starting Data Service...")
     logger.info(f"Version: {VERSION}")
     logger.info(f"EasyInsight API: {settings.easyinsight_api_url}")
+
+    # Connect rate limiter
+    try:
+        connected = await rate_limiter.connect()
+        if connected:
+            logger.info("Rate limiter connected to Redis")
+        else:
+            logger.info("Rate limiter using in-memory fallback")
+    except Exception as e:
+        logger.warning(f"Rate limiter initialization warning: {e}")
 
     # Cleanup expired training data cache on startup
     try:
@@ -397,9 +418,17 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown."""
-    global _cache_cleanup_task
+    global _cache_cleanup_task, rate_limiter
 
     logger.info("Shutting down Data Service...")
+
+    # Close rate limiter
+    if rate_limiter:
+        try:
+            await rate_limiter.close()
+            logger.info("Rate limiter closed")
+        except Exception as e:
+            logger.warning(f"Error closing rate limiter: {e}")
 
     # Stop cache cleanup task
     if _cache_cleanup_task and not _cache_cleanup_task.done():

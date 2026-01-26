@@ -18,6 +18,7 @@ from ..services.training_orchestrator import (
     JobPriority,
     JobStatus
 )
+from ..services.resource_monitor import resource_monitor
 
 router = APIRouter(prefix="/training", tags=["Training Orchestrator"])
 
@@ -344,6 +345,52 @@ async def quick_train(service: str, symbols: Optional[List[str]] = None):
         symbols=symbols,
         priority="normal"
     ))
+
+
+# ============ Resource Protection Endpoints ============
+
+@router.get("/resources", tags=["Resource Protection"])
+async def get_resources():
+    """
+    Get current system resource metrics.
+
+    Returns CPU, memory, swap usage and whether training can start.
+    Used for monitoring system load and preventing resource exhaustion.
+    """
+    return resource_monitor.to_dict()
+
+
+@router.post("/pause", tags=["Resource Protection"])
+async def pause_training():
+    """
+    Pause the training orchestrator.
+
+    No new training jobs will start while paused.
+    Running jobs will continue to completion.
+    Use this to protect system resources during high load.
+    """
+    training_orchestrator.pause()
+    return {
+        "status": "paused",
+        "message": "Training orchestrator paused - no new jobs will start",
+        "running_jobs": len(training_orchestrator._running_jobs),
+        "queued_jobs": len(training_orchestrator._queue)
+    }
+
+
+@router.post("/resume", tags=["Resource Protection"])
+async def resume_training():
+    """
+    Resume the training orchestrator.
+
+    Training jobs will start processing again based on queue priority.
+    """
+    training_orchestrator.resume()
+    return {
+        "status": "resumed",
+        "message": "Training orchestrator resumed",
+        "queued_jobs": len(training_orchestrator._queue)
+    }
 
 
 # ============ HMM Validation Pipeline Endpoints ============

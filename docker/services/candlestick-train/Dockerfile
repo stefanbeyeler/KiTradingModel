@@ -49,6 +49,9 @@ ENV TRAINING_INTERVAL_HOURS=24
 ENV TRAINING_HOUR_UTC=2
 ENV SCHEDULED_TRAINING_EPOCHS=50
 
+# Low priority for training (same as other training services)
+ENV NICE_PRIORITY=19
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:3016/health')" || exit 1
@@ -56,5 +59,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 # Expose port
 EXPOSE 3016
 
-# Run service
-CMD ["python", "-m", "uvicorn", "src.services.candlestick_train_app.main:app", "--host", "0.0.0.0", "--port", "3016"]
+# Run service with low CPU priority (nice -n 19)
+CMD ["sh", "-c", "nice -n ${NICE_PRIORITY:-19} python -m uvicorn src.services.candlestick_train_app.main:app --host 0.0.0.0 --port 3016"]

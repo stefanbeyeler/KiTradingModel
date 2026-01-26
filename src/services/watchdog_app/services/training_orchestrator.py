@@ -22,6 +22,8 @@ from enum import Enum
 from pathlib import Path
 from loguru import logger
 
+from .resource_monitor import resource_monitor
+
 
 class TrainingServiceType(str, Enum):
     """Types of training services."""
@@ -169,6 +171,7 @@ class TrainingOrchestrator:
         self._schedules: Dict[str, ScheduledTraining] = {}
         self._http_client: Optional[httpx.AsyncClient] = None
         self._running = False
+        self._paused = False  # Resource protection: pause new job starts
         self._worker_task: Optional[asyncio.Task] = None
         self._scheduler_task: Optional[asyncio.Task] = None
 
@@ -272,11 +275,24 @@ class TrainingOrchestrator:
         logger.info("Training Orchestrator stopped")
 
     async def _job_worker(self):
-        """Background worker that processes the job queue."""
+        """Background worker that processes the job queue with resource awareness."""
         while self._running:
             try:
                 # Check if we can start a new job
                 if self._queue and len(self._running_jobs) < 2:  # Max 2 concurrent
+                    # Check if orchestrator is paused (resource protection)
+                    if self._paused:
+                        logger.debug("Training orchestrator paused - waiting")
+                        await asyncio.sleep(10)
+                        continue
+
+                    # Resource check before starting new training
+                    can_train, reason = resource_monitor.can_start_training()
+                    if not can_train:
+                        logger.warning(f"Training delayed due to resource constraints: {reason}")
+                        await asyncio.sleep(10)
+                        continue
+
                     # Get highest priority job
                     self._queue.sort(key=lambda j: j.priority.value, reverse=True)
                     job = self._queue.pop(0)
@@ -291,8 +307,15 @@ class TrainingOrchestrator:
                         # Put back in queue
                         self._queue.insert(0, job)
                     else:
-                        # Start the job
-                        asyncio.create_task(self._execute_job(job))
+                        # Final resource check before execution
+                        can_train, reason = resource_monitor.can_start_training()
+                        if can_train:
+                            # Start the job
+                            asyncio.create_task(self._execute_job(job))
+                        else:
+                            # Put back in queue and wait
+                            self._queue.insert(0, job)
+                            logger.info(f"Job {job.job_id} deferred: {reason}")
 
                 # Update running jobs progress
                 for job in list(self._running_jobs.values()):
@@ -674,13 +697,25 @@ class TrainingOrchestrator:
         ]
 
     def get_status(self) -> Dict[str, Any]:
-        """Get orchestrator status."""
+        """Get orchestrator status with resource metrics."""
+        # Get resource information
+        resource_info = resource_monitor.to_dict()
+        can_train, reason = resource_monitor.can_start_training()
+
         return {
             "running": self._running,
+            "paused": self._paused,
             "queued_jobs": len(self._queue),
             "running_jobs": len(self._running_jobs),
             "completed_jobs": len(self._completed_jobs),
             "schedules": len(self._schedules),
+            "resources": {
+                "status": resource_info["status"],
+                "cpu_percent": resource_info["cpu_percent"],
+                "memory_percent": resource_info["memory_percent"],
+                "can_start_training": can_train,
+                "block_reason": reason if not can_train else None,
+            },
             "services": {
                 st.value: {
                     "name": cfg.name,
@@ -690,6 +725,16 @@ class TrainingOrchestrator:
                 for st, cfg in self.SERVICES.items()
             }
         }
+
+    def pause(self) -> None:
+        """Pause the orchestrator - no new jobs will start."""
+        self._paused = True
+        logger.warning("Training orchestrator PAUSED - no new jobs will start")
+
+    def resume(self) -> None:
+        """Resume the orchestrator - jobs can start again."""
+        self._paused = False
+        logger.info("Training orchestrator RESUMED")
 
 
 # Global singleton

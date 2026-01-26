@@ -22,8 +22,9 @@ from .services.alert_manager import AlertManager
 from .services.health_checker import HealthChecker
 from .services.telegram_notifier import TelegramNotifier
 from .services.training_orchestrator import training_orchestrator
+from .services.resource_monitor import resource_monitor, ResourceMetrics
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"  # Added resource monitoring
 
 # Global services
 health_checker: HealthChecker | None = None
@@ -105,6 +106,34 @@ async def lifespan(app: FastAPI):
     # Training Orchestrator starten
     await training_orchestrator.start()
 
+    # Resource Monitor starten mit auto-pause Callback
+    async def on_resource_alert(metrics: ResourceMetrics, level: str):
+        """Callback bei kritischen Ressourcen - pausiert Training automatisch."""
+        if level == "critical":
+            if not training_orchestrator._paused:
+                training_orchestrator.pause()
+                logger.warning(
+                    f"CRITICAL RESOURCES - Training paused automatically. "
+                    f"CPU: {metrics.cpu_percent:.1f}%, Memory: {metrics.memory_percent:.1f}%"
+                )
+                # Telegram-Alert senden
+                if telegram_notifier and telegram_notifier.enabled:
+                    await telegram_notifier.send_alert(
+                        f"RESOURCE CRITICAL - Training paused\n"
+                        f"CPU: {metrics.cpu_percent:.1f}%\n"
+                        f"Memory: {metrics.memory_percent:.1f}%\n"
+                        f"Queued jobs: {len(training_orchestrator._queue)}"
+                    )
+
+    # Resource Monitor konfigurieren und starten
+    resource_monitor.cpu_warning = settings.resource_cpu_warning
+    resource_monitor.cpu_critical = settings.resource_cpu_critical
+    resource_monitor.memory_warning = settings.resource_memory_warning
+    resource_monitor.memory_critical = settings.resource_memory_critical
+    resource_monitor.poll_interval = settings.resource_poll_interval
+    resource_monitor.register_callback(on_resource_alert)
+    await resource_monitor.start()
+
     logger.info(f"Monitoring {len(health_checker.services)} services")
     logger.info(
         f"Telegram: {'enabled' if telegram_notifier.enabled else 'disabled'} "
@@ -123,6 +152,10 @@ async def lifespan(app: FastAPI):
             await monitoring_task
         except asyncio.CancelledError:
             pass
+
+    # Stop Resource Monitor
+    await resource_monitor.stop()
+    logger.info("Resource Monitor stopped")
 
     # Stop Training Orchestrator
     await training_orchestrator.stop()
@@ -162,6 +195,7 @@ async def health_check():
 
     summary = health_checker.get_summary() if health_checker else {}
     orchestrator_status = training_orchestrator.get_status()
+    resource_status = resource_monitor.to_dict()
 
     response = {
         "service": "watchdog",
@@ -173,8 +207,15 @@ async def health_check():
         "healthy_count": summary.get("healthy", 0),
         "unhealthy_count": summary.get("unhealthy", 0),
         "telegram_enabled": telegram_notifier.enabled if telegram_notifier else False,
+        "resources": {
+            "status": resource_status.get("status", "unknown"),
+            "cpu_percent": resource_status.get("cpu_percent", 0),
+            "memory_percent": resource_status.get("memory_percent", 0),
+            "can_start_training": resource_status.get("can_start_training", True),
+        },
         "training_orchestrator": {
             "running": orchestrator_status.get("running", False),
+            "paused": orchestrator_status.get("paused", False),
             "queued_jobs": orchestrator_status.get("queued_jobs", 0),
             "running_jobs": orchestrator_status.get("running_jobs", 0)
         }

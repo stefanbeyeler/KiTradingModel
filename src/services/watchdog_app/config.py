@@ -38,6 +38,14 @@ class WatchdogSettings(BaseSettings):
     history_retention_hours: int = 24  # Wie lange Historie gespeichert wird (1-168h / 1 Woche max)
     history_max_entries: int = 2880  # Max Einträge (24h * 60min / 0.5min bei 30s Intervall)
 
+    # Resource Protection Konfiguration
+    resource_cpu_warning: float = 75.0  # CPU-Warnschwelle (%) - Training wird verzögert
+    resource_cpu_critical: float = 90.0  # CPU-Kritisch (%) - Training wird pausiert
+    resource_memory_warning: float = 80.0  # Memory-Warnschwelle (%)
+    resource_memory_critical: float = 90.0  # Memory-Kritisch (%)
+    resource_poll_interval: float = 5.0  # Sekunden zwischen Resource-Checks
+    max_concurrent_training: int = 2  # Max gleichzeitige Training-Jobs
+
     model_config = {
         "env_file": ".env.watchdog",
         "env_prefix": "WATCHDOG_",
