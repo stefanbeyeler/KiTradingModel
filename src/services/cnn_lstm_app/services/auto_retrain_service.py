@@ -362,16 +362,17 @@ class AutoRetrainService:
                             else:
                                 last_event.training_status = "running"
 
+                    # If training is idle and we have a running job, mark it as completed
+                    if training_status == "idle" and self._current_training_job:
+                        if self._retrain_history:
+                            last_event = self._retrain_history[-1]
+                            if last_event.training_status == "running":
+                                last_event.training_status = "completed"
+                                self._current_training_job = None
+                                self._save_history()
+                                logger.info(f"Training {last_event.training_job_id} completed (no active training)")
+
                     return status
-                elif response.status_code == 400:
-                    # No training in progress - mark as completed if we had a running job
-                    if self._retrain_history:
-                        last_event = self._retrain_history[-1]
-                        if last_event.training_status == "running":
-                            last_event.training_status = "completed"
-                            self._current_training_job = None
-                            self._save_history()
-                            logger.info(f"Training {last_event.training_job_id} completed (no active training)")
 
         except Exception as e:
             logger.warning(f"Error checking training status: {e}")
@@ -383,23 +384,41 @@ class AutoRetrainService:
         if not self._retrain_history:
             return
 
+        # Check if any events need updating
+        running_events = [e for e in self._retrain_history if e.training_status == "running"]
+        if not running_events:
+            return
+
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     f"{self._train_service_url}/api/v1/train/status"
                 )
 
-                # Wenn kein Training laeuft, alle "running" Events auf "completed" setzen
-                if response.status_code == 400:  # No training in progress
-                    updated = False
-                    for event in self._retrain_history:
-                        if event.training_status == "running":
-                            event.training_status = "completed"
-                            updated = True
-                            logger.info(f"Marked stale training {event.training_job_id} as completed")
+                if response.status_code == 200:
+                    status = response.json()
+                    current_status = status.get("status", "unknown")
+                    current_job_id = status.get("job_id")
 
-                    if updated:
-                        self._save_history()
+                    # If no training is running (idle), mark all "running" events as completed
+                    if current_status == "idle":
+                        updated = False
+                        for event in self._retrain_history:
+                            if event.training_status == "running":
+                                event.training_status = "completed"
+                                updated = True
+                                logger.info(f"Marked stale training {event.training_job_id} as completed")
+
+                        if updated:
+                            self._save_history()
+                    else:
+                        # Training is active - update status for matching job
+                        for event in self._retrain_history:
+                            if event.training_job_id == current_job_id:
+                                if current_status in ["completed", "failed", "cancelled"]:
+                                    event.training_status = current_status
+                                    self._save_history()
+                                    logger.info(f"Training {event.training_job_id} finished: {current_status}")
 
         except Exception as e:
             logger.debug(f"Could not update pending events: {e}")
