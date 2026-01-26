@@ -93,3 +93,23 @@ async def update_config(request: ConfigUpdateRequest):
 async def get_config():
     """Get the current self-learning configuration."""
     return self_learning_orchestrator.get_config().to_dict()
+
+
+class DriftAlertRequest(BaseModel):
+    """Request for drift alert notification."""
+    severity: str = Field(..., description="Drift severity: none, low, medium, high, critical")
+    details: Dict[str, Any] = Field(default_factory=dict, description="Drift detection details")
+
+
+@router.post("/drift-alert", summary="Handle drift alert")
+async def handle_drift_alert(request: DriftAlertRequest):
+    """
+    Handle a drift alert from the inference service.
+
+    If drift is critical, triggers automatic rollback.
+    If drift is high, may trigger urgent retraining.
+    """
+    return await self_learning_orchestrator.handle_drift_alert(
+        drift_severity=request.severity,
+        drift_details=request.details
+    )

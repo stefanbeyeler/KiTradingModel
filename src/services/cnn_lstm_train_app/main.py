@@ -16,7 +16,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from .routers import training_router, system_router, feedback_router, self_learning_router
+from .routers import (
+    training_router,
+    system_router,
+    feedback_router,
+    self_learning_router,
+    model_management_router,
+)
 
 # =============================================================================
 # Configuration
@@ -159,8 +165,8 @@ openapi_tags = [
         "description": "Selbstlernende Modell-Optimierung"
     },
     {
-        "name": "5. Models",
-        "description": "Trainierte Modelle verwalten"
+        "name": "5. Model Management",
+        "description": "Validation, Versioning und Rollback"
     },
 ]
 
@@ -211,6 +217,7 @@ app.include_router(system_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(training_router, prefix="/api/v1", tags=["2. Training"])
 app.include_router(feedback_router, prefix="/api/v1", tags=["3. Feedback Buffer"])
 app.include_router(self_learning_router, prefix="/api/v1", tags=["4. Self-Learning"])
+app.include_router(model_management_router, prefix="/api/v1", tags=["5. Model Management"])
 
 
 # =============================================================================

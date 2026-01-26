@@ -19,6 +19,8 @@ import httpx
 from loguru import logger
 
 from .feedback_buffer_service import feedback_buffer_service
+from .cnn_lstm_validation_service import validation_service, ValidationRecommendation
+from .cnn_lstm_rollback_service import rollback_service, RollbackReason
 
 
 class OrchestratorState(Enum):
@@ -326,7 +328,19 @@ class SelfLearningOrchestrator:
             if result.get("status") == "completed":
                 self._status.training_count += 1
                 self._status.last_training = datetime.now(timezone.utc).isoformat()
-                self._status.candidate_model_version = result.get("model_version")
+                model_version = result.get("model_version")
+                model_path = result.get("model_path")
+                self._status.candidate_model_version = model_version
+
+                # Register model with rollback service
+                if model_path and model_version:
+                    rollback_service.register_model(
+                        model_path=model_path,
+                        training_type="incremental",
+                        metrics=result.get("metrics", {}),
+                        notes=f"Incremental training triggered by: {trigger_reason}"
+                    )
+                    logger.info(f"Registered model {model_version} with rollback service")
 
                 # Mark samples as used
                 sample_ids = [s.sample_id for s in training_batch]
@@ -382,49 +396,119 @@ class SelfLearningOrchestrator:
             return {"status": "error", "message": str(e)}
 
     async def _validate_model(self, validation_data: Dict[str, Any]) -> bool:
-        """Validate the newly trained model."""
+        """Validate the newly trained model using A/B comparison."""
         self._status.state = OrchestratorState.VALIDATING
         self._save_state()
 
         try:
-            # Check accuracy improvement/regression
-            accuracy_change = validation_data.get("accuracy_change", 0.0)
+            candidate_path = validation_data.get("model_path")
+            if not candidate_path:
+                logger.warning("No candidate model path for validation")
+                return self._validate_basic(validation_data)
 
-            # Allow any improvement
-            if accuracy_change >= self._config.min_accuracy_improvement:
-                logger.info(f"Model validation passed: accuracy change {accuracy_change:+.3f}")
+            # Get production model path
+            current_version = rollback_service.get_current_version()
+            if not current_version:
+                # No production model, use basic validation
+                logger.info("No production model to compare - using basic validation")
+                return self._validate_basic(validation_data)
+
+            production_path = current_version.get("model_path")
+
+            # Prepare test data from feedback buffer
+            buffer_stats = feedback_buffer_service.get_statistics()
+            if buffer_stats.unused_samples < 20:
+                logger.info("Insufficient samples for A/B comparison - using basic validation")
+                return self._validate_basic(validation_data)
+
+            # Get test samples
+            test_batch = feedback_buffer_service.get_training_batch(
+                batch_size=min(100, buffer_stats.unused_samples)
+            )
+
+            test_data = [
+                {
+                    "features": s.get("ohlcv_context", []),
+                    "price_label": [1 if s.get("price_direction_correct", False) else 0],
+                    "pattern_labels": s.get("pattern_predictions", [0] * 16),
+                    "regime_label": s.get("regime_prediction", 0),
+                    "outcome": {"is_success": s.get("overall_success", False)}
+                }
+                for s in test_batch
+            ]
+
+            # Run A/B comparison
+            comparison = validation_service.compare_models(
+                production_path=production_path,
+                candidate_path=candidate_path,
+                test_data=test_data
+            )
+
+            logger.info(
+                f"A/B Comparison: {comparison.recommendation.value} "
+                f"(accuracy delta: {comparison.overall_accuracy_delta:+.3f}, "
+                f"F1 delta: {comparison.overall_f1_delta:+.3f})"
+            )
+
+            if comparison.recommendation == ValidationRecommendation.DEPLOY:
+                logger.info(f"Validation PASSED: {comparison.recommendation_reason}")
                 return True
-
-            # Check if regression is within acceptable bounds
-            if accuracy_change >= -self._config.max_accuracy_regression:
-                logger.info(f"Model validation passed (minor regression): {accuracy_change:+.3f}")
-                return True
-
-            logger.warning(f"Model validation failed: accuracy change {accuracy_change:+.3f}")
-            return False
+            elif comparison.recommendation == ValidationRecommendation.REJECT:
+                logger.warning(f"Validation REJECTED: {comparison.recommendation_reason}")
+                return False
+            else:
+                # Manual review - check basic thresholds
+                logger.info(f"Validation REVIEW: {comparison.recommendation_reason}")
+                return comparison.overall_accuracy_delta >= -self._config.max_accuracy_regression
 
         except Exception as e:
             logger.error(f"Model validation error: {e}")
-            return False
+            return self._validate_basic(validation_data)
+
+    def _validate_basic(self, validation_data: Dict[str, Any]) -> bool:
+        """Basic validation when A/B comparison is not possible."""
+        accuracy_change = validation_data.get("accuracy_change", 0.0)
+
+        if accuracy_change >= self._config.min_accuracy_improvement:
+            logger.info(f"Basic validation passed: accuracy change {accuracy_change:+.3f}")
+            return True
+
+        if accuracy_change >= -self._config.max_accuracy_regression:
+            logger.info(f"Basic validation passed (minor regression): {accuracy_change:+.3f}")
+            return True
+
+        logger.warning(f"Basic validation failed: accuracy change {accuracy_change:+.3f}")
+        return False
 
     async def _deploy_model(self):
-        """Deploy the validated model."""
+        """Deploy the validated model using the rollback service."""
         self._status.state = OrchestratorState.DEPLOYING
         self._save_state()
 
         try:
-            # Trigger hot-reload on inference service
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    f"{self._cnn_lstm_service_url}/api/v1/model/reload"
-                )
+            candidate_version = self._status.candidate_model_version
+            if not candidate_version:
+                logger.warning("No candidate model version to deploy")
+                return
 
-                if response.status_code == 200:
-                    self._status.current_model_version = self._status.candidate_model_version
-                    self._status.candidate_model_version = None
-                    logger.info("Model deployed successfully")
-                else:
-                    logger.warning(f"Model deployment failed: {response.status_code}")
+            # Deploy via rollback service (handles versioning, backup, and hot-reload)
+            result = await rollback_service.deploy_model(
+                version_id=candidate_version,
+                force=False
+            )
+
+            if result.get("status") == "deployed":
+                self._status.current_model_version = candidate_version
+                self._status.candidate_model_version = None
+                logger.info(f"Model {candidate_version} deployed successfully via rollback service")
+
+                # Log deployment info
+                if result.get("previous_version"):
+                    logger.info(f"Previous version: {result['previous_version']}")
+                if result.get("inference_reloaded"):
+                    logger.info("Inference service reloaded")
+            else:
+                logger.warning(f"Model deployment failed: {result.get('message', 'Unknown error')}")
 
         except Exception as e:
             logger.error(f"Failed to deploy model: {e}")
@@ -466,6 +550,59 @@ class SelfLearningOrchestrator:
     def get_config(self) -> OrchestratorConfig:
         """Get current configuration."""
         return self._config
+
+    async def handle_drift_alert(self, drift_severity: str, drift_details: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle a drift alert from the inference service.
+
+        If drift is critical, triggers automatic rollback.
+
+        Args:
+            drift_severity: Severity level (none, low, medium, high, critical)
+            drift_details: Details about the detected drift
+
+        Returns:
+            Action taken
+        """
+        logger.info(f"Received drift alert: severity={drift_severity}")
+
+        if drift_severity == "critical":
+            logger.warning("Critical drift detected - triggering automatic rollback")
+
+            result = await rollback_service.auto_rollback_on_drift(
+                drift_severity=drift_severity,
+                drift_details=drift_details
+            )
+
+            if result.get("status") == "deployed":
+                self._status.current_model_version = result.get("version_id")
+                self._save_state()
+                logger.info(f"Automatic rollback successful: {result}")
+            else:
+                logger.warning(f"Automatic rollback skipped/failed: {result}")
+
+            return {
+                "action": "automatic_rollback",
+                "result": result
+            }
+
+        elif drift_severity == "high":
+            # High drift - schedule urgent retraining
+            logger.warning("High drift detected - scheduling urgent retraining")
+
+            buffer_stats = feedback_buffer_service.get_statistics()
+            if buffer_stats.unused_samples >= self._config.min_samples_for_training // 2:
+                # Lower threshold for urgent training
+                await self._trigger_training("high_drift")
+                return {"action": "urgent_retraining_triggered"}
+
+            return {"action": "urgent_retraining_pending", "reason": "insufficient_samples"}
+
+        elif drift_severity == "medium":
+            logger.info("Medium drift detected - monitoring closely")
+            return {"action": "monitoring", "note": "Will retrain if samples available"}
+
+        return {"action": "none", "severity": drift_severity}
 
 
 # Global singleton
