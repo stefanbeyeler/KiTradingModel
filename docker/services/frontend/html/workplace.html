@@ -6,6 +6,8 @@
     <title>Trading Workplace - Setups & Analyse</title>
     <!-- TradingView Widget Library -->
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <!-- Lightweight Charts for custom indicators -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         * {
             margin: 0;
@@ -383,6 +385,60 @@
         .chart-expand-btn svg {
             width: 14px;
             height: 14px;
+        }
+
+        /* Multi-Timeframe Strength Chart */
+        .strength-chart-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 0.75rem;
+            overflow: hidden;
+        }
+
+        .strength-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .strength-header h4 {
+            font-size: 0.85rem;
+            color: #64c8ff;
+            margin: 0;
+        }
+
+        .strength-legend {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.7rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .legend-item.h4 { color: #f59e0b; }
+        .legend-item.d1 { color: #10b981; }
+        .legend-item.w1 { color: #8b5cf6; }
+
+        .strength-chart-container {
+            height: 120px;
+            background: #131722;
+        }
+
+        .strength-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6b7280;
+            font-size: 0.8rem;
         }
 
         .chart-placeholder {
@@ -1376,6 +1432,21 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Multi-Timeframe Strength Chart -->
+                <div class="strength-chart-section" id="strengthChartSection">
+                    <div class="strength-header">
+                        <h4>📊 EasyInsight Stärke</h4>
+                        <div class="strength-legend">
+                            <span class="legend-item h4">━ H4</span>
+                            <span class="legend-item d1">━ D1</span>
+                            <span class="legend-item w1">━ W1</span>
+                        </div>
+                    </div>
+                    <div class="strength-chart-container" id="strengthChartContainer">
+                        <div class="strength-placeholder">Wählen Sie ein Symbol</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Sidebar -->
@@ -1863,11 +1934,113 @@
                 "popup_width": "1000",
                 "popup_height": "650"
             });
+
+            // Load Multi-Timeframe Strength Chart
+            loadStrengthChart(symbol);
         }
 
         function updateChart() {
             if (currentChartSymbol) {
                 loadChart(currentChartSymbol);
+            }
+        }
+
+        // =============================================
+        // Multi-Timeframe Strength Chart (Lightweight Charts)
+        // =============================================
+
+        let strengthChart = null;
+        let strengthSeries = { h4: null, d1: null, w1: null };
+
+        async function loadStrengthChart(symbol) {
+            const container = document.getElementById('strengthChartContainer');
+
+            // Clear placeholder
+            container.innerHTML = '';
+
+            try {
+                // Fetch multi-timeframe strength data from Data Service
+                const response = await fetch(`/data/api/v1/easyinsight/multi-strength/${symbol}`);
+
+                if (!response.ok) {
+                    throw new Error('Strength data not available');
+                }
+
+                const data = await response.json();
+
+                // Create chart if not exists
+                if (!strengthChart) {
+                    strengthChart = LightweightCharts.createChart(container, {
+                        width: container.clientWidth,
+                        height: 120,
+                        layout: {
+                            background: { color: '#131722' },
+                            textColor: '#d1d4dc',
+                        },
+                        grid: {
+                            vertLines: { color: 'rgba(255, 255, 255, 0.05)' },
+                            horzLines: { color: 'rgba(255, 255, 255, 0.05)' },
+                        },
+                        rightPriceScale: {
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            scaleMargins: { top: 0.1, bottom: 0.1 },
+                        },
+                        timeScale: {
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            timeVisible: true,
+                            secondsVisible: false,
+                        },
+                        crosshair: {
+                            mode: LightweightCharts.CrosshairMode.Normal,
+                        },
+                    });
+
+                    // Add series for each timeframe
+                    strengthSeries.h4 = strengthChart.addLineSeries({
+                        color: '#f59e0b',
+                        lineWidth: 2,
+                        title: 'H4',
+                    });
+                    strengthSeries.d1 = strengthChart.addLineSeries({
+                        color: '#10b981',
+                        lineWidth: 2,
+                        title: 'D1',
+                    });
+                    strengthSeries.w1 = strengthChart.addLineSeries({
+                        color: '#8b5cf6',
+                        lineWidth: 2,
+                        title: 'W1',
+                    });
+
+                    // Handle resize
+                    const resizeObserver = new ResizeObserver(entries => {
+                        if (strengthChart) {
+                            const { width } = entries[0].contentRect;
+                            strengthChart.applyOptions({ width });
+                        }
+                    });
+                    resizeObserver.observe(container);
+                }
+
+                // Set data for each timeframe
+                const timeframes = data.timeframes || {};
+
+                if (timeframes.H4 && Array.isArray(timeframes.H4) && timeframes.H4.length > 0) {
+                    strengthSeries.h4.setData(timeframes.H4);
+                }
+                if (timeframes.D1 && Array.isArray(timeframes.D1) && timeframes.D1.length > 0) {
+                    strengthSeries.d1.setData(timeframes.D1);
+                }
+                if (timeframes.W1 && Array.isArray(timeframes.W1) && timeframes.W1.length > 0) {
+                    strengthSeries.w1.setData(timeframes.W1);
+                }
+
+                // Fit content
+                strengthChart.timeScale().fitContent();
+
+            } catch (error) {
+                console.warn('Strength chart error:', error);
+                container.innerHTML = '<div class="strength-placeholder">Stärke-Daten nicht verfügbar</div>';
             }
         }
 

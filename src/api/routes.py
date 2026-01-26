@@ -6347,6 +6347,81 @@ async def get_easyinsight_strength(
     return result
 
 
+@easyinsight_router.get("/easyinsight/multi-strength/{symbol}")
+async def get_easyinsight_multi_strength(
+    symbol: str,
+    outputsize: int = Query(50, ge=1, le=500, description="Number of data points per timeframe"),
+):
+    """
+    Get EasyInsight Strength indicator for multiple timeframes (H4, D1, W1).
+
+    Returns strength values for all three timeframes in a format optimized
+    for charting libraries like Lightweight Charts.
+
+    Response format:
+    ```json
+    {
+        "symbol": "BTCUSD",
+        "timeframes": {
+            "H4": [{"time": 1706270400, "value": 65.2}, ...],
+            "D1": [{"time": 1706227200, "value": 72.1}, ...],
+            "W1": [{"time": 1705795200, "value": 58.7}, ...]
+        }
+    }
+    ```
+    """
+    import asyncio
+    from ..services.easyinsight_service import easyinsight_service
+
+    timeframes = ["4h", "1day", "1week"]
+    tf_names = ["H4", "D1", "W1"]
+
+    async def fetch_strength(interval: str) -> dict:
+        try:
+            result = await easyinsight_service.get_strength(
+                symbol=symbol, interval=interval, outputsize=outputsize
+            )
+            if result.get("status") == "error":
+                return {"error": result.get("error")}
+
+            # Convert to Lightweight Charts format: {time: unix_timestamp, value: strength}
+            values = result.get("values", [])
+            chart_data = []
+            for item in values:
+                if "datetime" in item and "strength" in item:
+                    try:
+                        # Parse datetime string to Unix timestamp
+                        from datetime import datetime
+                        dt = datetime.fromisoformat(item["datetime"].replace("Z", "+00:00"))
+                        chart_data.append({
+                            "time": int(dt.timestamp()),
+                            "value": float(item["strength"])
+                        })
+                    except (ValueError, TypeError):
+                        continue
+            # Sort by time ascending (oldest first)
+            chart_data.sort(key=lambda x: x["time"])
+            return {"data": chart_data}
+        except Exception as e:
+            return {"error": str(e)}
+
+    # Fetch all timeframes in parallel
+    results = await asyncio.gather(*[fetch_strength(tf) for tf in timeframes])
+
+    response = {
+        "symbol": symbol,
+        "timeframes": {}
+    }
+
+    for tf_name, result in zip(tf_names, results):
+        if "error" in result:
+            response["timeframes"][tf_name] = {"error": result["error"], "data": []}
+        else:
+            response["timeframes"][tf_name] = result.get("data", [])
+
+    return response
+
+
 # ==================== Yahoo Finance API ====================
 # Note: yfinance_service is imported conditionally at the top of this file
 # It will be None if yfinance is not installed in the container
