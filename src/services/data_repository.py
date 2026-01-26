@@ -593,18 +593,19 @@ class DataRepository:
             return False
 
         # Freshness intervals per timeframe
-        # More generous intervals to reduce API calls - TimescaleDB data is sufficient
-        # for most use cases (RAG, analysis) even if slightly older
+        # Very generous intervals - prefer using existing data over requiring API calls.
+        # ML models (CNN-LSTM, NHITS) can work with slightly older data.
+        # For real-time trading, use force_refresh=True.
         freshness_intervals = {
-            Timeframe.M1: timedelta(minutes=5),      # was 2 min
-            Timeframe.M5: timedelta(minutes=30),     # was 10 min
-            Timeframe.M15: timedelta(hours=1),       # was 30 min
-            Timeframe.M30: timedelta(hours=2),       # was 1 hour
-            Timeframe.H1: timedelta(hours=12),       # 12h für Forex ausserhalb Handelszeiten
-            Timeframe.H4: timedelta(hours=24),       # was 8 hours
-            Timeframe.D1: timedelta(days=3),         # was 1 day
-            Timeframe.W1: timedelta(days=14),        # was 7 days
-            Timeframe.MN: timedelta(days=60),        # was 30 days
+            Timeframe.M1: timedelta(hours=1),        # 1 hour for intraday
+            Timeframe.M5: timedelta(hours=2),        # 2 hours
+            Timeframe.M15: timedelta(hours=4),       # 4 hours
+            Timeframe.M30: timedelta(hours=6),       # 6 hours
+            Timeframe.H1: timedelta(days=2),         # 2 days - covers weekends
+            Timeframe.H4: timedelta(days=3),         # 3 days
+            Timeframe.D1: timedelta(days=7),         # 1 week
+            Timeframe.W1: timedelta(days=30),        # 1 month
+            Timeframe.MN: timedelta(days=90),        # 3 months
         }
 
         max_age = freshness_intervals.get(timeframe, timedelta(hours=1))
