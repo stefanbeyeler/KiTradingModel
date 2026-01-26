@@ -83,6 +83,9 @@ class PatternOutcome:
     claude_validated: bool = False
     claude_agreed: Optional[bool] = None
 
+    # OHLCV data for feedback (stored at tracking start to survive history cleanup)
+    ohlcv_data: Optional[List[dict]] = None
+
     def to_dict(self) -> dict:
         """Convert to dictionary."""
         return asdict(self)
@@ -107,7 +110,9 @@ class PatternOutcome:
             confidence=entry.confidence,
             price_target=entry.price_target,
             invalidation_level=entry.invalidation_level,
-            tracking_started=datetime.now(timezone.utc).isoformat()
+            tracking_started=datetime.now(timezone.utc).isoformat(),
+            # Store OHLCV data at tracking start (pattern may be evicted from history later)
+            ohlcv_data=entry.ohlcv_data,
         )
 
 
@@ -538,6 +543,9 @@ class OutcomeTrackerService:
         # Send feedback to TCN Training Service
         await self._send_feedback_to_training_service(outcome)
 
+        # Clear OHLCV data after feedback is sent to save storage space
+        outcome.ohlcv_data = None
+
         # Add observation to drift detection
         await self._add_drift_observation(outcome)
 
@@ -740,8 +748,11 @@ class OutcomeTrackerService:
 
         tcn_train_url = os.getenv("TCN_TRAIN_SERVICE_URL", "http://trading-tcn-train:3013")
 
-        # Get OHLCV data from pattern history
-        ohlcv_data = await self._get_pattern_ohlcv(outcome.pattern_id)
+        # Use stored OHLCV data (stored at tracking start), fallback to history lookup
+        ohlcv_data = outcome.ohlcv_data
+        if not ohlcv_data:
+            # Fallback: try to get from pattern history (may not exist anymore)
+            ohlcv_data = await self._get_pattern_ohlcv(outcome.pattern_id)
         if not ohlcv_data:
             logger.debug(f"No OHLCV data for pattern {outcome.pattern_id}, skipping feedback")
             return False
