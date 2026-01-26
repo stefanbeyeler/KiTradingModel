@@ -595,8 +595,13 @@ class DriftDetectionService:
             return {
                 "observations_count": 0,
                 "drift_events_count": 0,
+                "recent_drift_events": 0,
                 "current_severity": DriftSeverity.NONE.value,
-                "task_accuracies": {}
+                "last_check": None,
+                "recommendation": "No data collected yet",
+                "task_accuracies": {},
+                "overall_accuracy": 0.0,
+                "severity_distribution": {s.value: 0 for s in DriftSeverity}
             }
 
         # Calculate task-specific accuracies
