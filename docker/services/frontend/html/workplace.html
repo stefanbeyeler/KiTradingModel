@@ -783,124 +783,118 @@
             height: 10px;
         }
 
-        /* Detail Modal - Grösseres Modal für alle Details */
+        /* Detail Modal - Kompaktes, breites Modal für alle Details */
         .detail-modal {
-            max-width: 900px;
-            width: 95%;
+            max-width: 1200px;
+            width: 98%;
         }
 
         .detail-modal .modal-body {
             padding: 0;
         }
 
-        .detail-tabs {
-            display: flex;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(0, 0, 0, 0.2);
-        }
-
-        .detail-tab {
-            padding: 0.75rem 1.25rem;
-            background: transparent;
-            border: none;
-            color: #94a3b8;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            border-bottom: 2px solid transparent;
-        }
-
-        .detail-tab:hover {
-            color: #e8e8e8;
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .detail-tab.active {
-            color: #64c8ff;
-            border-bottom-color: #64c8ff;
-            background: rgba(100, 200, 255, 0.1);
-        }
-
         .detail-content {
-            padding: 1rem;
-            max-height: 70vh;
+            padding: 0.75rem;
+            max-height: 80vh;
             overflow-y: auto;
         }
 
-        /* Consolidated Section Styles */
-        .consolidated-section {
-            margin-bottom: 0.5rem;
+        /* 2-Column Layout für kompakte Darstellung */
+        .detail-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
         }
 
-        .section-title {
-            font-size: 1rem;
-            color: #10b981;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid rgba(16, 185, 129, 0.3);
+        @media (max-width: 900px) {
+            .detail-columns {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .detail-column {
             display: flex;
-            align-items: center;
+            flex-direction: column;
             gap: 0.5rem;
         }
 
+        /* Consolidated Section Styles - Kompakter */
+        .consolidated-section {
+            margin-bottom: 0;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            padding: 0.6rem;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            color: #10b981;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
         .section-title .icon {
-            font-size: 1.1rem;
+            font-size: 0.9rem;
         }
 
         .section-divider {
-            height: 1px;
-            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
-            margin: 1.25rem 0;
+            display: none;
         }
 
         .llm-prompt-box {
             background: rgba(100, 200, 255, 0.1);
             border: 1px solid rgba(100, 200, 255, 0.2);
-            border-radius: 8px;
-            padding: 1rem;
+            border-radius: 6px;
+            padding: 0.6rem;
             text-align: center;
         }
 
         .llm-prompt-box p {
-            margin-bottom: 0.75rem;
-            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
             opacity: 0.8;
         }
 
         .llm-prompt-box .btn {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
         }
 
-        /* Detail Sections */
+        /* Detail Sections - Kompakter */
         .detail-section {
-            margin-bottom: 1.25rem;
+            margin-bottom: 0.5rem;
         }
 
         .detail-section h4 {
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             color: #64c8ff;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.4rem;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.35rem;
         }
 
         .detail-section h4 .icon {
-            font-size: 1rem;
+            font-size: 0.85rem;
         }
 
         .detail-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 0.75rem;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.4rem;
         }
 
         .detail-card {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 6px;
+            padding: 0.5rem;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
@@ -908,20 +902,20 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .detail-card-title {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             color: #94a3b8;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
 
         .detail-card-badge {
-            padding: 0.15rem 0.4rem;
-            border-radius: 4px;
-            font-size: 0.65rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            font-size: 0.6rem;
             font-weight: 600;
         }
 
@@ -936,13 +930,13 @@
         }
 
         .detail-card-value {
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             font-weight: 600;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.15rem;
         }
 
         .detail-card-sub {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             color: #94a3b8;
         }
 
@@ -950,15 +944,15 @@
         .pattern-list {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.4rem;
-            margin-top: 0.5rem;
+            gap: 0.25rem;
+            margin-top: 0.25rem;
         }
 
         .pattern-tag {
-            padding: 0.25rem 0.5rem;
+            padding: 0.15rem 0.4rem;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            font-size: 0.75rem;
+            border-radius: 3px;
+            font-size: 0.65rem;
         }
 
         .pattern-tag.bullish {
@@ -974,48 +968,49 @@
         /* LLM Analysis Box */
         .llm-analysis-box {
             background: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            padding: 1rem;
+            border-radius: 6px;
+            padding: 0.6rem;
             border-left: 3px solid #64c8ff;
         }
 
         .llm-analysis-box p {
-            line-height: 1.6;
-            font-size: 0.85rem;
+            line-height: 1.5;
+            font-size: 0.75rem;
         }
 
         .llm-loading {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 1rem;
+            gap: 0.5rem;
+            padding: 0.6rem;
             background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
         }
 
         .llm-loading .spinner {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
         }
 
         /* Score Meter */
         .score-meter {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
         }
 
         .score-bar {
             flex: 1;
-            height: 8px;
+            height: 6px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
+            border-radius: 3px;
             overflow: hidden;
         }
 
         .score-bar-fill {
             height: 100%;
-            border-radius: 4px;
+            border-radius: 3px;
             transition: width 0.3s ease;
         }
 
@@ -1032,13 +1027,13 @@
         }
 
         .score-value-large {
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             font-weight: 700;
-            min-width: 50px;
+            min-width: 40px;
             text-align: right;
         }
 
-        /* Forecast Table */
+        /* Forecast Table - Kompakter */
         .forecast-table {
             width: 100%;
             border-collapse: collapse;
@@ -1046,13 +1041,14 @@
 
         .forecast-table th,
         .forecast-table td {
-            padding: 0.5rem;
+            padding: 0.25rem 0.35rem;
             text-align: left;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.7rem;
         }
 
         .forecast-table th {
-            font-size: 0.7rem;
+            font-size: 0.6rem;
             text-transform: uppercase;
             color: #94a3b8;
             font-weight: 500;
@@ -1784,7 +1780,8 @@
             const studies = [];
             if (tradingViewConfig.indicators) {
                 for (const [key, enabled] of Object.entries(tradingViewConfig.indicators)) {
-                    if (enabled && TV_INDICATOR_MAP[key]) {
+                    // Volume wird über hide_volume gesteuert, nicht als Studie
+                    if (enabled && TV_INDICATOR_MAP[key] && key !== 'volume') {
                         studies.push(TV_INDICATOR_MAP[key]);
                     }
                 }
@@ -2247,13 +2244,16 @@
         function renderAllContent(setup) {
             const container = document.getElementById('detailAllContent');
             container.innerHTML = `
-                ${renderOverviewSection(setup)}
-                <div class="section-divider"></div>
-                ${renderSignalsSection(setup)}
-                <div class="section-divider"></div>
-                ${renderPatternsSection(setup)}
-                <div class="section-divider"></div>
-                ${renderLlmSection()}
+                <div class="detail-columns">
+                    <div class="detail-column">
+                        ${renderOverviewSection(setup)}
+                        ${renderSignalsSection(setup)}
+                    </div>
+                    <div class="detail-column">
+                        ${renderPatternsSection(setup)}
+                        ${renderLlmSection()}
+                    </div>
+                </div>
             `;
         }
 
@@ -2270,57 +2270,45 @@
             return `
                 <div class="consolidated-section">
                     <h3 class="section-title"><span class="icon">📊</span> Übersicht</h3>
-                    <div class="detail-section">
-                        <h4><span class="icon">📊</span> Composite Score</h4>
-                        <div class="score-meter">
-                            <div class="score-bar">
-                                <div class="score-bar-fill ${scoreClass}" style="width: ${setup.composite_score}%"></div>
-                            </div>
-                            <span class="score-value-large" style="color: ${scoreClass === 'high' ? '#34d399' : scoreClass === 'moderate' ? '#fbbf24' : '#9ca3af'}">${setup.composite_score.toFixed(1)}</span>
+                    <div class="score-meter" style="margin-bottom: 0.5rem;">
+                        <div class="score-bar">
+                            <div class="score-bar-fill ${scoreClass}" style="width: ${setup.composite_score}%"></div>
                         </div>
+                        <span class="score-value-large" style="color: ${scoreClass === 'high' ? '#34d399' : scoreClass === 'moderate' ? '#fbbf24' : '#9ca3af'}">${setup.composite_score.toFixed(1)}</span>
                     </div>
 
                     <div class="detail-grid">
                         <div class="detail-card">
-                            <div class="detail-card-header">
-                                <span class="detail-card-title">Richtung</span>
-                            </div>
+                            <div class="detail-card-title">Richtung</div>
                             <div class="detail-card-value" style="color: ${directionColor}">
                                 ${directionIcon} ${setup.direction.toUpperCase()}
                             </div>
-                            <div class="detail-card-sub">Signal-Alignment: ${setup.signal_alignment}</div>
+                            <div class="detail-card-sub">${setup.signal_alignment}</div>
                         </div>
 
                         <div class="detail-card">
-                            <div class="detail-card-header">
-                                <span class="detail-card-title">Konfidenz</span>
-                            </div>
+                            <div class="detail-card-title">Konfidenz</div>
                             <div class="detail-card-value">${setup.confidence_level.toUpperCase()}</div>
-                            <div class="detail-card-sub">${setup.signals_available} von 5 Signalen verfügbar</div>
+                            <div class="detail-card-sub">${setup.signals_available}/5 Signale</div>
                         </div>
 
                         <div class="detail-card">
-                            <div class="detail-card-header">
-                                <span class="detail-card-title">Timeframe</span>
-                            </div>
+                            <div class="detail-card-title">Timeframe</div>
                             <div class="detail-card-value">${setup.timeframe}</div>
-                            <div class="detail-card-sub">${new Date(setup.timestamp).toLocaleString('de-CH')}</div>
+                            <div class="detail-card-sub">${new Date(setup.timestamp).toLocaleTimeString('de-CH')}</div>
                         </div>
 
                         ${setup.current_price ? `
                         <div class="detail-card">
-                            <div class="detail-card-header">
-                                <span class="detail-card-title">Aktueller Preis</span>
-                            </div>
+                            <div class="detail-card-title">Preis</div>
                             <div class="detail-card-value">${setup.current_price.toLocaleString('de-CH', {minimumFractionDigits: 2})}</div>
-                            <div class="detail-card-sub">${setup.symbol}</div>
                         </div>
                         ` : ''}
                     </div>
 
                     ${setup.key_drivers && setup.key_drivers.length > 0 ? `
-                    <div class="detail-section" style="margin-top: 1rem;">
-                        <h4><span class="icon">🎯</span> Key Drivers</h4>
+                    <div style="margin-top: 0.4rem;">
+                        <div class="detail-card-title" style="margin-bottom: 0.2rem;">Key Drivers</div>
                         <div class="pattern-list">
                             ${setup.key_drivers.map(driver => `<span class="pattern-tag">${driver}</span>`).join('')}
                         </div>
@@ -2340,151 +2328,91 @@
                     <h3 class="section-title"><span class="icon">📡</span> Signale</h3>
                     <!-- NHITS Signal -->
                     <div class="detail-section">
-                        <h4><span class="icon">🔮</span> NHITS Prognose (30%)</h4>
+                        <h4><span class="icon">🔮</span> NHITS (30%) <span class="detail-card-badge ${nhits.available ? 'available' : 'unavailable'}">${nhits.available ? '✓' : '✗'}</span></h4>
+                        ${nhits.available ? `
                         <div class="detail-grid">
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">Status</span>
-                                    <span class="detail-card-badge ${nhits.available ? 'available' : 'unavailable'}">
-                                        ${nhits.available ? 'Verfügbar' : 'Nicht verfügbar'}
-                                    </span>
-                                </div>
-                                ${nhits.available ? `
+                                <div class="detail-card-title">Richtung</div>
                                 <div class="detail-card-value" style="color: ${nhits.direction === 'long' ? '#34d399' : nhits.direction === 'short' ? '#f87171' : '#fbbf24'}">
                                     ${nhits.direction?.toUpperCase() || 'NEUTRAL'}
                                 </div>
-                                <div class="detail-card-sub">Trend-Wahrscheinlichkeit: ${((nhits.trend_probability || 0) * 100).toFixed(1)}%</div>
-                                ` : '<div class="detail-card-sub">Keine Prognose verfügbar</div>'}
+                                <div class="detail-card-sub">Trend: ${((nhits.trend_probability || 0) * 100).toFixed(0)}%</div>
                             </div>
-
-                            ${nhits.available && (nhits.forecast_change_1h !== null || nhits.forecast_change_24h !== null) ? `
+                            ${nhits.forecast_change_1h !== null || nhits.forecast_change_24h !== null ? `
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">Prognose</span>
-                                </div>
-                                <table class="forecast-table">
-                                    <tr>
-                                        <th>Zeitraum</th>
-                                        <th>Änderung</th>
-                                    </tr>
-                                    ${nhits.forecast_change_1h !== null ? `
-                                    <tr>
-                                        <td>1 Stunde</td>
-                                        <td class="${nhits.forecast_change_1h >= 0 ? 'forecast-positive' : 'forecast-negative'}">
-                                            ${nhits.forecast_change_1h >= 0 ? '+' : ''}${nhits.forecast_change_1h?.toFixed(2)}%
-                                        </td>
-                                    </tr>
-                                    ` : ''}
-                                    ${nhits.forecast_change_24h !== null ? `
-                                    <tr>
-                                        <td>24 Stunden</td>
-                                        <td class="${nhits.forecast_change_24h >= 0 ? 'forecast-positive' : 'forecast-negative'}">
-                                            ${nhits.forecast_change_24h >= 0 ? '+' : ''}${nhits.forecast_change_24h?.toFixed(2)}%
-                                        </td>
-                                    </tr>
-                                    ` : ''}
-                                </table>
+                                <div class="detail-card-title">Prognose</div>
+                                ${nhits.forecast_change_1h !== null ? `<div class="detail-card-sub">1h: <span class="${nhits.forecast_change_1h >= 0 ? 'forecast-positive' : 'forecast-negative'}">${nhits.forecast_change_1h >= 0 ? '+' : ''}${nhits.forecast_change_1h?.toFixed(2)}%</span></div>` : ''}
+                                ${nhits.forecast_change_24h !== null ? `<div class="detail-card-sub">24h: <span class="${nhits.forecast_change_24h >= 0 ? 'forecast-positive' : 'forecast-negative'}">${nhits.forecast_change_24h >= 0 ? '+' : ''}${nhits.forecast_change_24h?.toFixed(2)}%</span></div>` : ''}
                             </div>
                             ` : ''}
-
-                            ${nhits.available && nhits.model_confidence !== null ? `
+                            ${nhits.model_confidence !== null ? `
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">Modell-Konfidenz</span>
-                                </div>
-                                <div class="detail-card-value">${((nhits.model_confidence || 0) * 100).toFixed(1)}%</div>
+                                <div class="detail-card-title">Konfidenz</div>
+                                <div class="detail-card-value">${((nhits.model_confidence || 0) * 100).toFixed(0)}%</div>
                             </div>
                             ` : ''}
                         </div>
+                        ` : '<div class="detail-card-sub" style="opacity: 0.6;">Nicht verfügbar</div>'}
                     </div>
 
                     <!-- HMM Signal -->
                     <div class="detail-section">
-                        <h4><span class="icon">📊</span> HMM Regime (25%)</h4>
+                        <h4><span class="icon">📊</span> HMM (25%) <span class="detail-card-badge ${hmm.available ? 'available' : 'unavailable'}">${hmm.available ? '✓' : '✗'}</span></h4>
+                        ${hmm.available ? `
                         <div class="detail-grid">
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">Status</span>
-                                    <span class="detail-card-badge ${hmm.available ? 'available' : 'unavailable'}">
-                                        ${hmm.available ? 'Verfügbar' : 'Nicht verfügbar'}
-                                    </span>
-                                </div>
-                                ${hmm.available ? `
+                                <div class="detail-card-title">Regime</div>
                                 <div class="detail-card-value">${formatRegime(hmm.regime)}</div>
-                                <div class="detail-card-sub">Wahrscheinlichkeit: ${((hmm.regime_probability || 0) * 100).toFixed(1)}%</div>
-                                ` : '<div class="detail-card-sub">Keine Regime-Daten verfügbar</div>'}
+                                <div class="detail-card-sub">${((hmm.regime_probability || 0) * 100).toFixed(0)}%</div>
                             </div>
-
-                            ${hmm.available ? `
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">Signal Score</span>
-                                </div>
+                                <div class="detail-card-title">Score</div>
                                 <div class="detail-card-value">${(hmm.signal_score || 0).toFixed(1)}</div>
-                                <div class="detail-card-sub">Alignment: ${hmm.alignment || 'neutral'}</div>
+                                <div class="detail-card-sub">${hmm.alignment || 'neutral'}</div>
                             </div>
-
                             ${hmm.regime_duration !== null ? `
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">Regime-Dauer</span>
-                                </div>
-                                <div class="detail-card-value">${hmm.regime_duration} Bars</div>
+                                <div class="detail-card-title">Dauer</div>
+                                <div class="detail-card-value">${hmm.regime_duration}</div>
+                                <div class="detail-card-sub">Bars</div>
                             </div>
                             ` : ''}
-                            ` : ''}
                         </div>
+                        ` : '<div class="detail-card-sub" style="opacity: 0.6;">Nicht verfügbar</div>'}
                     </div>
 
                     <!-- Technical Signal -->
                     <div class="detail-section">
-                        <h4><span class="icon">📈</span> Technische Indikatoren (10%)</h4>
+                        <h4><span class="icon">📈</span> Technisch (10%) <span class="detail-card-badge ${technical.available ? 'available' : 'unavailable'}">${technical.available ? '✓' : '✗'}</span></h4>
+                        ${technical.available ? `
                         <div class="detail-grid">
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">Status</span>
-                                    <span class="detail-card-badge ${technical.available ? 'available' : 'unavailable'}">
-                                        ${technical.available ? 'Verfügbar' : 'Nicht verfügbar'}
-                                    </span>
-                                </div>
-                                ${technical.available ? `
-                                <div class="detail-card-sub">Trend Alignment: ${((technical.trend_alignment || 0) * 100).toFixed(0)}%</div>
-                                ` : '<div class="detail-card-sub">Keine technischen Daten verfügbar</div>'}
+                                <div class="detail-card-title">Alignment</div>
+                                <div class="detail-card-value">${((technical.trend_alignment || 0) * 100).toFixed(0)}%</div>
                             </div>
-
-                            ${technical.available && technical.rsi !== null ? `
+                            ${technical.rsi !== null ? `
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">RSI (14)</span>
-                                </div>
+                                <div class="detail-card-title">RSI</div>
                                 <div class="detail-card-value" style="color: ${technical.rsi < 30 ? '#34d399' : technical.rsi > 70 ? '#f87171' : '#fbbf24'}">
                                     ${technical.rsi?.toFixed(1)}
                                 </div>
-                                <div class="detail-card-sub">${technical.rsi_signal || 'neutral'}</div>
                             </div>
                             ` : ''}
-
-                            ${technical.available ? `
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">MACD</span>
-                                </div>
+                                <div class="detail-card-title">MACD</div>
                                 <div class="detail-card-value" style="color: ${technical.macd_signal === 'bullish' ? '#34d399' : technical.macd_signal === 'bearish' ? '#f87171' : '#fbbf24'}">
                                     ${(technical.macd_signal || 'neutral').toUpperCase()}
                                 </div>
                             </div>
-                            ` : ''}
 
-                            ${technical.available && technical.bb_position !== null ? `
+                            ${technical.bb_position !== null ? `
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">BB Position</span>
-                                </div>
+                                <div class="detail-card-title">BB</div>
                                 <div class="detail-card-value">${((technical.bb_position || 0) * 100).toFixed(0)}%</div>
-                                <div class="detail-card-sub">${technical.bb_position < 0.2 ? 'Nahe unteres Band' : technical.bb_position > 0.8 ? 'Nahe oberes Band' : 'Mittig'}</div>
                             </div>
                             ` : ''}
                         </div>
+                        ` : '<div class="detail-card-sub" style="opacity: 0.6;">Nicht verfügbar</div>'}
                     </div>
                 </div>
             `;
@@ -2499,79 +2427,50 @@
                     <h3 class="section-title"><span class="icon">📐</span> Patterns</h3>
                     <!-- TCN Patterns -->
                     <div class="detail-section">
-                        <h4><span class="icon">📐</span> TCN Chart Patterns (20%)</h4>
+                        <h4><span class="icon">📐</span> TCN (20%) <span class="detail-card-badge ${tcn.available ? 'available' : 'unavailable'}">${tcn.available ? '✓' : '✗'}</span></h4>
+                        ${tcn.available ? `
                         <div class="detail-grid">
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">Status</span>
-                                    <span class="detail-card-badge ${tcn.available ? 'available' : 'unavailable'}">
-                                        ${tcn.available ? 'Verfügbar' : 'Nicht verfügbar'}
-                                    </span>
-                                </div>
-                                ${tcn.available ? `
+                                <div class="detail-card-title">Richtung</div>
                                 <div class="detail-card-value" style="color: ${tcn.direction === 'long' ? '#34d399' : tcn.direction === 'short' ? '#f87171' : '#fbbf24'}">
                                     ${tcn.direction?.toUpperCase() || 'NEUTRAL'}
                                 </div>
-                                <div class="detail-card-sub">Konfidenz: ${((tcn.pattern_confidence || 0) * 100).toFixed(1)}%</div>
-                                ` : '<div class="detail-card-sub">Keine TCN-Patterns erkannt</div>'}
+                                <div class="detail-card-sub">${((tcn.pattern_confidence || 0) * 100).toFixed(0)}%</div>
                             </div>
-
-                            ${tcn.available && tcn.price_target ? `
+                            ${tcn.price_target ? `
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">Kursziel</span>
-                                </div>
+                                <div class="detail-card-title">Kursziel</div>
                                 <div class="detail-card-value">${tcn.price_target?.toLocaleString('de-CH', {minimumFractionDigits: 2})}</div>
                             </div>
                             ` : ''}
                         </div>
-
-                        ${tcn.available && tcn.patterns && tcn.patterns.length > 0 ? `
-                        <div style="margin-top: 0.75rem;">
-                            <div class="detail-card-title" style="margin-bottom: 0.5rem;">Erkannte Patterns:</div>
-                            <div class="pattern-list">
-                                ${tcn.patterns.map(p => `
-                                    <span class="pattern-tag ${tcn.direction === 'long' ? 'bullish' : tcn.direction === 'short' ? 'bearish' : ''}">
-                                        ${formatPatternName(p)}
-                                    </span>
-                                `).join('')}
-                            </div>
+                        ${tcn.patterns && tcn.patterns.length > 0 ? `
+                        <div class="pattern-list">
+                            ${tcn.patterns.map(p => `<span class="pattern-tag ${tcn.direction === 'long' ? 'bullish' : tcn.direction === 'short' ? 'bearish' : ''}">${formatPatternName(p)}</span>`).join('')}
                         </div>
                         ` : ''}
+                        ` : '<div class="detail-card-sub" style="opacity: 0.6;">Nicht verfügbar</div>'}
                     </div>
 
                     <!-- Candlestick Patterns -->
                     <div class="detail-section">
-                        <h4><span class="icon">🕯️</span> Candlestick Patterns (15%)</h4>
+                        <h4><span class="icon">🕯️</span> Candlestick (15%) <span class="detail-card-badge ${candlestick.available ? 'available' : 'unavailable'}">${candlestick.available ? '✓' : '✗'}</span></h4>
+                        ${candlestick.available ? `
                         <div class="detail-grid">
                             <div class="detail-card">
-                                <div class="detail-card-header">
-                                    <span class="detail-card-title">Status</span>
-                                    <span class="detail-card-badge ${candlestick.available ? 'available' : 'unavailable'}">
-                                        ${candlestick.available ? 'Verfügbar' : 'Nicht verfügbar'}
-                                    </span>
-                                </div>
-                                ${candlestick.available ? `
+                                <div class="detail-card-title">Richtung</div>
                                 <div class="detail-card-value" style="color: ${candlestick.direction === 'long' ? '#34d399' : candlestick.direction === 'short' ? '#f87171' : '#fbbf24'}">
                                     ${candlestick.direction?.toUpperCase() || 'NEUTRAL'}
                                 </div>
-                                <div class="detail-card-sub">Stärke: ${((candlestick.pattern_strength || 0) * 100).toFixed(1)}%</div>
-                                ` : '<div class="detail-card-sub">Keine Candlestick-Patterns erkannt</div>'}
+                                <div class="detail-card-sub">${((candlestick.pattern_strength || 0) * 100).toFixed(0)}%</div>
                             </div>
                         </div>
-
-                        ${candlestick.available && candlestick.patterns && candlestick.patterns.length > 0 ? `
-                        <div style="margin-top: 0.75rem;">
-                            <div class="detail-card-title" style="margin-bottom: 0.5rem;">Erkannte Patterns:</div>
-                            <div class="pattern-list">
-                                ${candlestick.patterns.map(p => `
-                                    <span class="pattern-tag ${candlestick.direction === 'long' ? 'bullish' : candlestick.direction === 'short' ? 'bearish' : ''}">
-                                        ${formatPatternName(p)}
-                                    </span>
-                                `).join('')}
-                            </div>
+                        ${candlestick.patterns && candlestick.patterns.length > 0 ? `
+                        <div class="pattern-list">
+                            ${candlestick.patterns.map(p => `<span class="pattern-tag ${candlestick.direction === 'long' ? 'bullish' : candlestick.direction === 'short' ? 'bearish' : ''}">${formatPatternName(p)}</span>`).join('')}
                         </div>
                         ` : ''}
+                        ` : '<div class="detail-card-sub" style="opacity: 0.6;">Nicht verfügbar</div>'}
                     </div>
                 </div>
             `;
@@ -2583,9 +2482,9 @@
                     <h3 class="section-title"><span class="icon">🤖</span> LLM Analyse</h3>
                     <div id="llmContent">
                         <div class="llm-prompt-box">
-                            <p>Die LLM-Analyse generiert eine detaillierte Trading-Empfehlung mit Entry/Exit-Levels und Risikobewertung.</p>
+                            <p>Detaillierte Empfehlung mit Entry/Exit-Levels</p>
                             <button class="btn btn-primary" onclick="triggerLlmAnalysis()">
-                                <span class="icon">🤖</span> LLM-Analyse starten
+                                🤖 Analyse starten
                             </button>
                         </div>
                     </div>
@@ -2644,7 +2543,7 @@
 
                 ${data.entry_exit_levels ? `
                 <div class="detail-section">
-                    <h4><span class="icon">🎯</span> Entry/Exit Levels</h4>
+                    <h4><span class="icon">🎯</span> Entry/Exit</h4>
                     <div class="detail-grid">
                         ${data.entry_exit_levels.entry_price ? `
                         <div class="detail-card">
@@ -2654,25 +2553,25 @@
                         ` : ''}
                         ${data.entry_exit_levels.stop_loss ? `
                         <div class="detail-card">
-                            <div class="detail-card-title">Stop Loss</div>
+                            <div class="detail-card-title">SL</div>
                             <div class="detail-card-value" style="color: #f87171">${data.entry_exit_levels.stop_loss?.toFixed(2)}</div>
                         </div>
                         ` : ''}
                         ${data.entry_exit_levels.take_profit_1 ? `
                         <div class="detail-card">
-                            <div class="detail-card-title">Take Profit 1</div>
+                            <div class="detail-card-title">TP1</div>
                             <div class="detail-card-value" style="color: #34d399">${data.entry_exit_levels.take_profit_1?.toFixed(2)}</div>
                         </div>
                         ` : ''}
                         ${data.entry_exit_levels.take_profit_2 ? `
                         <div class="detail-card">
-                            <div class="detail-card-title">Take Profit 2</div>
+                            <div class="detail-card-title">TP2</div>
                             <div class="detail-card-value" style="color: #34d399">${data.entry_exit_levels.take_profit_2?.toFixed(2)}</div>
                         </div>
                         ` : ''}
                         ${data.entry_exit_levels.risk_reward_ratio ? `
                         <div class="detail-card">
-                            <div class="detail-card-title">Risk/Reward</div>
+                            <div class="detail-card-title">R:R</div>
                             <div class="detail-card-value">${data.entry_exit_levels.risk_reward_ratio?.toFixed(2)}</div>
                         </div>
                         ` : ''}
@@ -2682,7 +2581,7 @@
 
                 ${data.risk_assessment ? `
                 <div class="detail-section">
-                    <h4><span class="icon">⚠️</span> Risiko-Bewertung</h4>
+                    <h4><span class="icon">⚠️</span> Risiko</h4>
                     <div class="llm-analysis-box" style="border-left-color: #f59e0b;">
                         <p>${data.risk_assessment}</p>
                     </div>
@@ -2698,10 +2597,10 @@
                 </div>
                 ` : ''}
 
-                <div style="margin-top: 1rem; font-size: 0.75rem; opacity: 0.6;">
-                    <span>Analyse-Dauer: ${data.analysis_duration_ms?.toFixed(0) || '-'}ms</span>
-                    ${data.rag_sources_used ? `<span style="margin-left: 1rem;">RAG-Quellen: ${data.rag_sources_used}</span>` : ''}
-                    ${data.llm_model ? `<span style="margin-left: 1rem;">Modell: ${data.llm_model}</span>` : ''}
+                <div style="margin-top: 0.5rem; font-size: 0.65rem; opacity: 0.5;">
+                    ${data.analysis_duration_ms ? `${data.analysis_duration_ms?.toFixed(0)}ms` : ''}
+                    ${data.rag_sources_used ? `• ${data.rag_sources_used} RAG` : ''}
+                    ${data.llm_model ? `• ${data.llm_model}` : ''}
                 </div>
             `;
         }
