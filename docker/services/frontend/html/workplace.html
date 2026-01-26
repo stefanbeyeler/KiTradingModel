@@ -2486,25 +2486,29 @@
         }
 
         async function loadDetailContent(symbol, timeframe) {
-            // Versuche zuerst aus Cache
-            let setup = setupsCache[symbol];
+            // Cache-Key mit Symbol und Timeframe
+            const cacheKey = `${symbol}:${timeframe}`;
+
+            // Versuche zuerst aus Cache (nur wenn Timeframe übereinstimmt)
+            let cachedSetup = setupsCache[cacheKey];
 
             // Parallel: Setup und Trend-Stärke laden
             const [setupResult, trendStrength] = await Promise.all([
-                // Setup laden falls nicht im Cache
+                // Setup laden (immer frisch für korrekte Daten)
                 (async () => {
-                    if (setup) return setup;
                     try {
-                        const response = await fetch(`${API_BASE}/setups/${symbol}?timeframe=${timeframe}`);
+                        const response = await fetch(`${API_BASE}/setups/${symbol}?timeframe=${timeframe}&force_refresh=true`);
                         if (response.ok) {
                             const data = await response.json();
-                            setupsCache[symbol] = data;
+                            // Cache mit korrektem Timeframe-Key
+                            setupsCache[`${symbol}:${data.timeframe}`] = data;
                             return data;
                         }
                     } catch (error) {
                         console.error('Fehler beim Laden des Setups:', error);
                     }
-                    return null;
+                    // Fallback auf Cache wenn API fehlschlägt
+                    return cachedSetup || null;
                 })(),
                 // Trend-Stärke laden
                 fetchTrendStrength(symbol)
@@ -2517,6 +2521,11 @@
                 document.getElementById('detailAllContent').innerHTML = '<div class="empty-state">Setup nicht gefunden</div>';
                 return;
             }
+
+            // Update modal title with actual timeframe from setup data
+            const actualTimeframe = setup.timeframe || timeframe;
+            document.getElementById('detailModalTitle').textContent = `${symbol} ${actualTimeframe} - Setup Details`;
+            currentDetailTimeframe = actualTimeframe;
 
             // Alle Inhalte in einem einzigen Container rendern
             renderAllContent(setup, trendStrength);
