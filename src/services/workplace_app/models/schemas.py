@@ -366,3 +366,232 @@ class TradingViewTestResponse(BaseModel):
     """Response für TradingView-Verbindungstest."""
     valid: bool = Field(..., description="Verbindung gültig")
     error: Optional[str] = Field(None, description="Fehlermeldung bei ungültiger Verbindung")
+
+
+# =============================================================================
+# MT5 Connector Schemas
+# =============================================================================
+
+
+class MT5TerminalStatus(str, Enum):
+    """Terminal-Verbindungsstatus."""
+    ONLINE = "online"
+    OFFLINE = "offline"
+    UNKNOWN = "unknown"
+
+
+class MT5TradeStatus(str, Enum):
+    """Trade-Status."""
+    OPEN = "open"
+    CLOSED = "closed"
+    CANCELLED = "cancelled"
+
+
+class MT5TradeType(str, Enum):
+    """Trade-Typ."""
+    BUY = "buy"
+    SELL = "sell"
+
+
+class MT5LinkType(str, Enum):
+    """Link-Typ."""
+    AUTO = "auto"
+    MANUAL = "manual"
+
+
+class MT5OutcomeType(str, Enum):
+    """Outcome-Typ für Evaluation."""
+    CORRECT = "correct"
+    INCORRECT = "incorrect"
+    PARTIAL = "partial"
+
+
+class MT5Terminal(BaseModel):
+    """MT5 Terminal Darstellung."""
+    terminal_id: str = Field(..., description="Eindeutige Terminal-ID")
+    name: str = Field(..., description="Terminal-Anzeigename")
+    account_number: int = Field(..., description="MT5 Kontonummer")
+    broker_name: Optional[str] = Field(None, description="Broker-Name")
+    server: Optional[str] = Field(None, description="MT5 Server")
+    account_type: str = Field(default="real", description="Kontotyp (real/demo/contest)")
+    currency: str = Field(default="USD", description="Kontowährung")
+    leverage: Optional[int] = Field(None, description="Hebel")
+    is_active: bool = Field(default=True, description="Terminal aktiv")
+    last_heartbeat: Optional[datetime] = Field(None, description="Letzter Heartbeat")
+    status: MT5TerminalStatus = Field(default=MT5TerminalStatus.UNKNOWN, description="Verbindungsstatus")
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    @classmethod
+    def from_data_service(cls, data: dict) -> "MT5Terminal":
+        """Erstellt ein MT5Terminal aus Data Service Response."""
+        # Berechne Status basierend auf Heartbeat
+        status = MT5TerminalStatus.UNKNOWN
+        if data.get("last_heartbeat"):
+            from datetime import timezone, timedelta
+            last_hb = data["last_heartbeat"]
+            if isinstance(last_hb, str):
+                last_hb = datetime.fromisoformat(last_hb.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) - last_hb < timedelta(minutes=5):
+                status = MT5TerminalStatus.ONLINE
+            else:
+                status = MT5TerminalStatus.OFFLINE
+
+        return cls(
+            terminal_id=data["terminal_id"],
+            name=data["name"],
+            account_number=data["account_number"],
+            broker_name=data.get("broker_name"),
+            server=data.get("server"),
+            account_type=data.get("account_type", "real"),
+            currency=data.get("currency", "USD"),
+            leverage=data.get("leverage"),
+            is_active=data.get("is_active", True),
+            last_heartbeat=data.get("last_heartbeat"),
+            status=status,
+            created_at=data.get("created_at"),
+            updated_at=data.get("updated_at"),
+        )
+
+
+class MT5Trade(BaseModel):
+    """MT5 Trade Darstellung."""
+    trade_id: str = Field(..., description="Eindeutige Trade-ID")
+    terminal_id: str = Field(..., description="Terminal-ID")
+    ticket: int = Field(..., description="MT5 Order-Ticket")
+    position_id: Optional[int] = Field(None, description="MT5 Position-ID")
+    symbol: str = Field(..., description="Trading-Symbol")
+    trade_type: MT5TradeType = Field(..., description="Trade-Typ (buy/sell)")
+    entry_time: datetime = Field(..., description="Entry-Zeitpunkt")
+    entry_price: float = Field(..., description="Entry-Preis")
+    volume: float = Field(..., description="Lot-Grösse")
+    exit_time: Optional[datetime] = Field(None, description="Exit-Zeitpunkt")
+    exit_price: Optional[float] = Field(None, description="Exit-Preis")
+    stop_loss: Optional[float] = Field(None, description="Stop-Loss")
+    take_profit: Optional[float] = Field(None, description="Take-Profit")
+    profit: Optional[float] = Field(None, description="Gewinn/Verlust")
+    profit_pips: Optional[float] = Field(None, description="Gewinn/Verlust in Pips")
+    commission: Optional[float] = Field(None, description="Kommission")
+    swap: Optional[float] = Field(None, description="Swap")
+    status: MT5TradeStatus = Field(default=MT5TradeStatus.OPEN, description="Trade-Status")
+    close_reason: Optional[str] = Field(None, description="Schluss-Grund")
+    magic_number: Optional[int] = Field(None, description="EA Magic Number")
+    comment: Optional[str] = Field(None, description="Trade-Kommentar")
+    timeframe: Optional[str] = Field(None, description="Zeitrahmen")
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    # Verknüpftes Setup (optional)
+    linked_setup: Optional["MT5TradeSetupLink"] = None
+
+
+class MT5TradeSetupLink(BaseModel):
+    """Verknüpfung zwischen Trade und Trading-Setup."""
+    link_id: str = Field(..., description="Eindeutige Link-ID")
+    trade_id: str = Field(..., description="Trade-ID")
+    setup_symbol: str = Field(..., description="Symbol des Setups")
+    setup_timeframe: str = Field(..., description="Timeframe des Setups")
+    setup_timestamp: datetime = Field(..., description="Zeitstempel des Setups")
+    setup_direction: SignalDirection = Field(..., description="Setup-Richtung")
+    setup_score: float = Field(..., ge=0.0, le=100.0, description="Setup-Score")
+    setup_confidence: Optional[ConfidenceLevel] = Field(None, description="Setup-Konfidenz")
+
+    # Signal-Komponenten zum Zeitpunkt der Verknüpfung
+    nhits_direction: Optional[SignalDirection] = None
+    nhits_probability: Optional[float] = None
+    hmm_regime: Optional[MarketRegime] = None
+    hmm_score: Optional[float] = None
+    tcn_patterns: Optional[list[str]] = None
+    tcn_confidence: Optional[float] = None
+    candlestick_patterns: Optional[list[str]] = None
+    candlestick_strength: Optional[float] = None
+
+    # Link-Metadaten
+    link_type: MT5LinkType = Field(default=MT5LinkType.AUTO, description="Verknüpfungstyp")
+    link_confidence: Optional[float] = Field(None, ge=0.0, le=1.0, description="Link-Konfidenz")
+    notes: Optional[str] = None
+
+    # Evaluation (nach Trade-Schluss)
+    followed_recommendation: Optional[bool] = Field(
+        None, description="Folgte der Trade der Empfehlung?"
+    )
+    outcome_vs_prediction: Optional[MT5OutcomeType] = Field(
+        None, description="Ergebnis vs. Vorhersage"
+    )
+    created_at: Optional[datetime] = None
+
+
+class MT5TradeWithSetup(MT5Trade):
+    """Trade mit verknüpftem Setup für Detail-Ansicht."""
+    setup: Optional[MT5TradeSetupLink] = None
+    terminal_name: Optional[str] = None
+
+
+class MT5PerformanceMetrics(BaseModel):
+    """Performance-Metriken für MT5 Trades."""
+    # Handels-Statistiken
+    total_trades: int = Field(default=0, description="Gesamtanzahl Trades")
+    open_trades: int = Field(default=0, description="Offene Trades")
+    closed_trades: int = Field(default=0, description="Geschlossene Trades")
+    winning_trades: int = Field(default=0, description="Gewinnende Trades")
+    losing_trades: int = Field(default=0, description="Verlierende Trades")
+    win_rate: float = Field(default=0.0, description="Gewinnrate in %")
+
+    # Profit-Metriken
+    total_profit: float = Field(default=0.0, description="Gesamtgewinn")
+    total_loss: float = Field(default=0.0, description="Gesamtverlust")
+    net_profit: float = Field(default=0.0, description="Netto-Gewinn")
+    average_win: Optional[float] = Field(None, description="Durchschnittlicher Gewinn")
+    average_loss: Optional[float] = Field(None, description="Durchschnittlicher Verlust")
+    profit_factor: float = Field(default=0.0, description="Profit Factor")
+    max_drawdown: Optional[float] = Field(None, description="Maximaler Drawdown")
+
+    # Kosten
+    total_commission: float = Field(default=0.0, description="Gesamte Kommissionen")
+    total_swap: float = Field(default=0.0, description="Gesamte Swaps")
+
+    # Setup-verknüpfte Metriken
+    trades_with_setup: int = Field(default=0, description="Trades mit Setup-Verknüpfung")
+    trades_following_setup: int = Field(default=0, description="Trades die Setup folgten")
+    setup_follow_rate: float = Field(default=0.0, description="Setup-Folgerate in %")
+    profit_following_setup: float = Field(default=0.0, description="Gewinn bei Setup-Befolgung")
+    profit_against_setup: float = Field(default=0.0, description="Gewinn gegen Setup")
+    setup_prediction_accuracy: float = Field(default=0.0, description="Setup-Vorhersage-Genauigkeit in %")
+
+    # Aufschlüsselungen
+    trades_by_symbol: dict[str, int] = Field(default_factory=dict, description="Trades pro Symbol")
+    trades_by_direction: dict[str, int] = Field(default_factory=dict, description="Trades pro Richtung")
+    profit_by_symbol: dict[str, float] = Field(default_factory=dict, description="Profit pro Symbol")
+
+
+class MT5OverviewResponse(BaseModel):
+    """Response für MT5 Dashboard-Übersicht."""
+    terminals: list[MT5Terminal] = Field(default_factory=list, description="Registrierte Terminals")
+    terminals_online: int = Field(default=0, description="Anzahl Online-Terminals")
+    terminals_total: int = Field(default=0, description="Gesamtanzahl Terminals")
+    recent_trades: list[MT5Trade] = Field(default_factory=list, description="Letzte Trades")
+    open_trades: int = Field(default=0, description="Offene Trades")
+    metrics: MT5PerformanceMetrics = Field(
+        default_factory=MT5PerformanceMetrics, description="Performance-Metriken"
+    )
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(), description="Letzte Aktualisierung")
+
+
+class MT5TradeListResponse(BaseModel):
+    """Response für Trade-Liste."""
+    trades: list[MT5TradeWithSetup] = Field(default_factory=list, description="Trade-Liste")
+    total: int = Field(default=0, description="Gesamtanzahl")
+    has_more: bool = Field(default=False, description="Weitere Trades verfügbar")
+
+
+class MT5TerminalListResponse(BaseModel):
+    """Response für Terminal-Liste."""
+    terminals: list[MT5Terminal] = Field(default_factory=list, description="Terminal-Liste")
+    total: int = Field(default=0, description="Gesamtanzahl")
+
+
+class MT5LinkRequest(BaseModel):
+    """Request zum manuellen Verknüpfen eines Trades mit einem Setup."""
+    setup_timestamp: datetime = Field(..., description="Zeitstempel des Setups")
+    setup_timeframe: str = Field(default="H1", description="Timeframe des Setups")
+    notes: Optional[str] = Field(None, max_length=500, description="Notizen zur Verknüpfung")

@@ -22,6 +22,7 @@ from .services.scanner_service import scanner_service
 from .services.watchlist_service import watchlist_service
 from .services.signal_aggregator import signal_aggregator
 from .services.deep_analysis_service import deep_analysis_service
+from .services.mt5_trade_service import mt5_trade_service
 
 VERSION = "1.0.0"
 
@@ -46,6 +47,10 @@ openapi_tags = [
     {
         "name": "5. System",
         "description": "Health-Checks und Service-Info"
+    },
+    {
+        "name": "6. MT5 Connector",
+        "description": "MT5 Trade-Aufzeichnung und Performance-Analyse"
     },
 ]
 
@@ -84,6 +89,7 @@ async def lifespan(app: FastAPI):
     # HTTP-Clients schliessen
     await signal_aggregator.close()
     await deep_analysis_service.close()
+    await mt5_trade_service.close()
 
     log_shutdown_info("workplace")
 

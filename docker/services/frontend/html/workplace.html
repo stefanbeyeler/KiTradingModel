@@ -173,6 +173,16 @@
             background: rgba(255, 255, 255, 0.15);
         }
 
+        .btn-secondary {
+            background: rgba(100, 200, 255, 0.15);
+            border-color: rgba(100, 200, 255, 0.3);
+            color: #64c8ff;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(100, 200, 255, 0.25);
+        }
+
         /* Stats Row - Compact */
         .stats-row {
             display: flex;
@@ -1366,6 +1376,7 @@
                     </div>
                     <button class="btn btn-sm" onclick="triggerScan()">Scan</button>
                     <button class="btn btn-sm" onclick="toggleScanner()" id="toggleBtn">Stop</button>
+                    <a href="workplace-mt5.html" class="btn btn-sm btn-secondary">MT5 Trades</a>
                     <a href="config-workplace.html" class="btn btn-sm">Config</a>
                 </div>
             </div>

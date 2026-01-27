@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MT5 Connector - Trading Workplace</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .back-link {
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        h1 {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .status-badge.online {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+
+        .status-badge.offline {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-badge.online .status-dot {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        .status-badge.offline .status-dot {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .btn {
+            padding: 0.4rem 0.9rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e8e8e8;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .stat-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card-title {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .stat-card-icon {
+            font-size: 1.1rem;
+        }
+
+        .stat-card-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .stat-card-value.positive {
+            color: #34d399;
+        }
+
+        .stat-card-value.negative {
+            color: #f87171;
+        }
+
+        .stat-card-subtitle {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        /* Sidebar - Terminals */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .sidebar-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .terminal-list {
+            padding: 0.5rem;
+        }
+
+        .terminal-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .terminal-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(100, 200, 255, 0.2);
+        }
+
+        .terminal-item.selected {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .terminal-name {
+            font-weight: 500;
+        }
+
+        .terminal-status {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+        }
+
+        .terminal-status.online {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .terminal-status.offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .terminal-info {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .terminal-account {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Trades Table */
+        .trades-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .section-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .section-filters {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-select {
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e8e8e8;
+            font-size: 0.8rem;
+        }
+
+        .trades-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .trades-table th,
+        .trades-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .trades-table th {
+            background: rgba(0, 0, 0, 0.2);
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .trades-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .trade-symbol {
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .trade-type {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .trade-type.buy {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .trade-type.sell {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .trade-profit.positive {
+            color: #34d399;
+        }
+
+        .trade-profit.negative {
+            color: #f87171;
+        }
+
+        .trade-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            cursor: pointer;
+        }
+
+        .trade-link.no-link {
+            background: rgba(148, 163, 184, 0.1);
+            color: #64748b;
+        }
+
+        .trade-link:hover {
+            background: rgba(59, 130, 246, 0.3);
+        }
+
+        /* Performance Section */
+        .performance-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1rem;
+        }
+
+        .performance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .perf-item {
+            text-align: center;
+        }
+
+        .perf-value {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .perf-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state-text {
+            font-size: 0.9rem;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #64c8ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                order: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-row">
+                <div class="header-left">
+                    <a href="workplace.html" class="back-link">← Trading Workplace</a>
+                    <h1>MT5 Connector</h1>
+                </div>
+                <div class="header-right">
+                    <div class="status-badge" id="connectionStatus">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Verbindung...</span>
+                    </div>
+                    <button class="btn btn-secondary" onclick="refreshData()">
+                        ↻ Aktualisieren
+                    </button>
+                    <button class="btn btn-primary" onclick="triggerAutoLink()">
+                        Auto-Link Trades
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Stats Overview -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">Offene Trades</span>
+                </div>
+                <div class="stat-card-value" id="statOpenTrades">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">Gesamt-Trades</span>
+                </div>
+                <div class="stat-card-value" id="statTotalTrades">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">Win-Rate</span>
+                </div>
+                <div class="stat-card-value positive" id="statWinRate">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">Net Profit</span>
+                </div>
+                <div class="stat-card-value" id="statNetProfit">-</div>
+                <div class="stat-card-subtitle" id="statProfitFactor">PF: -</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">Setup-Befolgung</span>
+                </div>
+                <div class="stat-card-value" id="statSetupFollow">-</div>
+                <div class="stat-card-subtitle" id="statSetupAccuracy">Genauigkeit: -</div>
+            </div>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Sidebar: Terminals -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <span class="sidebar-title">MT5 Terminals</span>
+                    <span id="terminalCount">0</span>
+                </div>
+                <div class="terminal-list" id="terminalList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Trades Table -->
+                <div class="trades-section">
+                    <div class="section-header">
+                        <span class="section-title">Trade-Historie</span>
+                        <div class="section-filters">
+                            <select class="filter-select" id="filterStatus" onchange="loadTrades()">
+                                <option value="">Alle Status</option>
+                                <option value="open">Offen</option>
+                                <option value="closed">Geschlossen</option>
+                            </select>
+                            <select class="filter-select" id="filterSymbol" onchange="loadTrades()">
+                                <option value="">Alle Symbole</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="tradesContainer">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance by Setup -->
+                <div class="performance-section">
+                    <div class="section-header" style="padding: 0; border: none; margin-bottom: 1rem;">
+                        <span class="section-title">Performance nach Setup-Befolgung</span>
+                    </div>
+                    <div class="performance-grid" id="setupPerformance">
+                        <div class="perf-item">
+                            <div class="perf-value positive" id="perfFollowed">-</div>
+                            <div class="perf-label">Win-Rate (Setup befolgt)</div>
+                        </div>
+                        <div class="perf-item">
+                            <div class="perf-value" id="perfAgainst">-</div>
+                            <div class="perf-label">Win-Rate (gegen Setup)</div>
+                        </div>
+                        <div class="perf-item">
+                            <div class="perf-value" id="perfNoLink">-</div>
+                            <div class="perf-label">Win-Rate (kein Link)</div>
+                        </div>
+                        <div class="perf-item">
+                            <div class="perf-value" id="perfRecommendation">-</div>
+                            <div class="perf-label">Empfehlung</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const WORKPLACE_API = '/workplace/api/v1/mt5';
+
+        let currentTerminalId = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadOverview();
+            loadPerformance();
+        });
+
+        async function loadOverview() {
+            try {
+                const response = await fetch(`${WORKPLACE_API}/overview`);
+                if (!response.ok) throw new Error('API error');
+
+                const data = await response.json();
+
+                // Update connection status
+                updateConnectionStatus(data.terminals_online > 0);
+
+                // Update stats
+                updateStats(data.metrics, data.open_trades, data.terminals_online);
+
+                // Update terminals
+                renderTerminals(data.terminals);
+
+                // Load trades
+                loadTrades();
+
+            } catch (error) {
+                console.error('Error loading overview:', error);
+                updateConnectionStatus(false);
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const badge = document.getElementById('connectionStatus');
+            const text = badge.querySelector('.status-text');
+
+            if (connected) {
+                badge.className = 'status-badge online';
+                text.textContent = 'Verbunden';
+            } else {
+                badge.className = 'status-badge offline';
+                text.textContent = 'Nicht verbunden';
+            }
+        }
+
+        function updateStats(metrics, openTrades, terminalsOnline) {
+            document.getElementById('statOpenTrades').textContent = openTrades || 0;
+            document.getElementById('statTotalTrades').textContent = metrics.total_trades || 0;
+            document.getElementById('statWinRate').textContent = (metrics.win_rate || 0).toFixed(1) + '%';
+
+            const netProfit = metrics.net_profit || 0;
+            const profitEl = document.getElementById('statNetProfit');
+            profitEl.textContent = netProfit >= 0 ? `+${netProfit.toFixed(2)}` : netProfit.toFixed(2);
+            profitEl.className = 'stat-card-value ' + (netProfit >= 0 ? 'positive' : 'negative');
+
+            document.getElementById('statProfitFactor').textContent =
+                `PF: ${(metrics.profit_factor || 0).toFixed(2)}`;
+
+            document.getElementById('statSetupFollow').textContent =
+                (metrics.setup_follow_rate || 0).toFixed(1) + '%';
+            document.getElementById('statSetupAccuracy').textContent =
+                `Genauigkeit: ${(metrics.setup_prediction_accuracy || 0).toFixed(1)}%`;
+        }
+
+        function renderTerminals(terminals) {
+            const container = document.getElementById('terminalList');
+            document.getElementById('terminalCount').textContent = terminals.length;
+
+            if (terminals.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📡</div>
+                        <div class="empty-state-text">
+                            Keine Terminals registriert.<br>
+                            Starten Sie den MT5 Agent.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = terminals.map(t => `
+                <div class="terminal-item ${t.terminal_id === currentTerminalId ? 'selected' : ''}"
+                     onclick="selectTerminal('${t.terminal_id}')">
+                    <div class="terminal-header">
+                        <span class="terminal-name">${t.name}</span>
+                        <span class="terminal-status ${t.status}">
+                            <span class="status-dot"></span>
+                            ${t.status === 'online' ? 'Online' : 'Offline'}
+                        </span>
+                    </div>
+                    <div class="terminal-info">
+                        <div class="terminal-account">
+                            <span>${t.broker_name || 'Unbekannt'}</span>
+                            <span>#${t.account_number}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectTerminal(terminalId) {
+            currentTerminalId = currentTerminalId === terminalId ? null : terminalId;
+            loadOverview();
+        }
+
+        async function loadTrades() {
+            const container = document.getElementById('tradesContainer');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const status = document.getElementById('filterStatus').value;
+                const symbol = document.getElementById('filterSymbol').value;
+
+                let url = `${WORKPLACE_API}/trades?limit=50`;
+                if (status) url += `&status=${status}`;
+                if (symbol) url += `&symbol=${symbol}`;
+                if (currentTerminalId) url += `&terminal_id=${currentTerminalId}`;
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('API error');
+
+                const data = await response.json();
+                renderTrades(data.trades);
+
+                // Update symbol filter
+                updateSymbolFilter(data.trades);
+
+            } catch (error) {
+                console.error('Error loading trades:', error);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-text">Fehler beim Laden der Trades</div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderTrades(trades) {
+            const container = document.getElementById('tradesContainer');
+
+            if (trades.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <div class="empty-state-text">Keine Trades gefunden</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="trades-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Typ</th>
+                            <th>Volume</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th>P/L</th>
+                            <th>Status</th>
+                            <th>Setup-Link</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${trades.map(t => renderTradeRow(t)).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderTradeRow(trade) {
+            const profit = trade.profit || 0;
+            const profitClass = profit >= 0 ? 'positive' : 'negative';
+            const profitSign = profit >= 0 ? '+' : '';
+
+            const entryTime = new Date(trade.entry_time).toLocaleString('de-CH', {
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+            });
+
+            const exitTime = trade.exit_time
+                ? new Date(trade.exit_time).toLocaleString('de-CH', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                })
+                : '-';
+
+            const linkHtml = trade.setup
+                ? `<span class="trade-link" onclick="viewSetupLink('${trade.trade_id}')">
+                     ✓ ${trade.setup.setup_score.toFixed(0)}%
+                   </span>`
+                : `<span class="trade-link no-link" onclick="linkTrade('${trade.trade_id}')">
+                     + Verknüpfen
+                   </span>`;
+
+            return `
+                <tr>
+                    <td class="trade-symbol">${trade.symbol}</td>
+                    <td><span class="trade-type ${trade.trade_type}">${trade.trade_type.toUpperCase()}</span></td>
+                    <td>${trade.volume}</td>
+                    <td>${entryTime}<br><small>${trade.entry_price.toFixed(5)}</small></td>
+                    <td>${exitTime}<br><small>${trade.exit_price ? trade.exit_price.toFixed(5) : '-'}</small></td>
+                    <td class="trade-profit ${profitClass}">${profitSign}${profit.toFixed(2)}</td>
+                    <td>${trade.status}</td>
+                    <td>${linkHtml}</td>
+                </tr>
+            `;
+        }
+
+        function updateSymbolFilter(trades) {
+            const symbols = [...new Set(trades.map(t => t.symbol))].sort();
+            const select = document.getElementById('filterSymbol');
+            const currentValue = select.value;
+
+            select.innerHTML = '<option value="">Alle Symbole</option>' +
+                symbols.map(s => `<option value="${s}" ${s === currentValue ? 'selected' : ''}>${s}</option>`).join('');
+        }
+
+        async function loadPerformance() {
+            try {
+                const response = await fetch(`${WORKPLACE_API}/performance/by-setup?days=30`);
+                if (!response.ok) throw new Error('API error');
+
+                const data = await response.json();
+
+                document.getElementById('perfFollowed').textContent =
+                    (data.followed_setup?.win_rate || 0).toFixed(1) + '%';
+                document.getElementById('perfAgainst').textContent =
+                    (data.against_setup?.win_rate || 0).toFixed(1) + '%';
+                document.getElementById('perfNoLink').textContent =
+                    (data.no_setup_link?.win_rate || 0).toFixed(1) + '%';
+
+                const rec = data.recommendation || 'Nicht genügend Daten';
+                document.getElementById('perfRecommendation').textContent =
+                    rec.length > 50 ? rec.substring(0, 47) + '...' : rec;
+
+            } catch (error) {
+                console.error('Error loading performance:', error);
+            }
+        }
+
+        async function triggerAutoLink() {
+            try {
+                const response = await fetch(`${WORKPLACE_API}/trades/auto-link`, { method: 'POST' });
+                if (!response.ok) throw new Error('API error');
+
+                const data = await response.json();
+                alert(`${data.linked_count} Trades wurden mit Setups verknüpft.`);
+
+                loadTrades();
+                loadOverview();
+
+            } catch (error) {
+                console.error('Error auto-linking:', error);
+                alert('Fehler beim Auto-Linking');
+            }
+        }
+
+        function viewSetupLink(tradeId) {
+            // TODO: Modal mit Setup-Details öffnen
+            alert('Setup-Details für Trade: ' + tradeId);
+        }
+
+        function linkTrade(tradeId) {
+            // TODO: Modal zum manuellen Verknüpfen öffnen
+            alert('Manuelles Verknüpfen für Trade: ' + tradeId);
+        }
+
+        function refreshData() {
+            loadOverview();
+            loadPerformance();
+        }
+    </script>
+</body>
+</html>

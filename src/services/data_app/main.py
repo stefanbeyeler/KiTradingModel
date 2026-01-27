@@ -91,6 +91,15 @@ except ImportError:
     _kanban_routes_available = False
     logger.warning("Kanban routes not available")
 
+# MT5 Trade History routes
+try:
+    from src.services.data_app.api.mt5_routes import router as mt5_router
+    _mt5_routes_available = True
+except ImportError:
+    mt5_router = None
+    _mt5_routes_available = False
+    logger.warning("MT5 routes not available")
+
 from src.service_registry import register_service
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import is_test_unhealthy, get_test_unhealthy_status
@@ -199,6 +208,10 @@ openapi_tags = [
         "name": "17. Kanban Board",
         "description": "Task-Management Board mit Backend-Persistenz"
     },
+    {
+        "name": "18. MT5 Trades",
+        "description": "MT5 Terminal-Verwaltung und Trade-Aufzeichnung"
+    },
 ]
 
 # Create FastAPI application
@@ -293,6 +306,10 @@ if _service_runs_routes_available and service_runs_router:
 # Include Kanban Board router if available
 if _kanban_routes_available and kanban_router:
     app.include_router(kanban_router, prefix="/api/v1", tags=["17. Kanban Board"])
+
+# Include MT5 Trade History router if available
+if _mt5_routes_available and mt5_router:
+    app.include_router(mt5_router, tags=["18. MT5 Trades"])
 
 
 async def _periodic_cache_cleanup():
