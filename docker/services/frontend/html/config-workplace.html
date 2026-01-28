@@ -360,6 +360,131 @@
             color: #fbbf24;
         }
 
+        /* Timeframe badges */
+        .tf-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.2rem;
+            cursor: pointer;
+        }
+
+        .tf-badge {
+            font-size: 0.65rem;
+            padding: 0.1rem 0.3rem;
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+
+        .tf-badge.best {
+            background: rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            font-weight: 600;
+        }
+
+        /* Timeframe Edit Popup */
+        .tf-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .tf-popup.active {
+            display: flex;
+        }
+
+        .tf-popup-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.25rem;
+            min-width: 280px;
+            max-width: 400px;
+        }
+
+        .tf-popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tf-popup-header h4 {
+            margin: 0;
+            font-size: 1rem;
+            color: #34d399;
+        }
+
+        .tf-popup-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .tf-popup-close:hover {
+            color: #e8e8e8;
+        }
+
+        .tf-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tf-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tf-option:hover {
+            background: rgba(100, 200, 255, 0.1);
+            border-color: rgba(100, 200, 255, 0.3);
+        }
+
+        .tf-option.selected {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.5);
+        }
+
+        .tf-option input[type="checkbox"] {
+            accent-color: #10b981;
+            width: 14px;
+            height: 14px;
+        }
+
+        .tf-option label {
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .tf-popup-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
         /* Add symbol form */
         .add-symbol-form {
             display: flex;
@@ -521,7 +646,7 @@
                         </table>
                     </div>
                     <p class="info-text" style="margin-top: 0.5rem;">
-                        <span id="watchlistCount">0</span> Symbole · Alle Timeframes (M5-D1) werden gescannt
+                        <span id="watchlistCount">0</span> Symbole · Timeframes pro Symbol konfigurierbar (klicken)
                     </p>
                 </div>
 
@@ -821,6 +946,49 @@
 
     <div id="toast" class="toast"></div>
 
+    <!-- Timeframe Edit Popup -->
+    <div class="tf-popup" id="tfPopup">
+        <div class="tf-popup-content">
+            <div class="tf-popup-header">
+                <h4>Timeframes für <span id="tfPopupSymbol">-</span></h4>
+                <button class="tf-popup-close" onclick="closeTfPopup()">&times;</button>
+            </div>
+            <div class="tf-options" id="tfOptions">
+                <label class="tf-option">
+                    <input type="checkbox" value="M1"> <span>M1</span>
+                </label>
+                <label class="tf-option">
+                    <input type="checkbox" value="M5"> <span>M5</span>
+                </label>
+                <label class="tf-option">
+                    <input type="checkbox" value="M15"> <span>M15</span>
+                </label>
+                <label class="tf-option">
+                    <input type="checkbox" value="M30"> <span>M30</span>
+                </label>
+                <label class="tf-option">
+                    <input type="checkbox" value="H1"> <span>H1</span>
+                </label>
+                <label class="tf-option">
+                    <input type="checkbox" value="H4"> <span>H4</span>
+                </label>
+                <label class="tf-option">
+                    <input type="checkbox" value="D1"> <span>D1</span>
+                </label>
+                <label class="tf-option">
+                    <input type="checkbox" value="W1"> <span>W1</span>
+                </label>
+                <label class="tf-option">
+                    <input type="checkbox" value="MN"> <span>MN</span>
+                </label>
+            </div>
+            <div class="tf-popup-actions">
+                <button class="btn btn-secondary btn-sm" onclick="closeTfPopup()">Abbrechen</button>
+                <button class="btn btn-primary btn-sm" onclick="saveTfSelection()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = '/workplace/api/v1';
 
@@ -838,16 +1006,27 @@
         });
 
         // ==================== WATCHLIST ====================
+        let watchlistData = [];
+
+        function renderTimeframeBadges(item) {
+            const tfs = item.timeframes || ['M5', 'M15', 'H1', 'H4', 'D1'];
+            const best = item.best_timeframe;
+            return tfs.map(tf =>
+                `<span class="tf-badge ${tf === best ? 'best' : ''}">${tf}</span>`
+            ).join('');
+        }
+
         async function loadWatchlist() {
             try {
                 const response = await fetch(`${API_BASE}/watchlist/`);
                 const data = await response.json();
+                watchlistData = data.items || [];
 
                 document.getElementById('watchlistCount').textContent = data.total;
 
                 const tbody = document.getElementById('watchlistBody');
-                if (data.items && data.items.length > 0) {
-                    tbody.innerHTML = data.items.map(item => `
+                if (watchlistData.length > 0) {
+                    tbody.innerHTML = watchlistData.map(item => `
                         <tr>
                             <td>
                                 <button class="favorite-btn ${item.is_favorite ? 'active' : ''}" onclick="toggleFavorite('${item.symbol}')">
@@ -857,7 +1036,11 @@
                             </td>
                             <td>${item.alert_threshold}</td>
                             <td>${item.last_score ? item.last_score.toFixed(0) : '-'}</td>
-                            <td>${item.best_timeframe || '-'}</td>
+                            <td>
+                                <div class="tf-badges" onclick="openTfPopup('${item.symbol}')" title="Klicken zum Bearbeiten">
+                                    ${renderTimeframeBadges(item)}
+                                </div>
+                            </td>
                             <td><button class="btn btn-danger btn-sm" onclick="removeSymbol('${item.symbol}')" style="padding: 0.2rem 0.5rem;">×</button></td>
                         </tr>
                     `).join('');
@@ -918,6 +1101,91 @@
                 loadWatchlist();
             } catch (error) {}
         }
+
+        // ==================== TIMEFRAME POPUP ====================
+        let currentTfSymbol = null;
+
+        function openTfPopup(symbol) {
+            currentTfSymbol = symbol;
+            const item = watchlistData.find(i => i.symbol === symbol);
+            if (!item) return;
+
+            document.getElementById('tfPopupSymbol').textContent = symbol;
+
+            // Alle Checkboxen zurücksetzen
+            const checkboxes = document.querySelectorAll('#tfOptions input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+                cb.parentElement.classList.remove('selected');
+            });
+
+            // Aktive Timeframes setzen
+            const activeTimeframes = item.timeframes || ['M5', 'M15', 'H1', 'H4', 'D1'];
+            checkboxes.forEach(cb => {
+                if (activeTimeframes.includes(cb.value)) {
+                    cb.checked = true;
+                    cb.parentElement.classList.add('selected');
+                }
+            });
+
+            // Event-Listener für visuelle Aktualisierung
+            checkboxes.forEach(cb => {
+                cb.onchange = () => {
+                    if (cb.checked) {
+                        cb.parentElement.classList.add('selected');
+                    } else {
+                        cb.parentElement.classList.remove('selected');
+                    }
+                };
+            });
+
+            document.getElementById('tfPopup').classList.add('active');
+        }
+
+        function closeTfPopup() {
+            document.getElementById('tfPopup').classList.remove('active');
+            currentTfSymbol = null;
+        }
+
+        async function saveTfSelection() {
+            if (!currentTfSymbol) return;
+
+            const checkboxes = document.querySelectorAll('#tfOptions input[type="checkbox"]:checked');
+            const selectedTimeframes = Array.from(checkboxes).map(cb => cb.value);
+
+            if (selectedTimeframes.length === 0) {
+                showToast('Mindestens ein Timeframe auswählen', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/watchlist/${currentTfSymbol}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeframes: selectedTimeframes })
+                });
+
+                if (response.ok) {
+                    showToast(`Timeframes für ${currentTfSymbol} aktualisiert`, 'success');
+                    closeTfPopup();
+                    loadWatchlist();
+                } else {
+                    const error = await response.json();
+                    showToast(error.detail || 'Fehler', 'error');
+                }
+            } catch (error) {
+                showToast('Fehler beim Speichern', 'error');
+            }
+        }
+
+        // Popup schliessen bei Escape oder Klick ausserhalb
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeTfPopup();
+        });
+
+        document.getElementById('tfPopup')?.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tf-popup')) closeTfPopup();
+        });
 
         // ==================== SCANNER ====================
         async function loadScannerStatus() {

@@ -254,6 +254,10 @@ class WatchlistItem(BaseModel):
     is_favorite: bool = Field(default=False, description="Als Favorit markiert")
     alert_threshold: float = Field(default=70.0, ge=0.0, le=100.0, description="Alert-Schwelle")
     timeframe: str = Field(default="H1", description="Bevorzugter Timeframe (deprecated)")
+    timeframes: list[str] = Field(
+        default_factory=lambda: ["M5", "M15", "H1", "H4", "D1"],
+        description="Zu scannende Timeframes"
+    )
     last_score: Optional[float] = Field(None, description="Bester Composite-Score über alle Timeframes")
     best_timeframe: Optional[str] = Field(None, description="Timeframe mit bestem Score")
     last_direction: Optional[SignalDirection] = Field(None, description="Letzte Richtung")
@@ -270,7 +274,11 @@ class WatchlistAddRequest(BaseModel):
     symbol: str = Field(..., description="Trading-Symbol")
     is_favorite: bool = Field(default=False, description="Als Favorit markieren")
     alert_threshold: float = Field(default=70.0, ge=0.0, le=100.0, description="Alert-Schwelle")
-    timeframe: str = Field(default="H1", description="Bevorzugter Timeframe")
+    timeframe: str = Field(default="H1", description="Bevorzugter Timeframe (deprecated)")
+    timeframes: list[str] = Field(
+        default_factory=lambda: ["M5", "M15", "H1", "H4", "D1"],
+        description="Zu scannende Timeframes"
+    )
     notes: Optional[str] = Field(None, max_length=500, description="Notizen")
 
     class Config:
@@ -279,7 +287,7 @@ class WatchlistAddRequest(BaseModel):
                 "symbol": "BTCUSD",
                 "is_favorite": True,
                 "alert_threshold": 75.0,
-                "timeframe": "H1",
+                "timeframes": ["M5", "H1", "H4"],
                 "notes": "Wichtiger Support bei 40000"
             }
         }
@@ -289,7 +297,8 @@ class WatchlistUpdateRequest(BaseModel):
     """Request zum Aktualisieren eines Watchlist-Items."""
     is_favorite: Optional[bool] = Field(None, description="Favorit-Status")
     alert_threshold: Optional[float] = Field(None, ge=0.0, le=100.0, description="Alert-Schwelle")
-    timeframe: Optional[str] = Field(None, description="Bevorzugter Timeframe")
+    timeframe: Optional[str] = Field(None, description="Bevorzugter Timeframe (deprecated)")
+    timeframes: Optional[list[str]] = Field(None, description="Zu scannende Timeframes")
     notes: Optional[str] = Field(None, max_length=500, description="Notizen")
 
 

@@ -148,10 +148,16 @@ class ScannerService:
             await asyncio.sleep(settings.scan_interval_seconds)
 
     async def _scan_symbol(self, symbol: str) -> Optional[TradingSetup]:
-        """Scannt ein einzelnes Symbol über alle relevanten Timeframes."""
+        """Scannt ein einzelnes Symbol über die konfigurierten Timeframes."""
         try:
-            # Alle relevanten Timeframes scannen
-            timeframes = ["M5", "M15", "H1", "H4", "D1"]
+            # Timeframes aus Watchlist-Item laden (falls vorhanden)
+            item = await watchlist_service.get(symbol)
+            if item and item.timeframes:
+                timeframes = item.timeframes
+            else:
+                # Fallback auf Standard-Timeframes
+                timeframes = ["M5", "M15", "H1", "H4", "D1"]
+
             best_setup: Optional[TradingSetup] = None
             timeframe_scores: dict[str, float] = {}
 

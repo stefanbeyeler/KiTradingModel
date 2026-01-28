@@ -130,6 +130,7 @@ class WatchlistService:
             is_favorite=request.is_favorite,
             alert_threshold=request.alert_threshold,
             timeframe=request.timeframe,
+            timeframes=request.timeframes,
             notes=request.notes,
             added_at=datetime.now(timezone.utc),
         )
@@ -164,6 +165,8 @@ class WatchlistService:
             item.alert_threshold = request.alert_threshold
         if request.timeframe is not None:
             item.timeframe = request.timeframe
+        if request.timeframes is not None:
+            item.timeframes = request.timeframes
         if request.notes is not None:
             item.notes = request.notes
 
