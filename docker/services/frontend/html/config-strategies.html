@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Workplace - Strategien</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .back-link {
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* Cards and Sections */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .section-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #34d399;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Strategy List */
+        .strategy-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .strategy-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+
+        .strategy-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(100, 200, 255, 0.3);
+        }
+
+        .strategy-item.default {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .strategy-info {
+            flex: 1;
+        }
+
+        .strategy-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #e8e8e8;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .strategy-name .default-badge {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            background: rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .strategy-description {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        .strategy-meta {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: #64c8ff;
+        }
+
+        .strategy-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #059669;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e8e8e8;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-icon {
+            padding: 0.4rem 0.6rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #e8e8e8;
+        }
+
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-success:hover {
+            background: rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-sm {
+            padding: 0.35rem 0.7rem;
+            font-size: 0.8rem;
+        }
+
+        /* Form Styling */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #34d399;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.6rem;
+            background: #1a1a2e;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-size: 0.85rem;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-row, .form-row-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-text {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        /* Checkbox styling */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .checkbox-group:hover {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            cursor: pointer;
+            accent-color: #10b981;
+        }
+
+        .checkbox-group .checkbox-label {
+            font-size: 0.85rem;
+            color: #e8e8e8;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #34d399;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #e8e8e8;
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Entry/Exit Rules Section */
+        .rules-section {
+            margin-top: 1.5rem;
+        }
+
+        .rules-section h4 {
+            font-size: 0.95rem;
+            color: #64c8ff;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .rules-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .rule-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .rule-item input {
+            flex: 1;
+            padding: 0.4rem 0.6rem;
+            background: #1a1a2e;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            border-radius: 4px;
+            color: #e8e8e8;
+            font-size: 0.85rem;
+        }
+
+        .rule-item .btn-remove {
+            padding: 0.3rem 0.5rem;
+            background: rgba(239, 68, 68, 0.2);
+            border: none;
+            border-radius: 4px;
+            color: #f87171;
+            cursor: pointer;
+        }
+
+        .rule-item .btn-remove:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .add-rule-btn {
+            margin-top: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px dashed rgba(100, 200, 255, 0.4);
+            border-radius: 6px;
+            color: #64c8ff;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .add-rule-btn:hover {
+            background: rgba(100, 200, 255, 0.2);
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success {
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+        }
+
+        .toast.error {
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #94a3b8;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid #64c8ff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #94a3b8;
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-left">
+                <a href="workplace.html" class="back-link">&larr; Workplace</a>
+                <h1>Trading-Strategien</h1>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-primary" onclick="openCreateModal()">
+                    + Neue Strategie
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Strategy List Card -->
+        <div class="card">
+            <div class="section-header">
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                    Strategien
+                </h2>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #94a3b8;">
+                        <input type="checkbox" id="showInactive" onchange="loadStrategies()" style="accent-color: #10b981;">
+                        Inaktive anzeigen
+                    </label>
+                    <button class="btn btn-secondary btn-sm" onclick="loadStrategies()">
+                        Aktualisieren
+                    </button>
+                </div>
+            </div>
+
+            <div id="strategyList" class="strategy-list">
+                <div class="loading">Strategien werden geladen</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strategy Modal -->
+    <div class="modal-overlay" id="strategyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Neue Strategie erstellen</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="strategyForm" onsubmit="saveStrategy(event)">
+                    <input type="hidden" id="strategyId">
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Name *</label>
+                            <input type="text" id="strategyName" required placeholder="z.B. Trend-Following H4">
+                        </div>
+                        <div class="form-group">
+                            <label>Timeframe</label>
+                            <select id="strategyTimeframe">
+                                <option value="M1">M1 (1 Minute)</option>
+                                <option value="M5">M5 (5 Minuten)</option>
+                                <option value="M15">M15 (15 Minuten)</option>
+                                <option value="M30">M30 (30 Minuten)</option>
+                                <option value="H1" selected>H1 (1 Stunde)</option>
+                                <option value="H4">H4 (4 Stunden)</option>
+                                <option value="D1">D1 (1 Tag)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Beschreibung</label>
+                        <textarea id="strategyDescription" placeholder="Beschreiben Sie die Strategie..."></textarea>
+                    </div>
+
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label>Min. Confidence</label>
+                            <input type="number" id="minConfidence" min="0" max="1" step="0.05" value="0.65">
+                            <div class="info-text">Schwelle für Signale (0-1)</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Risk/Reward Ratio</label>
+                            <input type="number" id="riskReward" min="0.5" max="10" step="0.1" value="2.0">
+                            <div class="info-text">Mindest-R:R</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Max. Risiko %</label>
+                            <input type="number" id="maxRisk" min="0.1" max="10" step="0.1" value="1.0">
+                            <div class="info-text">Max. Risiko pro Trade</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Stop-Loss Methode</label>
+                            <select id="stopLossMethod">
+                                <option value="atr">ATR-basiert</option>
+                                <option value="fixed">Feste Pips</option>
+                                <option value="swing">Swing High/Low</option>
+                                <option value="percent">Prozentual</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Stop-Loss Wert</label>
+                            <input type="number" id="stopLossValue" min="0" step="0.1" value="1.5">
+                            <div class="info-text">ATR-Multiplikator oder Pips/Prozent</div>
+                        </div>
+                    </div>
+
+                    <!-- Entry Rules -->
+                    <div class="rules-section">
+                        <h4>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 11 12 14 22 4"/>
+                                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                            </svg>
+                            Entry-Regeln
+                        </h4>
+                        <div id="entryRules" class="rules-list"></div>
+                        <button type="button" class="add-rule-btn" onclick="addRule('entry')">+ Regel hinzufügen</button>
+                    </div>
+
+                    <!-- Exit Rules -->
+                    <div class="rules-section">
+                        <h4>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                                <polyline points="16 17 21 12 16 7"/>
+                                <line x1="21" y1="12" x2="9" y2="12"/>
+                            </svg>
+                            Exit-Regeln
+                        </h4>
+                        <div id="exitRules" class="rules-list"></div>
+                        <button type="button" class="add-rule-btn" onclick="addRule('exit')">+ Regel hinzufügen</button>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="strategyActive" checked>
+                            <span class="checkbox-label">Strategie aktiv</span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
+                <button type="submit" class="btn btn-primary" form="strategyForm">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/workplace/api/v1';
+        let strategies = [];
+
+        // Load strategies on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStrategies();
+        });
+
+        async function loadStrategies() {
+            const includeInactive = document.getElementById('showInactive').checked;
+            const listEl = document.getElementById('strategyList');
+            listEl.innerHTML = '<div class="loading">Strategien werden geladen</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/strategies?include_inactive=${includeInactive}`);
+                if (!response.ok) throw new Error('Fehler beim Laden');
+
+                strategies = await response.json();
+                renderStrategies();
+            } catch (error) {
+                console.error('Error loading strategies:', error);
+                listEl.innerHTML = `<div class="empty-state">Fehler beim Laden der Strategien: ${error.message}</div>`;
+            }
+        }
+
+        function renderStrategies() {
+            const listEl = document.getElementById('strategyList');
+
+            if (strategies.length === 0) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                            <path d="M2 17l10 5 10-5"/>
+                            <path d="M2 12l10 5 10-5"/>
+                        </svg>
+                        <p>Keine Strategien vorhanden</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = strategies.map(s => `
+                <div class="strategy-item ${s.is_default ? 'default' : ''}" data-id="${s.id}">
+                    <div class="strategy-info">
+                        <div class="strategy-name">
+                            ${s.name}
+                            ${s.is_default ? '<span class="default-badge">Standard</span>' : ''}
+                            ${!s.is_active ? '<span class="default-badge" style="background: rgba(239, 68, 68, 0.3); color: #f87171;">Inaktiv</span>' : ''}
+                        </div>
+                        <div class="strategy-description">${s.description || 'Keine Beschreibung'}</div>
+                        <div class="strategy-meta">
+                            <span>Timeframe: ${s.timeframe || 'H1'}</span>
+                            <span>Min. Conf.: ${(s.min_confidence || 0.65).toFixed(2)}</span>
+                            <span>R:R: ${(s.risk_reward_ratio || 2.0).toFixed(1)}</span>
+                            <span>Max. Risk: ${(s.max_risk_percent || 1.0).toFixed(1)}%</span>
+                        </div>
+                    </div>
+                    <div class="strategy-actions">
+                        ${!s.is_default ? `<button class="btn btn-success btn-sm" onclick="setDefault('${s.id}')" title="Als Standard festlegen">Standard</button>` : ''}
+                        <button class="btn btn-icon btn-sm" onclick="exportStrategy('${s.id}')" title="Als Markdown exportieren">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </button>
+                        <button class="btn btn-icon btn-sm" onclick="editStrategy('${s.id}')" title="Bearbeiten">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                        </button>
+                        ${!s.id.startsWith('default_') ? `
+                            <button class="btn btn-danger btn-sm" onclick="deleteStrategy('${s.id}')" title="Löschen">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                </svg>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openCreateModal() {
+            document.getElementById('modalTitle').textContent = 'Neue Strategie erstellen';
+            document.getElementById('strategyId').value = '';
+            document.getElementById('strategyForm').reset();
+            document.getElementById('strategyActive').checked = true;
+            document.getElementById('entryRules').innerHTML = '';
+            document.getElementById('exitRules').innerHTML = '';
+
+            // Add default rules
+            addRule('entry', 'Composite Score > Min. Confidence');
+            addRule('entry', 'Trend-Alignment bestätigt');
+            addRule('exit', 'Take-Profit erreicht (R:R)');
+            addRule('exit', 'Stop-Loss erreicht');
+
+            document.getElementById('strategyModal').classList.add('active');
+        }
+
+        function editStrategy(id) {
+            const strategy = strategies.find(s => s.id === id);
+            if (!strategy) return;
+
+            document.getElementById('modalTitle').textContent = 'Strategie bearbeiten';
+            document.getElementById('strategyId').value = strategy.id;
+            document.getElementById('strategyName').value = strategy.name;
+            document.getElementById('strategyDescription').value = strategy.description || '';
+            document.getElementById('strategyTimeframe').value = strategy.timeframe || 'H1';
+            document.getElementById('minConfidence').value = strategy.min_confidence || 0.65;
+            document.getElementById('riskReward').value = strategy.risk_reward_ratio || 2.0;
+            document.getElementById('maxRisk').value = strategy.max_risk_percent || 1.0;
+            document.getElementById('stopLossMethod').value = strategy.stop_loss?.method || 'atr';
+            document.getElementById('stopLossValue').value = strategy.stop_loss?.value || 1.5;
+            document.getElementById('strategyActive').checked = strategy.is_active !== false;
+
+            // Populate rules
+            document.getElementById('entryRules').innerHTML = '';
+            document.getElementById('exitRules').innerHTML = '';
+
+            (strategy.entry_rules || []).forEach(rule => addRule('entry', rule));
+            (strategy.exit_rules || []).forEach(rule => addRule('exit', rule));
+
+            document.getElementById('strategyModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('strategyModal').classList.remove('active');
+        }
+
+        function addRule(type, value = '') {
+            const container = document.getElementById(type === 'entry' ? 'entryRules' : 'exitRules');
+            const ruleId = Date.now() + Math.random();
+
+            const ruleEl = document.createElement('div');
+            ruleEl.className = 'rule-item';
+            ruleEl.innerHTML = `
+                <input type="text" value="${value}" placeholder="Regel eingeben...">
+                <button type="button" class="btn-remove" onclick="this.parentElement.remove()">×</button>
+            `;
+            container.appendChild(ruleEl);
+        }
+
+        function getRules(type) {
+            const container = document.getElementById(type === 'entry' ? 'entryRules' : 'exitRules');
+            const inputs = container.querySelectorAll('input');
+            return Array.from(inputs).map(i => i.value.trim()).filter(v => v);
+        }
+
+        async function saveStrategy(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('strategyId').value;
+            const data = {
+                name: document.getElementById('strategyName').value,
+                description: document.getElementById('strategyDescription').value,
+                timeframe: document.getElementById('strategyTimeframe').value,
+                min_confidence: parseFloat(document.getElementById('minConfidence').value),
+                risk_reward_ratio: parseFloat(document.getElementById('riskReward').value),
+                max_risk_percent: parseFloat(document.getElementById('maxRisk').value),
+                stop_loss: {
+                    method: document.getElementById('stopLossMethod').value,
+                    value: parseFloat(document.getElementById('stopLossValue').value)
+                },
+                entry_rules: getRules('entry'),
+                exit_rules: getRules('exit'),
+                is_active: document.getElementById('strategyActive').checked
+            };
+
+            try {
+                let response;
+                if (id) {
+                    // Update existing
+                    response = await fetch(`${API_BASE}/strategies/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                } else {
+                    // Create new
+                    response = await fetch(`${API_BASE}/strategies`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                }
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                showToast(id ? 'Strategie aktualisiert' : 'Strategie erstellt', 'success');
+                closeModal();
+                loadStrategies();
+            } catch (error) {
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteStrategy(id) {
+            if (!confirm('Strategie wirklich löschen?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/strategies/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Löschen fehlgeschlagen');
+                }
+
+                showToast('Strategie gelöscht', 'success');
+                loadStrategies();
+            } catch (error) {
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
+        async function setDefault(id) {
+            try {
+                const response = await fetch(`${API_BASE}/strategies/${id}/set-default`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Fehler beim Setzen der Standard-Strategie');
+                }
+
+                showToast('Standard-Strategie aktualisiert', 'success');
+                loadStrategies();
+            } catch (error) {
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
+        async function exportStrategy(id) {
+            try {
+                const response = await fetch(`${API_BASE}/strategies/${id}/export`);
+                if (!response.ok) throw new Error('Export fehlgeschlagen');
+
+                const markdown = await response.text();
+                const strategy = strategies.find(s => s.id === id);
+                const filename = `${strategy?.name || id}.md`;
+
+                // Download as file
+                const blob = new Blob([markdown], { type: 'text/markdown' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast('Strategie exportiert', 'success');
+            } catch (error) {
+                showToast(`Fehler: ${error.message}`, 'error');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Close modal on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Close modal on overlay click
+        document.getElementById('strategyModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) closeModal();
+        });
+    </script>
+</body>
+</html>
