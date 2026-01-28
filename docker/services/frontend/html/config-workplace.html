@@ -646,7 +646,7 @@
                         </table>
                     </div>
                     <p class="info-text" style="margin-top: 0.5rem;">
-                        <span id="watchlistCount">0</span> Symbole · Timeframes pro Symbol konfigurierbar (klicken)
+                        <span id="watchlistCount">0</span> Symbole · Zeile klicken zum Bearbeiten
                     </p>
                 </div>
 
@@ -946,45 +946,75 @@
 
     <div id="toast" class="toast"></div>
 
-    <!-- Timeframe Edit Popup -->
-    <div class="tf-popup" id="tfPopup">
-        <div class="tf-popup-content">
+    <!-- Watchlist Edit Popup -->
+    <div class="tf-popup" id="editPopup">
+        <div class="tf-popup-content" style="min-width: 340px;">
             <div class="tf-popup-header">
-                <h4>Timeframes für <span id="tfPopupSymbol">-</span></h4>
-                <button class="tf-popup-close" onclick="closeTfPopup()">&times;</button>
+                <h4><span id="editPopupSymbol">-</span> bearbeiten</h4>
+                <button class="tf-popup-close" onclick="closeEditPopup()">&times;</button>
             </div>
-            <div class="tf-options" id="tfOptions">
-                <label class="tf-option">
-                    <input type="checkbox" value="M1"> <span>M1</span>
-                </label>
-                <label class="tf-option">
-                    <input type="checkbox" value="M5"> <span>M5</span>
-                </label>
-                <label class="tf-option">
-                    <input type="checkbox" value="M15"> <span>M15</span>
-                </label>
-                <label class="tf-option">
-                    <input type="checkbox" value="M30"> <span>M30</span>
-                </label>
-                <label class="tf-option">
-                    <input type="checkbox" value="H1"> <span>H1</span>
-                </label>
-                <label class="tf-option">
-                    <input type="checkbox" value="H4"> <span>H4</span>
-                </label>
-                <label class="tf-option">
-                    <input type="checkbox" value="D1"> <span>D1</span>
-                </label>
-                <label class="tf-option">
-                    <input type="checkbox" value="W1"> <span>W1</span>
-                </label>
-                <label class="tf-option">
-                    <input type="checkbox" value="MN"> <span>MN</span>
+
+            <!-- Favorite Toggle -->
+            <div style="margin-bottom: 1rem;">
+                <label class="checkbox-group" id="editFavoriteGroup" onclick="toggleEditFavorite()">
+                    <input type="checkbox" id="editFavorite" />
+                    <div class="checkbox-label">
+                        <span class="checkbox-title">★ Favorit</span>
+                        <span class="checkbox-desc">Wird priorisiert angezeigt</span>
+                    </div>
                 </label>
             </div>
+
+            <!-- Alert Threshold -->
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label>Alert-Schwelle (%)</label>
+                <input type="number" id="editAlertThreshold" min="0" max="100" step="5" placeholder="70" />
+                <p class="info-text">Benachrichtigung wenn Score diesen Wert überschreitet</p>
+            </div>
+
+            <!-- Timeframes -->
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #34d399; font-size: 0.85rem; font-weight: 500;">Zu scannende Timeframes</label>
+                <div class="tf-options" id="tfOptions">
+                    <label class="tf-option">
+                        <input type="checkbox" value="M1"> <span>M1</span>
+                    </label>
+                    <label class="tf-option">
+                        <input type="checkbox" value="M5"> <span>M5</span>
+                    </label>
+                    <label class="tf-option">
+                        <input type="checkbox" value="M15"> <span>M15</span>
+                    </label>
+                    <label class="tf-option">
+                        <input type="checkbox" value="M30"> <span>M30</span>
+                    </label>
+                    <label class="tf-option">
+                        <input type="checkbox" value="H1"> <span>H1</span>
+                    </label>
+                    <label class="tf-option">
+                        <input type="checkbox" value="H4"> <span>H4</span>
+                    </label>
+                    <label class="tf-option">
+                        <input type="checkbox" value="D1"> <span>D1</span>
+                    </label>
+                    <label class="tf-option">
+                        <input type="checkbox" value="W1"> <span>W1</span>
+                    </label>
+                    <label class="tf-option">
+                        <input type="checkbox" value="MN"> <span>MN</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label>Notizen</label>
+                <textarea id="editNotes" rows="3" placeholder="Eigene Notizen zum Symbol..." style="width: 100%; padding: 0.6rem; background: #1a1a2e; border: 1px solid rgba(100, 200, 255, 0.3); border-radius: 6px; color: #e8e8e8; font-size: 0.85rem; resize: vertical;"></textarea>
+            </div>
+
             <div class="tf-popup-actions">
-                <button class="btn btn-secondary btn-sm" onclick="closeTfPopup()">Abbrechen</button>
-                <button class="btn btn-primary btn-sm" onclick="saveTfSelection()">Speichern</button>
+                <button class="btn btn-secondary btn-sm" onclick="closeEditPopup()">Abbrechen</button>
+                <button class="btn btn-primary btn-sm" onclick="saveWatchlistItem()">Speichern</button>
             </div>
         </div>
     </div>
@@ -1010,10 +1040,7 @@
 
         function renderTimeframeBadges(item) {
             const tfs = item.timeframes || ['M5', 'M15', 'H1', 'H4', 'D1'];
-            const best = item.best_timeframe;
-            return tfs.map(tf =>
-                `<span class="tf-badge ${tf === best ? 'best' : ''}">${tf}</span>`
-            ).join('');
+            return tfs.map(tf => `<span class="tf-badge">${tf}</span>`).join('');
         }
 
         async function loadWatchlist() {
@@ -1027,21 +1054,22 @@
                 const tbody = document.getElementById('watchlistBody');
                 if (watchlistData.length > 0) {
                     tbody.innerHTML = watchlistData.map(item => `
-                        <tr>
+                        <tr style="cursor: pointer;" onclick="openEditPopup('${item.symbol}')" title="Klicken zum Bearbeiten">
                             <td>
-                                <button class="favorite-btn ${item.is_favorite ? 'active' : ''}" onclick="toggleFavorite('${item.symbol}')">
+                                <button class="favorite-btn ${item.is_favorite ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite('${item.symbol}')">
                                     ${item.is_favorite ? '★' : '☆'}
                                 </button>
                                 ${item.symbol}
+                                ${item.notes ? '<span style="color: #64c8ff; font-size: 0.7rem; margin-left: 0.3rem;" title="' + escapeHtml(item.notes) + '">📝</span>' : ''}
                             </td>
-                            <td>${item.alert_threshold}</td>
+                            <td>${item.alert_threshold}%</td>
                             <td>${item.last_score ? item.last_score.toFixed(0) : '-'}</td>
                             <td>
-                                <div class="tf-badges" onclick="openTfPopup('${item.symbol}')" title="Klicken zum Bearbeiten">
+                                <div class="tf-badges">
                                     ${renderTimeframeBadges(item)}
                                 </div>
                             </td>
-                            <td><button class="btn btn-danger btn-sm" onclick="removeSymbol('${item.symbol}')" style="padding: 0.2rem 0.5rem;">×</button></td>
+                            <td><button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); removeSymbol('${item.symbol}')" style="padding: 0.2rem 0.5rem;">×</button></td>
                         </tr>
                     `).join('');
                 } else {
@@ -1102,17 +1130,28 @@
             } catch (error) {}
         }
 
-        // ==================== TIMEFRAME POPUP ====================
-        let currentTfSymbol = null;
+        // ==================== WATCHLIST EDIT POPUP ====================
+        let currentEditSymbol = null;
 
-        function openTfPopup(symbol) {
-            currentTfSymbol = symbol;
+        function openEditPopup(symbol) {
+            currentEditSymbol = symbol;
             const item = watchlistData.find(i => i.symbol === symbol);
             if (!item) return;
 
-            document.getElementById('tfPopupSymbol').textContent = symbol;
+            document.getElementById('editPopupSymbol').textContent = symbol;
 
-            // Alle Checkboxen zurücksetzen
+            // Favorite setzen
+            const favoriteCheckbox = document.getElementById('editFavorite');
+            favoriteCheckbox.checked = item.is_favorite || false;
+            updateEditFavoriteStyle();
+
+            // Alert Threshold setzen
+            document.getElementById('editAlertThreshold').value = item.alert_threshold || 70;
+
+            // Notes setzen
+            document.getElementById('editNotes').value = item.notes || '';
+
+            // Alle Timeframe-Checkboxen zurücksetzen
             const checkboxes = document.querySelectorAll('#tfOptions input[type="checkbox"]');
             checkboxes.forEach(cb => {
                 cb.checked = false;
@@ -1128,7 +1167,7 @@
                 }
             });
 
-            // Event-Listener für visuelle Aktualisierung
+            // Event-Listener für visuelle Aktualisierung der Timeframes
             checkboxes.forEach(cb => {
                 cb.onchange = () => {
                     if (cb.checked) {
@@ -1139,16 +1178,28 @@
                 };
             });
 
-            document.getElementById('tfPopup').classList.add('active');
+            document.getElementById('editPopup').classList.add('active');
         }
 
-        function closeTfPopup() {
-            document.getElementById('tfPopup').classList.remove('active');
-            currentTfSymbol = null;
+        function closeEditPopup() {
+            document.getElementById('editPopup').classList.remove('active');
+            currentEditSymbol = null;
         }
 
-        async function saveTfSelection() {
-            if (!currentTfSymbol) return;
+        function toggleEditFavorite() {
+            const checkbox = document.getElementById('editFavorite');
+            // Toggle wird vom Click-Event behandelt
+            setTimeout(updateEditFavoriteStyle, 0);
+        }
+
+        function updateEditFavoriteStyle() {
+            const checkbox = document.getElementById('editFavorite');
+            const group = document.getElementById('editFavoriteGroup');
+            group.classList.toggle('checked', checkbox.checked);
+        }
+
+        async function saveWatchlistItem() {
+            if (!currentEditSymbol) return;
 
             const checkboxes = document.querySelectorAll('#tfOptions input[type="checkbox"]:checked');
             const selectedTimeframes = Array.from(checkboxes).map(cb => cb.value);
@@ -1158,16 +1209,23 @@
                 return;
             }
 
+            const updateData = {
+                is_favorite: document.getElementById('editFavorite').checked,
+                alert_threshold: parseFloat(document.getElementById('editAlertThreshold').value) || 70,
+                timeframes: selectedTimeframes,
+                notes: document.getElementById('editNotes').value.trim() || null
+            };
+
             try {
-                const response = await fetch(`${API_BASE}/watchlist/${currentTfSymbol}`, {
+                const response = await fetch(`${API_BASE}/watchlist/${currentEditSymbol}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ timeframes: selectedTimeframes })
+                    body: JSON.stringify(updateData)
                 });
 
                 if (response.ok) {
-                    showToast(`Timeframes für ${currentTfSymbol} aktualisiert`, 'success');
-                    closeTfPopup();
+                    showToast(`${currentEditSymbol} aktualisiert`, 'success');
+                    closeEditPopup();
                     loadWatchlist();
                 } else {
                     const error = await response.json();
@@ -1180,11 +1238,11 @@
 
         // Popup schliessen bei Escape oder Klick ausserhalb
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeTfPopup();
+            if (e.key === 'Escape') closeEditPopup();
         });
 
-        document.getElementById('tfPopup')?.addEventListener('click', (e) => {
-            if (e.target.classList.contains('tf-popup')) closeTfPopup();
+        document.getElementById('editPopup')?.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tf-popup')) closeEditPopup();
         });
 
         // ==================== SCANNER ====================
@@ -1435,6 +1493,13 @@
             toast.textContent = message;
             toast.className = `toast ${type} show`;
             setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML.replace(/"/g, '&quot;');
         }
     </script>
 </body>
