@@ -250,3 +250,33 @@ async def trigger_evaluation():
             status_code=500,
             detail=f"Fehler: {str(e)}"
         )
+
+
+@router.delete(
+    "/cleanup-invalid",
+    summary="Ungültige Setups bereinigen",
+    description="Löscht Setups ohne Entry-Preis, die nicht evaluiert werden können."
+)
+async def cleanup_invalid_predictions():
+    """
+    Bereinigt Prediction History.
+
+    Löscht alle Workplace-Setups die keinen Entry-Preis haben
+    und daher nicht evaluiert werden können.
+    """
+    try:
+        result = await setup_recorder.cleanup_invalid_predictions()
+
+        return {
+            "success": True,
+            "checked": result.get("checked", 0),
+            "deleted": result.get("deleted", 0),
+            "message": f"{result.get('deleted', 0)} ungültige Setups gelöscht"
+        }
+
+    except Exception as e:
+        logger.error(f"Fehler beim Bereinigen: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Fehler: {str(e)}"
+        )

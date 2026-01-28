@@ -311,6 +311,49 @@
             font-size: 0.8rem;
         }
 
+        .entry-price {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #f0f0f0;
+        }
+
+        .signals-count {
+            text-align: center;
+            color: #94a3b8;
+        }
+
+        .alignment-badge {
+            display: inline-block;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .alignment-badge.high {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .alignment-badge.medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .alignment-badge.low {
+            background: rgba(148, 163, 184, 0.15);
+            color: #94a3b8;
+        }
+
+        /* Table header tooltips */
+        .journal-table th {
+            cursor: help;
+        }
+
+        .journal-table th[title]:hover {
+            color: #64c8ff;
+        }
+
         /* Pagination */
         .pagination {
             display: flex;
@@ -417,6 +460,7 @@
             </div>
             <h1>Setup Journal</h1>
             <div class="header-right">
+                <button class="btn btn-secondary" onclick="cleanupInvalid()" title="Setups ohne Entry-Preis löschen">Bereinigen</button>
                 <button class="btn btn-secondary" onclick="triggerEvaluation()">Evaluation starten</button>
                 <a href="config-workplace.html" class="btn btn-secondary">Config</a>
             </div>
@@ -487,9 +531,37 @@
                         <option value="incorrect">Falsch</option>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <label>Min. Score</label>
+                    <select id="filterScore">
+                        <option value="">Alle</option>
+                        <option value="75">≥ 75 (Stark)</option>
+                        <option value="65">≥ 65</option>
+                        <option value="60">≥ 60</option>
+                        <option value="50">≥ 50</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Min. Signale</label>
+                    <select id="filterSignals">
+                        <option value="">Alle</option>
+                        <option value="4">≥ 4</option>
+                        <option value="3">≥ 3</option>
+                        <option value="2">≥ 2</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Alignment</label>
+                    <select id="filterAlignment">
+                        <option value="">Alle</option>
+                        <option value="strong">Strong</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="mixed">Mixed</option>
+                        <option value="conflict">Conflict</option>
+                    </select>
+                </div>
                 <div class="filter-actions">
-                    <button class="btn btn-primary" onclick="applyFilters()">Filtern</button>
-                    <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+                    <button class="btn btn-secondary" onclick="resetFilters()">Filter zurücksetzen</button>
                 </div>
             </div>
         </div>
@@ -526,6 +598,15 @@
         let symbols = [];
 
         async function init() {
+            // Event-Listener für sofortige Filter-Reaktion
+            document.getElementById('filterSymbol').addEventListener('change', applyFilters);
+            document.getElementById('filterTimeframe').addEventListener('change', applyFilters);
+            document.getElementById('filterDirection').addEventListener('change', applyFilters);
+            document.getElementById('filterEvaluated').addEventListener('change', applyFilters);
+            document.getElementById('filterScore').addEventListener('change', applyFilters);
+            document.getElementById('filterSignals').addEventListener('change', applyFilters);
+            document.getElementById('filterAlignment').addEventListener('change', applyFilters);
+
             await Promise.all([
                 loadStats(),
                 loadSymbols(),
@@ -611,14 +692,42 @@
 
                 let predictions = await response.json();
 
-                // Client-side filtering for direction and correct/incorrect
+                // Client-side filtering
                 const direction = document.getElementById('filterDirection').value;
                 const evalFilter = document.getElementById('filterEvaluated').value;
+                const minScore = document.getElementById('filterScore').value;
+                const minSignals = document.getElementById('filterSignals').value;
+                const alignmentFilter = document.getElementById('filterAlignment').value;
 
                 if (direction) {
                     predictions = predictions.filter(p => {
                         const pred = p.prediction || {};
                         return pred.direction === direction;
+                    });
+                }
+
+                if (minScore) {
+                    const minScoreNum = parseFloat(minScore);
+                    predictions = predictions.filter(p => {
+                        const pred = p.prediction || {};
+                        return (pred.composite_score || 0) >= minScoreNum;
+                    });
+                }
+
+                if (minSignals) {
+                    const minSigNum = parseInt(minSignals);
+                    predictions = predictions.filter(p => {
+                        const pred = p.prediction || {};
+                        const { signalsCount } = analyzeSignals(pred.signals || {}, pred.direction || 'neutral');
+                        return signalsCount >= minSigNum;
+                    });
+                }
+
+                if (alignmentFilter) {
+                    predictions = predictions.filter(p => {
+                        const pred = p.prediction || {};
+                        const { alignment } = analyzeSignals(pred.signals || {}, pred.direction || 'neutral');
+                        return alignment === alignmentFilter;
                     });
                 }
 
@@ -667,14 +776,16 @@
             let html = `<table class="journal-table">
                 <thead>
                     <tr>
-                        <th>Zeitpunkt</th>
-                        <th>Symbol</th>
-                        <th>TF</th>
-                        <th>Richtung</th>
-                        <th>Score</th>
-                        <th>Konfidenz</th>
-                        <th>Ziel-Zeit</th>
-                        <th>Status</th>
+                        <th title="Zeitpunkt der Setup-Erkennung">Zeit</th>
+                        <th title="Trading-Symbol">Symbol</th>
+                        <th title="Timeframe der Analyse">TF</th>
+                        <th title="Empfohlene Handelsrichtung">Richtung</th>
+                        <th title="Entry-Preis zum Zeitpunkt der Erkennung">Entry</th>
+                        <th title="Composite Score (0-100): Gewichteter Durchschnitt aller ML-Signale">Score</th>
+                        <th title="Anzahl der ML-Services die ein Signal geliefert haben (max. 5)">Signale</th>
+                        <th title="Signal-Alignment: Übereinstimmung der ML-Signale (strong/moderate/mixed)">Align</th>
+                        <th title="Zeitpunkt für die Evaluation (abhängig vom Timeframe)">Ziel</th>
+                        <th title="Evaluationsstatus: Ausstehend, Korrekt oder Falsch">Status</th>
                     </tr>
                 </thead>
                 <tbody>`;
@@ -683,29 +794,35 @@
                 const pred = p.prediction || {};
                 const direction = pred.direction || 'neutral';
                 const score = pred.composite_score || 0;
-                const confidence = p.confidence ? (p.confidence * 100).toFixed(0) : '-';
+                const entryPrice = pred.entry_price ? formatPrice(pred.entry_price, p.symbol) : '-';
 
                 const predictedAt = p.predicted_at ? formatDateTime(p.predicted_at) : '-';
                 const targetTime = p.target_time ? formatDateTime(p.target_time) : '-';
 
+                // Berechne verfügbare Signale und Alignment
+                const { signalsCount, alignment } = analyzeSignals(pred.signals || {}, direction);
+
                 let evalBadge = '<span class="eval-badge pending">Ausstehend</span>';
                 if (p.evaluated_at) {
                     if (p.is_correct === true) {
-                        evalBadge = '<span class="eval-badge correct">Korrekt</span>';
+                        evalBadge = '<span class="eval-badge correct">✓</span>';
                     } else if (p.is_correct === false) {
-                        evalBadge = '<span class="eval-badge incorrect">Falsch</span>';
+                        evalBadge = '<span class="eval-badge incorrect">✗</span>';
                     }
                 }
 
                 const scoreClass = score >= 75 ? 'high' : score >= 50 ? 'medium' : 'low';
+                const alignClass = alignment === 'strong' ? 'high' : alignment === 'moderate' ? 'medium' : 'low';
 
                 html += `<tr>
                     <td class="timestamp">${predictedAt}</td>
                     <td class="symbol-cell">${p.symbol}</td>
                     <td>${p.timeframe}</td>
                     <td><span class="direction-badge ${direction}">${direction.toUpperCase()}</span></td>
+                    <td class="entry-price">${entryPrice}</td>
                     <td><span class="score-value ${scoreClass}">${score.toFixed(1)}</span></td>
-                    <td>${confidence}%</td>
+                    <td class="signals-count">${signalsCount}/5</td>
+                    <td><span class="alignment-badge ${alignClass}">${alignment}</span></td>
                     <td class="timestamp">${targetTime}</td>
                     <td>${evalBadge}</td>
                 </tr>`;
@@ -724,6 +841,71 @@
                 hour: '2-digit',
                 minute: '2-digit'
             });
+        }
+
+        function formatPrice(price, symbol) {
+            // Bestimme Dezimalstellen basierend auf Symbol
+            let decimals = 2;
+            if (symbol && (symbol.includes('JPY') || symbol.includes('XAU') || symbol.includes('XAG'))) {
+                decimals = 3;
+            } else if (symbol && symbol.includes('BTC')) {
+                decimals = 1;
+            } else if (symbol && (symbol.includes('USD') && !symbol.includes('BTC') && !symbol.includes('ETH'))) {
+                decimals = 5;  // Forex
+            }
+            return price.toLocaleString('de-CH', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+
+        function analyzeSignals(signals, setupDirection) {
+            // Zähle verfügbare Signale und berechne Alignment
+            const serviceNames = ['nhits', 'hmm', 'tcn', 'candlestick', 'technical'];
+            let availableCount = 0;
+            let sameDirection = 0;
+            let oppositeDirection = 0;
+
+            serviceNames.forEach(name => {
+                const sig = signals[name];
+                if (sig && sig.available) {
+                    availableCount++;
+
+                    // Bestimme Signal-Richtung
+                    let sigDir = 'neutral';
+                    if (sig.direction) {
+                        sigDir = sig.direction;
+                    } else if (sig.alignment === 'aligned') {
+                        sigDir = setupDirection;
+                    } else if (sig.alignment === 'contrary') {
+                        sigDir = setupDirection === 'long' ? 'short' : 'long';
+                    } else if (sig.macd_signal === 'bullish' || sig.rsi_signal === 'oversold') {
+                        sigDir = 'long';
+                    } else if (sig.macd_signal === 'bearish' || sig.rsi_signal === 'overbought') {
+                        sigDir = 'short';
+                    }
+
+                    if (sigDir === setupDirection) {
+                        sameDirection++;
+                    } else if (sigDir !== 'neutral' && sigDir !== setupDirection) {
+                        oppositeDirection++;
+                    }
+                }
+            });
+
+            // Berechne Alignment
+            let alignment = 'mixed';
+            if (availableCount === 0) {
+                alignment = '-';
+            } else if (oppositeDirection === 0 && sameDirection >= 2) {
+                alignment = 'strong';
+            } else if (sameDirection > oppositeDirection) {
+                alignment = 'moderate';
+            } else if (oppositeDirection > sameDirection) {
+                alignment = 'conflict';
+            }
+
+            return { signalsCount: availableCount, alignment };
         }
 
         function updatePagination() {
@@ -765,8 +947,42 @@
             document.getElementById('filterTimeframe').value = '';
             document.getElementById('filterDirection').value = '';
             document.getElementById('filterEvaluated').value = '';
+            document.getElementById('filterScore').value = '';
+            document.getElementById('filterSignals').value = '';
+            document.getElementById('filterAlignment').value = '';
             currentPage = 0;
             loadPredictions();
+        }
+
+        async function cleanupInvalid() {
+            if (!confirm('Alle Setups ohne Entry-Preis löschen?\n\nDiese können nicht evaluiert werden und werden dauerhaft entfernt.')) {
+                return;
+            }
+
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Bereinige...';
+
+            try {
+                const response = await fetch(`${WORKPLACE_URL}/api/v1/scan/cleanup-invalid`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Bereinigung fehlgeschlagen');
+                const result = await response.json();
+
+                alert(`Bereinigung abgeschlossen:\n${result.checked} geprüft\n${result.deleted} gelöscht`);
+
+                // Refresh data
+                await loadStats();
+                await loadPredictions();
+
+            } catch (e) {
+                alert('Fehler bei Bereinigung: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Bereinigen';
+            }
         }
 
         async function triggerEvaluation() {
@@ -782,7 +998,17 @@
                 if (!response.ok) throw new Error('Evaluation fehlgeschlagen');
                 const result = await response.json();
 
-                alert(`Evaluation abgeschlossen:\n${result.evaluated} ausgewertet\n${result.correct} korrekt\n${result.incorrect} falsch`);
+                let msg = `Evaluation abgeschlossen:\n`;
+                msg += `${result.evaluated} geprüft\n`;
+                msg += `${result.correct} korrekt\n`;
+                msg += `${result.incorrect} falsch`;
+                if (result.errors > 0) {
+                    msg += `\n${result.errors} übersprungen (kein Entry-Preis)`;
+                }
+                if (result.accuracy_percent !== null) {
+                    msg += `\n\nTrefferquote: ${result.accuracy_percent.toFixed(1)}%`;
+                }
+                alert(msg);
 
                 // Refresh data
                 await loadStats();

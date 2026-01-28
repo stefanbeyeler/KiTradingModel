@@ -73,6 +73,7 @@ class PredictionSummary(BaseModel):
     symbol: str
     timeframe: str
     prediction_type: str
+    prediction: Optional[dict] = None  # Full prediction data including entry_price
     confidence: Optional[float] = None
     predicted_at: datetime
     target_time: Optional[datetime] = None
@@ -259,6 +260,8 @@ class PredictionHistoryService:
             return None
 
         try:
+            import json as json_module
+
             pool = timescaledb_service._pool
             async with pool.acquire() as conn:
                 row = await conn.fetchrow(
@@ -276,19 +279,28 @@ class PredictionHistoryService:
                 if not row:
                     return None
 
+                # Parse JSONB fields if returned as strings
+                prediction_data = row["prediction"]
+                if isinstance(prediction_data, str):
+                    prediction_data = json_module.loads(prediction_data)
+
+                actual_outcome = row["actual_outcome"]
+                if isinstance(actual_outcome, str):
+                    actual_outcome = json_module.loads(actual_outcome)
+
                 return PredictionResult(
                     prediction_id=str(row["prediction_id"]),
                     service=row["service"],
                     symbol=row["symbol"],
                     timeframe=row["timeframe"],
                     prediction_type=row["prediction_type"],
-                    prediction=row["prediction"],
+                    prediction=prediction_data,
                     confidence=float(row["confidence"]) if row["confidence"] else None,
                     predicted_at=row["predicted_at"],
                     target_time=row["target_time"],
                     horizon=row["horizon"],
                     model_version=row["model_version"],
-                    actual_outcome=row["actual_outcome"],
+                    actual_outcome=actual_outcome,
                     evaluated_at=row["evaluated_at"],
                     is_correct=row["is_correct"],
                     accuracy_score=float(row["accuracy_score"]) if row["accuracy_score"] else None,
@@ -314,11 +326,13 @@ class PredictionHistoryService:
             return []
 
         try:
+            import json as json_module
+
             pool = timescaledb_service._pool
             async with pool.acquire() as conn:
                 query = """
                     SELECT prediction_id, service, symbol, timeframe, prediction_type,
-                           confidence, predicted_at, target_time, is_correct, evaluated_at
+                           prediction, confidence, predicted_at, target_time, is_correct, evaluated_at
                     FROM prediction_history
                     WHERE 1=1
                 """
@@ -352,21 +366,27 @@ class PredictionHistoryService:
 
                 rows = await conn.fetch(query, *params)
 
-                return [
-                    PredictionSummary(
+                results = []
+                for row in rows:
+                    # Parse JSONB prediction field
+                    prediction_data = row["prediction"]
+                    if isinstance(prediction_data, str):
+                        prediction_data = json_module.loads(prediction_data)
+
+                    results.append(PredictionSummary(
                         prediction_id=str(row["prediction_id"]),
                         service=row["service"],
                         symbol=row["symbol"],
                         timeframe=row["timeframe"],
                         prediction_type=row["prediction_type"],
+                        prediction=prediction_data,
                         confidence=float(row["confidence"]) if row["confidence"] else None,
                         predicted_at=row["predicted_at"],
                         target_time=row["target_time"],
                         is_correct=row["is_correct"],
                         evaluated_at=row["evaluated_at"],
-                    )
-                    for row in rows
-                ]
+                    ))
+                return results
         except Exception as e:
             logger.error(f"Failed to list predictions: {e}")
             return []
@@ -512,6 +532,42 @@ class PredictionHistoryService:
         except Exception as e:
             logger.error(f"Failed to cleanup old predictions: {e}")
             return 0
+
+    async def cleanup_invalid_predictions(self, service: str = "workplace") -> dict:
+        """
+        Delete predictions without entry_price that cannot be evaluated.
+
+        Args:
+            service: Service to cleanup (default: workplace)
+
+        Returns:
+            Statistics dictionary with deleted count
+        """
+        if not await self.initialize():
+            return {"deleted": 0, "error": "Service not initialized"}
+
+        try:
+            pool = timescaledb_service._pool
+            async with pool.acquire() as conn:
+                # Delete predictions where prediction->entry_price is null or missing
+                result = await conn.execute(
+                    """
+                    DELETE FROM prediction_history
+                    WHERE service = $1
+                      AND (
+                          prediction->>'entry_price' IS NULL
+                          OR prediction->>'entry_price' = 'null'
+                      )
+                    """,
+                    service,
+                )
+                deleted = int(result.split()[-1])
+                if deleted > 0:
+                    logger.info(f"Cleaned up {deleted} invalid predictions for {service}")
+                return {"deleted": deleted, "service": service}
+        except Exception as e:
+            logger.error(f"Failed to cleanup invalid predictions: {e}")
+            return {"deleted": 0, "error": str(e)}
 
 
 # Singleton instance

@@ -67,6 +67,44 @@ class SetupRecorderService:
             delay = HORIZON_DELAYS.get(horizon, timedelta(hours=4))
             target_time = datetime.now(timezone.utc) + delay
 
+            # Fetch current price as entry_price for later evaluation
+            entry_price = getattr(setup, 'entry_price', None) or getattr(setup, 'current_price', None)
+            if not entry_price:
+                try:
+                    # Try market-snapshot first (cached data)
+                    price_response = await client.get(
+                        f"{self._data_service_url}/api/v1/db/market-snapshot/{setup.symbol}",
+                        params={"timeframe": setup.timeframe or "H1"}
+                    )
+                    if price_response.status_code == 200:
+                        price_data = price_response.json()
+                        entry_price = price_data.get("price", {}).get("last")
+
+                    # Fallback: Try TwelveData OHLCV (fresh data)
+                    if not entry_price:
+                        # Map timeframe to TwelveData interval
+                        tf_map = {
+                            "M1": "1min", "M5": "5min", "M15": "15min", "M30": "30min",
+                            "H1": "1h", "H4": "4h", "D1": "1day", "W1": "1week", "MN": "1month"
+                        }
+                        td_interval = tf_map.get(setup.timeframe or "H1", "1h")
+
+                        ohlcv_response = await client.get(
+                            f"{self._data_service_url}/api/v1/twelvedata/time_series/{setup.symbol}",
+                            params={"interval": td_interval, "outputsize": 1}
+                        )
+                        if ohlcv_response.status_code == 200:
+                            ohlcv_data = ohlcv_response.json()
+                            values = ohlcv_data.get("values", [])
+                            if values:
+                                entry_price = float(values[0].get("close", 0))
+
+                    if not entry_price:
+                        logger.warning(f"Could not fetch entry price for {setup.symbol} - setup will not be evaluable")
+
+                except Exception as e:
+                    logger.debug(f"Could not fetch entry price for {setup.symbol}: {e}")
+
             # Build prediction data
             confidence_str = "low"
             if setup.confidence_level:
@@ -88,7 +126,7 @@ class SetupRecorderService:
                         "candlestick": _signal_to_dict(setup.candlestick_signal) if hasattr(setup, 'candlestick_signal') and setup.candlestick_signal else None,
                         "technical": _signal_to_dict(setup.technical_signal) if hasattr(setup, 'technical_signal') and setup.technical_signal else None,
                     },
-                    "entry_price": getattr(setup, 'entry_price', None),
+                    "entry_price": entry_price,
                     "stop_loss": getattr(setup, 'stop_loss', None),
                     "take_profit": getattr(setup, 'take_profit', None),
                 },
@@ -292,6 +330,64 @@ class SetupRecorderService:
         except Exception as e:
             logger.error(f"Error getting accuracy stats: {e}")
             return {}
+
+    async def cleanup_invalid_predictions(self) -> dict:
+        """
+        Delete predictions that cannot be evaluated (no entry_price).
+
+        Uses the Data Service's optimized cleanup endpoint for fast execution.
+
+        Returns:
+            Statistics about cleanup operation
+        """
+        stats = {
+            "checked": 0,
+            "deleted": 0,
+            "errors": 0,
+        }
+
+        try:
+            client = await self._get_client()
+
+            # First, count total predictions to report "checked"
+            count_response = await client.get(
+                f"{self._data_service_url}/api/v1/predictions/",
+                params={"service": "workplace", "limit": 1}
+            )
+
+            # Use Data Service's optimized cleanup endpoint (runs directly in DB)
+            response = await client.post(
+                f"{self._data_service_url}/api/v1/predictions/cleanup-invalid",
+                params={"service": "workplace"},
+                timeout=30.0
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                stats["deleted"] = result.get("deleted_count", 0)
+
+                # Get updated count
+                new_count_response = await client.get(
+                    f"{self._data_service_url}/api/v1/predictions/stats",
+                    params={"service": "workplace"}
+                )
+                if new_count_response.status_code == 200:
+                    new_stats = new_count_response.json()
+                    stats["checked"] = new_stats.get("total_predictions", 0) + stats["deleted"]
+
+                logger.info(
+                    f"Cleanup: {stats['checked']} geprüft, "
+                    f"{stats['deleted']} gelöscht"
+                )
+            else:
+                logger.warning(f"Cleanup failed: {response.status_code}")
+                stats["errors"] = 1
+
+        except Exception as e:
+            logger.error(f"Error in cleanup_invalid_predictions: {e}")
+            stats["errors"] = 1
+
+        return stats
 
 
 def _signal_to_dict(signal) -> dict:

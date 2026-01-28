@@ -258,3 +258,22 @@ async def cleanup_old_predictions(
         "deleted_count": deleted,
         "message": f"{deleted} old predictions deleted",
     }
+
+
+@router.post("/cleanup-invalid")
+async def cleanup_invalid_predictions(
+    service: str = Query(default="workplace", description="Service zu bereinigen"),
+):
+    """
+    Ungültige Vorhersagen bereinigen.
+
+    Löscht Vorhersagen ohne entry_price, die nicht evaluiert werden können.
+    """
+    result = await prediction_history_service.cleanup_invalid_predictions(service=service)
+
+    return {
+        "status": "ok",
+        "deleted_count": result.get("deleted", 0),
+        "service": result.get("service"),
+        "message": f"{result.get('deleted', 0)} invalid predictions deleted",
+    }
