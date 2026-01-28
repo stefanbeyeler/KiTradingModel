@@ -102,6 +102,68 @@ CRYPTO_SUFFIXES = {
     'BTC', 'ETH', 'BNB', 'SOL',  # Crypto bases
 }
 
+# Symbol aliases - maps user input to canonical DB symbol
+# Format: alias -> canonical
+SYMBOL_ALIASES = {
+    # German indices
+    'DE40': 'GER40',
+    'DE30': 'GER40',
+    'DAX': 'GER40',
+    'DAX40': 'GER40',
+    'DAX30': 'GER40',
+    # US indices
+    'US100': 'NAS100',
+    'NASDAQ': 'NAS100',
+    'NDX': 'NAS100',
+    'SPX': 'US500',
+    'SPX500': 'US500',
+    'SP500': 'US500',
+    'DJ30': 'US30',
+    'DJI': 'US30',
+    # UK indices
+    'FTSE': 'UK100',
+    'FTSE100': 'UK100',
+    # Japan indices
+    'NIKKEI': 'JP225',
+    'NIK225': 'JP225',
+    'NK225': 'JP225',
+    'JPN225': 'JP225',
+    # Australia
+    'ASX200': 'AUS200',
+    'AU200': 'AUS200',
+    # France
+    'CAC': 'FRA40',
+    'CAC40': 'FRA40',
+    'FR40': 'FRA40',
+    # Europe
+    'STOXX': 'EURO50',
+    'STOXX50': 'EURO50',
+    'EU50': 'EURO50',
+    'EUSTX50': 'EURO50',
+    # Commodities
+    'GOLD': 'XAUUSD',
+    'SILVER': 'XAGUSD',
+    'OIL': 'XTIUSD',
+    'WTI': 'XTIUSD',
+    'USOIL': 'XTIUSD',
+    'BRENT': 'XBRUSD',
+    'UKOIL': 'XBRUSD',
+}
+
+
+def normalize_symbol(symbol: str) -> str:
+    """
+    Normalize a symbol by resolving aliases to canonical names.
+
+    Args:
+        symbol: User-provided symbol (e.g., 'DE40', 'NASDAQ')
+
+    Returns:
+        Canonical symbol name (e.g., 'GER40', 'NAS100')
+    """
+    upper = symbol.upper().strip()
+    return SYMBOL_ALIASES.get(upper, upper)
+
 
 def categorize_symbol(symbol: str) -> str:
     """Categorize a trading symbol into asset class."""
@@ -198,10 +260,14 @@ async def get_ohlcv_from_db(
     OHLCV-Daten aus TimescaleDB abrufen.
 
     Verwendet den 3-Layer-Cache (Redis → TimescaleDB → API).
+    Symbol-Aliase (DE40, NASDAQ, etc.) werden automatisch aufgelöst.
     """
     try:
+        # Normalize symbol (resolve aliases like DE40 -> GER40)
+        canonical_symbol = normalize_symbol(symbol)
+
         data, source = await data_repository.get_ohlcv(
-            symbol=symbol.upper(),
+            symbol=canonical_symbol,
             timeframe=timeframe,
             limit=limit,
             start_time=start_time,
@@ -212,7 +278,7 @@ async def get_ohlcv_from_db(
         tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
 
         return OHLCVResponse(
-            symbol=symbol.upper(),
+            symbol=canonical_symbol,  # Return canonical symbol
             timeframe=tf.value,
             count=len(data),
             source=source,
@@ -230,8 +296,10 @@ async def get_latest_ohlcv(
 ):
     """Get the latest OHLCV timestamp for symbol/timeframe."""
     try:
+        canonical_symbol = normalize_symbol(symbol)
+
         latest = await timescaledb_service.get_latest_timestamp(
-            symbol=symbol.upper(),
+            symbol=canonical_symbol,
             timeframe=timeframe,
         )
 
@@ -239,7 +307,7 @@ async def get_latest_ohlcv(
             raise HTTPException(status_code=404, detail="No data found")
 
         return {
-            "symbol": symbol.upper(),
+            "symbol": canonical_symbol,
             "timeframe": timeframe,
             "latest_timestamp": latest.isoformat(),
         }
@@ -260,14 +328,16 @@ async def get_data_freshness(
 ):
     """Aktualitätsstatus für Symbol/Timeframe abrufen."""
     try:
+        canonical_symbol = normalize_symbol(symbol)
+
         freshness = await data_repository.get_freshness(
-            symbol=symbol.upper(),
+            symbol=canonical_symbol,
             timeframe=timeframe,
             data_type=data_type,
         )
 
         is_stale = await data_repository.is_data_stale(
-            symbol=symbol.upper(),
+            symbol=canonical_symbol,
             timeframe=timeframe,
             data_type=data_type,
         )
@@ -275,7 +345,7 @@ async def get_data_freshness(
         tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
 
         return FreshnessResponse(
-            symbol=symbol.upper(),
+            symbol=canonical_symbol,
             timeframe=tf.value,
             data_type=data_type,
             last_updated=freshness.get("last_updated") if freshness else None,
@@ -767,19 +837,21 @@ async def get_market_snapshot(
 
     Aggregiert die neuesten Indikatordaten in einem strukturierten Format
     für die Signal-Aggregation im Trading Workplace Service.
+    Symbol-Aliase (DE40, NASDAQ, etc.) werden automatisch aufgelöst.
     """
     try:
+        canonical_symbol = normalize_symbol(symbol)
         tf = normalize_timeframe_safe(timeframe, Timeframe.H1)
 
         # Get latest OHLCV data for current price
         ohlcv_data, _ = await data_repository.get_ohlcv(
-            symbol=symbol.upper(),
+            symbol=canonical_symbol,
             timeframe=tf.value,
             limit=1,
         )
 
         if not ohlcv_data:
-            raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
+            raise HTTPException(status_code=404, detail=f"No data found for {canonical_symbol}")
 
         latest_ohlcv = ohlcv_data[0] if ohlcv_data else {}
         current_price = float(latest_ohlcv.get("close", 0))
@@ -787,12 +859,12 @@ async def get_market_snapshot(
 
         # Get latest momentum indicators (RSI, MACD, Stochastic)
         momentum_data = await timescaledb_service.get_momentum_indicators(
-            symbol.upper(), tf.value, limit=1
+            canonical_symbol, tf.value, limit=1
         )
 
         # Get latest volatility indicators (Bollinger Bands, ATR)
         volatility_data = await timescaledb_service.get_volatility_indicators(
-            symbol.upper(), tf.value, limit=1
+            canonical_symbol, tf.value, limit=1
         )
 
         # Build response structure
@@ -830,7 +902,7 @@ async def get_market_snapshot(
         }
 
         return MarketSnapshotResponse(
-            symbol=symbol.upper(),
+            symbol=canonical_symbol,
             timeframe=tf.value,
             timestamp=timestamp.isoformat() if hasattr(timestamp, 'isoformat') else str(timestamp) if timestamp else None,
             price={

@@ -596,14 +596,15 @@ class DataRepository:
         # Very generous intervals - prefer using existing data over requiring API calls.
         # ML models (CNN-LSTM, NHITS) can work with slightly older data.
         # For real-time trading, use force_refresh=True.
+        # Note: Indices/Forex don't trade on weekends, so intervals must cover Fri→Mon+
         freshness_intervals = {
-            Timeframe.M1: timedelta(hours=1),        # 1 hour for intraday
-            Timeframe.M5: timedelta(hours=2),        # 2 hours
-            Timeframe.M15: timedelta(hours=4),       # 4 hours
-            Timeframe.M30: timedelta(hours=6),       # 6 hours
-            Timeframe.H1: timedelta(days=2),         # 2 days - covers weekends
-            Timeframe.H4: timedelta(days=3),         # 3 days
-            Timeframe.D1: timedelta(days=7),         # 1 week
+            Timeframe.M1: timedelta(hours=2),        # 2 hours for intraday
+            Timeframe.M5: timedelta(hours=4),        # 4 hours
+            Timeframe.M15: timedelta(hours=8),       # 8 hours
+            Timeframe.M30: timedelta(hours=12),      # 12 hours
+            Timeframe.H1: timedelta(days=4),         # 4 days - covers weekends + holidays
+            Timeframe.H4: timedelta(days=5),         # 5 days
+            Timeframe.D1: timedelta(days=10),        # 10 days
             Timeframe.W1: timedelta(days=30),        # 1 month
             Timeframe.MN: timedelta(days=90),        # 3 months
         }
