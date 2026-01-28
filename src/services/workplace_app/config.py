@@ -57,6 +57,9 @@ class WorkplaceSettings(BaseSettings):
     default_alert_threshold: float = 70.0
     max_watchlist_size: int = 100
 
+    # Trading Strategies
+    strategies_file: str = "/app/data/strategies.json"
+
     # Default Watchlist-Symbole
     default_symbols: list[str] = [
         "BTCUSD", "ETHUSD", "EURUSD", "GBPUSD", "USDJPY",

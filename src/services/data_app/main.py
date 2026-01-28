@@ -3,7 +3,6 @@ Data Service - Symbol Management & Data Gateway Microservice
 
 Handles:
 - Symbol Management
-- Trading Strategies
 - RAG Synchronization
 - Query Logs
 - External Data Sources Gateway
@@ -28,7 +27,6 @@ from src.config import settings
 from src.version import VERSION
 from src.api.routes import (
     symbol_router,
-    strategy_router,
     sync_router,
     system_router,
     query_log_router,
@@ -149,67 +147,63 @@ openapi_tags = [
         "description": "Trading-Symbole verwalten (Forex, Crypto, Indizes)"
     },
     {
-        "name": "3. Trading Strategies",
-        "description": "Handelsstrategien erstellen und verwalten"
-    },
-    {
-        "name": "4. Config Export/Import",
+        "name": "3. Config Export/Import",
         "description": "Konfiguration exportieren und importieren"
     },
     {
-        "name": "5. Database",
+        "name": "4. Database",
         "description": "TimescaleDB OHLCV-Daten und Indikatoren"
     },
     {
-        "name": "6. TwelveData API",
+        "name": "5. TwelveData API",
         "description": "OHLC-Daten und Indikatoren (M1-MN, 50+ Indikatoren)"
     },
     {
-        "name": "7. EasyInsight API",
+        "name": "6. EasyInsight API",
         "description": "TwelveData-kompatible API v2.0 (alle Timeframes)"
     },
     {
-        "name": "8. Yahoo Finance",
+        "name": "7. Yahoo Finance",
         "description": "Historische Kursdaten (kostenloser Fallback)"
     },
     {
-        "name": "9. RAG Sync",
+        "name": "8. RAG Sync",
         "description": "Marktdaten-Synchronisation zur RAG Knowledge Base"
     },
     {
-        "name": "10. Query Logs",
+        "name": "9. Query Logs",
         "description": "Query-Logging und Analytics"
     },
     {
-        "name": "11. External Sources",
+        "name": "10. External Sources",
         "description": "Economic Calendar, Sentiment, On-Chain, Macro"
     },
     {
-        "name": "12. Technical Indicators",
+        "name": "11. Technical Indicators",
         "description": "Indikator-Registry mit API-Mappings"
     },
     {
-        "name": "13. Testing",
+        "name": "12. Testing",
         "description": "Test-Suite und Quality Assurance"
     },
     {
-        "name": "14. Validation History",
+        "name": "13. Validation History",
         "description": "Validierungsläufe speichern und abrufen"
     },
     {
-        "name": "15. Prediction History",
+        "name": "14. Prediction History",
         "description": "Vorhersagen aller Services speichern und evaluieren"
     },
     {
-        "name": "16. Service Runs",
+        "name": "15. Service Runs",
         "description": "Service-Läufe protokollieren und auswerten"
     },
     {
-        "name": "17. Kanban Board",
+        "name": "16. Kanban Board",
         "description": "Task-Management Board mit Backend-Persistenz"
     },
     {
-        "name": "18. MT5 Trades",
+        "name": "17. MT5 Trades",
         "description": "MT5 Terminal-Verwaltung und Trade-Aufzeichnung"
     },
 ]
@@ -224,7 +218,6 @@ Zentraler Service für Datenmanagement im KI Trading Model System.
 ### Hauptfunktionen
 
 - **Symbol Management**: Verwaltung von Trading-Symbolen (Forex, Crypto, Indizes)
-- **Trading Strategies**: Konfiguration und Verwaltung von Handelsstrategien
 - **TwelveData Integration**: Marktdaten und technische Indikatoren (primär)
 - **EasyInsight Integration**: TwelveData-kompatible API v2.0 (1. Fallback)
 - **Yahoo Finance Integration**: Historische Kursdaten (2. Fallback)
@@ -273,43 +266,42 @@ app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
 app.include_router(system_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(general_router, prefix="/api/v1", tags=["1. System"])
 app.include_router(symbol_router, prefix="/api/v1", tags=["2. Symbol Management"])
-app.include_router(strategy_router, prefix="/api/v1", tags=["3. Trading Strategies"])
-app.include_router(config_router, prefix="/api/v1", tags=["4. Config Export/Import"])
+app.include_router(config_router, prefix="/api/v1", tags=["3. Config Export/Import"])
 # Include DB router if available (requires asyncpg)
 if _db_routes_available and db_router:
-    app.include_router(db_router, prefix="/api/v1", tags=["5. Database"])
-app.include_router(twelvedata_router, prefix="/api/v1", tags=["6. TwelveData API"])
-app.include_router(easyinsight_router, prefix="/api/v1", tags=["7. EasyInsight API"])
-app.include_router(yfinance_router, prefix="/api/v1", tags=["8. Yahoo Finance"])
-app.include_router(sync_router, prefix="/api/v1", tags=["9. RAG Sync"])
-app.include_router(query_log_router, prefix="/api/v1", tags=["10. Query Logs"])
-app.include_router(external_sources_router, prefix="/api/v1", tags=["11. External Sources"])
-app.include_router(indicators_router, prefix="/api/v1", tags=["12. Technical Indicators"])
-app.include_router(testing_router, prefix="/api/v1/testing", tags=["13. Testing"])
+    app.include_router(db_router, prefix="/api/v1", tags=["4. Database"])
+app.include_router(twelvedata_router, prefix="/api/v1", tags=["5. TwelveData API"])
+app.include_router(easyinsight_router, prefix="/api/v1", tags=["6. EasyInsight API"])
+app.include_router(yfinance_router, prefix="/api/v1", tags=["7. Yahoo Finance"])
+app.include_router(sync_router, prefix="/api/v1", tags=["8. RAG Sync"])
+app.include_router(query_log_router, prefix="/api/v1", tags=["9. Query Logs"])
+app.include_router(external_sources_router, prefix="/api/v1", tags=["10. External Sources"])
+app.include_router(indicators_router, prefix="/api/v1", tags=["11. Technical Indicators"])
+app.include_router(testing_router, prefix="/api/v1/testing", tags=["12. Testing"])
 
 # Test-Health-Router für Test-Unhealthy-Endpoint
 test_health_router = create_test_health_router("data")
-app.include_router(test_health_router, prefix="/api/v1", tags=["13. Testing"])
+app.include_router(test_health_router, prefix="/api/v1", tags=["12. Testing"])
 
 # Include Validation History router if available
 if _validation_routes_available and validation_router:
-    app.include_router(validation_router, prefix="/api/v1", tags=["14. Validation History"])
+    app.include_router(validation_router, prefix="/api/v1", tags=["13. Validation History"])
 
 # Include Prediction History router if available
 if _prediction_routes_available and prediction_router:
-    app.include_router(prediction_router, prefix="/api/v1", tags=["15. Prediction History"])
+    app.include_router(prediction_router, prefix="/api/v1", tags=["14. Prediction History"])
 
 # Include Service Runs History router if available
 if _service_runs_routes_available and service_runs_router:
-    app.include_router(service_runs_router, prefix="/api/v1", tags=["16. Service Runs"])
+    app.include_router(service_runs_router, prefix="/api/v1", tags=["15. Service Runs"])
 
 # Include Kanban Board router if available
 if _kanban_routes_available and kanban_router:
-    app.include_router(kanban_router, prefix="/api/v1", tags=["17. Kanban Board"])
+    app.include_router(kanban_router, prefix="/api/v1", tags=["16. Kanban Board"])
 
 # Include MT5 Trade History router if available
 if _mt5_routes_available and mt5_router:
-    app.include_router(mt5_router, tags=["18. MT5 Trades"])
+    app.include_router(mt5_router, tags=["17. MT5 Trades"])
 
 
 async def _periodic_cache_cleanup():

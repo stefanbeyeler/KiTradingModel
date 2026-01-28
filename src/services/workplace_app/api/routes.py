@@ -12,6 +12,7 @@ from .watchlist_router import router as watchlist_router
 from .scan_router import router as scan_router
 from .config_router import router as config_router
 from .mt5_router import router as mt5_router
+from .strategy_router import router as strategy_router
 
 # Haupt-Router
 router = APIRouter()
@@ -50,4 +51,9 @@ router.include_router(
 router.include_router(
     mt5_router,
     tags=["6. MT5 Connector"]
+)
+
+router.include_router(
+    strategy_router,
+    tags=["7. Strategies"]
 )

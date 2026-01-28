@@ -45,6 +45,10 @@ openapi_tags = [
         "description": "Auto-Scanner Kontrolle"
     },
     {
+        "name": "4. Strategies",
+        "description": "Trading-Strategien verwalten"
+    },
+    {
         "name": "5. System",
         "description": "Health-Checks und Service-Info"
     },

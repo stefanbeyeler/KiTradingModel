@@ -7,8 +7,12 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel, Field
 from loguru import logger
+import httpx
 
 from ..config import settings
+
+# Workplace Service URL for strategy management
+WORKPLACE_URL = os.getenv("WORKPLACE_SERVICE_URL", "http://trading-workplace:3020")
 
 
 class ConfigExportMetadata(BaseModel):
@@ -58,8 +62,8 @@ class ConfigExportService:
     def __init__(self):
         self._export_dir = Path(os.getenv("CONFIG_EXPORT_DIR", "data/exports"))
         self._symbols_file = Path("data/symbols.json")
-        # Strategies are stored in faiss directory (same as strategy_service.py)
-        self._strategies_file = Path(settings.faiss_persist_directory) / "strategies.json"
+        # Strategies are now managed by Workplace Service (Port 3020)
+        self._workplace_url = WORKPLACE_URL
         self._ensure_export_dir()
 
     def _ensure_export_dir(self):
@@ -98,10 +102,17 @@ class ConfigExportService:
                 with open(self._symbols_file, "r", encoding="utf-8") as f:
                     export_data.symbols = json.load(f)
 
-            # Load strategies
-            if include_strategies and self._strategies_file.exists():
-                with open(self._strategies_file, "r", encoding="utf-8") as f:
-                    export_data.strategies = json.load(f)
+            # Load strategies from Workplace Service
+            if include_strategies:
+                try:
+                    async with httpx.AsyncClient(timeout=10.0) as client:
+                        response = await client.get(f"{self._workplace_url}/api/v1/strategies")
+                        if response.status_code == 200:
+                            export_data.strategies = response.json()
+                        else:
+                            logger.warning(f"Could not fetch strategies from Workplace: {response.status_code}")
+                except Exception as e:
+                    logger.warning(f"Could not fetch strategies from Workplace: {e}")
 
             # Generate filename
             if not filename:
@@ -259,45 +270,56 @@ class ConfigExportService:
         strategies: list[dict],
         overwrite: bool
     ) -> dict:
-        """Import strategies into the system."""
+        """Import strategies to Workplace Service."""
         result = {"imported": 0, "updated": 0, "skipped": 0, "errors": []}
 
-        # Load existing strategies
-        existing = {}
-        if self._strategies_file.exists():
-            with open(self._strategies_file, "r", encoding="utf-8") as f:
-                for s in json.load(f):
-                    existing[s.get("id")] = s
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # Fetch existing strategies from Workplace
+                existing = {}
+                try:
+                    response = await client.get(f"{self._workplace_url}/api/v1/strategies")
+                    if response.status_code == 200:
+                        for s in response.json():
+                            existing[s.get("id")] = s
+                except Exception as e:
+                    logger.warning(f"Could not fetch existing strategies: {e}")
 
-        for strategy_data in strategies:
-            try:
-                strategy_id = strategy_data.get("id")
-                if not strategy_id:
-                    result["errors"].append("Strategie ohne ID übersprungen")
-                    result["skipped"] += 1
-                    continue
+                for strategy_data in strategies:
+                    try:
+                        strategy_id = strategy_data.get("id")
+                        if not strategy_id:
+                            result["errors"].append("Strategie ohne ID übersprungen")
+                            result["skipped"] += 1
+                            continue
 
-                if strategy_id in existing:
-                    if overwrite:
-                        existing[strategy_id].update(strategy_data)
-                        existing[strategy_id]["updated_at"] = datetime.utcnow().isoformat()
-                        result["updated"] += 1
-                    else:
+                        is_existing = strategy_id in existing
+
+                        if is_existing and not overwrite:
+                            result["skipped"] += 1
+                            continue
+
+                        # Use the import endpoint which handles both create and update
+                        response = await client.post(
+                            f"{self._workplace_url}/api/v1/strategies/import",
+                            json=strategy_data
+                        )
+                        if response.status_code == 200:
+                            if is_existing:
+                                result["updated"] += 1
+                            else:
+                                result["imported"] += 1
+                        else:
+                            result["errors"].append(f"Import fehlgeschlagen für {strategy_id}: {response.text}")
+                            result["skipped"] += 1
+
+                    except Exception as e:
+                        result["errors"].append(f"Fehler bei Strategie {strategy_data.get('id', '?')}: {str(e)}")
                         result["skipped"] += 1
-                else:
-                    strategy_data["created_at"] = datetime.utcnow().isoformat()
-                    strategy_data["updated_at"] = datetime.utcnow().isoformat()
-                    existing[strategy_id] = strategy_data
-                    result["imported"] += 1
 
-            except Exception as e:
-                result["errors"].append(f"Fehler bei Strategie {strategy_data.get('id', '?')}: {str(e)}")
-                result["skipped"] += 1
-
-        # Save updated strategies (ensure faiss directory exists)
-        Path(settings.faiss_persist_directory).mkdir(parents=True, exist_ok=True)
-        with open(self._strategies_file, "w", encoding="utf-8") as f:
-            json.dump(list(existing.values()), f, indent=2, default=str)
+        except Exception as e:
+            result["errors"].append(f"Verbindung zum Workplace Service fehlgeschlagen: {str(e)}")
+            logger.error(f"Could not connect to Workplace Service: {e}")
 
         return result
 

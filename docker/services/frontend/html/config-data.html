@@ -1457,7 +1457,6 @@
             <button class="tab-btn" data-tab="indicators">Indikatoren</button>
             <button class="tab-btn" data-tab="explorer">Daten-Explorer</button>
             <button class="tab-btn" data-tab="validation">Daten-Validierung</button>
-            <button class="tab-btn" data-tab="strategies">Trading-Strategien</button>
             <button class="tab-btn" data-tab="external">External Sources</button>
             <button class="tab-btn" data-tab="mt5logs">MT5 Logs</button>
             <button class="tab-btn" data-tab="cache">Cache</button>
@@ -1759,20 +1758,6 @@
                 </div>
                 <div id="indicator-detail-content">
                     <!-- Content will be populated dynamically -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Strategies Tab -->
-        <div id="strategies-tab" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Trading-Strategien</h2>
-                    <button class="btn btn-primary" onclick="openStrategyModal()">+ Neue Strategie</button>
-                </div>
-
-                <div id="strategies-list">
-                    <div class="loading"><div class="spinner"></div><br>Lade Strategien...</div>
                 </div>
             </div>
         </div>
@@ -3314,74 +3299,6 @@
         </div>
     </div>
 
-    <!-- Strategy Modal -->
-    <div class="modal-overlay" id="strategy-modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title" id="strategy-modal-title">Strategie bearbeiten</h3>
-                <button class="modal-close" onclick="closeStrategyModal()">&times;</button>
-            </div>
-            <form id="strategy-form" onsubmit="saveStrategy(event)">
-                <input type="hidden" id="strategy-id">
-                <div class="form-group">
-                    <label class="form-label">Name *</label>
-                    <input type="text" class="form-input" id="strategy-name" required placeholder="Strategiename">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Beschreibung</label>
-                    <textarea class="form-textarea" id="strategy-description" placeholder="Beschreibung der Strategie..."></textarea>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Strategietyp</label>
-                        <select class="form-select" id="strategy-type">
-                            <option value="trend_following">Trend Following</option>
-                            <option value="mean_reversion">Mean Reversion</option>
-                            <option value="momentum">Momentum</option>
-                            <option value="breakout">Breakout</option>
-                            <option value="scalping">Scalping</option>
-                            <option value="swing">Swing Trading</option>
-                            <option value="custom">Custom</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Risikostufe</label>
-                        <select class="form-select" id="strategy-risk">
-                            <option value="low">Niedrig</option>
-                            <option value="moderate">Moderat</option>
-                            <option value="high">Hoch</option>
-                            <option value="aggressive">Aggressiv</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Min. Kaufsignale</label>
-                        <input type="number" class="form-input" id="strategy-min-buy" value="3" min="1" max="10">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Min. Verkaufsignale</label>
-                        <input type="number" class="form-input" id="strategy-min-sell" value="3" min="1" max="10">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Stop-Loss (ATR Mult.)</label>
-                        <input type="number" class="form-input" id="strategy-stop-loss" value="2.0" min="0.5" max="5" step="0.1">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Take-Profit (ATR Mult.)</label>
-                        <input type="number" class="form-input" id="strategy-take-profit" value="3.0" min="1" max="10" step="0.1">
-                    </div>
-                </div>
-                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                    <button type="button" class="btn btn-danger" onclick="closeStrategyModal()">Abbrechen</button>
-                    <button type="submit" class="btn btn-success">Speichern</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Symbol Import Modal -->
     <div class="modal-overlay" id="import-modal">
         <div class="modal" style="max-width: 900px; max-height: 85vh;">
@@ -3523,7 +3440,6 @@
     <script>
         const API_BASE = '/data/api/v1';
         let allSymbols = [];
-        let allStrategies = [];
         let allIndicators = [];
         let serviceStartTime = null;
 
@@ -4632,169 +4548,6 @@
             openImportModal('easyinsight');
         }
 
-        // ==================== Strategies ====================
-        async function loadStrategies() {
-            try {
-                const response = await fetch(`${API_BASE}/strategies`);
-                allStrategies = await response.json();
-                renderStrategies();
-            } catch (error) {
-                console.error('Error loading strategies:', error);
-                showToast('Fehler beim Laden der Strategien', 'error');
-            }
-        }
-
-        function renderStrategies() {
-            const container = document.getElementById('strategies-list');
-
-            if (allStrategies.length === 0) {
-                container.innerHTML = `<div class="empty-state">
-                    <div class="empty-state-icon">&#128200;</div>
-                    Keine Strategien vorhanden
-                </div>`;
-                return;
-            }
-
-            container.innerHTML = allStrategies.map(s => `
-                <div class="strategy-card ${s.is_default ? 'default' : ''}">
-                    <div class="strategy-header">
-                        <div>
-                            <div class="strategy-name">${s.name}</div>
-                        </div>
-                        <div class="strategy-badges">
-                            ${s.is_default ? '<span class="badge badge-active">Standard</span>' : ''}
-                            <span class="badge risk-${s.risk_level}">${getRiskLabel(s.risk_level)}</span>
-                            <span class="badge badge-forex">${getTypeLabel(s.strategy_type)}</span>
-                        </div>
-                    </div>
-                    <div class="strategy-desc">${s.description || 'Keine Beschreibung'}</div>
-                    <div class="strategy-meta">
-                        <span>Min. Kaufsignale: ${s.min_buy_signals}</span>
-                        <span>Min. Verkaufsignale: ${s.min_sell_signals}</span>
-                        <span>Stop-Loss: ${s.stop_loss_atr_multiplier}x ATR</span>
-                        <span>Take-Profit: ${s.take_profit_atr_multiplier}x ATR</span>
-                    </div>
-                    <div class="strategy-actions">
-                        <button class="btn btn-primary btn-sm" onclick="editStrategy('${s.id}')">Bearbeiten</button>
-                        ${!s.is_default ? `<button class="btn btn-success btn-sm" onclick="setDefault('${s.id}')">Als Standard</button>` : ''}
-                        <button class="btn btn-warning btn-sm" onclick="exportStrategy('${s.id}')">Exportieren</button>
-                        ${!s.id.startsWith('default_') ? `<button class="btn btn-danger btn-sm" onclick="deleteStrategy('${s.id}')">Löschen</button>` : ''}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function getRiskLabel(risk) {
-            const labels = { low: 'Niedrig', moderate: 'Moderat', high: 'Hoch', aggressive: 'Aggressiv' };
-            return labels[risk] || risk;
-        }
-
-        function getTypeLabel(type) {
-            const labels = {
-                trend_following: 'Trend Following',
-                mean_reversion: 'Mean Reversion',
-                momentum: 'Momentum',
-                breakout: 'Breakout',
-                scalping: 'Scalping',
-                swing: 'Swing Trading',
-                custom: 'Custom'
-            };
-            return labels[type] || type;
-        }
-
-        function openStrategyModal(strategy = null) {
-            document.getElementById('strategy-modal-title').textContent = strategy ? 'Strategie bearbeiten' : 'Neue Strategie';
-            document.getElementById('strategy-id').value = strategy?.id || '';
-            document.getElementById('strategy-name').value = strategy?.name || '';
-            document.getElementById('strategy-description').value = strategy?.description || '';
-            document.getElementById('strategy-type').value = strategy?.strategy_type || 'custom';
-            document.getElementById('strategy-risk').value = strategy?.risk_level || 'moderate';
-            document.getElementById('strategy-min-buy').value = strategy?.min_buy_signals || 3;
-            document.getElementById('strategy-min-sell').value = strategy?.min_sell_signals || 3;
-            document.getElementById('strategy-stop-loss').value = strategy?.stop_loss_atr_multiplier || 2.0;
-            document.getElementById('strategy-take-profit').value = strategy?.take_profit_atr_multiplier || 3.0;
-            document.getElementById('strategy-modal').classList.add('active');
-        }
-
-        function closeStrategyModal() {
-            document.getElementById('strategy-modal').classList.remove('active');
-        }
-
-        function editStrategy(id) {
-            const strategy = allStrategies.find(s => s.id === id);
-            if (strategy) openStrategyModal(strategy);
-        }
-
-        async function saveStrategy(event) {
-            event.preventDefault();
-            const id = document.getElementById('strategy-id').value;
-            const data = {
-                id: id || 'custom_' + Date.now(),
-                name: document.getElementById('strategy-name').value,
-                description: document.getElementById('strategy-description').value,
-                strategy_type: document.getElementById('strategy-type').value,
-                risk_level: document.getElementById('strategy-risk').value,
-                min_buy_signals: parseInt(document.getElementById('strategy-min-buy').value),
-                min_sell_signals: parseInt(document.getElementById('strategy-min-sell').value),
-                stop_loss_atr_multiplier: parseFloat(document.getElementById('strategy-stop-loss').value),
-                take_profit_atr_multiplier: parseFloat(document.getElementById('strategy-take-profit').value),
-                indicators: []
-            };
-
-            try {
-                const url = id ? `${API_BASE}/strategies/${id}` : `${API_BASE}/strategies`;
-                const method = id ? 'PUT' : 'POST';
-                await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                closeStrategyModal();
-                await loadStrategies();
-                showToast('Strategie gespeichert', 'success');
-            } catch (error) {
-                showToast('Fehler beim Speichern', 'error');
-            }
-        }
-
-        async function deleteStrategy(id) {
-            if (!confirm('Strategie wirklich löschen?')) return;
-            try {
-                await fetch(`${API_BASE}/strategies/${id}`, { method: 'DELETE' });
-                await loadStrategies();
-                showToast('Strategie geloscht', 'success');
-            } catch (error) {
-                showToast('Fehler beim Löschen', 'error');
-            }
-        }
-
-        async function setDefault(id) {
-            try {
-                await fetch(`${API_BASE}/strategies/${id}/set-default`, { method: 'POST' });
-                await loadStrategies();
-                showToast('Standard-Strategie gesetzt', 'success');
-            } catch (error) {
-                showToast('Fehler beim Setzen', 'error');
-            }
-        }
-
-        async function exportStrategy(id) {
-            try {
-                const response = await fetch(`${API_BASE}/strategies/${id}/export`);
-                const text = await response.text();
-                const blob = new Blob([text], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `strategy_${id}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-                showToast('Strategie exportiert', 'success');
-            } catch (error) {
-                showToast('Fehler beim Export', 'error');
-            }
-        }
-
         // ==================== Export/Import Functions ====================
 
         let allExports = [];
@@ -4814,7 +4567,8 @@
         function updateExportStats() {
             document.getElementById('export-count').textContent = allExports.length;
             document.getElementById('export-symbols-total').textContent = allSymbols.length;
-            document.getElementById('export-strategies-total').textContent = allStrategies.length;
+            // Strategies are now managed by Workplace Service
+            document.getElementById('export-strategies-total').textContent = '-';
         }
 
         function renderExports() {
@@ -4910,13 +4664,26 @@
             }
 
             try {
-                // Create config object locally
+                // Strategies are now managed by Workplace - fetch if needed
+                let strategies = [];
+                if (includeStrategies) {
+                    try {
+                        const response = await fetch('/workplace/api/v1/strategies');
+                        if (response.ok) {
+                            strategies = await response.json();
+                        }
+                    } catch (e) {
+                        console.warn('Could not fetch strategies from Workplace:', e);
+                    }
+                }
+
+                // Create config object
                 const config = {
                     version: '1.0',
                     exported_at: new Date().toISOString(),
                     description: document.getElementById('export-description').value || 'Direkter Download',
                     symbols: includeSymbols ? allSymbols : [],
-                    strategies: includeStrategies ? allStrategies : []
+                    strategies: strategies
                 };
 
                 const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
@@ -5012,7 +4779,6 @@
                     fileInput.value = '';
                     // Reload data
                     await loadSymbols();
-                    await loadStrategies();
                     updateExportStats();
                 } else {
                     showToast(result.message, 'error');
@@ -5047,7 +4813,6 @@
                 if (result.success) {
                     showToast(result.message, 'success');
                     await loadSymbols();
-                    await loadStrategies();
                     updateExportStats();
                 } else {
                     showToast(result.message, 'error');
@@ -7828,7 +7593,6 @@
         // Initialize
         loadKPIs();  // Load KPIs for Status tab
         loadSymbols();
-        loadStrategies();
         loadIndicators();
         loadExports();
 
