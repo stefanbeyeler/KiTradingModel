@@ -2212,10 +2212,11 @@
             const marketClosedClass = isOpen ? '' : 'market-closed';
 
             const signals = [
-                { name: 'N', available: setup.nhits_signal?.available, tooltip: 'NHITS: Preis-Prognose (30%)' },
-                { name: 'H', available: setup.hmm_signal?.available, tooltip: 'HMM: Regime-Erkennung (25%)' },
-                { name: 'T', available: setup.tcn_signal?.available && setup.tcn_signal?.patterns?.length > 0, tooltip: 'TCN: Chart-Patterns (20%)' },
-                { name: 'C', available: setup.candlestick_signal?.available && setup.candlestick_signal?.patterns?.length > 0, tooltip: 'Candlestick: Kerzen-Patterns (15%)' },
+                { name: 'N', available: setup.nhits_signal?.available, tooltip: 'NHITS: Preis-Prognose (25%)' },
+                { name: 'H', available: setup.hmm_signal?.available, tooltip: 'HMM: Regime-Erkennung (20%)' },
+                { name: 'L', available: setup.cnn_lstm_signal?.available, tooltip: 'CNN-LSTM: Multi-Task (20%)' },
+                { name: 'T', available: setup.tcn_signal?.available && setup.tcn_signal?.patterns?.length > 0, tooltip: 'TCN: Chart-Patterns (15%)' },
+                { name: 'C', available: setup.candlestick_signal?.available && setup.candlestick_signal?.patterns?.length > 0, tooltip: 'Candlestick: Kerzen-Patterns (10%)' },
             ];
 
             const arrow = getDirectionArrow(setup.direction);
@@ -2550,6 +2551,7 @@
                         ${renderOverviewSection(setup)}
                         ${renderTrendStrengthSection(trendStrength)}
                         ${renderSignalsSection(setup)}
+                        ${renderCnnLstmSection(setup)}
                         ${renderPatternsSection(setup)}
                     </div>
                     <div class="detail-column llm-column">
@@ -2689,7 +2691,7 @@
                     <h3 class="section-title"><span class="icon">📡</span> Signale</h3>
                     <!-- NHITS Signal -->
                     <div class="detail-section">
-                        <h4><span class="icon">🔮</span> NHITS (30%) <span class="detail-card-badge ${nhits.available ? 'available' : 'unavailable'}">${nhits.available ? '✓' : '✗'}</span></h4>
+                        <h4><span class="icon">🔮</span> NHITS (25%) <span class="detail-card-badge ${nhits.available ? 'available' : 'unavailable'}">${nhits.available ? '✓' : '✗'}</span></h4>
                         ${nhits.available ? `
                         <div class="detail-grid">
                             <div class="detail-card">
@@ -2718,7 +2720,7 @@
 
                     <!-- HMM Signal -->
                     <div class="detail-section">
-                        <h4><span class="icon">📊</span> HMM (25%) <span class="detail-card-badge ${hmm.available ? 'available' : 'unavailable'}">${hmm.available ? '✓' : '✗'}</span></h4>
+                        <h4><span class="icon">📊</span> HMM (20%) <span class="detail-card-badge ${hmm.available ? 'available' : 'unavailable'}">${hmm.available ? '✓' : '✗'}</span></h4>
                         ${hmm.available ? `
                         <div class="detail-grid">
                             <div class="detail-card">
@@ -2788,7 +2790,7 @@
                     <h3 class="section-title"><span class="icon">📐</span> Patterns</h3>
                     <!-- TCN Patterns -->
                     <div class="detail-section">
-                        <h4><span class="icon">📐</span> TCN (20%) <span class="detail-card-badge ${tcn.available ? 'available' : 'unavailable'}">${tcn.available ? '✓' : '✗'}</span></h4>
+                        <h4><span class="icon">📐</span> TCN (15%) <span class="detail-card-badge ${tcn.available ? 'available' : 'unavailable'}">${tcn.available ? '✓' : '✗'}</span></h4>
                         ${tcn.available ? `
                         <div class="detail-grid">
                             <div class="detail-card">
@@ -2815,7 +2817,7 @@
 
                     <!-- Candlestick Patterns -->
                     <div class="detail-section">
-                        <h4><span class="icon">🕯️</span> Candlestick (15%) <span class="detail-card-badge ${candlestick.available ? 'available' : 'unavailable'}">${candlestick.available ? '✓' : '✗'}</span></h4>
+                        <h4><span class="icon">🕯️</span> Candlestick (10%) <span class="detail-card-badge ${candlestick.available ? 'available' : 'unavailable'}">${candlestick.available ? '✓' : '✗'}</span></h4>
                         ${candlestick.available ? `
                         <div class="detail-grid">
                             <div class="detail-card">
@@ -2831,6 +2833,48 @@
                             ${candlestick.patterns.map(p => `<span class="pattern-tag ${candlestick.direction === 'long' ? 'bullish' : candlestick.direction === 'short' ? 'bearish' : ''}">${formatPatternName(p)}</span>`).join('')}
                         </div>
                         ` : ''}
+                        ` : '<div class="detail-card-sub" style="opacity: 0.6;">Nicht verfügbar</div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCnnLstmSection(setup) {
+            const cnnLstm = setup.cnn_lstm_signal || {};
+
+            return `
+                <div class="consolidated-section">
+                    <h3 class="section-title"><span class="icon">🧠</span> CNN-LSTM (20%)</h3>
+                    <div class="detail-section">
+                        <h4><span class="icon">🧠</span> Multi-Task <span class="detail-card-badge ${cnnLstm.available ? 'available' : 'unavailable'}">${cnnLstm.available ? '✓' : '✗'}</span></h4>
+                        ${cnnLstm.available ? `
+                        <div class="detail-grid">
+                            <div class="detail-card">
+                                <div class="detail-card-title">Preis-Richtung</div>
+                                <div class="detail-card-value" style="color: ${cnnLstm.price_direction === 'long' ? '#34d399' : cnnLstm.price_direction === 'short' ? '#f87171' : '#fbbf24'}">
+                                    ${cnnLstm.price_direction?.toUpperCase() || 'NEUTRAL'}
+                                </div>
+                                <div class="detail-card-sub">${((cnnLstm.price_confidence || 0) * 100).toFixed(0)}%</div>
+                            </div>
+                            <div class="detail-card">
+                                <div class="detail-card-title">Regime</div>
+                                <div class="detail-card-value">${formatRegime(cnnLstm.regime)}</div>
+                                <div class="detail-card-sub">${((cnnLstm.regime_probability || 0) * 100).toFixed(0)}%</div>
+                            </div>
+                            ${cnnLstm.forecast_change_1h !== null || cnnLstm.forecast_change_1d !== null ? `
+                            <div class="detail-card">
+                                <div class="detail-card-title">Prognose</div>
+                                ${cnnLstm.forecast_change_1h !== null ? `<div class="detail-card-sub">1h: <span class="${cnnLstm.forecast_change_1h >= 0 ? 'forecast-positive' : 'forecast-negative'}">${cnnLstm.forecast_change_1h >= 0 ? '+' : ''}${cnnLstm.forecast_change_1h?.toFixed(2)}%</span></div>` : ''}
+                                ${cnnLstm.forecast_change_1d !== null ? `<div class="detail-card-sub">1d: <span class="${cnnLstm.forecast_change_1d >= 0 ? 'forecast-positive' : 'forecast-negative'}">${cnnLstm.forecast_change_1d >= 0 ? '+' : ''}${cnnLstm.forecast_change_1d?.toFixed(2)}%</span></div>` : ''}
+                            </div>
+                            ` : ''}
+                        </div>
+                        ${cnnLstm.patterns && cnnLstm.patterns.length > 0 ? `
+                        <div class="pattern-list">
+                            ${cnnLstm.patterns.map(p => `<span class="pattern-tag ${cnnLstm.price_direction === 'long' ? 'bullish' : cnnLstm.price_direction === 'short' ? 'bearish' : ''}">${formatPatternName(p)}</span>`).join('')}
+                        </div>
+                        ` : ''}
+                        ${cnnLstm.model_version ? `<div class="detail-card-sub" style="opacity: 0.5; margin-top: 8px; font-size: 11px;">Model: ${cnnLstm.model_version}</div>` : ''}
                         ` : '<div class="detail-card-sub" style="opacity: 0.6;">Nicht verfügbar</div>'}
                     </div>
                 </div>

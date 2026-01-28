@@ -16,6 +16,7 @@ from ..models.schemas import (
     TCNSignal,
     CandlestickSignal,
     TechnicalSignal,
+    CNNLSTMSignal,
     TradingSetup,
     SignalDirection,
     ConfidenceLevel,
@@ -34,20 +35,24 @@ class ScoringService:
         tcn: TCNSignal,
         candlestick: CandlestickSignal,
         technical: TechnicalSignal,
+        cnn_lstm: Optional[CNNLSTMSignal] = None,
     ) -> tuple[float, SignalDirection, list[str], SignalAlignment]:
         """
         Berechnet gewichteten Score.
 
         Gewichte (konfigurierbar):
-        - NHITS trend_probability: 30%
-        - HMM regime_confidence: 25%
-        - TCN pattern_confidence: 20%
-        - Candlestick pattern_strength: 15%
+        - NHITS trend_probability: 25%
+        - HMM regime_confidence: 20%
+        - CNN-LSTM multi-task: 20%
+        - TCN pattern_confidence: 15%
+        - Candlestick pattern_strength: 10%
         - Technical alignment: 10%
 
         Returns:
             (composite_score, direction, key_drivers, alignment)
         """
+        if cnn_lstm is None:
+            cnn_lstm = CNNLSTMSignal()
         scores = []
         weights = []
         drivers = []
@@ -132,6 +137,27 @@ class ScoringService:
                     drivers.append(f"RSI: oversold ({technical.rsi:.0f})")
                 elif technical.rsi_signal == "overbought":
                     drivers.append(f"RSI: overbought ({technical.rsi:.0f})")
+
+        # CNN-LSTM (20%)
+        if cnn_lstm.available:
+            # Kombinierter Score aus Price-Confidence und Regime-Probability
+            cnn_lstm_score = (cnn_lstm.price_confidence * 0.6 + cnn_lstm.regime_probability * 0.4) * 100
+
+            # Bonus für erkannte Patterns
+            if cnn_lstm.patterns and cnn_lstm.pattern_confidence >= 0.5:
+                cnn_lstm_score = min(100, cnn_lstm_score + cnn_lstm.pattern_confidence * 10)
+
+            scores.append(cnn_lstm_score)
+            weights.append(settings.cnn_lstm_weight)
+            directions.append(cnn_lstm.price_direction)
+
+            if cnn_lstm.price_confidence >= 0.65:
+                pct = f"{cnn_lstm.price_confidence:.0%}"
+                drivers.append(f"CNN-LSTM: {cnn_lstm.price_direction.value} ({pct})")
+
+            if cnn_lstm.patterns and cnn_lstm.pattern_confidence >= 0.6:
+                patterns_str = ", ".join(cnn_lstm.patterns[:2])
+                drivers.append(f"CNN-LSTM patterns: {patterns_str}")
 
         # Composite Score berechnen
         if not scores:
@@ -241,10 +267,11 @@ class ScoringService:
         tcn = signals.get("tcn") or TCNSignal()
         candlestick = signals.get("candlestick") or CandlestickSignal()
         technical = signals.get("technical") or TechnicalSignal()
+        cnn_lstm = signals.get("cnn_lstm") or CNNLSTMSignal()
 
         # Score berechnen
         composite_score, direction, key_drivers, alignment = self.calculate_composite_score(
-            nhits, hmm, tcn, candlestick, technical
+            nhits, hmm, tcn, candlestick, technical, cnn_lstm
         )
 
         # Anzahl verfügbarer Signale
@@ -254,6 +281,7 @@ class ScoringService:
             tcn.available and bool(tcn.patterns),
             candlestick.available and bool(candlestick.patterns),
             technical.available,
+            cnn_lstm.available,
         ])
 
         return TradingSetup(
@@ -268,6 +296,7 @@ class ScoringService:
             tcn_signal=tcn,
             candlestick_signal=candlestick,
             technical_signal=technical,
+            cnn_lstm_signal=cnn_lstm,
             signal_alignment=alignment,
             key_drivers=key_drivers,
             signals_available=signals_available,

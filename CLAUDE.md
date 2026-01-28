@@ -927,13 +927,13 @@ Der **Trading Workplace Service** (Port 3020) aggregiert alle ML-Vorhersagen und
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘              │
 └─────────┼────────────────┼────────────────┼─────────────────────┘
           │                │                │
-    ┌─────┴─────┬──────────┴────────┬───────┴──────┐
-    ▼           ▼                   ▼              ▼
- NHITS        HMM                 TCN         Candlestick
- :3002       :3004               :3003          :3006
-  30%         25%                 20%            15%
-    │           │                   │              │
-    └───────────┴───────────────────┴──────────────┘
+    ┌─────┴─────┬──────────┴────────┬───────┴──────┬──────────┐
+    ▼           ▼                   ▼              ▼          ▼
+ NHITS        HMM              CNN-LSTM          TCN     Candlestick
+ :3002       :3004               :3007          :3003      :3006
+  25%         20%                 20%            15%        10%
+    │           │                   │              │          │
+    └───────────┴───────────────────┴──────────────┴──────────┘
                          │
                     ┌────┴────┐
                     ▼         ▼
@@ -946,10 +946,11 @@ Der **Trading Workplace Service** (Port 3020) aggregiert alle ML-Vorhersagen und
 
 | Service | Gewicht | Signal |
 |---------|---------|--------|
-| NHITS | 30% | `trend_probability`, `direction` |
-| HMM | 25% | `regime_confidence`, `alignment` |
-| TCN | 20% | `pattern_confidence` |
-| Candlestick | 15% | `pattern_strength` |
+| NHITS | 25% | `trend_probability`, `direction` |
+| HMM | 20% | `regime_confidence`, `alignment` |
+| CNN-LSTM | 20% | `price_direction`, `price_confidence`, `regime`, `patterns` |
+| TCN | 15% | `pattern_confidence` |
+| Candlestick | 10% | `pattern_strength` |
 | Technical | 10% | `trend_alignment` (RSI, MACD) |
 
 ### API-Endpoints

@@ -18,6 +18,7 @@ from ..models.schemas import (
     TCNSignal,
     CandlestickSignal,
     TechnicalSignal,
+    CNNLSTMSignal,
     SignalDirection,
     MarketRegime,
 )
@@ -67,6 +68,7 @@ class SignalAggregatorService:
             "tcn": self._fetch_tcn(client, symbol, timeframe),
             "candlestick": self._fetch_candlestick(client, symbol, timeframe),
             "technical": self._fetch_technical(client, symbol, timeframe),
+            "cnn_lstm": self._fetch_cnn_lstm(client, symbol, timeframe),
         }
 
         results = {}
@@ -340,6 +342,64 @@ class SignalAggregatorService:
             logger.debug(f"Technical fetch error for {symbol}: {e}")
             return TechnicalSignal(available=False)
 
+    async def _fetch_cnn_lstm(
+        self,
+        client: httpx.AsyncClient,
+        symbol: str,
+        timeframe: str
+    ) -> CNNLSTMSignal:
+        """Holt CNN-LSTM Multi-Task Vorhersage."""
+        try:
+            url = f"{settings.cnn_lstm_service_url}/api/v1/predict/{symbol}"
+            response = await client.get(url, params={"timeframe": timeframe})
+
+            if response.status_code != 200:
+                return CNNLSTMSignal(available=False)
+
+            data = response.json()
+            predictions = data.get("predictions", {})
+
+            # Price Prediction parsen
+            price_data = predictions.get("price", {})
+            price_direction_str = price_data.get("direction", "neutral").lower()
+            if price_direction_str == "bullish":
+                price_direction = SignalDirection.LONG
+            elif price_direction_str == "bearish":
+                price_direction = SignalDirection.SHORT
+            else:
+                price_direction = SignalDirection.NEUTRAL
+
+            # Patterns parsen
+            patterns_data = predictions.get("patterns", [])
+            patterns = [p.get("type", "unknown") for p in patterns_data]
+            max_pattern_conf = max(
+                (p.get("confidence", 0) for p in patterns_data), default=0
+            )
+
+            # Regime parsen
+            regime_data = predictions.get("regime", {})
+            regime_str = regime_data.get("current", "sideways").lower()
+            try:
+                regime = MarketRegime(regime_str)
+            except ValueError:
+                regime = MarketRegime.SIDEWAYS
+
+            return CNNLSTMSignal(
+                available=True,
+                price_direction=price_direction,
+                price_confidence=price_data.get("confidence", 0.5),
+                forecast_change_1h=price_data.get("change_percent_1h"),
+                forecast_change_1d=price_data.get("change_percent_1d"),
+                patterns=patterns[:3],  # Top 3 Patterns
+                pattern_confidence=max_pattern_conf,
+                regime=regime,
+                regime_probability=regime_data.get("probability", 0.5),
+                model_version=data.get("model_version"),
+            )
+        except Exception as e:
+            logger.debug(f"CNN-LSTM fetch error for {symbol}: {e}")
+            return CNNLSTMSignal(available=False)
+
     async def check_services_health(self) -> dict[str, bool]:
         """Prüft die Erreichbarkeit aller ML-Services."""
         client = await self._get_client()
@@ -349,6 +409,7 @@ class SignalAggregatorService:
             "hmm": settings.hmm_service_url,
             "tcn": settings.tcn_service_url,
             "candlestick": settings.candlestick_service_url,
+            "cnn_lstm": settings.cnn_lstm_service_url,
             "rag": settings.rag_service_url,
             "llm": settings.llm_service_url,
         }

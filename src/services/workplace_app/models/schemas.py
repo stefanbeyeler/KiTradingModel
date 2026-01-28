@@ -104,6 +104,32 @@ class TechnicalSignal(BaseModel):
     bb_position: Optional[float] = Field(None, description="Position in Bollinger Bands (0-1)")
 
 
+class CNNLSTMSignal(BaseModel):
+    """CNN-LSTM Multi-Task Signal."""
+    available: bool = Field(default=False, description="Signal verfügbar")
+    # Price Prediction
+    price_direction: SignalDirection = Field(
+        default=SignalDirection.NEUTRAL, description="Preis-Richtung"
+    )
+    price_confidence: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="Preis-Konfidenz"
+    )
+    forecast_change_1h: Optional[float] = Field(None, description="1h Preisänderung in %")
+    forecast_change_1d: Optional[float] = Field(None, description="1d Preisänderung in %")
+    # Pattern Detection
+    patterns: list[str] = Field(default_factory=list, description="Erkannte Patterns")
+    pattern_confidence: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="Stärkstes Pattern-Konfidenz"
+    )
+    # Regime Detection
+    regime: MarketRegime = Field(default=MarketRegime.SIDEWAYS, description="Erkanntes Regime")
+    regime_probability: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="Regime-Wahrscheinlichkeit"
+    )
+    # Model Info
+    model_version: Optional[str] = Field(None, description="CNN-LSTM Modell-Version")
+
+
 # =============================================================================
 # Trading Setup Schemas
 # =============================================================================
@@ -125,11 +151,12 @@ class TradingSetup(BaseModel):
     tcn_signal: TCNSignal = Field(default_factory=TCNSignal, description="TCN Signal")
     candlestick_signal: CandlestickSignal = Field(default_factory=CandlestickSignal, description="Candlestick Signal")
     technical_signal: TechnicalSignal = Field(default_factory=TechnicalSignal, description="Technical Signal")
+    cnn_lstm_signal: "CNNLSTMSignal" = Field(default_factory=lambda: CNNLSTMSignal(), description="CNN-LSTM Signal")
 
     # Aggregation
     signal_alignment: SignalAlignment = Field(default=SignalAlignment.MIXED, description="Signal-Übereinstimmung")
     key_drivers: list[str] = Field(default_factory=list, description="Wichtigste Treiber")
-    signals_available: int = Field(default=0, ge=0, le=5, description="Anzahl verfügbarer Signale")
+    signals_available: int = Field(default=0, ge=0, le=6, description="Anzahl verfügbarer Signale")
 
     # Preise
     current_price: Optional[float] = Field(None, description="Aktueller Preis")

@@ -36,10 +36,11 @@ class WorkplaceSettings(BaseSettings):
     deep_analysis_timeout_seconds: float = 120.0
 
     # Scoring-Gewichte (müssen 1.0 ergeben)
-    nhits_weight: float = 0.30
-    hmm_weight: float = 0.25
-    tcn_weight: float = 0.20
-    candlestick_weight: float = 0.15
+    nhits_weight: float = 0.25
+    hmm_weight: float = 0.20
+    cnn_lstm_weight: float = 0.20
+    tcn_weight: float = 0.15
+    candlestick_weight: float = 0.10
     technical_weight: float = 0.10
 
     # Scoring-Boni und Penalties
@@ -73,6 +74,7 @@ class WorkplaceSettings(BaseSettings):
         total = (
             self.nhits_weight +
             self.hmm_weight +
+            self.cnn_lstm_weight +
             self.tcn_weight +
             self.candlestick_weight +
             self.technical_weight
