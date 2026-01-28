@@ -38,6 +38,51 @@ def _ensure_torch():
         torch = _torch
 
 
+class CUDATrainingError(Exception):
+    """Custom exception for CUDA errors during training."""
+    pass
+
+
+def _check_cuda_health() -> tuple[bool, str]:
+    """
+    Check if CUDA is healthy and usable for training.
+
+    Returns:
+        Tuple of (is_healthy: bool, message: str)
+    """
+    _ensure_torch()
+
+    if not torch.cuda.is_available():
+        return True, "CUDA not available, using CPU"
+
+    try:
+        # Test basic CUDA operations
+        torch.cuda.synchronize()
+
+        # Check memory availability
+        free_memory = torch.cuda.mem_get_info()[0] / (1024**3)  # GB
+        if free_memory < 0.5:  # Less than 500MB free
+            return False, f"Insufficient GPU memory: {free_memory:.2f}GB free"
+
+        return True, f"CUDA healthy, {free_memory:.2f}GB free"
+
+    except RuntimeError as e:
+        return False, f"CUDA error: {e}"
+
+
+def _cleanup_gpu_memory():
+    """Clean up GPU memory after training or on error."""
+    _ensure_torch()
+
+    if torch.cuda.is_available():
+        try:
+            torch.cuda.synchronize()
+            torch.cuda.empty_cache()
+            logger.info("GPU memory cleaned up")
+        except Exception as e:
+            logger.warning(f"GPU cleanup failed: {e}")
+
+
 # =============================================================================
 # Configuration
 # =============================================================================
@@ -173,17 +218,25 @@ class TrainingService:
 
     async def _run_training(self, job_id: str, request: TrainingRequest):
         """
-        Haupttraining-Loop.
+        Haupttraining-Loop mit robustem CUDA Error Handling.
 
         Args:
             job_id: Job-ID
             request: Training-Request
         """
         _ensure_torch()
+        device = "cpu"  # Default fallback
 
         try:
             self._update_status(TrainingStatus.PREPARING)
             logger.info(f"Preparing training for {len(request.symbols)} symbols")
+
+            # Check CUDA health before training
+            cuda_healthy, cuda_msg = _check_cuda_health()
+            if not cuda_healthy:
+                logger.warning(f"CUDA not healthy: {cuda_msg}")
+                self._current_job["error_message"] = f"CUDA check failed: {cuda_msg}"
+                # Continue with CPU
 
             # Erstelle Model
             from ...cnn_lstm_app.models.cnn_lstm_model import (
@@ -198,9 +251,24 @@ class TrainingService:
             )
             model = create_cnn_lstm_model(config)
 
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            model = model.to(device)
-            logger.info(f"Model created on device: {device}")
+            # Determine device with CUDA validation
+            if torch.cuda.is_available() and cuda_healthy:
+                try:
+                    # Clear GPU memory before loading model
+                    torch.cuda.empty_cache()
+                    device = "cuda"
+                    model = model.to(device)
+                    # Verify model is on GPU
+                    torch.cuda.synchronize()
+                    logger.info(f"Model created on GPU: {torch.cuda.get_device_name(0)}")
+                except RuntimeError as cuda_err:
+                    logger.warning(f"Failed to use CUDA, falling back to CPU: {cuda_err}")
+                    device = "cpu"
+                    model = model.to(device)
+            else:
+                device = "cpu"
+                model = model.to(device)
+                logger.info("Model created on CPU")
 
             # Loss und Optimizer
             loss_fn = create_multi_task_loss(LossWeights(
@@ -348,12 +416,34 @@ class TrainingService:
                 # Benachrichtige Inference Service
                 await self._notify_inference_service()
 
+        except RuntimeError as e:
+            error_str = str(e).lower()
+            is_cuda_error = any(pattern in error_str for pattern in [
+                "cuda", "gpu", "illegal memory access", "out of memory",
+                "device-side assert", "cublas", "cudnn"
+            ])
+
+            if is_cuda_error:
+                logger.error(f"CUDA training error: {e}")
+                self._current_job["error_message"] = f"CUDA Error: {e}"
+                self._current_job["cuda_error"] = True
+                # Attempt GPU recovery
+                _cleanup_gpu_memory()
+            else:
+                logger.error(f"Training runtime error: {e}")
+                self._current_job["error_message"] = str(e)
+
+            self._update_status(TrainingStatus.FAILED)
+
         except Exception as e:
             logger.error(f"Training error: {e}")
             self._update_status(TrainingStatus.FAILED)
             self._current_job["error_message"] = str(e)
 
         finally:
+            # Clean up GPU memory after training
+            _cleanup_gpu_memory()
+
             # Speichere in Historie
             await self._save_to_history()
 
@@ -365,63 +455,123 @@ class TrainingService:
                 pass
 
     async def _train_epoch(self, model, dataloader, loss_fn, optimizer, device):
-        """Trainiert eine Epoche."""
+        """Trainiert eine Epoche mit CUDA Error Handling."""
         model.train()
         total_loss = None
+        batch_count = 0
 
         for batch in dataloader:
-            features = batch['features'].to(device)
-            targets = {
-                'price': batch['price'].to(device),
-                'patterns': batch['patterns'].to(device),
-                'regime': batch['regime'].to(device)
-            }
-
-            optimizer.zero_grad()
-            predictions = model(features)
-            loss, components = loss_fn(predictions, targets)
-            loss.backward()
-
-            # Gradient Clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-
-            optimizer.step()
-
-            if total_loss is None:
-                total_loss = components
-            else:
-                # Averaging
-                total_loss.total = (total_loss.total + components.total) / 2
-                total_loss.price = (total_loss.price + components.price) / 2
-                total_loss.pattern = (total_loss.pattern + components.pattern) / 2
-                total_loss.regime = (total_loss.regime + components.regime) / 2
-
-        return total_loss
-
-    async def _validate_epoch(self, model, dataloader, loss_fn, device):
-        """Validiert eine Epoche."""
-        model.eval()
-        total_loss = None
-
-        with torch.no_grad():
-            for batch in dataloader:
-                features = batch['features'].to(device)
+            try:
+                features = batch['features'].to(device, non_blocking=True)
                 targets = {
-                    'price': batch['price'].to(device),
-                    'patterns': batch['patterns'].to(device),
-                    'regime': batch['regime'].to(device)
+                    'price': batch['price'].to(device, non_blocking=True),
+                    'patterns': batch['patterns'].to(device, non_blocking=True),
+                    'regime': batch['regime'].to(device, non_blocking=True)
                 }
 
+                optimizer.zero_grad()
                 predictions = model(features)
-                _, components = loss_fn(predictions, targets)
+                loss, components = loss_fn(predictions, targets)
+
+                # Check for NaN/Inf in loss
+                if torch.isnan(loss) or torch.isinf(loss):
+                    logger.warning(f"NaN/Inf loss detected in batch {batch_count}, skipping")
+                    continue
+
+                loss.backward()
+
+                # Check for NaN in gradients
+                has_nan_grad = False
+                for param in model.parameters():
+                    if param.grad is not None and (torch.isnan(param.grad).any() or torch.isinf(param.grad).any()):
+                        has_nan_grad = True
+                        break
+
+                if has_nan_grad:
+                    logger.warning(f"NaN gradient detected in batch {batch_count}, skipping")
+                    optimizer.zero_grad()
+                    continue
+
+                # Gradient Clipping
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+                optimizer.step()
+
+                # Periodic GPU sync to catch deferred errors
+                if device == "cuda" and batch_count % 50 == 0:
+                    torch.cuda.synchronize()
 
                 if total_loss is None:
                     total_loss = components
                 else:
+                    # Averaging
                     total_loss.total = (total_loss.total + components.total) / 2
                     total_loss.price = (total_loss.price + components.price) / 2
                     total_loss.pattern = (total_loss.pattern + components.pattern) / 2
                     total_loss.regime = (total_loss.regime + components.regime) / 2
+
+                batch_count += 1
+
+            except RuntimeError as e:
+                error_str = str(e).lower()
+                if "out of memory" in error_str:
+                    logger.error(f"GPU OOM in batch {batch_count}, attempting recovery")
+                    # Clear cache and skip batch
+                    if device == "cuda":
+                        torch.cuda.empty_cache()
+                    continue
+                elif "illegal memory access" in error_str or "cuda" in error_str:
+                    logger.error(f"CUDA error in batch {batch_count}: {e}")
+                    raise CUDATrainingError(f"CUDA error during training: {e}") from e
+                else:
+                    raise
+
+        # Final sync after epoch
+        if device == "cuda":
+            torch.cuda.synchronize()
+
+        return total_loss
+
+    async def _validate_epoch(self, model, dataloader, loss_fn, device):
+        """Validiert eine Epoche mit CUDA Error Handling."""
+        model.eval()
+        total_loss = None
+
+        try:
+            with torch.no_grad():
+                for batch in dataloader:
+                    features = batch['features'].to(device, non_blocking=True)
+                    targets = {
+                        'price': batch['price'].to(device, non_blocking=True),
+                        'patterns': batch['patterns'].to(device, non_blocking=True),
+                        'regime': batch['regime'].to(device, non_blocking=True)
+                    }
+
+                    predictions = model(features)
+                    _, components = loss_fn(predictions, targets)
+
+                    # Skip if NaN
+                    if np.isnan(components.total):
+                        continue
+
+                    if total_loss is None:
+                        total_loss = components
+                    else:
+                        total_loss.total = (total_loss.total + components.total) / 2
+                        total_loss.price = (total_loss.price + components.price) / 2
+                        total_loss.pattern = (total_loss.pattern + components.pattern) / 2
+                        total_loss.regime = (total_loss.regime + components.regime) / 2
+
+            # Sync after validation
+            if device == "cuda":
+                torch.cuda.synchronize()
+
+        except RuntimeError as e:
+            error_str = str(e).lower()
+            if "cuda" in error_str or "illegal memory" in error_str:
+                logger.error(f"CUDA error during validation: {e}")
+                raise CUDATrainingError(f"CUDA error during validation: {e}") from e
+            raise
 
         return total_loss, {}
 
@@ -830,7 +980,10 @@ class TrainingService:
             logger.warning(f"Could not notify inference service: {e}")
 
     async def close(self):
-        """Schliesst Service."""
+        """Schliesst Service und gibt GPU-Ressourcen frei."""
+        # Clean up GPU resources
+        _cleanup_gpu_memory()
+
         if self._http_client:
             await self._http_client.aclose()
 

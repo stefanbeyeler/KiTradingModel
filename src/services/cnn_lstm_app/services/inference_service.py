@@ -2,6 +2,7 @@
 Inference Service für CNN-LSTM Multi-Task Model.
 
 Laedt trainierte Modelle und fuehrt Vorhersagen durch.
+Enthaelt robustes CUDA Error Handling fuer GPU-basierte Inferenz.
 """
 
 import json
@@ -37,6 +38,88 @@ def _ensure_torch():
     if torch is None:
         import torch as _torch
         torch = _torch
+
+
+class CUDAError(Exception):
+    """Custom exception for CUDA-related errors."""
+    pass
+
+
+def _handle_cuda_error(func_name: str, error: Exception) -> None:
+    """
+    Handles CUDA errors with proper logging and cleanup.
+
+    Args:
+        func_name: Name of the function where error occurred
+        error: The exception that was raised
+    """
+    error_str = str(error).lower()
+
+    # Check for known CUDA error patterns
+    is_cuda_error = any(pattern in error_str for pattern in [
+        "cuda", "gpu", "illegal memory access", "out of memory",
+        "device-side assert", "cublas", "cudnn", "nccl"
+    ])
+
+    if is_cuda_error:
+        logger.error(f"CUDA error in {func_name}: {error}")
+
+        # Attempt recovery
+        _ensure_torch()
+        if torch.cuda.is_available():
+            try:
+                # Synchronize to ensure error is captured
+                torch.cuda.synchronize()
+                # Clear GPU memory cache
+                torch.cuda.empty_cache()
+                logger.info("GPU memory cache cleared after CUDA error")
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to cleanup GPU after CUDA error: {cleanup_error}")
+    else:
+        logger.error(f"Error in {func_name}: {error}")
+
+
+def _safe_cuda_operation(operation_name: str):
+    """
+    Decorator for safe CUDA operations with automatic error handling.
+
+    Wraps GPU operations to catch CUDA errors and attempt recovery.
+    """
+    def decorator(func):
+        async def wrapper(*args, **kwargs):
+            try:
+                return await func(*args, **kwargs)
+            except RuntimeError as e:
+                _handle_cuda_error(operation_name, e)
+                raise CUDAError(f"CUDA operation failed in {operation_name}: {e}") from e
+            except Exception as e:
+                _handle_cuda_error(operation_name, e)
+                raise
+        return wrapper
+    return decorator
+
+
+def _get_gpu_memory_info() -> dict:
+    """
+    Get current GPU memory usage information.
+
+    Returns:
+        Dictionary with GPU memory stats or empty dict if not available
+    """
+    _ensure_torch()
+
+    if not torch.cuda.is_available():
+        return {}
+
+    try:
+        return {
+            "allocated_mb": round(torch.cuda.memory_allocated() / 1024 / 1024, 2),
+            "reserved_mb": round(torch.cuda.memory_reserved() / 1024 / 1024, 2),
+            "max_allocated_mb": round(torch.cuda.max_memory_allocated() / 1024 / 1024, 2),
+        }
+    except Exception as e:
+        logger.warning(f"Could not get GPU memory info: {e}")
+        return {}
 
 
 # =============================================================================
@@ -102,7 +185,7 @@ class InferenceService:
 
     async def load_model(self, model_id: Optional[str] = None) -> bool:
         """
-        Laedt ein Modell.
+        Laedt ein Modell mit robustem CUDA Error Handling.
 
         Args:
             model_id: Spezifische Modell-ID oder None fuer latest
@@ -135,23 +218,70 @@ class InferenceService:
                 logger.warning(f"Model not found: {target_path}")
                 return False
 
-            # Lade Modell
-            self._device = "cuda" if torch.cuda.is_available() else "cpu"
+            # Bestimme Device mit CUDA-Check
+            cuda_available = torch.cuda.is_available()
+            if cuda_available:
+                try:
+                    # Test CUDA accessibility before using it
+                    torch.cuda.synchronize()
+                    self._device = "cuda"
+                    logger.info(f"CUDA available: {torch.cuda.get_device_name(0)}")
+                except RuntimeError as cuda_err:
+                    logger.warning(f"CUDA available but not usable: {cuda_err}")
+                    self._device = "cpu"
+            else:
+                self._device = "cpu"
 
-            from ..models.cnn_lstm_model import load_model
-            self._model = load_model(str(target_path), device=self._device)
-            self._model.eval()
+            # Clear GPU cache before loading new model
+            if self._device == "cuda":
+                torch.cuda.empty_cache()
+
+            # Lade Modell mit CUDA Error Handling
+            try:
+                from ..models.cnn_lstm_model import load_model
+                self._model = load_model(str(target_path), device=self._device)
+                self._model.eval()
+
+                # Synchronize to catch any deferred CUDA errors
+                if self._device == "cuda":
+                    torch.cuda.synchronize()
+
+            except RuntimeError as e:
+                error_str = str(e).lower()
+                if "cuda" in error_str or "gpu" in error_str or "illegal memory" in error_str:
+                    logger.warning(f"CUDA error during model load, falling back to CPU: {e}")
+                    # Fallback to CPU
+                    self._device = "cpu"
+                    torch.cuda.empty_cache()
+                    from ..models.cnn_lstm_model import load_model
+                    self._model = load_model(str(target_path), device="cpu")
+                    self._model.eval()
+                else:
+                    raise
 
             # Extrahiere Metadaten
-            checkpoint = torch.load(str(target_path), map_location=self._device)
+            checkpoint = torch.load(str(target_path), map_location=self._device, weights_only=False)
             self._model_metadata = checkpoint.get("metadata", {})
             self._model_version = self._model_metadata.get(
                 "job_id",
                 target_path.stem
             )
 
-            logger.info(f"Model loaded: {self._model_version} on {self._device}")
+            gpu_info = _get_gpu_memory_info()
+            logger.info(
+                f"Model loaded: {self._model_version} on {self._device}"
+                f"{f' (GPU mem: {gpu_info.get(\"allocated_mb\", 0)}MB)' if gpu_info else ''}"
+            )
             return True
+
+        except RuntimeError as e:
+            _handle_cuda_error("load_model", e)
+            # Try CPU fallback on CUDA failure
+            if self._device == "cuda":
+                logger.warning("Attempting CPU fallback after CUDA error")
+                self._device = "cpu"
+                return await self.load_model(model_id)
+            return False
 
         except Exception as e:
             logger.error(f"Error loading model: {e}")
@@ -212,7 +342,7 @@ class InferenceService:
         timeframe: str = "H1"
     ) -> Optional[PredictionResponse]:
         """
-        Fuehrt Multi-Task Vorhersage durch.
+        Fuehrt Multi-Task Vorhersage durch mit robustem CUDA Error Handling.
 
         Args:
             symbol: Trading-Symbol
@@ -237,17 +367,31 @@ class InferenceService:
 
             features, current_price = result
 
-            # Konvertiere zu Tensor
-            features_tensor = torch.FloatTensor(features).unsqueeze(0).to(self._device)
+            # Konvertiere zu Tensor mit CUDA Error Handling
+            try:
+                features_tensor = torch.FloatTensor(features).unsqueeze(0).to(self._device)
 
-            # Inference
-            with torch.no_grad():
-                outputs = self._model(features_tensor)
+                # Inference mit expliziter Synchronisation
+                with torch.no_grad():
+                    outputs = self._model(features_tensor)
 
-            # Parse Outputs
-            price_pred = outputs['price'].cpu().numpy()[0]
-            pattern_logits = outputs['patterns'].cpu().numpy()[0]
-            regime_logits = outputs['regime'].cpu().numpy()[0]
+                    # Synchronize GPU before accessing results
+                    if self._device == "cuda":
+                        torch.cuda.synchronize()
+
+                # Parse Outputs - explizite Kopie auf CPU
+                price_pred = outputs['price'].detach().cpu().numpy()[0]
+                pattern_logits = outputs['patterns'].detach().cpu().numpy()[0]
+                regime_logits = outputs['regime'].detach().cpu().numpy()[0]
+
+            except RuntimeError as cuda_err:
+                error_str = str(cuda_err).lower()
+                if "cuda" in error_str or "illegal memory" in error_str or "out of memory" in error_str:
+                    logger.error(f"CUDA error during inference for {symbol}: {cuda_err}")
+                    # Attempt recovery
+                    self._handle_cuda_recovery()
+                    return None
+                raise
 
             # Erstelle Price Prediction mit echtem aktuellem Preis
             price_prediction = self._create_price_prediction(
@@ -262,6 +406,14 @@ class InferenceService:
 
             inference_time = (time.time() - start_time) * 1000
 
+            # Periodic GPU memory cleanup (every 100 inferences)
+            if self._device == "cuda" and hasattr(self, '_inference_count'):
+                self._inference_count += 1
+                if self._inference_count % 100 == 0:
+                    torch.cuda.empty_cache()
+            elif self._device == "cuda":
+                self._inference_count = 1
+
             return PredictionResponse(
                 symbol=symbol,
                 timeframe=timeframe.upper(),
@@ -275,9 +427,63 @@ class InferenceService:
                 inference_time_ms=round(inference_time, 2)
             )
 
-        except Exception as e:
-            logger.error(f"Prediction error for {symbol}: {e}")
+        except CUDAError as e:
+            logger.error(f"CUDA error during prediction for {symbol}: {e}")
+            self._handle_cuda_recovery()
             return None
+
+        except Exception as e:
+            _handle_cuda_error("predict", e)
+            return None
+
+    def _handle_cuda_recovery(self) -> None:
+        """
+        Attempts to recover from CUDA errors.
+
+        Clears GPU cache and optionally reloads model on CPU.
+        """
+        _ensure_torch()
+        logger.warning("Attempting CUDA recovery...")
+
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+                torch.cuda.empty_cache()
+                logger.info("GPU cache cleared")
+        except Exception as e:
+            logger.error(f"CUDA recovery failed: {e}")
+            # Mark device as CPU for future inferences
+            self._device = "cpu"
+            logger.warning("Switching to CPU mode due to CUDA errors")
+
+    def get_gpu_status(self) -> dict:
+        """
+        Returns current GPU status information.
+
+        Useful for health checks and monitoring.
+        """
+        _ensure_torch()
+
+        status = {
+            "device": self._device,
+            "cuda_available": torch.cuda.is_available(),
+            "model_loaded": self.is_model_loaded(),
+        }
+
+        if torch.cuda.is_available():
+            try:
+                status.update({
+                    "gpu_name": torch.cuda.get_device_name(0),
+                    "memory": _get_gpu_memory_info(),
+                    "cuda_healthy": True,
+                })
+                # Test CUDA accessibility
+                torch.cuda.synchronize()
+            except RuntimeError as e:
+                status["cuda_healthy"] = False
+                status["cuda_error"] = str(e)
+
+        return status
 
     def _create_price_prediction(
         self,
@@ -431,7 +637,22 @@ class InferenceService:
         return None
 
     async def close(self):
-        """Schliesst Service."""
+        """Schliesst Service und gibt GPU-Ressourcen frei."""
+        _ensure_torch()
+
+        # Release model from GPU
+        if self._model is not None:
+            del self._model
+            self._model = None
+
+        # Clear GPU cache
+        if torch.cuda.is_available():
+            try:
+                torch.cuda.empty_cache()
+                logger.info("GPU resources released")
+            except Exception as e:
+                logger.warning(f"Error releasing GPU resources: {e}")
+
         await feature_service.close()
 
 

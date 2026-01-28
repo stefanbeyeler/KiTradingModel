@@ -19,7 +19,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install additional dependencies for watchdog
-RUN pip install --no-cache-dir httpx python-telegram-bot psutil
+# nvidia-ml-py (pynvml) for GPU monitoring - will gracefully fallback if no GPU
+RUN pip install --no-cache-dir httpx python-telegram-bot psutil nvidia-ml-py
 
 # Copy only the Watchdog app source code (avoid importing other services)
 # ARCHITEKTUR: Watchdog greift auf Daten NUR über Data Service (Port 3001) zu

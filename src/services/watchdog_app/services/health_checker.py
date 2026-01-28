@@ -1,10 +1,10 @@
-"""Health Checker Service für Microservice-Überwachung."""
+"""Health Checker Service für Microservice-Überwachung mit GPU-Support."""
 
 import asyncio
 import os
 import socket
 from datetime import datetime, timezone
-from typing import Dict
+from typing import Dict, Optional
 
 import httpx
 from loguru import logger
@@ -14,6 +14,10 @@ from ..models.service_status import HealthState, ServiceStatus
 
 # Data Service URL für externe Service-Checks (Gateway-Pattern)
 DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+
+# GPU-basierte Services die erweiterte Health-Checks benötigen
+GPU_SERVICES = {"nhits", "tcn", "embedder", "cnn-lstm", "rag", "llm"}
+GPU_TRAIN_SERVICES = {"nhits-train", "tcn-train", "cnn-lstm-train"}
 
 
 # Mapping von technischen Fehlermeldungen zu benutzerfreundlichen Texten
@@ -111,14 +115,16 @@ class HealthChecker:
                 "url": "http://trading-nhits:3002/health",
                 "criticality": "high",
                 "startup_grace": 40,
-                "dependencies": ["data"]
+                "dependencies": ["data"],
+                "gpu_service": True
             },
             "tcn": {
                 "url": "http://trading-tcn:3003/health",
                 "criticality": "high",
                 "startup_grace": 150,  # Erhöht: TCN hängt von Embedder ab (120s)
                 "dependencies": ["data", "embedder"],
-                "timeout": 20  # Erhöht: GPU-Inference kann während hoher Last 14+ Sekunden dauern
+                "timeout": 20,  # Erhöht: GPU-Inference kann während hoher Last 14+ Sekunden dauern
+                "gpu_service": True
             },
             "hmm": {
                 "url": "http://trading-hmm:3004/health",
@@ -142,7 +148,9 @@ class HealthChecker:
                 "url": "http://trading-cnn-lstm:3007/health",
                 "criticality": "high",
                 "startup_grace": 40,
-                "dependencies": ["data"]
+                "dependencies": ["data"],
+                "timeout": 20,  # Erhöht: GPU-Inference kann während hoher Last länger dauern
+                "gpu_service": True  # Flag für erweiterte GPU-Health-Checks
             },
             "redis": {
                 "url": "http://trading-redis:6379",
@@ -228,7 +236,7 @@ class HealthChecker:
 
     async def check_service(self, name: str, config: dict) -> ServiceStatus:
         """
-        Prüft einen einzelnen Service.
+        Prüft einen einzelnen Service mit erweiterter GPU-Unterstützung.
 
         Args:
             name: Service-Name
@@ -279,6 +287,21 @@ class HealthChecker:
                         status = "healthy" if text == "healthy" else "unhealthy"
                         data = {"status": status, "raw": response.text.strip()}
 
+                    # Check for GPU errors in response for GPU services
+                    gpu_status = self._check_gpu_status_in_response(name, config, data)
+
+                    # If GPU error detected, mark as degraded/unhealthy
+                    if gpu_status:
+                        return ServiceStatus(
+                            name=name,
+                            state=gpu_status["state"],
+                            response_time_ms=response_time_ms,
+                            last_check=start_time,
+                            details={**data, "gpu_issue": gpu_status["message"]},
+                            error=gpu_status["message"] if gpu_status["state"] == HealthState.UNHEALTHY else None,
+                            consecutive_failures=0 if gpu_status["state"] != HealthState.UNHEALTHY else 1
+                        )
+
                     return ServiceStatus(
                         name=name,
                         state=HealthState.HEALTHY if status == "healthy" else HealthState.DEGRADED,
@@ -298,6 +321,83 @@ class HealthChecker:
             return self._create_failure_status(name, start_time, "Connection refused")
         except Exception as e:
             return self._create_failure_status(name, start_time, str(e))
+
+    def _check_gpu_status_in_response(
+        self, name: str, config: dict, response_data: dict
+    ) -> Optional[dict]:
+        """
+        Prüft GPU-Status in der Health-Response eines GPU-Services.
+
+        Args:
+            name: Service-Name
+            config: Service-Konfiguration
+            response_data: JSON-Response vom Health-Endpoint
+
+        Returns:
+            Dict mit state und message bei GPU-Problemen, sonst None
+        """
+        # Nur für GPU-Services prüfen
+        if not config.get("gpu_service") and name not in GPU_SERVICES:
+            return None
+
+        # Check for explicit GPU/CUDA errors in response
+        gpu_info = response_data.get("gpu", {})
+        cuda_info = response_data.get("cuda", {})
+
+        # Check for CUDA error indicators
+        cuda_error_patterns = [
+            "illegal memory access",
+            "cuda error",
+            "out of memory",
+            "device-side assert",
+            "cublas",
+            "cudnn error",
+        ]
+
+        # Check in error field
+        error_field = str(response_data.get("error", "")).lower()
+        for pattern in cuda_error_patterns:
+            if pattern in error_field:
+                logger.warning(f"CUDA error detected in {name}: {response_data.get('error')}")
+                return {
+                    "state": HealthState.UNHEALTHY,
+                    "message": f"CUDA Error: {response_data.get('error')}"
+                }
+
+        # Check GPU health status if provided
+        if gpu_info:
+            if gpu_info.get("cuda_healthy") is False:
+                cuda_error = gpu_info.get("cuda_error", "Unknown CUDA error")
+                logger.warning(f"GPU unhealthy in {name}: {cuda_error}")
+                return {
+                    "state": HealthState.UNHEALTHY,
+                    "message": f"GPU unhealthy: {cuda_error}"
+                }
+
+            # Check GPU memory usage (warning if > 90%)
+            memory_percent = gpu_info.get("memory_percent", 0)
+            if memory_percent > 95:
+                logger.warning(f"Critical GPU memory usage in {name}: {memory_percent}%")
+                return {
+                    "state": HealthState.DEGRADED,
+                    "message": f"GPU memory critical: {memory_percent}%"
+                }
+            elif memory_percent > 90:
+                return {
+                    "state": HealthState.DEGRADED,
+                    "message": f"GPU memory high: {memory_percent}%"
+                }
+
+        # Check CUDA availability mismatch (expected GPU but running on CPU)
+        device = response_data.get("device", "").lower()
+        cuda_available = response_data.get("cuda_available", True)
+        if cuda_available and device == "cpu" and name in GPU_SERVICES:
+            return {
+                "state": HealthState.DEGRADED,
+                "message": "Running on CPU instead of GPU"
+            }
+
+        return None
 
     async def _check_tcp_service(
         self, name: str, config: dict, start_time: datetime
@@ -675,7 +775,7 @@ class HealthChecker:
         return True
 
     def get_summary(self) -> dict:
-        """Gibt eine Zusammenfassung des aktuellen Status zurück."""
+        """Gibt eine Zusammenfassung des aktuellen Status zurück inkl. GPU-Status."""
         healthy = sum(
             1 for s in self.status.values() if s.state == HealthState.HEALTHY
         )
@@ -693,12 +793,33 @@ class HealthChecker:
         ]
         avg_response_ms = sum(response_times) / len(response_times) if response_times else 0
 
+        # GPU-Services Status
+        gpu_services_status = {}
+        for name in GPU_SERVICES | GPU_TRAIN_SERVICES:
+            if name in self.status:
+                status = self.status[name]
+                details = status.details or {}
+                gpu_services_status[name] = {
+                    "state": status.state.value,
+                    "gpu_issue": details.get("gpu_issue"),
+                    "device": details.get("device"),
+                    "cuda_healthy": details.get("gpu", {}).get("cuda_healthy") if details.get("gpu") else None,
+                }
+
+        # Count GPU-specific issues
+        gpu_issues = sum(
+            1 for name, info in gpu_services_status.items()
+            if info.get("gpu_issue") is not None
+        )
+
         return {
             "healthy": healthy,
             "degraded": degraded,
             "unhealthy": unhealthy,
             "total": len(self.status),
-            "avg_response_ms": avg_response_ms
+            "avg_response_ms": avg_response_ms,
+            "gpu_services": gpu_services_status,
+            "gpu_issues_count": gpu_issues,
         }
 
     async def _check_easyinsight_components(
