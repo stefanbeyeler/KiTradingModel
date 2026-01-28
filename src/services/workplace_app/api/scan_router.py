@@ -4,7 +4,9 @@ Scan Router - Scanner-Kontrolle.
 Endpoints zum Starten, Stoppen und Überwachen des Auto-Scanners.
 """
 
-from fastapi import APIRouter, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
 from ..models.schemas import (
@@ -12,6 +14,7 @@ from ..models.schemas import (
     ScanTriggerResponse,
 )
 from ..services.scanner_service import scanner_service
+from ..services.setup_recorder_service import setup_recorder
 
 router = APIRouter()
 
@@ -174,4 +177,76 @@ async def trigger_manual_scan():
         raise HTTPException(
             status_code=500,
             detail=f"Fehler beim Auslösen: {str(e)}"
+        )
+
+
+@router.get(
+    "/accuracy",
+    summary="Setup-Trefferquote",
+    description="Gibt die Trefferquote der aufgezeichneten Trading-Setups zurück."
+)
+async def get_accuracy_stats(
+    symbol: Optional[str] = Query(None, description="Filter nach Symbol"),
+    days: int = Query(30, ge=1, le=365, description="Zeitraum in Tagen")
+):
+    """
+    Trefferquote der Trading-Setups abrufen.
+
+    Zeigt wie viele der vorgeschlagenen Setups korrekt waren,
+    basierend auf dem tatsächlichen Marktverlauf nach Ablauf des Zeithorizonts.
+    """
+    try:
+        stats = await setup_recorder.get_accuracy_stats(symbol=symbol, days=days)
+
+        return {
+            "symbol": symbol,
+            "period_days": days,
+            "total_predictions": stats.get("total_predictions", 0),
+            "evaluated_count": stats.get("evaluated_count", 0),
+            "correct_count": stats.get("correct_count", 0),
+            "accuracy_percent": stats.get("accuracy_percent"),
+            "avg_confidence": stats.get("avg_confidence"),
+            "service": "workplace",
+        }
+
+    except Exception as e:
+        logger.error(f"Fehler beim Abrufen der Trefferquote: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Fehler: {str(e)}"
+        )
+
+
+@router.post(
+    "/evaluate",
+    summary="Evaluation manuell auslösen",
+    description="Löst die Evaluation ausstehender Setups manuell aus."
+)
+async def trigger_evaluation():
+    """
+    Manuelle Evaluation auslösen.
+
+    Evaluiert alle Setups, deren Zeithorizont abgelaufen ist,
+    gegen den tatsächlichen Marktverlauf.
+    """
+    try:
+        stats = await setup_recorder.evaluate_pending_setups()
+
+        return {
+            "success": True,
+            "evaluated": stats.get("evaluated", 0),
+            "correct": stats.get("correct", 0),
+            "incorrect": stats.get("incorrect", 0),
+            "errors": stats.get("errors", 0),
+            "accuracy_percent": (
+                stats["correct"] / stats["evaluated"] * 100
+                if stats.get("evaluated", 0) > 0 else None
+            ),
+        }
+
+    except Exception as e:
+        logger.error(f"Fehler bei manueller Evaluation: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Fehler: {str(e)}"
         )

@@ -21,6 +21,7 @@ from ..models.schemas import (
 from .signal_aggregator import signal_aggregator
 from .scoring_service import scoring_service
 from .watchlist_service import watchlist_service
+from .setup_recorder_service import setup_recorder
 
 
 class ScannerService:
@@ -30,12 +31,14 @@ class ScannerService:
         self._running = False
         self._status = ScanStatus.STOPPED
         self._task: Optional[asyncio.Task] = None
+        self._eval_task: Optional[asyncio.Task] = None
         self._results: dict[str, TradingSetup] = {}
         self._last_scan_time: Optional[datetime] = None
         self._current_symbol: Optional[str] = None
         self._symbols_scanned_total = 0
         self._errors_count = 0
         self._alerts_triggered = 0
+        self._setups_recorded = 0
         self._scan_start_time: Optional[datetime] = None
         # Alert-State: Speichert letzten Alert-Zustand pro Symbol
         # Format: {symbol: {"alerted": bool, "direction": str, "score": float}}
@@ -51,7 +54,8 @@ class ScannerService:
         self._status = ScanStatus.RUNNING
         self._scan_start_time = datetime.now(timezone.utc)
         self._task = asyncio.create_task(self._scan_loop())
-        logger.info("Scanner gestartet")
+        self._eval_task = asyncio.create_task(self._evaluation_loop())
+        logger.info("Scanner gestartet (inkl. Evaluation-Job)")
 
     async def stop(self):
         """Stoppt den Auto-Scanner."""
@@ -62,6 +66,13 @@ class ScannerService:
             self._task.cancel()
             try:
                 await self._task
+            except asyncio.CancelledError:
+                pass
+
+        if self._eval_task:
+            self._eval_task.cancel()
+            try:
+                await self._eval_task
             except asyncio.CancelledError:
                 pass
 
@@ -123,6 +134,13 @@ class ScannerService:
                             # Alert prüfen
                             await self._check_alert(symbol, setup)
 
+                            # Setup zur Prediction History aufzeichnen
+                            # (nur bei relevanten Scores für Evaluation)
+                            if setup.composite_score >= 50 and setup.direction != SignalDirection.NEUTRAL:
+                                prediction_id = await setup_recorder.record_setup(setup)
+                                if prediction_id:
+                                    self._setups_recorded += 1
+
                     except Exception as e:
                         logger.error(f"Fehler beim Scannen von {symbol}: {e}")
                         self._errors_count += 1
@@ -146,6 +164,31 @@ class ScannerService:
 
             # Warten bis zum nächsten Scan
             await asyncio.sleep(settings.scan_interval_seconds)
+
+    async def _evaluation_loop(self):
+        """Background-Loop für periodische Evaluation vergangener Setups."""
+        # Initiales Delay - warte bis Scanner warmgelaufen ist
+        await asyncio.sleep(60)
+
+        while self._running:
+            try:
+                if self._status != ScanStatus.PAUSED:
+                    logger.debug("Starte Evaluation vergangener Setups")
+                    stats = await setup_recorder.evaluate_pending_setups()
+
+                    if stats.get("evaluated", 0) > 0:
+                        logger.info(
+                            f"Evaluation: {stats['correct']}/{stats['evaluated']} korrekt "
+                            f"({stats['correct']/stats['evaluated']*100:.1f}%)"
+                        )
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Fehler in Evaluation-Loop: {e}")
+
+            # Evaluation alle 5 Minuten
+            await asyncio.sleep(300)
 
     async def _scan_symbol(self, symbol: str) -> Optional[TradingSetup]:
         """Scannt ein einzelnes Symbol über die konfigurierten Timeframes."""
@@ -400,6 +443,7 @@ class ScannerService:
             current_symbol=self._current_symbol,
             errors_count=self._errors_count,
             alerts_triggered=self._alerts_triggered,
+            setups_recorded=self._setups_recorded,
         )
 
     @property

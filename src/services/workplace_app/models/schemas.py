@@ -326,6 +326,7 @@ class ScanStatusResponse(BaseModel):
     current_symbol: Optional[str] = Field(None, description="Aktuell gescanntes Symbol")
     errors_count: int = Field(default=0, description="Fehleranzahl seit Start")
     alerts_triggered: int = Field(default=0, description="Ausgelöste Alerts seit Start")
+    setups_recorded: int = Field(default=0, description="Aufgezeichnete Setups für Evaluation")
 
 
 class ScanTriggerResponse(BaseModel):
