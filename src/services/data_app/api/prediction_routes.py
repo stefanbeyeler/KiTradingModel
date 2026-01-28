@@ -277,3 +277,23 @@ async def cleanup_invalid_predictions(
         "service": result.get("service"),
         "message": f"{result.get('deleted', 0)} invalid predictions deleted",
     }
+
+
+@router.post("/reset-stale-evaluations")
+async def reset_stale_evaluations(
+    service: str = Query(default="workplace", description="Service zu zurücksetzen"),
+):
+    """
+    Fehlerhafte Evaluationen zurücksetzen.
+
+    Setzt Evaluationen zurück, die mit veralteten Preisdaten durchgeführt wurden
+    (price_change_percent = 0). Diese können dann neu evaluiert werden.
+    """
+    result = await prediction_history_service.reset_stale_evaluations(service=service)
+
+    return {
+        "status": "ok",
+        "reset_count": result.get("reset", 0),
+        "service": result.get("service"),
+        "message": f"{result.get('reset', 0)} stale evaluations reset for re-evaluation",
+    }

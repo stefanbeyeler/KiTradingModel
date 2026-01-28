@@ -1035,6 +1035,40 @@
                     </div>
                 </div>
             </div>
+
+            <!-- GPU/CPU Resources -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">System-Ressourcen</h2>
+                    <button class="btn btn-sm btn-primary" onclick="loadResources()">Aktualisieren</button>
+                </div>
+                <div class="config-grid" id="resources-grid">
+                    <div class="config-item">
+                        <span class="label">CPU</span>
+                        <span class="value" id="res-cpu">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">Memory</span>
+                        <span class="value" id="res-memory">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">GPU</span>
+                        <span class="value" id="res-gpu-name">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">GPU Memory</span>
+                        <span class="value" id="res-gpu-memory">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">GPU Temp</span>
+                        <span class="value" id="res-gpu-temp">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="label">Training erlaubt</span>
+                        <span class="value" id="res-can-train">-</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Monitoring Tab -->
@@ -3476,10 +3510,66 @@
             }
         }
 
+        // Load system resources (CPU, Memory, GPU)
+        async function loadResources() {
+            try {
+                const response = await fetch('/watchdog/api/v1/training/resources');
+                if (!response.ok) throw new Error('Resources not available');
+                const data = await response.json();
+
+                // CPU
+                const cpuEl = document.getElementById('res-cpu');
+                cpuEl.textContent = data.cpu_percent + '%';
+                cpuEl.style.color = data.cpu_percent > 90 ? '#e57373' : data.cpu_percent > 75 ? '#ffd54f' : '#81c784';
+
+                // Memory
+                const memEl = document.getElementById('res-memory');
+                memEl.textContent = data.memory_percent + '% (' + data.memory_used_gb.toFixed(1) + 'GB)';
+                memEl.style.color = data.memory_percent > 90 ? '#e57373' : data.memory_percent > 80 ? '#ffd54f' : '#81c784';
+
+                // GPU
+                if (data.gpu) {
+                    document.getElementById('res-gpu-name').textContent = data.gpu.name || 'Unknown';
+
+                    const gpuMemEl = document.getElementById('res-gpu-memory');
+                    gpuMemEl.textContent = data.gpu.memory_percent + '% (' + (data.gpu.memory_used_mb / 1024).toFixed(1) + 'GB)';
+                    gpuMemEl.style.color = data.gpu.memory_percent > 95 ? '#e57373' : data.gpu.memory_percent > 85 ? '#ffd54f' : '#81c784';
+
+                    const gpuTempEl = document.getElementById('res-gpu-temp');
+                    gpuTempEl.textContent = data.gpu.temperature_celsius + '°C';
+                    gpuTempEl.style.color = data.gpu.temperature_celsius > 85 ? '#e57373' : data.gpu.temperature_celsius > 75 ? '#ffd54f' : '#81c784';
+                } else {
+                    document.getElementById('res-gpu-name').textContent = 'Nicht verfügbar';
+                    document.getElementById('res-gpu-memory').textContent = '-';
+                    document.getElementById('res-gpu-temp').textContent = '-';
+                }
+
+                // Training allowed
+                const canTrainEl = document.getElementById('res-can-train');
+                if (data.can_start_training) {
+                    canTrainEl.textContent = 'Ja';
+                    canTrainEl.style.color = '#81c784';
+                } else {
+                    canTrainEl.textContent = 'Nein';
+                    canTrainEl.style.color = '#e57373';
+                    canTrainEl.title = data.training_block_reason || '';
+                }
+            } catch (error) {
+                console.error('Error loading resources:', error);
+                document.getElementById('res-cpu').textContent = '-';
+                document.getElementById('res-memory').textContent = '-';
+                document.getElementById('res-gpu-name').textContent = '-';
+                document.getElementById('res-gpu-memory').textContent = '-';
+                document.getElementById('res-gpu-temp').textContent = '-';
+                document.getElementById('res-can-train').textContent = '-';
+            }
+        }
+
         // Initial load
         async function init() {
             await checkHealth();
             await loadServicesStatus();
+            await loadResources();
 
             // Set default config values
             document.getElementById('cfg-health-interval').textContent = '30s';
@@ -3492,6 +3582,7 @@
         // Auto-refresh every 30 seconds
         setInterval(() => {
             checkHealth();
+            loadResources();
         }, 30000);
     </script>
 </body>

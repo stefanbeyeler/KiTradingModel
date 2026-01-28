@@ -68,36 +68,37 @@ class SetupRecorderService:
             target_time = datetime.now(timezone.utc) + delay
 
             # Fetch current price as entry_price for later evaluation
+            # Priority: 1) setup data, 2) TwelveData (fresh), 3) market-snapshot (cached)
             entry_price = getattr(setup, 'entry_price', None) or getattr(setup, 'current_price', None)
             if not entry_price:
                 try:
-                    # Try market-snapshot first (cached data)
-                    price_response = await client.get(
-                        f"{self._data_service_url}/api/v1/db/market-snapshot/{setup.symbol}",
-                        params={"timeframe": setup.timeframe or "H1"}
+                    # Map timeframe to TwelveData interval
+                    tf_map = {
+                        "M1": "1min", "M5": "5min", "M15": "15min", "M30": "30min",
+                        "H1": "1h", "H4": "4h", "D1": "1day", "W1": "1week", "MN": "1month"
+                    }
+                    td_interval = tf_map.get(setup.timeframe or "H1", "1h")
+
+                    # Try TwelveData first (fresh data)
+                    ohlcv_response = await client.get(
+                        f"{self._data_service_url}/api/v1/twelvedata/time_series/{setup.symbol}",
+                        params={"interval": td_interval, "outputsize": 1}
                     )
-                    if price_response.status_code == 200:
-                        price_data = price_response.json()
-                        entry_price = price_data.get("price", {}).get("last")
+                    if ohlcv_response.status_code == 200:
+                        ohlcv_data = ohlcv_response.json()
+                        values = ohlcv_data.get("values", [])
+                        if values:
+                            entry_price = float(values[0].get("close", 0))
 
-                    # Fallback: Try TwelveData OHLCV (fresh data)
+                    # Fallback: Try market-snapshot (cached data)
                     if not entry_price:
-                        # Map timeframe to TwelveData interval
-                        tf_map = {
-                            "M1": "1min", "M5": "5min", "M15": "15min", "M30": "30min",
-                            "H1": "1h", "H4": "4h", "D1": "1day", "W1": "1week", "MN": "1month"
-                        }
-                        td_interval = tf_map.get(setup.timeframe or "H1", "1h")
-
-                        ohlcv_response = await client.get(
-                            f"{self._data_service_url}/api/v1/twelvedata/time_series/{setup.symbol}",
-                            params={"interval": td_interval, "outputsize": 1}
+                        price_response = await client.get(
+                            f"{self._data_service_url}/api/v1/db/market-snapshot/{setup.symbol}",
+                            params={"timeframe": setup.timeframe or "H1"}
                         )
-                        if ohlcv_response.status_code == 200:
-                            ohlcv_data = ohlcv_response.json()
-                            values = ohlcv_data.get("values", [])
-                            if values:
-                                entry_price = float(values[0].get("close", 0))
+                        if price_response.status_code == 200:
+                            price_data = price_response.json()
+                            entry_price = price_data.get("price", {}).get("last")
 
                     if not entry_price:
                         logger.warning(f"Could not fetch entry price for {setup.symbol} - setup will not be evaluable")
@@ -256,19 +257,38 @@ class SetupRecorderService:
                 # Can't evaluate without entry price or neutral direction
                 return None
 
-            # Get current price from Data Service
+            # Get current price from TwelveData (fresh data, not cached)
+            # Map timeframe to TwelveData interval
+            tf_map = {
+                "M1": "1min", "M5": "5min", "M15": "15min", "M30": "30min",
+                "H1": "1h", "H4": "4h", "D1": "1day", "W1": "1week", "MN": "1month"
+            }
+            td_interval = tf_map.get(timeframe, "1h")
+
             price_response = await client.get(
-                f"{self._data_service_url}/api/v1/db/market-snapshot/{symbol}",
-                params={"timeframe": timeframe}
+                f"{self._data_service_url}/api/v1/twelvedata/time_series/{symbol}",
+                params={"interval": td_interval, "outputsize": 1}
             )
 
-            if price_response.status_code != 200:
-                return None
+            current_price = None
+            if price_response.status_code == 200:
+                price_data = price_response.json()
+                values = price_data.get("values", [])
+                if values:
+                    current_price = float(values[0].get("close", 0))
 
-            price_data = price_response.json()
-            current_price = price_data.get("price", {}).get("last")
+            # Fallback to market-snapshot if TwelveData fails
+            if not current_price:
+                snapshot_response = await client.get(
+                    f"{self._data_service_url}/api/v1/db/market-snapshot/{symbol}",
+                    params={"timeframe": timeframe}
+                )
+                if snapshot_response.status_code == 200:
+                    snapshot_data = snapshot_response.json()
+                    current_price = snapshot_data.get("price", {}).get("last")
 
             if not current_price:
+                logger.warning(f"Could not fetch current price for {symbol} evaluation")
                 return None
 
             # Calculate price change

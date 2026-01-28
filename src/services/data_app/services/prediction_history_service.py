@@ -571,6 +571,51 @@ class PredictionHistoryService:
             logger.error(f"Failed to cleanup invalid predictions: {e}")
             return {"deleted": 0, "error": str(e)}
 
+    async def reset_stale_evaluations(self, service: str = "workplace") -> dict:
+        """
+        Reset evaluations that used stale price data (price_change_percent = 0).
+
+        This allows predictions to be re-evaluated with fresh price data.
+
+        Args:
+            service: Service to reset (default: workplace)
+
+        Returns:
+            Statistics dictionary with reset count
+        """
+        if not await self.initialize():
+            return {"reset": 0, "error": "Service not initialized"}
+
+        try:
+            pool = timescaledb_service._pool
+            async with pool.acquire() as conn:
+                # Reset evaluations where price_change_percent is 0 (stale data)
+                result = await conn.execute(
+                    """
+                    UPDATE prediction_history
+                    SET evaluated_at = NULL,
+                        is_correct = NULL,
+                        accuracy_score = NULL,
+                        error_amount = NULL,
+                        actual_outcome = NULL
+                    WHERE service = $1
+                      AND evaluated_at IS NOT NULL
+                      AND (
+                          actual_outcome->>'price_change_percent' = '0'
+                          OR actual_outcome->>'price_change_percent' = '0.0'
+                          OR (actual_outcome IS NOT NULL AND actual_outcome->>'price_change_percent' IS NULL)
+                      )
+                    """,
+                    service,
+                )
+                reset_count = int(result.split()[-1])
+                if reset_count > 0:
+                    logger.info(f"Reset {reset_count} stale evaluations for {service}")
+                return {"reset": reset_count, "service": service}
+        except Exception as e:
+            logger.error(f"Failed to reset stale evaluations: {e}")
+            return {"reset": 0, "error": str(e)}
+
 
 # Singleton instance
 prediction_history_service = PredictionHistoryService()

@@ -1830,7 +1830,7 @@
                 }
 
                 return details;
-            });
+            }, 'kein Pattern erkannt');
 
             // Candlestick Signal
             html += renderSignalCard('Candlestick', signals.candlestick, (sig) => {
@@ -1851,7 +1851,7 @@
                 }
 
                 return details;
-            });
+            }, 'kein Pattern erkannt');
 
             html += `</div></div>`;
 
@@ -1926,7 +1926,7 @@
             document.getElementById('modalBody').innerHTML = html;
         }
 
-        function renderSignalCard(name, signal, detailsFn) {
+        function renderSignalCard(name, signal, detailsFn, unavailableMsg = 'Signal nicht verfügbar') {
             const isAvailable = signal && signal.available;
             const direction = signal?.direction || signal?.price_direction || 'neutral';
             const dirClass = isAvailable ? direction : 'unavailable';
@@ -1942,7 +1942,7 @@
             if (isAvailable) {
                 html += `<div class="signal-details">${detailsFn(signal)}</div>`;
             } else {
-                html += `<div class="signal-details"><span style="color: #64748b;">Signal nicht verfügbar</span></div>`;
+                html += `<div class="signal-details"><span style="color: #64748b;">${unavailableMsg}</span></div>`;
             }
 
             html += `</div>`;
